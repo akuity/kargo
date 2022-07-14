@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "k8sta.controller.fullname" . }}
+  labels:
+    {{- include "k8sta.labels" . | nindent 4 }}
+    {{- include "k8sta.controller.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "k8sta.selectorLabels" . | nindent 6 }}
+      {{- include "k8sta.controller.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "k8sta.selectorLabels" . | nindent 8 }}
+        {{- include "k8sta.controller.labels" . | nindent 8 }}
+    spec:
+      serviceAccount: {{ include "k8sta.controller.fullname" . }}
+      containers:
+      - name: controller
+        image: {{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/usr/local/bin/k8sta-controller"]
+        env:
+        - name: CONFIG_PATH
+          value: /var/k8sta/config/lines.json
+        volumeMounts:
+        - name: config
+          mountPath: /var/k8sta/config
+          readOnly: true
+        resources:
+          {{- toYaml .Values.controller.resources | nindent 10 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "k8sta.fullname" . }}-config
+

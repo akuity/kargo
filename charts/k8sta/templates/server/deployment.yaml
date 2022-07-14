@@ -1,0 +1,137 @@
+{{- $tlsCert := "" }}
+{{- $tlsKey := "" }}
+{{- if .Values.server.tls.enabled }} 
+  {{- if .Values.server.tls.generateSelfSignedCert }}
+    {{- $data := (lookup "v1" "Secret" .Release.Namespace (printf "%s-cert" (include "k8sta.server.fullname" . ))).data }}
+    {{- if $data }}
+      # Reuse the existing cert and key
+      {{- $tlsCert = index $data "tls.crt" }}
+      {{- $tlsKey = index $data "tls.key" }}
+    {{- else }}
+      # Generate a new cert and key
+      {{- $altName1 := include "k8sta.server.fullname" . }}
+      {{- $altName2 := printf "%s.%s" (include "k8sta.server.fullname" .) .Release.Namespace }}
+      {{- $altName3 := printf "%s.%s.svc" (include "k8sta.server.fullname" .) .Release.Namespace }}
+      {{- $altName4 := printf "%s.%s.svc.cluster" (include "k8sta.server.fullname" .) .Release.Namespace }}
+      {{- $altName5 := printf "%s.%s.svc.cluster.local" (include "k8sta.server.fullname" .) .Release.Namespace }}
+      {{- $cert := genSelfSignedCert .Values.server.host nil (list .Values.server.host $altName1 $altName2 $altName3 $altName4 $altName5) 3650 }}
+      {{- $tlsCert = b64enc $cert.Cert }}
+      {{- $tlsKey = b64enc $cert.Key }}
+    {{- end }}
+  {{- else if .Values.server.tls.cert }}
+    # Use operator supplied cert and key
+    {{- $tlsCert = .Values.server.tls.cert }}
+    {{- $tlsKey = .Values.server.tls.key }}
+  {{- end }}
+{{- end }}
+---
+{{- if and .Values.server.tls.enabled (or .Values.server.tls.generateSelfSignedCert .Values.server.tls.cert) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "k8sta.server.fullname" . }}-cert
+  labels:
+    {{- include "k8sta.labels" . | nindent 4 }}
+    {{- include "k8sta.server.labels" . | nindent 4 }}
+type: Opaque
+data:
+  tls.crt: {{ $tlsCert }}
+  tls.key: {{ $tlsKey }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "k8sta.server.fullname" . }}
+  labels:
+    {{- include "k8sta.labels" . | nindent 4 }}
+    {{- include "k8sta.server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.server.replicas }}
+  selector:
+    matchLabels:
+      {{- include "k8sta.selectorLabels" . | nindent 6 }}
+      {{- include "k8sta.server.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "k8sta.selectorLabels" . | nindent 8 }}
+        {{- include "k8sta.server.labels" . | nindent 8 }}
+      annotations:
+        checksum/config-secret: {{ include (print $.Template.BasePath "/server/config-secret.yaml") . | sha256sum }}
+        {{- if and .Values.server.tls.enabled (or .Values.server.tls.generateSelfSignedCert .Values.server.tls.cert) }}
+        checksum/tls-cert: {{ sha256sum $tlsCert }}
+        checksum/tls-key: {{ sha256sum $tlsKey }}
+        {{- end }}
+    spec:
+      serviceAccount: {{ include "k8sta.server.fullname" . }}
+      containers:
+      - name: server
+        image: {{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/usr/local/bin/k8sta-server"]
+        env:
+        - name: TLS_ENABLED
+          value: {{ quote .Values.server.tls.enabled }}
+        {{- if .Values.server.tls.enabled }}
+        - name: TLS_CERT_PATH
+          value: /var/k8sta/certs/tls.crt
+        - name: TLS_KEY_PATH
+          value: /var/k8sta/certs/tls.key
+        {{- end }}
+        - name: CONFIG_PATH
+          value: /var/k8sta/config/lines.json
+        - name: DOCKERHUB_TOKENS_PATH
+          value: /var/k8sta/secret-config/dockerhub-tokens.json
+        volumeMounts:
+        {{- if .Values.server.tls.enabled }}
+        - name: cert
+          mountPath: /var/k8sta/certs
+          readOnly: true
+        {{- end }}
+        - name: config
+          mountPath: /var/k8sta/config
+          readOnly: true
+        - name: secret-config
+          mountPath: /var/k8sta/secret-config
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            port: 8080
+            path: /healthz
+            {{- if .Values.server.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            port: 8080
+            path: /healthz
+            {{- if .Values.server.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          {{- toYaml .Values.server.resources | nindent 10 }}
+      volumes:
+      {{- if .Values.server.tls.enabled }}
+      - name: cert
+        secret:
+          secretName: {{ include "k8sta.server.fullname" . }}-cert
+      {{- end }}
+      - name: config
+        configMap:
+          name: {{ include "k8sta.fullname" . }}-config
+      - name: secret-config
+        secret:
+          secretName: {{ include "k8sta.server.fullname" . }}-config
+      {{- with .Values.server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

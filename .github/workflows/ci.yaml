@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+    - main
+  push:
+    branches:
+    - main
+
+jobs:
+
+  test-unit:
+    runs-on: ubuntu-latest
+    container:
+      image: brigadecore/go-tools:v0.8.0
+      env:
+        SKIP_DOCKER: 'true'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Run unit tests
+      run: make test-unit
+
+  lint:
+    runs-on: ubuntu-latest
+    container:
+      image: brigadecore/go-tools:v0.8.0
+      env:
+        SKIP_DOCKER: 'true'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Run linter
+      run: make lint
+
+  lint-chart:
+    runs-on: ubuntu-latest
+    container:
+      image: brigadecore/helm-tools:v0.4.0
+      env:
+        SKIP_DOCKER: 'true'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Run linter
+      run: make lint-chart
+
+  build:
+    needs: [test-unit, lint, lint-chart]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Build
+      run: make build

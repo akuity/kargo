@@ -1,0 +1,50 @@
+{{- if .Values.server.ingress.enabled }}
+{{- $networkingApiIsStable := eq (include "networking.apiVersion.isStable" .) "true" -}}
+{{- $networkingApiSupportsIngressClassName := eq (include "networking.apiVersion.supportIngressClassName" .) "true" -}}
+apiVersion: {{ template "networking.apiVersion" . }}
+kind: Ingress
+metadata:
+  name: {{ include "k8sta.server.fullname" . }}
+  labels:
+    {{- include "k8sta.labels" . | nindent 4 }}
+    {{- include "k8sta.server.labels" . | nindent 4 }}
+  {{- with .Values.server.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and (.Values.server.ingress.ingressClassName) ($networkingApiSupportsIngressClassName) }}
+  ingressClassName: {{ .Values.server.ingress.ingressClassName }}
+  {{- end }}
+  rules:
+  - host: {{ .Values.server.host }}
+    http:
+      paths:
+      {{- if $networkingApiIsStable }}
+      - pathType: ImplementationSpecific
+        path: /
+        backend:
+          service:
+            name: {{ include "k8sta.server.fullname" . }}
+            port:
+              {{- if .Values.server.tls.enabled }}
+              number: 443
+              {{- else }}
+              number: 80
+              {{- end }}
+      {{- else }}
+      - backend:
+          serviceName: {{ include "k8sta.server.fullname" . }}
+          {{- if .Values.server.tls.enabled }}
+          servicePort: 443
+          {{- else }}
+          servicePort: 80
+          {{- end }}
+      {{- end}}
+  {{- if .Values.server.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.server.host }}
+    secretName: {{ include "k8sta.server.fullname" . }}-ingress-cert
+  {{- end }}
+{{- end }}
