@@ -37,14 +37,16 @@ locally.
 If you make modifications to Go code, it is recommended that you run
 corresponding unit tests and linters before opening a PR.
 
-To run lint checks for all Go-based components:
-
-```shell
-$ make lint
-```
+To run all unit tests:
 
 ```shell
 $ make test-unit
+```
+
+To run lint checks:
+
+```shell
+$ make lint
 ```
 
 ### Building & Pushing Docker Images from Source
