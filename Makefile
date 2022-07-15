@@ -51,7 +51,11 @@ ifdef DOCKER_ORG
 	DOCKER_ORG := $(DOCKER_ORG)/
 endif
 
-DOCKER_IMAGE_NAME := $(DOCKER_REGISTRY)$(DOCKER_ORG)k8sta
+ifndef VERSION
+	VERSION            := $(GIT_VERSION)
+endif
+
+DOCKER_IMAGE_NAME := $(DOCKER_REGISTRY)$(DOCKER_ORG)k8sta:$(VERSION)
 
 ifdef HELM_REGISTRY
 	HELM_REGISTRY := $(HELM_REGISTRY)/
@@ -62,15 +66,6 @@ ifdef HELM_ORG
 endif
 
 HELM_CHART_PREFIX := $(HELM_REGISTRY)$(HELM_ORG)
-
-ifdef VERSION
-	MUTABLE_DOCKER_TAG := latest
-else
-	VERSION            := $(GIT_VERSION)
-	MUTABLE_DOCKER_TAG := edge
-endif
-
-IMMUTABLE_DOCKER_TAG := $(VERSION)
 
 ################################################################################
 # Tests                                                                        #
@@ -104,11 +99,11 @@ lint-chart:
 
 .PHONY: scan
 scan:
-	grype $(DOCKER_IMAGE_NAME):$(IMMUTABLE_DOCKER_TAG) -f medium
+	grype $(DOCKER_IMAGE_NAME) -f high
 
 .PHONY: generate-sbom
 generate-sbom:
-	syft $(DOCKER_IMAGE_NAME):$(IMMUTABLE_DOCKER_TAG) \
+	syft $(DOCKER_IMAGE_NAME) \
 		-o spdx-json \
 		--file ./artifacts/k8sta-$(VERSION)-SBOM.json
 
@@ -129,8 +124,7 @@ publish-sbom: generate-sbom
 .PHONY: build
 build:
 	docker buildx build \
-		-t $(DOCKER_IMAGE_NAME):$(IMMUTABLE_DOCKER_TAG) \
-		-t $(DOCKER_IMAGE_NAME):$(MUTABLE_DOCKER_TAG) \
+		-t $(DOCKER_IMAGE_NAME) \
 		--build-arg VERSION=$(VERSION) \
 		--build-arg COMMIT=$(GIT_VERSION) \
 		--platform linux/amd64,linux/arm64 \
@@ -146,8 +140,7 @@ publish: push push-chart
 .PHONY: push
 push:
 	docker buildx build \
-		-t $(DOCKER_IMAGE_NAME):$(IMMUTABLE_DOCKER_TAG) \
-		-t $(DOCKER_IMAGE_NAME):$(MUTABLE_DOCKER_TAG) \
+		-t $(DOCKER_IMAGE_NAME) \
 		--build-arg VERSION=$(VERSION) \
 		--build-arg COMMIT=$(GIT_VERSION) \
 		--platform linux/amd64,linux/arm64 \
@@ -156,12 +149,9 @@ push:
 
 .PHONY: sign
 sign:
-	docker pull $(DOCKER_IMAGE_NAME):$(IMMUTABLE_DOCKER_TAG)
-	docker pull $(DOCKER_IMAGE_NAME):$(MUTABLE_DOCKER_TAG)
-	docker trust sign $(DOCKER_IMAGE_NAME):$(IMMUTABLE_DOCKER_TAG)
-	docker trust sign $(DOCKER_IMAGE_NAME):$(MUTABLE_DOCKER_TAG)
-	docker trust inspect --pretty $(DOCKER_IMAGE_NAME):$(IMMUTABLE_DOCKER_TAG)
-	docker trust inspect --pretty $(DOCKER_IMAGE_NAME):$(MUTABLE_DOCKER_TAG)
+	docker pull $(DOCKER_IMAGE_NAME)
+	docker trust sign $(DOCKER_IMAGE_NAME)
+	docker trust inspect --pretty $(DOCKER_IMAGE_NAME)
 
 .PHONY: push-chart
 push-chart:
