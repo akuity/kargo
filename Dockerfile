@@ -21,7 +21,6 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
 
 WORKDIR /k8sta/bin
 RUN ln -s k8sta k8sta-controller
-RUN ln -s k8sta k8sta-promoter
 RUN ln -s k8sta k8sta-server
 
 FROM alpine:3.15.4 as final
@@ -31,7 +30,7 @@ RUN apk update \
     && addgroup -S -g 65532 nonroot \
     && adduser -S -D -u 65532 -g nonroot -G nonroot nonroot
 
-COPY --chown=nonroot:nonroot cmd/promoter/ssh_config /home/nonroot/.ssh/config
+COPY --chown=nonroot:nonroot cmd/controller/ssh_config /home/nonroot/.ssh/config
 COPY --from=builder /k8sta/bin/ /usr/local/bin/
 
 CMD ["/usr/local/bin/k8sta"]

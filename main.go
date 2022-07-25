@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuityio/k8sta/cmd/controller"
-	"github.com/akuityio/k8sta/cmd/promoter"
 	"github.com/akuityio/k8sta/cmd/server"
 	"github.com/akuityio/k8sta/internal/common/signals"
 )
@@ -27,8 +26,6 @@ func main() {
 	switch binaryName {
 	case "k8sta-controller":
 		err = controller.RunController(ctx)
-	case "k8sta-promoter":
-		err = promoter.RunPromoter(ctx)
 	case "k8sta-server":
 		err = server.RunServer(ctx)
 	default:
