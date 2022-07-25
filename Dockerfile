@@ -1,10 +1,21 @@
 FROM --platform=$BUILDPLATFORM brigadecore/go-tools:v0.8.0 as builder
 
-ARG VERSION
-ARG COMMIT
 ARG TARGETOS
 ARG TARGETARCH
-ENV CGO_ENABLED=0
+
+ARG KUSTOMIZE_VERSION=v4.5.5
+RUN curl -L -o /tmp/kustomize.tar.gz \
+      https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz \
+    && tar xvfz /tmp/kustomize.tar.gz -C /usr/local/bin
+
+ARG YTT_VERSION=v0.41.1
+RUN curl -L -o /usr/local/bin/ytt \
+      https://github.com/vmware-tanzu/carvel-ytt/releases/download/${YTT_VERSION}/ytt-linux-${TARGETARCH} \
+      && chmod 755 /usr/local/bin/ytt
+
+ARG VERSION
+ARG COMMIT
+ARG CGO_ENABLED=0
 
 WORKDIR /k8sta
 COPY go.mod .
@@ -14,10 +25,10 @@ COPY cmd/ cmd/
 COPY internal/ internal/
 COPY main.go .
 
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
-  -o bin/k8sta \
-  -ldflags "-w -X github.com/akuityio/k8sta/internal/common/version.version=$VERSION -X github.com/akuityio/k8sta/internal/common/version.commit=$COMMIT" \
-  .
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -o bin/k8sta \
+      -ldflags "-w -X github.com/akuityio/k8sta/internal/common/version.version=${VERSION} -X github.com/akuityio/k8sta/internal/common/version.commit=${COMMIT}" \
+      .
 
 WORKDIR /k8sta/bin
 RUN ln -s k8sta k8sta-controller
@@ -31,6 +42,10 @@ RUN apk update \
     && adduser -S -D -u 65532 -g nonroot -G nonroot nonroot
 
 COPY --chown=nonroot:nonroot cmd/controller/ssh_config /home/nonroot/.ssh/config
+COPY --from=builder /usr/local/bin/kustomize /usr/local/bin/
+COPY --from=builder /usr/local/bin/ytt /usr/local/bin/
 COPY --from=builder /k8sta/bin/ /usr/local/bin/
+
+USER nonroot
 
 CMD ["/usr/local/bin/k8sta"]
