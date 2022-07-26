@@ -14,24 +14,29 @@ type Config interface {
 	AddLine(Line)
 	LineCount() int
 	GetLineByName(string) (Line, bool)
-	GetLineByImageRepository(string) (Line, bool)
+	GetLinesByImageRepository(string) []Line
 }
 
 type config struct {
-	linesByName      map[string]Line
-	linesByImageRepo map[string]Line
+	linesByName      map[string]*Line
+	linesByImageRepo map[string]map[*Line]struct{}
 }
 
 func NewConfig() Config {
 	return &config{
-		linesByName:      map[string]Line{},
-		linesByImageRepo: map[string]Line{},
+		linesByName:      map[string]*Line{},
+		linesByImageRepo: map[string]map[*Line]struct{}{},
 	}
 }
 
 func (c *config) AddLine(line Line) {
-	c.linesByName[line.Name] = line
-	c.linesByImageRepo[line.ImageRepository] = line
+	c.linesByName[line.Name] = &line
+	for _, imageRepository := range line.ImageRepositories {
+		if _, ok := c.linesByImageRepo[imageRepository]; !ok {
+			c.linesByImageRepo[imageRepository] = map[*Line]struct{}{}
+		}
+		c.linesByImageRepo[imageRepository][&line] = struct{}{}
+	}
 }
 
 func (c *config) LineCount() int {
@@ -40,12 +45,17 @@ func (c *config) LineCount() int {
 
 func (c *config) GetLineByName(name string) (Line, bool) {
 	line, ok := c.linesByName[name]
-	return line, ok
+	return *line, ok
 }
 
-func (c *config) GetLineByImageRepository(repo string) (Line, bool) {
-	line, ok := c.linesByImageRepo[repo]
-	return line, ok
+func (c *config) GetLinesByImageRepository(repo string) []Line {
+	lines := make([]Line, len(c.linesByImageRepo[repo]))
+	var i int
+	for line := range c.linesByImageRepo[repo] {
+		lines[i] = *line
+		i++
+	}
+	return lines
 }
 
 func K8staConfig() (Config, error) {

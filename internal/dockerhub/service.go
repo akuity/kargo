@@ -58,64 +58,65 @@ func (s *service) Handle(
 		"tag":  tag,
 	}).Debug("An image was pushed to a Docker Hub image repository")
 
-	line, ok := s.config.GetLineByImageRepository(repo)
-	if !ok {
+	lines := s.config.GetLinesByImageRepository(repo)
+	if len(lines) == 0 {
 		s.logger.WithFields(log.Fields{
 			"repo": repo,
 		}).Debug("No line is subscribed to this image repository; nothing to do")
 		return nil
 	}
 
-	s.logger.WithFields(log.Fields{
-		"repo": repo,
-		"line": line.Name,
-	}).Debug("A line is subscribed to this image repository")
+	for _, line := range lines {
+		s.logger.WithFields(log.Fields{
+			"repo": repo,
+			"line": line.Name,
+		}).Debug("A line is subscribed to this image repository")
 
-	ticket := scratch.Ticket{
-		// TODO: UUID seems sensible for now, but we may find a better option as
-		// we move forward.
-		ID:        uuid.NewV4().String(),
-		Source:    "Docker Hub",
-		Namespace: line.Namespace,
-		Line:      line.Name,
-		Change: scratch.Change{
-			Type:  "NewImage",
-			Image: fmt.Sprintf("%s:%s", repo, tag),
-		},
-	}
-	ticketBytes, err := json.Marshal(ticket)
-	if err != nil {
-		return errors.Wrapf(err, "error marshaling Ticket %s to JSON", ticket.ID)
-	}
-	if _, err := s.kubeClient.CoreV1().ConfigMaps(line.Namespace).Create(
-		ctx,
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: line.Namespace,
-				Name:      ticket.ID,
-				Labels: map[string]string{
-					LabelKeyComponent: "ticket",
+		ticket := scratch.Ticket{
+			// TODO: UUID seems sensible for now, but we may find a better option as
+			// we move forward.
+			ID:        uuid.NewV4().String(),
+			Source:    "Docker Hub",
+			Namespace: line.Namespace,
+			Line:      line.Name,
+			Change: scratch.Change{
+				Type:  "NewImage",
+				Image: fmt.Sprintf("%s:%s", repo, tag),
+			},
+		}
+		ticketBytes, err := json.Marshal(ticket)
+		if err != nil {
+			return errors.Wrapf(err, "error marshaling Ticket %s to JSON", ticket.ID)
+		}
+		if _, err := s.kubeClient.CoreV1().ConfigMaps(line.Namespace).Create(
+			ctx,
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: line.Namespace,
+					Name:      ticket.ID,
+					Labels: map[string]string{
+						LabelKeyComponent: "ticket",
+					},
+				},
+				Data: map[string]string{
+					"ticket": string(ticketBytes),
 				},
 			},
-			Data: map[string]string{
-				"ticket": string(ticketBytes),
-			},
-		},
-		metav1.CreateOptions{},
-	); err != nil {
-		return errors.Wrapf(
-			err,
-			"error creating ConfigMap for Ticket %s",
-			ticket.ID)
+			metav1.CreateOptions{},
+		); err != nil {
+			return errors.Wrapf(
+				err,
+				"error creating ConfigMap for Ticket %s",
+				ticket.ID)
+		}
 
+		s.logger.WithFields(log.Fields{
+			"namespace": ticket.Namespace,
+			"name":      ticket.ID,
+			"line":      ticket.Line,
+			"image":     ticket.Change.Image,
+		}).Debug("Created Ticket (ConfigMap) resource")
 	}
-
-	s.logger.WithFields(log.Fields{
-		"namespace": ticket.Namespace,
-		"name":      ticket.ID,
-		"line":      ticket.Line,
-		"image":     ticket.Change.Image,
-	}).Debug("Created Ticket (ConfigMap) resource")
 
 	return nil
 }
