@@ -172,7 +172,7 @@ config:
   - name: guestbook
     ## Images pushed to this repository will kick of a deployment that
     ## progresses through the line's environments.
-    imageRepository: krancour/guestbook
+    imageRepository: krancour/k8sta-guestbook
     ## Environments are represented by Argo CD Application resources. Those
     ## resources can be located in this namespace.
     namespace: argocd

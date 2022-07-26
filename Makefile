@@ -180,6 +180,7 @@ hack-kind-up:
 		--values hack/argo-cd-config/values.yaml \
 		--wait \
 		--timeout 300s
+	kubectl apply -f hack/argo-cd-apps/repositories.yaml
 	kubectl apply -f hack/argo-cd-apps/apps.yaml
 
 .PHONY: hack-kind-down
