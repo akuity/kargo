@@ -61,7 +61,7 @@ func TestK8sTAConfig(t *testing.T) {
 				_, err =
 					configFile.Write(
 						[]byte(
-							`[{"name":"guestbook","imageRepository":"akuityio/guestbook","namespace":"argocd","environments":["guestbook-dev","guestbook-stage","guestbook-prod"]}]`, // nolint: lll
+							`[{"name":"guestbook","imageRepositories":["akuityio/guestbook"],"namespace":"argocd","environments":["guestbook-dev","guestbook-stage","guestbook-prod"]}]`, // nolint: lll
 						),
 					)
 				require.NoError(t, err)
@@ -73,18 +73,22 @@ func TestK8sTAConfig(t *testing.T) {
 				line, ok := config.GetLineByName("guestbook")
 				require.True(t, ok)
 				require.Equal(t, "guestbook", line.Name)
-				require.Equal(t, "akuityio/guestbook", line.ImageRepository)
+				require.Equal(t, []string{"akuityio/guestbook"}, line.ImageRepositories)
 				require.Equal(t, "argocd", line.Namespace)
 				require.Equal(
 					t,
 					[]string{"guestbook-dev", "guestbook-stage", "guestbook-prod"},
 					line.Environments,
 				)
-				line, ok = config.GetLineByImageRepository("akuityio/guestbook")
-				require.True(t, ok)
-				require.Equal(t, "guestbook", line.Name)
-				require.Equal(t, "akuityio/guestbook", line.ImageRepository)
-				require.Equal(t, "argocd", line.Namespace)
+				lines := config.GetLinesByImageRepository("akuityio/guestbook")
+				require.Len(t, lines, 1)
+				require.Equal(t, "guestbook", lines[0].Name)
+				require.Equal(
+					t,
+					[]string{"akuityio/guestbook"},
+					lines[0].ImageRepositories,
+				)
+				require.Equal(t, "argocd", lines[0].Namespace)
 				require.Equal(
 					t,
 					[]string{"guestbook-dev", "guestbook-stage", "guestbook-prod"},

@@ -9,11 +9,11 @@ type Line struct {
 	// enforced in any way. Currently, if two or more Lines have the same value in
 	// their Name field, the LAST Line defined wins.
 	Name string `json:"name"`
-	// ImageRepository specifies an image repository that the Line is effectively
-	// subscribed to. When a push to this repository is detected, it will trigger
-	// the progressive deployment of the new image through the Line's
+	// ImageRepositories specifies image repositories that the Line is effectively
+	// subscribed to. When a push to any one of these repositories is detected, it
+	// will trigger the progressive deployment of the new image through the Line's
 	// environments.
-	ImageRepository string `json:"imageRepository"`
+	ImageRepositories []string `json:"imageRepositories"`
 	// Namespace is the Kubernetes namespace in which all the Argo CD Application
 	// resources named by the Environment field can/should be found.
 	Namespace string `json:"namespace"`
