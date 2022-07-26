@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/krancour/akuity-guestbook-deploy
+    repoURL: https://github.com/akuityio/k8sta-guestbook-deploy
     targetRevision: env/dev
     path: .
   destination:
@@ -29,7 +29,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/krancour/akuity-guestbook-deploy
+    repoURL: https://github.com/akuityio/k8sta-guestbook-deploy
     targetRevision: env/stage
     path: .
   destination:
@@ -50,7 +50,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/krancour/akuity-guestbook-deploy
+    repoURL: https://github.com/akuityio/k8sta-guestbook-deploy
     targetRevision: env/prod
     path: .
   destination:
