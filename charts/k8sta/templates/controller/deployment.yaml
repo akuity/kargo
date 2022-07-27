@@ -26,12 +26,12 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/k8sta-controller"]
         env:
-        - name: CONFIG_PATH
-          value: /var/k8sta/config/lines.json
-        volumeMounts:
-        - name: config
-          mountPath: /var/k8sta/config
-          readOnly: true
+        - name: LOG_LEVEL
+          value: {{ .Values.controller.logLevel }}
+        - name: ARGOCD_NAMESPACE
+          value: {{ .Values.argocd.namespace }}
+        - name: K8STA_NAMESPACE
+          value: {{ .Release.Namespace }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
       {{- with .Values.nodeSelector }}
@@ -42,8 +42,3 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      volumes:
-      - name: config
-        configMap:
-          name: {{ include "k8sta.fullname" . }}-config
-

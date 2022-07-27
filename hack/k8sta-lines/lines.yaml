@@ -1,0 +1,11 @@
+apiVersion: k8sta.akuity.io/v1alpha1
+kind: Line
+metadata:
+  name: guestbook
+  namespace: k8sta
+imageRepositories:
+- krancour/k8sta-guestbook
+environments:
+- guestbook-dev
+- guestbook-stage
+- guestbook-prod

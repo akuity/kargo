@@ -21,8 +21,10 @@ WORKDIR /k8sta
 COPY go.mod .
 COPY go.sum .
 RUN go mod download
+COPY api/ api/
 COPY cmd/ cmd/
 COPY internal/ internal/
+COPY config.go .
 COPY main.go .
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
@@ -47,5 +49,9 @@ COPY --from=builder /usr/local/bin/ytt /usr/local/bin/
 COPY --from=builder /k8sta/bin/ /usr/local/bin/
 
 USER nonroot
+
+RUN git config --global credential.helper store \
+    && git config --global user.name k8sta \
+    && git config --global user.email k8sta@akuity.io
 
 CMD ["/usr/local/bin/k8sta"]

@@ -8,16 +8,16 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/akuityio/k8sta/internal/common/client"
+	"github.com/akuityio/k8sta/internal/common/config"
 	libHTTP "github.com/akuityio/k8sta/internal/common/http"
-	"github.com/akuityio/k8sta/internal/common/kubernetes"
 	"github.com/akuityio/k8sta/internal/common/signals"
 	"github.com/akuityio/k8sta/internal/common/version"
 	"github.com/akuityio/k8sta/internal/dockerhub"
-	"github.com/akuityio/k8sta/internal/scratch"
 )
 
 // RunServer configures and runs the K8sTA Server.
-func RunServer(ctx context.Context) error {
+func RunServer(ctx context.Context, config config.Config) error {
 	serverConfig, err := serverConfig()
 	if err != nil {
 		return errors.Wrap(err, "error reading server configuration")
@@ -34,14 +34,9 @@ func RunServer(ctx context.Context) error {
 		"tls":     tlsStatus,
 	}).Info("Starting K8sTA Server")
 
-	config, err := scratch.K8staConfig()
+	controllerRuntimeClient, err := client.New()
 	if err != nil {
-		return errors.Wrap(err, "error reading K8sTA configuration")
-	}
-
-	kubeClient, err := kubernetes.Client()
-	if err != nil {
-		return errors.Wrap(err, "error obtaining Kubernetes client")
+		return errors.Wrap(err, "error obtaining controller runtime client")
 	}
 
 	// Wire together everything for handling webhooks from Docker Hub...
@@ -55,7 +50,7 @@ func RunServer(ctx context.Context) error {
 			)
 		}
 		handler, err := dockerhub.NewHandler(
-			dockerhub.NewService(config, kubeClient),
+			dockerhub.NewService(config, controllerRuntimeClient),
 		)
 		if err != nil {
 			return errors.Wrap(err, "error creating handler for Docker Hub webhooks")
@@ -69,6 +64,11 @@ func RunServer(ctx context.Context) error {
 	router.StrictSlash(true)
 	router.Handle("/dockerhub", dockerhubWebhookHandler).Methods(http.MethodPost)
 	// TODO: Support more triggers here!
+	// - Container registries:
+	//   - ghcr
+	//   - gcr
+	//   - acr
+	// - Other?
 	router.HandleFunc("/healthz", libHTTP.Healthz).Methods(http.MethodGet)
 
 	return libHTTP.NewServer(

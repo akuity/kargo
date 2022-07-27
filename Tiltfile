@@ -12,8 +12,7 @@ namespace_create('k8sta')
 k8s_resource(
   new_name = 'common',
   objects = [
-    'k8sta:namespace',
-    'k8sta-config:configmap'
+    'k8sta:namespace'
   ],
   labels = ['k8sta']
 )
@@ -22,8 +21,10 @@ docker_build(
   'akuity/k8sta',
   '.',
   only = [
+    'api/',
     'cmd/',
     'internal/',
+    'config.go',
     'go.mod',
     'go.sum',
     'main.go'
@@ -58,6 +59,14 @@ k8s_resource(
     'k8sta-controller:serviceaccount'
   ]
 )
+k8s_resource(
+  new_name = 'crds',
+  objects = [
+    'lines.k8sta.akuity.io:customresourcedefinition',
+    'tickets.k8sta.akuity.io:customresourcedefinition',
+  ],
+  labels = ['k8sta']
+)
 
 k8s_yaml(
   helm(
@@ -65,6 +74,8 @@ k8s_yaml(
     name = 'k8sta',
     namespace = 'k8sta',
     set = [
+      'controller.logLevel=DEBUG',
+      'server.logLevel=DEBUG',
       'server.tls.enabled=false',
       'server.dockerhub.tokens.dev-token=insecure-dev-token'
     ]

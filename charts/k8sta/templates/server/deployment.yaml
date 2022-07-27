@@ -71,6 +71,12 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/k8sta-server"]
         env:
+        - name: LOG_LEVEL
+          value: {{ .Values.server.logLevel }}
+        - name: ARGOCD_NAMESPACE
+          value: {{ .Values.argocd.namespace }}
+        - name: K8STA_NAMESPACE
+          value: {{ .Release.Namespace }}
         - name: TLS_ENABLED
           value: {{ quote .Values.server.tls.enabled }}
         {{- if .Values.server.tls.enabled }}
@@ -79,8 +85,6 @@ spec:
         - name: TLS_KEY_PATH
           value: /var/k8sta/certs/tls.key
         {{- end }}
-        - name: CONFIG_PATH
-          value: /var/k8sta/config/lines.json
         - name: DOCKERHUB_TOKENS_PATH
           value: /var/k8sta/secret-config/dockerhub-tokens.json
         volumeMounts:
@@ -89,9 +93,6 @@ spec:
           mountPath: /var/k8sta/certs
           readOnly: true
         {{- end }}
-        - name: config
-          mountPath: /var/k8sta/config
-          readOnly: true
         - name: secret-config
           mountPath: /var/k8sta/secret-config
           readOnly: true
@@ -121,9 +122,6 @@ spec:
         secret:
           secretName: {{ include "k8sta.server.fullname" . }}-cert
       {{- end }}
-      - name: config
-        configMap:
-          name: {{ include "k8sta.fullname" . }}-config
       - name: secret-config
         secret:
           secretName: {{ include "k8sta.server.fullname" . }}-config

@@ -1,15 +1,16 @@
-package controller
+package client
 
 import (
-	appclientset "github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuityio/k8sta/internal/common/os"
 )
 
-func argocdClient() (*appclientset.Clientset, error) {
+// New returns an implementation of the controller runtime client.
+func New() (client.Client, error) {
 	masterURL := os.GetEnvVar("KUBE_MASTER", "")
 	kubeConfigPath := os.GetEnvVar("KUBE_CONFIG", "")
 
@@ -21,7 +22,10 @@ func argocdClient() (*appclientset.Clientset, error) {
 		cfg, err = clientcmd.BuildConfigFromFlags(masterURL, kubeConfigPath)
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting kubernetes configuration")
+		return nil, errors.Wrap(
+			err,
+			"error getting Kubernetes configuration",
+		)
 	}
-	return appclientset.NewForConfig(cfg)
+	return client.New(cfg, client.Options{})
 }

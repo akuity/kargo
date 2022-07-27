@@ -2,22 +2,17 @@ package dockerhub
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/go-playground/webhooks/v6/docker"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuityio/k8sta/internal/scratch"
+	api "github.com/akuityio/k8sta/api/v1alpha1"
+	"github.com/akuityio/k8sta/internal/common/config"
 )
-
-// TODO: This is duplicated in a few places. Fix that!
-const LabelKeyComponent = "akuity.io/k8sta-component"
 
 // Service is an interface for components that can handle webhooks (events) from
 // Docker Hub. Implementations of this interface are transport-agnostic.
@@ -27,23 +22,23 @@ type Service interface {
 }
 
 type service struct {
-	config     scratch.Config
-	kubeClient kubernetes.Interface
-	logger     *log.Logger
+	config                  config.Config
+	controllerRuntimeClient client.Client
+	logger                  *log.Logger
 }
 
 // NewService returns an implementation of the Service interface for handling
 // webhooks (events) from Docker Hub.
 func NewService(
-	config scratch.Config,
-	kubeClient kubernetes.Interface,
+	config config.Config,
+	controllerRuntimeClient client.Client,
 ) Service {
 	s := &service{
-		config:     config,
-		kubeClient: kubeClient,
-		logger:     log.New(),
+		config:                  config,
+		controllerRuntimeClient: controllerRuntimeClient,
+		logger:                  log.New(),
 	}
-	s.logger.SetLevel(log.DebugLevel) // TODO: Make this configurable
+	s.logger.SetLevel(config.LogLevel)
 	return s
 }
 
@@ -58,12 +53,14 @@ func (s *service) Handle(
 		"tag":  tag,
 	}).Debug("An image was pushed to a Docker Hub image repository")
 
-	lines := s.config.GetLinesByImageRepository(repo)
-	if len(lines) == 0 {
-		s.logger.WithFields(log.Fields{
-			"repo": repo,
-		}).Debug("No line is subscribed to this image repository; nothing to do")
-		return nil
+	// Find subscribed lines
+	lines, err := s.getLinesByImageRepo(ctx, repo)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"error finding Lines subscribed to image repo %s",
+			repo,
+		)
 	}
 
 	for _, line := range lines {
@@ -72,51 +69,66 @@ func (s *service) Handle(
 			"line": line.Name,
 		}).Debug("A line is subscribed to this image repository")
 
-		ticket := scratch.Ticket{
-			// TODO: UUID seems sensible for now, but we may find a better option as
-			// we move forward.
-			ID:        uuid.NewV4().String(),
-			Source:    "Docker Hub",
-			Namespace: line.Namespace,
-			Line:      line.Name,
-			Change: scratch.Change{
-				Type:  "NewImage",
-				Image: fmt.Sprintf("%s:%s", repo, tag),
+		ticket := api.Ticket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      uuid.NewV4().String(),
+				Namespace: s.config.K8sTANamespace,
 			},
-		}
-		ticketBytes, err := json.Marshal(ticket)
-		if err != nil {
-			return errors.Wrapf(err, "error marshaling Ticket %s to JSON", ticket.ID)
-		}
-		if _, err := s.kubeClient.CoreV1().ConfigMaps(line.Namespace).Create(
-			ctx,
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: line.Namespace,
-					Name:      ticket.ID,
-					Labels: map[string]string{
-						LabelKeyComponent: "ticket",
-					},
-				},
-				Data: map[string]string{
-					"ticket": string(ticketBytes),
+			Spec: api.TicketSpec{
+				Line: line.Name,
+				Change: api.Change{
+					Type:      api.ChangeTypeNewImage,
+					ImageRepo: repo,
+					ImageTag:  tag,
 				},
 			},
-			metav1.CreateOptions{},
-		); err != nil {
+			Status: api.TicketStatus{
+				State:       api.TicketStateNew,
+				StateReason: "This is a brand new Ticket",
+			},
+		}
+
+		if err := s.controllerRuntimeClient.Create(ctx, &ticket); err != nil {
 			return errors.Wrapf(
 				err,
-				"error creating ConfigMap for Ticket %s",
-				ticket.ID)
+				"error creating Ticket %s",
+				ticket.Name,
+			)
 		}
 
 		s.logger.WithFields(log.Fields{
-			"namespace": ticket.Namespace,
-			"name":      ticket.ID,
-			"line":      ticket.Line,
-			"image":     ticket.Change.Image,
-		}).Debug("Created Ticket (ConfigMap) resource")
+			"name":      ticket.Name,
+			"line":      ticket.Spec.Line,
+			"imageRepo": ticket.Spec.Change.ImageRepo,
+			"imageTag":  ticket.Spec.Change.ImageTag,
+		}).Debug("Created Ticket resource")
 	}
 
 	return nil
+}
+
+func (s *service) getLinesByImageRepo(
+	ctx context.Context,
+	repo string,
+) ([]api.Line, error) {
+	subscribedLines := []api.Line{}
+	lines := api.LineList{}
+	if err := s.controllerRuntimeClient.List(
+		ctx, &lines,
+		&client.ListOptions{
+			Namespace: s.config.K8sTANamespace,
+		},
+	); err != nil {
+		return subscribedLines, errors.Wrap(err, "error retrieving Lines")
+	}
+lines:
+	for _, line := range lines.Items {
+		for _, subscribedRepo := range line.ImageRepositories {
+			if subscribedRepo == repo {
+				subscribedLines = append(subscribedLines, line)
+				continue lines
+			}
+		}
+	}
+	return subscribedLines, nil
 }
