@@ -60,6 +60,8 @@ func (s *server) ListenAndServe(ctx context.Context) error {
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.config.Port),
 		Handler: s.handler,
+		// TODO: Is this is a sensible value?
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	errCh := make(chan error)

@@ -22,12 +22,16 @@ func main() {
 
 	ctx := signals.Context()
 
-	var err error
+	config, err := k8staConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	switch binaryName {
 	case "k8sta-controller":
-		err = controller.RunController(ctx)
+		err = controller.RunController(ctx, config)
 	case "k8sta-server":
-		err = server.RunServer(ctx)
+		err = server.RunServer(ctx, config)
 	default:
 		err = errors.Errorf("unrecognized component name %q", binaryName)
 	}

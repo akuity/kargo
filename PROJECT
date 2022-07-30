@@ -1,0 +1,24 @@
+domain: akuity.io
+layout:
+- go.kubebuilder.io/v3
+projectName: k8sta
+repo: github.com/akuityio/k8sta
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: akuity.io
+  group: k8sta
+  kind: Line
+  path: github.com/akuityio/k8sta/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: akuity.io
+  group: k8sta
+  kind: Ticket
+  path: github.com/akuityio/k8sta/api/v1alpha1
+  version: v1alpha1
+version: "3"

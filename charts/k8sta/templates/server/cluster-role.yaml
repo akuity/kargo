@@ -8,9 +8,9 @@ metadata:
     {{- include "k8sta.server.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - ""
+  - k8sta.akuity.io
   resources:
-  - configmaps
+  - tickets
   verbs:
   - create
 {{- end }}

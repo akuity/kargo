@@ -16,10 +16,16 @@ rbac:
   ## already exist.
   installGlobalResources: true
 
+argocd:
+  ## The namespace into which Argo CD has been installed
+  namespace: argocd
+
 ## All settings for the server component
 server:
 
   replicas: 1
+
+  logLevel: INFO
 
   ## Host should be set to the public IP address or DNS hostname for this
   ## server. Whenever possible, it should be set accurately for a variety of
@@ -136,12 +142,7 @@ server:
 ## All settings for the controller component
 controller:
 
-  image:
-    repository: akuity/k8sta
-    ## tag should only be specified if you want to override Chart.appVersion
-    ## The default tag is the value of .Chart.AppVersion
-    # tag:
-    pullPolicy: IfNotPresent
+  logLevel: INFO
 
   resources: {}
     # We usually recommend not to specify default resources and to leave this as
@@ -159,26 +160,3 @@ controller:
   nodeSelector: {}
 
   tolerations: []
-
-## TODO: This is temporary configuration that is probably better suited to being
-## represented by CRDs. This is a quick and dirty way to get a PoC going.
-##
-## Sample configuration.
-##
-## YOU PROBABLY WANT TO ADJUST THIS CONFIGURATION TO SUBSCRIBE TO A DOCKER HUB
-## REPOSITORY YOU OWN AND CAN PUSH TO!!!
-config:
-  lines:
-  - name: guestbook
-    ## Images pushed to this repository will kick of a deployment that
-    ## progresses through the line's environments.
-    imageRepository: krancour/k8sta-guestbook
-    ## Environments are represented by Argo CD Application resources. Those
-    ## resources can be located in this namespace.
-    namespace: argocd
-    ## Environments are represented by Argo CD Application resources. The
-    ## environments field enumerates them (in order) by name.
-    environments:
-    - guestbook-dev
-    - guestbook-stage
-    - guestbook-prod

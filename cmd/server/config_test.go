@@ -10,11 +10,6 @@ import (
 	"github.com/akuityio/k8sta/internal/dockerhub"
 )
 
-// Note that unit testing in Go does NOT clear environment variables between
-// tests, which can sometimes be a pain, but it's fine here-- so each of these
-// test functions uses a series of test cases that cumulatively build upon one
-// another.
-
 func TestTokenFilterConfig(t *testing.T) {
 	testCases := []struct {
 		name       string

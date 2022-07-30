@@ -11,6 +11,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - secrets
   verbs:
   - get
   - list
@@ -23,4 +24,19 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - k8sta.akuity.io
+  resources:
+  - lines
+  - tickets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - k8sta.akuity.io
+  resources:
+  - tickets/status
+  verbs:
+  - update
 {{- end }}
