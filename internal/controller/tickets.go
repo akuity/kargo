@@ -270,22 +270,3 @@ func (t *TicketReconciler) Reconcile(
 	}
 	return result, err
 }
-
-// SetupWithManager sets up the controller with the Manager.
-func (t *TicketReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&api.Ticket{}).WithEventFilter(predicate.Funcs{
-		CreateFunc: func(event event.CreateEvent) bool {
-			// We're only interested if it's in the right namespace
-			return event.Object.GetNamespace() == t.config.K8sTANamespace
-		},
-		UpdateFunc: func(event event.UpdateEvent) bool {
-			// We're only interested if it's in the right namespace
-			return event.ObjectNew.GetNamespace() == t.config.K8sTANamespace
-		},
-		DeleteFunc: func(event.DeleteEvent) bool {
-			// We're not interested in any deletes
-			return false
-		},
-	}).Complete(t)
-}
