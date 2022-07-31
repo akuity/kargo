@@ -13,13 +13,6 @@ func k8staConfig() (config.Config, error) {
 		log.ParseLevel(os.GetEnvVar("LOG_LEVEL", "INFO")); err != nil {
 		return config, err
 	}
-	if config.ArgoCDNamespace, err =
-		os.GetRequiredEnvVar("ARGOCD_NAMESPACE"); err != nil {
-		return config, err
-	}
-	if config.K8sTANamespace, err =
-		os.GetRequiredEnvVar("K8STA_NAMESPACE"); err != nil {
-		return config, err
-	}
-	return config, nil
+	config.Namespace, err = os.GetRequiredEnvVar("NAMESPACE")
+	return config, err
 }

@@ -1,5 +1,5 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   name: {{ include "k8sta.controller.fullname" . }}
   labels:
@@ -7,7 +7,7 @@ metadata:
     {{- include "k8sta.server.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
+  kind: Role
   name: {{ include "k8sta.controller.fullname" . }}
 subjects:
 - kind: ServiceAccount

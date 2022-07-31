@@ -72,7 +72,7 @@ func (s *service) Handle(
 		ticket := api.Ticket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      uuid.NewV4().String(),
-				Namespace: s.config.K8sTANamespace,
+				Namespace: s.config.Namespace,
 			},
 			Spec: api.TicketSpec{
 				Line: line.Name,
@@ -116,7 +116,7 @@ func (s *service) getLinesByImageRepo(
 	if err := s.controllerRuntimeClient.List(
 		ctx, &lines,
 		&client.ListOptions{
-			Namespace: s.config.K8sTANamespace,
+			Namespace: s.config.Namespace,
 		},
 	); err != nil {
 		return subscribedLines, errors.Wrap(err, "error retrieving Lines")
