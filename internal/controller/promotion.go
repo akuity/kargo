@@ -18,7 +18,7 @@ import (
 )
 
 // TODO: Break this up into smaller, more testable functions
-func (t *TicketReconciler) promoteImage(
+func (t *ticketReconciler) promoteImage(
 	ctx context.Context,
 	imageRepo string,
 	imageTag string,
@@ -284,7 +284,7 @@ func (t *TicketReconciler) promoteImage(
 
 // setupGitAuth, if necessary, configures the git CLI for authentication using
 // either SSH or the "store" (username/password-based) credential helper.
-func (t *TicketReconciler) setupGitAuth(
+func (t *ticketReconciler) setupGitAuth(
 	ctx context.Context,
 	repoURL string,
 ) error {
@@ -390,7 +390,7 @@ func tearDownGitAuth() error {
 }
 
 // TODO: This isn't adding much value. Let's can it.
-func (t *TicketReconciler) execCommand(cmd *exec.Cmd) error {
+func (t *ticketReconciler) execCommand(cmd *exec.Cmd) error {
 	// stdoutReader, err := cmd.StdoutPipe()
 	// if err != nil {
 	// 	return errors.Wrap(err, "error obtaining stdout pipe")

@@ -18,8 +18,8 @@ import (
 	"github.com/akuityio/k8sta/internal/common/config"
 )
 
-// TicketReconciler reconciles a Ticket object
-type TicketReconciler struct {
+// ticketReconciler reconciles a Ticket object
+type ticketReconciler struct {
 	config config.Config
 	client client.Client
 	argoDB db.ArgoDB
@@ -35,13 +35,12 @@ type TicketReconciler struct {
 	execCommandFn func(*exec.Cmd) error
 }
 
-func NewTicketReconciler(
-	ctx context.Context,
+func SetupWithManager(
 	config config.Config,
 	mgr manager.Manager,
 	argoDB db.ArgoDB,
 ) error {
-	t := &TicketReconciler{
+	t := &ticketReconciler{
 		config: config,
 		client: mgr.GetClient(),
 		argoDB: argoDB,
@@ -61,7 +60,7 @@ func NewTicketReconciler(
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (t *TicketReconciler) Reconcile(
+func (t *ticketReconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
