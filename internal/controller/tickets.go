@@ -7,24 +7,31 @@ import (
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/util/db"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/akuityio/k8sta/internal/common/config"
 )
 
-// ticketReconciler reconciles a Ticket object
+const applicationsIndexField = "applications"
+
+// ticketReconciler reconciles Ticket resources.
 type ticketReconciler struct {
-	config config.Config
 	client client.Client
 	argoDB db.ArgoDB
 	logger *log.Logger
-	// All of these internal functions are overridable for testing purposes
+	// The following internal functions are overridable for testing purposes
 	promoteImageFn func(
 		ctx context.Context,
 		imageRepoName string,
@@ -35,27 +42,107 @@ type ticketReconciler struct {
 	execCommandFn func(*exec.Cmd) error
 }
 
-func SetupWithManager(
+// SetupTicketReconcilerWithManager initializes a reconciler for Ticket
+// resources and registers it with the provided Manager.
+func SetupTicketReconcilerWithManager(
+	ctx context.Context,
 	config config.Config,
 	mgr manager.Manager,
 	argoDB db.ArgoDB,
 ) error {
+	logger := log.New()
+	logger.SetLevel(config.LogLevel)
+
+	// Index Tickets by associated ArgoCD Applications
+	// TODO: How do we keep this index up to date?
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&api.Ticket{},
+		applicationsIndexField,
+		func(ticket client.Object) []string {
+			line := api.Line{}
+			lineName := ticket.(*api.Ticket).Spec.Line // nolint: forcetypeassert
+			if err := mgr.GetClient().Get(
+				ctx,
+				types.NamespacedName{
+					Namespace: ticket.GetNamespace(),
+					Name:      lineName,
+				},
+				&line,
+			); err != nil {
+				logger.WithFields(log.Fields{
+					"ticket": ticket.GetName(),
+					"line":   lineName,
+				}).Errorf(
+					"could not get Argo CD Applications associated with Ticket; "+
+						"error getting intermediate Line resource: %s",
+					err,
+				)
+				return nil
+			}
+			return line.Environments
+		},
+	); err != nil {
+		return errors.Wrap(
+			err,
+			"error indexing Tickets by associated ArgoCD Applications",
+		)
+	}
+
 	t := &ticketReconciler{
-		config: config,
 		client: mgr.GetClient(),
 		argoDB: argoDB,
-		logger: log.New(),
+		logger: logger,
 	}
-	t.logger.SetLevel(config.LogLevel)
 	t.promoteImageFn = t.promoteImage
 	t.execCommandFn = t.execCommand
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Ticket{}).WithEventFilter(predicate.Funcs{
 		DeleteFunc: func(event.DeleteEvent) bool {
 			// We're not interested in any deletes
 			return false
 		},
-	}).Complete(t)
+	}).Watches(
+		&source.Kind{Type: &argocd.Application{}},
+		handler.EnqueueRequestsFromMapFunc(t.findTicketsForApplication),
+	).Complete(t)
+}
+
+// findTicketsForApplication returns reconciliation requests for all Tickets
+// related to a given Argo CD Application. This takes advantage of an index
+// established by SetupTicketReconcilerWithManager() and is used to propagate
+// reconciliation requests to Tickets whose state should be affected by changes
+// to relates Application resources.
+func (t *ticketReconciler) findTicketsForApplication(
+	application client.Object,
+) []reconcile.Request {
+	tickets := &api.TicketList{}
+	if err := t.client.List(
+		context.Background(),
+		tickets,
+		&client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(
+				applicationsIndexField,
+				application.GetName(),
+			),
+		},
+	); err != nil {
+		t.logger.WithFields(log.Fields{
+			"application": application.GetName(),
+		}).Error("error listing Tickets associated with Argo CD application")
+		return []reconcile.Request{}
+	}
+	requests := make([]reconcile.Request, len(tickets.Items))
+	for i, item := range tickets.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      item.GetName(),
+				Namespace: item.GetNamespace(),
+			},
+		}
+	}
+	return requests
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -64,6 +151,10 @@ func (t *ticketReconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
+	t.logger.WithFields(log.Fields{
+		"name": req.NamespacedName.Name,
+	}).Debug("reconciling Ticket")
+
 	// No matter what happens, we're not requeueing
 	result := ctrl.Result{}
 
@@ -72,26 +163,18 @@ func (t *ticketReconciler) Reconcile(
 		if err = client.IgnoreNotFound(err); err == nil {
 			t.logger.WithFields(log.Fields{
 				"name": req.NamespacedName.Name,
-			}).Warn("ticket not found")
+			}).Warn("Ticket not found")
 		} else {
 			t.logger.WithFields(log.Fields{
 				"name": req.NamespacedName.Name,
-			}).Error("error getting ticket")
+			}).Error("error getting Ticket")
 		}
 		return result, err
 	}
 
-	// Do not attempt to further reconcile the Ticket if it is being deleted.
-	// TODO: Do we really need this here given that we're filtering out deletes
-	// using a predicate?
-	if ticket.DeletionTimestamp != nil {
-		return result, nil
-	}
-
 	// What's the current state of the ticket?
 	switch ticket.Status.State {
-	// TODO: Undo this change
-	case api.TicketStateNew, "":
+	case api.TicketStateNew:
 	default:
 		// We don't have anything to do in the current state
 		return result, nil
@@ -102,7 +185,7 @@ func (t *ticketReconciler) Reconcile(
 	if err := t.client.Get(
 		ctx,
 		client.ObjectKey{
-			Namespace: t.config.Namespace,
+			Namespace: req.Namespace,
 			Name:      ticket.Spec.Line,
 		},
 		&line,
@@ -114,8 +197,8 @@ func (t *ticketReconciler) Reconcile(
 				ticket.Spec.Line,
 			)
 			t.logger.WithFields(log.Fields{
-				"ticketName": ticket.Name,
-				"lineName":   ticket.Spec.Line,
+				"ticket": ticket.Name,
+				"line":   ticket.Spec.Line,
 			}).Warn("No Line found for Ticket")
 		} else {
 			ticket.Status.StateReason = fmt.Sprintf(
@@ -123,8 +206,8 @@ func (t *ticketReconciler) Reconcile(
 				ticket.Spec.Line,
 			)
 			t.logger.WithFields(log.Fields{
-				"ticketName": ticket.Name,
-				"lineName":   ticket.Spec.Line,
+				"ticket": ticket.Name,
+				"line":   ticket.Spec.Line,
 			}).Errorf("Error getting line for Ticket: %s", err)
 		}
 		if err = t.client.Status().Update(ctx, &ticket); err != nil {
@@ -160,7 +243,7 @@ func (t *ticketReconciler) Reconcile(
 	if err := t.client.Get(
 		ctx,
 		client.ObjectKey{
-			Namespace: t.config.Namespace,
+			Namespace: req.Namespace,
 			Name:      env,
 		},
 		&app,
@@ -172,8 +255,8 @@ func (t *ticketReconciler) Reconcile(
 				env,
 			)
 			t.logger.WithFields(log.Fields{
-				"ticketName":  ticket.Name,
-				"lineName":    ticket.Spec.Line,
+				"ticket":      ticket.Name,
+				"line":        ticket.Spec.Line,
 				"environment": env,
 			}).Warn("No Argo CD Application found for environment")
 		} else {
@@ -182,8 +265,8 @@ func (t *ticketReconciler) Reconcile(
 				env,
 			)
 			t.logger.WithFields(log.Fields{
-				"ticketName":  ticket.Name,
-				"lineName":    ticket.Spec.Line,
+				"ticket":      ticket.Name,
+				"line":        ticket.Spec.Line,
 				"environment": env,
 			}).Errorf("Error getting Argo CD Application for environment: %s", err)
 		}
@@ -218,8 +301,8 @@ func (t *ticketReconciler) Reconcile(
 			env,
 		)
 		t.logger.WithFields(log.Fields{
-			"ticketName":       ticket.Name,
-			"lineName":         ticket.Spec.Line,
+			"ticket":           ticket.Name,
+			"line":             ticket.Spec.Line,
 			"environment":      env,
 			"imageRepo":        ticket.Spec.Change.ImageRepo,
 			"imageTag":         ticket.Spec.Change.ImageTag,
@@ -237,15 +320,15 @@ func (t *ticketReconciler) Reconcile(
 	}
 
 	t.logger.WithFields(log.Fields{
-		"ticketName":       ticket.Name,
-		"lineName":         ticket.Spec.Line,
+		"ticket":           ticket.Name,
+		"line":             ticket.Spec.Line,
 		"environment":      env,
 		"imageRepo":        ticket.Spec.Change.ImageRepo,
 		"imageTag":         ticket.Spec.Change.ImageTag,
 		"gitopsRepoURL":    gitopsRepoURL,
 		"gitopsRepoBranch": envBranch,
 		"gitopsRepoCommit": commitSHA,
-	}).Debug("Promoted image")
+	}).Debug("promoted image")
 
 	ticket.Status.State = api.TicketStateProgressing
 	ticket.Status.StateReason = fmt.Sprintf(
