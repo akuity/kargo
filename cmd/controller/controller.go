@@ -64,12 +64,7 @@ func RunController(ctx context.Context, config config.Config) error {
 		kubeClient,
 	)
 
-	if err := controller.NewTicketReconciler(
-		ctx,
-		config,
-		mgr,
-		argoDB,
-	); err != nil {
+	if err := controller.SetupWithManager(config, mgr, argoDB); err != nil {
 		return errors.Wrap(err, "error creating Ticket reconciler")
 	}
 
