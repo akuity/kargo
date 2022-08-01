@@ -7,16 +7,6 @@ if 'ENABLE_NGROK_EXTENSION' in os.environ and os.environ['ENABLE_NGROK_EXTENSION
 
 trigger_mode(TRIGGER_MODE_MANUAL)
 
-load('ext://namespace', 'namespace_create')
-namespace_create('k8sta')
-k8s_resource(
-  new_name = 'common',
-  objects = [
-    'k8sta:namespace'
-  ],
-  labels = ['k8sta']
-)
-
 docker_build(
   'akuity/k8sta',
   '.',
@@ -40,8 +30,8 @@ k8s_resource(
 k8s_resource(
   workload = 'server',
   objects = [
-    'k8sta-server:clusterrole',
-    'k8sta-server:clusterrolebinding',
+    'k8sta-server:role',
+    'k8sta-server:rolebinding',
     'k8sta-server:serviceaccount',
     'k8sta-server-config:secret'
   ]
@@ -54,8 +44,8 @@ k8s_resource(
 k8s_resource(
   workload = 'controller',
   objects = [
-    'k8sta-controller:clusterrole',
-    'k8sta-controller:clusterrolebinding',
+    'k8sta-controller:role',
+    'k8sta-controller:rolebinding',
     'k8sta-controller:serviceaccount'
   ]
 )
@@ -72,7 +62,7 @@ k8s_yaml(
   helm(
     './charts/k8sta',
     name = 'k8sta',
-    namespace = 'k8sta',
+    namespace = 'argocd',
     set = [
       'controller.logLevel=DEBUG',
       'server.logLevel=DEBUG',

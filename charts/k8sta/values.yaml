@@ -16,10 +16,6 @@ rbac:
   ## already exist.
   installGlobalResources: true
 
-argocd:
-  ## The namespace into which Argo CD has been installed
-  namespace: argocd
-
 ## All settings for the server component
 server:
 

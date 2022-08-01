@@ -2,7 +2,7 @@ apiVersion: k8sta.akuity.io/v1alpha1
 kind: Line
 metadata:
   name: guestbook
-  namespace: k8sta
+  namespace: argocd
 imageRepositories:
 - krancour/k8sta-guestbook
 environments:
