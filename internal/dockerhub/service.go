@@ -82,10 +82,6 @@ func (s *service) Handle(
 					ImageTag:  tag,
 				},
 			},
-			Status: api.TicketStatus{
-				State:       api.TicketStateNew,
-				StateReason: "This is a brand new Ticket",
-			},
 		}
 
 		if err := s.controllerRuntimeClient.Create(ctx, &ticket); err != nil {

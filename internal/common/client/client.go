@@ -2,6 +2,7 @@ package client
 
 import (
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -10,7 +11,7 @@ import (
 )
 
 // New returns an implementation of the controller runtime client.
-func New() (client.Client, error) {
+func New(scheme *runtime.Scheme) (client.Client, error) {
 	masterURL := os.GetEnvVar("KUBE_MASTER", "")
 	kubeConfigPath := os.GetEnvVar("KUBE_CONFIG", "")
 
@@ -27,5 +28,10 @@ func New() (client.Client, error) {
 			"error getting Kubernetes configuration",
 		)
 	}
-	return client.New(cfg, client.Options{})
+	return client.New(
+		cfg,
+		client.Options{
+			Scheme: scheme,
+		},
+	)
 }

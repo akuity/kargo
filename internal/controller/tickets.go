@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"sync"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/util/db"
@@ -31,18 +32,21 @@ const (
 
 // ticketReconciler reconciles Ticket resources.
 type ticketReconciler struct {
+	config config.Config
 	client client.Client
 	argoDB db.ArgoDB
 	logger *log.Logger
+	// Promotions are a critical section of the code
+	promoMutex sync.Mutex
 	// The following internal functions are overridable for testing purposes
 	promoteImageFn func(
-		ctx context.Context,
-		imageRepoName string,
-		imageTag string,
-		gitopsRepoURL string,
-		envBranch string,
+		context.Context,
+		*api.Ticket,
+		*argocd.Application,
 	) (string, error)
-	execCommandFn func(*exec.Cmd) error
+	setupGitAuthFn    func(ctx context.Context, repoURL string) error
+	tearDownGitAuthFn func()
+	execCommandFn     func(*exec.Cmd) ([]byte, error)
 }
 
 // SetupTicketReconcilerWithManager initializes a reconciler for Ticket
@@ -73,7 +77,6 @@ func SetupTicketReconcilerWithManager(
 			return []string{ticket.(*api.Ticket).Spec.Line} // nolint: forcetypeassert
 		},
 	); err != nil {
-
 		return errors.Wrap(
 			err,
 			"error indexing Tickets by Line",
@@ -96,11 +99,14 @@ func SetupTicketReconcilerWithManager(
 	}
 
 	t := &ticketReconciler{
+		config: config,
 		client: mgr.GetClient(),
 		argoDB: argoDB,
 		logger: logger,
 	}
 	t.promoteImageFn = t.promoteImage
+	t.setupGitAuthFn = t.setupGitAuth
+	t.tearDownGitAuthFn = t.tearDownGitAuth
 	t.execCommandFn = t.execCommand
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -115,11 +121,11 @@ func SetupTicketReconcilerWithManager(
 	).Complete(t)
 }
 
-// findTicketsForApplication returns reconciliation requests for all Tickets
-// related to a given Argo CD Application. This takes advantage of both indices
-// established by SetupTicketReconcilerWithManager() and is used to propagate
-// reconciliation requests to Tickets whose state should be affected by changes
-// to relates Application resources.
+// findTicketsForApplication dynamically returns reconciliation requests for all
+// Tickets related to a given Argo CD Application. This takes advantage of both
+// indices established by SetupTicketReconcilerWithManager() and is used to
+// propagate reconciliation requests to Tickets whose state should be affected
+// by changes to relates Application resources.
 func (t *ticketReconciler) findTicketsForApplication(
 	application client.Object,
 ) []reconcile.Request {
@@ -136,7 +142,7 @@ func (t *ticketReconciler) findTicketsForApplication(
 	); err != nil {
 		t.logger.WithFields(log.Fields{
 			"application": application.GetName(),
-		}).Error("error listing Lines associated with Argo CD application")
+		}).Error("error listing Lines associated with Argo CD Application")
 		return nil
 	}
 	requests := []reconcile.Request{}
@@ -177,196 +183,366 @@ func (t *ticketReconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
+	result := ctrl.Result{}
+
 	t.logger.WithFields(log.Fields{
 		"name": req.NamespacedName.Name,
 	}).Debug("reconciling Ticket")
 
-	// No matter what happens, we're not requeueing
-	result := ctrl.Result{}
-
-	var ticket api.Ticket
-	if err := t.client.Get(ctx, req.NamespacedName, &ticket); err != nil {
-		if err = client.IgnoreNotFound(err); err == nil {
-			t.logger.WithFields(log.Fields{
-				"name": req.NamespacedName.Name,
-			}).Warn("Ticket not found")
-		} else {
-			t.logger.WithFields(log.Fields{
-				"name": req.NamespacedName.Name,
-			}).Error("error getting Ticket")
-		}
+	// Find the Ticket
+	ticket, err := t.getTicket(ctx, req.Name)
+	if err != nil {
 		return result, err
+	}
+	if ticket == nil {
+		// Ignore if not found. This can happen if the Ticket was deleted after the
+		// current reconciliation request was issued.
+		return result, nil
 	}
 
 	// What's the current state of the ticket?
 	switch ticket.Status.State {
-	case api.TicketStateNew:
+	case "":
+		// Add the initial state and requeue
+		ticket.Status.State = api.TicketStateNew
+		t.updateTicketStatus(ctx, ticket)
+		result.Requeue = true
+		return result, nil
+	case api.TicketStateNew, api.TicketStateProgressing:
+		// Proceed if one of the above
 	default:
-		// We don't have anything to do in the current state
+		// Ignore all other states
 		return result, nil
 	}
 
 	// Find the associated Line
+	line, err := t.getLine(ctx, ticket.Spec.Line)
+	if err != nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Error getting Line %q",
+			ticket.Spec.Line,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return result, err
+	}
+	if line == nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Line %q does not exist",
+			ticket.Spec.Line,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return result, nil
+	}
+
+	// Find what environment we're dealing with so we can later find the
+	// corresponding Argo CD application.
+	var env string
+	switch ticket.Status.State {
+	case api.TicketStateNew:
+		// Find the "zero" environment that we want to migrate to first
+		if len(line.Environments) == 0 {
+			// This Ticket is implicitly complete
+			ticket.Status.State = api.TicketStateCompleted
+			ticket.Status.StateReason =
+				"Associated Line has no environments; Nothing to do"
+			t.updateTicketStatus(ctx, ticket)
+			return result, nil
+		}
+		env = line.Environments[0]
+	case api.TicketStateProgressing:
+		// Find the most recent environment the change represented by the Ticket was
+		// migrated to
+		env =
+			ticket.Status.Progress[len(ticket.Status.Progress)-1].TargetEnvironment
+	}
+
+	// Find the Argo CD Application corresponding to env
+	app, err := t.getArgoCDApplication(ctx, env)
+	if err != nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Error getting Argo CD Application for environment %q",
+			env,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return result, nil
+	}
+	if app == nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Argo CD Application for environment %q does not exist",
+			env,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return result, nil
+	}
+
+	// What's the current state of the Ticket?
+	switch ticket.Status.State {
+	case api.TicketStateNew:
+		return result, t.reconcileNewTicket(ctx, ticket, line, app)
+	case api.TicketStateProgressing:
+		return result, t.reconcileProgressingTicket(ctx, ticket, line, app)
+	}
+
+	// We don't have anything to do in the current state
+	return result, nil
+}
+
+func (t *ticketReconciler) reconcileNewTicket(
+	ctx context.Context,
+	ticket *api.Ticket,
+	line *api.Line,
+	app *argocd.Application,
+) error {
+	loggerFields := log.Fields{
+		"ticket":           ticket.Name,
+		"line":             ticket.Spec.Line,
+		"environment":      app.Name,
+		"imageRepo":        ticket.Spec.Change.ImageRepo,
+		"imageTag":         ticket.Spec.Change.ImageTag,
+		"gitopsRepoURL":    app.Spec.Source.RepoURL,
+		"gitopsRepoBranch": app.Spec.Source.TargetRevision,
+	}
+
+	// Promote
+	commitSHA, err := t.promoteImageFn(ctx, ticket, app)
+	if err != nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Error promoting image to environment %q",
+			app.Name,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return err
+	}
+
+	loggerFields["gitopsRepoCommit"] = commitSHA
+	t.logger.WithFields(loggerFields).Debug("promoted image")
+
+	ticket.Status.State = api.TicketStateProgressing
+	ticket.Status.StateReason = fmt.Sprintf(
+		"Image has been promoted to environment %q",
+		app.Name,
+	)
+	ticket.Status.Progress = []api.Transition{
+		{
+			TargetEnvironment: app.Name,
+			CommitSHA:         commitSHA,
+		},
+	}
+	t.updateTicketStatus(ctx, ticket)
+	return nil
+}
+
+func (t *ticketReconciler) reconcileProgressingTicket(
+	ctx context.Context,
+	ticket *api.Ticket,
+	line *api.Line,
+	app *argocd.Application,
+) error {
+	// Determine if the last Transition is complete
+	lastTransition := ticket.Status.Progress[len(ticket.Status.Progress)-1]
+	var lastTransitionInAppHistory bool
+	for _, record := range app.Status.History {
+		if record.Revision == lastTransition.CommitSHA {
+			lastTransitionInAppHistory = true
+			break
+		}
+	}
+
+	// TODO: This logic isn't quite correct. This leaves open the possibility that
+	// the change we migrated didn't sync successfully , but a subsequent change
+	// HAS synced successfully. Not sure yet how to deal with that scenario yet.
+	if !(lastTransitionInAppHistory &&
+		app.Status.Sync.Status == argocd.SyncStatusCodeSynced) {
+		return nil // Nothing to do
+	}
+
+	// What's the next transition? Or are we done?
+	lastEnvIndex := -1
+	for i, env := range line.Environments {
+		if env == lastTransition.TargetEnvironment {
+			lastEnvIndex = i
+			break
+		}
+	}
+
+	// This is an edge case where the Line was redefined while the Ticket was
+	// progressing and the last environment we migrated into is no longer on the
+	// Line. It's not possible to know where to go next.
+	if lastEnvIndex == -1 {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = "Cannot determine next migration"
+		t.updateTicketStatus(ctx, ticket)
+		return nil
+	}
+
+	// Check if we've reached the end of the line
+	if lastEnvIndex == len(line.Environments)-1 {
+		ticket.Status.State = api.TicketStateCompleted
+		ticket.Status.StateReason = ""
+		t.updateTicketStatus(ctx, ticket)
+		return nil
+	}
+
+	// If we get to here, we can migrate into the next environment
+	env := line.Environments[lastEnvIndex+1]
+
+	app, err := t.getArgoCDApplication(ctx, env)
+	if err != nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Error getting Argo CD Application for environment %q",
+			env,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return err
+	}
+	if app == nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Argo CD Application for environment %q does not exist",
+			env,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return nil
+	}
+
+	loggerFields := log.Fields{
+		"ticket":           ticket.Name,
+		"line":             ticket.Spec.Line,
+		"environment":      app.Name,
+		"imageRepo":        ticket.Spec.Change.ImageRepo,
+		"imageTag":         ticket.Spec.Change.ImageTag,
+		"gitopsRepoURL":    app.Spec.Source.RepoURL,
+		"gitopsRepoBranch": app.Spec.Source.TargetRevision,
+	}
+
+	// Promote
+	commitSHA, err := t.promoteImageFn(ctx, ticket, app)
+	if err != nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Error promoting image to environment %q",
+			env,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return errors.Wrap(err, "error promoting image")
+	}
+
+	loggerFields["gitopsRepoCommit"] = commitSHA
+	t.logger.WithFields(loggerFields).Debug("promoted image")
+
+	ticket.Status.State = api.TicketStateProgressing
+	ticket.Status.StateReason = fmt.Sprintf(
+		"Image has been promoted to environment %q",
+		env,
+	)
+	ticket.Status.Progress = append(
+		ticket.Status.Progress,
+		api.Transition{
+			TargetEnvironment: env,
+			CommitSHA:         commitSHA,
+		},
+	)
+	t.updateTicketStatus(ctx, ticket)
+	return nil
+}
+
+// getTicket returns a pointer to the Ticket resource having the name specified
+// by the name argument. If no such resource is found, nil is returned instead.
+func (t *ticketReconciler) getTicket(
+	ctx context.Context,
+	name string,
+) (*api.Ticket, error) {
+	ticket := api.Ticket{}
+	if err := t.client.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: t.config.Namespace,
+			Name:      name,
+		},
+		&ticket,
+	); err != nil {
+		if err = client.IgnoreNotFound(err); err == nil {
+			t.logger.WithFields(log.Fields{
+				"name": name,
+			}).Warn("Ticket not found")
+			return nil, nil
+		}
+		return nil, errors.Wrapf(err, "error getting Ticket %q", name)
+	}
+	return &ticket, nil
+}
+
+// updateTicketStatus updates the status subresource of the provided Ticket.
+func (t *ticketReconciler) updateTicketStatus(
+	ctx context.Context,
+	ticket *api.Ticket,
+) {
+	if err := t.client.Status().Update(ctx, ticket); err != nil {
+		t.logger.WithFields(log.Fields{
+			"name": ticket.Name,
+		}).Error("error updating ticket status")
+	}
+}
+
+// getLine returns a pointer to the Line resource having the name specified by
+// the name argument. If no such resource is found, nil is returned instead.
+func (t *ticketReconciler) getLine(
+	ctx context.Context,
+	name string,
+) (*api.Line, error) {
 	line := api.Line{}
 	if err := t.client.Get(
 		ctx,
-		client.ObjectKey{
-			Namespace: req.Namespace,
-			Name:      ticket.Spec.Line,
+		types.NamespacedName{
+			Namespace: t.config.Namespace,
+			Name:      name,
 		},
 		&line,
 	); err != nil {
-		ticket.Status.State = api.TicketStateFailed
 		if err = client.IgnoreNotFound(err); err == nil {
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Line %s does not exist",
-				ticket.Spec.Line,
-			)
 			t.logger.WithFields(log.Fields{
-				"ticket": ticket.Name,
-				"line":   ticket.Spec.Line,
-			}).Warn("No Line found for Ticket")
-		} else {
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Error getting Line %s",
-				ticket.Spec.Line,
-			)
-			t.logger.WithFields(log.Fields{
-				"ticket": ticket.Name,
-				"line":   ticket.Spec.Line,
-			}).Errorf("Error getting line for Ticket: %s", err)
+				"name": name,
+			}).Warn("Line not found")
+			return nil, nil
 		}
-		if err = t.client.Status().Update(ctx, &ticket); err != nil {
-			t.logger.WithFields(log.Fields{
-				"name":        ticket.Name,
-				"state":       ticket.Status.State,
-				"stateReason": ticket.Status.StateReason,
-			}).Errorf("Error updating Ticket status: %s", err)
-		}
-		return result, err
+		return nil, errors.Wrapf(err, "error getting Line %q", name)
 	}
+	return &line, nil
+}
 
-	// What's the zero environment?
-	if len(line.Environments) == 0 {
-		// This Ticket is implicitly complete
-		ticket.Status.State = api.TicketStateCompleted
-		ticket.Status.StateReason =
-			"Associated Line has no environments; Nothing to do"
-		err := t.client.Status().Update(ctx, &ticket)
-		if err != nil {
-			t.logger.WithFields(log.Fields{
-				"name":        ticket.Name,
-				"state":       ticket.Status.State,
-				"stateReason": ticket.Status.StateReason,
-			}).Errorf("Error updating Ticket status: %s", err)
-		}
-		return result, err
-	}
-	env := line.Environments[0]
-
-	// Find the associated Argo CD Application
+// getArgoCDApplication returns a pointer to the Argo CD Application resource
+// having the name specified by the name argument. If no such resource is found,
+// nil is returned instead.
+func (t *ticketReconciler) getArgoCDApplication(
+	ctx context.Context,
+	name string,
+) (*argocd.Application, error) {
 	app := argocd.Application{}
 	if err := t.client.Get(
 		ctx,
 		client.ObjectKey{
-			Namespace: req.Namespace,
-			Name:      env,
+			Namespace: t.config.Namespace,
+			Name:      name,
 		},
 		&app,
 	); err != nil {
-		ticket.Status.State = api.TicketStateFailed
 		if err = client.IgnoreNotFound(err); err == nil {
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Argo CD Application %s does not exist",
-				env,
-			)
 			t.logger.WithFields(log.Fields{
-				"ticket":      ticket.Name,
-				"line":        ticket.Spec.Line,
-				"environment": env,
-			}).Warn("No Argo CD Application found for environment")
-		} else {
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Error getting Argo CD Application for environment %s",
-				env,
-			)
-			t.logger.WithFields(log.Fields{
-				"ticket":      ticket.Name,
-				"line":        ticket.Spec.Line,
-				"environment": env,
-			}).Errorf("Error getting Argo CD Application for environment: %s", err)
+				"name": name,
+			}).Warn("Argo CD Application not found")
+			return nil, nil
 		}
-		if err = t.client.Status().Update(ctx, &ticket); err != nil {
-			t.logger.WithFields(log.Fields{
-				"name":        ticket.Name,
-				"state":       ticket.Status.State,
-				"stateReason": ticket.Status.StateReason,
-			}).Errorf("Error updating Ticket status: %s", err)
-		}
-		return result, err
-	}
-
-	// Now see what this Application tells us about how to proceed with applying
-	// the change represented by the Ticket. e.g. What repo and branch do we
-	// commit to?
-	gitopsRepoURL := app.Spec.Source.RepoURL
-	envBranch := app.Spec.Source.TargetRevision
-
-	// Promote
-	commitSHA, err := t.promoteImageFn(
-		ctx,
-		ticket.Spec.Change.ImageRepo,
-		ticket.Spec.Change.ImageTag,
-		gitopsRepoURL,
-		envBranch,
-	)
-	if err != nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Error promoting image to environment %s",
-			env,
+		return nil, errors.Wrapf(
+			err,
+			"error getting Argo CD Application %q",
+			name,
 		)
-		t.logger.WithFields(log.Fields{
-			"ticket":           ticket.Name,
-			"line":             ticket.Spec.Line,
-			"environment":      env,
-			"imageRepo":        ticket.Spec.Change.ImageRepo,
-			"imageTag":         ticket.Spec.Change.ImageTag,
-			"gitopsRepoURL":    gitopsRepoURL,
-			"gitopsRepoBranch": envBranch,
-		}).Errorf("Error promoting image: %s", err)
-		if err = t.client.Status().Update(ctx, &ticket); err != nil {
-			t.logger.WithFields(log.Fields{
-				"name":        ticket.Name,
-				"state":       ticket.Status.State,
-				"stateReason": ticket.Status.StateReason,
-			}).Errorf("Error updating Ticket status: %s", err)
-		}
-		return result, nil
 	}
-
-	t.logger.WithFields(log.Fields{
-		"ticket":           ticket.Name,
-		"line":             ticket.Spec.Line,
-		"environment":      env,
-		"imageRepo":        ticket.Spec.Change.ImageRepo,
-		"imageTag":         ticket.Spec.Change.ImageTag,
-		"gitopsRepoURL":    gitopsRepoURL,
-		"gitopsRepoBranch": envBranch,
-		"gitopsRepoCommit": commitSHA,
-	}).Debug("promoted image")
-
-	ticket.Status.State = api.TicketStateProgressing
-	ticket.Status.StateReason = fmt.Sprintf(
-		"Image has been promoted to environment %s",
-		env,
-	)
-	if err = t.client.Status().Update(ctx, &ticket); err != nil {
-		t.logger.WithFields(log.Fields{
-			"name":        ticket.Name,
-			"state":       ticket.Status.State,
-			"stateReason": ticket.Status.StateReason,
-		}).Errorf("Error updating Ticket status: %s", err)
-	}
-	return result, err
+	return &app, nil
 }
