@@ -24,7 +24,10 @@ import (
 	"github.com/akuityio/k8sta/internal/common/config"
 )
 
-const applicationsIndexField = "applications"
+const (
+	ticketsByLineIndexField      = ".spec.line"
+	linesByApplicationIndexField = "applications"
+)
 
 // ticketReconciler reconciles Ticket resources.
 type ticketReconciler struct {
@@ -53,39 +56,42 @@ func SetupTicketReconcilerWithManager(
 	logger := log.New()
 	logger.SetLevel(config.LogLevel)
 
-	// Index Tickets by associated ArgoCD Applications
-	// TODO: How do we keep this index up to date?
+	// NB: We build TWO indices here. Tickets do not directly reference associated
+	// Argo CD Applications. They are associated with Applications via an
+	// intermediate resource -- a Line. If we want to reconcile related Tickets
+	// every time the state of an Application changes, we need to first find
+	// related Lines, then, for each Line, find the related Tickets. To make these
+	// list operations as efficient as possible, we index Tickets by Line AND
+	// Lines by Application.
+
+	// Index Tickets by Line
 	if err := mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.Ticket{},
-		applicationsIndexField,
+		ticketsByLineIndexField,
 		func(ticket client.Object) []string {
-			line := api.Line{}
-			lineName := ticket.(*api.Ticket).Spec.Line // nolint: forcetypeassert
-			if err := mgr.GetClient().Get(
-				ctx,
-				types.NamespacedName{
-					Namespace: ticket.GetNamespace(),
-					Name:      lineName,
-				},
-				&line,
-			); err != nil {
-				logger.WithFields(log.Fields{
-					"ticket": ticket.GetName(),
-					"line":   lineName,
-				}).Errorf(
-					"could not get Argo CD Applications associated with Ticket; "+
-						"error getting intermediate Line resource: %s",
-					err,
-				)
-				return nil
-			}
-			return line.Environments
+			return []string{ticket.(*api.Ticket).Spec.Line} // nolint: forcetypeassert
+		},
+	); err != nil {
+
+		return errors.Wrap(
+			err,
+			"error indexing Tickets by Line",
+		)
+	}
+
+	// Index Lines by Argo CD Applications
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&api.Line{},
+		linesByApplicationIndexField,
+		func(line client.Object) []string {
+			return line.(*api.Line).Environments // nolint: forcetypeassert
 		},
 	); err != nil {
 		return errors.Wrap(
 			err,
-			"error indexing Tickets by associated ArgoCD Applications",
+			"error indexing Lines by ArgoCD Applications",
 		)
 	}
 
@@ -110,37 +116,57 @@ func SetupTicketReconcilerWithManager(
 }
 
 // findTicketsForApplication returns reconciliation requests for all Tickets
-// related to a given Argo CD Application. This takes advantage of an index
+// related to a given Argo CD Application. This takes advantage of both indices
 // established by SetupTicketReconcilerWithManager() and is used to propagate
 // reconciliation requests to Tickets whose state should be affected by changes
 // to relates Application resources.
 func (t *ticketReconciler) findTicketsForApplication(
 	application client.Object,
 ) []reconcile.Request {
-	tickets := &api.TicketList{}
+	lines := api.LineList{}
 	if err := t.client.List(
 		context.Background(),
-		tickets,
+		&lines,
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
-				applicationsIndexField,
+				linesByApplicationIndexField,
 				application.GetName(),
 			),
 		},
 	); err != nil {
 		t.logger.WithFields(log.Fields{
 			"application": application.GetName(),
-		}).Error("error listing Tickets associated with Argo CD application")
-		return []reconcile.Request{}
+		}).Error("error listing Lines associated with Argo CD application")
+		return nil
 	}
-	requests := make([]reconcile.Request, len(tickets.Items))
-	for i, item := range tickets.Items {
-		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      item.GetName(),
-				Namespace: item.GetNamespace(),
+	requests := []reconcile.Request{}
+	for _, line := range lines.Items {
+		tickets := &api.TicketList{}
+		if err := t.client.List(
+			context.Background(),
+			tickets,
+			&client.ListOptions{
+				FieldSelector: fields.OneTermEqualSelector(
+					ticketsByLineIndexField,
+					line.GetName(),
+				),
 			},
+		); err != nil {
+			t.logger.WithFields(log.Fields{
+				"line": line.Name,
+			}).Error("error listing Tickets associated with Line")
+			return nil
 		}
+		reqs := make([]reconcile.Request, len(tickets.Items))
+		for i, item := range tickets.Items {
+			reqs[i] = reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      item.GetName(),
+					Namespace: item.GetNamespace(),
+				},
+			}
+		}
+		requests = append(requests, reqs...)
 	}
 	return requests
 }
