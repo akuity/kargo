@@ -80,15 +80,19 @@ type Transition struct {
 	// TargetEnvironment indicates the environment into which this Transition aims
 	// to migrate the change represented by the Ticket.
 	TargetEnvironment string `json:"targetEnvironment,omitempty"`
-	// TargetApplication indicated the Argo CD Application resource that can be
-	// watched for evidence that a Transition is complete.
+	// Commits records all git commits made to effect an update to
+	// TargetEnvironment.
+	Commits []Commit `json:"commits,omitempty"`
+}
+
+// Commit represents a git commit made with the intent to effect an update to
+// a specific Argo CD Application.
+type Commit struct {
+	// TargetApplication records the Argo CD Application resource for which this
+	// Commit was intended to effect an update.
 	TargetApplication string `json:"targetApplication,omitempty"`
-	// CommitSHA records the ID of the commit that was made in order to migrate
-	// the change into the environment specified by TargetEnvironment. The
-	// TicketReconciler will wait for the Argo CD Application resource that
-	// corresponds to TargetEnvironment to have this commit in its version
-	// history.
-	CommitSHA string `json:"commitSHA,omitempty"`
+	// SHA records the ID of the git commit.
+	SHA string `json:"sha,omitempty"`
 }
 
 //+kubebuilder:object:root=true

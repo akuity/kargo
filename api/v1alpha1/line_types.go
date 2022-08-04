@@ -29,9 +29,9 @@ type Track struct {
 type Environment struct {
 	// Name is a name for the environment.
 	Name string `json:"name,omitempty"`
-	// ArgoCDApplication is a reference to an existing Argo CD Application
-	// resource that managed deployments to this Environment.
-	Application string `json:"application,omitempty"`
+	// Applications is a list of references to existing Argo CD Application
+	// resources that manage deployments to this Environment.
+	Applications []string `json:"applications,omitempty"`
 }
 
 //+kubebuilder:object:root=true
