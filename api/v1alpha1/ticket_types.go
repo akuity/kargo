@@ -80,6 +80,9 @@ type Transition struct {
 	// TargetEnvironment indicates the environment into which this Transition aims
 	// to migrate the change represented by the Ticket.
 	TargetEnvironment string `json:"targetEnvironment,omitempty"`
+	// TargetApplication indicated the Argo CD Application resource that can be
+	// watched for evidence that a Transition is complete.
+	TargetApplication string `json:"targetApplication,omitempty"`
 	// CommitSHA records the ID of the commit that was made in order to migrate
 	// the change into the environment specified by TargetEnvironment. The
 	// TicketReconciler will wait for the Argo CD Application resource that

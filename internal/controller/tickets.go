@@ -90,7 +90,12 @@ func SetupTicketReconcilerWithManager(
 		&api.Track{},
 		tracksByApplicationIndexField,
 		func(track client.Object) []string {
-			return track.(*api.Track).Environments // nolint: forcetypeassert
+			envs := track.(*api.Track).Environments // nolint: forcetypeassert
+			apps := make([]string, len(envs))
+			for i, env := range envs {
+				apps[i] = env.Application
+			}
+			return apps
 		},
 	); err != nil {
 		return errors.Wrap(
@@ -237,55 +242,12 @@ func (t *ticketReconciler) Reconcile(
 		return result, nil
 	}
 
-	// Find what environment we're dealing with so we can later find the
-	// corresponding Argo CD application.
-	var env string
-	switch ticket.Status.State {
-	case api.TicketStateNew:
-		// Find the "zero" environment that we want to migrate to first
-		if len(track.Environments) == 0 {
-			// This Ticket is implicitly complete
-			ticket.Status.State = api.TicketStateCompleted
-			ticket.Status.StateReason =
-				"Associated Track has no environments; Nothing to do"
-			t.updateTicketStatus(ctx, ticket)
-			return result, nil
-		}
-		env = track.Environments[0]
-	case api.TicketStateProgressing:
-		// Find the most recent environment the change represented by the Ticket was
-		// migrated to
-		env =
-			ticket.Status.Progress[len(ticket.Status.Progress)-1].TargetEnvironment
-	}
-
-	// Find the Argo CD Application corresponding to env
-	app, err := t.getArgoCDApplication(ctx, env)
-	if err != nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Error getting Argo CD Application for environment %q",
-			env,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return result, nil
-	}
-	if app == nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Argo CD Application for environment %q does not exist",
-			env,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return result, nil
-	}
-
 	// What's the current state of the Ticket?
 	switch ticket.Status.State {
 	case api.TicketStateNew:
-		return result, t.reconcileNewTicket(ctx, ticket, track, app)
+		return result, t.reconcileNewTicket(ctx, ticket, track)
 	case api.TicketStateProgressing:
-		return result, t.reconcileProgressingTicket(ctx, ticket, track, app)
+		return result, t.reconcileProgressingTicket(ctx, ticket, track)
 	}
 
 	// We don't have anything to do in the current state
@@ -296,12 +258,47 @@ func (t *ticketReconciler) reconcileNewTicket(
 	ctx context.Context,
 	ticket *api.Ticket,
 	track *api.Track,
-	app *argocd.Application,
 ) error {
+	// Find the "zero" environment that we want to migrate to first
+	if len(track.Environments) == 0 {
+		// This Ticket is implicitly complete
+		ticket.Status.State = api.TicketStateCompleted
+		ticket.Status.StateReason =
+			"Associated Track has no environments; Nothing to do"
+		t.updateTicketStatus(ctx, ticket)
+		return nil
+	}
+
+	env := track.Environments[0]
+
+	// Find the corresponding Argo CD Application
+	app, err := t.getArgoCDApplication(ctx, env.Application)
+	if err != nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Error getting Argo CD Application %q for environment %q",
+			env.Application,
+			env.Name,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return nil
+	}
+	if app == nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Argo CD Application %q for environment %q does not exist",
+			env.Application,
+			env.Name,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return nil
+	}
+
 	loggerFields := log.Fields{
 		"ticket":           ticket.Name,
 		"track":            ticket.Spec.Track,
-		"environment":      app.Name,
+		"environment":      env.Name,
+		"application":      env.Application,
 		"imageRepo":        ticket.Spec.Change.ImageRepo,
 		"imageTag":         ticket.Spec.Change.ImageTag,
 		"gitopsRepoURL":    app.Spec.Source.RepoURL,
@@ -314,7 +311,7 @@ func (t *ticketReconciler) reconcileNewTicket(
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
 			"Error promoting image to environment %q",
-			app.Name,
+			env.Name,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return err
@@ -326,11 +323,12 @@ func (t *ticketReconciler) reconcileNewTicket(
 	ticket.Status.State = api.TicketStateProgressing
 	ticket.Status.StateReason = fmt.Sprintf(
 		"Image has been promoted to environment %q",
-		app.Name,
+		env.Name,
 	)
 	ticket.Status.Progress = []api.Transition{
 		{
-			TargetEnvironment: app.Name,
+			TargetEnvironment: env.Name,
+			TargetApplication: env.Application,
 			CommitSHA:         commitSHA,
 		},
 	}
@@ -342,8 +340,37 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 	ctx context.Context,
 	ticket *api.Ticket,
 	track *api.Track,
-	app *argocd.Application,
 ) error {
+	// Find the most recent environment the change represented by the Ticket was
+	// migrated to
+	lastEnvName :=
+		ticket.Status.Progress[len(ticket.Status.Progress)-1].TargetEnvironment
+	lastAppName :=
+		ticket.Status.Progress[len(ticket.Status.Progress)-1].TargetApplication
+
+	// Find the corresponding Argo CD Application
+	app, err := t.getArgoCDApplication(ctx, lastAppName)
+	if err != nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Error getting Argo CD Application %q for environment %q",
+			lastAppName,
+			lastEnvName,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return nil
+	}
+	if app == nil {
+		ticket.Status.State = api.TicketStateFailed
+		ticket.Status.StateReason = fmt.Sprintf(
+			"Argo CD Application %q for environment %q does not exist",
+			lastAppName,
+			lastEnvName,
+		)
+		t.updateTicketStatus(ctx, ticket)
+		return nil
+	}
+
 	// Determine if the last Transition is complete
 	lastTransition := ticket.Status.Progress[len(ticket.Status.Progress)-1]
 	var lastTransitionInAppHistory bool
@@ -365,7 +392,7 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 	// What's the next transition? Or are we done?
 	lastEnvIndex := -1
 	for i, env := range track.Environments {
-		if env == lastTransition.TargetEnvironment {
+		if env.Name == lastTransition.TargetEnvironment {
 			lastEnvIndex = i
 			break
 		}
@@ -390,23 +417,24 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 	}
 
 	// If we get to here, we can migrate into the next environment
-	env := track.Environments[lastEnvIndex+1]
-
-	app, err := t.getArgoCDApplication(ctx, env)
+	nextEnv := track.Environments[lastEnvIndex+1]
+	nextApp, err := t.getArgoCDApplication(ctx, nextEnv.Application)
 	if err != nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
-			"Error getting Argo CD Application for environment %q",
-			env,
+			"Error getting Argo CD Application %q for environment %q",
+			nextEnv.Application,
+			nextEnv.Name,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return err
 	}
-	if app == nil {
+	if nextApp == nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
-			"Argo CD Application for environment %q does not exist",
-			env,
+			"Argo CD Application %q for environment %q does not exist",
+			nextEnv.Application,
+			nextEnv.Name,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return nil
@@ -415,23 +443,28 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 	loggerFields := log.Fields{
 		"ticket":           ticket.Name,
 		"track":            ticket.Spec.Track,
-		"environment":      app.Name,
+		"environment":      nextEnv.Name,
+		"application":      nextEnv.Application,
 		"imageRepo":        ticket.Spec.Change.ImageRepo,
 		"imageTag":         ticket.Spec.Change.ImageTag,
-		"gitopsRepoURL":    app.Spec.Source.RepoURL,
-		"gitopsRepoBranch": app.Spec.Source.TargetRevision,
+		"gitopsRepoURL":    nextApp.Spec.Source.RepoURL,
+		"gitopsRepoBranch": nextApp.Spec.Source.TargetRevision,
 	}
 
 	// Promote
-	commitSHA, err := t.promoteImageFn(ctx, ticket, app)
+	commitSHA, err := t.promoteImageFn(ctx, ticket, nextApp)
 	if err != nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
 			"Error promoting image to environment %q",
-			env,
+			nextEnv.Name,
 		)
 		t.updateTicketStatus(ctx, ticket)
-		return errors.Wrap(err, "error promoting image")
+		return errors.Wrapf(
+			err,
+			"error promoting image to environment %q",
+			nextEnv.Name,
+		)
 	}
 
 	loggerFields["gitopsRepoCommit"] = commitSHA
@@ -440,12 +473,13 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 	ticket.Status.State = api.TicketStateProgressing
 	ticket.Status.StateReason = fmt.Sprintf(
 		"Image has been promoted to environment %q",
-		env,
+		nextEnv.Name,
 	)
 	ticket.Status.Progress = append(
 		ticket.Status.Progress,
 		api.Transition{
-			TargetEnvironment: env,
+			TargetEnvironment: nextEnv.Name,
+			TargetApplication: nextEnv.Application,
 			CommitSHA:         commitSHA,
 		},
 	)
