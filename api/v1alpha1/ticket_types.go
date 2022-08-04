@@ -70,6 +70,22 @@ type TicketStatus struct {
 	State TicketState `json:"state,omitempty"`
 	// StateReason provides context for why the Ticket is in the State that it is.
 	StateReason string `json:"stateReason,omitempty"`
+	// Progress
+	Progress []Transition `json:"progress,omitempty"`
+}
+
+// Transition represents a single leg of a change's progression toward the
+// production environment.
+type Transition struct {
+	// TargetEnvironment indicates the environment into which this Transition aims
+	// to migrate the change represented by the Ticket.
+	TargetEnvironment string `json:"targetEnvironment,omitempty"`
+	// CommitSHA records the ID of the commit that was made in order to migrate
+	// the change into the environment specified by TargetEnvironment. The
+	// TicketReconciler will wait for the Argo CD Application resource that
+	// corresponds to TargetEnvironment to have this commit in its version
+	// history.
+	CommitSHA string `json:"commitSHA,omitempty"`
 }
 
 //+kubebuilder:object:root=true

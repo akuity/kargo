@@ -68,6 +68,26 @@ spec:
           status:
             description: TicketStatus defines the observed state of Ticket
             properties:
+              progress:
+                description: Progress
+                items:
+                  description: Transition represents a single leg of a change's progression
+                    toward the production environment.
+                  properties:
+                    commitSHA:
+                      description: CommitSHA records the ID of the commit that was
+                        made in order to migrate the change into the environment specified
+                        by TargetEnvironment. The TicketReconciler will wait for the
+                        Argo CD Application resource that corresponds to TargetEnvironment
+                        to have this commit in its version history.
+                      type: string
+                    targetEnvironment:
+                      description: TargetEnvironment indicates the environment into
+                        which this Transition aims to migrate the change represented
+                        by the Ticket.
+                      type: string
+                  type: object
+                type: array
               state:
                 description: TicketState represents the overall state of the Ticket.
                 type: string

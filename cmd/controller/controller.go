@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -19,17 +18,6 @@ import (
 	"github.com/akuityio/k8sta/internal/common/version"
 	"github.com/akuityio/k8sta/internal/controller"
 )
-
-var (
-	scheme = runtime.NewScheme()
-)
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
-	utilruntime.Must(argocd.AddToScheme(scheme))
-	utilruntime.Must(api.AddToScheme(scheme))
-}
 
 // RunController configures and runs the K8sTA controller.
 func RunController(ctx context.Context, config config.Config) error {
@@ -41,6 +29,16 @@ func RunController(ctx context.Context, config config.Config) error {
 	mgrConfig, err := ctrl.GetConfig()
 	if err != nil {
 		return errors.Wrap(err, "error getting manager config")
+	}
+	scheme := runtime.NewScheme()
+	if err = clientgoscheme.AddToScheme(scheme); err != nil {
+		return errors.Wrap(err, "error adding Kubernetes API to scheme")
+	}
+	if err = argocd.AddToScheme(scheme); err != nil {
+		return errors.Wrap(err, "error adding ArgoCD API to scheme")
+	}
+	if err = api.AddToScheme(scheme); err != nil {
+		return errors.Wrap(err, "error adding K8sTA API to scheme")
 	}
 	mgr, err := ctrl.NewManager(
 		mgrConfig,

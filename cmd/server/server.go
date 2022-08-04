@@ -7,7 +7,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
 
+	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/akuityio/k8sta/internal/common/client"
 	"github.com/akuityio/k8sta/internal/common/config"
 	libHTTP "github.com/akuityio/k8sta/internal/common/http"
@@ -34,7 +36,11 @@ func RunServer(ctx context.Context, config config.Config) error {
 		"tls":     tlsStatus,
 	}).Info("Starting K8sTA Server")
 
-	controllerRuntimeClient, err := client.New()
+	scheme := runtime.NewScheme()
+	if err = api.AddToScheme(scheme); err != nil {
+		return errors.Wrap(err, "error adding K8sTA API to scheme")
+	}
+	controllerRuntimeClient, err := client.New(scheme)
 	if err != nil {
 		return errors.Wrap(err, "error obtaining controller runtime client")
 	}

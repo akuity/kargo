@@ -180,8 +180,6 @@ hack-kind-up:
 		--values hack/argo-cd-config/values.yaml \
 		--wait \
 		--timeout 300s
-	kubectl apply -f hack/argo-cd-apps/repositories.yaml
-	kubectl apply -f hack/argo-cd-apps/apps.yaml
 
 .PHONY: hack-kind-down
 hack-kind-down:
@@ -210,7 +208,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=charts/k8sta/templates/crds
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=charts/k8sta/crds
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
