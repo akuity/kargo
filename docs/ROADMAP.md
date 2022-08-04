@@ -9,39 +9,25 @@ the meantime, we'll document the road _behind us_ and _currently under our
 tires_ to highlight what we've already experimented with, or are experimenting
 with currently, what has worked, and what hasn't.
 
-# First Iteration
+## Iteration 1
 
-In this iteration, our goal is only to move a new Docker image through a series
-of environments _with no manual intervention and no "glue code" required._
+In the first iteration, our goal was only to move a new Docker image through a
+series of environments _with no manual intervention and no "glue code"
+required._
 
-"Hard configuration" (not user-defined) will be ingested from files at startup.
-(This can be user-defined in the future.) This configuration describes
-proverbial "railway tracks" (`Tracks`s) wherein every application instance
-(environment) can be compared to a stop or station along the track. _They are
-ordered_, so progressing to any given station requires passing through all those
-that come before it. Each `Track` also has a name and subscribes to webhooks
-from an image repository. (Only Docker Hub will be supported initially.)
+We introduced a CRD, `Track`, instances of which subscribe to new images pushed
+to different image repositories (in Docker Hub only for now). Instances of a
+`Track` also define an ordered list of environments to progress new images
+through. In this initial iteration, an environment is just a reference to an
+existing Argo CD `Application`.
 
-> 📝&nbsp;&nbsp;If you have need to modify the configuration, you can find it in
-`charts/k8sta/values.yaml`.
+When an inbound webhook from Docker Hub is received by the server component and
+indicates a new image is to be progressed along a subscribed `Track`, an
+instance of a `Ticket` CRD is created. A `TicketReconciler` in the controller
+component manages progressive deployment of the image along the `Track`.
 
-If a `Track` is subscribed to the image repository referenced by an inbound
-webhook, the webhook triggers the creation of a `Ticket` resource. The ticket
-will hold state as the new image rides the proverbial railway track all the way
-to production.
+Argo CD operates 100% as normal and K8sTA is purely complementary.
 
-The K8sTA controller actively monitors `Ticket` resources. A new `Ticket`
-triggers execution of a job that will prepare and push a `git commit` that
-effectively moves the new image into the first environment defined by the
-`Track`.
-
-The K8sTA controller also actively monitors Argo CD `Application` resources.
-When it is observed that a previous change has been synced to its target
-environment and the target environment is healthy, this will trigger a job that
-will prepare and push a `git commit` that will effectively "promote" the image
-into the next environment defined by the `Track`.
-
-This process repeats until the new image reaches production. Throughout, Argo CD
-operates 100% as normal.
-
-![Concept](arch.jpg)
+The results of the first iteration were successfully demoed on 2022-08-03 and
+a recording of that demo is available to Akuity employees
+[here](https://drive.google.com/file/d/1HfAaS9tky3QVof9xTvYugr55CwIhCOSJ/view?usp=sharing).
