@@ -27,8 +27,8 @@ rules:
 - apiGroups:
   - k8sta.akuity.io
   resources:
-  - lines
   - tickets
+  - tracks
   verbs:
   - get
   - list

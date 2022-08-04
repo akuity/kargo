@@ -10,15 +10,15 @@ rules:
 - apiGroups:
   - k8sta.akuity.io
   resources:
-  - lines
+  - tickets
+  verbs:
+  - create
+- apiGroups:
+  - k8sta.akuity.io
+  resources:
+  - tracks
   verbs:
   - get
   - list
   - watch
-- apiGroups:
-  - k8sta.akuity.io
-  resources:
-  - tickets
-  verbs:
-  - create
 {{- end }}

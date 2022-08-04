@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	ticketsByLineIndexField      = ".spec.line"
-	linesByApplicationIndexField = "applications"
+	ticketsByTrackIndexField      = ".spec.track"
+	tracksByApplicationIndexField = "applications"
 )
 
 // ticketReconciler reconciles Ticket resources.
@@ -62,39 +62,40 @@ func SetupTicketReconcilerWithManager(
 
 	// NB: We build TWO indices here. Tickets do not directly reference associated
 	// Argo CD Applications. They are associated with Applications via an
-	// intermediate resource -- a Line. If we want to reconcile related Tickets
+	// intermediate resource -- a Track. If we want to reconcile related Tickets
 	// every time the state of an Application changes, we need to first find
-	// related Lines, then, for each Line, find the related Tickets. To make these
-	// list operations as efficient as possible, we index Tickets by Line AND
-	// Lines by Application.
+	// related Tracks, then, for each Track, find the related Tickets. To make
+	// these list operations as efficient as possible, we index Tickets by Track
+	// AND Tracks by Application.
 
-	// Index Tickets by Line
+	// Index Tickets by Track
 	if err := mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.Ticket{},
-		ticketsByLineIndexField,
+		ticketsByTrackIndexField,
 		func(ticket client.Object) []string {
-			return []string{ticket.(*api.Ticket).Spec.Line} // nolint: forcetypeassert
+			// nolint: forcetypeassert
+			return []string{ticket.(*api.Ticket).Spec.Track}
 		},
 	); err != nil {
 		return errors.Wrap(
 			err,
-			"error indexing Tickets by Line",
+			"error indexing Tickets by Track",
 		)
 	}
 
-	// Index Lines by Argo CD Applications
+	// Index Tracks by Argo CD Applications
 	if err := mgr.GetFieldIndexer().IndexField(
 		ctx,
-		&api.Line{},
-		linesByApplicationIndexField,
-		func(line client.Object) []string {
-			return line.(*api.Line).Environments // nolint: forcetypeassert
+		&api.Track{},
+		tracksByApplicationIndexField,
+		func(track client.Object) []string {
+			return track.(*api.Track).Environments // nolint: forcetypeassert
 		},
 	); err != nil {
 		return errors.Wrap(
 			err,
-			"error indexing Lines by ArgoCD Applications",
+			"error indexing Tracks by ArgoCD Applications",
 		)
 	}
 
@@ -129,38 +130,38 @@ func SetupTicketReconcilerWithManager(
 func (t *ticketReconciler) findTicketsForApplication(
 	application client.Object,
 ) []reconcile.Request {
-	lines := api.LineList{}
+	tracks := api.TrackList{}
 	if err := t.client.List(
 		context.Background(),
-		&lines,
+		&tracks,
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
-				linesByApplicationIndexField,
+				tracksByApplicationIndexField,
 				application.GetName(),
 			),
 		},
 	); err != nil {
 		t.logger.WithFields(log.Fields{
 			"application": application.GetName(),
-		}).Error("error listing Lines associated with Argo CD Application")
+		}).Error("error listing Tracks associated with Argo CD Application")
 		return nil
 	}
 	requests := []reconcile.Request{}
-	for _, line := range lines.Items {
+	for _, track := range tracks.Items {
 		tickets := &api.TicketList{}
 		if err := t.client.List(
 			context.Background(),
 			tickets,
 			&client.ListOptions{
 				FieldSelector: fields.OneTermEqualSelector(
-					ticketsByLineIndexField,
-					line.GetName(),
+					ticketsByTrackIndexField,
+					track.GetName(),
 				),
 			},
 		); err != nil {
 			t.logger.WithFields(log.Fields{
-				"line": line.Name,
-			}).Error("error listing Tickets associated with Line")
+				"track": track.Name,
+			}).Error("error listing Tickets associated with Track")
 			return nil
 		}
 		reqs := make([]reconcile.Request, len(tickets.Items))
@@ -215,22 +216,22 @@ func (t *ticketReconciler) Reconcile(
 		return result, nil
 	}
 
-	// Find the associated Line
-	line, err := t.getLine(ctx, ticket.Spec.Line)
+	// Find the associated Track
+	track, err := t.getTrack(ctx, ticket.Spec.Track)
 	if err != nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
-			"Error getting Line %q",
-			ticket.Spec.Line,
+			"Error getting Track %q",
+			ticket.Spec.Track,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return result, err
 	}
-	if line == nil {
+	if track == nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
-			"Line %q does not exist",
-			ticket.Spec.Line,
+			"Track %q does not exist",
+			ticket.Spec.Track,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return result, nil
@@ -242,15 +243,15 @@ func (t *ticketReconciler) Reconcile(
 	switch ticket.Status.State {
 	case api.TicketStateNew:
 		// Find the "zero" environment that we want to migrate to first
-		if len(line.Environments) == 0 {
+		if len(track.Environments) == 0 {
 			// This Ticket is implicitly complete
 			ticket.Status.State = api.TicketStateCompleted
 			ticket.Status.StateReason =
-				"Associated Line has no environments; Nothing to do"
+				"Associated Track has no environments; Nothing to do"
 			t.updateTicketStatus(ctx, ticket)
 			return result, nil
 		}
-		env = line.Environments[0]
+		env = track.Environments[0]
 	case api.TicketStateProgressing:
 		// Find the most recent environment the change represented by the Ticket was
 		// migrated to
@@ -282,9 +283,9 @@ func (t *ticketReconciler) Reconcile(
 	// What's the current state of the Ticket?
 	switch ticket.Status.State {
 	case api.TicketStateNew:
-		return result, t.reconcileNewTicket(ctx, ticket, line, app)
+		return result, t.reconcileNewTicket(ctx, ticket, track, app)
 	case api.TicketStateProgressing:
-		return result, t.reconcileProgressingTicket(ctx, ticket, line, app)
+		return result, t.reconcileProgressingTicket(ctx, ticket, track, app)
 	}
 
 	// We don't have anything to do in the current state
@@ -294,12 +295,12 @@ func (t *ticketReconciler) Reconcile(
 func (t *ticketReconciler) reconcileNewTicket(
 	ctx context.Context,
 	ticket *api.Ticket,
-	line *api.Line,
+	track *api.Track,
 	app *argocd.Application,
 ) error {
 	loggerFields := log.Fields{
 		"ticket":           ticket.Name,
-		"line":             ticket.Spec.Line,
+		"track":            ticket.Spec.Track,
 		"environment":      app.Name,
 		"imageRepo":        ticket.Spec.Change.ImageRepo,
 		"imageTag":         ticket.Spec.Change.ImageTag,
@@ -340,7 +341,7 @@ func (t *ticketReconciler) reconcileNewTicket(
 func (t *ticketReconciler) reconcileProgressingTicket(
 	ctx context.Context,
 	ticket *api.Ticket,
-	line *api.Line,
+	track *api.Track,
 	app *argocd.Application,
 ) error {
 	// Determine if the last Transition is complete
@@ -363,16 +364,16 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 
 	// What's the next transition? Or are we done?
 	lastEnvIndex := -1
-	for i, env := range line.Environments {
+	for i, env := range track.Environments {
 		if env == lastTransition.TargetEnvironment {
 			lastEnvIndex = i
 			break
 		}
 	}
 
-	// This is an edge case where the Line was redefined while the Ticket was
+	// This is an edge case where the Track was redefined while the Ticket was
 	// progressing and the last environment we migrated into is no longer on the
-	// Line. It's not possible to know where to go next.
+	// Track. It's not possible to know where to go next.
 	if lastEnvIndex == -1 {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = "Cannot determine next migration"
@@ -380,8 +381,8 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 		return nil
 	}
 
-	// Check if we've reached the end of the line
-	if lastEnvIndex == len(line.Environments)-1 {
+	// Check if we've reached the end of the Track
+	if lastEnvIndex == len(track.Environments)-1 {
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason = ""
 		t.updateTicketStatus(ctx, ticket)
@@ -389,7 +390,7 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 	}
 
 	// If we get to here, we can migrate into the next environment
-	env := line.Environments[lastEnvIndex+1]
+	env := track.Environments[lastEnvIndex+1]
 
 	app, err := t.getArgoCDApplication(ctx, env)
 	if err != nil {
@@ -413,7 +414,7 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 
 	loggerFields := log.Fields{
 		"ticket":           ticket.Name,
-		"line":             ticket.Spec.Line,
+		"track":            ticket.Spec.Track,
 		"environment":      app.Name,
 		"imageRepo":        ticket.Spec.Change.ImageRepo,
 		"imageTag":         ticket.Spec.Change.ImageTag,
@@ -490,30 +491,30 @@ func (t *ticketReconciler) updateTicketStatus(
 	}
 }
 
-// getLine returns a pointer to the Line resource having the name specified by
+// getTrack returns a pointer to the Track resource having the name specified by
 // the name argument. If no such resource is found, nil is returned instead.
-func (t *ticketReconciler) getLine(
+func (t *ticketReconciler) getTrack(
 	ctx context.Context,
 	name string,
-) (*api.Line, error) {
-	line := api.Line{}
+) (*api.Track, error) {
+	track := api.Track{}
 	if err := t.client.Get(
 		ctx,
 		types.NamespacedName{
 			Namespace: t.config.Namespace,
 			Name:      name,
 		},
-		&line,
+		&track,
 	); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			t.logger.WithFields(log.Fields{
 				"name": name,
-			}).Warn("Line not found")
+			}).Warn("Track not found")
 			return nil, nil
 		}
-		return nil, errors.Wrapf(err, "error getting Line %q", name)
+		return nil, errors.Wrapf(err, "error getting Track %q", name)
 	}
-	return &line, nil
+	return &track, nil
 }
 
 // getArgoCDApplication returns a pointer to the Argo CD Application resource

@@ -53,21 +53,21 @@ func (s *service) Handle(
 		"tag":  tag,
 	}).Debug("An image was pushed to a Docker Hub image repository")
 
-	// Find subscribed lines
-	lines, err := s.getLinesByImageRepo(ctx, repo)
+	// Find subscribed Tracks
+	tracks, err := s.getTracksByImageRepo(ctx, repo)
 	if err != nil {
 		return errors.Wrapf(
 			err,
-			"error finding Lines subscribed to image repo %s",
+			"error finding Tracks subscribed to image repo %s",
 			repo,
 		)
 	}
 
-	for _, line := range lines {
+	for _, track := range tracks {
 		s.logger.WithFields(log.Fields{
-			"repo": repo,
-			"line": line.Name,
-		}).Debug("A line is subscribed to this image repository")
+			"repo":  repo,
+			"track": track.Name,
+		}).Debug("A track is subscribed to this image repository")
 
 		ticket := api.Ticket{
 			ObjectMeta: metav1.ObjectMeta{
@@ -75,7 +75,7 @@ func (s *service) Handle(
 				Namespace: s.config.Namespace,
 			},
 			Spec: api.TicketSpec{
-				Line: line.Name,
+				Track: track.Name,
 				Change: api.Change{
 					Type:      api.ChangeTypeNewImage,
 					ImageRepo: repo,
@@ -94,7 +94,7 @@ func (s *service) Handle(
 
 		s.logger.WithFields(log.Fields{
 			"name":      ticket.Name,
-			"line":      ticket.Spec.Line,
+			"track":     ticket.Spec.Track,
 			"imageRepo": ticket.Spec.Change.ImageRepo,
 			"imageTag":  ticket.Spec.Change.ImageTag,
 		}).Debug("Created Ticket resource")
@@ -103,28 +103,29 @@ func (s *service) Handle(
 	return nil
 }
 
-func (s *service) getLinesByImageRepo(
+func (s *service) getTracksByImageRepo(
 	ctx context.Context,
 	repo string,
-) ([]api.Line, error) {
-	subscribedLines := []api.Line{}
-	lines := api.LineList{}
+) ([]api.Track, error) {
+	subscribedTracks := []api.Track{}
+	tracks := api.TrackList{}
 	if err := s.controllerRuntimeClient.List(
-		ctx, &lines,
+		ctx,
+		&tracks,
 		&client.ListOptions{
 			Namespace: s.config.Namespace,
 		},
 	); err != nil {
-		return subscribedLines, errors.Wrap(err, "error retrieving Lines")
+		return subscribedTracks, errors.Wrap(err, "error retrieving Tracks")
 	}
-lines:
-	for _, line := range lines.Items {
-		for _, subscribedRepo := range line.ImageRepositories {
+tracks:
+	for _, track := range tracks.Items {
+		for _, subscribedRepo := range track.ImageRepositories {
 			if subscribedRepo == repo {
-				subscribedLines = append(subscribedLines, line)
-				continue lines
+				subscribedTracks = append(subscribedTracks, track)
+				continue tracks
 			}
 		}
 	}
-	return subscribedLines, nil
+	return subscribedTracks, nil
 }

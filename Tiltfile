@@ -52,8 +52,8 @@ k8s_resource(
 k8s_resource(
   new_name = 'crds',
   objects = [
-    'lines.k8sta.akuity.io:customresourcedefinition',
     'tickets.k8sta.akuity.io:customresourcedefinition',
+    'tracks.k8sta.akuity.io:customresourcedefinition',
   ],
   labels = ['k8sta']
 )
