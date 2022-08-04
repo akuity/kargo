@@ -10,7 +10,7 @@ ending with production.
 > 🟡&nbsp;&nbsp;K8sTA is highly experimental at this time and breaking changes
 > should be anticipated between pre-GA minor releases.
 
-## The Rail Line Paradigm
+## The Track Paradigm
 
 Up until now, "pipelines" have been the predominant conceptual model for the
 movement of application changes through a logical progression of environments
@@ -23,8 +23,8 @@ emerges from the other, may be overly simplistic and does not map neatly onto
 this reality.
 
 K8sTA eschews the notion of pipelines and models the delivery of application
-changes as movement along a _rail line_ instead. Every environment can be
-thought of as a stop or station along the line and while some changes may ride
+changes as movement along a _railway track_ instead. Every environment can be
+thought of as a stop or station along the track and while some changes may ride
 the rail all the way from one end of the line to the other, many other changes
 may board the train or disembark at various stations in between.
 

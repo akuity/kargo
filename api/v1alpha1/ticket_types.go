@@ -19,7 +19,7 @@ type TicketState string
 
 const (
 	// TicketStateCompleted is a constant representing a Ticket that has
-	// progressed all the way to the last environment in the associated Line.
+	// progressed all the way to the last environment in the associated Track.
 	TicketStateCompleted TicketState = "Completed"
 	// TicketStateFailed is a constant representing a Ticket that can not be
 	// progressed further for whatever reason.
@@ -37,8 +37,8 @@ type TicketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Line is a reference to a K8sTA Line.
-	Line string `json:"line,omitempty"`
+	// Track is a reference to a K8sTA Track.
+	Track string `json:"track,omitempty"`
 	// Source indicates how this ticket entered the system.
 	Source string `json:"source,omitempty"`
 	// Change encapsulates the specific change this Ticket is meant to progress

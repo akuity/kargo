@@ -58,11 +58,11 @@ spec:
                       the value of this field.
                     type: string
                 type: object
-              line:
-                description: Line is a reference to a K8sTA Line.
-                type: string
               source:
                 description: Source indicates how this ticket entered the system.
+                type: string
+              track:
+                description: Track is a reference to a K8sTA Track.
                 type: string
             type: object
           status:
