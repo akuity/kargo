@@ -26,12 +26,20 @@ spec:
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           environments:
-            description: Environments enumerates a logical ordering of environments,
-              each represented by a string reference to an (assumed to be) existing
-              Argo CD Application resource in the Kubernetes namespace indicated by
-              the Namespace field.
+            description: Environments enumerates a logical ordering of environments
+              through which a change represented by a Ticket should be progressed.
             items:
-              type: string
+              description: Environment represents a single environment through which
+                a change represented by a Ticket should be progressed.
+              properties:
+                application:
+                  description: ArgoCDApplication is a reference to an existing Argo
+                    CD Application resource that managed deployments to this Environment.
+                  type: string
+                name:
+                  description: Name is a name for the environment.
+                  type: string
+              type: object
             type: array
           imageRepositories:
             description: ImageRepositories specifies image repositories that the Track
@@ -49,7 +57,6 @@ spec:
           metadata:
             type: object
         required:
-        - environments
         - imageRepositories
         type: object
     served: true

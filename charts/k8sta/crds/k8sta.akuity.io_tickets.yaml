@@ -81,6 +81,11 @@ spec:
                         Argo CD Application resource that corresponds to TargetEnvironment
                         to have this commit in its version history.
                       type: string
+                    targetApplication:
+                      description: TargetApplication indicated the Argo CD Application
+                        resource that can be watched for evidence that a Transition
+                        is complete.
+                      type: string
                     targetEnvironment:
                       description: TargetEnvironment indicates the environment into
                         which this Transition aims to migrate the change represented

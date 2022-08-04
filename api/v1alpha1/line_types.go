@@ -19,11 +19,19 @@ type Track struct {
 	// detected, it will trigger the progressive deployment of the new image
 	// through the Track's environments.
 	ImageRepositories []string `json:"imageRepositories"`
-	// Environments enumerates a logical ordering of environments, each
-	// represented by a string reference to an (assumed to be) existing Argo CD
-	// Application resource in the Kubernetes namespace indicated by the Namespace
-	// field.
-	Environments []string `json:"environments"`
+	// Environments enumerates a logical ordering of environments through which a
+	// change represented by a Ticket should be progressed.
+	Environments []Environment `json:"environments,omitempty"`
+}
+
+// Environment represents a single environment through which a change
+// represented by a Ticket should be progressed.
+type Environment struct {
+	// Name is a name for the environment.
+	Name string `json:"name,omitempty"`
+	// ArgoCDApplication is a reference to an existing Argo CD Application
+	// resource that managed deployments to this Environment.
+	Application string `json:"application,omitempty"`
 }
 
 //+kubebuilder:object:root=true
