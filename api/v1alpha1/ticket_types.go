@@ -23,13 +23,13 @@ const (
 	TicketStateCompleted TicketState = "Completed"
 	// TicketStateFailed is a constant representing a Ticket that can not be
 	// progressed further for whatever reason.
-	TicketStateFailed TicketState = "FAILED"
+	TicketStateFailed TicketState = "Failed"
 	// TicketStateNew is a constant representing a brand new Ticket. Nothing has
 	// been done yet to address the change represented by the Ticket.
-	TicketStateNew TicketState = "NEW"
+	TicketStateNew TicketState = "New"
 	// TicketStateProgressing is a constant representing a Ticket whose change
 	// is already being progressed through a series of environments.
-	TicketStateProgressing TicketState = "PROGRESSING"
+	TicketStateProgressing TicketState = "Progressing"
 )
 
 // TicketSpec defines the desired state of Ticket
