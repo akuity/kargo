@@ -40,20 +40,6 @@ const (
 	MigrationStateCompleted = "Completed"
 )
 
-// TicketSpec defines the desired state of Ticket
-type TicketSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Track is a reference to a K8sTA Track.
-	Track string `json:"track,omitempty"`
-	// Source indicates how this ticket entered the system.
-	Source string `json:"source,omitempty"`
-	// Change encapsulates the specific change this Ticket is meant to progress
-	// through a series of environments.
-	Change Change `json:"change,omitempty"`
-}
-
 // Change is a description of a change that is being progressed through a series
 // of environments by a Ticket.
 type Change struct {
@@ -120,7 +106,14 @@ type Ticket struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TicketSpec   `json:"spec,omitempty"`
+	// Track is a reference to a K8sTA Track.
+	Track string `json:"track,omitempty"`
+	// Source indicates how this ticket entered the system.
+	Source string `json:"source,omitempty"`
+	// Change encapsulates the specific change this Ticket is meant to progress
+	// through a series of environments.
+	Change Change `json:"change,omitempty"`
+	// Status encapsulates the status of the Ticket.
 	Status TicketStatus `json:"status,omitempty"`
 }
 
