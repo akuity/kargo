@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"sync"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -38,15 +37,6 @@ type ticketReconciler struct {
 	logger *log.Logger
 	// Promotions are a critical section of the code
 	promoMutex sync.Mutex
-	// The following internal functions are overridable for testing purposes
-	promoteImageFn func(
-		context.Context,
-		*api.Ticket,
-		*argocd.Application,
-	) (string, error)
-	setupGitAuthFn    func(ctx context.Context, repoURL string) error
-	tearDownGitAuthFn func()
-	execCommandFn     func(*exec.Cmd) ([]byte, error)
 }
 
 // SetupTicketReconcilerWithManager initializes a reconciler for Ticket
@@ -110,10 +100,6 @@ func SetupTicketReconcilerWithManager(
 		argoDB: argoDB,
 		logger: logger,
 	}
-	t.promoteImageFn = t.promoteImage
-	t.setupGitAuthFn = t.setupGitAuth
-	t.tearDownGitAuthFn = t.tearDownGitAuth
-	t.execCommandFn = t.execCommand
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Ticket{}).WithEventFilter(predicate.Funcs{
@@ -538,7 +524,7 @@ func (t *ticketReconciler) promoteToEnv(
 	// Promote
 	commits := make([]api.Commit, len(apps))
 	for i, app := range apps {
-		commitSHA, err := t.promoteImageFn(ctx, ticket, app)
+		commitSHA, err := t.promoteImage(ctx, ticket, app)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
