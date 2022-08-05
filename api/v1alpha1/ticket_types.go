@@ -22,14 +22,6 @@ const (
 	TicketStateProgressing TicketState = "Progressing"
 )
 
-// MigrationState represents the current state of a Migration.
-type MigrationState string
-
-const (
-	MigrationStateStarted   = "Started"
-	MigrationStateCompleted = "Completed"
-)
-
 // TicketStatus defines the observed state of Ticket
 type TicketStatus struct {
 	// TicketState represents the overall state of the Ticket.
@@ -56,8 +48,11 @@ type Migration struct {
 	// Commits records all git commits made to effect an update to
 	// TargetEnvironment.
 	Commits []Commit `json:"commits,omitempty"`
-	// State represents the current state of the Migration.
-	State MigrationState `json:"state,omitempty"`
+	// Started indicates the time the migration started.
+	Started *metav1.Time `json:"started,omitempty"`
+	// Completed indicates the time the migration completed. A nil value means
+	// the migration is not yet complete.
+	Completed *metav1.Time `json:"completed,omitempty"`
 }
 
 // Commit represents a git commit made with the intent to effect an update to
