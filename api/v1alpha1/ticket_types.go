@@ -32,6 +32,14 @@ const (
 	TicketStateProgressing TicketState = "Progressing"
 )
 
+// MigrationState represents the current state of a Migration.
+type MigrationState string
+
+const (
+	MigrationStateStarted   = "Started"
+	MigrationStateCompleted = "Completed"
+)
+
 // TicketSpec defines the desired state of Ticket
 type TicketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -71,18 +79,27 @@ type TicketStatus struct {
 	// StateReason provides context for why the Ticket is in the State that it is.
 	StateReason string `json:"stateReason,omitempty"`
 	// Progress
-	Progress []Transition `json:"progress,omitempty"`
+	Progress []ProgressRecord `json:"progress,omitempty"`
 }
 
-// Transition represents a single leg of a change's progression toward the
-// production environment.
-type Transition struct {
+// ProgressRecord records a single bit of a Ticket's progress along its Track.
+// Only one of its fields may be non-nil. Compare this to how a EnvVarSource or
+// VolumeSource works in the core Kubernetes API.
+type ProgressRecord struct {
+	Migration *Migration `json:"migration,omitempty"`
+}
+
+// Migration represents a bit of a Ticket's progress along a Track involving
+// migration from one environment to another.
+type Migration struct {
 	// TargetEnvironment indicates the environment into which this Transition aims
 	// to migrate the change represented by the Ticket.
 	TargetEnvironment string `json:"targetEnvironment,omitempty"`
 	// Commits records all git commits made to effect an update to
 	// TargetEnvironment.
 	Commits []Commit `json:"commits,omitempty"`
+	// State represents the current state of the Migration.
+	State MigrationState `json:"state,omitempty"`
 }
 
 // Commit represents a git commit made with the intent to effect an update to

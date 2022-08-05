@@ -71,31 +71,43 @@ spec:
               progress:
                 description: Progress
                 items:
-                  description: Transition represents a single leg of a change's progression
-                    toward the production environment.
+                  description: ProgressRecord records a single bit of a Ticket's progress
+                    along its Track. Only one of its fields may be non-nil. Compare
+                    this to how a EnvVarSource or VolumeSource works in the core Kubernetes
+                    API.
                   properties:
-                    commits:
-                      description: Commits records all git commits made to effect
-                        an update to TargetEnvironment.
-                      items:
-                        description: Commit represents a git commit made with the
-                          intent to effect an update to a specific Argo CD Application.
-                        properties:
-                          sha:
-                            description: SHA records the ID of the git commit.
-                            type: string
-                          targetApplication:
-                            description: TargetApplication records the Argo CD Application
-                              resource for which this Commit was intended to effect
-                              an update.
-                            type: string
-                        type: object
-                      type: array
-                    targetEnvironment:
-                      description: TargetEnvironment indicates the environment into
-                        which this Transition aims to migrate the change represented
-                        by the Ticket.
-                      type: string
+                    migration:
+                      description: Migration represents a bit of a Ticket's progress
+                        along a Track involving migration from one environment to
+                        another.
+                      properties:
+                        commits:
+                          description: Commits records all git commits made to effect
+                            an update to TargetEnvironment.
+                          items:
+                            description: Commit represents a git commit made with
+                              the intent to effect an update to a specific Argo CD
+                              Application.
+                            properties:
+                              sha:
+                                description: SHA records the ID of the git commit.
+                                type: string
+                              targetApplication:
+                                description: TargetApplication records the Argo CD
+                                  Application resource for which this Commit was intended
+                                  to effect an update.
+                                type: string
+                            type: object
+                          type: array
+                        state:
+                          description: State represents the current state of the Migration.
+                          type: string
+                        targetEnvironment:
+                          description: TargetEnvironment indicates the environment
+                            into which this Transition aims to migrate the change
+                            represented by the Ticket.
+                          type: string
+                      type: object
                   type: object
                 type: array
               state:
