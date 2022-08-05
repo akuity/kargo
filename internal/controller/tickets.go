@@ -559,8 +559,8 @@ func (t *ticketReconciler) promoteToEnv(
 		"ticket":      ticket.Name,
 		"track":       ticket.Track,
 		"environment": env.Name,
-		"imageRepo":   ticket.Change.ImageRepo,
-		"imageTag":    ticket.Change.ImageTag,
+		"imageRepo":   ticket.Change.NewImage.Repo,
+		"imageTag":    ticket.Change.NewImage.Tag,
 	}).Debug("promoted image")
 
 	ticket.Status.State = api.TicketStateProgressing

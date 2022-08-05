@@ -4,16 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ChangeType is a type representing different types of Changes meant to be
-// progressed through a series of environments.
-type ChangeType string
-
-const (
-	// ChangeTypeNewImage is a constant representing a Change involving a new
-	// image that is to be progressed through a series of environments.
-	ChangeTypeNewImage ChangeType = "NewImage"
-)
-
 // TicketState is a type representing the current state of a Ticket.
 type TicketState string
 
@@ -39,24 +29,6 @@ const (
 	MigrationStateStarted   = "Started"
 	MigrationStateCompleted = "Completed"
 )
-
-// Change is a description of a change that is being progressed through a series
-// of environments by a Ticket.
-type Change struct {
-	// Type indicates a class of change that needs to be progressed through a
-	// series of environments. The controller knows how to deal with different
-	// classes of change based on the value of this field.
-	Type ChangeType `json:"type,omitempty"`
-	// ImageRepo denotes a new image (without tag) that is to be progressed
-	// through a series of environments. The value of this field only has meaning
-	// when the value of the Type field is "NewImage".
-	ImageRepo string `json:"imageRepo,omitempty"`
-	// ImageTag qualifies which image from the repository specified by the
-	// ImageRepo filed is to be progressed through a series of environments. The
-	// value of this field only has meaning when the value of the Type field is
-	// "NewImage".
-	ImageTag string `json:"imageTag,omitempty"`
-}
 
 // TicketStatus defines the observed state of Ticket
 type TicketStatus struct {
@@ -115,6 +87,24 @@ type Ticket struct {
 	Change Change `json:"change,omitempty"`
 	// Status encapsulates the status of the Ticket.
 	Status TicketStatus `json:"status,omitempty"`
+}
+
+// Change describes a change that is to be progressed through a series of
+// environments by a Ticket. Only one of its fields may be non-nil. Compare this
+// to how a EnvVarSource or VolumeSource works in the core Kubernetes API.
+type Change struct {
+	// NewImage encapsulates the details of a new image that is to be progressed
+	// through a series of environments.
+	NewImage *NewImageChange `json:"newImage,omitempty"`
+}
+
+type NewImageChange struct {
+	// Repo denotes the image (without tag) that is to be progressed through a
+	// series of environments.
+	Repo string `json:"imageRepo,omitempty"`
+	// Tag qualifies which image from the repository specified by the Repo field
+	// is to be progressed through a series of environments.
+	Tag string `json:"imageTag,omitempty"`
 }
 
 //+kubebuilder:object:root=true

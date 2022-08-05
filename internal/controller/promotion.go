@@ -203,8 +203,8 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	loggerFields := log.Fields{
 		"repo":      app.Spec.Source.RepoURL,
 		"envBranch": app.Spec.Source.TargetRevision,
-		"imageRepo": ticket.Change.ImageRepo,
-		"imageTag":  ticket.Change.ImageTag,
+		"imageRepo": ticket.Change.NewImage.Repo,
+		"imageTag":  ticket.Change.NewImage.Tag,
 	}
 
 	// We assume the environment-specific overlay path within the source branch ==
@@ -220,9 +220,9 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		"image",
 		fmt.Sprintf(
 			"%s=%s:%s",
-			ticket.Change.ImageRepo,
-			ticket.Change.ImageRepo,
-			ticket.Change.ImageTag,
+			ticket.Change.NewImage.Repo,
+			ticket.Change.NewImage.Repo,
+			ticket.Change.NewImage.Tag,
 		),
 	)
 	cmd.Dir = envDir // We need to be in the overlay directory to do this
@@ -255,8 +255,8 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		fmt.Sprintf(
 			"k8sta: updating %s to use image %s:%s",
 			app.Spec.Source.TargetRevision,
-			ticket.Change.ImageRepo,
-			ticket.Change.ImageTag,
+			ticket.Change.NewImage.Repo,
+			ticket.Change.NewImage.Tag,
 		),
 	)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
@@ -345,8 +345,8 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		"-am",
 		fmt.Sprintf(
 			"k8sta: use image %s:%s",
-			ticket.Change.ImageRepo,
-			ticket.Change.ImageTag,
+			ticket.Change.NewImage.Repo,
+			ticket.Change.NewImage.Tag,
 		),
 	)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
