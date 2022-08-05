@@ -50,6 +50,6 @@ A second specific change we anticipate is the introduction of a "gate" (e.g.
 quality gate) concept that can prevent or permit progress between environments
 based on metrics or manual decisions. Initially, we will only implement a no-op
 gate in order to explore what this concept looks like without diving too deep
-into specific integration.
+into specific integrations.
 
 Other API changes me be discovered in the course of the iteration.
