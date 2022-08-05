@@ -26,8 +26,8 @@ func (t *ticketReconciler) promoteImage(
 	// the git CLI all involve touching files in the user's home directory.
 	t.promoMutex.Lock()
 	defer t.promoMutex.Unlock()
-	defer t.tearDownGitAuthFn()
-	if err := t.setupGitAuthFn(ctx, app.Spec.Source.RepoURL); err != nil {
+	defer t.tearDownGitAuth()
+	if err := t.setupGitAuth(ctx, app.Spec.Source.RepoURL); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error setting up authentication for repo %q",
@@ -236,7 +236,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	// YAML could be quite large.
 	cmd = exec.Command("kustomize", "build")
 	cmd.Dir = envDir // We need to be in the overlay directory to do this
-	yamlBytes, err := t.execCommandFn(cmd)
+	yamlBytes, err := t.execCommand(cmd)
 	if err != nil {
 		return "",
 			errors.Wrapf(
@@ -383,7 +383,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	// Get the ID of the last commit
 	cmd = exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	shaBytes, err := t.execCommandFn(cmd)
+	shaBytes, err := t.execCommand(cmd)
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
