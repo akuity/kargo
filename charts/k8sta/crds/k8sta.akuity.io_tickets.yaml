@@ -74,18 +74,23 @@ spec:
                   description: Transition represents a single leg of a change's progression
                     toward the production environment.
                   properties:
-                    commitSHA:
-                      description: CommitSHA records the ID of the commit that was
-                        made in order to migrate the change into the environment specified
-                        by TargetEnvironment. The TicketReconciler will wait for the
-                        Argo CD Application resource that corresponds to TargetEnvironment
-                        to have this commit in its version history.
-                      type: string
-                    targetApplication:
-                      description: TargetApplication indicated the Argo CD Application
-                        resource that can be watched for evidence that a Transition
-                        is complete.
-                      type: string
+                    commits:
+                      description: Commits records all git commits made to effect
+                        an update to TargetEnvironment.
+                      items:
+                        description: Commit represents a git commit made with the
+                          intent to effect an update to a specific Argo CD Application.
+                        properties:
+                          sha:
+                            description: SHA records the ID of the git commit.
+                            type: string
+                          targetApplication:
+                            description: TargetApplication records the Argo CD Application
+                              resource for which this Commit was intended to effect
+                              an update.
+                            type: string
+                        type: object
+                      type: array
                     targetEnvironment:
                       description: TargetEnvironment indicates the environment into
                         which this Transition aims to migrate the change represented
