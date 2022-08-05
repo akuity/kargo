@@ -29,22 +29,19 @@ spec:
             description: Change encapsulates the specific change this Ticket is meant
               to progress through a series of environments.
             properties:
-              imageRepo:
-                description: ImageRepo denotes a new image (without tag) that is to
-                  be progressed through a series of environments. The value of this
-                  field only has meaning when the value of the Type field is "NewImage".
-                type: string
-              imageTag:
-                description: ImageTag qualifies which image from the repository specified
-                  by the ImageRepo filed is to be progressed through a series of environments.
-                  The value of this field only has meaning when the value of the Type
-                  field is "NewImage".
-                type: string
-              type:
-                description: Type indicates a class of change that needs to be progressed
-                  through a series of environments. The controller knows how to deal
-                  with different classes of change based on the value of this field.
-                type: string
+              newImage:
+                description: NewImage encapsulates the details of a new image that
+                  is to be progressed through a series of environments.
+                properties:
+                  imageRepo:
+                    description: Repo denotes the image (without tag) that is to be
+                      progressed through a series of environments.
+                    type: string
+                  imageTag:
+                    description: Tag qualifies which image from the repository specified
+                      by the Repo field is to be progressed through a series of environments.
+                    type: string
+                type: object
             type: object
           kind:
             description: 'Kind is a string value representing the REST resource this
