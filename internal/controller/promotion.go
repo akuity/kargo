@@ -12,7 +12,6 @@ import (
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,21 +21,8 @@ func (t *ticketReconciler) promoteImage(
 	ticket *api.Ticket,
 	app *argocd.Application,
 ) (string, error) {
-	// This is a critical section of code because authentication methods use by
-	// the git CLI all involve touching files in the user's home directory.
-	t.promoMutex.Lock()
-	defer t.promoMutex.Unlock()
-	defer t.tearDownGitAuth()
-	if err := t.setupGitAuth(ctx, app.Spec.Source.RepoURL); err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error setting up authentication for repo %q",
-			app.Spec.Source.RepoURL,
-		)
-	}
-
-	// Create a temporary workspace
-	tempDir, err := ioutil.TempDir("", "")
+	// Create a temporary home directory for everything we're about to do
+	homeDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
@@ -44,13 +30,22 @@ func (t *ticketReconciler) promoteImage(
 			app.Spec.Source.RepoURL,
 		)
 	}
-	defer os.RemoveAll(tempDir)
+	defer os.RemoveAll(homeDir)
 	t.logger.WithFields(log.Fields{
-		"path": tempDir,
-	}).Debug("created temporary workspace")
+		"path": homeDir,
+	}).Debug("created temporary home directory")
+
+	if err =
+		t.setupGitAuth(ctx, app.Spec.Source.RepoURL, homeDir); err != nil {
+		return "", errors.Wrapf(
+			err,
+			"error setting up authentication for repo %q",
+			app.Spec.Source.RepoURL,
+		)
+	}
 
 	// Clone the repo
-	repoDir := filepath.Join(tempDir, "repo")
+	repoDir := filepath.Join(homeDir, "repo")
 	cmd := exec.Command( // nolint: gosec
 		"git",
 		"clone",
@@ -58,7 +53,7 @@ func (t *ticketReconciler) promoteImage(
 		app.Spec.Source.RepoURL,
 		repoDir,
 	)
-	if _, err = t.execCommand(cmd); err != nil {
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error cloning repo %q into %q",
@@ -77,6 +72,7 @@ func (t *ticketReconciler) promoteImage(
 		ctx,
 		ticket,
 		app,
+		homeDir,
 		repoDir,
 	)
 }
@@ -86,7 +82,24 @@ func (t *ticketReconciler) promoteImage(
 func (t *ticketReconciler) setupGitAuth(
 	ctx context.Context,
 	repoURL string,
+	homeDir string,
 ) error {
+	// Configure the git client
+	cmd := exec.Command("git", "config", "--global", "user.name", "k8sta")
+	if _, err := t.execGitCommand(cmd, homeDir); err != nil {
+		return errors.Wrapf(err, "error configuring git username")
+	}
+	cmd = exec.Command(
+		"git",
+		"config",
+		"--global",
+		"user.email",
+		"k8sta@akuity.io",
+	)
+	if _, err := t.execGitCommand(cmd, homeDir); err != nil {
+		return errors.Wrapf(err, "error configuring git user email address")
+	}
+
 	const repoTypeGit = "git"
 	var sshKey, username, password string
 	// NB: This next call returns an empty Repository if no such Repository is
@@ -130,13 +143,16 @@ func (t *ticketReconciler) setupGitAuth(
 		return errors.Errorf("could not find any credentials for repo %q", repoURL)
 	}
 
-	homeDir, err := homedir.Dir()
-	if err != nil {
-		return errors.Wrap(err, "error finding user's home directory")
-	}
-
 	// If an SSH key was provided, use that.
 	if sshKey != "" {
+		sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
+		// nolint: lll
+		const sshConfig = "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null"
+		if err =
+			ioutil.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
+			return errors.Wrapf(err, "error writing SSH config to %q", sshConfigPath)
+		}
+
 		rsaKeyPath := filepath.Join(homeDir, ".ssh", "id_rsa")
 		if err = ioutil.WriteFile(rsaKeyPath, []byte(sshKey), 0600); err != nil {
 			return errors.Wrapf(err, "error writing SSH key to %q", rsaKeyPath)
@@ -145,6 +161,12 @@ func (t *ticketReconciler) setupGitAuth(
 	}
 
 	// If we get to here, we're authenticating using a password
+
+	// Set up the credential helper
+	cmd = exec.Command("git", "config", "--global", "credential.helper", "store")
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+		return errors.Wrapf(err, "error configuring git credential helper")
+	}
 
 	credentialURL, err := url.Parse(repoURL)
 	if err != nil {
@@ -178,26 +200,11 @@ func (t *ticketReconciler) setupGitAuth(
 	return nil
 }
 
-func (t *ticketReconciler) tearDownGitAuth() {
-	homeDir, err := homedir.Dir()
-	if err != nil {
-		t.logger.Errorf("error finding user's home directory: %s", err)
-		return
-	}
-	rsaKeyPath := filepath.Join(homeDir, ".ssh", "id_rsa")
-	if err = os.RemoveAll(rsaKeyPath); err != nil {
-		t.logger.Errorf("error deleting file %q: %s", rsaKeyPath, err)
-	}
-	credentialsPath := filepath.Join(homeDir, ".git-credentials")
-	if err = os.RemoveAll(credentialsPath); err != nil {
-		t.logger.Errorf("error deleting file %q: %s", credentialsPath, err)
-	}
-}
-
 func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	ctx context.Context,
 	ticket *api.Ticket,
 	app *argocd.Application,
+	homeDir string,
 	repoDir string,
 ) (string, error) {
 	loggerFields := log.Fields{
@@ -260,7 +267,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		),
 	)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
-	if _, err = t.execCommand(cmd); err != nil {
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrap(err, "error committing changes to source branch")
 	}
 	t.logger.WithFields(loggerFields).Debug(
@@ -270,7 +277,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	// Push the changes to the source branch
 	cmd = exec.Command("git", "push", "origin", "HEAD")
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	if _, err = t.execCommand(cmd); err != nil {
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrap(err, "error pushing changes to source branch")
 	}
 	t.logger.WithFields(loggerFields).Debug("pushed changes to the source branch")
@@ -350,7 +357,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		),
 	)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
-	if _, err = t.execCommand(cmd); err != nil {
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error committing changes to environment-specific branch %q",
@@ -369,7 +376,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		app.Spec.Source.TargetRevision,
 	)
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	if _, err = t.execCommand(cmd); err != nil {
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error pushing changes to environment-specific branch %q",
@@ -398,6 +405,21 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	return sha, nil
 }
 
+func (t *ticketReconciler) execGitCommand(
+	cmd *exec.Cmd,
+	homeDir string,
+) ([]byte, error) {
+	homeEnvVar := fmt.Sprintf("HOME=%s", homeDir)
+	if cmd.Env == nil {
+		cmd.Env = []string{homeEnvVar}
+	} else {
+		cmd.Env = append(cmd.Env, homeEnvVar)
+	}
+	return t.execCommand(cmd)
+}
+
 func (t *ticketReconciler) execCommand(cmd *exec.Cmd) ([]byte, error) {
-	return cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
+	t.logger.Debug(string(output))
+	return output, err
 }

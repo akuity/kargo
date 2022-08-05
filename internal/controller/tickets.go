@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/util/db"
@@ -35,8 +34,6 @@ type ticketReconciler struct {
 	client client.Client
 	argoDB db.ArgoDB
 	logger *log.Logger
-	// Promotions are a critical section of the code
-	promoMutex sync.Mutex
 }
 
 // SetupTicketReconcilerWithManager initializes a reconciler for Ticket

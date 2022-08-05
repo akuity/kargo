@@ -41,17 +41,12 @@ FROM alpine:3.15.4 as final
 RUN apk update \
     && apk add git openssh-client \
     && addgroup -S -g 65532 nonroot \
-    && adduser -S -D -u 65532 -g nonroot -G nonroot nonroot
+    && adduser -S -D -H -u 65532 -g nonroot -G nonroot nonroot
 
-COPY --chown=nonroot:nonroot cmd/controller/ssh_config /home/nonroot/.ssh/config
 COPY --from=builder /usr/local/bin/kustomize /usr/local/bin/
 COPY --from=builder /usr/local/bin/ytt /usr/local/bin/
 COPY --from=builder /k8sta/bin/ /usr/local/bin/
 
 USER nonroot
-
-RUN git config --global credential.helper store \
-    && git config --global user.name k8sta \
-    && git config --global user.email k8sta@akuity.io
 
 CMD ["/usr/local/bin/k8sta"]
