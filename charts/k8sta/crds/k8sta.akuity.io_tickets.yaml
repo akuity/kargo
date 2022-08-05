@@ -25,6 +25,27 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
+          change:
+            description: Change encapsulates the specific change this Ticket is meant
+              to progress through a series of environments.
+            properties:
+              imageRepo:
+                description: ImageRepo denotes a new image (without tag) that is to
+                  be progressed through a series of environments. The value of this
+                  field only has meaning when the value of the Type field is "NewImage".
+                type: string
+              imageTag:
+                description: ImageTag qualifies which image from the repository specified
+                  by the ImageRepo filed is to be progressed through a series of environments.
+                  The value of this field only has meaning when the value of the Type
+                  field is "NewImage".
+                type: string
+              type:
+                description: Type indicates a class of change that needs to be progressed
+                  through a series of environments. The controller knows how to deal
+                  with different classes of change based on the value of this field.
+                type: string
+            type: object
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -32,41 +53,11 @@ spec:
             type: string
           metadata:
             type: object
-          spec:
-            description: TicketSpec defines the desired state of Ticket
-            properties:
-              change:
-                description: Change encapsulates the specific change this Ticket is
-                  meant to progress through a series of environments.
-                properties:
-                  imageRepo:
-                    description: ImageRepo denotes a new image (without tag) that
-                      is to be progressed through a series of environments. The value
-                      of this field only has meaning when the value of the Type field
-                      is "NewImage".
-                    type: string
-                  imageTag:
-                    description: ImageTag qualifies which image from the repository
-                      specified by the ImageRepo filed is to be progressed through
-                      a series of environments. The value of this field only has meaning
-                      when the value of the Type field is "NewImage".
-                    type: string
-                  type:
-                    description: Type indicates a class of change that needs to be
-                      progressed through a series of environments. The controller
-                      knows how to deal with different classes of change based on
-                      the value of this field.
-                    type: string
-                type: object
-              source:
-                description: Source indicates how this ticket entered the system.
-                type: string
-              track:
-                description: Track is a reference to a K8sTA Track.
-                type: string
-            type: object
+          source:
+            description: Source indicates how this ticket entered the system.
+            type: string
           status:
-            description: TicketStatus defines the observed state of Ticket
+            description: Status encapsulates the status of the Ticket.
             properties:
               progress:
                 description: Progress
@@ -118,6 +109,9 @@ spec:
                   the State that it is.
                 type: string
             type: object
+          track:
+            description: Track is a reference to a K8sTA Track.
+            type: string
         type: object
     served: true
     storage: true

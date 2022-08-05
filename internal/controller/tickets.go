@@ -75,7 +75,7 @@ func SetupTicketReconcilerWithManager(
 		ticketsByTrackIndexField,
 		func(ticket client.Object) []string {
 			// nolint: forcetypeassert
-			return []string{ticket.(*api.Ticket).Spec.Track}
+			return []string{ticket.(*api.Ticket).Track}
 		},
 	); err != nil {
 		return errors.Wrap(
@@ -229,12 +229,12 @@ func (t *ticketReconciler) reconcileNewTicket(
 	ticket *api.Ticket,
 ) error {
 	// Find the associated Track
-	track, err := t.getTrack(ctx, ticket.Spec.Track)
+	track, err := t.getTrack(ctx, ticket.Track)
 	if err != nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
 			"Error getting Track %q",
-			ticket.Spec.Track,
+			ticket.Track,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return err
@@ -243,7 +243,7 @@ func (t *ticketReconciler) reconcileNewTicket(
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
 			"Track %q does not exist",
-			ticket.Spec.Track,
+			ticket.Track,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return nil
@@ -449,12 +449,12 @@ func (t *ticketReconciler) performNextMigration(
 	ticket *api.Ticket,
 ) error {
 	// Find the associated Track
-	track, err := t.getTrack(ctx, ticket.Spec.Track)
+	track, err := t.getTrack(ctx, ticket.Track)
 	if err != nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
 			"Error getting Track %q",
-			ticket.Spec.Track,
+			ticket.Track,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return err
@@ -463,7 +463,7 @@ func (t *ticketReconciler) performNextMigration(
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
 			"Track %q does not exist",
-			ticket.Spec.Track,
+			ticket.Track,
 		)
 		t.updateTicketStatus(ctx, ticket)
 		return nil
@@ -557,10 +557,10 @@ func (t *ticketReconciler) promoteToEnv(
 
 	t.logger.WithFields(log.Fields{
 		"ticket":      ticket.Name,
-		"track":       ticket.Spec.Track,
+		"track":       ticket.Track,
 		"environment": env.Name,
-		"imageRepo":   ticket.Spec.Change.ImageRepo,
-		"imageTag":    ticket.Spec.Change.ImageTag,
+		"imageRepo":   ticket.Change.ImageRepo,
+		"imageTag":    ticket.Change.ImageTag,
 	}).Debug("promoted image")
 
 	ticket.Status.State = api.TicketStateProgressing

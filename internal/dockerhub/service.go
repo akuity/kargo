@@ -74,13 +74,11 @@ func (s *service) Handle(
 				Name:      uuid.NewV4().String(),
 				Namespace: s.config.Namespace,
 			},
-			Spec: api.TicketSpec{
-				Track: track.Name,
-				Change: api.Change{
-					Type:      api.ChangeTypeNewImage,
-					ImageRepo: repo,
-					ImageTag:  tag,
-				},
+			Track: track.Name,
+			Change: api.Change{
+				Type:      api.ChangeTypeNewImage,
+				ImageRepo: repo,
+				ImageTag:  tag,
 			},
 		}
 
@@ -94,9 +92,9 @@ func (s *service) Handle(
 
 		s.logger.WithFields(log.Fields{
 			"name":      ticket.Name,
-			"track":     ticket.Spec.Track,
-			"imageRepo": ticket.Spec.Change.ImageRepo,
-			"imageTag":  ticket.Spec.Change.ImageTag,
+			"track":     ticket.Track,
+			"imageRepo": ticket.Change.ImageRepo,
+			"imageTag":  ticket.Change.ImageTag,
 		}).Debug("Created Ticket resource")
 	}
 
