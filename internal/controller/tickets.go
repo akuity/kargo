@@ -91,9 +91,9 @@ func SetupTicketReconcilerWithManager(
 		tracksByApplicationIndexField,
 		func(track client.Object) []string {
 			envs := track.(*api.Track).Environments // nolint: forcetypeassert
-			apps := make([]string, len(envs))
-			for i, env := range envs {
-				apps[i] = env.Application
+			apps := []string{}
+			for _, env := range envs {
+				apps = append(apps, env.Applications...)
 			}
 			return apps
 		},
@@ -271,54 +271,60 @@ func (t *ticketReconciler) reconcileNewTicket(
 
 	env := track.Environments[0]
 
-	// Find the corresponding Argo CD Application
-	app, err := t.getArgoCDApplication(ctx, env.Application)
-	if err != nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Error getting Argo CD Application %q for environment %q",
-			env.Application,
-			env.Name,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return nil
-	}
-	if app == nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Argo CD Application %q for environment %q does not exist",
-			env.Application,
-			env.Name,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return nil
-	}
-
-	loggerFields := log.Fields{
-		"ticket":           ticket.Name,
-		"track":            ticket.Spec.Track,
-		"environment":      env.Name,
-		"application":      env.Application,
-		"imageRepo":        ticket.Spec.Change.ImageRepo,
-		"imageTag":         ticket.Spec.Change.ImageTag,
-		"gitopsRepoURL":    app.Spec.Source.RepoURL,
-		"gitopsRepoBranch": app.Spec.Source.TargetRevision,
+	// Find the corresponding Argo CD Applications
+	apps := make([]*argocd.Application, len(env.Applications))
+	for i, appName := range env.Applications {
+		app, err := t.getArgoCDApplication(ctx, appName)
+		if err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error getting Argo CD Application %q for environment %q",
+				appName,
+				env.Name,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return nil
+		}
+		if app == nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Argo CD Application %q for environment %q does not exist",
+				appName,
+				env.Name,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return nil
+		}
+		apps[i] = app
 	}
 
 	// Promote
-	commitSHA, err := t.promoteImageFn(ctx, ticket, app)
-	if err != nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Error promoting image to environment %q",
-			env.Name,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return err
+	commits := make([]api.Commit, len(apps))
+	for i, app := range apps {
+		commitSHA, err := t.promoteImageFn(ctx, ticket, app)
+		if err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error promoting image to Argo CD Application %q in environment %q",
+				app.Name,
+				env.Name,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return err
+		}
+		commits[i] = api.Commit{
+			TargetApplication: app.Name,
+			SHA:               commitSHA,
+		}
 	}
 
-	loggerFields["gitopsRepoCommit"] = commitSHA
-	t.logger.WithFields(loggerFields).Debug("promoted image")
+	t.logger.WithFields(log.Fields{
+		"ticket":      ticket.Name,
+		"track":       ticket.Spec.Track,
+		"environment": env.Name,
+		"imageRepo":   ticket.Spec.Change.ImageRepo,
+		"imageTag":    ticket.Spec.Change.ImageTag,
+	}).Debug("promoted image")
 
 	ticket.Status.State = api.TicketStateProgressing
 	ticket.Status.StateReason = fmt.Sprintf(
@@ -328,8 +334,7 @@ func (t *ticketReconciler) reconcileNewTicket(
 	ticket.Status.Progress = []api.Transition{
 		{
 			TargetEnvironment: env.Name,
-			TargetApplication: env.Application,
-			CommitSHA:         commitSHA,
+			Commits:           commits,
 		},
 	}
 	t.updateTicketStatus(ctx, ticket)
@@ -343,51 +348,54 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 ) error {
 	// Find the most recent environment the change represented by the Ticket was
 	// migrated to
-	lastEnvName :=
-		ticket.Status.Progress[len(ticket.Status.Progress)-1].TargetEnvironment
-	lastAppName :=
-		ticket.Status.Progress[len(ticket.Status.Progress)-1].TargetApplication
+	lastTransition :=
+		ticket.Status.Progress[len(ticket.Status.Progress)-1]
 
-	// Find the corresponding Argo CD Application
-	app, err := t.getArgoCDApplication(ctx, lastAppName)
-	if err != nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Error getting Argo CD Application %q for environment %q",
-			lastAppName,
-			lastEnvName,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return nil
-	}
-	if app == nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Argo CD Application %q for environment %q does not exist",
-			lastAppName,
-			lastEnvName,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return nil
+	// Find the corresponding Argo CD Applications
+	apps := make([]*argocd.Application, len(lastTransition.Commits))
+	for i, commit := range lastTransition.Commits {
+		app, err := t.getArgoCDApplication(ctx, commit.TargetApplication)
+		if err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error getting Argo CD Application %q for environment %q",
+				commit.TargetApplication,
+				lastTransition.TargetEnvironment,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return nil
+		}
+		if app == nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Argo CD Application %q for environment %q does not exist",
+				commit.TargetApplication,
+				lastTransition.TargetEnvironment,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return nil
+		}
+		apps[i] = app
 	}
 
 	// Determine if the last Transition is complete
-	lastTransition := ticket.Status.Progress[len(ticket.Status.Progress)-1]
-	var lastTransitionInAppHistory bool
-	for _, record := range app.Status.History {
-		if record.Revision == lastTransition.CommitSHA {
-			lastTransitionInAppHistory = true
-			break
+	for i, commit := range lastTransition.Commits {
+		var lastCommitIDInAppHistory bool
+		for _, record := range apps[i].Status.History {
+			if record.Revision == commit.SHA {
+				lastCommitIDInAppHistory = true
+				break
+			}
+		}
+		// TODO: This logic isn't quite correct.
+		if !(lastCommitIDInAppHistory &&
+			apps[i].Status.Sync.Status == argocd.SyncStatusCodeSynced) {
+			return nil // Not done syncing
 		}
 	}
 
-	// TODO: This logic isn't quite correct. This leaves open the possibility that
-	// the change we migrated didn't sync successfully , but a subsequent change
-	// HAS synced successfully. Not sure yet how to deal with that scenario yet.
-	if !(lastTransitionInAppHistory &&
-		app.Status.Sync.Status == argocd.SyncStatusCodeSynced) {
-		return nil // Nothing to do
-	}
+	// If we get to here, all the Argo CD Applications associated with the last
+	// transition have synced.
 
 	// What's the next transition? Or are we done?
 	lastEnvIndex := -1
@@ -418,57 +426,59 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 
 	// If we get to here, we can migrate into the next environment
 	nextEnv := track.Environments[lastEnvIndex+1]
-	nextApp, err := t.getArgoCDApplication(ctx, nextEnv.Application)
-	if err != nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Error getting Argo CD Application %q for environment %q",
-			nextEnv.Application,
-			nextEnv.Name,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return err
-	}
-	if nextApp == nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Argo CD Application %q for environment %q does not exist",
-			nextEnv.Application,
-			nextEnv.Name,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return nil
-	}
-
-	loggerFields := log.Fields{
-		"ticket":           ticket.Name,
-		"track":            ticket.Spec.Track,
-		"environment":      nextEnv.Name,
-		"application":      nextEnv.Application,
-		"imageRepo":        ticket.Spec.Change.ImageRepo,
-		"imageTag":         ticket.Spec.Change.ImageTag,
-		"gitopsRepoURL":    nextApp.Spec.Source.RepoURL,
-		"gitopsRepoBranch": nextApp.Spec.Source.TargetRevision,
+	nextApps := make([]*argocd.Application, len(nextEnv.Applications))
+	for i, appName := range nextEnv.Applications {
+		app, err := t.getArgoCDApplication(ctx, appName)
+		if err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error getting Argo CD Application %q for environment %q",
+				appName,
+				nextEnv.Name,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return err
+		}
+		if app == nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Argo CD Application %q for environment %q does not exist",
+				appName,
+				nextEnv.Name,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return nil
+		}
+		nextApps[i] = app
 	}
 
 	// Promote
-	commitSHA, err := t.promoteImageFn(ctx, ticket, nextApp)
-	if err != nil {
-		ticket.Status.State = api.TicketStateFailed
-		ticket.Status.StateReason = fmt.Sprintf(
-			"Error promoting image to environment %q",
-			nextEnv.Name,
-		)
-		t.updateTicketStatus(ctx, ticket)
-		return errors.Wrapf(
-			err,
-			"error promoting image to environment %q",
-			nextEnv.Name,
-		)
+	commits := make([]api.Commit, len(nextApps))
+	for i, app := range nextApps {
+		commitSHA, err := t.promoteImageFn(ctx, ticket, app)
+		if err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error promoting image to Argo CD Application %q in environment %q",
+				app.Name,
+				nextEnv.Name,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return err
+		}
+		commits[i] = api.Commit{
+			TargetApplication: app.Name,
+			SHA:               commitSHA,
+		}
 	}
 
-	loggerFields["gitopsRepoCommit"] = commitSHA
-	t.logger.WithFields(loggerFields).Debug("promoted image")
+	t.logger.WithFields(log.Fields{
+		"ticket":      ticket.Name,
+		"track":       ticket.Spec.Track,
+		"environment": nextEnv.Name,
+		"imageRepo":   ticket.Spec.Change.ImageRepo,
+		"imageTag":    ticket.Spec.Change.ImageTag,
+	}).Debug("promoted image")
 
 	ticket.Status.State = api.TicketStateProgressing
 	ticket.Status.StateReason = fmt.Sprintf(
@@ -479,8 +489,7 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 		ticket.Status.Progress,
 		api.Transition{
 			TargetEnvironment: nextEnv.Name,
-			TargetApplication: nextEnv.Application,
-			CommitSHA:         commitSHA,
+			Commits:           commits,
 		},
 	)
 	t.updateTicketStatus(ctx, ticket)

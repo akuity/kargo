@@ -32,10 +32,12 @@ spec:
               description: Environment represents a single environment through which
                 a change represented by a Ticket should be progressed.
               properties:
-                application:
-                  description: ArgoCDApplication is a reference to an existing Argo
-                    CD Application resource that managed deployments to this Environment.
-                  type: string
+                applications:
+                  description: Applications is a list of references to existing Argo
+                    CD Application resources that manage deployments to this Environment.
+                  items:
+                    type: string
+                  type: array
                 name:
                   description: Name is a name for the environment.
                   type: string
