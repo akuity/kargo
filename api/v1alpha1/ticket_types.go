@@ -88,12 +88,19 @@ type Ticket struct {
 // environments by a Ticket. Only one of its fields may be non-nil. Compare this
 // to how a EnvVarSource or VolumeSource works in the core Kubernetes API.
 type Change struct {
-	// NewImage encapsulates the details of a new image that is to be progressed
-	// through a series of environments.
-	NewImage *NewImageChange `json:"newImage,omitempty"`
+	// NewImage encapsulates the details of one or more new images that are to be
+	// progressed through a series of environments.
+	NewImages *NewImagesChange `json:"newImages,omitempty"`
 }
 
-type NewImageChange struct {
+// NewImagesChanges encapsulates the details of one or more new images that are
+// to be progressed through a series of environments.
+type NewImagesChange struct {
+	Images []Image `json:"images,omitempty"`
+}
+
+// Image encapsulates the details of a single image.
+type Image struct {
 	// Repo denotes the image (without tag) that is to be progressed through a
 	// series of environments.
 	Repo string `json:"imageRepo,omitempty"`

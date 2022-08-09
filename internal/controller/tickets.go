@@ -512,11 +512,11 @@ func (t *ticketReconciler) promoteToEnv(
 	// Promote
 	commits := make([]api.Commit, len(apps))
 	for i, app := range apps {
-		commitSHA, err := t.promoteImage(ctx, ticket, app)
+		commitSHA, err := t.promoteImages(ctx, ticket, app)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Error promoting image to Argo CD Application %q in environment %q",
+				"Error promoting images to Argo CD Application %q in environment %q",
 				app.Name,
 				env.Name,
 			)
@@ -533,9 +533,7 @@ func (t *ticketReconciler) promoteToEnv(
 		"ticket":      ticket.Name,
 		"track":       ticket.Track,
 		"environment": env.Name,
-		"imageRepo":   ticket.Change.NewImage.Repo,
-		"imageTag":    ticket.Change.NewImage.Tag,
-	}).Debug("promoted image")
+	}).Debug("promoted images")
 
 	ticket.Status.State = api.TicketStateProgressing
 	progressRecord := api.ProgressRecord{
