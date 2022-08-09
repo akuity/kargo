@@ -59,7 +59,7 @@ type RepositorySubscription struct {
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest version of an image. No regular expressions or glob patterns are
 	// supported yet.
-	IgnoreTagsTags []string `json:"ignoreTags,omitempty"`
+	IgnoreTags []string `json:"ignoreTags,omitempty"`
 	// PullSecret is a reference to a Kubernetes Secret containing repository
 	// credentials. If left unspecified, K8sTA will fall back on globally
 	// configured repository credentials, if they exist.
