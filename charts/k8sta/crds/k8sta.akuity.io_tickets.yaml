@@ -29,18 +29,25 @@ spec:
             description: Change encapsulates the specific change this Ticket is meant
               to progress through a series of environments.
             properties:
-              newImage:
-                description: NewImage encapsulates the details of a new image that
-                  is to be progressed through a series of environments.
+              newImages:
+                description: NewImage encapsulates the details of one or more new
+                  images that are to be progressed through a series of environments.
                 properties:
-                  imageRepo:
-                    description: Repo denotes the image (without tag) that is to be
-                      progressed through a series of environments.
-                    type: string
-                  imageTag:
-                    description: Tag qualifies which image from the repository specified
-                      by the Repo field is to be progressed through a series of environments.
-                    type: string
+                  images:
+                    items:
+                      description: Image encapsulates the details of a single image.
+                      properties:
+                        imageRepo:
+                          description: Repo denotes the image (without tag) that is
+                            to be progressed through a series of environments.
+                          type: string
+                        imageTag:
+                          description: Tag qualifies which image from the repository
+                            specified by the Repo field is to be progressed through
+                            a series of environments.
+                          type: string
+                      type: object
+                    type: array
                 type: object
             type: object
           kind:

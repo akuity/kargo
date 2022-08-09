@@ -76,9 +76,13 @@ func (s *service) Handle(
 			},
 			Track: track.Name,
 			Change: api.Change{
-				NewImage: &api.NewImageChange{
-					Repo: repo,
-					Tag:  tag,
+				NewImages: &api.NewImagesChange{
+					Images: []api.Image{
+						{
+							Repo: repo,
+							Tag:  tag,
+						},
+					},
 				},
 			},
 		}
@@ -94,8 +98,8 @@ func (s *service) Handle(
 		s.logger.WithFields(log.Fields{
 			"name":      ticket.Name,
 			"track":     ticket.Track,
-			"imageRepo": ticket.Change.NewImage.Repo,
-			"imageTag":  ticket.Change.NewImage.Tag,
+			"imageRepo": repo,
+			"imageTag":  tag,
 		}).Debug("Created Ticket resource")
 	}
 
