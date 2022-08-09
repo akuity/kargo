@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (t *ticketReconciler) promoteImage(
+func (t *ticketReconciler) promoteImages(
 	ctx context.Context,
 	ticket *api.Ticket,
 	app *argocd.Application,
@@ -210,8 +210,6 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	loggerFields := log.Fields{
 		"repo":      app.Spec.Source.RepoURL,
 		"envBranch": app.Spec.Source.TargetRevision,
-		"imageRepo": ticket.Change.NewImage.Repo,
-		"imageTag":  ticket.Change.NewImage.Tag,
 	}
 
 	// We assume the environment-specific overlay path within the source branch ==
@@ -220,28 +218,35 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	envDir := filepath.Join(repoDir, app.Spec.Source.TargetRevision)
 
 	// Set the image
-	cmd := exec.Command( // nolint: gosec
-		"kustomize",
-		"edit",
-		"set",
-		"image",
-		fmt.Sprintf(
-			"%s=%s:%s",
-			ticket.Change.NewImage.Repo,
-			ticket.Change.NewImage.Repo,
-			ticket.Change.NewImage.Tag,
-		),
-	)
-	cmd.Dir = envDir // We need to be in the overlay directory to do this
-	if _, err := t.execCommand(cmd); err != nil {
-		return "", errors.Wrap(err, "error setting image")
+	for _, image := range ticket.Change.NewImages.Images {
+		cmd := exec.Command( // nolint: gosec
+			"kustomize",
+			"edit",
+			"set",
+			"image",
+			fmt.Sprintf(
+				"%s=%s:%s",
+				image.Repo,
+				image.Repo,
+				image.Tag,
+			),
+		)
+		cmd.Dir = envDir // We need to be in the overlay directory to do this
+		if _, err := t.execCommand(cmd); err != nil {
+			return "", errors.Wrap(err, "error setting image")
+		}
+		loggerFields["imageRepo"] = image.Repo
+		loggerFields["imageTag"] = image.Tag
+		t.logger.WithFields(loggerFields).Debug("ran kustomize edit set image")
 	}
-	t.logger.WithFields(loggerFields).Debug("ran kustomize edit set image")
+
+	delete(loggerFields, "imageRepo")
+	delete(loggerFields, "imageTag")
 
 	// Render environment-specific YAML
 	// TODO: We may need to buffer this or use a file instead because the rendered
 	// YAML could be quite large.
-	cmd = exec.Command("kustomize", "build")
+	cmd := exec.Command("kustomize", "build")
 	cmd.Dir = envDir // We need to be in the overlay directory to do this
 	yamlBytes, err := t.execCommand(cmd)
 	if err != nil {
@@ -255,17 +260,26 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	t.logger.WithFields(loggerFields).Debug("rendered environment-specific YAML")
 
 	// Commit the changes to the source branch
-	cmd = exec.Command( // nolint: gosec
-		"git",
-		"commit",
-		"-am",
-		fmt.Sprintf(
+	var commitMsg string
+	if len(ticket.Change.NewImages.Images) == 1 {
+		commitMsg = fmt.Sprintf(
 			"k8sta: updating %s to use image %s:%s",
 			app.Spec.Source.TargetRevision,
-			ticket.Change.NewImage.Repo,
-			ticket.Change.NewImage.Tag,
-		),
-	)
+			ticket.Change.NewImages.Images[0].Repo,
+			ticket.Change.NewImages.Images[0].Tag,
+		)
+	} else {
+		commitMsg = "k8sta: updating %s to use new images"
+		for _, image := range ticket.Change.NewImages.Images {
+			commitMsg = fmt.Sprintf(
+				"%s\n * %s:%s",
+				commitMsg,
+				image.Repo,
+				image.Tag,
+			)
+		}
+	}
+	cmd = exec.Command("git", "commit", "-am", commitMsg)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
 	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrap(err, "error committing changes to source branch")
@@ -346,16 +360,25 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	t.logger.WithFields(loggerFields).Debug("wrote new rendered YAML")
 
 	// Commit the changes to the environment-specific branch
-	cmd = exec.Command( // nolint: gosec
-		"git",
-		"commit",
-		"-am",
-		fmt.Sprintf(
-			"k8sta: use image %s:%s",
-			ticket.Change.NewImage.Repo,
-			ticket.Change.NewImage.Tag,
-		),
-	)
+	commitMsg = ""
+	if len(ticket.Change.NewImages.Images) == 1 {
+		commitMsg = fmt.Sprintf(
+			"k8sta: updating to use new image %s:%s",
+			ticket.Change.NewImages.Images[0].Repo,
+			ticket.Change.NewImages.Images[0].Tag,
+		)
+	} else {
+		commitMsg = "k8sta: updating to use new images"
+		for _, image := range ticket.Change.NewImages.Images {
+			commitMsg = fmt.Sprintf(
+				"%s\n * %s:%s",
+				commitMsg,
+				image.Repo,
+				image.Tag,
+			)
+		}
+	}
+	cmd = exec.Command("git", "commit", "-am", commitMsg)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
 	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
