@@ -71,6 +71,11 @@ spec:
                   items:
                     type: string
                   type: array
+                pullSecret:
+                  description: PullSecret is a reference to a Kubernetes Secret containing
+                    repository credentials. If left unspecified, K8sTA will fall back
+                    on globally configured repository credentials, if they exist.
+                  type: string
                 repoURL:
                   description: RepoURL specifies the URL of the image repository to
                     subscribe to. The value in this field MUST NOT include an image
