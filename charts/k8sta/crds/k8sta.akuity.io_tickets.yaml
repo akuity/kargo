@@ -87,8 +87,15 @@ spec:
                                 type: string
                             type: object
                           type: array
-                        state:
-                          description: State represents the current state of the Migration.
+                        completed:
+                          description: Completed indicates the time the migration
+                            completed. A nil value means the migration is not yet
+                            complete.
+                          format: date-time
+                          type: string
+                        started:
+                          description: Started indicates the time the migration started.
+                          format: date-time
                           type: string
                         targetEnvironment:
                           description: TargetEnvironment indicates the environment

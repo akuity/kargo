@@ -3,11 +3,13 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/util/db"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -256,14 +258,10 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 
 	// For the moment, the only type of progress is a Migration. So we just need
 	// to deal here with started Migrations and complete Migrations
-	switch lastProgressRecord.Migration.State {
-	case api.MigrationStateStarted:
+	if lastProgressRecord.Migration.Completed == nil {
 		return t.checkMigrationStatus(ctx, ticket)
-	case api.MigrationStateCompleted:
-		return t.performNextMigration(ctx, ticket)
-	default:
-		return nil // Do nothing
 	}
+	return t.performNextMigration(ctx, ticket)
 }
 
 // getTicket returns a pointer to the Ticket resource having the name specified
@@ -414,15 +412,8 @@ func (t *ticketReconciler) checkMigrationStatus(
 	// If we get to here, all the Argo CD Applications associated with the last
 	// migration have synced.
 
-	ticket.Status.Progress = append(
-		ticket.Status.Progress,
-		api.ProgressRecord{
-			Migration: &api.Migration{
-				TargetEnvironment: lastMigration.TargetEnvironment,
-				State:             api.MigrationStateCompleted,
-			},
-		},
-	)
+	ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration.Completed =
+		&metav1.Time{Time: time.Now().UTC()}
 	t.updateTicketStatus(ctx, ticket)
 	return nil
 }
@@ -551,7 +542,7 @@ func (t *ticketReconciler) promoteToEnv(
 		Migration: &api.Migration{
 			TargetEnvironment: env.Name,
 			Commits:           commits,
-			State:             api.MigrationStateStarted,
+			Started:           &metav1.Time{Time: time.Now().UTC()},
 		},
 	}
 	if ticket.Status.Progress == nil {
