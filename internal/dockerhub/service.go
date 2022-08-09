@@ -119,8 +119,8 @@ func (s *service) getTracksByImageRepo(
 	}
 tracks:
 	for _, track := range tracks.Items {
-		for _, subscribedRepo := range track.ImageRepositories {
-			if subscribedRepo == repo {
+		for _, sub := range track.RepositorySubscriptions {
+			if sub.RepoURL == repo {
 				subscribedTracks = append(subscribedTracks, track)
 				continue tracks
 			}

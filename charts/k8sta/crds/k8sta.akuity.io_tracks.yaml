@@ -43,14 +43,6 @@ spec:
                   type: string
               type: object
             type: array
-          imageRepositories:
-            description: ImageRepositories specifies image repositories that the Track
-              is effectively subscribed to. When a push to any one of these repositories
-              is detected, it will trigger the progressive deployment of the new image
-              through the Track's environments.
-            items:
-              type: string
-            type: array
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -58,8 +50,38 @@ spec:
             type: string
           metadata:
             type: object
-        required:
-        - imageRepositories
+          repositorySubscriptions:
+            description: RepositorySubscriptions specifies image repositories that
+              the Track is effectively subscribed to. When a push to any one of these
+              repositories is detected, it will trigger the progressive deployment
+              of the new image through the Track's environments.
+            items:
+              description: RepositorySubscription defines a subscription to an image
+                repository.
+              properties:
+                allowTags:
+                  description: AllowTags is a regular expression that can optionally
+                    be used to limit the image tags that are considered in determining
+                    the newest version of an image.
+                  type: string
+                ignoreTags:
+                  description: IgnoreTags is a list of tags that must be ignored when
+                    determining the newest version of an image. No regular expressions
+                    or glob patterns are supported yet.
+                  items:
+                    type: string
+                  type: array
+                repoURL:
+                  description: RepoURL specifies the URL of the image repository to
+                    subscribe to. The value in this field MUST NOT include an image
+                    tag.
+                  type: string
+                updateStrategy:
+                  description: UpdateStrategy specifies the rules for how to identify
+                    the newest version of the image specified by the RepoURL field.
+                  type: string
+              type: object
+            type: array
         type: object
     served: true
     storage: true
