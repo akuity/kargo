@@ -24,7 +24,7 @@ docker_build(
 k8s_resource(
   workload = 'k8sta-server',
   new_name = 'server',
-  port_forwards = '30081:8080',
+  port_forwards = '30082:8080',
   labels = ['k8sta']
 )
 k8s_resource(
@@ -62,7 +62,7 @@ k8s_yaml(
   helm(
     './charts/k8sta',
     name = 'k8sta',
-    namespace = 'argocd',
+    namespace = 'argo-cd',
     set = [
       'controller.logLevel=DEBUG',
       'server.logLevel=DEBUG',
