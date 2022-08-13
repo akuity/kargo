@@ -66,6 +66,8 @@ k8s_yaml(
     set = [
       'controller.logLevel=DEBUG',
       'server.logLevel=DEBUG',
+      'server.service.type=NodePort',
+      'server.service.nodePort=30082',
       'server.tls.enabled=false',
       'server.dockerhub.tokens.dev-token=insecure-dev-token'
     ]
