@@ -7,6 +7,7 @@ import (
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/util/db"
+	"github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -402,9 +403,13 @@ func (t *ticketReconciler) checkMigrationStatus(
 				break
 			}
 		}
-		// TODO: This logic isn't quite correct.
+		// TODO: This logic isn't quite correct. The possibility exists that the
+		// Application is healthy on account of a change that was applied AFTER
+		// the change represented by the Ticket and the change represented by the
+		// Ticket is actually bad. This speaks to a larger issue wherein we need to
+		// figure out how to limit or prevent racing changes.
 		if !(lastCommitIDInAppHistory &&
-			apps[i].Status.Sync.Status == argocd.SyncStatusCodeSynced) {
+			apps[i].Status.Health.Status == health.HealthStatusHealthy) {
 			return nil // Not done syncing
 		}
 	}
