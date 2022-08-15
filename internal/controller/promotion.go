@@ -232,7 +232,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 			),
 		)
 		cmd.Dir = envDir // We need to be in the overlay directory to do this
-		if _, err := t.execCommand(cmd); err != nil {
+		if err := cmd.Run(); err != nil {
 			return "", errors.Wrap(err, "error setting image")
 		}
 		loggerFields["imageRepo"] = image.Repo
@@ -248,7 +248,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	// YAML could be quite large.
 	cmd := exec.Command("kustomize", "build")
 	cmd.Dir = envDir // We need to be in the overlay directory to do this
-	yamlBytes, err := t.execCommand(cmd)
+	yamlBytes, err := cmd.Output()
 	if err != nil {
 		return "",
 			errors.Wrapf(
@@ -309,7 +309,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		"--",
 	)
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	if _, err = t.execCommand(cmd); err != nil {
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error checking out environment-specific branch %q from repo %q",
@@ -413,7 +413,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	// Get the ID of the last commit
 	cmd = exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	shaBytes, err := t.execCommand(cmd)
+	shaBytes, err := cmd.Output()
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
@@ -438,10 +438,6 @@ func (t *ticketReconciler) execGitCommand(
 	} else {
 		cmd.Env = append(cmd.Env, homeEnvVar)
 	}
-	return t.execCommand(cmd)
-}
-
-func (t *ticketReconciler) execCommand(cmd *exec.Cmd) ([]byte, error) {
 	output, err := cmd.CombinedOutput()
 	t.logger.Debug(string(output))
 	return output, err
