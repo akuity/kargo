@@ -212,9 +212,12 @@ hack-kind-up:
 		--install \
 		--create-namespace \
 		--namespace argo-cd \
+		--set 'configs.secret.argocdServerAdminPassword=$$2a$$10$$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
+		--set server.extensions.enabled=true \
+		--set server.extensions.contents[0].name=argo-rollouts \
+		--set server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.2.0/extension.tar \
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30081 \
-		--set 'configs.secret.argocdServerAdminPassword=$$2a$$10$$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
 		--wait
 	helm upgrade argo-rollouts argo-rollouts \
 		--repo https://argoproj.github.io/argo-helm \
