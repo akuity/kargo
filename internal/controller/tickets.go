@@ -360,16 +360,19 @@ func (t *ticketReconciler) getArgoCDApplication(
 	return &app, nil
 }
 
+// TODO: This logic is still not completely correct. It's possible for an Argo
+// CD Application to be "fully synced" to a given commit, but healthy NOT on
+// account of that commit, but on account of one that came after it. Not sure
+// yet how to deal with these sort of scenarios.
 func (t *ticketReconciler) checkMigrationStatus(
 	ctx context.Context,
 	ticket *api.Ticket,
 ) error {
 	lastMigration :=
 		ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration
-
-	// Find the corresponding Argo CD Applications
-	apps := make([]*argocd.Application, len(lastMigration.Commits))
-	for i, commit := range lastMigration.Commits {
+	// Keep track of whether the last migration might possibly be complete.
+	possiblyComplete := true
+	for _, commit := range lastMigration.Commits {
 		app, err := t.getArgoCDApplication(ctx, commit.TargetApplication)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
@@ -391,36 +394,58 @@ func (t *ticketReconciler) checkMigrationStatus(
 			t.updateTicketStatus(ctx, ticket)
 			return nil
 		}
-		apps[i] = app
-	}
-
-	// Determine if the last Migration is complete
-	for i, commit := range lastMigration.Commits {
-		var lastCommitIDInAppHistory bool
-		for _, record := range apps[i].Status.History {
-			if record.Revision == commit.SHA {
-				lastCommitIDInAppHistory = true
-				break
-			}
+		if !t.isAppFullySynced(app, commit.SHA) {
+			possiblyComplete = false
+			continue
 		}
-		// TODO: This logic isn't quite correct. The possibility exists that the
-		// Application is healthy on account of a change that was applied AFTER
-		// the change represented by the Ticket and the change represented by the
-		// Ticket is actually bad. This speaks to a larger issue wherein we need to
-		// figure out how to limit or prevent racing changes.
-		if !(lastCommitIDInAppHistory &&
-			apps[i].Status.Health.Status == health.HealthStatusHealthy) {
-			return nil // Not done syncing
+		// If we get to here, the Argo CD Application is "fully synced." What does
+		// its health look like?
+		switch app.Status.Health.Status {
+		case health.HealthStatusHealthy:
+			continue
+		case health.HealthStatusProgressing,
+			health.HealthStatusSuspended:
+			possiblyComplete = false
+			continue
+		default:
+			// For any other state, we cannot progress the ticket further.
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Argo CD Application %q was fully synced but observed with "+
+					"health %q; cannot progress further",
+				app.Name,
+				app.Status.Health.Status,
+			)
+			t.updateTicketStatus(ctx, ticket)
+			return nil
 		}
 	}
-
-	// If we get to here, all the Argo CD Applications associated with the last
-	// migration have synced.
-
-	ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration.Completed =
-		&metav1.Time{Time: time.Now().UTC()}
-	t.updateTicketStatus(ctx, ticket)
+	if possiblyComplete {
+		ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration.Completed =
+			&metav1.Time{Time: time.Now().UTC()}
+		t.updateTicketStatus(ctx, ticket)
+	}
 	return nil
+}
+
+// isAppFullySynced determines if an Argo CD Application is "fully synced" by
+// not only examining the Application's sync status, but also by examining
+// Application history to validate that the provided commitID is among those
+// records.
+func (t *ticketReconciler) isAppFullySynced(
+	app *argocd.Application,
+	commitID string,
+) bool {
+	if app.Status.Sync.Status == argocd.SyncStatusCodeOutOfSync ||
+		app.Status.Sync.Status == argocd.SyncStatusCodeUnknown {
+		return false
+	}
+	for _, revisionHistory := range app.Status.History {
+		if revisionHistory.Revision == commitID {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *ticketReconciler) performNextMigration(
