@@ -109,6 +109,13 @@ spec:
                             into which this Transition aims to migrate the change
                             represented by the Ticket.
                           type: string
+                        tickets:
+                          description: Tickets is a list of references to Ticket resources
+                            created to progress the same change represented by this
+                            Ticket down another Track.
+                          items:
+                            type: string
+                          type: array
                       type: object
                   type: object
                 type: array

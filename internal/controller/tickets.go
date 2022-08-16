@@ -9,6 +9,7 @@ import (
 	"github.com/argoproj/argo-cd/v2/util/db"
 	"github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -502,6 +503,13 @@ func (t *ticketReconciler) promoteToEnv(
 	ticket *api.Ticket,
 	env api.Environment,
 ) error {
+	progressRecord := api.ProgressRecord{
+		Migration: &api.Migration{
+			TargetEnvironment: env.Name,
+			Started:           &metav1.Time{Time: time.Now().UTC()},
+		},
+	}
+
 	// Find the corresponding Argo CD Applications
 	apps := make([]*argocd.Application, len(env.Applications))
 	for i, appName := range env.Applications {
@@ -527,8 +535,33 @@ func (t *ticketReconciler) promoteToEnv(
 		apps[i] = app
 	}
 
-	// Promote
-	commits := make([]api.Commit, len(apps))
+	// Find the corresponding Tracks
+	tracks := make([]*api.Track, len(env.Tracks))
+	for i, trackName := range env.Tracks {
+		track, err := t.getTrack(ctx, trackName)
+		if err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error getting Track %q for environment %q",
+				trackName,
+				env.Name,
+			)
+			return nil
+		}
+		if track == nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Track %q for environment %q does not exist",
+				trackName,
+				env.Name,
+			)
+			return nil
+		}
+		tracks[i] = track
+	}
+
+	// Promote by making commits
+	progressRecord.Migration.Commits = make([]api.Commit, len(apps))
 	for i, app := range apps {
 		commitSHA, err := t.promoteImages(ctx, ticket, app)
 		if err != nil {
@@ -540,10 +573,51 @@ func (t *ticketReconciler) promoteToEnv(
 			)
 			return err
 		}
-		commits[i] = api.Commit{
+		progressRecord.Migration.Commits[i] = api.Commit{
 			TargetApplication: app.Name,
 			SHA:               commitSHA,
 		}
+	}
+
+	// Promote by creating new Tickets
+	progressRecord.Migration.Tickets = make([]string, len(tracks))
+	for i, track := range tracks {
+		newTicket := api.Ticket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      uuid.NewV4().String(),
+				Namespace: t.config.Namespace,
+			},
+			Track:  track.Name,
+			Change: ticket.Change,
+		}
+		if err := t.client.Create(
+			ctx,
+			&newTicket,
+			&client.CreateOptions{},
+		); err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error creating new Ticket for Track %q",
+				track.Name,
+			)
+			return errors.Wrapf(
+				err,
+				"error creating Ticket %s",
+				ticket.Name,
+			)
+		}
+		t.logger.WithFields(log.Fields{
+			"name":  ticket.Name,
+			"track": ticket.Track,
+		}).Debug("Created Ticket resource")
+		progressRecord.Migration.Tickets[i] = newTicket.Name
+	}
+
+	ticket.Status.State = api.TicketStateProgressing
+	if ticket.Status.Progress == nil {
+		ticket.Status.Progress = []api.ProgressRecord{progressRecord}
+	} else {
+		ticket.Status.Progress = append(ticket.Status.Progress, progressRecord)
 	}
 
 	t.logger.WithFields(log.Fields{
@@ -552,18 +626,5 @@ func (t *ticketReconciler) promoteToEnv(
 		"environment": env.Name,
 	}).Debug("promoted images")
 
-	ticket.Status.State = api.TicketStateProgressing
-	progressRecord := api.ProgressRecord{
-		Migration: &api.Migration{
-			TargetEnvironment: env.Name,
-			Commits:           commits,
-			Started:           &metav1.Time{Time: time.Now().UTC()},
-		},
-	}
-	if ticket.Status.Progress == nil {
-		ticket.Status.Progress = []api.ProgressRecord{progressRecord}
-	} else {
-		ticket.Status.Progress = append(ticket.Status.Progress, progressRecord)
-	}
 	return nil
 }

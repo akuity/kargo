@@ -74,6 +74,12 @@ type Environment struct {
 	// Applications is a list of references to existing Argo CD Application
 	// resources that manage deployments to this Environment.
 	Applications []string `json:"applications,omitempty"`
+	// Tracks is a list of references to other existing K8sTA Track resources.
+	// When the change represented by a Ticket reaches this Environment, a new
+	// Ticket representing the same change will be created for each of these
+	// Tracks. i.e. This permits the composition of complex trees from segments of
+	// linear Track.
+	Tracks []string `json:"tracks,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -36,6 +36,8 @@ type TicketStatus struct {
 // Only one of its fields may be non-nil. Compare this to how a EnvVarSource or
 // VolumeSource works in the core Kubernetes API.
 type ProgressRecord struct {
+	// Migration represents a bit of a Ticket's progress along a Track involving
+	// migration from one environment to another.
 	Migration *Migration `json:"migration,omitempty"`
 }
 
@@ -48,6 +50,9 @@ type Migration struct {
 	// Commits records all git commits made to effect an update to
 	// TargetEnvironment.
 	Commits []Commit `json:"commits,omitempty"`
+	// Tickets is a list of references to Ticket resources created to progress the
+	// same change represented by this Ticket down another Track.
+	Tickets []string `json:"tickets,omitempty"`
 	// Started indicates the time the migration started.
 	Started *metav1.Time `json:"started,omitempty"`
 	// Completed indicates the time the migration completed. A nil value means
