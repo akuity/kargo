@@ -208,14 +208,15 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	repoDir string,
 ) (string, error) {
 	loggerFields := log.Fields{
-		"repo":      app.Spec.Source.RepoURL,
-		"envBranch": app.Spec.Source.TargetRevision,
+		"repo":   app.Spec.Source.RepoURL,
+		"branch": app.Spec.Source.TargetRevision,
 	}
 
-	// We assume the environment-specific overlay path within the source branch ==
-	// the name of the environment-specific branch that the final rendered YAML
+	// We assume the Application-specific overlay path within the source branch ==
+	// the name of the Application-specific branch that the final rendered YAML
 	// will live in.
-	envDir := filepath.Join(repoDir, app.Spec.Source.TargetRevision)
+	// TODO: Nothing enforced this assumption yet.
+	appDir := filepath.Join(repoDir, app.Spec.Source.TargetRevision)
 
 	// Set the image
 	for _, image := range ticket.Change.NewImages.Images {
@@ -231,7 +232,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 				image.Tag,
 			),
 		)
-		cmd.Dir = envDir // We need to be in the overlay directory to do this
+		cmd.Dir = appDir // We need to be in the overlay directory to do this
 		if err := cmd.Run(); err != nil {
 			return "", errors.Wrap(err, "error setting image")
 		}
@@ -243,11 +244,11 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	delete(loggerFields, "imageRepo")
 	delete(loggerFields, "imageTag")
 
-	// Render environment-specific YAML
+	// Render Application-specific YAML
 	// TODO: We may need to buffer this or use a file instead because the rendered
 	// YAML could be quite large.
 	cmd := exec.Command("kustomize", "build")
-	cmd.Dir = envDir // We need to be in the overlay directory to do this
+	cmd.Dir = appDir // We need to be in the overlay directory to do this
 	yamlBytes, err := cmd.Output()
 	if err != nil {
 		return "",
@@ -257,7 +258,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 				app.Spec.Source.TargetRevision,
 			)
 	}
-	t.logger.WithFields(loggerFields).Debug("rendered environment-specific YAML")
+	t.logger.WithFields(loggerFields).Debug("rendered Application-specific YAML")
 
 	// Commit the changes to the source branch
 	var commitMsg string
@@ -296,9 +297,9 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	t.logger.WithFields(loggerFields).Debug("pushed changes to the source branch")
 
-	// Switch to the env-specific branch
+	// Switch to the Application-specific branch
 	// TODO: Should we do something about the possibility that the branch doesn't
-	// already exist, e.g. `git checkout --orphan <envBranch> --`
+	// already exist, e.g. `git checkout --orphan <appBranch> --`
 	cmd = exec.Command( // nolint: gosec
 		"git",
 		"checkout",
@@ -312,13 +313,13 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
 			err,
-			"error checking out environment-specific branch %q from repo %q",
+			"error checking out Application-specific branch %q from repo %q",
 			app.Spec.Source.TargetRevision,
 			app.Spec.Source.RepoURL,
 		)
 	}
 	t.logger.WithFields(loggerFields).Debug(
-		"checked out environment-specific branch",
+		"checked out Application-specific branch",
 	)
 
 	// Remove existing rendered YAML
@@ -326,7 +327,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
-			"error listing files in environment-specific branch %q",
+			"error listing files in Application-specific branch %q",
 			app.Spec.Source.TargetRevision,
 		)
 	}
@@ -337,7 +338,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		if err = os.RemoveAll(file); err != nil {
 			return "", errors.Wrapf(
 				err,
-				"error deleting file %q from environment-specific branch %q",
+				"error deleting file %q from Application-specific branch %q",
 				file,
 				app.Spec.Source.TargetRevision,
 			)
@@ -353,13 +354,13 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	); err != nil {
 		return "", errors.Wrapf(
 			err,
-			"error writing rendered YAML to environment-specific branch %q",
+			"error writing rendered YAML to Application-specific branch %q",
 			app.Spec.Source.TargetRevision,
 		)
 	}
 	t.logger.WithFields(loggerFields).Debug("wrote new rendered YAML")
 
-	// Commit the changes to the environment-specific branch
+	// Commit the changes to the Application-specific branch
 	commitMsg = ""
 	if len(ticket.Change.NewImages.Images) == 1 {
 		commitMsg = fmt.Sprintf(
@@ -383,15 +384,15 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
 			err,
-			"error committing changes to environment-specific branch %q",
+			"error committing changes to Application-specific branch %q",
 			app.Spec.Source.TargetRevision,
 		)
 	}
 	t.logger.WithFields(loggerFields).Debug(
-		"committed changes to environment-specific branch",
+		"committed changes to Application-specific branch",
 	)
 
-	// Push the changes to the environment-specific branch
+	// Push the changes to the Application-specific branch
 	cmd = exec.Command( // nolint: gosec
 		"git",
 		"push",
@@ -402,12 +403,12 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
 			err,
-			"error pushing changes to environment-specific branch %q",
+			"error pushing changes to Application-specific branch %q",
 			app.Spec.Source.TargetRevision,
 		)
 	}
 	t.logger.WithFields(loggerFields).Debug(
-		"pushed changes to environment-specific branch",
+		"pushed changes to Application-specific branch",
 	)
 
 	// Get the ID of the last commit
@@ -423,7 +424,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	sha := strings.TrimSpace(string(shaBytes))
 	t.logger.WithFields(loggerFields).Debug(
-		"obtained sha of commit to environment-specific branch",
+		"obtained sha of commit to Application-specific branch",
 	)
 	return sha, nil
 }

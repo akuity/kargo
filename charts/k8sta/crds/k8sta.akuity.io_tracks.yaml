@@ -25,33 +25,6 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
-          environments:
-            description: Environments enumerates a logical ordering of environments
-              through which a change represented by a Ticket should be progressed.
-            items:
-              description: Environment represents a single environment through which
-                a change represented by a Ticket should be progressed.
-              properties:
-                applications:
-                  description: Applications is a list of references to existing Argo
-                    CD Application resources that manage deployments to this Environment.
-                  items:
-                    type: string
-                  type: array
-                name:
-                  description: Name is a name for the environment.
-                  type: string
-                tracks:
-                  description: Tracks is a list of references to other existing K8sTA
-                    Track resources. When the change represented by a Ticket reaches
-                    this Environment, a new Ticket representing the same change will
-                    be created for each of these Tracks. i.e. This permits the composition
-                    of complex trees from segments of linear Track.
-                  items:
-                    type: string
-                  type: array
-              type: object
-            type: array
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -63,7 +36,7 @@ spec:
             description: RepositorySubscriptions specifies image repositories that
               the Track is effectively subscribed to. When a push to any one of these
               repositories is detected, it will trigger the progressive deployment
-              of the new image through the Track's environments.
+              of the new image through the Track's Stations.
             items:
               description: RepositorySubscription defines a subscription to an image
                 repository.
@@ -94,6 +67,34 @@ spec:
                   description: UpdateStrategy specifies the rules for how to identify
                     the newest version of the image specified by the RepoURL field.
                   type: string
+              type: object
+            type: array
+          stations:
+            description: Stations enumerates points along the Track through which
+              a change represented by a Ticket may be progressed.
+            items:
+              description: Station represents a single point on a Track through which
+                a change represented by a Ticket may be progressed.
+              properties:
+                applications:
+                  description: Applications is a list of references to existing Argo
+                    CD Applications. Progressing through the Station is effected via
+                    deployment of each of these Applications.
+                  items:
+                    type: string
+                  type: array
+                name:
+                  description: Name is a name for the Station.
+                  type: string
+                tracks:
+                  description: Tracks is a list of references to other existing K8sTA
+                    Track resources. When the change represented by a Ticket reaches
+                    this Station, a new Ticket representing the same change will be
+                    created for each of these Tracks. i.e. This permits the composition
+                    of complex tracks from segments of linear Track.
+                  items:
+                    type: string
+                  type: array
               type: object
             type: array
         type: object

@@ -6,7 +6,7 @@ import (
 
 // UpdateStrategy represents a strategy for determining when one tag of a given
 // image is newer than another, thus making it eligible to be promoted through a
-// succession of environments.
+// succession of Stations.
 type UpdateStrategy string
 
 const (
@@ -37,11 +37,11 @@ type Track struct {
 	// RepositorySubscriptions specifies image repositories that the Track is
 	// effectively subscribed to. When a push to any one of these repositories is
 	// detected, it will trigger the progressive deployment of the new image
-	// through the Track's environments.
+	// through the Track's Stations.
 	RepositorySubscriptions []RepositorySubscription `json:"repositorySubscriptions,omitempty"` // nolint: lll
-	// Environments enumerates a logical ordering of environments through which a
-	// change represented by a Ticket should be progressed.
-	Environments []Environment `json:"environments,omitempty"`
+	// Stations enumerates points along the Track through which a change
+	// represented by a Ticket may be progressed.
+	Stations []Station `json:"stations,omitempty"`
 }
 
 // RepositorySubscription defines a subscription to an image repository.
@@ -66,19 +66,20 @@ type RepositorySubscription struct {
 	PullSecret string `json:"pullSecret,omitempty"`
 }
 
-// Environment represents a single environment through which a change
-// represented by a Ticket should be progressed.
-type Environment struct {
-	// Name is a name for the environment.
+// Station represents a single point on a Track through which a change
+// represented by a Ticket may be progressed.
+type Station struct {
+	// Name is a name for the Station.
 	Name string `json:"name,omitempty"`
-	// Applications is a list of references to existing Argo CD Application
-	// resources that manage deployments to this Environment.
+	// Applications is a list of references to existing Argo CD Applications.
+	// Progressing through the Station is effected via deployment of each of these
+	// Applications.
 	Applications []string `json:"applications,omitempty"`
 	// Tracks is a list of references to other existing K8sTA Track resources.
-	// When the change represented by a Ticket reaches this Environment, a new
-	// Ticket representing the same change will be created for each of these
-	// Tracks. i.e. This permits the composition of complex trees from segments of
-	// linear Track.
+	// When the change represented by a Ticket reaches this Station, a new Ticket
+	// representing the same change will be created for each of these Tracks. i.e.
+	// This permits the composition of complex tracks from segments of linear
+	// Track.
 	Tracks []string `json:"tracks,omitempty"`
 }
 
