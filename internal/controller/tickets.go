@@ -197,17 +197,18 @@ func (t *ticketReconciler) Reconcile(
 	case "":
 		// Add the initial state and requeue
 		ticket.Status.State = api.TicketStateNew
-		t.updateTicketStatus(ctx, ticket)
 		result.Requeue = true
-		return result, nil
 	case api.TicketStateNew:
-		return result, t.reconcileNewTicket(ctx, ticket)
+		err = t.reconcileNewTicket(ctx, ticket)
 	case api.TicketStateProgressing:
-		return result, t.reconcileProgressingTicket(ctx, ticket)
+		err = t.reconcileProgressingTicket(ctx, ticket)
 	default:
 		// Ignore all other states
 		return result, nil
 	}
+
+	t.updateTicketStatus(ctx, ticket)
+	return result, err
 }
 
 func (t *ticketReconciler) reconcileNewTicket(
@@ -222,7 +223,6 @@ func (t *ticketReconciler) reconcileNewTicket(
 			"Error getting Track %q",
 			ticket.Track,
 		)
-		t.updateTicketStatus(ctx, ticket)
 		return err
 	}
 	if track == nil {
@@ -231,7 +231,6 @@ func (t *ticketReconciler) reconcileNewTicket(
 			"Track %q does not exist",
 			ticket.Track,
 		)
-		t.updateTicketStatus(ctx, ticket)
 		return nil
 	}
 
@@ -241,7 +240,6 @@ func (t *ticketReconciler) reconcileNewTicket(
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason =
 			"Associated Track has no environments; Nothing to do"
-		t.updateTicketStatus(ctx, ticket)
 		return nil
 	}
 	env := track.Environments[0]
@@ -381,7 +379,6 @@ func (t *ticketReconciler) checkMigrationStatus(
 				commit.TargetApplication,
 				lastMigration.TargetEnvironment,
 			)
-			t.updateTicketStatus(ctx, ticket)
 			return nil
 		}
 		if app == nil {
@@ -391,7 +388,6 @@ func (t *ticketReconciler) checkMigrationStatus(
 				commit.TargetApplication,
 				lastMigration.TargetEnvironment,
 			)
-			t.updateTicketStatus(ctx, ticket)
 			return nil
 		}
 		if !t.isAppFullySynced(app, commit.SHA) {
@@ -416,14 +412,12 @@ func (t *ticketReconciler) checkMigrationStatus(
 				app.Name,
 				app.Status.Health.Status,
 			)
-			t.updateTicketStatus(ctx, ticket)
 			return nil
 		}
 	}
 	if possiblyComplete {
 		ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration.Completed =
 			&metav1.Time{Time: time.Now().UTC()}
-		t.updateTicketStatus(ctx, ticket)
 	}
 	return nil
 }
@@ -460,7 +454,6 @@ func (t *ticketReconciler) performNextMigration(
 			"Error getting Track %q",
 			ticket.Track,
 		)
-		t.updateTicketStatus(ctx, ticket)
 		return err
 	}
 	if track == nil {
@@ -469,7 +462,6 @@ func (t *ticketReconciler) performNextMigration(
 			"Track %q does not exist",
 			ticket.Track,
 		)
-		t.updateTicketStatus(ctx, ticket)
 		return nil
 	}
 
@@ -491,7 +483,6 @@ func (t *ticketReconciler) performNextMigration(
 	if lastEnvIndex == -1 {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = "Cannot determine next migration"
-		t.updateTicketStatus(ctx, ticket)
 		return nil
 	}
 
@@ -499,7 +490,6 @@ func (t *ticketReconciler) performNextMigration(
 	if lastEnvIndex == len(track.Environments)-1 {
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason = ""
-		t.updateTicketStatus(ctx, ticket)
 		return nil
 	}
 	nextEnv := track.Environments[lastEnvIndex+1]
@@ -523,7 +513,6 @@ func (t *ticketReconciler) promoteToEnv(
 				appName,
 				env.Name,
 			)
-			t.updateTicketStatus(ctx, ticket)
 			return nil
 		}
 		if app == nil {
@@ -533,7 +522,6 @@ func (t *ticketReconciler) promoteToEnv(
 				appName,
 				env.Name,
 			)
-			t.updateTicketStatus(ctx, ticket)
 			return nil
 		}
 		apps[i] = app
@@ -550,7 +538,6 @@ func (t *ticketReconciler) promoteToEnv(
 				app.Name,
 				env.Name,
 			)
-			t.updateTicketStatus(ctx, ticket)
 			return err
 		}
 		commits[i] = api.Commit{
@@ -578,6 +565,5 @@ func (t *ticketReconciler) promoteToEnv(
 	} else {
 		ticket.Status.Progress = append(ticket.Status.Progress, progressRecord)
 	}
-	t.updateTicketStatus(ctx, ticket)
 	return nil
 }
