@@ -27,11 +27,11 @@ spec:
             type: string
           change:
             description: Change encapsulates the specific change this Ticket is meant
-              to progress through a series of environments.
+              to progress through a series of Stations.
             properties:
               newImages:
                 description: NewImage encapsulates the details of one or more new
-                  images that are to be progressed through a series of environments.
+                  images that are to be progressed through a series of Stations.
                 properties:
                   images:
                     items:
@@ -39,12 +39,12 @@ spec:
                       properties:
                         imageRepo:
                           description: Repo denotes the image (without tag) that is
-                            to be progressed through a series of environments.
+                            to be progressed through a series of Stations.
                           type: string
                         imageTag:
                           description: Tag qualifies which image from the repository
                             specified by the Repo field is to be progressed through
-                            a series of environments.
+                            a series of Stations.
                           type: string
                       type: object
                     type: array
@@ -73,12 +73,11 @@ spec:
                   properties:
                     migration:
                       description: Migration represents a bit of a Ticket's progress
-                        along a Track involving migration from one environment to
-                        another.
+                        along a Track involving migration from one Station to another.
                       properties:
                         commits:
                           description: Commits records all git commits made to effect
-                            an update to TargetEnvironment.
+                            the migration to TargetStation.
                           items:
                             description: Commit represents a git commit made with
                               the intent to effect an update to a specific Argo CD
@@ -104,10 +103,10 @@ spec:
                           description: Started indicates the time the migration started.
                           format: date-time
                           type: string
-                        targetEnvironment:
-                          description: TargetEnvironment indicates the environment
-                            into which this Transition aims to migrate the change
-                            represented by the Ticket.
+                        targetStation:
+                          description: TargetStation indicates the Station on the
+                            associated Track into which this Migration aims to migrate
+                            the change represented by the Ticket.
                           type: string
                         tickets:
                           description: Tickets is a list of references to Ticket resources

@@ -9,7 +9,7 @@ type TicketState string
 
 const (
 	// TicketStateCompleted is a constant representing a Ticket that has
-	// progressed all the way to the last environment in the associated Track.
+	// progressed all the way to the last Station in the associated Track.
 	TicketStateCompleted TicketState = "Completed"
 	// TicketStateFailed is a constant representing a Ticket that can not be
 	// progressed further for whatever reason.
@@ -18,7 +18,7 @@ const (
 	// been done yet to address the change represented by the Ticket.
 	TicketStateNew TicketState = "New"
 	// TicketStateProgressing is a constant representing a Ticket whose change
-	// is already being progressed through a series of environments.
+	// is already being progressed through a series of Stations.
 	TicketStateProgressing TicketState = "Progressing"
 )
 
@@ -37,18 +37,18 @@ type TicketStatus struct {
 // VolumeSource works in the core Kubernetes API.
 type ProgressRecord struct {
 	// Migration represents a bit of a Ticket's progress along a Track involving
-	// migration from one environment to another.
+	// migration from one Station to another.
 	Migration *Migration `json:"migration,omitempty"`
 }
 
 // Migration represents a bit of a Ticket's progress along a Track involving
-// migration from one environment to another.
+// migration from one Station to another.
 type Migration struct {
-	// TargetEnvironment indicates the environment into which this Transition aims
-	// to migrate the change represented by the Ticket.
-	TargetEnvironment string `json:"targetEnvironment,omitempty"`
-	// Commits records all git commits made to effect an update to
-	// TargetEnvironment.
+	// TargetStation indicates the Station on the associated Track into which this
+	// Migration aims to migrate the change represented by the Ticket.
+	TargetStation string `json:"targetStation,omitempty"`
+	// Commits records all git commits made to effect the migration to
+	// TargetStation.
 	Commits []Commit `json:"commits,omitempty"`
 	// Tickets is a list of references to Ticket resources created to progress the
 	// same change represented by this Ticket down another Track.
@@ -83,23 +83,23 @@ type Ticket struct {
 	// Source indicates how this ticket entered the system.
 	Source string `json:"source,omitempty"`
 	// Change encapsulates the specific change this Ticket is meant to progress
-	// through a series of environments.
+	// through a series of Stations.
 	Change Change `json:"change,omitempty"`
 	// Status encapsulates the status of the Ticket.
 	Status TicketStatus `json:"status,omitempty"`
 }
 
 // Change describes a change that is to be progressed through a series of
-// environments by a Ticket. Only one of its fields may be non-nil. Compare this
+// Stations by a Ticket. Only one of its fields may be non-nil. Compare this
 // to how a EnvVarSource or VolumeSource works in the core Kubernetes API.
 type Change struct {
 	// NewImage encapsulates the details of one or more new images that are to be
-	// progressed through a series of environments.
+	// progressed through a series of Stations.
 	NewImages *NewImagesChange `json:"newImages,omitempty"`
 }
 
 // NewImagesChanges encapsulates the details of one or more new images that are
-// to be progressed through a series of environments.
+// to be progressed through a series of Stations.
 type NewImagesChange struct {
 	Images []Image `json:"images,omitempty"`
 }
@@ -107,10 +107,10 @@ type NewImagesChange struct {
 // Image encapsulates the details of a single image.
 type Image struct {
 	// Repo denotes the image (without tag) that is to be progressed through a
-	// series of environments.
+	// series of Stations.
 	Repo string `json:"imageRepo,omitempty"`
 	// Tag qualifies which image from the repository specified by the Repo field
-	// is to be progressed through a series of environments.
+	// is to be progressed through a series of Stations.
 	Tag string `json:"imageTag,omitempty"`
 }
 

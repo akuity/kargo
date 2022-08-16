@@ -81,10 +81,10 @@ func SetupTicketReconcilerWithManager(
 		&api.Track{},
 		tracksByApplicationIndexField,
 		func(track client.Object) []string {
-			envs := track.(*api.Track).Environments // nolint: forcetypeassert
 			apps := []string{}
-			for _, env := range envs {
-				apps = append(apps, env.Applications...)
+			// nolint: forcetypeassert
+			for _, station := range track.(*api.Track).Stations {
+				apps = append(apps, station.Applications...)
 			}
 			return apps
 		},
@@ -235,17 +235,17 @@ func (t *ticketReconciler) reconcileNewTicket(
 		return nil
 	}
 
-	// Find the "zero" environment that we want to migrate to first
-	if len(track.Environments) == 0 {
+	// Find the "zero" Station that we want to migrate to first
+	if len(track.Stations) == 0 {
 		// This Ticket is implicitly complete
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason =
-			"Associated Track has no environments; Nothing to do"
+			"Associated Track has no Stations; Nothing to do"
 		return nil
 	}
-	env := track.Environments[0]
+	station := track.Stations[0]
 
-	return t.promoteToEnv(ctx, ticket, env)
+	return t.promoteToStation(ctx, ticket, station)
 }
 
 func (t *ticketReconciler) reconcileProgressingTicket(
@@ -376,18 +376,18 @@ func (t *ticketReconciler) checkMigrationStatus(
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Error getting Argo CD Application %q for environment %q",
+				"Error getting Argo CD Application %q for Station %q",
 				commit.TargetApplication,
-				lastMigration.TargetEnvironment,
+				lastMigration.TargetStation,
 			)
 			return nil
 		}
 		if app == nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Argo CD Application %q for environment %q does not exist",
+				"Argo CD Application %q for Station %q does not exist",
 				commit.TargetApplication,
-				lastMigration.TargetEnvironment,
+				lastMigration.TargetStation,
 			)
 			return nil
 		}
@@ -470,65 +470,65 @@ func (t *ticketReconciler) performNextMigration(
 		ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration
 
 	// What's the next Migration? Or are we done?
-	lastEnvIndex := -1
-	for i, env := range track.Environments {
-		if env.Name == lastMigration.TargetEnvironment {
-			lastEnvIndex = i
+	lastStationIndex := -1
+	for i, station := range track.Stations {
+		if station.Name == lastMigration.TargetStation {
+			lastStationIndex = i
 			break
 		}
 	}
 
 	// This is an edge case where the Track was redefined while the Ticket was
-	// progressing and the last environment we migrated into is no longer on the
-	// Track. It's not possible to know where to go next.
-	if lastEnvIndex == -1 {
+	// progressing and the last Station we migrated to is no longer on the Track.
+	// It's not possible to know where to go next.
+	if lastStationIndex == -1 {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = "Cannot determine next migration"
 		return nil
 	}
 
 	// Check if we've reached the end of the Track
-	if lastEnvIndex == len(track.Environments)-1 {
+	if lastStationIndex == len(track.Stations)-1 {
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason = ""
 		return nil
 	}
-	nextEnv := track.Environments[lastEnvIndex+1]
+	nextStation := track.Stations[lastStationIndex+1]
 
-	return t.promoteToEnv(ctx, ticket, nextEnv)
+	return t.promoteToStation(ctx, ticket, nextStation)
 }
 
-func (t *ticketReconciler) promoteToEnv(
+func (t *ticketReconciler) promoteToStation(
 	ctx context.Context,
 	ticket *api.Ticket,
-	env api.Environment,
+	station api.Station,
 ) error {
 	progressRecord := api.ProgressRecord{
 		Migration: &api.Migration{
-			TargetEnvironment: env.Name,
-			Started:           &metav1.Time{Time: time.Now().UTC()},
+			TargetStation: station.Name,
+			Started:       &metav1.Time{Time: time.Now().UTC()},
 		},
 	}
 
 	// Find the corresponding Argo CD Applications
-	apps := make([]*argocd.Application, len(env.Applications))
-	for i, appName := range env.Applications {
+	apps := make([]*argocd.Application, len(station.Applications))
+	for i, appName := range station.Applications {
 		app, err := t.getArgoCDApplication(ctx, appName)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Error getting Argo CD Application %q for environment %q",
+				"Error getting Argo CD Application %q for Station %q",
 				appName,
-				env.Name,
+				station.Name,
 			)
 			return nil
 		}
 		if app == nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Argo CD Application %q for environment %q does not exist",
+				"Argo CD Application %q for Station %q does not exist",
 				appName,
-				env.Name,
+				station.Name,
 			)
 			return nil
 		}
@@ -536,24 +536,24 @@ func (t *ticketReconciler) promoteToEnv(
 	}
 
 	// Find the corresponding Tracks
-	tracks := make([]*api.Track, len(env.Tracks))
-	for i, trackName := range env.Tracks {
+	tracks := make([]*api.Track, len(station.Tracks))
+	for i, trackName := range station.Tracks {
 		track, err := t.getTrack(ctx, trackName)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Error getting Track %q for environment %q",
+				"Error getting Track %q for Station %q",
 				trackName,
-				env.Name,
+				station.Name,
 			)
 			return nil
 		}
 		if track == nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Track %q for environment %q does not exist",
+				"Track %q for Station %q does not exist",
 				trackName,
-				env.Name,
+				station.Name,
 			)
 			return nil
 		}
@@ -567,9 +567,9 @@ func (t *ticketReconciler) promoteToEnv(
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Error promoting images to Argo CD Application %q in environment %q",
+				"Error promoting images to Argo CD Application %q in Station %q",
 				app.Name,
-				env.Name,
+				station.Name,
 			)
 			return err
 		}
@@ -621,9 +621,9 @@ func (t *ticketReconciler) promoteToEnv(
 	}
 
 	t.logger.WithFields(log.Fields{
-		"ticket":      ticket.Name,
-		"track":       ticket.Track,
-		"environment": env.Name,
+		"ticket":  ticket.Name,
+		"track":   ticket.Track,
+		"station": station.Name,
 	}).Debug("promoted images")
 
 	return nil
