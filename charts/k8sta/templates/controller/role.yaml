@@ -23,6 +23,7 @@ rules:
   verbs:
   - get
   - list
+  - patch
   - watch
 - apiGroups:
   - k8sta.akuity.io
