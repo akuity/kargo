@@ -201,8 +201,8 @@ func (t *ticketReconciler) Reconcile(
 		result.Requeue = true
 	case api.TicketStateNew:
 		err = t.reconcileNewTicket(ctx, ticket)
-	case api.TicketStateProgressing:
-		err = t.reconcileProgressingTicket(ctx, ticket)
+	case api.TicketStateProgressing, api.TicketStateSuspended:
+		err = t.reconcileProgressingOrSuspendedTicket(ctx, ticket)
 	default:
 		// Ignore all other states
 		return result, nil
@@ -248,7 +248,7 @@ func (t *ticketReconciler) reconcileNewTicket(
 	return t.promoteToStation(ctx, ticket, station)
 }
 
-func (t *ticketReconciler) reconcileProgressingTicket(
+func (t *ticketReconciler) reconcileProgressingOrSuspendedTicket(
 	ctx context.Context,
 	ticket *api.Ticket,
 ) error {
@@ -259,7 +259,7 @@ func (t *ticketReconciler) reconcileProgressingTicket(
 	// For the moment, the only type of progress is a Migration. So we just need
 	// to deal here with started Migrations and complete Migrations
 	if lastProgressRecord.Migration.Completed == nil {
-		return t.checkMigrationStatus(ctx, ticket)
+		return t.reconcileLastMigrationStatus(ctx, ticket)
 	}
 	return t.performNextMigration(ctx, ticket)
 }
@@ -363,14 +363,17 @@ func (t *ticketReconciler) getArgoCDApplication(
 // CD Application to be "fully synced" to a given commit, but healthy NOT on
 // account of that commit, but on account of one that came after it. Not sure
 // yet how to deal with these sort of scenarios.
-func (t *ticketReconciler) checkMigrationStatus(
+func (t *ticketReconciler) reconcileLastMigrationStatus(
 	ctx context.Context,
 	ticket *api.Ticket,
 ) error {
 	lastMigration :=
 		ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration
-	// Keep track of whether the last migration might possibly be complete.
-	possiblyComplete := true
+	// Keep track of what's true about ALL the Argo CD Applications involved in
+	// the present migration.
+	allAppsSynced := true
+	allAppsHealthy := true
+	allNonHealthyAppsSuspended := true
 	for _, commit := range lastMigration.Commits {
 		app, err := t.getArgoCDApplication(ctx, commit.TargetApplication)
 		if err != nil {
@@ -392,18 +395,15 @@ func (t *ticketReconciler) checkMigrationStatus(
 			return nil
 		}
 		if !t.isAppFullySynced(app, commit.SHA) {
-			possiblyComplete = false
-			continue
+			allAppsSynced = false
 		}
-		// If we get to here, the Argo CD Application is "fully synced." What does
-		// its health look like?
 		switch app.Status.Health.Status {
 		case health.HealthStatusHealthy:
-			continue
-		case health.HealthStatusProgressing,
-			health.HealthStatusSuspended:
-			possiblyComplete = false
-			continue
+		case health.HealthStatusProgressing:
+			allAppsHealthy = false
+			allNonHealthyAppsSuspended = false
+		case health.HealthStatusSuspended:
+			allAppsHealthy = false
 		default:
 			// For any other state, we cannot progress the ticket further.
 			ticket.Status.State = api.TicketStateFailed
@@ -416,9 +416,22 @@ func (t *ticketReconciler) checkMigrationStatus(
 			return nil
 		}
 	}
-	if possiblyComplete {
-		ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration.Completed =
-			&metav1.Time{Time: time.Now().UTC()}
+	ticket.Status.State = api.TicketStateProgressing
+	ticket.Status.StateReason = ""
+	if allAppsSynced {
+		if allAppsHealthy {
+			// If all Argo CD Applications are fully synced and healthy, the present
+			// migration is complete.
+			ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration.Completed = // nolint: lll
+				&metav1.Time{Time: time.Now().UTC()}
+		} else if allNonHealthyAppsSuspended {
+			// If all Argo CD Applications are fully synced and and all those that are
+			// NOT healthy ARE Suspended, then we count the Ticket as Suspended as
+			// well.
+			ticket.Status.State = api.TicketStateSuspended
+			ticket.Status.StateReason = "The current migration is blocked by " +
+				`one or more Argo CD Applications with health "Suspended"`
+		}
 	}
 	return nil
 }
