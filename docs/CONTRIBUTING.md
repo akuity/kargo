@@ -154,17 +154,25 @@ To launch a brand new Kind cluster pre-connected to a local image registry:
 $ make hack-kind-up
 ```
 
-Because K8sTA augments Argo CD, the above command will _also_ install a recent,
-stable version of Argo CD in the cluster's `argocd` namespace.
+Because K8sTA integrates with Argo CD and Argo Rollouts, the above command will
+_also_ install recent, stable versions of both, along with the Argo Rollouts
+extension for the Argo CD dashboard.
+
+K8sTA has no dependencies on Istio or Prometheus, but because the application
+commonly used to test K8sTA does (for now, at least), recent, stable versions of
+these are also installed.
+
+> 📝&nbsp;&nbsp;The Istio ingress controller / gateway will be exposed at
+> `localhost:30080`.
+> 
+> The Argo CD dashboard will be exposed at `localhost:30081`. The username and
+> password are both `admin`.
 
 To build and deploy K8sTA from source:
 
 ```shell
 $ tilt up
 ```
-
-> 📝&nbsp;&nbsp;Temporarily, the K8sTA Helm chart that Tilt installs also
-> includes K8sTA configuration that, in the future, will be user-defined.
 
 Tilt will also launch a web-based UI running at
 [http://localhost:10350](http://localhost:10350). Visit this in your web browser
@@ -199,8 +207,8 @@ To destroy your KinD cluster, use `make hack-kind-down`.
 ### Receiving Webhooks
 
 Making the K8sTA server visible to Docker Hub such that it can successfully
-receive webhooks can be challenging. To help ease this process, our Tiltfile has
-built-in support for exposing your local K8sTA server using
+receive webhooks can be challenging. To help ease this process, our `Tiltfile`
+has built-in support for exposing your local K8sTA server using
 [ngrok](https://ngrok.com/). To take advantage of this:
 
 1. [Sign up](https://dashboard.ngrok.com/signup) for a free ngrok account.
