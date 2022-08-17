@@ -399,7 +399,7 @@ func (t *ticketReconciler) reconcileLastMigrationStatus(
 		}
 		switch app.Status.Health.Status {
 		case health.HealthStatusHealthy:
-		case health.HealthStatusProgressing:
+		case health.HealthStatusMissing, health.HealthStatusProgressing:
 			allAppsHealthy = false
 			allNonHealthyAppsSuspended = false
 		case health.HealthStatusSuspended:

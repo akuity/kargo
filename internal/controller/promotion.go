@@ -14,6 +14,7 @@ import (
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (t *ticketReconciler) promoteImages(
@@ -64,17 +65,43 @@ func (t *ticketReconciler) promoteImages(
 	t.logger.WithFields(log.Fields{
 		"path": repoDir,
 		"repo": app.Spec.Source.RepoURL,
-	}).Debug("clone git repository")
+	}).Debug("cloned git repository")
 
 	// TODO: This is hard-coded for now, but there's a possibility here of later
 	// supporting other tools and patterns.
-	return t.promotionStrategyRenderedYAMLBranchesWithKustomize(
+	sha, err := t.promotionStrategyRenderedYAMLBranchesWithKustomize(
 		ctx,
 		ticket,
 		app,
 		homeDir,
 		repoDir,
 	)
+	if err != nil {
+		return "", err
+	}
+
+	// Force the Argo CD Application to refresh and sync?
+	patch := client.MergeFrom(app.DeepCopy())
+	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] =
+		string(argocd.RefreshTypeHard)
+	app.Operation = &argocd.Operation{
+		Sync: &argocd.SyncOperation{
+			Revision: app.Spec.Source.TargetRevision,
+		},
+	}
+	if err = t.client.Patch(ctx, app, patch, &client.PatchOptions{}); err != nil {
+		t.logger.Debugf("----> %s", err)
+		return "", errors.Wrapf(
+			err,
+			"error patching Argo CD Application %q to coerce refresh and sync",
+			app.Name,
+		)
+	}
+	t.logger.WithFields(log.Fields{
+		"app": app.Name,
+	}).Debug("triggered refresh of Argo CD Application")
+
+	return sha, nil
 }
 
 // setupGitAuth, if necessary, configures the git CLI for authentication using
