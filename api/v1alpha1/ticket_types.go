@@ -20,6 +20,11 @@ const (
 	// TicketStateProgressing is a constant representing a Ticket whose change
 	// is already being progressed through a series of Stations.
 	TicketStateProgressing TicketState = "Progressing"
+	// TicketStateSuspended is a constant representing a Ticket whose change was
+	// being progressed through a series of Stations, but has stalled, probably
+	// temporarily, because all Argo CD applications that the change is currently
+	// being applied to are themselves in a Suspended state..
+	TicketStateSuspended TicketState = "Suspended"
 )
 
 // TicketStatus defines the observed state of Ticket
