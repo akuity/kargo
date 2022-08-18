@@ -31,7 +31,7 @@ func (t *ticketReconciler) promoteImages(
 			app.Spec.Source.RepoURL,
 		)
 	}
-	defer os.RemoveAll(homeDir)
+	// defer os.RemoveAll(homeDir)
 	t.logger.WithFields(log.Fields{
 		"path": homeDir,
 	}).Debug("created temporary home directory")
@@ -227,6 +227,7 @@ func (t *ticketReconciler) setupGitAuth(
 	return nil
 }
 
+// nolint: gocyclo
 func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	ctx context.Context,
 	ticket *api.Ticket,
@@ -324,32 +325,84 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	t.logger.WithFields(loggerFields).Debug("pushed changes to the source branch")
 
-	// Switch to the Application-specific branch
-	// TODO: Should we do something about the possibility that the branch doesn't
-	// already exist, e.g. `git checkout --orphan <appBranch> --`
+	// Check if the Application-specific branch exists on the remote
+	appBranchExists := true
 	cmd = exec.Command( // nolint: gosec
 		"git",
-		"checkout",
+		"ls-remote",
+		"--heads",
+		"--exit-code", // Return 2 if not found
+		app.Spec.Source.RepoURL,
 		app.Spec.Source.TargetRevision,
-		// The next line makes it crystal clear to git that we're checking out
-		// a branch. We need to do this since we operate under an assumption that
-		// the path to the overlay within the repo == the branch name.
-		"--",
 	)
-	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error checking out Application-specific branch %q from repo %q",
+	// We need to be anywhere in the root of the repo for this
+	cmd.Dir = repoDir
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil { // nolint: gosec
+		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 2 {
+			return "", errors.Wrapf(
+				err,
+				"error checking for existence of Application-specific branch %q "+
+					"from repo %q",
+				app.Spec.Source.TargetRevision,
+				app.Spec.Source.RepoURL,
+			)
+		}
+		// If we get to here, exit code was 2 and that means the branch doesn't
+		// exist
+		appBranchExists = false
+	}
+
+	if appBranchExists {
+		// Switch to the Application-specific branch
+		cmd = exec.Command( // nolint: gosec
+			"git",
+			"checkout",
 			app.Spec.Source.TargetRevision,
-			app.Spec.Source.RepoURL,
+			// The next line makes it crystal clear to git that we're checking out
+			// a branch. We need to do this since we operate under an assumption that
+			// the path to the overlay within the repo == the branch name.
+			"--",
+		)
+		cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
+		if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+			return "", errors.Wrapf(
+				err,
+				"error checking out Application-specific branch %q from repo %q",
+				app.Spec.Source.TargetRevision,
+				app.Spec.Source.RepoURL,
+			)
+		}
+		t.logger.WithFields(loggerFields).Debug(
+			"checked out Application-specific branch",
+		)
+	} else {
+		// Create the Application-specific branch
+		cmd = exec.Command( // nolint: gosec
+			"git",
+			"checkout",
+			"--orphan",
+			app.Spec.Source.TargetRevision,
+			// The next line makes it crystal clear to git that we're checking out
+			// a branch. We need to do this since we operate under an assumption that
+			// the path to the overlay within the repo == the branch name.
+			"--",
+		)
+		cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
+		if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+			return "", errors.Wrapf(
+				err,
+				"error creating orphaned Application-specific branch %q from repo %q",
+				app.Spec.Source.TargetRevision,
+				app.Spec.Source.RepoURL,
+			)
+		}
+		t.logger.WithFields(loggerFields).Debug(
+			"created Application-specific branch",
 		)
 	}
-	t.logger.WithFields(loggerFields).Debug(
-		"checked out Application-specific branch",
-	)
 
-	// Remove existing rendered YAML
+	// Remove existing rendered YAML (or files from the source branch that were
+	// left behind when the orphaned Application-specific branch was created)
 	files, err := filepath.Glob(filepath.Join(repoDir, "*"))
 	if err != nil {
 		return "", errors.Wrapf(
@@ -406,7 +459,16 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 			)
 		}
 	}
-	cmd = exec.Command("git", "commit", "-am", commitMsg)
+	cmd = exec.Command("git", "add", ".")
+	cmd.Dir = repoDir // We need to be in the root of the repo for this
+	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+		return "", errors.Wrapf(
+			err,
+			"error staging changes for commit to Application-specific branch %q",
+			app.Spec.Source.TargetRevision,
+		)
+	}
+	cmd = exec.Command("git", "commit", "-m", commitMsg)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
 	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
 		return "", errors.Wrapf(
