@@ -405,15 +405,22 @@ func (t *ticketReconciler) reconcileLastMigrationStatus(
 		case health.HealthStatusSuspended:
 			allAppsHealthy = false
 		default:
-			// For any other state, we cannot progress the ticket further.
-			ticket.Status.State = api.TicketStateFailed
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Argo CD Application %q was fully synced but observed with "+
-					"health %q; cannot progress further",
-				app.Name,
-				app.Status.Health.Status,
-			)
-			return nil
+			// For any other state, we cannot progress the ticket further, but we're
+			// allowing a short grace period because we've seen cases where the Argo
+			// CD Application is momentarily Degraded.
+			// TODO: Make the grace period configurable?
+			if time.Now().UTC().After(lastMigration.Started.Time.Add(time.Minute)) {
+				ticket.Status.State = api.TicketStateFailed
+				ticket.Status.StateReason = fmt.Sprintf(
+					"Argo CD Application %q was fully synced but observed with "+
+						"health %q; cannot progress further",
+					app.Name,
+					app.Status.Health.Status,
+				)
+				return nil
+			}
+			allAppsHealthy = false
+			allNonHealthyAppsSuspended = false
 		}
 	}
 	ticket.Status.State = api.TicketStateProgressing
