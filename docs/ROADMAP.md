@@ -34,22 +34,64 @@ a recording of that demo is available to Akuity employees
 
 ## Iteration 2
 
-Our goals for the second iteration are only to further explore what a reasonable
-API for K8sTA looks like. We do not expect to implement all aspects of the API
-at this time.
+Our goal for the second iteration were to further explore what a reasonable API
+for K8sTA looks like, with no expectation of immediately implementing all
+aspects of that API. The effort to do so was a great success in that it
+uncovered all of the following:
 
-One specific change we anticipate is that entries in the `environments` field of
-the `Track` CRD will no longer be mere references to existing Argo CD
-`Application` resources, but instead will evolve into a more robust type with
-its own `name` field and may reference _multiple_ Argo CD `Application`
-resources. In this manner, we can (for instance) accommodate environments that
-are logically composed of multiple application instances across multiple
-clusters or geographic regions.
+* K8sTA will likely need to assimilate much of the functionality of the
+  [Argo CD Image Updater](https://argocd-image-updater.readthedocs.io/en/stable/)
+  -- namely its ability to subscribe to an image repository and be notified of
+  new images meeting user-defined criteria. Long term, this will mean K8sTA will
+  not be dependent on webhooks, although the K8sTA prototype _does_ remain
+  dependent on webhooks at this time. Fields that permit users to define those
+  subscriptions have already been added to the `Track` API for illustrative
+  purposes, but are mostly unused at this time.
 
-A second specific change we anticipate is the introduction of a "gate" (e.g.
-quality gate) concept that can prevent or permit progress between environments
-based on metrics or manual decisions. Initially, we will only implement a no-op
-gate in order to explore what this concept looks like without diving too deep
-into specific integrations.
+* Stations on a `Track` can now reference _multiple_ Argo CD `Application`
+  resources. By doing so, it is possible to roll changes out to multiple
+  environments at once. Progressing farther down the `Track` requires _all_ of
+  those multiple `Application`s to sync and reach a heathy state. This is
+  useful (for instance) if one wished to treat `Application`s managing
+  deployment to different availability zones as a single logical environment,
+  deploying to all simultaneously, and weighing the success or failure of all
+  as an atomic unit. This feature is fully-integrated into the prototype, but
+  isn't well-covered by tests.
 
-Other API changes me be discovered in the course of the iteration.
+* Stations on a `Track` can now behave as "junctions" by referencing one or more
+  other `Track`s. When the change represented by a `Ticket` is progressed to
+  such a station, it results in the creation of a new `Ticket` per referenced
+  `Track` to progress the same change, independently, along each. This
+  capability makes it possible to compose complex, tree-like tracks from many
+  sections of simple, linear `Track`. This is useful (for instance) if one
+  wished to progress changes through a series of "preliminary" environments like
+  "dev" and "int" before _independently_ progressing the change through multiple
+  environments in different geographic regions or even different clouds. This
+  feature is fully-integrated into the prototype, but isn't well-covered by
+  tests.
+
+* Some work was performed to allow for user-defined "quality gates" in the
+  `Track` API. Such gates would have either permitted or halted progress to the
+  next station after every `Application` referenced by the previous station was
+  synced and healthy. This was abandoned after @jessesuen and @alexmt pointed
+  out that [Argo Rollouts](https://argoproj.github.io/argo-rollouts/) already
+  contained similar functionality, which turned out to be a pivotal moment in
+  understanding where K8sTA is headed.
+
+  Because Argo CD already integrates so well with Argo Rollouts, a single Argo
+  CD `Application`'s health can already be pegged to the success or failure of
+  user-defined tests, and because K8sTA already treats `Application` health as a
+  criterion for progressing a change farther down a `Track`, K8sTA gets
+  "quality gate" functionality for free. Or more precisely, the stack of K8sTA +
+  Argo CD + Argo Rollouts has this capability. _This was a major revelation._
+
+  K8sSTA is but the top tier of the <b><u>KCR</u></b> (<b><u>K</u></b>8sTA +
+  Argo <b><u>C</u></b>D + Argo <b><u>R</u></b>ollouts) stack and only needs to
+  provide the little functionality those other tiers lack -- namely it needs
+  only to understand the relationship between environments and orchestrate
+  deployments across them while relying on the lower tiers of the stack to
+  continue doing what they already so remarkably well. This seems an eminently
+  practical proposition since, at Akuity, we have the luxury of knowing that
+  every one of our customers is already using Argo CD, and given Argo CD's
+  excellent integration with Argo Rollouts, many Akuity customers are likely
+  using it already or could easily be convinced to do so.
