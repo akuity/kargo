@@ -99,6 +99,20 @@ spec:
                             complete.
                           format: date-time
                           type: string
+                        skippedApplications:
+                          description: SkippedApplications lists Applications referenced
+                            by the TargetStation that were bypassed during this Migration
+                            because they were disabled.
+                          items:
+                            type: string
+                          type: array
+                        skippedTracks:
+                          description: SkippedTracks lists Tracks referenced by the
+                            TargetStation that were bypassed during this Migration
+                            because they were disabled.
+                          items:
+                            type: string
+                          type: array
                         started:
                           description: Started indicates the time the migration started.
                           format: date-time
@@ -113,9 +127,24 @@ spec:
                             created to progress the same change represented by this
                             Ticket down another Track.
                           items:
-                            type: string
+                            description: TicketReference is a reference to a Ticket.
+                            properties:
+                              name:
+                                description: Name is the name of a Ticket.
+                                type: string
+                              track:
+                                description: Track is the name of the Track this Ticket
+                                  references. This information is duplicated here
+                                  for operator convenience.
+                                type: string
+                            type: object
                           type: array
                       type: object
+                    skippedStation:
+                      description: SkippedStation represents a bit of a Ticket's progress
+                        along a Track involving a Station that was bypassed because
+                        it was disabled.
+                      type: string
                   type: object
                 type: array
               state:
