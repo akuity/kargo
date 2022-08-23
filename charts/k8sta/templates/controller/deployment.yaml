@@ -28,8 +28,6 @@ spec:
         env:
         - name: LOG_LEVEL
           value: {{ .Values.controller.logLevel }}
-        - name: NAMESPACE
-          value: {{ .Release.Namespace }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
       {{- with .Values.nodeSelector }}

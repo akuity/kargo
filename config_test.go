@@ -26,25 +26,13 @@ func TestK8sTAConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "NAMESPACE not set",
-			setup: func() {
-				t.Setenv("LOG_LEVEL", "INFO")
-			},
-			assertions: func(_ config.Config, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "value not found for")
-				require.Contains(t, err.Error(), "NAMESPACE")
-			},
-		},
-		{
 			name: "success",
 			setup: func() {
-				t.Setenv("NAMESPACE", "argocd")
+				t.Setenv("LOG_LEVEL", "INFO")
 			},
 			assertions: func(config config.Config, err error) {
 				require.NoError(t, err)
 				require.Equal(t, log.InfoLevel, config.LogLevel)
-				require.Equal(t, "argocd", config.Namespace)
 			},
 		},
 	}

@@ -43,9 +43,8 @@ func RunController(ctx context.Context, config config.Config) error {
 	mgr, err := ctrl.NewManager(
 		mgrConfig,
 		ctrl.Options{
-			Namespace: config.Namespace,
-			Scheme:    scheme,
-			Port:      9443,
+			Scheme: scheme,
+			Port:   9443,
 		},
 	)
 	if err != nil {
@@ -57,8 +56,8 @@ func RunController(ctx context.Context, config config.Config) error {
 		return errors.Wrap(err, "error obtaining Kubernetes client")
 	}
 	argoDB := db.NewDB(
-		config.Namespace,
-		settings.NewSettingsManager(ctx, kubeClient, config.Namespace),
+		"",
+		settings.NewSettingsManager(ctx, kubeClient, ""),
 		kubeClient,
 	)
 
