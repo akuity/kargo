@@ -187,7 +187,7 @@ func (t *ticketReconciler) Reconcile(
 	}).Debug("reconciling Ticket")
 
 	// Find the Ticket
-	ticket, err := t.getTicket(ctx, req.Name)
+	ticket, err := t.getTicket(ctx, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -221,7 +221,13 @@ func (t *ticketReconciler) reconcileNewTicket(
 	ticket *api.Ticket,
 ) error {
 	// Find the associated Track
-	track, err := t.getTrack(ctx, ticket.Track)
+	track, err := t.getTrack(
+		ctx,
+		types.NamespacedName{
+			Namespace: ticket.Namespace,
+			Name:      ticket.Track,
+		},
+	)
 	if err != nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
@@ -269,28 +275,28 @@ func (t *ticketReconciler) reconcileProgressingOrSuspendedTicket(
 	return t.performNextMigration(ctx, ticket)
 }
 
-// getTicket returns a pointer to the Ticket resource having the name specified
-// by the name argument. If no such resource is found, nil is returned instead.
+// getTicket returns a pointer to the Ticket resource specified by the
+// namespacedName argument. If no such resource is found, nil is returned
+// instead.
 func (t *ticketReconciler) getTicket(
 	ctx context.Context,
-	name string,
+	namespacedName types.NamespacedName,
 ) (*api.Ticket, error) {
 	ticket := api.Ticket{}
-	if err := t.client.Get(
-		ctx,
-		types.NamespacedName{
-			Namespace: t.config.Namespace,
-			Name:      name,
-		},
-		&ticket,
-	); err != nil {
+	if err := t.client.Get(ctx, namespacedName, &ticket); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			t.logger.WithFields(log.Fields{
-				"name": name,
+				"namespace": namespacedName.Namespace,
+				"name":      namespacedName.Name,
 			}).Warn("Ticket not found")
 			return nil, nil
 		}
-		return nil, errors.Wrapf(err, "error getting Ticket %q", name)
+		return nil, errors.Wrapf(
+			err,
+			"error getting Ticket %q in namespace %q",
+			namespacedName.Name,
+			namespacedName.Namespace,
+		)
 	}
 	return &ticket, nil
 }
@@ -307,58 +313,60 @@ func (t *ticketReconciler) updateTicketStatus(
 	}
 }
 
-// getTrack returns a pointer to the Track resource having the name specified by
-// the name argument. If no such resource is found, nil is returned instead.
+// getTrack returns a pointer to the Track resource specified by the
+// namespacedName argument. If no such resource is found, nil is returned
+// instead.
 func (t *ticketReconciler) getTrack(
 	ctx context.Context,
-	name string,
+	namespacedName types.NamespacedName,
 ) (*api.Track, error) {
 	track := api.Track{}
-	if err := t.client.Get(
-		ctx,
-		types.NamespacedName{
-			Namespace: t.config.Namespace,
-			Name:      name,
-		},
-		&track,
-	); err != nil {
+	if err := t.client.Get(ctx, namespacedName, &track); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			t.logger.WithFields(log.Fields{
-				"name": name,
+				"namespace": namespacedName.Namespace,
+				"name":      namespacedName.Name,
 			}).Warn("Track not found")
 			return nil, nil
 		}
-		return nil, errors.Wrapf(err, "error getting Track %q", name)
+		return nil, errors.Wrapf(
+			err,
+			"error getting Track %q in namespace %q",
+			namespacedName.Name,
+			namespacedName.Namespace,
+		)
 	}
 	return &track, nil
 }
 
 // getArgoCDApplication returns a pointer to the Argo CD Application resource
-// having the name specified by the name argument. If no such resource is found,
+// specified by the namespacedName argument. If no such resource is found,
 // nil is returned instead.
 func (t *ticketReconciler) getArgoCDApplication(
 	ctx context.Context,
-	name string,
+	namespacedName types.NamespacedName,
 ) (*argocd.Application, error) {
 	app := argocd.Application{}
 	if err := t.client.Get(
 		ctx,
 		client.ObjectKey{
-			Namespace: t.config.Namespace,
-			Name:      name,
+			Namespace: namespacedName.Namespace,
+			Name:      namespacedName.Name,
 		},
 		&app,
 	); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			t.logger.WithFields(log.Fields{
-				"name": name,
+				"namespace": namespacedName.Namespace,
+				"name":      namespacedName.Name,
 			}).Warn("Argo CD Application not found")
 			return nil, nil
 		}
 		return nil, errors.Wrapf(
 			err,
-			"error getting Argo CD Application %q",
-			name,
+			"error getting Argo CD Application %q in namespace %q",
+			namespacedName.Name,
+			namespacedName.Namespace,
 		)
 	}
 	return &app, nil
@@ -380,7 +388,13 @@ func (t *ticketReconciler) reconcileLastMigrationStatus(
 	allAppsHealthy := true
 	allNonHealthyAppsSuspended := true
 	for _, commit := range lastMigration.Commits {
-		app, err := t.getArgoCDApplication(ctx, commit.TargetApplication)
+		app, err := t.getArgoCDApplication(
+			ctx,
+			types.NamespacedName{
+				Namespace: ticket.Namespace,
+				Name:      commit.TargetApplication,
+			},
+		)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
@@ -473,7 +487,13 @@ func (t *ticketReconciler) performNextMigration(
 	ticket *api.Ticket,
 ) error {
 	// Find the associated Track
-	track, err := t.getTrack(ctx, ticket.Track)
+	track, err := t.getTrack(
+		ctx,
+		types.NamespacedName{
+			Namespace: ticket.Namespace,
+			Name:      ticket.Track,
+		},
+	)
 	if err != nil {
 		ticket.Status.State = api.TicketStateFailed
 		ticket.Status.StateReason = fmt.Sprintf(
@@ -566,7 +586,13 @@ func (t *ticketReconciler) promoteToStation(
 				appRef.Name,
 			)
 		} else {
-			app, err := t.getArgoCDApplication(ctx, appRef.Name)
+			app, err := t.getArgoCDApplication(
+				ctx,
+				types.NamespacedName{
+					Namespace: ticket.Namespace,
+					Name:      appRef.Name,
+				},
+			)
 			if err != nil {
 				ticket.Status.State = api.TicketStateFailed
 				ticket.Status.StateReason = fmt.Sprintf(
@@ -598,7 +624,13 @@ func (t *ticketReconciler) promoteToStation(
 				trackRef.Name,
 			)
 		} else {
-			track, err := t.getTrack(ctx, trackRef.Name)
+			track, err := t.getTrack(
+				ctx,
+				types.NamespacedName{
+					Namespace: ticket.Namespace,
+					Name:      trackRef.Name,
+				},
+			)
 			if err != nil {
 				ticket.Status.State = api.TicketStateFailed
 				ticket.Status.StateReason = fmt.Sprintf(
@@ -653,7 +685,7 @@ func (t *ticketReconciler) promoteToStation(
 		newTicket := api.Ticket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      uuid.NewV4().String(),
-				Namespace: t.config.Namespace,
+				Namespace: ticket.Namespace,
 			},
 			Track:  track.Name,
 			Change: ticket.Change,
@@ -675,8 +707,9 @@ func (t *ticketReconciler) promoteToStation(
 			)
 		}
 		t.logger.WithFields(log.Fields{
-			"name":  ticket.Name,
-			"track": ticket.Track,
+			"name":      ticket.Name,
+			"track":     ticket.Track,
+			"namespace": ticket.Namespace,
 		}).Debug("Created Ticket resource")
 		progressRecord.Migration.Tickets[i] = api.TicketReference{
 			Name:  newTicket.Name,

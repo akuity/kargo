@@ -59,7 +59,7 @@ server:
     ## discourages the more heavy-handed option to disable TLS entirely. If TLS
     ## is enabled and cert generation is DISABLED, users MUST provide their own
     ## cert and private key below OR create a cert secret named <Helm release
-    ## name>-receiver-cert in the same namespace as K8sTA.
+    ## name>-server-cert in the same namespace as K8sTA.
     generateSelfSignedCert: true
     # cert: base 64 encoded cert goes here
     # key: base 64 encoded key goes here
