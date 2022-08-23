@@ -65,14 +65,15 @@ func (s *service) Handle(
 
 	for _, track := range tracks {
 		s.logger.WithFields(log.Fields{
-			"repo":  repo,
-			"track": track.Name,
+			"repo":      repo,
+			"name":      track.Name,
+			"namespace": track.Namespace,
 		}).Debug("A track is subscribed to this image repository")
 
 		ticket := api.Ticket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      uuid.NewV4().String(),
-				Namespace: s.config.Namespace,
+				Namespace: track.Namespace,
 			},
 			Track: track.Name,
 			Change: api.Change{
@@ -98,6 +99,7 @@ func (s *service) Handle(
 		s.logger.WithFields(log.Fields{
 			"name":      ticket.Name,
 			"track":     ticket.Track,
+			"namespace": ticket.Namespace,
 			"imageRepo": repo,
 			"imageTag":  tag,
 		}).Debug("Created Ticket resource")
@@ -112,13 +114,7 @@ func (s *service) getTracksByImageRepo(
 ) ([]api.Track, error) {
 	subscribedTracks := []api.Track{}
 	tracks := api.TrackList{}
-	if err := s.controllerRuntimeClient.List(
-		ctx,
-		&tracks,
-		&client.ListOptions{
-			Namespace: s.config.Namespace,
-		},
-	); err != nil {
+	if err := s.controllerRuntimeClient.List(ctx, &tracks); err != nil {
 		return subscribedTracks, errors.Wrap(err, "error retrieving Tracks")
 	}
 tracks:
