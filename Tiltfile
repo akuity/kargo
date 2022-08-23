@@ -30,8 +30,8 @@ k8s_resource(
 k8s_resource(
   workload = 'server',
   objects = [
-    'k8sta-server:role',
-    'k8sta-server:rolebinding',
+    'k8sta-server:clusterrole',
+    'k8sta-server:clusterrolebinding',
     'k8sta-server:serviceaccount',
     'k8sta-server-config:secret'
   ]
@@ -44,8 +44,8 @@ k8s_resource(
 k8s_resource(
   workload = 'controller',
   objects = [
-    'k8sta-controller:role',
-    'k8sta-controller:rolebinding',
+    'k8sta-controller:clusterrole',
+    'k8sta-controller:clusterrolebinding',
     'k8sta-controller:serviceaccount'
   ]
 )
