@@ -119,12 +119,22 @@ type Change struct {
 	// NewImage encapsulates the details of one or more new images that are to be
 	// progressed through a series of Stations.
 	NewImages *NewImagesChange `json:"newImages,omitempty"`
+	// BaseConfiguration
+	BaseConfiguration *BaseConfigurationChange `json:"baseConfiguration,omitempty"` // nolint: lll
 }
 
-// NewImagesChanges encapsulates the details of one or more new images that are
+// NewImagesChange encapsulates the details of one or more new images that are
 // to be progressed through a series of Stations.
 type NewImagesChange struct {
 	Images []Image `json:"images,omitempty"`
+}
+
+// BaseConfigurationChange encapsulates the details of changes to a git
+// repository's source branch.
+type BaseConfigurationChange struct {
+	// Commit is the commit ID (sha) of a commit to a git repository's source
+	// branch that contains changes to be progressed along a Track.
+	Commit string `json:"commit,omitempty"`
 }
 
 // Image encapsulates the details of a single image.

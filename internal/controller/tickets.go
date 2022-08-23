@@ -83,7 +83,7 @@ func SetupTicketReconcilerWithManager(
 		func(track client.Object) []string {
 			apps := []string{}
 			// nolint: forcetypeassert
-			for _, station := range track.(*api.Track).Stations {
+			for _, station := range track.(*api.Track).Spec.Stations {
 				for _, app := range station.Applications {
 					if !app.Disabled {
 						apps = append(apps, app.Name)
@@ -246,14 +246,14 @@ func (t *ticketReconciler) reconcileNewTicket(
 	}
 
 	// Find the "zero" Station that we want to migrate to first
-	if len(track.Stations) == 0 {
+	if len(track.Spec.Stations) == 0 {
 		// This Ticket is implicitly complete
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason =
 			"Associated Track has no Stations; Nothing to do"
 		return nil
 	}
-	station := track.Stations[0]
+	station := track.Spec.Stations[0]
 
 	return t.promoteToStation(ctx, ticket, station)
 }
@@ -521,7 +521,7 @@ func (t *ticketReconciler) performNextMigration(
 
 	// What's the next Migration? Or are we done?
 	lastStationIndex := -1
-	for i, station := range track.Stations {
+	for i, station := range track.Spec.Stations {
 		if station.Name == lastStation {
 			lastStationIndex = i
 			break
@@ -538,12 +538,12 @@ func (t *ticketReconciler) performNextMigration(
 	}
 
 	// Check if we've reached the end of the Track
-	if lastStationIndex == len(track.Stations)-1 {
+	if lastStationIndex == len(track.Spec.Stations)-1 {
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason = ""
 		return nil
 	}
-	nextStation := track.Stations[lastStationIndex+1]
+	nextStation := track.Spec.Stations[lastStationIndex+1]
 
 	return t.promoteToStation(ctx, ticket, nextStation)
 }
@@ -649,7 +649,7 @@ func (t *ticketReconciler) promoteToStation(
 				)
 				return nil
 			}
-			if track.Disabled {
+			if track.Spec.Disabled {
 				progressRecord.Migration.SkippedTracks = append(
 					progressRecord.Migration.SkippedTracks,
 					track.Name,

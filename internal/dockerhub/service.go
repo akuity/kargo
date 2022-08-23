@@ -119,11 +119,11 @@ func (s *service) getTracksByImageRepo(
 	}
 tracks:
 	for _, track := range tracks.Items {
-		if track.Disabled {
+		if track.Spec.Disabled {
 			continue tracks
 		}
-		for _, sub := range track.RepositorySubscriptions {
-			if sub.RepoURL == repo {
+		for _, sub := range track.Spec.RepositorySubscriptions {
+			if sub.Image != nil && sub.Image.RepoURL == repo {
 				subscribedTracks = append(subscribedTracks, track)
 				continue tracks
 			}
