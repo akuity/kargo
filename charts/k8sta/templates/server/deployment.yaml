@@ -73,8 +73,6 @@ spec:
         env:
         - name: LOG_LEVEL
           value: {{ .Values.server.logLevel }}
-        - name: NAMESPACE
-          value: {{ .Release.Namespace }}
         - name: TLS_ENABLED
           value: {{ quote .Values.server.tls.enabled }}
         {{- if .Values.server.tls.enabled }}
