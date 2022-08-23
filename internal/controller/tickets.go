@@ -84,7 +84,11 @@ func SetupTicketReconcilerWithManager(
 			apps := []string{}
 			// nolint: forcetypeassert
 			for _, station := range track.(*api.Track).Stations {
-				apps = append(apps, station.Applications...)
+				for _, app := range station.Applications {
+					if !app.Disabled {
+						apps = append(apps, app.Name)
+					}
+				}
 			}
 			return apps
 		},
@@ -258,7 +262,8 @@ func (t *ticketReconciler) reconcileProgressingOrSuspendedTicket(
 
 	// For the moment, the only type of progress is a Migration. So we just need
 	// to deal here with started Migrations and complete Migrations
-	if lastProgressRecord.Migration.Completed == nil {
+	if lastProgressRecord.Migration != nil &&
+		lastProgressRecord.Migration.Completed == nil {
 		return t.reconcileLastMigrationStatus(ctx, ticket)
 	}
 	return t.performNextMigration(ctx, ticket)
@@ -486,13 +491,18 @@ func (t *ticketReconciler) performNextMigration(
 		return nil
 	}
 
-	lastMigration :=
-		ticket.Status.Progress[len(ticket.Status.Progress)-1].Migration
+	lastProgressRecord := ticket.Status.Progress[len(ticket.Status.Progress)-1]
+	var lastStation string
+	if lastProgressRecord.Migration != nil {
+		lastStation = lastProgressRecord.Migration.TargetStation
+	} else {
+		lastStation = lastProgressRecord.SkippedStation
+	}
 
 	// What's the next Migration? Or are we done?
 	lastStationIndex := -1
 	for i, station := range track.Stations {
-		if station.Name == lastMigration.TargetStation {
+		if station.Name == lastStation {
 			lastStationIndex = i
 			break
 		}
@@ -523,61 +533,99 @@ func (t *ticketReconciler) promoteToStation(
 	ticket *api.Ticket,
 	station api.Station,
 ) error {
+	if ticket.Status.Progress == nil {
+		ticket.Status.Progress = []api.ProgressRecord{}
+	}
+
+	if station.Disabled {
+		ticket.Status.State = api.TicketStateProgressing
+		ticket.Status.Progress = append(
+			ticket.Status.Progress,
+			api.ProgressRecord{
+				SkippedStation: station.Name,
+			},
+		)
+		return nil
+	}
+
 	progressRecord := api.ProgressRecord{
 		Migration: &api.Migration{
-			TargetStation: station.Name,
-			Started:       &metav1.Time{Time: time.Now().UTC()},
+			TargetStation:       station.Name,
+			SkippedApplications: []string{},
+			SkippedTracks:       []string{},
+			Started:             &metav1.Time{Time: time.Now().UTC()},
 		},
 	}
 
 	// Find the corresponding Argo CD Applications
-	apps := make([]*argocd.Application, len(station.Applications))
-	for i, appName := range station.Applications {
-		app, err := t.getArgoCDApplication(ctx, appName)
-		if err != nil {
-			ticket.Status.State = api.TicketStateFailed
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Error getting Argo CD Application %q for Station %q",
-				appName,
-				station.Name,
+	apps := []*argocd.Application{}
+	for _, appRef := range station.Applications {
+		if appRef.Disabled {
+			progressRecord.Migration.SkippedApplications = append(
+				progressRecord.Migration.SkippedApplications,
+				appRef.Name,
 			)
-			return nil
+		} else {
+			app, err := t.getArgoCDApplication(ctx, appRef.Name)
+			if err != nil {
+				ticket.Status.State = api.TicketStateFailed
+				ticket.Status.StateReason = fmt.Sprintf(
+					"Error getting Argo CD Application %q for Station %q",
+					appRef.Name,
+					station.Name,
+				)
+				return nil
+			}
+			if app == nil {
+				ticket.Status.State = api.TicketStateFailed
+				ticket.Status.StateReason = fmt.Sprintf(
+					"Argo CD Application %q for Station %q does not exist",
+					appRef.Name,
+					station.Name,
+				)
+				return nil
+			}
+			apps = append(apps, app)
 		}
-		if app == nil {
-			ticket.Status.State = api.TicketStateFailed
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Argo CD Application %q for Station %q does not exist",
-				appName,
-				station.Name,
-			)
-			return nil
-		}
-		apps[i] = app
 	}
 
 	// Find the corresponding Tracks
-	tracks := make([]*api.Track, len(station.Tracks))
-	for i, trackName := range station.Tracks {
-		track, err := t.getTrack(ctx, trackName)
-		if err != nil {
-			ticket.Status.State = api.TicketStateFailed
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Error getting Track %q for Station %q",
-				trackName,
-				station.Name,
+	tracks := []*api.Track{}
+	for _, trackRef := range station.Tracks {
+		if trackRef.Disabled {
+			progressRecord.Migration.SkippedTracks = append(
+				progressRecord.Migration.SkippedTracks,
+				trackRef.Name,
 			)
-			return nil
+		} else {
+			track, err := t.getTrack(ctx, trackRef.Name)
+			if err != nil {
+				ticket.Status.State = api.TicketStateFailed
+				ticket.Status.StateReason = fmt.Sprintf(
+					"Error getting Track %q for Station %q",
+					trackRef.Name,
+					station.Name,
+				)
+				return nil
+			}
+			if track == nil {
+				ticket.Status.State = api.TicketStateFailed
+				ticket.Status.StateReason = fmt.Sprintf(
+					"Track %q for Station %q does not exist",
+					trackRef.Name,
+					station.Name,
+				)
+				return nil
+			}
+			if track.Disabled {
+				progressRecord.Migration.SkippedTracks = append(
+					progressRecord.Migration.SkippedTracks,
+					track.Name,
+				)
+			} else {
+				tracks = append(tracks, track)
+			}
 		}
-		if track == nil {
-			ticket.Status.State = api.TicketStateFailed
-			ticket.Status.StateReason = fmt.Sprintf(
-				"Track %q for Station %q does not exist",
-				trackName,
-				station.Name,
-			)
-			return nil
-		}
-		tracks[i] = track
 	}
 
 	// Promote by making commits
@@ -600,7 +648,7 @@ func (t *ticketReconciler) promoteToStation(
 	}
 
 	// Promote by creating new Tickets
-	progressRecord.Migration.Tickets = make([]string, len(tracks))
+	progressRecord.Migration.Tickets = make([]api.TicketReference, len(tracks))
 	for i, track := range tracks {
 		newTicket := api.Ticket{
 			ObjectMeta: metav1.ObjectMeta{
@@ -630,15 +678,14 @@ func (t *ticketReconciler) promoteToStation(
 			"name":  ticket.Name,
 			"track": ticket.Track,
 		}).Debug("Created Ticket resource")
-		progressRecord.Migration.Tickets[i] = newTicket.Name
+		progressRecord.Migration.Tickets[i] = api.TicketReference{
+			Name:  newTicket.Name,
+			Track: track.Name,
+		}
 	}
 
 	ticket.Status.State = api.TicketStateProgressing
-	if ticket.Status.Progress == nil {
-		ticket.Status.Progress = []api.ProgressRecord{progressRecord}
-	} else {
-		ticket.Status.Progress = append(ticket.Status.Progress, progressRecord)
-	}
+	ticket.Status.Progress = append(ticket.Status.Progress, progressRecord)
 
 	t.logger.WithFields(log.Fields{
 		"ticket":  ticket.Name,
