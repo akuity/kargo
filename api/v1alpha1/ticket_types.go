@@ -44,6 +44,9 @@ type ProgressRecord struct {
 	// Migration represents a bit of a Ticket's progress along a Track involving
 	// migration from one Station to another.
 	Migration *Migration `json:"migration,omitempty"`
+	// SkippedStation represents a bit of a Ticket's progress along a Track
+	// involving a Station that was bypassed because it was disabled.
+	SkippedStation string `json:"skippedStation,omitempty"`
 }
 
 // Migration represents a bit of a Ticket's progress along a Track involving
@@ -55,9 +58,15 @@ type Migration struct {
 	// Commits records all git commits made to effect the migration to
 	// TargetStation.
 	Commits []Commit `json:"commits,omitempty"`
+	// SkippedApplications lists Applications referenced by the TargetStation that
+	// were bypassed during this Migration because they were disabled.
+	SkippedApplications []string `json:"skippedApplications,omitempty"`
+	// SkippedTracks lists Tracks referenced by the TargetStation that were
+	// bypassed during this Migration because they were disabled.
+	SkippedTracks []string `json:"skippedTracks,omitempty"`
 	// Tickets is a list of references to Ticket resources created to progress the
 	// same change represented by this Ticket down another Track.
-	Tickets []string `json:"tickets,omitempty"`
+	Tickets []TicketReference `json:"tickets,omitempty"`
 	// Started indicates the time the migration started.
 	Started *metav1.Time `json:"started,omitempty"`
 	// Completed indicates the time the migration completed. A nil value means
@@ -73,6 +82,15 @@ type Commit struct {
 	TargetApplication string `json:"targetApplication,omitempty"`
 	// SHA records the ID of the git commit.
 	SHA string `json:"sha,omitempty"`
+}
+
+// TicketReference is a reference to a Ticket.
+type TicketReference struct {
+	// Name is the name of a Ticket.
+	Name string `json:"name,omitempty"`
+	// Track is the name of the Track this Ticket references. This information is
+	// duplicated here for operator convenience.
+	Track string `json:"track,omitempty"`
 }
 
 //+kubebuilder:object:root=true

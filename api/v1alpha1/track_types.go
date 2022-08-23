@@ -34,6 +34,8 @@ type Track struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// Disabled indicates whether this Track is disabled.
+	Disabled bool `json:"disabled,omitempty"`
 	// RepositorySubscriptions specifies image repositories that the Track is
 	// effectively subscribed to. When a push to any one of these repositories is
 	// detected, it will trigger the progressive deployment of the new image
@@ -71,16 +73,37 @@ type RepositorySubscription struct {
 type Station struct {
 	// Name is a name for the Station.
 	Name string `json:"name,omitempty"`
+	// Disabled indicates whether this Station is disabled and effectively
+	// removed from the Track.
+	Disabled bool `json:"disabled,omitempty"`
 	// Applications is a list of references to existing Argo CD Applications.
 	// Progressing through the Station is effected via deployment of each of these
 	// Applications.
-	Applications []string `json:"applications,omitempty"`
+	Applications []ApplicationReference `json:"applications,omitempty"`
 	// Tracks is a list of references to other existing K8sTA Track resources.
 	// When the change represented by a Ticket reaches this Station, a new Ticket
 	// representing the same change will be created for each of these Tracks. i.e.
 	// This permits the composition of complex tracks from segments of linear
 	// Track.
-	Tracks []string `json:"tracks,omitempty"`
+	Tracks []TrackReference `json:"tracks,omitempty"`
+}
+
+// ApplicationReference is a reference to an existing Argo CD Application.
+type ApplicationReference struct {
+	// Name is the name of an existing Argo CD Application.
+	Name string `json:"name,omitempty"`
+	// Disabled indicates whether deployments to the referenced Argo CD
+	// Application should be bypassed as changes progress along the Track.
+	Disabled bool `json:"disabled,omitempty"`
+}
+
+// TrackReference is a reference to a Track.
+type TrackReference struct {
+	// Name is the name of an existing Track.
+	Name string `json:"name,omitempty"`
+	// Disabled indicates whether the junction represented by this TrackReference
+	// should be ignored as changes progress along the Track making the reference.
+	Disabled bool `json:"disabled,omitempty"`
 }
 
 //+kubebuilder:object:root=true

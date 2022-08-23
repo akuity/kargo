@@ -25,6 +25,9 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
+          disabled:
+            description: Disabled indicates whether this Track is disabled.
+            type: boolean
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
@@ -81,8 +84,23 @@ spec:
                     CD Applications. Progressing through the Station is effected via
                     deployment of each of these Applications.
                   items:
-                    type: string
+                    description: ApplicationReference is a reference to an existing
+                      Argo CD Application.
+                    properties:
+                      disabled:
+                        description: Disabled indicates whether deployments to the
+                          referenced Argo CD Application should be bypassed as changes
+                          progress along the Track.
+                        type: boolean
+                      name:
+                        description: Name is the name of an existing Argo CD Application.
+                        type: string
+                    type: object
                   type: array
+                disabled:
+                  description: Disabled indicates whether this Station is disabled
+                    and effectively removed from the Track.
+                  type: boolean
                 name:
                   description: Name is a name for the Station.
                   type: string
@@ -93,7 +111,17 @@ spec:
                     created for each of these Tracks. i.e. This permits the composition
                     of complex tracks from segments of linear Track.
                   items:
-                    type: string
+                    description: TrackReference is a reference to a Track.
+                    properties:
+                      disabled:
+                        description: Disabled indicates whether the junction represented
+                          by this TrackReference should be ignored as changes progress
+                          along the Track making the reference.
+                        type: boolean
+                      name:
+                        description: Name is the name of an existing Track.
+                        type: string
+                    type: object
                   type: array
               type: object
             type: array
