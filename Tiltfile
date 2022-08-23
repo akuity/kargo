@@ -7,6 +7,14 @@ if 'ENABLE_NGROK_EXTENSION' in os.environ and os.environ['ENABLE_NGROK_EXTENSION
 
 trigger_mode(TRIGGER_MODE_MANUAL)
 
+load('ext://namespace', 'namespace_create')
+namespace_create('k8sta')
+k8s_resource(
+  new_name = 'namespace',
+  objects = ['k8sta:namespace'],
+  labels = ['k8sta']
+)
+
 docker_build(
   'akuity/k8sta',
   '.',
@@ -62,7 +70,7 @@ k8s_yaml(
   helm(
     './charts/k8sta',
     name = 'k8sta',
-    namespace = 'argo-cd',
+    namespace = 'k8sta',
     set = [
       'controller.logLevel=DEBUG',
       'server.logLevel=DEBUG',
