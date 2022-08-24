@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -31,41 +29,27 @@ func (t *ticketReconciler) promoteImages(
 			app.Spec.Source.RepoURL,
 		)
 	}
-	// defer os.RemoveAll(homeDir)
+	defer os.RemoveAll(homeDir)
 	t.logger.WithFields(log.Fields{
 		"path": homeDir,
 	}).Debug("created temporary home directory")
 
-	if err =
-		t.setupGitAuth(ctx, app.Spec.Source.RepoURL, homeDir); err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error setting up authentication for repo %q",
-			app.Spec.Source.RepoURL,
-		)
+	// Set up auth
+	if err = setupGitAuth(
+		ctx,
+		app.Spec.Source.RepoURL,
+		homeDir,
+		t.argoDB,
+		t.logger,
+	); err != nil {
+		return "", err
 	}
 
 	// Clone the repo
-	repoDir := filepath.Join(homeDir, "repo")
-	cmd := exec.Command( // nolint: gosec
-		"git",
-		"clone",
-		"--no-tags",
-		app.Spec.Source.RepoURL,
-		repoDir,
-	)
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error cloning repo %q into %q",
-			app.Spec.Source.RepoURL,
-			repoDir,
-		)
+	repoDir, err := cloneRepo(app.Spec.Source.RepoURL, homeDir, t.logger)
+	if err != nil {
+		return "", err
 	}
-	t.logger.WithFields(log.Fields{
-		"path": repoDir,
-		"repo": app.Spec.Source.RepoURL,
-	}).Debug("cloned git repository")
 
 	// TODO: This is hard-coded for now, but there's a possibility here of later
 	// supporting other tools and patterns.
@@ -90,7 +74,6 @@ func (t *ticketReconciler) promoteImages(
 		},
 	}
 	if err = t.client.Patch(ctx, app, patch, &client.PatchOptions{}); err != nil {
-		t.logger.Debugf("----> %s", err)
 		return "", errors.Wrapf(
 			err,
 			"error patching Argo CD Application %q to coerce refresh and sync",
@@ -102,129 +85,6 @@ func (t *ticketReconciler) promoteImages(
 	}).Debug("triggered refresh of Argo CD Application")
 
 	return sha, nil
-}
-
-// setupGitAuth, if necessary, configures the git CLI for authentication using
-// either SSH or the "store" (username/password-based) credential helper.
-func (t *ticketReconciler) setupGitAuth(
-	ctx context.Context,
-	repoURL string,
-	homeDir string,
-) error {
-	// Configure the git client
-	cmd := exec.Command("git", "config", "--global", "user.name", "k8sta")
-	if _, err := t.execGitCommand(cmd, homeDir); err != nil {
-		return errors.Wrapf(err, "error configuring git username")
-	}
-	cmd = exec.Command(
-		"git",
-		"config",
-		"--global",
-		"user.email",
-		"k8sta@akuity.io",
-	)
-	if _, err := t.execGitCommand(cmd, homeDir); err != nil {
-		return errors.Wrapf(err, "error configuring git user email address")
-	}
-
-	const repoTypeGit = "git"
-	var sshKey, username, password string
-	// NB: This next call returns an empty Repository if no such Repository is
-	// found, so instead of continuing to look for credentials if no Repository is
-	// found, what we'll do is continue looking for credentials if the Repository
-	// we get back doesn't have anything we can use, i.e. no SSH private key or
-	// password.
-	repo, err := t.argoDB.GetRepository(ctx, repoURL)
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"error getting Repository (Secret) for repo %q",
-			repoURL,
-		)
-	}
-	if repo.Type == repoTypeGit || repo.Type == "" {
-		sshKey = repo.SSHPrivateKey
-		username = repo.Username
-		password = repo.Password
-	}
-	if sshKey == "" && password == "" {
-		// We didn't find any creds yet, so keep looking
-		var repoCreds *argocd.RepoCreds
-		repoCreds, err = t.argoDB.GetRepositoryCredentials(ctx, repoURL)
-		if err != nil {
-			return errors.Wrapf(
-				err,
-				"error getting Repository Credentials (Secret) for repo %q",
-				repoURL,
-			)
-		}
-		if repoCreds.Type == repoTypeGit || repoCreds.Type == "" {
-			sshKey = repo.SSHPrivateKey
-			username = repo.Username
-			password = repo.Password
-		}
-	}
-
-	// We didn't find any creds, so we're done. We can't promote without creds.
-	if sshKey == "" && password == "" {
-		return errors.Errorf("could not find any credentials for repo %q", repoURL)
-	}
-
-	// If an SSH key was provided, use that.
-	if sshKey != "" {
-		sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
-		// nolint: lll
-		const sshConfig = "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null"
-		if err =
-			ioutil.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
-			return errors.Wrapf(err, "error writing SSH config to %q", sshConfigPath)
-		}
-
-		rsaKeyPath := filepath.Join(homeDir, ".ssh", "id_rsa")
-		if err = ioutil.WriteFile(rsaKeyPath, []byte(sshKey), 0600); err != nil {
-			return errors.Wrapf(err, "error writing SSH key to %q", rsaKeyPath)
-		}
-		return nil // We're done
-	}
-
-	// If we get to here, we're authenticating using a password
-
-	// Set up the credential helper
-	cmd = exec.Command("git", "config", "--global", "credential.helper", "store")
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
-		return errors.Wrapf(err, "error configuring git credential helper")
-	}
-
-	credentialURL, err := url.Parse(repoURL)
-	if err != nil {
-		return errors.Wrapf(err, "error parsing URL %q", repoURL)
-	}
-	// Remove path and query string components from the URL
-	credentialURL.Path = ""
-	credentialURL.RawQuery = ""
-	// If the username is the empty string, we assume we're working with a git
-	// provider like GitHub that only requires the username to be non-empty. We
-	// arbitrarily set it to "git".
-	if username == "" {
-		username = "git"
-	}
-	// Augment the URL with user/pass information.
-	credentialURL.User = url.UserPassword(username, password)
-	// Write the augmented URL to the location used by the "stored" credential
-	// helper.
-	credentialsPath := filepath.Join(homeDir, ".git-credentials")
-	if err := ioutil.WriteFile(
-		credentialsPath,
-		[]byte(credentialURL.String()),
-		0600,
-	); err != nil {
-		return errors.Wrapf(
-			err,
-			"error writing credentials to %q",
-			credentialsPath,
-		)
-	}
-	return nil
 }
 
 // nolint: gocyclo
@@ -310,7 +170,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	cmd = exec.Command("git", "commit", "-am", commitMsg)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+	if _, err = execGitCommand(cmd, homeDir, t.logger); err != nil {
 		return "", errors.Wrap(err, "error committing changes to source branch")
 	}
 	t.logger.WithFields(loggerFields).Debug(
@@ -320,7 +180,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	// Push the changes to the source branch
 	cmd = exec.Command("git", "push", "origin", "HEAD")
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+	if _, err = execGitCommand(cmd, homeDir, t.logger); err != nil {
 		return "", errors.Wrap(err, "error pushing changes to source branch")
 	}
 	t.logger.WithFields(loggerFields).Debug("pushed changes to the source branch")
@@ -337,7 +197,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	)
 	// We need to be anywhere in the root of the repo for this
 	cmd.Dir = repoDir
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil { // nolint: gosec
+	if _, err = execGitCommand(cmd, homeDir, t.logger); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 2 {
 			return "", errors.Wrapf(
 				err,
@@ -364,7 +224,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 			"--",
 		)
 		cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-		if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+		if _, err = execGitCommand(cmd, homeDir, t.logger); err != nil {
 			return "", errors.Wrapf(
 				err,
 				"error checking out Application-specific branch %q from repo %q",
@@ -388,7 +248,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 			"--",
 		)
 		cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-		if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+		if _, err = execGitCommand(cmd, homeDir, t.logger); err != nil {
 			return "", errors.Wrapf(
 				err,
 				"error creating orphaned Application-specific branch %q from repo %q",
@@ -461,7 +321,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	cmd = exec.Command("git", "add", ".")
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+	if _, err = execGitCommand(cmd, homeDir, t.logger); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error staging changes for commit to Application-specific branch %q",
@@ -470,7 +330,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	cmd = exec.Command("git", "commit", "-m", commitMsg)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+	if _, err = execGitCommand(cmd, homeDir, t.logger); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error committing changes to Application-specific branch %q",
@@ -489,7 +349,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		app.Spec.Source.TargetRevision,
 	)
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	if _, err = t.execGitCommand(cmd, homeDir); err != nil {
+	if _, err = execGitCommand(cmd, homeDir, t.logger); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error pushing changes to Application-specific branch %q",
@@ -501,34 +361,12 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	)
 
 	// Get the ID of the last commit
-	cmd = exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	shaBytes, err := cmd.Output()
+	sha, err := getLastCommitID(repoDir)
 	if err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error obtaining last commit ID for branch %q",
-			app.Spec.Source.TargetRevision,
-		)
+		return "", err
 	}
-	sha := strings.TrimSpace(string(shaBytes))
 	t.logger.WithFields(loggerFields).Debug(
 		"obtained sha of commit to Application-specific branch",
 	)
 	return sha, nil
-}
-
-func (t *ticketReconciler) execGitCommand(
-	cmd *exec.Cmd,
-	homeDir string,
-) ([]byte, error) {
-	homeEnvVar := fmt.Sprintf("HOME=%s", homeDir)
-	if cmd.Env == nil {
-		cmd.Env = []string{homeEnvVar}
-	} else {
-		cmd.Env = append(cmd.Env, homeEnvVar)
-	}
-	output, err := cmd.CombinedOutput()
-	t.logger.Debug(string(output))
-	return output, err
 }

@@ -108,6 +108,7 @@ func (s *service) Handle(
 	return nil
 }
 
+// TODO: Can we make use of an index here?
 func (s *service) getTracksByImageRepo(
 	ctx context.Context,
 	repo string,
@@ -122,8 +123,8 @@ tracks:
 		if track.Spec.Disabled {
 			continue tracks
 		}
-		for _, sub := range track.Spec.RepositorySubscriptions {
-			if sub.Image != nil && sub.Image.RepoURL == repo {
+		for _, sub := range track.Spec.ImageRepositorySubscriptions {
+			if sub.RepoURL == repo {
 				subscribedTracks = append(subscribedTracks, track)
 				continue tracks
 			}

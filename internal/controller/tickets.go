@@ -183,7 +183,8 @@ func (t *ticketReconciler) Reconcile(
 	result := ctrl.Result{}
 
 	t.logger.WithFields(log.Fields{
-		"name": req.NamespacedName.Name,
+		"namespace": req.NamespacedName.Namespace,
+		"name":      req.NamespacedName.Name,
 	}).Debug("reconciling Ticket")
 
 	// Find the Ticket
@@ -308,8 +309,9 @@ func (t *ticketReconciler) updateTicketStatus(
 ) {
 	if err := t.client.Status().Update(ctx, ticket); err != nil {
 		t.logger.WithFields(log.Fields{
-			"name": ticket.Name,
-		}).Error("error updating ticket status")
+			"namespace": ticket.Namespace,
+			"name":      ticket.Name,
+		}).Error("error updating Ticket status")
 	}
 }
 
@@ -585,34 +587,34 @@ func (t *ticketReconciler) promoteToStation(
 				progressRecord.Migration.SkippedApplications,
 				appRef.Name,
 			)
-		} else {
-			app, err := t.getArgoCDApplication(
-				ctx,
-				types.NamespacedName{
-					Namespace: ticket.Namespace,
-					Name:      appRef.Name,
-				},
-			)
-			if err != nil {
-				ticket.Status.State = api.TicketStateFailed
-				ticket.Status.StateReason = fmt.Sprintf(
-					"Error getting Argo CD Application %q for Station %q",
-					appRef.Name,
-					station.Name,
-				)
-				return nil
-			}
-			if app == nil {
-				ticket.Status.State = api.TicketStateFailed
-				ticket.Status.StateReason = fmt.Sprintf(
-					"Argo CD Application %q for Station %q does not exist",
-					appRef.Name,
-					station.Name,
-				)
-				return nil
-			}
-			apps = append(apps, app)
+			continue
 		}
+		app, err := t.getArgoCDApplication(
+			ctx,
+			types.NamespacedName{
+				Namespace: ticket.Namespace,
+				Name:      appRef.Name,
+			},
+		)
+		if err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error getting Argo CD Application %q for Station %q",
+				appRef.Name,
+				station.Name,
+			)
+			return nil
+		}
+		if app == nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Argo CD Application %q for Station %q does not exist",
+				appRef.Name,
+				station.Name,
+			)
+			return nil
+		}
+		apps = append(apps, app)
 	}
 
 	// Find the corresponding Tracks
@@ -663,6 +665,14 @@ func (t *ticketReconciler) promoteToStation(
 	// Promote by making commits
 	progressRecord.Migration.Commits = make([]api.Commit, len(apps))
 	for i, app := range apps {
+		if ticket.Change.BaseConfiguration != nil {
+			// TODO: We aren't handling these just yet, but this is where we'll
+			// eventually call some other function to promote the config changes.
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason =
+				"This type of change can not yet be progressed"
+			return nil
+		}
 		commitSHA, err := t.promoteImages(ctx, ticket, app)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
