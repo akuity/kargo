@@ -29,6 +29,15 @@ spec:
             description: Change encapsulates the specific change this Ticket is meant
               to progress through a series of Stations.
             properties:
+              baseConfiguration:
+                description: BaseConfiguration
+                properties:
+                  commit:
+                    description: Commit is the commit ID (sha) of a commit to a git
+                      repository's source branch that contains changes to be progressed
+                      along a Track.
+                    type: string
+                type: object
               newImages:
                 description: NewImage encapsulates the details of one or more new
                   images that are to be progressed through a series of Stations.

@@ -25,6 +25,7 @@ const (
 )
 
 //+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
 
 // Track is the Schema for the tracks API
 type Track struct {
@@ -34,20 +35,34 @@ type Track struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// Spec encapsulates the desired state of a Track.
+	Spec TrackSpec `json:"spec,omitempty"`
+	// Status encapsulates the status of the Track.
+	Status TrackStatus `json:"status,omitempty"`
+}
+
+// TrackSpec encapsulates the desired state of a Track.
+type TrackSpec struct {
 	// Disabled indicates whether this Track is disabled.
 	Disabled bool `json:"disabled,omitempty"`
-	// RepositorySubscriptions specifies image repositories that the Track is
-	// effectively subscribed to. When a push to any one of these repositories is
-	// detected, it will trigger the progressive deployment of the new image
-	// through the Track's Stations.
-	RepositorySubscriptions []RepositorySubscription `json:"repositorySubscriptions,omitempty"` // nolint: lll
+	// ImageRepositorySubscriptions specifies image repositories that the Track is
+	// subscribed to. When a push to any one of these repositories is
+	// detected, a new Ticket will be created to effect progression of the new
+	// image through the Track's Stations.
+	ImageRepositorySubscriptions []ImageRepositorySubscription `json:"imageRepositorySubscriptions,omitempty"` // nolint: lll
+	// GitRepositorySubscription specifies a git repository that the Track is
+	// subscribed to. When changes are detected in the source branch of that
+	// repository and they are deemed to affect base configuration (all
+	// environments), a new Ticket will be created to effect progression of the
+	// change through the Track's Stations.
+	GitRepositorySubscription *GitRepositorySubscription `json:"gitRepositorySubscription,omitempty"` // nolint: lll
 	// Stations enumerates points along the Track through which a change
 	// represented by a Ticket may be progressed.
 	Stations []Station `json:"stations,omitempty"`
 }
 
-// RepositorySubscription defines a subscription to an image repository.
-type RepositorySubscription struct {
+// ImageRepositorySubscription defines a subscription to an image repository.
+type ImageRepositorySubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag.
 	RepoURL string `json:"repoURL,omitempty"`
@@ -66,6 +81,12 @@ type RepositorySubscription struct {
 	// credentials. If left unspecified, K8sTA will fall back on globally
 	// configured repository credentials, if they exist.
 	PullSecret string `json:"pullSecret,omitempty"`
+}
+
+// GitRepositorySubscription defines a subscription to a git repository.
+type GitRepositorySubscription struct {
+	// RepoURL specifies the URL of the git repository to subscribe to.
+	RepoURL string `json:"repoURL,omitempty"`
 }
 
 // Station represents a single point on a Track through which a change
@@ -104,6 +125,22 @@ type TrackReference struct {
 	// Disabled indicates whether the junction represented by this TrackReference
 	// should be ignored as changes progress along the Track making the reference.
 	Disabled bool `json:"disabled,omitempty"`
+}
+
+// TrackStatus encapsulates the status of the Track.
+type TrackStatus struct {
+	// GitSyncStatus encapsulates the details of what point in a repository was
+	// last synced to and when.
+	GitSyncStatus *GitSyncStatus `json:"gitSyncStatus,omitempty"`
+}
+
+// GitSyncStatus encapsulates the details of what point in a repository was last
+// synced to and when.
+type GitSyncStatus struct {
+	// Commit is the commit ID (sha) found at HEAD at the time of the last sync.
+	Commit string `json:"commit,omitempty"`
+	// Time is the time of the most recent sync.
+	Time *metav1.Time `json:"time,omitempty"`
 }
 
 //+kubebuilder:object:root=true
