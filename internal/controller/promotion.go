@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/akuityio/k8sta/internal/git"
 	"github.com/akuityio/k8sta/internal/kustomize"
 )
 
@@ -39,7 +40,7 @@ func (t *ticketReconciler) promoteImages(
 	}).Debug("created temporary home directory")
 
 	// Set up auth
-	if err = setupGitAuth(
+	if err = git.SetupAuth(
 		ctx,
 		app.Spec.Source.RepoURL,
 		homeDir,
@@ -50,7 +51,7 @@ func (t *ticketReconciler) promoteImages(
 	}
 
 	// Clone the repo
-	repoDir, err := cloneRepo(app.Spec.Source.RepoURL, homeDir, logger)
+	repoDir, err := git.Clone(app.Spec.Source.RepoURL, homeDir, logger)
 	if err != nil {
 		return "", err
 	}
@@ -150,7 +151,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	cmd := exec.Command("git", "commit", "-am", commitMsg)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
-	if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err = git.ExecCommand(cmd, homeDir, logger); err != nil {
 		return "", errors.Wrap(err, "error committing changes to source branch")
 	}
 	logger.Debug("committed changes to the source branch")
@@ -158,7 +159,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	// Push the changes to the source branch
 	cmd = exec.Command("git", "push", "origin", "HEAD")
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err = git.ExecCommand(cmd, homeDir, logger); err != nil {
 		return "", errors.Wrap(err, "error pushing changes to source branch")
 	}
 	logger.Debug("pushed changes to the source branch")
@@ -175,7 +176,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	)
 	// We need to be anywhere in the root of the repo for this
 	cmd.Dir = repoDir
-	if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err = git.ExecCommand(cmd, homeDir, logger); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 2 {
 			return "", errors.Wrapf(
 				err,
@@ -202,7 +203,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 			"--",
 		)
 		cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-		if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+		if _, err = git.ExecCommand(cmd, homeDir, logger); err != nil {
 			return "", errors.Wrapf(
 				err,
 				"error checking out Application-specific branch %q from repo %q",
@@ -226,7 +227,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 			"--",
 		)
 		cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-		if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+		if _, err = git.ExecCommand(cmd, homeDir, logger); err != nil {
 			return "", errors.Wrapf(
 				err,
 				"error creating orphaned Application-specific branch %q from repo %q",
@@ -299,7 +300,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	cmd = exec.Command("git", "add", ".")
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
-	if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err = git.ExecCommand(cmd, homeDir, logger); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error staging changes for commit to Application-specific branch %q",
@@ -308,7 +309,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	}
 	cmd = exec.Command("git", "commit", "-m", commitMsg)
 	cmd.Dir = repoDir // We need to be in the root of the repo for this
-	if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err = git.ExecCommand(cmd, homeDir, logger); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error committing changes to Application-specific branch %q",
@@ -327,7 +328,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 		app.Spec.Source.TargetRevision,
 	)
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
-	if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err = git.ExecCommand(cmd, homeDir, logger); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error pushing changes to Application-specific branch %q",
@@ -339,7 +340,7 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 	)
 
 	// Get the ID of the last commit
-	sha, err := getLastCommitID(repoDir)
+	sha, err := git.LastCommitID(repoDir)
 	if err != nil {
 		return "", err
 	}

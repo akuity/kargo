@@ -11,6 +11,7 @@ import (
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/akuityio/k8sta/internal/common/config"
+	"github.com/akuityio/k8sta/internal/git"
 	"github.com/argoproj/argo-cd/v2/util/db"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -151,7 +152,7 @@ func (t *trackReconciler) syncGitRepo(
 	}).Debug("created temporary home directory")
 
 	// Set up auth
-	if err = setupGitAuth(
+	if err = git.SetupAuth(
 		ctx,
 		track.Spec.GitRepositorySubscription.RepoURL,
 		homeDir,
@@ -162,7 +163,7 @@ func (t *trackReconciler) syncGitRepo(
 	}
 
 	// Clone the repo
-	repoDir, err := cloneRepo(
+	repoDir, err := git.Clone(
 		track.Spec.GitRepositorySubscription.RepoURL,
 		homeDir,
 		logger,
@@ -172,7 +173,7 @@ func (t *trackReconciler) syncGitRepo(
 	}
 
 	// Get the ID of the last commit
-	mostRecentSHA, err := getLastCommitID(repoDir)
+	mostRecentSHA, err := git.LastCommitID(repoDir)
 	if err != nil {
 		return err
 	}

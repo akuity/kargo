@@ -1,4 +1,4 @@
-package controller
+package git
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// setupGitAuth configures the git CLI for authentication using either SSH or
-// the "store" (username/password-based) credential helper.
-func setupGitAuth(
+// SetupAuth configures the git CLI for authentication using either SSH or the
+// "store" (username/password-based) credential helper.
+func SetupAuth(
 	ctx context.Context,
 	repoURL string,
 	homeDir string,
@@ -26,7 +26,7 @@ func setupGitAuth(
 ) error {
 	// Configure the git client
 	cmd := exec.Command("git", "config", "--global", "user.name", "k8sta")
-	if _, err := execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err := ExecCommand(cmd, homeDir, logger); err != nil {
 		return errors.Wrapf(err, "error configuring git username")
 	}
 	cmd = exec.Command(
@@ -36,7 +36,7 @@ func setupGitAuth(
 		"user.email",
 		"k8sta@akuity.io",
 	)
-	if _, err := execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err := ExecCommand(cmd, homeDir, logger); err != nil {
 		return errors.Wrapf(err, "error configuring git user email address")
 	}
 
@@ -104,7 +104,7 @@ func setupGitAuth(
 
 	// Set up the credential helper
 	cmd = exec.Command("git", "config", "--global", "credential.helper", "store")
-	if _, err = execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err = ExecCommand(cmd, homeDir, logger); err != nil {
 		return errors.Wrapf(err, "error configuring git credential helper")
 	}
 
@@ -140,7 +140,7 @@ func setupGitAuth(
 	return nil
 }
 
-func cloneRepo(repoURL, homeDir string, logger *log.Entry) (string, error) {
+func Clone(repoURL, homeDir string, logger *log.Entry) (string, error) {
 	repoDir := filepath.Join(homeDir, "repo")
 	cmd := exec.Command( // nolint: gosec
 		"git",
@@ -149,7 +149,7 @@ func cloneRepo(repoURL, homeDir string, logger *log.Entry) (string, error) {
 		repoURL,
 		repoDir,
 	)
-	if _, err := execGitCommand(cmd, homeDir, logger); err != nil {
+	if _, err := ExecCommand(cmd, homeDir, logger); err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error cloning repo %q into %q",
@@ -164,7 +164,7 @@ func cloneRepo(repoURL, homeDir string, logger *log.Entry) (string, error) {
 	return repoDir, nil
 }
 
-func getLastCommitID(repoDir string) (string, error) {
+func LastCommitID(repoDir string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
 	shaBytes, err := cmd.Output()
@@ -172,7 +172,7 @@ func getLastCommitID(repoDir string) (string, error) {
 		errors.Wrap(err, "error obtaining ID of last commit")
 }
 
-func execGitCommand(
+func ExecCommand(
 	cmd *exec.Cmd,
 	homeDir string,
 	logger *log.Entry,
