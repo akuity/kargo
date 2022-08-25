@@ -133,6 +133,8 @@ func (t *trackReconciler) syncGitRepo(
 	ctx context.Context,
 	track *api.Track,
 ) error {
+	logger := t.logger.WithFields(log.Fields{})
+
 	// Create a temporary home directory for everything we're about to do
 	homeDir, err := ioutil.TempDir("", "")
 	if err != nil {
@@ -154,7 +156,7 @@ func (t *trackReconciler) syncGitRepo(
 		track.Spec.GitRepositorySubscription.RepoURL,
 		homeDir,
 		t.argoDB,
-		t.logger,
+		logger,
 	); err != nil {
 		return err
 	}
@@ -163,7 +165,7 @@ func (t *trackReconciler) syncGitRepo(
 	repoDir, err := cloneRepo(
 		track.Spec.GitRepositorySubscription.RepoURL,
 		homeDir,
-		t.logger,
+		logger,
 	)
 	if err != nil {
 		return err

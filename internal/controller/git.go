@@ -22,7 +22,7 @@ func setupGitAuth(
 	repoURL string,
 	homeDir string,
 	argoDB db.ArgoDB,
-	logger *log.Logger,
+	logger *log.Entry,
 ) error {
 	// Configure the git client
 	cmd := exec.Command("git", "config", "--global", "user.name", "k8sta")
@@ -140,7 +140,7 @@ func setupGitAuth(
 	return nil
 }
 
-func cloneRepo(repoURL, homeDir string, logger *log.Logger) (string, error) {
+func cloneRepo(repoURL, homeDir string, logger *log.Entry) (string, error) {
 	repoDir := filepath.Join(homeDir, "repo")
 	cmd := exec.Command( // nolint: gosec
 		"git",
@@ -175,7 +175,7 @@ func getLastCommitID(repoDir string) (string, error) {
 func execGitCommand(
 	cmd *exec.Cmd,
 	homeDir string,
-	logger *log.Logger,
+	logger *log.Entry,
 ) ([]byte, error) {
 	homeEnvVar := fmt.Sprintf("HOME=%s", homeDir)
 	if cmd.Env == nil {
