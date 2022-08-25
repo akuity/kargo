@@ -95,3 +95,44 @@ uncovered all of the following:
   every one of our customers is already using Argo CD, and given Argo CD's
   excellent integration with Argo Rollouts, many Akuity customers are likely
   using it already or could easily be convinced to do so.
+
+## Iteration 3
+
+The first two iterations focused _exclusively_ on the use case of progressing a
+new image along a `Track` (or series of interconnected `Track`s), with the
+precipitating event being the publication (push) of that image.
+
+Iteration 3 will explore _another type of change_ that needs to be progressed
+along a `Track` (or series of interconnected `Track`s), with a _different
+precipitating event_ -- namely, changes that have been committed to the "source
+branch" by a human operator.
+
+> 📝&nbsp;&nbsp;To clarify the meaning of "source branch": K8sTA heavily leans
+into the "rendered YAML branches pattern" wherein a single branch (typically
+`main`) houses base configuration as well as environment-specific overlays. The
+base configuration and applicable overlays can be rendered into plain YAML
+manifests that are stored in environment-specific branches. I have been calling
+the branch containing base configuration and overlays the "source branch" to
+distinguish it from the environment-specific branches.
+
+Iteration 3 will focus on detecting changes to the source branch (that were not
+initiated by K8sTA itself as part of the image update process already
+implemented), determining whether those changes affect base configuration (and
+therefore, potentially, all environments) and in such a case, proceeding to
+progress those changes down applicable `Track`s.
+
+Further:
+
+* Changes that are deemed to affect only specific overlays / environments are,
+  for now, out of scope (although I anticipate these being addressed in the
+  next iteration).
+
+* K8sTA should take responsibility for rendering plain YAML manifests into the
+  environment-specific branches so that it is neither the responsibility of a
+  human operator to do so manually nor is it their responsibility to automate
+  the process themselves through their own esoteric glue code or automated
+  processes. (i.e. A human operator should only ever touch the source branch.)
+
+* For the sake of expediency, as with detecting new Docker images, the prototype
+  will rely on webhooks for detecting changes in a git repository which, in the
+  future, should be detected through other means.
