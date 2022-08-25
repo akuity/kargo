@@ -83,7 +83,7 @@ func SetupTicketReconcilerWithManager(
 		func(track client.Object) []string {
 			apps := []string{}
 			// nolint: forcetypeassert
-			for _, station := range track.(*api.Track).Stations {
+			for _, station := range track.(*api.Track).Spec.Stations {
 				for _, app := range station.Applications {
 					if !app.Disabled {
 						apps = append(apps, app.Name)
@@ -183,7 +183,8 @@ func (t *ticketReconciler) Reconcile(
 	result := ctrl.Result{}
 
 	t.logger.WithFields(log.Fields{
-		"name": req.NamespacedName.Name,
+		"namespace": req.NamespacedName.Namespace,
+		"name":      req.NamespacedName.Name,
 	}).Debug("reconciling Ticket")
 
 	// Find the Ticket
@@ -246,14 +247,14 @@ func (t *ticketReconciler) reconcileNewTicket(
 	}
 
 	// Find the "zero" Station that we want to migrate to first
-	if len(track.Stations) == 0 {
+	if len(track.Spec.Stations) == 0 {
 		// This Ticket is implicitly complete
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason =
 			"Associated Track has no Stations; Nothing to do"
 		return nil
 	}
-	station := track.Stations[0]
+	station := track.Spec.Stations[0]
 
 	return t.promoteToStation(ctx, ticket, station)
 }
@@ -308,8 +309,9 @@ func (t *ticketReconciler) updateTicketStatus(
 ) {
 	if err := t.client.Status().Update(ctx, ticket); err != nil {
 		t.logger.WithFields(log.Fields{
-			"name": ticket.Name,
-		}).Error("error updating ticket status")
+			"namespace": ticket.Namespace,
+			"name":      ticket.Name,
+		}).Error("error updating Ticket status")
 	}
 }
 
@@ -521,7 +523,7 @@ func (t *ticketReconciler) performNextMigration(
 
 	// What's the next Migration? Or are we done?
 	lastStationIndex := -1
-	for i, station := range track.Stations {
+	for i, station := range track.Spec.Stations {
 		if station.Name == lastStation {
 			lastStationIndex = i
 			break
@@ -538,12 +540,12 @@ func (t *ticketReconciler) performNextMigration(
 	}
 
 	// Check if we've reached the end of the Track
-	if lastStationIndex == len(track.Stations)-1 {
+	if lastStationIndex == len(track.Spec.Stations)-1 {
 		ticket.Status.State = api.TicketStateCompleted
 		ticket.Status.StateReason = ""
 		return nil
 	}
-	nextStation := track.Stations[lastStationIndex+1]
+	nextStation := track.Spec.Stations[lastStationIndex+1]
 
 	return t.promoteToStation(ctx, ticket, nextStation)
 }
@@ -585,34 +587,34 @@ func (t *ticketReconciler) promoteToStation(
 				progressRecord.Migration.SkippedApplications,
 				appRef.Name,
 			)
-		} else {
-			app, err := t.getArgoCDApplication(
-				ctx,
-				types.NamespacedName{
-					Namespace: ticket.Namespace,
-					Name:      appRef.Name,
-				},
-			)
-			if err != nil {
-				ticket.Status.State = api.TicketStateFailed
-				ticket.Status.StateReason = fmt.Sprintf(
-					"Error getting Argo CD Application %q for Station %q",
-					appRef.Name,
-					station.Name,
-				)
-				return nil
-			}
-			if app == nil {
-				ticket.Status.State = api.TicketStateFailed
-				ticket.Status.StateReason = fmt.Sprintf(
-					"Argo CD Application %q for Station %q does not exist",
-					appRef.Name,
-					station.Name,
-				)
-				return nil
-			}
-			apps = append(apps, app)
+			continue
 		}
+		app, err := t.getArgoCDApplication(
+			ctx,
+			types.NamespacedName{
+				Namespace: ticket.Namespace,
+				Name:      appRef.Name,
+			},
+		)
+		if err != nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Error getting Argo CD Application %q for Station %q",
+				appRef.Name,
+				station.Name,
+			)
+			return nil
+		}
+		if app == nil {
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason = fmt.Sprintf(
+				"Argo CD Application %q for Station %q does not exist",
+				appRef.Name,
+				station.Name,
+			)
+			return nil
+		}
+		apps = append(apps, app)
 	}
 
 	// Find the corresponding Tracks
@@ -649,7 +651,7 @@ func (t *ticketReconciler) promoteToStation(
 				)
 				return nil
 			}
-			if track.Disabled {
+			if track.Spec.Disabled {
 				progressRecord.Migration.SkippedTracks = append(
 					progressRecord.Migration.SkippedTracks,
 					track.Name,
@@ -663,6 +665,14 @@ func (t *ticketReconciler) promoteToStation(
 	// Promote by making commits
 	progressRecord.Migration.Commits = make([]api.Commit, len(apps))
 	for i, app := range apps {
+		if ticket.Change.BaseConfiguration != nil {
+			// TODO: We aren't handling these just yet, but this is where we'll
+			// eventually call some other function to promote the config changes.
+			ticket.Status.State = api.TicketStateFailed
+			ticket.Status.StateReason =
+				"This type of change can not yet be progressed"
+			return nil
+		}
 		commitSHA, err := t.promoteImages(ctx, ticket, app)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed

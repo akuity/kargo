@@ -38,6 +38,7 @@ rules:
   - k8sta.akuity.io
   resources:
   - tickets/status
+  - tracks/status
   verbs:
   - update
 - apiGroups:

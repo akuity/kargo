@@ -61,6 +61,15 @@ func RunController(ctx context.Context, config config.Config) error {
 		kubeClient,
 	)
 
+	if err := controller.SetupTrackReconcilerWithManager(
+		ctx,
+		config,
+		mgr,
+		argoDB,
+	); err != nil {
+		return errors.Wrap(err, "error setting up Track reconciler")
+	}
+
 	if err := controller.SetupTicketReconcilerWithManager(
 		ctx,
 		config,

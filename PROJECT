@@ -16,6 +16,7 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
+  controller: true
   domain: akuity.io
   group: k8sta
   kind: Track
