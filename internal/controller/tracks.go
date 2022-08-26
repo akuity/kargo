@@ -3,8 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -136,44 +134,31 @@ func (t *trackReconciler) syncGitRepo(
 ) error {
 	logger := t.logger.WithFields(log.Fields{})
 
-	// Create a temporary home directory for everything we're about to do
-	homeDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"error creating temporary workspace for cloning repo %q",
-			track.Spec.GitRepositorySubscription.RepoURL,
-		)
-	}
-	defer os.RemoveAll(homeDir)
-	t.logger.WithFields(log.Fields{
-		"repo": track.Spec.GitRepositorySubscription.RepoURL,
-		"path": homeDir,
-	}).Debug("created temporary home directory")
-
-	// Set up auth
-	if err = git.SetupAuth(
+	repoCreds, err := getRepoCredentials(
 		ctx,
 		track.Spec.GitRepositorySubscription.RepoURL,
-		homeDir,
 		t.argoDB,
-		logger,
-	); err != nil {
-		return err
-	}
-
-	// Clone the repo
-	repoDir, err := git.Clone(
-		track.Spec.GitRepositorySubscription.RepoURL,
-		homeDir,
-		logger,
 	)
 	if err != nil {
 		return err
 	}
 
+	repo, err := git.Clone(
+		ctx,
+		track.Spec.GitRepositorySubscription.RepoURL,
+		repoCreds,
+	)
+	if err != err {
+		// TODO: Wrap this error?
+		return err
+	}
+	defer repo.Close()
+	logger.WithFields(log.Fields{
+		"url": track.Spec.GitRepositorySubscription.RepoURL,
+	}).Debug("cloned git repository")
+
 	// Get the ID of the last commit
-	mostRecentSHA, err := git.LastCommitID(repoDir)
+	mostRecentSHA, err := repo.LastCommitID()
 	if err != nil {
 		return err
 	}
@@ -183,7 +168,6 @@ func (t *trackReconciler) syncGitRepo(
 	if track.Status.GitSyncStatus == nil {
 		t.logger.WithFields(log.Fields{
 			"repo":   track.Spec.GitRepositorySubscription.RepoURL,
-			"path":   homeDir,
 			"commit": mostRecentSHA,
 		}).Debug("this is the first repository sync; nothing to compare")
 		updateSyncStatus(track, mostRecentSHA)
@@ -195,7 +179,6 @@ func (t *trackReconciler) syncGitRepo(
 	if mostRecentSHA == track.Status.GitSyncStatus.Commit {
 		t.logger.WithFields(log.Fields{
 			"repo":   track.Spec.GitRepositorySubscription.RepoURL,
-			"path":   homeDir,
 			"commit": mostRecentSHA,
 		}).Debug("found no changes since the previous sync")
 		updateSyncStatus(track, mostRecentSHA)
@@ -215,7 +198,7 @@ func (t *trackReconciler) syncGitRepo(
 		fmt.Sprintf("HEAD...%s", track.Status.GitSyncStatus.Commit),
 		`--format="%H %an"`,
 	)
-	cmd.Dir = repoDir // We need to be in the root of the repo for this
+	cmd.Dir = repo.WorkingDir() // We need to be in the root of the repo for this
 	commitListBytes, err := cmd.Output()
 	if err != nil {
 		return errors.Wrapf(
@@ -249,7 +232,6 @@ func (t *trackReconciler) syncGitRepo(
 	if !diffContainsNonK8staAuthors {
 		t.logger.WithFields(log.Fields{
 			"repo":           track.Spec.GitRepositorySubscription.RepoURL,
-			"path":           homeDir,
 			"previousCommit": track.Status.GitSyncStatus.Commit,
 			"currentCommit":  mostRecentSHA,
 		}).Debug("found no changes that were not authored by k8sta")
@@ -268,7 +250,7 @@ func (t *trackReconciler) syncGitRepo(
 		track.Status.GitSyncStatus.Commit,
 		"--name-only",
 	)
-	cmd.Dir = repoDir // We need to be in the root of the repo for this
+	cmd.Dir = repo.WorkingDir() // We need to be in the root of the repo for this
 	changedFilesBytes, err := cmd.Output()
 	if err != nil {
 		return errors.Wrapf(
@@ -294,7 +276,6 @@ func (t *trackReconciler) syncGitRepo(
 	if !diffContainsBaseChanges {
 		t.logger.WithFields(log.Fields{
 			"repo":           track.Spec.GitRepositorySubscription.RepoURL,
-			"path":           homeDir,
 			"previousCommit": track.Status.GitSyncStatus.Commit,
 			"currentCommit":  mostRecentSHA,
 		}).Debug("found no changes affecting base configuration")
