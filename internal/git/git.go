@@ -5,28 +5,96 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/argo-cd/v2/util/db"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
+
+// RepoCredentials represents the credentials for connecting to a private git
+// repository.
+type RepoCredentials struct {
+	SSHPrivateKey string
+	Username      string
+	Password      string
+}
+
+// Repo is an interface for interacting with a git repository.
+type Repo interface {
+	// WorkingDir returns an absolute path to the repository's working tree.
+	WorkingDir() string
+	// Checkout checks out the specified branch.
+	Checkout(branch string) error
+	// CreateOrphanedBranch creates a new branch that shares no commit history
+	// with any other branch.
+	CreateOrphanedBranch(branch string) error
+	// AddAllAndCommit is a convenience function that stages pending changes for
+	// commit to the current branch and then commits them using the provided
+	// commit message.
+	AddAllAndCommit(message string) error
+	// AddAll stages pending changes for commit.
+	AddAll() error
+	// Commit commits staged changes to the current branch.
+	Commit(message string) error
+	// Push pushes from the current branch to a remote branch by the same name.
+	Push() error
+	// LastCommitID returns the ID (sha) of the most recent commit to the current
+	// branch.
+	LastCommitID() (string, error)
+	// RemoteBranchExists returns a bool indicating if the specified branch exists
+	// in the remote repository.
+	RemoteBranchExists(branch string) (bool, error)
+	// Close cleans up file system resources used by this repository. This should
+	// always be called before a repository goes out of scope.
+	Close() error
+}
+
+// repo is an implementation of the Repo interface for interacting with a git
+// repository.
+type repo struct {
+	url           string
+	homeDir       string
+	dir           string
+	currentBranch string
+}
+
+// Clone produces a local clone of the remote git repository at the specified
+// URL and returns an implementation of the Repo interface that is stateful and
+// NOT suitable for use across multiple goroutines. This function will also
+// perform any setup that is required for successfully authenticating to the
+// remote repository.
+func Clone(
+	ctx context.Context,
+	url string,
+	repoCreds RepoCredentials,
+) (Repo, error) {
+	homeDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"error creating home directory for repo %q",
+			url,
+		)
+	}
+	r := &repo{
+		url:     url,
+		homeDir: homeDir,
+		dir:     filepath.Join(homeDir, "repo"),
+	}
+	if err = r.setupAuth(ctx, repoCreds); err != nil {
+		return nil, err
+	}
+	return r, r.clone()
+}
 
 // SetupAuth configures the git CLI for authentication using either SSH or the
 // "store" (username/password-based) credential helper.
-func SetupAuth(
-	ctx context.Context,
-	repoURL string,
-	homeDir string,
-	argoDB db.ArgoDB,
-	logger *log.Entry,
-) error {
+func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
 	// Configure the git client
 	cmd := exec.Command("git", "config", "--global", "user.name", "k8sta")
-	if _, err := ExecCommand(cmd, homeDir, logger); err != nil {
+	if _, err := r.execCommand(cmd); err != nil {
 		return errors.Wrapf(err, "error configuring git username")
 	}
 	cmd = exec.Command(
@@ -36,65 +104,26 @@ func SetupAuth(
 		"user.email",
 		"k8sta@akuity.io",
 	)
-	if _, err := ExecCommand(cmd, homeDir, logger); err != nil {
+	if _, err := r.execCommand(cmd); err != nil {
 		return errors.Wrapf(err, "error configuring git user email address")
 	}
 
-	const repoTypeGit = "git"
-	var sshKey, username, password string
-	// NB: This next call returns an empty Repository if no such Repository is
-	// found, so instead of continuing to look for credentials if no Repository is
-	// found, what we'll do is continue looking for credentials if the Repository
-	// we get back doesn't have anything we can use, i.e. no SSH private key or
-	// password.
-	repo, err := argoDB.GetRepository(ctx, repoURL)
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"error getting Repository (Secret) for repo %q",
-			repoURL,
-		)
-	}
-	if repo.Type == repoTypeGit || repo.Type == "" {
-		sshKey = repo.SSHPrivateKey
-		username = repo.Username
-		password = repo.Password
-	}
-	if sshKey == "" && password == "" {
-		// We didn't find any creds yet, so keep looking
-		var repoCreds *argocd.RepoCreds
-		repoCreds, err = argoDB.GetRepositoryCredentials(ctx, repoURL)
-		if err != nil {
-			return errors.Wrapf(
-				err,
-				"error getting Repository Credentials (Secret) for repo %q",
-				repoURL,
-			)
-		}
-		if repoCreds.Type == repoTypeGit || repoCreds.Type == "" {
-			sshKey = repo.SSHPrivateKey
-			username = repo.Username
-			password = repo.Password
-		}
-	}
-
-	// We didn't find any creds, so we're done. We can't promote without creds.
-	if sshKey == "" && password == "" {
-		return errors.Errorf("could not find any credentials for repo %q", repoURL)
-	}
-
 	// If an SSH key was provided, use that.
-	if sshKey != "" {
-		sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
+	if repoCreds.SSHPrivateKey != "" {
+		sshConfigPath := filepath.Join(r.homeDir, ".ssh", "config")
 		// nolint: lll
 		const sshConfig = "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null"
-		if err =
+		if err :=
 			ioutil.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
 			return errors.Wrapf(err, "error writing SSH config to %q", sshConfigPath)
 		}
 
-		rsaKeyPath := filepath.Join(homeDir, ".ssh", "id_rsa")
-		if err = ioutil.WriteFile(rsaKeyPath, []byte(sshKey), 0600); err != nil {
+		rsaKeyPath := filepath.Join(r.homeDir, ".ssh", "id_rsa")
+		if err := ioutil.WriteFile(
+			rsaKeyPath,
+			[]byte(repoCreds.SSHPrivateKey),
+			0600,
+		); err != nil {
 			return errors.Wrapf(err, "error writing SSH key to %q", rsaKeyPath)
 		}
 		return nil // We're done
@@ -104,13 +133,13 @@ func SetupAuth(
 
 	// Set up the credential helper
 	cmd = exec.Command("git", "config", "--global", "credential.helper", "store")
-	if _, err = ExecCommand(cmd, homeDir, logger); err != nil {
+	if _, err := r.execCommand(cmd); err != nil {
 		return errors.Wrapf(err, "error configuring git credential helper")
 	}
 
-	credentialURL, err := url.Parse(repoURL)
+	credentialURL, err := url.Parse(r.url)
 	if err != nil {
-		return errors.Wrapf(err, "error parsing URL %q", repoURL)
+		return errors.Wrapf(err, "error parsing URL %q", r.url)
 	}
 	// Remove path and query string components from the URL
 	credentialURL.Path = ""
@@ -118,14 +147,14 @@ func SetupAuth(
 	// If the username is the empty string, we assume we're working with a git
 	// provider like GitHub that only requires the username to be non-empty. We
 	// arbitrarily set it to "git".
-	if username == "" {
-		username = "git"
+	if repoCreds.Username == "" {
+		repoCreds.Username = "git"
 	}
 	// Augment the URL with user/pass information.
-	credentialURL.User = url.UserPassword(username, password)
+	credentialURL.User = url.UserPassword(repoCreds.Username, repoCreds.Password)
 	// Write the augmented URL to the location used by the "stored" credential
 	// helper.
-	credentialsPath := filepath.Join(homeDir, ".git-credentials")
+	credentialsPath := filepath.Join(r.homeDir, ".git-credentials")
 	if err := ioutil.WriteFile(
 		credentialsPath,
 		[]byte(credentialURL.String()),
@@ -140,50 +169,153 @@ func SetupAuth(
 	return nil
 }
 
-func Clone(repoURL, homeDir string, logger *log.Entry) (string, error) {
-	repoDir := filepath.Join(homeDir, "repo")
+func (r *repo) clone() error {
 	cmd := exec.Command( // nolint: gosec
 		"git",
 		"clone",
 		"--no-tags",
-		repoURL,
-		repoDir,
+		r.url,
+		r.dir,
 	)
-	if _, err := ExecCommand(cmd, homeDir, logger); err != nil {
-		return "", errors.Wrapf(
+	if _, err := r.execCommand(cmd); err != nil {
+		return errors.Wrapf(
 			err,
 			"error cloning repo %q into %q",
-			repoURL,
-			repoDir,
+			r.url,
+			r.dir,
 		)
 	}
-	logger.WithFields(log.Fields{
-		"repo": repoURL,
-		"path": repoDir,
-	}).Debug("cloned git repository")
-	return repoDir, nil
+	r.currentBranch = "HEAD"
+	return nil
 }
 
-func LastCommitID(repoDir string) (string, error) {
+func (r *repo) WorkingDir() string {
+	return r.dir
+}
+
+func (r *repo) Checkout(branch string) error {
+	cmd := exec.Command( // nolint: gosec
+		"git",
+		"checkout",
+		branch,
+		// The next line makes it crystal clear to git that we're checking out
+		// a branch. We need to do this because branch names can often resemble
+		// paths within the repo.
+		"--",
+	)
+	cmd.Dir = r.dir
+	if _, err := r.execCommand(cmd); err != nil {
+		return errors.Wrapf(
+			err,
+			"error checking out branch %q from repo %q",
+			branch,
+			r.url,
+		)
+	}
+	r.currentBranch = branch
+	return nil
+}
+
+func (r *repo) CreateOrphanedBranch(branch string) error {
+	cmd := exec.Command( // nolint: gosec
+		"git",
+		"checkout",
+		"--orphan",
+		branch,
+		// The next line makes it crystal clear to git that we're checking out
+		// a branch. We need to do this because branch names can often resemble
+		// paths within the repo.
+		"--",
+	)
+	cmd.Dir = r.dir
+	if _, err := r.execCommand(cmd); err != nil {
+		return errors.Wrapf(
+			err,
+			"error creating orphaned branch %q for repo %q",
+			branch,
+			r.url,
+		)
+	}
+	r.currentBranch = branch
+	return nil
+}
+
+func (r *repo) AddAllAndCommit(message string) error {
+	if err := r.AddAll(); err != nil {
+		return err
+	}
+	return r.Commit(message)
+}
+
+func (r *repo) AddAll() error {
+	cmd := exec.Command("git", "add", ".")
+	cmd.Dir = r.dir
+	_, err := r.execCommand(cmd)
+	return errors.Wrap(err, "error staging changes for commit")
+}
+
+func (r *repo) Commit(message string) error {
+	cmd := exec.Command("git", "commit", "-m", message)
+	cmd.Dir = r.dir
+	_, err := r.execCommand(cmd)
+	return errors.Wrapf(
+		err,
+		"error committing changes to branch %q",
+		r.currentBranch,
+	)
+}
+
+func (r *repo) Push() error {
+	cmd := exec.Command("git", "push", "origin", r.currentBranch) // nolint: gosec
+	cmd.Dir = r.dir
+	_, err := r.execCommand(cmd)
+	return errors.Wrapf(err, "error pushing branch %q", r.currentBranch)
+}
+
+func (r *repo) LastCommitID() (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = repoDir // We need to be anywhere in the root of the repo for this
+	cmd.Dir = r.dir // We need to be anywhere in the root of the repo for this
 	shaBytes, err := cmd.Output()
 	return strings.TrimSpace(string(shaBytes)),
 		errors.Wrap(err, "error obtaining ID of last commit")
 }
 
-func ExecCommand(
-	cmd *exec.Cmd,
-	homeDir string,
-	logger *log.Entry,
-) ([]byte, error) {
-	homeEnvVar := fmt.Sprintf("HOME=%s", homeDir)
+func (r *repo) RemoteBranchExists(branch string) (bool, error) {
+	cmd := exec.Command( // nolint: gosec
+		"git",
+		"ls-remote",
+		"--heads",
+		"--exit-code", // Return 2 if not found
+		r.url,
+		branch,
+	)
+	cmd.Dir = r.dir
+	if _, err := r.execCommand(cmd); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 2 {
+			return false, errors.Wrapf(
+				err,
+				"error checking for existence of branch %q in remote repo %q",
+				branch,
+				r.url,
+			)
+		}
+		// If we get to here, exit code was 2 and that means the branch doesn't
+		// exist
+		return false, nil
+	}
+	return true, nil
+}
+
+func (r *repo) execCommand(cmd *exec.Cmd) ([]byte, error) {
+	homeEnvVar := fmt.Sprintf("HOME=%s", r.homeDir)
 	if cmd.Env == nil {
 		cmd.Env = []string{homeEnvVar}
 	} else {
 		cmd.Env = append(cmd.Env, homeEnvVar)
 	}
-	output, err := cmd.CombinedOutput()
-	logger.Debug(string(output))
-	return output, err
+	return cmd.CombinedOutput()
+}
+
+func (r *repo) Close() error {
+	return os.RemoveAll(r.homeDir)
 }
