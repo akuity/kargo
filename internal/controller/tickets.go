@@ -665,19 +665,11 @@ func (t *ticketReconciler) promoteToStation(
 	// Promote by making commits
 	progressRecord.Migration.Commits = make([]api.Commit, len(apps))
 	for i, app := range apps {
-		if ticket.Change.BaseConfiguration != nil {
-			// TODO: We aren't handling these just yet, but this is where we'll
-			// eventually call some other function to promote the config changes.
-			ticket.Status.State = api.TicketStateFailed
-			ticket.Status.StateReason =
-				"This type of change can not yet be progressed"
-			return nil
-		}
-		commitSHA, err := t.promoteImages(ctx, ticket, app)
+		commitSHA, err := t.promote(ctx, ticket, app)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
-				"Error promoting images to Argo CD Application %q in Station %q",
+				"Error promoting change to Argo CD Application %q in Station %q",
 				app.Name,
 				station.Name,
 			)
@@ -734,7 +726,7 @@ func (t *ticketReconciler) promoteToStation(
 		"ticket":  ticket.Name,
 		"track":   ticket.Track,
 		"station": station.Name,
-	}).Debug("promoted images")
+	}).Debug("promoted change")
 
 	return nil
 }
