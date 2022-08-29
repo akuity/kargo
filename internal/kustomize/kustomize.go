@@ -6,10 +6,13 @@ import (
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
-func SetImage(dir string, image api.Image, logger *log.Entry) error {
+// TODO: Document this
+type RenderStrategy struct{}
+
+// SetImage runs `kustomize edit set image ...` in the specified directory.
+func (r *RenderStrategy) SetImage(dir string, image api.Image) error {
 	cmd := exec.Command( // nolint: gosec
 		"kustomize",
 		"edit",
@@ -23,24 +26,22 @@ func SetImage(dir string, image api.Image, logger *log.Entry) error {
 		),
 	)
 	cmd.Dir = dir
-	if err := cmd.Run(); err != nil {
-		return errors.Wrap(err, "error setting image")
-	}
-	logger.Debug("ran kustomize edit set image")
-	return nil
+	return errors.Wrapf(
+		cmd.Run(),
+		"error running kustomize set image in directory %q",
+		dir,
+	)
 }
 
-func Build(branch, dir string, logger *log.Entry) ([]byte, error) {
+// Build runs `kustomize build` in the specified directory and returns an array
+// of bytes containing the fully rendered YAML.
+func (r *RenderStrategy) Build(dir string) ([]byte, error) {
 	cmd := exec.Command("kustomize", "build")
 	cmd.Dir = dir
 	yamlBytes, err := cmd.Output()
-	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error rendering YAML for branch %q",
-			branch,
-		)
-	}
-	logger.Debug("ran kustomize build")
-	return yamlBytes, nil
+	return yamlBytes, errors.Wrapf(
+		err,
+		"error running kustomize build in directory %q",
+		dir,
+	)
 }

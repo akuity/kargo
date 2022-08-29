@@ -37,13 +37,15 @@ func (t *ticketReconciler) promoteImages(
 		"url": app.Spec.Source.RepoURL,
 	}).Debug("cloned git repository")
 
-	// TODO: This is hard-coded for now, but there's a possibility here of later
-	// supporting other tools and patterns.
-	sha, err := t.promotionStrategyRenderedYAMLBranchesWithKustomize(
+	sha, err := t.promotionImagesViaRenderedYAMLBranch(
 		ctx,
 		ticket,
 		app,
 		repo,
+		// TODO: For now this is hard-coded to use kustomize, but it's possible
+		// to later support ytt as well by passing a different implementation of
+		// the RenderStrategy interface.
+		&kustomize.RenderStrategy{},
 	)
 	if err != nil {
 		return "", err
@@ -73,11 +75,12 @@ func (t *ticketReconciler) promoteImages(
 }
 
 // nolint: gocyclo
-func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
+func (t *ticketReconciler) promotionImagesViaRenderedYAMLBranch(
 	ctx context.Context,
 	ticket *api.Ticket,
 	app *argocd.Application,
 	repo git.Repo,
+	renderStrategy RenderStrategy,
 ) (string, error) {
 	logger := t.logger.WithFields(
 		log.Fields{
@@ -94,19 +97,20 @@ func (t *ticketReconciler) promotionStrategyRenderedYAMLBranchesWithKustomize(
 
 	// Set the image
 	for _, image := range ticket.Change.NewImages.Images {
-		if err := kustomize.SetImage(appDir, image, logger); err != nil {
+		if err := renderStrategy.SetImage(appDir, image); err != nil {
 			return "", err
 		}
+		logger.Debug("ran kustomize edit set image")
 	}
 
 	// Render Application-specific YAML
 	// TODO: We may need to buffer this or use a file instead because the rendered
 	// YAML could be quite large.
-	yamlBytes, err :=
-		kustomize.Build(app.Spec.Source.TargetRevision, appDir, logger)
+	yamlBytes, err := renderStrategy.Build(appDir)
 	if err != nil {
 		return "", err
 	}
+	logger.Debug("ran kustomize build")
 
 	// Commit the changes to the source branch
 	var commitMsg string
