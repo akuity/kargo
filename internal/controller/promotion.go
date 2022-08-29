@@ -16,7 +16,7 @@ import (
 	"github.com/akuityio/k8sta/internal/kustomize"
 )
 
-func (t *ticketReconciler) promoteImages(
+func (t *ticketReconciler) promote(
 	ctx context.Context,
 	ticket *api.Ticket,
 	app *argocd.Application,
@@ -37,7 +37,7 @@ func (t *ticketReconciler) promoteImages(
 		"url": app.Spec.Source.RepoURL,
 	}).Debug("cloned git repository")
 
-	sha, err := t.promotionImagesViaRenderedYAMLBranch(
+	sha, err := t.promoteViaRenderedYAMLBranch(
 		ctx,
 		ticket,
 		app,
@@ -75,7 +75,7 @@ func (t *ticketReconciler) promoteImages(
 }
 
 // nolint: gocyclo
-func (t *ticketReconciler) promotionImagesViaRenderedYAMLBranch(
+func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 	ctx context.Context,
 	ticket *api.Ticket,
 	app *argocd.Application,
@@ -95,12 +95,14 @@ func (t *ticketReconciler) promotionImagesViaRenderedYAMLBranch(
 	// TODO: Nothing enforced this assumption yet.
 	appDir := filepath.Join(repo.WorkingDir(), app.Spec.Source.TargetRevision)
 
-	// Set the image
-	for _, image := range ticket.Change.NewImages.Images {
-		if err := renderStrategy.SetImage(appDir, image); err != nil {
-			return "", err
+	// Only do this for image changes
+	if ticket.Change.NewImages != nil {
+		for _, image := range ticket.Change.NewImages.Images {
+			if err := renderStrategy.SetImage(appDir, image); err != nil {
+				return "", err
+			}
+			logger.Debug("ran kustomize edit set image")
 		}
-		logger.Debug("ran kustomize edit set image")
 	}
 
 	// Render Application-specific YAML
@@ -112,42 +114,45 @@ func (t *ticketReconciler) promotionImagesViaRenderedYAMLBranch(
 	}
 	logger.Debug("ran kustomize build")
 
-	// Commit the changes to the source branch
-	var commitMsg string
-	if len(ticket.Change.NewImages.Images) == 1 {
-		commitMsg = fmt.Sprintf(
-			"k8sta: updating %s to use image %s:%s",
-			app.Spec.Source.TargetRevision,
-			ticket.Change.NewImages.Images[0].Repo,
-			ticket.Change.NewImages.Images[0].Tag,
-		)
-	} else {
-		commitMsg = "k8sta: updating %s to use new images"
-		for _, image := range ticket.Change.NewImages.Images {
+	// Only do this for image changes
+	if ticket.Change.NewImages != nil {
+		// Commit the changes to the source branch
+		var commitMsg string
+		if len(ticket.Change.NewImages.Images) == 1 {
 			commitMsg = fmt.Sprintf(
-				"%s\n * %s:%s",
-				commitMsg,
-				image.Repo,
-				image.Tag,
+				"k8sta: updating %s to use image %s:%s",
+				app.Spec.Source.TargetRevision,
+				ticket.Change.NewImages.Images[0].Repo,
+				ticket.Change.NewImages.Images[0].Tag,
 			)
+		} else {
+			commitMsg = "k8sta: updating %s to use new images"
+			for _, image := range ticket.Change.NewImages.Images {
+				commitMsg = fmt.Sprintf(
+					"%s\n * %s:%s",
+					commitMsg,
+					image.Repo,
+					image.Tag,
+				)
+			}
 		}
-	}
-	if err = repo.AddAllAndCommit(commitMsg); err != nil {
-		return "", err
-	}
-	log.WithFields(log.Fields{
-		"repo":   app.Spec.Source.RepoURL,
-		"branch": "HEAD",
-	}).Debug("committed changes")
+		if err = repo.AddAllAndCommit(commitMsg); err != nil {
+			return "", err
+		}
+		log.WithFields(log.Fields{
+			"repo":   app.Spec.Source.RepoURL,
+			"branch": "HEAD",
+		}).Debug("committed changes")
 
-	// Push the changes to the source branch
-	if err = repo.Push(); err != nil {
-		return "", err
+		// Push the changes to the source branch
+		if err = repo.Push(); err != nil {
+			return "", err
+		}
+		logger.WithFields(log.Fields{
+			"repo":   app.Spec.Source.RepoURL,
+			"branch": "HEAD",
+		}).Debug("pushed changes")
 	}
-	logger.WithFields(log.Fields{
-		"repo":   app.Spec.Source.RepoURL,
-		"branch": "HEAD",
-	}).Debug("pushed changes")
 
 	// Check if the Application-specific branch exists on the remote
 	appBranchExists, err := repo.RemoteBranchExists(
@@ -227,23 +232,30 @@ func (t *ticketReconciler) promotionImagesViaRenderedYAMLBranch(
 	logger.Debug("wrote new rendered YAML")
 
 	// Commit the changes to the Application-specific branch
-	commitMsg = ""
-	if len(ticket.Change.NewImages.Images) == 1 {
-		commitMsg = fmt.Sprintf(
-			"k8sta: updating to use new image %s:%s",
-			ticket.Change.NewImages.Images[0].Repo,
-			ticket.Change.NewImages.Images[0].Tag,
-		)
-	} else {
-		commitMsg = "k8sta: updating to use new images"
-		for _, image := range ticket.Change.NewImages.Images {
+	var commitMsg string
+	if ticket.Change.NewImages != nil {
+		if len(ticket.Change.NewImages.Images) == 1 {
 			commitMsg = fmt.Sprintf(
-				"%s\n * %s:%s",
-				commitMsg,
-				image.Repo,
-				image.Tag,
+				"k8sta: updating to use new image %s:%s",
+				ticket.Change.NewImages.Images[0].Repo,
+				ticket.Change.NewImages.Images[0].Tag,
 			)
+		} else {
+			commitMsg = "k8sta: updating to use new images"
+			for _, image := range ticket.Change.NewImages.Images {
+				commitMsg = fmt.Sprintf(
+					"%s\n * %s:%s",
+					commitMsg,
+					image.Repo,
+					image.Tag,
+				)
+			}
 		}
+	} else {
+		commitMsg = fmt.Sprintf(
+			"k8sta: updating with base configuration changes from %s",
+			ticket.Change.BaseConfiguration.Commit,
+		)
 	}
 	if err = repo.AddAllAndCommit(commitMsg); err != nil {
 		return "", err
