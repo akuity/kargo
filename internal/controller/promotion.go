@@ -16,6 +16,23 @@ import (
 	"github.com/akuityio/k8sta/internal/kustomize"
 )
 
+// PromotionStrategy is the signature for any function that can promote the
+// changes represented by the provided Ticket to the environment represented by
+// the provided Argo CD Application by interacting with the provided git
+// repository. A RenderStrategy must also be provided by the caller to provide
+// integration with config management tools such as kustomize or ytt. Except in
+// the event of an error, functions implementing this signature MUST return a
+// commit ID (sha). The ticketReconciler will consider a promotion to a given
+// environment complete when the commit ID returned from this function is
+// visible in the corresponding Argo CD Application's sync history.
+type PromotionStrategy func(
+	context.Context,
+	*api.Ticket,
+	*argocd.Application,
+	git.Repo,
+	RenderStrategy,
+) (string, error)
+
 func (t *ticketReconciler) promote(
 	ctx context.Context,
 	ticket *api.Ticket,
@@ -37,7 +54,11 @@ func (t *ticketReconciler) promote(
 		"url": app.Spec.Source.RepoURL,
 	}).Debug("cloned git repository")
 
-	sha, err := t.promoteViaRenderedYAMLBranch(
+	// TODO: For now this is hard-coded to use the rendered YAML branches pattern,
+	// but it's possible to later support other approaches by passing a different
+	// implementation of the PromotionStrategy function type.
+	var promote PromotionStrategy = t.promoteViaRenderedYAMLBranch
+	sha, err := promote(
 		ctx,
 		ticket,
 		app,
