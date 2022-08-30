@@ -122,18 +122,19 @@ func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 			if err := renderStrategy.SetImage(appDir, image); err != nil {
 				return "", err
 			}
-			logger.Debug("ran kustomize edit set image")
+			logger.Debug("set image")
 		}
 	}
 
 	// Render Application-specific YAML
+	baseDir := filepath.Join(repo.WorkingDir(), "base")
 	// TODO: We may need to buffer this or use a file instead because the rendered
 	// YAML could be quite large.
-	yamlBytes, err := renderStrategy.Build(appDir)
+	yamlBytes, err := renderStrategy.Build(baseDir, appDir)
 	if err != nil {
 		return "", err
 	}
-	logger.Debug("ran kustomize build")
+	logger.Debug("built configuration")
 
 	// Only do this for image changes
 	if ticket.Change.NewImages != nil {
