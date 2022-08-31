@@ -8,6 +8,11 @@ RUN curl -L -o /tmp/kustomize.tar.gz \
       https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz \
     && tar xvfz /tmp/kustomize.tar.gz -C /usr/local/bin
 
+ARG YQ_VERSION=v4.27.3
+RUN curl -L -o /usr/local/bin/yq \
+    https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${TARGETARCH} \
+    && chmod 755 /usr/local/bin/yq
+
 ARG YTT_VERSION=v0.41.1
 RUN curl -L -o /usr/local/bin/ytt \
       https://github.com/vmware-tanzu/carvel-ytt/releases/download/${YTT_VERSION}/ytt-linux-${TARGETARCH} \
@@ -44,6 +49,7 @@ RUN apk update \
     && adduser -S -D -H -u 65532 -g nonroot -G nonroot nonroot
 
 COPY --from=builder /usr/local/bin/kustomize /usr/local/bin/
+COPY --from=builder /usr/local/bin/yq /usr/local/bin/
 COPY --from=builder /usr/local/bin/ytt /usr/local/bin/
 COPY --from=builder /k8sta/bin/ /usr/local/bin/
 

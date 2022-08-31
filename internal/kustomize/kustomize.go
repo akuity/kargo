@@ -35,13 +35,13 @@ func (r *RenderStrategy) SetImage(dir string, image api.Image) error {
 
 // Build runs `kustomize build` in the specified directory and returns an array
 // of bytes containing the fully rendered YAML.
-func (r *RenderStrategy) Build(dir string) ([]byte, error) {
+func (r *RenderStrategy) Build(_, envDir string) ([]byte, error) {
 	cmd := exec.Command("kustomize", "build")
-	cmd.Dir = dir
+	cmd.Dir = envDir
 	yamlBytes, err := cmd.Output()
 	return yamlBytes, errors.Wrapf(
 		err,
 		"error running kustomize build in directory %q",
-		dir,
+		envDir,
 	)
 }
