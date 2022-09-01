@@ -22,8 +22,8 @@ resources:
 // TODO: Document this
 func EnsurePrerenderDir(dir string) error {
 	// Ensure the existence of the directory
-	if err := file.EnsureDirectory(dir); err != nil {
-		return errors.Wrapf(err, "error creating directory %q", dir)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return errors.Wrapf(err, "error ensuring existence of directory %q", dir)
 	}
 	kustomizationFile := filepath.Join(dir, "kustomization.yaml")
 	// Ensure the existence of kustomization.yaml

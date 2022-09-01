@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
@@ -66,7 +67,7 @@ func (t *ticketReconciler) promote(
 		// TODO: For now this is hard-coded to use kustomize, but it's possible
 		// to later support ytt as well by passing a different implementation of
 		// the RenderStrategy interface.
-		&kustomize.RenderStrategy{},
+		kustomize.RenderStrategy,
 	)
 	if err != nil {
 		return "", err
@@ -103,47 +104,52 @@ func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 	repo git.Repo,
 	renderStrategy RenderStrategy,
 ) (string, error) {
+	appBranch := app.Spec.Source.TargetRevision
+
 	logger := t.logger.WithFields(
 		log.Fields{
-			"repo":   app.Spec.Source.RepoURL,
-			"branch": app.Spec.Source.TargetRevision,
+			"ticket":    ticket.Name,
+			"namespace": ticket.Namespace,
+			"repo":      app.Spec.Source.RepoURL,
+			"appBranch": appBranch,
 		},
 	)
 
-	// We assume the Application-specific overlay path within the source branch ==
-	// the name of the Application-specific branch that the final rendered YAML
-	// will live in.
-	// TODO: Nothing enforced this assumption yet.
-	appDir := filepath.Join(repo.WorkingDir(), app.Spec.Source.TargetRevision)
+	baseDir := filepath.Join(repo.WorkingDir(), "base")
+	appDir := filepath.Join(repo.WorkingDir(), appBranch)
+	k8staDir := filepath.Join(repo.WorkingDir(), ".k8sta")
+	k8staAppDir := filepath.Join(k8staDir, appBranch)
 
-	// Only do this for image changes
+	if err := kustomize.EnsurePrerenderDir(k8staAppDir); err != nil {
+		return "", errors.Wrapf(
+			err,
+			"error setting up pre-render directory %q",
+			k8staAppDir,
+		)
+	}
+
+	var commitMsg string
 	if ticket.Change.NewImages != nil {
+		// TODO: We can maybe break this out into its own function.
+		//
+		// For image only changes, we need to call kustomize.SetImage.
 		for _, image := range ticket.Change.NewImages.Images {
-			if err := renderStrategy.SetImage(appDir, image); err != nil {
-				return "", err
+			if err := kustomize.SetImage(
+				k8staAppDir,
+				image,
+			); err != nil {
+				return "", errors.Wrapf(
+					err,
+					"error setting image in pre-render directory %q",
+					k8staAppDir,
+				)
 			}
 			logger.Debug("set image")
 		}
-	}
-
-	// Render Application-specific YAML
-	baseDir := filepath.Join(repo.WorkingDir(), "base")
-	// TODO: We may need to buffer this or use a file instead because the rendered
-	// YAML could be quite large.
-	yamlBytes, err := renderStrategy.Build(baseDir, appDir)
-	if err != nil {
-		return "", err
-	}
-	logger.Debug("built configuration")
-
-	// Only do this for image changes
-	if ticket.Change.NewImages != nil {
-		// Commit the changes to the source branch
-		var commitMsg string
 		if len(ticket.Change.NewImages.Images) == 1 {
 			commitMsg = fmt.Sprintf(
 				"k8sta: updating %s to use image %s:%s",
-				app.Spec.Source.TargetRevision,
+				appBranch,
 				ticket.Change.NewImages.Images[0].Repo,
 				ticket.Change.NewImages.Images[0].Tag,
 			)
@@ -158,70 +164,123 @@ func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 				)
 			}
 		}
-		if err = repo.AddAllAndCommit(commitMsg); err != nil {
-			return "", err
-		}
-		log.WithFields(log.Fields{
-			"repo":   app.Spec.Source.RepoURL,
-			"branch": "HEAD",
-		}).Debug("committed changes")
+	} else {
+		commitMsg = fmt.Sprintf(
+			"k8sta: pre-rendering base configuration changes from %s",
+			ticket.Change.BaseConfiguration.Commit,
+		)
+	}
 
-		// Push the changes to the source branch
-		if err = repo.Push(); err != nil {
-			return "", err
-		}
-		logger.WithFields(log.Fields{
-			"repo":   app.Spec.Source.RepoURL,
-			"branch": "HEAD",
-		}).Debug("pushed changes")
+	// TODO: We can maybe break this out into its own function.
+	//
+	// For ALL types of changes, We need to use the user's preferred config
+	// management tool to complete the first phase of rendering aka
+	// "pre-rendering." We save that in the source branch. Later, we take it the
+	// "last mile" with kustomize and write that FULLY-rendered config to the
+	// Application-specific branch.
+	//
+	// TODO: We may need to buffer this or use a file instead because the
+	// rendered config could be quite large.
+	//
+	// TODO: Fix this hard-coded placeholder release name -- actually it's only
+	// used by the helm strategy.
+	yamlBytes, err := renderStrategy("k8sta-demo", baseDir, appDir)
+	if err != nil {
+		return "", errors.Wrap(
+			err,
+			"error pre-rendering configuration",
+		)
+	}
+	logger.Debug("pre-rendered configuration")
+	// Write/overwrite the pre-rendered config
+	if err = os.WriteFile( // nolint: gosec
+		filepath.Join(k8staAppDir, "all.yaml"),
+		yamlBytes,
+		0644,
+	); err != nil {
+		return "", errors.Wrap(
+			err,
+			"error writing pre-rendered configuration to source branch",
+		)
+	}
+	logger.Debug("wrote pre-rendered configuration to source branch")
+
+	// Commit pre-rendered config to the local source branch
+	if err = repo.AddAllAndCommit(commitMsg); err != nil {
+		return "", errors.Wrap(
+			err,
+			"error committing changes to source branch",
+		)
+	}
+	logger.Debug("committed changes to source branch")
+
+	// Push the changes to the remote source branch
+	if err = repo.Push(); err != nil {
+		return "", errors.Wrap(
+			err,
+			"error pushing changes to source branch",
+		)
+	}
+	logger.Debug("pushed changes to the source branch")
+
+	// Now take everything the last mile with kustomize and write the
+	// fully-rendered config to an Application-specific branch...
+
+	// Last mile rendering
+	//
+	// TODO: We may need to buffer this or use a file instead because the
+	// rendered config could be quite large.
+	cmd := exec.Command("kustomize", "build")
+	cmd.Dir = k8staAppDir
+	if yamlBytes, err = cmd.Output(); err != nil {
+		return "", errors.Wrapf(
+			err,
+			"error producing fully-rendered configuration: "+
+				"error running `%s` in directory %q",
+			cmd.String(),
+			cmd.Dir,
+		)
 	}
 
 	// Check if the Application-specific branch exists on the remote
-	appBranchExists, err := repo.RemoteBranchExists(
-		app.Spec.Source.TargetRevision,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	if appBranchExists {
-		log.WithFields(log.Fields{
-			"repo":   app.Spec.Source.RepoURL,
-			"branch": app.Spec.Source.TargetRevision,
-		}).Debug("branch exists")
-		if err = repo.Checkout(
-			app.Spec.Source.TargetRevision,
-		); err != nil {
-			return "", err
+	//
+	// TODO: We can break this out into its own function that ensures the
+	// existence of a branch.
+	var appBranchExists bool
+	if appBranchExists, err = repo.RemoteBranchExists(appBranch); err != nil {
+		return "", errors.Wrapf(
+			err,
+			"error checking for existence of remote Application-specific branch %q",
+			appBranch,
+		)
+	} else if appBranchExists {
+		logger.Debug("Application-specific branch exists")
+		if err = repo.Checkout(appBranch); err != nil {
+			return "", errors.Wrapf(
+				err,
+				"error checking out Application-specific branch %q",
+				appBranch,
+			)
 		}
-		logger.WithFields(log.Fields{
-			"repo":   app.Spec.Source.RepoURL,
-			"branch": app.Spec.Source.TargetRevision,
-		}).Debug("checked out branch")
+		logger.Debug("checked out Application-specific branch")
 	} else {
-		log.WithFields(log.Fields{
-			"repo":   app.Spec.Source.RepoURL,
-			"branch": app.Spec.Source.TargetRevision,
-		}).Debug("branch does not exist")
-		if err = repo.CreateOrphanedBranch(
-			app.Spec.Source.TargetRevision,
-		); err != nil {
+		logger.Debug("Application-specific branch does not exist")
+		if err = repo.CreateOrphanedBranch(appBranch); err != nil {
 			return "", err
 		}
-		logger.WithFields(log.Fields{
-			"repo":   app.Spec.Source.RepoURL,
-			"branch": app.Spec.Source.TargetRevision,
-		}).Debug("created orphaned branch")
+		logger.Debug("created orphaned Application-specific branch branch")
 	}
 
 	// Remove existing rendered YAML (or files from the source branch that were
 	// left behind when the orphaned Application-specific branch was created)
+	//
+	// TODO: We can break this out into its own function
 	files, err := filepath.Glob(filepath.Join(repo.WorkingDir(), "*"))
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
 			"error listing files in Application-specific branch %q",
-			app.Spec.Source.TargetRevision,
+			appBranch,
 		)
 	}
 	for _, file := range files {
@@ -233,13 +292,13 @@ func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 				err,
 				"error deleting file %q from Application-specific branch %q",
 				file,
-				app.Spec.Source.TargetRevision,
+				appBranch,
 			)
 		}
 	}
 	logger.Debug("removed existing rendered YAML")
 
-	// Write the new rendered YAML
+	// Write the new fully-rendered config to the root of the repo
 	if err = os.WriteFile( // nolint: gosec
 		filepath.Join(repo.WorkingDir(), "all.yaml"),
 		yamlBytes,
@@ -247,54 +306,38 @@ func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 	); err != nil {
 		return "", errors.Wrapf(
 			err,
-			"error writing rendered YAML to Application-specific branch %q",
-			app.Spec.Source.TargetRevision,
+			"error writing fully-rendered configuration to Application-specific "+
+				"branch %q",
+			appBranch,
 		)
 	}
 	logger.Debug("wrote new rendered YAML")
 
 	// Commit the changes to the Application-specific branch
-	var commitMsg string
-	if ticket.Change.NewImages != nil {
-		if len(ticket.Change.NewImages.Images) == 1 {
-			commitMsg = fmt.Sprintf(
-				"k8sta: updating to use new image %s:%s",
-				ticket.Change.NewImages.Images[0].Repo,
-				ticket.Change.NewImages.Images[0].Tag,
-			)
-		} else {
-			commitMsg = "k8sta: updating to use new images"
-			for _, image := range ticket.Change.NewImages.Images {
-				commitMsg = fmt.Sprintf(
-					"%s\n * %s:%s",
-					commitMsg,
-					image.Repo,
-					image.Tag,
-				)
-			}
-		}
-	} else {
+	if ticket.Change.BaseConfiguration != nil {
 		commitMsg = fmt.Sprintf(
 			"k8sta: updating with base configuration changes from %s",
 			ticket.Change.BaseConfiguration.Commit,
 		)
 	}
 	if err = repo.AddAllAndCommit(commitMsg); err != nil {
-		return "", err
+		return "", errors.Wrapf(
+			err,
+			"error committing changes to Application-specific branch %q",
+			appBranch,
+		)
 	}
-	log.WithFields(log.Fields{
-		"repo":   app.Spec.Source.RepoURL,
-		"branch": app.Spec.Source.TargetRevision,
-	}).Debug("committed changes")
+	log.Debug("committed changes to Application-specific branch")
 
-	// Push the changes to the Application-specific branch
+	// Push the changes to the remote Application-specific branch
 	if err = repo.Push(); err != nil {
-		return "", err
+		return "", errors.Wrapf(
+			err,
+			"error pushing changes to Application-specific branch %q",
+			appBranch,
+		)
 	}
-	logger.WithFields(log.Fields{
-		"repo":   app.Spec.Source.RepoURL,
-		"branch": app.Spec.Source.TargetRevision,
-	}).Debug("pushed changes")
+	logger.Debug("pushed changes")
 
 	// Get the ID of the last commit
 	sha, err := repo.LastCommitID()
