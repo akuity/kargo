@@ -74,7 +74,7 @@ func SetImage(dir string, image api.Image) error {
 }
 
 // TODO: Document this
-func RenderStrategy(_, _, envDir string) ([]byte, error) {
+func PreRender(envDir string) ([]byte, error) {
 	cmd := exec.Command("kustomize", "build")
 	cmd.Dir = envDir
 	yamlBytes, err := cmd.Output()

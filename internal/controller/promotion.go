@@ -14,8 +14,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuityio/k8sta/internal/git"
+	"github.com/akuityio/k8sta/internal/helm"
 	"github.com/akuityio/k8sta/internal/kustomize"
+	"github.com/akuityio/k8sta/internal/ytt"
 )
+
+// PreRenderStrategy is the signature for any function that can complete the
+// first phase of the K8sTA's two-phased configuration using one a
+// user-specified configuration management tool.
+type PreRenderStrategy func() ([]byte, error)
 
 // PromotionStrategy is the signature for any function that can promote the
 // changes represented by the provided Ticket to the environment represented by
@@ -31,11 +38,12 @@ type PromotionStrategy func(
 	*api.Ticket,
 	*argocd.Application,
 	git.Repo,
-	RenderStrategy,
+	PreRenderStrategy,
 ) (string, error)
 
 func (t *ticketReconciler) promote(
 	ctx context.Context,
+	track *api.Track,
 	ticket *api.Ticket,
 	app *argocd.Application,
 ) (string, error) {
@@ -67,7 +75,27 @@ func (t *ticketReconciler) promote(
 		// TODO: For now this is hard-coded to use kustomize, but it's possible
 		// to later support ytt as well by passing a different implementation of
 		// the RenderStrategy interface.
-		kustomize.RenderStrategy,
+		func() ([]byte, error) {
+			baseDir := filepath.Join(repo.WorkingDir(), "base")
+			appDir := filepath.Join(repo.WorkingDir(), app.Spec.Source.TargetRevision)
+			if track.Spec.ConfigManagement.Helm != nil {
+				return helm.PreRender(
+					track.Spec.ConfigManagement.Helm.ReleaseName,
+					baseDir,
+					appDir,
+				)
+			}
+			if track.Spec.ConfigManagement.Kustomize != nil {
+				return kustomize.PreRender(appDir)
+			}
+			if track.Spec.ConfigManagement.Ytt != nil {
+				return ytt.PreRender(baseDir, appDir)
+			}
+			return nil, errors.Errorf(
+				"no configuration management strategy was specified by Track %q",
+				track.Name,
+			)
+		},
 	)
 	if err != nil {
 		return "", err
@@ -102,7 +130,7 @@ func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 	ticket *api.Ticket,
 	app *argocd.Application,
 	repo git.Repo,
-	renderStrategy RenderStrategy,
+	preRenderStrategy PreRenderStrategy,
 ) (string, error) {
 	appBranch := app.Spec.Source.TargetRevision
 
@@ -115,8 +143,6 @@ func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 		},
 	)
 
-	baseDir := filepath.Join(repo.WorkingDir(), "base")
-	appDir := filepath.Join(repo.WorkingDir(), appBranch)
 	k8staDir := filepath.Join(repo.WorkingDir(), ".k8sta")
 	k8staAppDir := filepath.Join(k8staDir, appBranch)
 
@@ -181,10 +207,7 @@ func (t *ticketReconciler) promoteViaRenderedYAMLBranch(
 	//
 	// TODO: We may need to buffer this or use a file instead because the
 	// rendered config could be quite large.
-	//
-	// TODO: Fix this hard-coded placeholder release name -- actually it's only
-	// used by the helm strategy.
-	yamlBytes, err := renderStrategy("k8sta-demo", baseDir, appDir)
+	yamlBytes, err := preRenderStrategy()
 	if err != nil {
 		return "", errors.Wrap(
 			err,

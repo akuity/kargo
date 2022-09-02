@@ -256,7 +256,7 @@ func (t *ticketReconciler) reconcileNewTicket(
 	}
 	station := track.Spec.Stations[0]
 
-	return t.promoteToStation(ctx, ticket, station)
+	return t.promoteToStation(ctx, track, ticket, station)
 }
 
 func (t *ticketReconciler) reconcileProgressingOrSuspendedTicket(
@@ -547,11 +547,12 @@ func (t *ticketReconciler) performNextMigration(
 	}
 	nextStation := track.Spec.Stations[lastStationIndex+1]
 
-	return t.promoteToStation(ctx, ticket, nextStation)
+	return t.promoteToStation(ctx, track, ticket, nextStation)
 }
 
 func (t *ticketReconciler) promoteToStation(
 	ctx context.Context,
+	track *api.Track,
 	ticket *api.Ticket,
 	station api.Station,
 ) error {
@@ -618,7 +619,7 @@ func (t *ticketReconciler) promoteToStation(
 	}
 
 	// Find the corresponding Tracks
-	tracks := []*api.Track{}
+	junctions := []*api.Track{}
 	for _, trackRef := range station.Tracks {
 		if trackRef.Disabled {
 			progressRecord.Migration.SkippedTracks = append(
@@ -626,7 +627,7 @@ func (t *ticketReconciler) promoteToStation(
 				trackRef.Name,
 			)
 		} else {
-			track, err := t.getTrack(
+			junction, err := t.getTrack(
 				ctx,
 				types.NamespacedName{
 					Namespace: ticket.Namespace,
@@ -642,7 +643,7 @@ func (t *ticketReconciler) promoteToStation(
 				)
 				return nil
 			}
-			if track == nil {
+			if junction == nil {
 				ticket.Status.State = api.TicketStateFailed
 				ticket.Status.StateReason = fmt.Sprintf(
 					"Track %q for Station %q does not exist",
@@ -651,13 +652,13 @@ func (t *ticketReconciler) promoteToStation(
 				)
 				return nil
 			}
-			if track.Spec.Disabled {
+			if junction.Spec.Disabled {
 				progressRecord.Migration.SkippedTracks = append(
 					progressRecord.Migration.SkippedTracks,
-					track.Name,
+					junction.Name,
 				)
 			} else {
-				tracks = append(tracks, track)
+				junctions = append(junctions, junction)
 			}
 		}
 	}
@@ -665,7 +666,7 @@ func (t *ticketReconciler) promoteToStation(
 	// Promote by making commits
 	progressRecord.Migration.Commits = make([]api.Commit, len(apps))
 	for i, app := range apps {
-		commitSHA, err := t.promote(ctx, ticket, app)
+		commitSHA, err := t.promote(ctx, track, ticket, app)
 		if err != nil {
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
@@ -682,14 +683,14 @@ func (t *ticketReconciler) promoteToStation(
 	}
 
 	// Promote by creating new Tickets
-	progressRecord.Migration.Tickets = make([]api.TicketReference, len(tracks))
-	for i, track := range tracks {
+	progressRecord.Migration.Tickets = make([]api.TicketReference, len(junctions))
+	for i, junction := range junctions {
 		newTicket := api.Ticket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      uuid.NewV4().String(),
 				Namespace: ticket.Namespace,
 			},
-			Track:  track.Name,
+			Track:  junction.Name,
 			Change: ticket.Change,
 		}
 		if err := t.client.Create(
@@ -700,7 +701,7 @@ func (t *ticketReconciler) promoteToStation(
 			ticket.Status.State = api.TicketStateFailed
 			ticket.Status.StateReason = fmt.Sprintf(
 				"Error creating new Ticket for Track %q",
-				track.Name,
+				junction.Name,
 			)
 			return errors.Wrapf(
 				err,
@@ -715,7 +716,7 @@ func (t *ticketReconciler) promoteToStation(
 		}).Debug("Created Ticket resource")
 		progressRecord.Migration.Tickets[i] = api.TicketReference{
 			Name:  newTicket.Name,
-			Track: track.Name,
+			Track: junction.Name,
 		}
 	}
 

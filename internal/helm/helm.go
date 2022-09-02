@@ -8,11 +8,11 @@ import (
 )
 
 // TODO: Document this
-func RenderStrategy(name, baseDir, envDir string) ([]byte, error) {
+func PreRender(releaseName, baseDir, envDir string) ([]byte, error) {
 	cmd := exec.Command( // nolint: gosec
 		"helm",
 		"template",
-		name,
+		releaseName,
 		baseDir,
 		"--values",
 		filepath.Join(envDir, "values.yaml"),
