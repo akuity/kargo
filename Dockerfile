@@ -3,15 +3,15 @@ FROM --platform=$BUILDPLATFORM brigadecore/go-tools:v0.8.0 as builder
 ARG TARGETOS
 ARG TARGETARCH
 
+ARG HELM_VERSION=v3.9.4
+RUN curl -L -o /tmp/helm.tar.gz \
+      https://get.helm.sh/helm-${HELM_VERSION}-linux-${TARGETARCH}.tar.gz \
+    && tar xvfz /tmp/helm.tar.gz -C /usr/local/bin --strip-components 1
+
 ARG KUSTOMIZE_VERSION=v4.5.5
 RUN curl -L -o /tmp/kustomize.tar.gz \
       https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_${TARGETARCH}.tar.gz \
     && tar xvfz /tmp/kustomize.tar.gz -C /usr/local/bin
-
-ARG YQ_VERSION=v4.27.3
-RUN curl -L -o /usr/local/bin/yq \
-    https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${TARGETARCH} \
-    && chmod 755 /usr/local/bin/yq
 
 ARG YTT_VERSION=v0.41.1
 RUN curl -L -o /usr/local/bin/ytt \
@@ -48,8 +48,8 @@ RUN apk update \
     && addgroup -S -g 65532 nonroot \
     && adduser -S -D -H -u 65532 -g nonroot -G nonroot nonroot
 
+COPY --from=builder /usr/local/bin/helm /usr/local/bin/
 COPY --from=builder /usr/local/bin/kustomize /usr/local/bin/
-COPY --from=builder /usr/local/bin/yq /usr/local/bin/
 COPY --from=builder /usr/local/bin/ytt /usr/local/bin/
 COPY --from=builder /k8sta/bin/ /usr/local/bin/
 

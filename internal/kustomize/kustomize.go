@@ -2,17 +2,57 @@ package kustomize
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
+	"github.com/akuityio/k8sta/internal/common/file"
 	"github.com/pkg/errors"
 )
 
+var kustomizationBytes = []byte(
+	`apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- all.yaml`,
+)
+
 // TODO: Document this
-type RenderStrategy struct{}
+func EnsurePrerenderDir(dir string) error {
+	// Ensure the existence of the directory
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return errors.Wrapf(err, "error ensuring existence of directory %q", dir)
+	}
+	kustomizationFile := filepath.Join(dir, "kustomization.yaml")
+	// Ensure the existence of kustomization.yaml
+	if exists, err := file.Exists(kustomizationFile); err != nil {
+		return errors.Wrapf(
+			err,
+			"error checking for existence of %q",
+			kustomizationFile,
+		)
+	} else if !exists {
+		if err = os.WriteFile( // nolint: gosec
+			kustomizationFile,
+			kustomizationBytes,
+			0644,
+		); err != nil {
+			return errors.Wrapf(
+				err,
+				"error writing to %q",
+				kustomizationFile,
+			)
+		}
+	}
+	return nil
+}
 
 // SetImage runs `kustomize edit set image ...` in the specified directory.
-func (r *RenderStrategy) SetImage(dir string, image api.Image) error {
+// The specified directory must already exist and contain a kustomization.yaml
+// file.
+func SetImage(dir string, image api.Image) error {
 	cmd := exec.Command( // nolint: gosec
 		"kustomize",
 		"edit",
@@ -33,15 +73,15 @@ func (r *RenderStrategy) SetImage(dir string, image api.Image) error {
 	)
 }
 
-// Build runs `kustomize build` in the specified directory and returns an array
-// of bytes containing the fully rendered YAML.
-func (r *RenderStrategy) Build(_, envDir string) ([]byte, error) {
+// TODO: Document this
+func PreRender(envDir string) ([]byte, error) {
 	cmd := exec.Command("kustomize", "build")
 	cmd.Dir = envDir
 	yamlBytes, err := cmd.Output()
 	return yamlBytes, errors.Wrapf(
 		err,
-		"error running kustomize build in directory %q",
-		envDir,
+		"error running `%s` in directory %q",
+		cmd.String(),
+		cmd.Dir,
 	)
 }
