@@ -1,7 +1,5 @@
 SHELL ?= /bin/bash
 
-.DEFAULT_GOAL := build
-
 ################################################################################
 # Version details                                                              #
 ################################################################################
@@ -40,22 +38,12 @@ ifneq ($(SKIP_DOCKER),true)
 endif
 
 ################################################################################
-# Docker images and charts we build and publish                                #
+# Helm chart                                                                   #
 ################################################################################
 
-ifdef DOCKER_REGISTRY
-	DOCKER_REGISTRY := $(DOCKER_REGISTRY)/
-endif
-
-ifdef DOCKER_ORG
-	DOCKER_ORG := $(DOCKER_ORG)/
-endif
-
 ifndef VERSION
-	VERSION            := $(GIT_VERSION)
+	VERSION := $(GIT_VERSION)
 endif
-
-DOCKER_IMAGE_NAME := $(DOCKER_REGISTRY)$(DOCKER_ORG)k8sta:$(VERSION)
 
 ifdef HELM_REGISTRY
 	HELM_REGISTRY := $(HELM_REGISTRY)/
@@ -94,64 +82,8 @@ lint-chart:
 	'
 
 ################################################################################
-# Image security                                                               #
-################################################################################
-
-.PHONY: scan
-scan:
-	grype $(DOCKER_IMAGE_NAME) -f high
-
-.PHONY: generate-sbom
-generate-sbom:
-	syft $(DOCKER_IMAGE_NAME) \
-		-o spdx-json \
-		--file ./artifacts/k8sta-$(VERSION)-SBOM.json
-
-.PHONY: publish-sbom
-publish-sbom: generate-sbom
-	ghr \
-		-u $(GITHUB_ORG) \
-		-r $(GITHUB_REPO) \
-		-c $$(git rev-parse HEAD) \
-		-t $${GITHUB_TOKEN} \
-		-n ${VERSION} \
-		${VERSION} ./artifacts/k8sta-$(VERSION)-SBOM.json
-
-################################################################################
-# Build                                                                        #
-################################################################################
-
-.PHONY: build
-build:
-	docker buildx build \
-		-t $(DOCKER_IMAGE_NAME) \
-		--build-arg VERSION=$(VERSION) \
-		--build-arg COMMIT=$(GIT_VERSION) \
-		--platform linux/amd64,linux/arm64 \
-		.
-
-################################################################################
 # Publish                                                                      #
 ################################################################################
-
-.PHONY: publish
-publish: push push-chart
-
-.PHONY: push
-push:
-	docker buildx build \
-		-t $(DOCKER_IMAGE_NAME) \
-		--build-arg VERSION=$(VERSION) \
-		--build-arg COMMIT=$(GIT_VERSION) \
-		--platform linux/amd64,linux/arm64 \
-		--push \
-		.
-
-.PHONY: sign
-sign:
-	docker pull $(DOCKER_IMAGE_NAME)
-	docker trust sign $(DOCKER_IMAGE_NAME)
-	docker trust inspect --pretty $(DOCKER_IMAGE_NAME)
 
 .PHONY: push-chart
 push-chart:
