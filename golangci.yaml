@@ -2,6 +2,7 @@ run:
   concurrency: 1
   deadline: 10m
   skip-files:
+  - api/.*/groupversion_info.go
 
 linters:
   disable-all: true
