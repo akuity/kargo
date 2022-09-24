@@ -1,49 +1,63 @@
 SHELL ?= /bin/bash
 
-################################################################################
-# Version details                                                              #
-################################################################################
-
-# This will reliably return the short SHA1 of HEAD or, if the working directory
-# is dirty, will return that + "-dirty"
-GIT_VERSION = $(shell git describe --always --abbrev=7 --dirty --match=NeVeRmAtCh)
-
-################################################################################
-# Containerized development environment-- or lack thereof                      #
-################################################################################
-
 ifneq ($(SKIP_DOCKER),true)
-	PROJECT_ROOT := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
-	GO_DEV_IMAGE := brigadecore/go-tools:v0.8.0
-
-	GO_DOCKER_CMD := docker run \
+	DOCKER_CMD := docker run \
 		-it \
 		--rm \
 		-e SKIP_DOCKER=true \
-		-e GOCACHE=/workspaces/k8sta/.gocache \
-		-v $(PROJECT_ROOT):/workspaces/k8sta \
+		-v gomodcache:/go/pkg/mod \
+		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/k8sta \
 		-w /workspaces/k8sta \
-		$(GO_DEV_IMAGE)
-
-	HELM_IMAGE := brigadecore/helm-tools:v0.4.0
-
-	HELM_DOCKER_CMD := docker run \
-	  -it \
-		--rm \
-		-e SKIP_DOCKER=true \
-		-e HELM_PASSWORD=$${HELM_PASSWORD} \
-		-v $(PROJECT_ROOT):/workspaces/k8sta \
-		-w /workspaces/k8sta \
-		$(HELM_IMAGE)
+		ghcr.io/akuityio/k8sta-tools:v0.2.0
 endif
+
+################################################################################
+# Tests                                                                        #
+################################################################################
+
+.PHONY: lint
+lint:
+	$(DOCKER_CMD) golangci-lint run --config golangci.yaml
+
+.PHONY: test-unit
+test-unit:
+	$(DOCKER_CMD) go test \
+		-v \
+		-timeout=120s \
+		-race \
+		-coverprofile=coverage.txt \
+		-covermode=atomic \
+		./...
+
+.PHONY: lint-chart
+lint-chart:
+	$(DOCKER_CMD) sh -c ' \
+		cd charts/k8sta && \
+		helm dep up && \
+		helm lint . \
+	'
+
+################################################################################
+# Code generation: To be run after modifications to API types                  #
+################################################################################
+
+.PHONY: generate
+generate:
+	$(DOCKER_CMD) sh -c ' \
+		controller-gen \
+			rbac:roleName=manager-role \
+			crd \
+			webhook \
+			paths=./... \
+			output:crd:artifacts:config=charts/k8sta/crds && \
+		controller-gen \
+			object:headerFile=hack/boilerplate.go.txt \
+			paths=./... \
+	'
 
 ################################################################################
 # Helm chart                                                                   #
 ################################################################################
-
-ifndef VERSION
-	VERSION := $(GIT_VERSION)
-endif
 
 ifdef HELM_REGISTRY
 	HELM_REGISTRY := $(HELM_REGISTRY)/
@@ -53,42 +67,9 @@ ifdef HELM_ORG
 	HELM_ORG := $(HELM_ORG)/
 endif
 
-HELM_CHART_PREFIX := $(HELM_REGISTRY)$(HELM_ORG)
-
-################################################################################
-# Tests                                                                        #
-################################################################################
-
-.PHONY: lint
-lint:
-	$(GO_DOCKER_CMD) golangci-lint run --config golangci.yaml
-
-.PHONY: test-unit
-test-unit:
-	$(GO_DOCKER_CMD) go test \
-		-v \
-		-timeout=60s \
-		-race \
-		-coverprofile=coverage.txt \
-		-covermode=atomic \
-		./...
-
-.PHONY: lint-chart
-lint-chart:
-	$(HELM_DOCKER_CMD) sh -c ' \
-		cd charts/k8sta && \
-		helm dep up && \
-		helm lint . \
-	'
-
-################################################################################
-# Publish                                                                      #
-################################################################################
-
 .PHONY: push-chart
 push-chart:
-	$(HELM_DOCKER_CMD) sh	-c ' \
-		helm registry login $(HELM_REGISTRY) -u $(HELM_USERNAME) -p $${HELM_PASSWORD} && \
+	sh -c ' \
 		cd charts/k8sta && \
 		helm dep up && \
 		helm package . --version $(VERSION) --app-version $(VERSION) && \
@@ -96,7 +77,8 @@ push-chart:
 	'
 
 ################################################################################
-# Targets to facilitate hacking on K8sTA                                       #
+# Hack: Manage a kind cluster with Istio, Argo CD, and Argo Rollouts           #
+# pre-installed                                                                #
 ################################################################################
 
 .PHONY: hack-kind-up
@@ -162,32 +144,3 @@ hack-kind-up:
 .PHONY: hack-kind-down
 hack-kind-down:
 	ctlptl delete -f hack/kind/cluster.yaml
-
-################################################################################
-# Kubebuilder stuffs                                                           #
-################################################################################
-
-## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
-## Tool Binaries
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-
-## Tool Versions
-CONTROLLER_TOOLS_VERSION ?= v0.9.0
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	echo $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
-
-.PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=charts/k8sta/crds
-
-.PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
