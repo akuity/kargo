@@ -18,24 +18,20 @@ RUN curl -L -o /usr/local/bin/ytt \
       https://github.com/vmware-tanzu/carvel-ytt/releases/download/${YTT_VERSION}/ytt-linux-${TARGETARCH} \
       && chmod 755 /usr/local/bin/ytt
 
+ARG VERSION_PACKAGE=github.com/akuityio/k8sta/internal/common/version
 ARG VERSION
-ARG COMMIT
 ARG CGO_ENABLED=0
 
 WORKDIR /k8sta
 COPY go.mod .
 COPY go.sum .
 RUN go mod download
-COPY api/ api/
-COPY cmd/ cmd/
-COPY internal/ internal/
-COPY config.go .
-COPY main.go .
+COPY . .
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -o bin/k8sta \
-      -ldflags "-w -X github.com/akuityio/k8sta/internal/common/version.version=${VERSION} -X github.com/akuityio/k8sta/internal/common/version.commit=${COMMIT}" \
-      .
+      -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+    && bin/k8sta version
 
 WORKDIR /k8sta/bin
 RUN ln -s k8sta k8sta-controller
