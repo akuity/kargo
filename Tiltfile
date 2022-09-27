@@ -16,7 +16,7 @@ k8s_resource(
 )
 
 docker_build(
-  'akuity/k8sta',
+  'ghcr.io/akuityio/k8sta-prototype',
   '.',
   only = [
     'api/',

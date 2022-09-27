@@ -28,7 +28,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: ghcr.io/k8sta-prototype
+        images: ghcr.io/akuityio/k8sta-prototype
         flavor: latest=false
         tags: type=semver,pattern={{raw}}
     - name: Build and push
@@ -52,4 +52,30 @@ jobs:
       with:
         image: ${{ steps.meta.outputs.tags }}
 
-  # TODO: Publish the chart
+  publish-chart:
+    needs: push
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
+      credentials:
+        username: ${{ secrets.GH_USERNAME }}
+        password: ${{ secrets.GH_TOKEN }}
+    steps:
+    - name: Login to GHCR
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ secrets.GH_USERNAME }}
+        password: ${{ secrets.GH_TOKEN }}
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Publish chart
+      env:
+        HELM_EXPERIMENTAL_OCI: '1'
+        HELM_REPO: ghcr.io/akuityio/k8sta-chart
+        VERSION: ${{ github.ref_name }}
+      run: |
+        cd charts/k8sta
+        helm dep up
+        helm package . --version ${VERSION} --app-version ${VERSION}
+        helm push k8sta-${VERSION}.tgz oci://${HELM_REPO}
