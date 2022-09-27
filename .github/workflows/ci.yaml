@@ -8,16 +8,12 @@ on:
     branches:
     - main
 
-env:
-  DEV_IMAGE_NAME: ghcr.io/akuityio/k8sta-tools:v0.2.0
-  IMAGE_NAME: krancour/k8sta
-
 jobs:
 
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.2.0
+      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
       credentials:
         username: ${{ secrets.GH_USERNAME }}
         password: ${{ secrets.GH_TOKEN }}
@@ -38,7 +34,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.2.0
+      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
       credentials:
         username: ${{ secrets.GH_USERNAME }}
         password: ${{ secrets.GH_TOKEN }}
@@ -59,7 +55,7 @@ jobs:
   lint-chart:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.2.0
+      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
       credentials:
         username: ${{ secrets.GH_USERNAME }}
         password: ${{ secrets.GH_TOKEN }}

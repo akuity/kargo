@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM ghcr.io/akuityio/k8sta-tools:v0.2.0 as builder
+FROM --platform=$BUILDPLATFORM ghcr.io/akuityio/k8sta-tools:v0.3.0 as builder
 
 ARG TARGETOS
 ARG TARGETARCH

@@ -8,7 +8,7 @@ ifneq ($(SKIP_DOCKER),true)
 		-v gomodcache:/go/pkg/mod \
 		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/k8sta \
 		-w /workspaces/k8sta \
-		ghcr.io/akuityio/k8sta-tools:v0.2.0
+		ghcr.io/akuityio/k8sta-tools:v0.3.0
 endif
 
 ################################################################################
