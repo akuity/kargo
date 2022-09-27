@@ -49,61 +49,6 @@ To run lint checks:
 $ make lint
 ```
 
-### Building & Pushing Docker Images from Source
-
-You will rarely, if ever, need to directly / manually build Docker images from
-source. This is because of tooling we use (see next section) that does this for
-you. Unless you have a specific need for doing this, you can safely skip this
-section.
-
-In the event that you do need to manually build images from source you can
-execute the same make targets that are used by CI and our release process, but
-be advised that this involves
-[multiarch builds using buildx](https://www.docker.com/blog/multi-arch-build-and-images-the-simple-way/).
-This can be somewhat slow and is not guaranteed to be supported on all systems.
-
-First, list all available builders:
-
-```shell
-$ docker buildx ls
-```
-
-You will require a builder that lists both `linux/amd64` and `linux/arm64` as
-supported platforms. If one is present, select it using the following command:
-
-```shell
-$ docker buildx use <NAME/NODE>
-```
-
-If you do not have an adequate builder available, you can try to launch one:
-
-```shell
-$ docker buildx create --use 
-```
-
-Because buildx utilizes a build server, the images built will not be present
-locally. (Even though your build server is running locally, it’s remote from the
-perspective of your local Docker engine.) To make them available for use, you
-must push them somewhere. The following environment variables give you control
-over where the images are pushed to:
-
-* `DOCKER_REGISTRY`: Host name of an OCI registry. If this is unset, Docker Hub
-  is assumed.
-
-* `DOCKER_ORG`: For multi-tenant registries, set this to a username or
-  organization name for which you have permission to push images. This is not
-  always required for private registries, but if you’re pushing to Docker Hub,
-  for instance, you will want to set this.
-
-If applicable, you MUST log in to whichever registry you are pushing images to
-in advance.
-
-The example below shows how to build and push it to Docker Hub:
-
-```shell
-$ DOCKER_ORG=<Docker Hub username or org name> make push
-```
-
 ### Iterating Quickly
 
 This section focuses on the best approaches for gaining rapid feedback on
