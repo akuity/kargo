@@ -56,27 +56,6 @@ generate:
 	'
 
 ################################################################################
-# Helm chart                                                                   #
-################################################################################
-
-ifdef HELM_REGISTRY
-	HELM_REGISTRY := $(HELM_REGISTRY)/
-endif
-
-ifdef HELM_ORG
-	HELM_ORG := $(HELM_ORG)/
-endif
-
-.PHONY: push-chart
-push-chart:
-	sh -c ' \
-		cd charts/k8sta && \
-		helm dep up && \
-		helm package . --version $(VERSION) --app-version $(VERSION) && \
-		helm push k8sta-$(VERSION).tgz oci://$(HELM_REGISTRY)$(HELM_ORG) \
-	'
-
-################################################################################
 # Hack: Manage a kind cluster with Istio, Argo CD, and Argo Rollouts           #
 # pre-installed                                                                #
 ################################################################################
