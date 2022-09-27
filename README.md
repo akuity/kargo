@@ -129,18 +129,18 @@ Here is a small set of assumptions we are embracing:
 
 > 📝&nbsp;&nbsp;Stay tuned for a comprehensive quick start. For now, the best way
 > to get started is by building/deploying locally from source. See the 
-> [K8sTA Contribution Guide](docs/CONTRIBUTING.md) for details.
+> [K8sTA Contribution Guide](metadocs/CONTRIBUTING.md) for details.
 
 ## Roadmap
 
-Visit our dedicated [Roadmap](docs/ROADMAP.md) doc for details about what we've
+Visit our dedicated [Roadmap](metadocs/ROADMAP.md) doc for details about what we've
 accomplished so far and what we're currently working on.
 
 ## Contributing
 
 The K8sTA project accepts contributions via GitHub pull requests.
 
-Visit our [K8sTA Contribution Guide](docs/CONTRIBUTING.md) for more info on how
+Visit our [K8sTA Contribution Guide](metadocs/CONTRIBUTING.md) for more info on how
 to get started quickly and easily.
 
 ## Support & Feedback
@@ -151,4 +151,4 @@ To report an issue, request a feature, or ask a question, please open an issue
 ## Code of Conduct
 
 Participation in the K8sTA project is governed by the
-[Contributor Covenant Code of Conduct](docs/CODE_OF_CONDUCT.md).
+[Contributor Covenant Code of Conduct](metadocs/CODE_OF_CONDUCT.md).
