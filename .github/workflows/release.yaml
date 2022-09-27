@@ -42,6 +42,8 @@ jobs:
           VERSION=${{ github.ref_name }}
         tags: ${{ steps.meta.outputs.tags }}
         push: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
     - name: Sign image
       env:
         TAGS: ${{ steps.meta.outputs.tags }}
