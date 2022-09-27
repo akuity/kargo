@@ -7,9 +7,9 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"math/big"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -125,7 +125,7 @@ func TestListenAndServe(t *testing.T) {
 		{
 			name: "TLS enabled; key not found",
 			setup: func() *ServerConfig {
-				certFile, err := ioutil.TempFile("", "tls-*.crt")
+				certFile, err := os.CreateTemp("", "tls-*.crt")
 				require.NoError(t, err)
 				return &ServerConfig{
 					TLSEnabled:  true,
@@ -145,9 +145,9 @@ func TestListenAndServe(t *testing.T) {
 		{
 			name: "TLS enabled; invalid cert",
 			setup: func() *ServerConfig {
-				certFile, err := ioutil.TempFile("", "tls-*.crt")
+				certFile, err := os.CreateTemp("", "tls-*.crt")
 				require.NoError(t, err)
-				keyFile, err := ioutil.TempFile("", "tls-*.key")
+				keyFile, err := os.CreateTemp("", "tls-*.key")
 				require.NoError(t, err)
 				return &ServerConfig{
 					Port:        8082,
@@ -170,13 +170,13 @@ func TestListenAndServe(t *testing.T) {
 			setup: func() *ServerConfig {
 				cert, key := generateCert(t)
 
-				certFile, err := ioutil.TempFile("", "tls-*.crt")
+				certFile, err := os.CreateTemp("", "tls-*.crt")
 				require.NoError(t, err)
 				defer certFile.Close()
 				_, err = certFile.Write(cert)
 				require.NoError(t, err)
 
-				keyFile, err := ioutil.TempFile("", "tls-*.key")
+				keyFile, err := os.CreateTemp("", "tls-*.key")
 				require.NoError(t, err)
 				defer keyFile.Close()
 				_, err = keyFile.Write(key)
