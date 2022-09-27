@@ -2,13 +2,13 @@ package server
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 
 	"github.com/pkg/errors"
 
 	"github.com/akuityio/k8sta/internal/common/file"
 	"github.com/akuityio/k8sta/internal/common/http"
-	"github.com/akuityio/k8sta/internal/common/os"
+	libOS "github.com/akuityio/k8sta/internal/common/os"
 	"github.com/akuityio/k8sta/internal/dockerhub"
 )
 
@@ -16,7 +16,7 @@ import (
 // authenticate webhooks from Docker Hub.
 func dockerhubFilterConfig() (dockerhub.TokenFilterConfig, error) {
 	config := dockerhub.NewTokenFilterConfig()
-	tokensPath, err := os.GetRequiredEnvVar("DOCKERHUB_TOKENS_PATH")
+	tokensPath, err := libOS.GetRequiredEnvVar("DOCKERHUB_TOKENS_PATH")
 	if err != nil {
 		return config, err
 	}
@@ -27,7 +27,7 @@ func dockerhubFilterConfig() (dockerhub.TokenFilterConfig, error) {
 	if !exists {
 		return config, errors.Errorf("file %s does not exist", tokensPath)
 	}
-	tokenBytes, err := ioutil.ReadFile(tokensPath)
+	tokenBytes, err := os.ReadFile(tokensPath)
 	if err != nil {
 		return config, err
 	}
@@ -47,20 +47,20 @@ func dockerhubFilterConfig() (dockerhub.TokenFilterConfig, error) {
 func serverConfig() (http.ServerConfig, error) {
 	config := http.ServerConfig{}
 	var err error
-	config.Port, err = os.GetIntFromEnvVar("PORT", 8080)
+	config.Port, err = libOS.GetIntFromEnvVar("PORT", 8080)
 	if err != nil {
 		return config, err
 	}
-	config.TLSEnabled, err = os.GetBoolFromEnvVar("TLS_ENABLED", false)
+	config.TLSEnabled, err = libOS.GetBoolFromEnvVar("TLS_ENABLED", false)
 	if err != nil {
 		return config, err
 	}
 	if config.TLSEnabled {
-		config.TLSCertPath, err = os.GetRequiredEnvVar("TLS_CERT_PATH")
+		config.TLSCertPath, err = libOS.GetRequiredEnvVar("TLS_CERT_PATH")
 		if err != nil {
 			return config, err
 		}
-		config.TLSKeyPath, err = os.GetRequiredEnvVar("TLS_KEY_PATH")
+		config.TLSKeyPath, err = libOS.GetRequiredEnvVar("TLS_KEY_PATH")
 		if err != nil {
 			return config, err
 		}

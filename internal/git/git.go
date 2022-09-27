@@ -3,7 +3,6 @@ package git
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -70,7 +69,7 @@ func Clone(
 	url string,
 	repoCreds RepoCredentials,
 ) (Repo, error) {
-	homeDir, err := ioutil.TempDir("", "")
+	homeDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
@@ -114,12 +113,12 @@ func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
 		// nolint: lll
 		const sshConfig = "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null"
 		if err :=
-			ioutil.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
+			os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
 			return errors.Wrapf(err, "error writing SSH config to %q", sshConfigPath)
 		}
 
 		rsaKeyPath := filepath.Join(r.homeDir, ".ssh", "id_rsa")
-		if err := ioutil.WriteFile(
+		if err := os.WriteFile(
 			rsaKeyPath,
 			[]byte(repoCreds.SSHPrivateKey),
 			0600,
@@ -155,7 +154,7 @@ func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
 	// Write the augmented URL to the location used by the "stored" credential
 	// helper.
 	credentialsPath := filepath.Join(r.homeDir, ".git-credentials")
-	if err := ioutil.WriteFile(
+	if err := os.WriteFile(
 		credentialsPath,
 		[]byte(credentialURL.String()),
 		0600,
