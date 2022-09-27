@@ -59,7 +59,6 @@ func init() {
 		log.Fatal("Build info not found")
 	}
 	for _, setting := range buildInfo.Settings {
-		fmt.Println(setting)
 		switch setting.Key {
 		case "vcs.modified":
 			if ver.GitTreeDirty, err = strconv.ParseBool(setting.Value); err != nil {
