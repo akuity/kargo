@@ -1,9 +1,9 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - v*.*.*
+  release:
+    types: 
+    - created
 
 env:
   IMAGE_NAME: krancour/k8sta
@@ -38,6 +38,8 @@ jobs:
       uses: docker/build-push-action@v3
       with:
         platforms: linux/amd64,linux/arm64
+        build-args: |
+          VERSION=${{ github.ref_name }}
         tags: ${{ steps.meta.outputs.tags }}
         push: true
     - name: Sign image

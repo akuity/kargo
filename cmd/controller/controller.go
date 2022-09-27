@@ -21,9 +21,11 @@ import (
 
 // RunController configures and runs the K8sTA controller.
 func RunController(ctx context.Context, config config.Config) error {
+	version := version.GetVersion()
+
 	log.WithFields(log.Fields{
-		"version": version.Version(),
-		"commit":  version.Commit(),
+		"version": version.Version,
+		"commit":  version.GitCommit,
 	}).Info("Starting K8sTA Controller")
 
 	mgrConfig, err := ctrl.GetConfig()

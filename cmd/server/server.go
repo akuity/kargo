@@ -20,6 +20,8 @@ import (
 
 // RunServer configures and runs the K8sTA Server.
 func RunServer(ctx context.Context, config config.Config) error {
+	version := version.GetVersion()
+
 	serverConfig, err := serverConfig()
 	if err != nil {
 		return errors.Wrap(err, "error reading server configuration")
@@ -30,8 +32,8 @@ func RunServer(ctx context.Context, config config.Config) error {
 		tlsStatus = "enabled"
 	}
 	log.WithFields(log.Fields{
-		"version": version.Version(),
-		"commit":  version.Commit(),
+		"version": version.Version,
+		"commit":  version.GitCommit,
 		"port":    serverConfig.Port,
 		"tls":     tlsStatus,
 	}).Info("Starting K8sTA Server")

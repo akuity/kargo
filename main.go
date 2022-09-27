@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/akuityio/k8sta/cmd/controller"
 	"github.com/akuityio/k8sta/cmd/server"
 	"github.com/akuityio/k8sta/internal/common/signals"
+	"github.com/akuityio/k8sta/internal/common/version"
 )
 
 const binaryNameEnvVar = "K8STA_BINARY_NAME"
@@ -18,6 +21,15 @@ func main() {
 	binaryName := filepath.Base(os.Args[0])
 	if val := os.Getenv(binaryNameEnvVar); val != "" {
 		binaryName = val
+	}
+
+	if len(os.Args) > 1 && os.Args[1] == "version" {
+		versionBytes, err := json.MarshalIndent(version.GetVersion(), "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(versionBytes))
+		return
 	}
 
 	ctx := signals.Context()
