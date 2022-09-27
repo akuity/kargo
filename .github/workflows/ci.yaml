@@ -26,6 +26,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: /go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
     - name: Run unit tests
       run: make test-unit
 
@@ -41,6 +47,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: /go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
     - name: Run linter
       run: make lint
 
