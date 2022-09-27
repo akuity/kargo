@@ -41,8 +41,8 @@ lint-chart:
 # Code generation: To be run after modifications to API types                  #
 ################################################################################
 
-.PHONY: generate
-generate:
+.PHONY: codegen
+codegen:
 	$(DOCKER_CMD) sh -c ' \
 		controller-gen \
 			rbac:roleName=manager-role \
