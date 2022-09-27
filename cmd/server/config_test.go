@@ -1,7 +1,7 @@
 package server
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -41,7 +41,7 @@ func TestTokenFilterConfig(t *testing.T) {
 		{
 			name: "DOCKERHUB_TOKENS_PATH does not contain valid json",
 			setup: func() {
-				tokensFile, err := ioutil.TempFile("", "tokens.json")
+				tokensFile, err := os.CreateTemp("", "tokens.json")
 				require.NoError(t, err)
 				defer tokensFile.Close()
 				_, err = tokensFile.Write([]byte("this is not json"))
@@ -58,7 +58,7 @@ func TestTokenFilterConfig(t *testing.T) {
 		{
 			name: "success",
 			setup: func() {
-				tokensFile, err := ioutil.TempFile("", "tokens.json")
+				tokensFile, err := os.CreateTemp("", "tokens.json")
 				require.NoError(t, err)
 				defer tokensFile.Close()
 				_, err = tokensFile.Write([]byte(`{"foo": "bar"}`))
