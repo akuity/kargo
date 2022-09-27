@@ -16,59 +16,56 @@ jobs:
 
   test-unit:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.2.0
-      credentials:
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
-      env:
-        SKIP_DOCKER: 'true'
     steps:
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.19.1'
     - name: Checkout code
       uses: actions/checkout@v3
     - uses: actions/cache@v3
       with:
-        path: /go/pkg/mod
+        path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Run unit tests
+      env:
+        SKIP_DOCKER: 'true'
       run: make test-unit
 
   lint:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.2.0
-      credentials:
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
-      env:
-        SKIP_DOCKER: 'true'
     steps:
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.19.1'
     - name: Checkout code
       uses: actions/checkout@v3
     - uses: actions/cache@v3
       with:
-        path: /go/pkg/mod
+        path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Run linter
-      run: make lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: v1.49.0
+        args: --config golangci.yaml
 
   lint-chart:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.2.0
-      credentials:
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
-      env:
-        SKIP_DOCKER: 'true'
     steps:
+    - uses: azure/setup-helm@v3
+      with:
+        version: '3.10.0'
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Run linter
+      env:
+        SKIP_DOCKER: 'true'
       run: make lint-chart
 
   build:
