@@ -5,9 +5,6 @@ on:
     types: 
     - created
 
-env:
-  IMAGE_NAME: krancour/k8sta
-
 jobs:
 
   push:
@@ -31,7 +28,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: ${{ env.IMAGE_NAME }}
+        images: ghcr.io/k8sta-prototype
         flavor: latest=false
         tags: type=semver,pattern={{raw}}
     - name: Build and push
@@ -50,29 +47,9 @@ jobs:
         COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
         COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
       run: cosign sign --key env://COSIGN_PRIVATE_KEY ${TAGS}
-
-  # TODO: Publish the chart
-
-  publish-sbom:
-    needs: push
-    runs-on: ubuntu-latest
-    steps:
-    - name: Login to GHCR
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: ${{ env.IMAGE_NAME }}
-        flavor: latest=false
-        tags: type=semver,pattern={{raw}}
     - name: Publish SBOM
       uses: anchore/sbom-action@v0
       with:
         image: ${{ steps.meta.outputs.tags }}
+
+  # TODO: Publish the chart
