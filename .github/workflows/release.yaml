@@ -55,11 +55,11 @@ jobs:
   publish-chart:
     needs: push
     runs-on: ubuntu-latest
+    steps:
     - name: Set up Helm
       uses: azure/setup-helm@v3
       with:
         version: '3.10.0'
-    steps:
     - name: Login to GHCR
       uses: docker/login-action@v2
       with:
