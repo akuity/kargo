@@ -20,6 +20,8 @@ spec:
         {{- include "k8sta.controller.labels" . | nindent 8 }}
     spec:
       serviceAccount: {{ include "k8sta.controller.fullname" . }}
+      imagePullSecrets:
+      - name: {{ include "k8sta.fullname" . }}-image-pull-secret
       containers:
       - name: controller
         image: {{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}
