@@ -1,19 +1,15 @@
-# K8sTA Contribution Guide
+---
+description: Hacking on K8sTA
+---
 
-This documentation provides a very brief overview of:
-
-* How to get a development environment for K8sTA set up quickly and easily.
-
-* The requirements for signing your commits.
-
-## The Development Environment
+# Hacking on K8sTA
 
 K8sTA is implemented in Go. For maximum productivity in your text editor or IDE,
 it is recommended that you have installed the latest stable releases of Go and
 applicable editor/IDE extensions, however, this is not strictly required to be
 successful.
 
-### Containerized Tests
+## Containerized tests
 
 In order to minimize the setup required to successfully apply small changes and
 in order to reduce the incidence of “it worked on my machine,” wherein changes
@@ -32,7 +28,7 @@ can set the environment variable `SKIP_DOCKER` to the value `true`. Doing so
 will require that any tools involved in tasks you execute have been installed
 locally. 
 
-### Working with Go Code
+## Working with Go code
 
 If you make modifications to Go code, it is recommended that you run
 corresponding unit tests and linters before opening a PR.
@@ -40,16 +36,16 @@ corresponding unit tests and linters before opening a PR.
 To run all unit tests:
 
 ```shell
-$ make test-unit
+make test-unit
 ```
 
 To run lint checks:
 
 ```shell
-$ make lint
+make lint
 ```
 
-### Iterating Quickly
+## Iterating quickly
 
 This section focuses on the best approaches for gaining rapid feedback on
 changes you make to K8sTA's code base.
@@ -70,14 +66,16 @@ cluster is configured such that it can pull images from that local registry. To
 achieve this with minimal effort, you will need to install the latest stable
 versions of:
 
-* [KinD](https://kind.sigs.k8s.io/#installation-and-usage): Runs
+* [kind](https://kind.sigs.k8s.io/#installation-and-usage): Runs
   development-grade Kubernetes clusters in Docker.
 
-  > 📝&nbsp;&nbsp;If you strongly prefer [k3d](https://k3d.io), please consider
-  > opening a PR to add support.
+  :::note
+  If you strongly prefer [k3d](https://k3d.io), please consider opening a PR to
+  add support.
+  :::
 
 * [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it): Launches
-  development-grade Kubernetes clusters (in KinD, for instance) that are
+  development-grade Kubernetes clusters (in kind, for instance) that are
   pre-connected to a local image registry.
 
 * [Tilt](https://docs.tilt.dev/#macoslinux): Builds components from source and
@@ -90,13 +88,15 @@ versions of:
 
 Follow the installation instructions for each of the above.
 
-> 🟢&nbsp;&nbsp;Once these tools are installed, you can be up and running with
-> just two commands!
+:::info
+Once these tools are installed, you can be up and running with just two
+commands!
+:::
 
 To launch a brand new Kind cluster pre-connected to a local image registry:
 
 ```shell
-$ make hack-kind-up
+make hack-kind-up
 ```
 
 Because K8sTA integrates with Argo CD and Argo Rollouts, the above command will
@@ -107,16 +107,17 @@ K8sTA has no dependencies on Istio or Prometheus, but because the application
 commonly used to test K8sTA does (for now, at least), recent, stable versions of
 these are also installed.
 
-> 📝&nbsp;&nbsp;The Istio ingress controller / gateway will be exposed at
-> `localhost:30080`.
-> 
-> The Argo CD dashboard will be exposed at `localhost:30081`. The username and
-> password are both `admin`.
+:::info
+The Istio ingress controller / gateway will be exposed at `localhost:30080`.
+ 
+The Argo CD dashboard will be exposed at `localhost:30081`. The username and
+password are both `admin`.
+:::
 
 To build and deploy K8sTA from source:
 
 ```shell
-$ tilt up
+tilt up
 ```
 
 Tilt will also launch a web-based UI running at
@@ -124,12 +125,14 @@ Tilt will also launch a web-based UI running at
 and you will be able to see the build and deployment status of each K8sTA
 component.
 
-> 📝&nbsp;&nbsp;Tilt is often configured to watch files and automatically
-> rebuild and replace running components when their source code is changed. This
-> is deliberately disabled for K8sTA since the Docker image takes long enough to
-> build that it’s better to conserve system resources by only rebuilding when
-> you choose. The web UI makes it easy to identify components whose source has
-> been altered. They can be rebuilt and replaced with one mouse click.
+:::info
+Tilt is often configured to watch files and automatically rebuild and replace
+running components when their source code is changed. This is deliberately
+disabled for K8sTA since the Docker image takes long enough to build that it’s
+better to conserve system resources by only rebuilding when you choose. The web
+UI makes it easy to identify components whose source has been altered. They can
+be rebuilt and replaced with one mouse click.
+:::
 
 When you are done with Tilt, interrupt the running `tilt up` process with
 `ctrl + c`. Components _will remain running in the cluster_, but Tilt will no
@@ -138,18 +141,21 @@ already-running components.
 
 If you wish to undeploy everything Tilt has deployed for you, use `tilt down`.
 
-To destroy your KinD cluster, use `make hack-kind-down`.
+To destroy your kind cluster, use `make hack-kind-down`.
 
-> 📝&nbsp;&nbsp;`make hack-kind-down` deliberately leaves your local registry
-> running so that if you resume work later, you are doing so with a local
-> registry that’s already primed with most layers of K8sTA’s image.
-> If you wish to destroy the registry, use:
->
-> ```shell
-> $ docker rm -f k8sta-dev-registry
-> ```
+:::info
+`make hack-kind-down` deliberately leaves your local registry
+running so that if you resume work later, you are doing so with a local
+registry that’s already primed with most layers of K8sTA’s image.
 
-### Receiving Webhooks
+If you wish to destroy the registry, use:
+
+```shell
+docker rm -f k8sta-dev-registry
+```
+:::
+
+## Receiving Webhooks
 
 Making the K8sTA server visible to Docker Hub such that it can successfully
 receive webhooks can be challenging. To help ease this process, our `Tiltfile`
@@ -172,73 +178,7 @@ has built-in support for exposing your local K8sTA server using
 1. Configure any Docker Hub repository you own to deliver webhooks to
    `<ngrok URL>/dockerhub?access_token=insecure-dev-token`.
 
-> 🟡&nbsp;&nbsp;We cannot guarantee that ngrok will work in all environments,
-> especially if you are behind a corporate firewall.
-
-## Signing Your Commits
-
-All commits merged into K8sTA's main branch MUST bear a DCO (Developer
-Certificate of Origin) sign-off. This is a line placed at the end of a commit
-message containing a contributor’s “signature.” In adding this, the contributor
-certifies that they have the right to contribute the material in question.
-
-Here are the steps to sign your work:
-
-1. Verify the contribution in your commit complies with the
-   [terms of the DCO](https://developercertificate.org/).
-
-1. Add a line like the following to your commit message:
-
-   ```
-   Signed-off-by: Joe Smith <joe.smith@example.com>
-   ```
-
-   You MUST use your legal name – handles or other pseudonyms are not permitted.
-
-   While you could manually add DCO sign-off to every commit, there is an easier
-   way:
-
-   1. Configure your git client appropriately. This is one-time setup.
-
-      ```shell
-      $ git config user.name <legal name>
-      $ git config user.email <email address you use for GitHub>
-      ```
-
-      If you work on multiple projects that require a DCO sign-off, you can
-      configure your git client to use these settings globally instead of only
-      for K8sTA:
-
-      ```shell
-      $ git config --global user.name <legal name>
-      $ git config --global user.email <email address you use for GitHub>
-      ```
-
-   1. Use the --signoff or -s (lowercase) flag when making each commit. For
-      example:
-
-      ```shell
-      $ git commit --message "<commit message>" --signoff
-      ```
-
-      If you ever make a commit and forget to use the `--signoff` flag, you can
-      amend your commit with this information before pushing:
-
-      ```shell
-      $ git commit --amend --signoff
-      ```
-
-   1. You can verify the above worked as expected using `git log`. Your latest
-      commit should look similar to this one:
-
-      ```shell
-      Author: Joe Smith <joe.smith@example.com>
-      Date:   Thu Feb 2 11:41:15 2018 -0800
-
-      Update README
-
-      Signed-off-by: Joe Smith <joe.smith@example.com>
-      ```
-
-      Notice the `Author` and `Signed-off-by` lines match. If they do not, the
-      PR will be rejected by the automated DCO check.
+:::cation
+We cannot guarantee that ngrok will work in all environments, especially if you
+are behind a corporate firewall.
+:::
