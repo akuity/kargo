@@ -61,9 +61,9 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        title: 'Documentation',
+        title: 'K8sTA Docs',
         logo: {
-          alt: 'Akuity Documentation',
+          alt: 'K8sTA Documentation',
           src: 'img/akuity.png',
           href: '/',
           target: '_self',
@@ -72,6 +72,11 @@ const config = {
           {
             href: 'https://argo-cd.readthedocs.io/',
             label: 'Argo CD Docs',
+            position: 'left',
+          },
+          {
+            href: 'https://argo-rollouts.readthedocs.io/',
+            label: 'Argo Rollouts Docs',
             position: 'left',
           },
           {
