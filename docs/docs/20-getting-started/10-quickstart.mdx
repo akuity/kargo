@@ -1,0 +1,395 @@
+---
+description: K8sTA Quickstart
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Quickstart
+
+This guide presents a basic introduction to K8sTA. Together, we will install
+K8sTA with configuration appropriate for a local, development-grade cluster,
+take it for a test drive, and then clean up.
+
+## Prerequisites
+
+:::caution
+The configuration options used in this guide are appropriate only for evaluating
+K8sTA on a local, development-grade cluster and are not appropriate for _any_
+shared cluster -- _especially a production one_.
+:::
+
+* [Helm](https://helm.sh/docs/): These instructions were tested with v3.10.0.
+* A local [k3d](https://k3d.io/) or [kind](https://kind.sigs.k8s.io/) cluster 
+  with [Argo CD](https://argo-cd.readthedocs.io) pre-installed. These instructions
+  were tested with:
+    * k3d: v5.4.6
+    * kind: v0.16.0
+    * Argo CD: v2.4.12
+
+### Starting a local cluster
+
+We will start our cluster using options that make it convenient to access the
+Argo CD dashboard, K8sTA server, and three different instances of our demo app
+on different `localhost` ports:
+
+<Tabs groupId="cluster-start">
+<TabItem value="k3d" label="k3d">
+
+```shell
+k3d cluster create k8sta-quickstart \
+  --no-lb \
+  --k3s-arg '--disable=traefik@server:0' \
+  -p '8080-8084:30080-30084@servers:0:direct' \
+  --wait
+```
+
+</TabItem>
+<TabItem value="kind" label="kind">
+
+```shell
+kind create cluster \
+  --wait 120s \
+  --config - <<EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: k8sta-quickstart
+nodes:
+- extraPortMappings:
+  - containerPort: 30080
+    hostPort: 8080
+  - containerPort: 30081
+    hostPort: 8081
+  - containerPort: 30082
+    hostPort: 8082
+  - containerPort: 30083
+    hostPort: 8083
+  - containerPort: 30084
+    hostPort: 8084
+EOF
+```
+
+</TabItem>
+</Tabs>
+
+### Installing Argo CD
+
+```shell
+helm install argo-cd argo-cd \
+  --repo https://argoproj.github.io/argo-helm \
+  --version 5.5.6 \
+  --create-namespace \
+  --namespace argo-cd \
+  --set 'configs.secret.argocdServerAdminPassword=$2a$10$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
+  --set dex.enabled=false \
+  --set notifications.enabled=false \
+  --set server.extensions.enabled=true \
+  --set server.service.type=NodePort \
+  --set server.service.nodePortHttp=30080 \
+  --wait
+```
+
+The Argo CD dashboard will be accessible at
+[localhost:8080](http://localhost:8080).
+
+The username and password are both `admin`.
+
+## Installing K8sTA
+
+:::info
+The Helm charts for K8sTA, much like K8sTA's container images, are hosted in the
+GitHub Container Registry and are currently accessible only by Akuity employees.
+This means you will need to log into the `ghcr.io` registry to proceed, exactly
+as if you were going to pull a private image from there.
+
+When K8sTA is eventually made public, this step will no longer be necessary.
+:::
+
+Use the command `docker login ghcr.io` and follow the prompts. Use your GitHub
+handle for the username and, for the password, use a
+[personal access token](https://github.com/settings/tokens) with adequate
+permissions to pull packages, then:
+
+```shell
+helm install k8sta \
+  oci://ghcr.io/akuityio/k8sta-chart/k8sta \
+  --version v0.1.0-alpha.1-rc.4 \
+  --create-namespace \
+  --namespace k8sta \
+  --set server.service.type=NodePort \
+  --set server.service.nodePort=30081 \
+  --set server.tls.enabled=false \
+  --set server.dockerhub.tokens.dev-token=insecure-dev-token \
+  --wait
+```
+
+## Trying it out
+
+### 1. Create a GitOps repo
+
+In the step, we will create a GitOps repo on GitHub to house variations of our
+application manifests for three different environments: dev, int, and prod. This
+repo will observe necessary K8sTA conventions.
+
+Visit https://github.com/akuityio/k8sta-demo-deploy and fork the repository into
+your own GitHub account.
+
+You can explore the repository and observe that the `main` branch contains
+common configuration in a `base/` directory and that `kustomize` is used to as a
+configuration management tool, applying environment-specific overlays to the
+base configuration. The overlays for each environment are defined in their
+respective `env/<environment name>/` directories. This repository layout is a
+required K8sTA convention.
+
+:::info
+`ytt` and `helm` are supported alternatives to `kustomize`, however, this guide
+only utilizes `kustomize`.
+:::
+
+While the `main` branch contains everything necessary to render the
+configuration for any of our three environments, we will see as we move into the
+next section that our Argo CD `Application` resources will not reference the
+`main` branch or the `env/<environment name>/` directories directly. Instead, as
+K8sTA progresses our initial deployments and any subsequent changes through our
+environments, it will automatically render base configuration and
+environment-specific overlays into plain Kubernetes manifests and store them in
+environment-specific _branches_. These are what our Argo CD `Application`
+resources will reference.
+
+:::info
+This is commonly referred to as the "rendered YAML branches" pattern.
+:::
+
+### 2. Create Argo CD Applications
+
+In this step, we will create three Argo CD `Application` resources that deploy
+the same application, with three slightly different configurations, to three
+different namespaces in our local cluster. These three instances of the same
+application will represent the three environments.
+
+To get started, you will require a GitHub [personal access
+token](https://github.com/settings/tokens) with adequate permissions to read
+from and write to repositories.
+
+1. Save the location of your GitOps repo, your GitHub handle, and your personal
+   access token in environment variables:
+
+   ```shell
+   export GITOPS_REPO_URL=<your repo URL, starting with https://>
+   export GITHUB_USERNAME=<your github handle>
+   export GITHUB_PAT=<your personal access token>
+   ```
+
+1. Create namespaces for our three environments, a `Secret` containing
+   repository credentials, and Argo CD `Application` resources for each
+   environment:
+
+   ```shell
+   cat <<EOF | kubectl apply -f -
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: k8sta-demo-dev
+   ---
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: k8sta-demo-int
+   ---
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: k8sta-demo-prod
+   ---
+   apiVersion: v1
+   kind: Secret
+   type: Opaque
+   metadata:
+     name: repo-creds
+     namespace: argo-cd
+     labels:
+       argocd.argoproj.io/secret-type: repository
+   stringData:
+     type: git
+     project: default
+     url: ${GITOPS_REPO_URL}
+     username: ${GITHUB_USERNAME}
+     password: ${GITHUB_PAT}
+   ---
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: k8sta-demo-dev
+     namespace: argo-cd
+   spec:
+     project: default
+     source:
+       repoURL: ${GITOPS_REPO_URL}
+       targetRevision: env/dev
+       path: .
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: k8sta-demo-dev
+   ---
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: k8sta-demo-int
+     namespace: argo-cd
+   spec:
+     project: default
+     source:
+       repoURL: ${GITOPS_REPO_URL}
+       targetRevision: env/int
+       path: .
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: k8sta-demo-int
+   ---
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: k8sta-demo-prod
+     namespace: argo-cd
+   spec:
+     project: default
+     source:
+       repoURL: ${GITOPS_REPO_URL}
+       targetRevision: env/prod
+       path: .
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: k8sta-demo-prod
+   EOF
+   ```
+
+If you visit [your Argo CD dashboard](http://localhost:8080) at this point, you
+will notice all three Argo CD `Application`s have failed to sync. _This is
+because the environment-specific branched out your GitOps repo do not exist
+yet!_ That's okay, though. K8sTA will create those branches for us as we
+continue this guide.
+
+:::info
+Our three environments all existing in a single cluster is for the sake of
+convenience. Because a single Argo CD control plane can manage multiple
+clusters, we could just as easily spread our environments across multiple
+clusters.
+:::
+
+### 3. Create a K8sTA Track
+
+In this step, we will create a K8sTA `Track` resource that describes the
+relationships between our three environments (our three Argo CD `Application`s).
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: k8sta.akuity.io/v1alpha1
+kind: Track
+metadata:
+  name: k8sta-demo
+  namespace: argo-cd
+spec:
+  imageRepositorySubscriptions:
+  gitRepositorySubscription:
+    repoURL: ${GITOPS_REPO_URL}
+  configManagement:
+    kustomize: {}
+  stations:
+  - name: dev
+    applications:
+    - name: k8sta-demo-dev
+  - name: int
+    applications:
+    - name: k8sta-demo-int
+  - name: prod
+    applications:
+    - name: k8sta-demo-prod
+EOF
+```
+
+### 4. Trigger an initial deployment
+
+In this step, we will trigger an initial deployment of our application and watch
+it progress through all three environments, one by one, and observe the
+bookkeeping K8sTA performs in the process.
+
+There are many different ways K8sTA can detect that your GitOps repo contains
+changes that should be progressed through the environments enumerated by a
+`Track`. For convenience we will use the method requiring the least setup.
+
+In your GitOps repo, find the line in `base/deployment.yaml` with the text
+`image: argoproj/rollouts-demo:placeholder` and update the image to be
+`argoproj/rollouts-demo:blue`. Commit this change to the `main` branch. You may
+accomplish this however you like. Making the modification directly via GitHub's
+web UI is a convenient option.
+
+Once the change is present in your GitOps repo, K8sTA will detect the change
+and upon noticing the change is within the `base/` directory, will infer that
+this change is likely to impact all environments. It will therefor create a
+`Ticket` resource that represents the change as it is progresses, one by one,
+through the environments enumerated by our `Track`.
+
+If you visit [your Argo CD dashboard](http://localhost:8080), you can watch
+K8sTA progress this change through all three environments. One by one, the Argo
+CD `Application`s representing those environments will become ✅ synced and 💚
+healthy.
+
+The three application instances should also be visible in your web browser by
+visiting:
+
+* dev: [localhost:8082](http://localhost:8082)
+* int: [localhost:8083](http://localhost:8083)
+* prod: [localhost:8084](http://localhost:8084)
+
+If you browse to your GitOps repo on GitHub and explore, you will be able to
+note of all the bookkeeping that K8sTA has done on our behalf:
+
+* K8sTA has made a number of commits to the `main` branch to store some
+  intermediate state in a `.k8sta/` directory. There is no particular need for
+  you to understand what is stored in that directory, and you should never have
+  any need to make changes to any resources in that directory.
+
+* K8sTA has created environment-specific branches for our dev, int, and prod
+  environments. If you explore those branches, you will find that they are
+  _orphaned branches_, having no common history with the `main` branch, and each
+  contains a single plain YAML file. This is what Argo CD actually deploys to
+  each environment.
+
+### 5. Roll out a change
+
+In this step, we will roll out a small change that will, again, progress through
+all three environments, one by one. Again, we will observe the bookkeeping K8sTA
+performs in the process.
+
+Repeat the steps of the previous section, this time finding the line in
+`base/deployment.yaml` with the text `image: argoproj/rollouts-demo:blue` and
+update the image to be `argoproj/rollouts-demo:green`.
+
+Once again, you can:
+
+1. Observe the progressive deployment of the change in [your Argo CD
+   dashboard](http://localhost:8080).
+
+1. Visit the applications in your web browser to observe that the software has
+   indeed been updated.
+
+1. Explore the bookkeeping K8sTA has performed in your GitOps repo.
+
+## Cleaning up
+
+<Tabs groupId="cluster-tear-down">
+<TabItem value="k3d" label="k3d">
+
+```shell
+k3d cluster delete k8sta-quickstart
+```
+
+</TabItem>
+<TabItem value="kind" label="kind">
+
+```shell
+kind delete cluster --name k8sta-quickstart
+```
+
+</TabItem>
+</Tabs>
