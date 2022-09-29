@@ -127,9 +127,12 @@ Here is a small set of assumptions we are embracing:
 
 ## Getting Started
 
-> 📝&nbsp;&nbsp;Stay tuned for a comprehensive quick start. For now, the best way
-> to get started is by building/deploying locally from source. See the 
-> [K8sTA Contribution Guide](metadocs/CONTRIBUTING.md) for details.
+We have a
+[quickstart](https://docs-k8sta-akuity-io.netlify.app/getting-started/quickstart)
+now! (The password is `akuitydocs`.)
+
+This documentation is very new, so please open issues against this repository if
+you encounter any difficulties with it.
 
 ## Roadmap
 
