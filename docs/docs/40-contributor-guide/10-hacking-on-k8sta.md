@@ -89,7 +89,7 @@ versions of:
 Follow the installation instructions for each of the above.
 
 :::info
-Once these tools are installed, you can be up and running with just two
+Once these tools are installed, you can be up and running with just a few
 commands!
 :::
 
@@ -99,19 +99,33 @@ To launch a brand new Kind cluster pre-connected to a local image registry:
 make hack-kind-up
 ```
 
-Because K8sTA integrates with Argo CD and Argo Rollouts, the above command will
-_also_ install recent, stable versions of both, along with the Argo Rollouts
-extension for the Argo CD dashboard.
+Because K8sTA integrates directly with Argo CD, the above command will _also_
+install a recent, stable version of that.
 
-K8sTA has no dependencies on Istio or Prometheus, but because the application
-commonly used to test K8sTA does (for now, at least), recent, stable versions of
-these are also installed.
+:::info
+The Argo CD dashboard will be exposed at `localhost:30081`.
+
+The username and password are both `admin`.
+:::
+
+K8sTA has no _direct_ dependency on Argo Rollouts and no dependency at all on
+Istio, but because one or both of these are often required to enable test
+applications, they can be easily added to the local development cluster.
+
+To add Argo Rollouts:
+
+```shell
+make hack-add-rollouts
+```
+
+To add Istio:
+
+```shell
+make hack-add-istio
+```
 
 :::info
 The Istio ingress controller / gateway will be exposed at `localhost:30080`.
- 
-The Argo CD dashboard will be exposed at `localhost:30081`. The username and
-password are both `admin`.
 :::
 
 To build and deploy K8sTA from source:
@@ -155,7 +169,7 @@ docker rm -f k8sta-dev-registry
 ```
 :::
 
-## Receiving Webhooks
+## Receiving webhooks
 
 Making the K8sTA server visible to Docker Hub such that it can successfully
 receive webhooks can be challenging. To help ease this process, our `Tiltfile`

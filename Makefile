@@ -56,32 +56,64 @@ codegen:
 	'
 
 ################################################################################
-# Hack: Manage a kind cluster with Istio, Argo CD, and Argo Rollouts           #
-# pre-installed                                                                #
+# Hack: Manage a kind cluster with Argo CD and, optionally, Istio and/or Argo  #
+# Rollouts pre-installed                                                       #
 ################################################################################
 
 .PHONY: hack-kind-up
 hack-kind-up:
 	ctlptl apply -f hack/kind/cluster.yaml
+	helm upgrade argo-cd argo-cd \
+		--repo https://argoproj.github.io/argo-helm \
+		--version 5.5.6 \
+		--install \
+		--create-namespace \
+		--namespace argo-cd \
+		--set 'configs.secret.argocdServerAdminPassword=$$2a$$10$$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
+		--set server.service.type=NodePort \
+		--set server.service.nodePortHttp=30081 \
+		--wait
+
+.PHONY: hack-add-rollouts
+hack-add-rollouts:
+	helm upgrade argo-cd argo-cd \
+		--repo https://argoproj.github.io/argo-helm \
+		--version 5.5.6 \
+		--namespace argo-cd \
+		--reuse-values \
+		--set server.extensions.enabled=true \
+		--set server.extensions.contents[0].name=argo-rollouts \
+		--set server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.2.0/extension.tar \
+		--wait
+	helm upgrade argo-rollouts argo-rollouts \
+		--repo https://argoproj.github.io/argo-helm \
+		--version 2.20.0 \
+		--install \
+		--create-namespace \
+		--namespace argo-rollouts \
+		--wait
+
+.PHONY: hack-add-istio
+hack-add-istio:
 	helm upgrade istio-base base \
 		--repo https://istio-release.storage.googleapis.com/charts \
-		--version 1.15.0-beta.0 \
+		--version 1.15.1 \
 		--install \
 		--create-namespace \
 		--namespace istio-system \
 		--wait
 	helm upgrade istiod istiod \
 		--repo https://istio-release.storage.googleapis.com/charts \
-		--version 1.15.0-beta.0 \
+		--version 1.15.1 \
 		--install \
 		--namespace istio-system \
 		--wait
-	kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/prometheus.yaml
+	kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.15/samples/addons/prometheus.yaml
 	kubectl get namespace istio-ingress || kubectl create namespace istio-ingress
 	kubectl label namespace istio-ingress istio-injection=enabled --overwrite
 	helm upgrade istio-ingress gateway \
 		--repo https://istio-release.storage.googleapis.com/charts \
-		--version 1.15.0-beta.0 \
+		--version 1.15.1 \
 		--install \
 		--namespace istio-ingress \
 		--set service.type=NodePort \
@@ -98,26 +130,6 @@ hack-kind-up:
 		--set 'service.ports[2].port=443' \
 		--set 'service.ports[2].protocol=TCP' \
 		--set 'service.ports[2].targetPort=443' \
-		--wait
-	helm upgrade argo-cd argo-cd \
-		--repo https://argoproj.github.io/argo-helm \
-		--version 4.10.5 \
-		--install \
-		--create-namespace \
-		--namespace argo-cd \
-		--set 'configs.secret.argocdServerAdminPassword=$$2a$$10$$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
-		--set server.extensions.enabled=true \
-		--set server.extensions.contents[0].name=argo-rollouts \
-		--set server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.2.0/extension.tar \
-		--set server.service.type=NodePort \
-		--set server.service.nodePortHttp=30081 \
-		--wait
-	helm upgrade argo-rollouts argo-rollouts \
-		--repo https://argoproj.github.io/argo-helm \
-		--version 2.18.0 \
-		--install \
-		--create-namespace \
-		--namespace argo-rollouts \
 		--wait
 
 .PHONY: hack-kind-down
