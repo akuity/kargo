@@ -65,6 +65,11 @@ k8s_resource(
   ],
   labels = ['k8sta']
 )
+k8s_resource(
+  new_name = 'image-pull-secret',
+  objects = ['k8sta-image-pull-secret:secret'],
+  labels = ['k8sta']
+)
 
 k8s_yaml(
   helm(
