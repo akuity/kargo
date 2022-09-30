@@ -1,7 +1,13 @@
-# K8sTA Roadmap
+---
+description: Roadmap
+---
 
-> 🟡&nbsp;&nbsp;K8sTA is highly experimental at this time and breaking changes
-> should be anticipated between pre-GA minor releases.
+# Roadmap
+
+:::caution
+K8sTA is highly experimental at this time and breaking changes should be
+anticipated between pre-GA minor releases.
+:::
 
 The current goal with K8sTA is to discover and add value in small increments. If
 the road ahead were more clear, we'd document it here -- and someday we will. In
@@ -107,13 +113,15 @@ along a `Track` (or series of interconnected `Track`s), with a _different
 precipitating event_ -- namely, changes that have been committed to the "source
 branch" by a human operator.
 
-> 📝&nbsp;&nbsp;To clarify the meaning of "source branch": K8sTA heavily leans
-into the "rendered YAML branches pattern" wherein a single branch (typically
-`main`) houses base configuration as well as environment-specific overlays. The
-base configuration and applicable overlays can be rendered into plain YAML
-manifests that are stored in environment-specific branches. I have been calling
-the branch containing base configuration and overlays the "source branch" to
-distinguish it from the environment-specific branches.
+:::note
+To clarify the meaning of "source branch": K8sTA heavily leans into the
+"rendered YAML branches pattern" wherein a single branch (typically `main`)
+houses base configuration as well as environment-specific overlays. The base
+configuration and applicable overlays can be rendered into plain YAML manifests
+that are stored in environment-specific branches. I have been calling the branch
+containing base configuration and overlays the "source branch" to distinguish it
+from the environment-specific branches.
+:::
 
 Iteration 3 will focus on detecting changes to the source branch (that were not
 initiated by K8sTA itself as part of the image update process already
