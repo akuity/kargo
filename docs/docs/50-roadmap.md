@@ -184,4 +184,4 @@ The responsibilities in question are:
 Iteration 4 will attempt to incorporate all logic related to no. 1 above into a
 standalone service. We hope that by the end of the iteration, we will be able to
 leverage that service to eliminate a substantial amount of bespoke "glue code"
-from some of AKuity's own internal processes.
+from some of Akuity's own internal processes.
