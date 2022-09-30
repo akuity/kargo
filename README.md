@@ -155,4 +155,4 @@ To report an issue, request a feature, or ask a question, please open an issue
 ## Code of Conduct
 
 Participation in the K8sTA project is governed by the
-[Contributor Covenant Code of Conduct](https://docs-k8sta-akuity-io.netlify.app/code-of-conduct/).
+[Contributor Covenant Code of Conduct](https://docs-k8sta-akuity-io.netlify.app/contributor-guide/code-of-conduct/).
