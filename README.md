@@ -16,7 +16,7 @@ while observing good GitOps practices and maintaining an impeccable paper trail.
 
 Read more about K8sTA in our [docs](https://docs-k8sta-akuity-io.netlify.app/)
 and then try it yourself by following our
-[Quickstart](https://docs-k8sta-akuity-io.netlify.app/getting-started/quickstart).
+[Quickstart](https://docs-k8sta-akuity-io.netlify.app/quickstart).
 
 This documentation is very new, so please open issues against this repository if
 you encounter any difficulties with it.
