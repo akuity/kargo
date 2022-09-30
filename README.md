@@ -143,8 +143,9 @@ accomplished so far and what we're currently working on.
 
 The K8sTA project accepts contributions via GitHub pull requests.
 
-Visit our [K8sTA Contribution Guide](metadocs/CONTRIBUTING.md) for more info on how
-to get started quickly and easily.
+Visit our
+[K8sTA Contribution Guide](https://docs-k8sta-akuity-io.netlify.app/contributor-guide/)
+for more info on how to get started quickly and easily.
 
 ## Support & Feedback
 
