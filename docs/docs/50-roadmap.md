@@ -108,39 +108,47 @@ The first two iterations focused _exclusively_ on the use case of progressing a
 new image along a `Track` (or series of interconnected `Track`s), with the
 precipitating event being the publication (push) of that image.
 
-Iteration 3 will explore _another type of change_ that needs to be progressed
+Iteration 3 explored _another type of change_ that needs to be progressed
 along a `Track` (or series of interconnected `Track`s), with a _different
-precipitating event_ -- namely, changes that have been committed to the "source
-branch" by a human operator.
+precipitating event_ -- namely, changes that have been committed to the default
+(e.g. `main`) branch of a GitOps repository by a human operator.
 
-:::note
-To clarify the meaning of "source branch": K8sTA heavily leans into the
-"rendered YAML branches pattern" wherein a single branch (typically `main`)
-houses base configuration as well as environment-specific overlays. The base
-configuration and applicable overlays can be rendered into plain YAML manifests
-that are stored in environment-specific branches. I have been calling the branch
-containing base configuration and overlays the "source branch" to distinguish it
-from the environment-specific branches.
-:::
+The K8sTA controller now monitors the default branches of repositories
+referenced by K8sTA `Track` resources for new commits. When such changes
+detected _and_ K8sTA determined to likely impact multiple Argo CD `Application`s
+(because files under `base/` were added, modified, or deleted), K8sTA creates a
+`Ticket` representing the changes.
 
-Iteration 3 will focus on detecting changes to the source branch (that were not
-initiated by K8sTA itself as part of the image update process already
-implemented), determining whether those changes affect base configuration (and
-therefore, potentially, all environments) and in such a case, proceeding to
-progress those changes down applicable `Track`s.
+Changes that are deemed to affect only specific overlays / Argo CD
+`Application`s (because _no_ files under `base/` were added, modified, or
+deleted) are, for now, ignored, and will likely be the subject of some future
+iteration.
 
-Further:
+This iteration also was partly interrupted by Akuity Platform launch and
+resources were, largely, reallocated to creating and editing Akuity Platform
+documentation. Owing to this, any concurrent K8sTA work was limited to "low
+hanging fruit," but several noteworthy advancements were made despite the simple
+nature of the work:
 
-* Changes that are deemed to affect only specific overlays / environments are,
-  for now, out of scope (although I anticipate these being addressed in the
-  next iteration).
+* Ability to disable entire `Track`s or constituent elements such as `Station`s
+  or Argo CD `Application`. This is useful when wishing to temporarily bypass
+  some element without permanently removing it.
 
-* K8sTA should take responsibility for rendering plain YAML manifests into the
-  environment-specific branches so that it is neither the responsibility of a
-  human operator to do so manually nor is it their responsibility to automate
-  the process themselves through their own esoteric glue code or automated
-  processes. (i.e. A human operator should only ever touch the source branch.)
+* Support Argo CD `Application`s in any namespace. Argo CD itself supports this
+  as of just recently, which invalidated our previous assumption that all
+  `Application` resources existed in the same namespace as Argo CD itself.
 
-* For the sake of expediency, as with detecting new Docker images, the prototype
-  will rely on webhooks for detecting changes in a git repository which, in the
-  future, should be detected through other means.
+* Support for additional configuration management tools:
+
+  * ytt
+  * Helm
+
+* Automated CI and release processes implemented.
+    * Images are signed during the release process.
+    * SBOMs are published during the release process.
+
+* Docs were created, including a quickstart.
+
+This iteration also included our first release -- v0.1.0-alpha.1, which permits
+Akuity staff who are not actively contributing to K8sTA to test drive K8sTA
+without the need to build it from source.
