@@ -166,7 +166,7 @@ novel and experimental elements continues at its own pace.
 The responsibilities in question are:
 
 1. GitOps "bookkeeping": These are the tedious operations required for
-   implementing GitOps with Argo CD and the "rendered YAML branches pattern.
+   implementing GitOps with Argo CD and the "rendered YAML branches" pattern.
    
    This includes:
 
