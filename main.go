@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/akuityio/k8sta/cmd/controller"
 	"github.com/akuityio/k8sta/cmd/server"
-	"github.com/akuityio/k8sta/internal/common/signals"
 	"github.com/akuityio/k8sta/internal/common/version"
 )
 
@@ -32,7 +32,7 @@ func main() {
 		return
 	}
 
-	ctx := signals.Context()
+	ctx := context.Background()
 
 	config, err := k8staConfig()
 	if err != nil {
