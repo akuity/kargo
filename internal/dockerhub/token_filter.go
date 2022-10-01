@@ -1,10 +1,6 @@
 package dockerhub
 
-import (
-	"net/http"
-
-	libHTTP "github.com/akuityio/k8sta/internal/common/http"
-)
+import "net/http"
 
 // TokenFilterConfig is the interface for a component that encapsulates token
 // filter configuration.
@@ -39,23 +35,13 @@ func (t *tokenFilterConfig) HasToken(token string) bool {
 	return found
 }
 
-// tokenFilter is a component that implements the http.Filter interface and can
-// conditionally allow or disallow a request on the basis of a recognized token
-// having been provided.
-type tokenFilter struct {
-	config TokenFilterConfig
-}
-
-// NewTokenFilter returns a component that implements the http.Filter interface
-// and can conditionally allow or disallow a request on the basis of a
-// recognized token having been provided.
-func NewTokenFilter(config TokenFilterConfig) libHTTP.Filter {
-	return &tokenFilter{
-		config: config,
-	}
-}
-
-func (t *tokenFilter) Decorate(handle http.HandlerFunc) http.HandlerFunc {
+// NewTokenFilter returns an http.FilterFunc that conditionally executes the
+// provided http.FilterFunc on the basis of a recognized token having been
+// provided.
+func NewTokenFilter(
+	config TokenFilterConfig,
+	handle http.HandlerFunc,
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Find the access token provided by the client.
 		//
@@ -76,7 +62,7 @@ func (t *tokenFilter) Decorate(handle http.HandlerFunc) http.HandlerFunc {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
-		if !t.config.HasToken(providedToken) {
+		if !config.HasToken(providedToken) {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
