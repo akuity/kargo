@@ -103,8 +103,6 @@ type Ticket struct {
 
 	// Track is a reference to a K8sTA Track.
 	Track string `json:"track,omitempty"`
-	// Source indicates how this ticket entered the system.
-	Source string `json:"source,omitempty"`
 	// Change encapsulates the specific change this Ticket is meant to progress
 	// through a series of Stations.
 	Change Change `json:"change,omitempty"`

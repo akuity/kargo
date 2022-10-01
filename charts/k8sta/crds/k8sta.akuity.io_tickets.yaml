@@ -66,9 +66,6 @@ spec:
             type: string
           metadata:
             type: object
-          source:
-            description: Source indicates how this ticket entered the system.
-            type: string
           status:
             description: Status encapsulates the status of the Ticket.
             properties:
