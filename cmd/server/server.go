@@ -13,7 +13,6 @@ import (
 	"github.com/akuityio/k8sta/internal/common/client"
 	"github.com/akuityio/k8sta/internal/common/config"
 	libHTTP "github.com/akuityio/k8sta/internal/common/http"
-	"github.com/akuityio/k8sta/internal/common/signals"
 	"github.com/akuityio/k8sta/internal/common/version"
 	"github.com/akuityio/k8sta/internal/dockerhub"
 )
@@ -65,7 +64,8 @@ func RunServer(ctx context.Context, config config.Config) error {
 		}
 		dockerhubWebhookHandler = dockerhub.NewTokenFilter(
 			filterConfig,
-		).Decorate(handler.ServeHTTP)
+			handler.ServeHTTP,
+		)
 	}
 
 	router := mux.NewRouter()
@@ -82,5 +82,5 @@ func RunServer(ctx context.Context, config config.Config) error {
 	return libHTTP.NewServer(
 		router,
 		&serverConfig,
-	).ListenAndServe(signals.Context())
+	).ListenAndServe(ctx)
 }

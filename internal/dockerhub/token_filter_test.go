@@ -35,28 +35,17 @@ func TestHasToken(t *testing.T) {
 	require.False(t, config.HasToken("bogus"))
 }
 
-func TestNewTokenFilter(t *testing.T) {
-	testConfig := NewTokenFilterConfig()
-	filter, ok := NewTokenFilter(testConfig).(*tokenFilter)
-	require.True(t, ok)
-	require.Equal(t, testConfig, filter.config)
-}
-
 func TestTokenFilter(t *testing.T) {
 	testConfig := NewTokenFilterConfig()
 	const testToken = "bar"
 	testConfig.AddToken(testToken)
 	testCases := []struct {
 		name       string
-		filter     *tokenFilter
 		setup      func() *http.Request
 		assertions func(handlerCalled bool, rr *http.Response)
 	}{
 		{
 			name: "valid token provided",
-			filter: &tokenFilter{
-				config: testConfig,
-			},
 			setup: func() *http.Request {
 				req, err := http.NewRequest(http.MethodPost, "/", nil)
 				require.NoError(t, err)
@@ -72,9 +61,6 @@ func TestTokenFilter(t *testing.T) {
 		},
 		{
 			name: "no token provided",
-			filter: &tokenFilter{
-				config: testConfig,
-			},
 			setup: func() *http.Request {
 				req, err := http.NewRequest(http.MethodPost, "/", nil)
 				require.NoError(t, err)
@@ -87,9 +73,6 @@ func TestTokenFilter(t *testing.T) {
 		},
 		{
 			name: "invalid token provided",
-			filter: &tokenFilter{
-				config: testConfig,
-			},
 			setup: func() *http.Request {
 				req, err := http.NewRequest(http.MethodPost, "/", nil)
 				require.NoError(t, err)
@@ -109,10 +92,13 @@ func TestTokenFilter(t *testing.T) {
 			rr := httptest.NewRecorder()
 			req := testCase.setup()
 			handlerCalled := false
-			testCase.filter.Decorate(func(w http.ResponseWriter, r *http.Request) {
-				handlerCalled = true
-				w.WriteHeader(http.StatusOK)
-			})(rr, req)
+			NewTokenFilter(
+				testConfig,
+				func(w http.ResponseWriter, r *http.Request) {
+					handlerCalled = true
+					w.WriteHeader(http.StatusOK)
+				},
+			).ServeHTTP(rr, req)
 			res := rr.Result()
 			defer res.Body.Close()
 			testCase.assertions(handlerCalled, res)
