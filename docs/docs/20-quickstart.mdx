@@ -30,8 +30,8 @@ shared cluster -- _especially a production one_.
 ### Starting a local cluster
 
 We will start our cluster using options that make it convenient to access the
-Argo CD dashboard, K8sTA server, and three different instances of our demo app
-on different `localhost` ports:
+Argo CD dashboard and three different instances of our demo app on different
+`localhost` ports:
 
 <Tabs groupId="cluster-start">
 <TabItem value="k3d" label="k3d">
@@ -40,7 +40,7 @@ on different `localhost` ports:
 k3d cluster create k8sta-quickstart \
   --no-lb \
   --k3s-arg '--disable=traefik@server:0' \
-  -p '8080-8084:30080-30084@servers:0:direct' \
+  -p '8080-8083:30080-30083@servers:0:direct' \
   --wait
 ```
 
@@ -64,8 +64,6 @@ nodes:
     hostPort: 8082
   - containerPort: 30083
     hostPort: 8083
-  - containerPort: 30084
-    hostPort: 8084
 EOF
 ```
 
@@ -116,10 +114,6 @@ helm install k8sta \
   --version v0.1.0-alpha.1 \
   --create-namespace \
   --namespace k8sta \
-  --set server.service.type=NodePort \
-  --set server.service.nodePort=30081 \
-  --set server.tls.enabled=false \
-  --set server.dockerhub.tokens.dev-token=insecure-dev-token \
   --wait
 ```
 
@@ -127,7 +121,7 @@ helm install k8sta \
 
 ### 1. Create a GitOps repo
 
-In the step, we will create a GitOps repo on GitHub to house variations of our
+In this step, we will create a GitOps repo on GitHub to house variations of our
 application manifests for three different environments: dev, int, and prod. This
 repo will observe necessary K8sTA conventions.
 
@@ -265,9 +259,9 @@ from and write to repositories.
 
 If you visit [your Argo CD dashboard](http://localhost:8080) at this point, you
 will notice all three Argo CD `Application`s have failed to sync. _This is
-because the environment-specific branched out your GitOps repo do not exist
-yet!_ That's okay, though. K8sTA will create those branches for us as we
-continue this guide.
+because the environment-specific branches of your GitOps repo do not exist yet!_
+That's okay, though. K8sTA will create those branches for us as we continue this
+guide.
 
 :::info
 Our three environments all existing in a single cluster is for the sake of
@@ -313,9 +307,9 @@ In this step, we will trigger an initial deployment of our application and watch
 it progress through all three environments, one by one, and observe the
 bookkeeping K8sTA performs in the process.
 
-There are many different ways K8sTA can detect that your GitOps repo contains
-changes that should be progressed through the environments enumerated by a
-`Track`. For convenience we will use the method requiring the least setup.
+There are many different ways K8sTA can detect changes that should be progressed
+through the environments enumerated by a `Track`. For convenience we will use
+the method that requires no additional setup.
 
 In your GitOps repo, find the line in `base/deployment.yaml` with the text
 `image: argoproj/rollouts-demo:placeholder` and update the image to be
@@ -337,12 +331,12 @@ healthy.
 The three application instances should also be visible in your web browser by
 visiting:
 
-* dev: [localhost:8082](http://localhost:8082)
-* int: [localhost:8083](http://localhost:8083)
-* prod: [localhost:8084](http://localhost:8084)
+* dev: [localhost:8081](http://localhost:8081)
+* int: [localhost:8082](http://localhost:8082)
+* prod: [localhost:8083](http://localhost:8083)
 
 If you browse to your GitOps repo on GitHub and explore, you will be able to
-note of all the bookkeeping that K8sTA has done on our behalf:
+see all the bookkeeping that K8sTA has done on our behalf:
 
 * K8sTA has made a number of commits to the `main` branch to store some
   intermediate state in a `.k8sta/` directory. There is no particular need for
@@ -363,7 +357,7 @@ performs in the process.
 
 Repeat the steps of the previous section, this time finding the line in
 `base/deployment.yaml` with the text `image: argoproj/rollouts-demo:blue` and
-update the image to be `argoproj/rollouts-demo:green`.
+updating the image to be `argoproj/rollouts-demo:green`.
 
 Once again, you can:
 
