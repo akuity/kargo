@@ -32,6 +32,7 @@ docker_build(
 k8s_resource(
   workload = 'k8sta-bookkeeper-server',
   new_name = 'bookkeeper-server',
+  port_forwards = '30083:8080',
   labels = ['k8sta']
 )
 k8s_resource(
@@ -88,6 +89,9 @@ k8s_yaml(
     name = 'k8sta',
     namespace = 'k8sta',
     set = [
+      'bookkeeper.server.logLevel=DEBUG',
+      'bookkeeper.server.service.type=NodePort',
+      'bookkeeper.server.service.nodePort=30083',
       'bookkeeper.server.tls.enabled=false',
       'controller.logLevel=DEBUG',
       'server.logLevel=DEBUG',

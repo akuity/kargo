@@ -8,7 +8,7 @@ import (
 )
 
 // TODO: Document this
-func PreRender(releaseName, baseDir, envDir string) ([]byte, error) {
+func Render(releaseName, baseDir, envDir string) ([]byte, error) {
 	cmd := exec.Command( // nolint: gosec
 		"helm",
 		"template",

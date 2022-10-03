@@ -7,7 +7,7 @@ import (
 )
 
 // TODO: Document this
-func PreRender(baseDir, envDir string) ([]byte, error) {
+func Render(baseDir, envDir string) ([]byte, error) {
 	cmd := exec.Command("ytt", "--file", baseDir, "--file", envDir)
 	yamlBytes, err := cmd.Output()
 	return yamlBytes, errors.Wrapf(

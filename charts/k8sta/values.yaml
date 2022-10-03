@@ -17,10 +17,10 @@ rbac:
   installGlobalResources: true
 
 
-## All settings for BookKeeper
+## All settings for Bookkeeper
 bookkeeper:
 
-  ## All settings for the BookKeeper server component
+  ## All settings for the Bookkeeper server component
   server:
 
     replicas: 1
