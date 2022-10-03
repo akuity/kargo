@@ -20,6 +20,10 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 {{- end -}}
 
+{{- define "k8sta.bookkeeper.server.fullname" -}}
+{{ include "k8sta.fullname" . | printf "%s-bookkeeper-server" }}
+{{- end -}}
+
 {{- define "k8sta.server.fullname" -}}
 {{ include "k8sta.fullname" . | printf "%s-server" }}
 {{- end -}}
@@ -53,6 +57,10 @@ Selector labels
 {{- define "k8sta.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "k8sta.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
+{{- define "k8sta.bookkeeper.server.labels" -}}
+app.kubernetes.io/component: bookkeeper-server
 {{- end -}}
 
 {{- define "k8sta.server.labels" -}}

@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/akuityio/k8sta/cmd/bookkeeper"
 	"github.com/akuityio/k8sta/cmd/controller"
 	"github.com/akuityio/k8sta/cmd/server"
 	"github.com/akuityio/k8sta/internal/common/version"
@@ -40,6 +41,10 @@ func main() {
 	}
 
 	switch binaryName {
+	case "bookkeeper":
+		log.Fatal("the bookkeeper CLI is not implemented yet")
+	case "bookkeeper-server":
+		err = bookkeeper.RunServer(ctx, config)
 	case "k8sta-controller":
 		err = controller.RunController(ctx, config)
 	case "k8sta-server":
