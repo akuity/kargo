@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/akuityio/k8sta/internal/common/config"
 	"github.com/akuityio/k8sta/internal/git"
 	"github.com/akuityio/k8sta/internal/helm"
@@ -35,31 +36,7 @@ type Request struct {
 	// ConfigManagement encapsulates details of which configuration management
 	// tool is to be used and, if applicable, configuration options for the
 	// selected tool.
-	ConfigManagement ConfigManagementConfig `json:"configManagement,omitempty"`
-}
-
-type ConfigManagementConfig struct {
-	// Helm encapsulates optional Helm configuration options.
-	Helm *HelmConfig `json:"helm,omitempty"`
-	// Kustomize encapsulates optional Kustomize configuration options.
-	Kustomize *KustomizeConfig `json:"kustomize,omitempty"`
-	// Ytt encapsulates optional ytt configuration options.
-	Ytt *YttConfig `json:"ytt,omitempty"`
-}
-
-// HelmConfig encapsulates optional Helm configuration options.
-type HelmConfig struct {
-	// ReleaseName specified the release name that will be used when running
-	// `helm template <release name> <chart> --values <values>`
-	ReleaseName string `json:"releaseName,omitempty"`
-}
-
-// KustomizeConfig encapsulates optional Kustomize configuration options.
-type KustomizeConfig struct {
-}
-
-// YttConfig encapsulates optional ytt configuration options.
-type YttConfig struct {
+	ConfigManagement api.ConfigManagementConfig `json:"configManagement,omitempty"` // nolint: lll
 }
 
 // Response encapsulates details of a successful rendering of some some
