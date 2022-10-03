@@ -79,17 +79,17 @@ func (t *ticketReconciler) promote(
 			baseDir := filepath.Join(repo.WorkingDir(), "base")
 			appDir := filepath.Join(repo.WorkingDir(), app.Spec.Source.TargetRevision)
 			if track.Spec.ConfigManagement.Helm != nil {
-				return helm.PreRender(
+				return helm.Render(
 					track.Spec.ConfigManagement.Helm.ReleaseName,
 					baseDir,
 					appDir,
 				)
 			}
 			if track.Spec.ConfigManagement.Kustomize != nil {
-				return kustomize.PreRender(appDir)
+				return kustomize.Render(appDir)
 			}
 			if track.Spec.ConfigManagement.Ytt != nil {
-				return ytt.PreRender(baseDir, appDir)
+				return ytt.Render(baseDir, appDir)
 			}
 			return nil, errors.Errorf(
 				"no configuration management strategy was specified by Track %q",

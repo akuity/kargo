@@ -32,13 +32,14 @@ func RunServer(ctx context.Context, config config.Config) error {
 		"commit":  version.GitCommit,
 		"port":    serverConfig.Port,
 		"tls":     tlsStatus,
-	}).Info("Starting BookKeeper Server")
+	}).Info("Starting Bookkeeper Server")
 
 	router := mux.NewRouter()
 	router.StrictSlash(true)
 	router.Handle(
-		"/",
+		"/v1alpha1",
 		bookkeeper.NewHandler(
+			config,
 			bookkeeper.NewService(config),
 		),
 	).Methods(http.MethodPost)
