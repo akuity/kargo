@@ -6,11 +6,11 @@ registry: k8sta-dev-registry
 kindV1Alpha4Cluster:
   nodes:
   - extraPortMappings:
-    - containerPort: 30080
+    - containerPort: 30080 # Istio HTTP
       hostPort: 30080
-    - containerPort: 30081
+    - containerPort: 30081 # Argo CD
       hostPort: 30081
-    - containerPort: 30082
+    - containerPort: 30082 # K8sTA Server
       hostPort: 30082
-    - containerPort: 30443
-      hostPort: 30443
+    - containerPort: 30083 # Bookkeeper Server
+      hostPort: 30083
