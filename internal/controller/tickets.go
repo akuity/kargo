@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
+	"github.com/akuityio/k8sta/internal/bookkeeper"
 	"github.com/akuityio/k8sta/internal/common/config"
 )
 
@@ -34,10 +35,11 @@ const (
 
 // ticketReconciler reconciles Ticket resources.
 type ticketReconciler struct {
-	config config.Config
-	client client.Client
-	argoDB db.ArgoDB
-	logger *log.Logger
+	config            config.Config
+	client            client.Client
+	argoDB            db.ArgoDB
+	bookkeeperService bookkeeper.Service
+	logger            *log.Logger
 }
 
 // SetupTicketReconcilerWithManager initializes a reconciler for Ticket
@@ -47,6 +49,7 @@ func SetupTicketReconcilerWithManager(
 	config config.Config,
 	mgr manager.Manager,
 	argoDB db.ArgoDB,
+	bookkeeperService bookkeeper.Service,
 ) error {
 	logger := log.New()
 	logger.SetLevel(config.LogLevel)
@@ -100,10 +103,11 @@ func SetupTicketReconcilerWithManager(
 	}
 
 	t := &ticketReconciler{
-		config: config,
-		client: mgr.GetClient(),
-		argoDB: argoDB,
-		logger: logger,
+		config:            config,
+		client:            mgr.GetClient(),
+		argoDB:            argoDB,
+		bookkeeperService: bookkeeperService,
+		logger:            logger,
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).

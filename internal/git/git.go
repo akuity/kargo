@@ -102,7 +102,13 @@ func Clone(
 // "store" (username/password-based) credential helper.
 func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
 	// Configure the git client
-	cmd := exec.Command("git", "config", "--global", "user.name", "k8sta")
+	cmd := exec.Command(
+		"git",
+		"config",
+		"--global",
+		"user.name",
+		"K8sTA Bookkeeper",
+	)
 	if _, err := r.execCommand(cmd); err != nil {
 		return errors.Wrapf(err, "error configuring git username")
 	}
@@ -111,7 +117,7 @@ func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
 		"config",
 		"--global",
 		"user.email",
-		"k8sta@akuity.io",
+		"k8sta-bookkeeper@akuity.io",
 	)
 	if _, err := r.execCommand(cmd); err != nil {
 		return errors.Wrapf(err, "error configuring git user email address")

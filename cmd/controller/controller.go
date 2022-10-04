@@ -13,6 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
+	"github.com/akuityio/k8sta/internal/bookkeeper"
 	"github.com/akuityio/k8sta/internal/common/config"
 	"github.com/akuityio/k8sta/internal/common/kubernetes"
 	"github.com/akuityio/k8sta/internal/common/version"
@@ -77,6 +78,7 @@ func RunController(ctx context.Context, config config.Config) error {
 		config,
 		mgr,
 		argoDB,
+		bookkeeper.NewService(config),
 	); err != nil {
 		return errors.Wrap(err, "error setting up Ticket reconciler")
 	}

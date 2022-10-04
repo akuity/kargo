@@ -212,8 +212,9 @@ func (t *trackReconciler) syncGitRepo(
 		"\n",
 	)
 	for _, commit := range commits {
-		author := strings.SplitN(commit, " ", 2)[1]
-		if author != "k8sta" {
+		author := strings.ToLower(strings.SplitN(commit, " ", 2)[1])
+		// "k8sta bookkeeper" is currently used, but we used to use "k8sta"
+		if author != "k8sta" && author != "k8sta bookkeeper" {
 			diffContainsNonK8staAuthors = true
 			break
 		}
