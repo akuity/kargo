@@ -152,3 +152,36 @@ nature of the work:
 This iteration also included our first release -- v0.1.0-alpha.1, which permits
 Akuity staff who are not actively contributing to K8sTA to test drive K8sTA
 without the need to build it from source.
+
+## Iteration 4
+
+This iteration aligns with the start of Akuity dev cycle 2.
+
+Iteration 4 will focus on decomposing K8sTA's two main responsibilities into
+separate components that can (potentially) be used independently of one another.
+By doing this, we hope to begin dogfooding and gaining value from the more
+stable and straightforward elements of K8sTA _sooner_ while work on the more
+novel and experimental elements continues at its own pace.
+
+The responsibilities in question are:
+
+1. GitOps "bookkeeping": These are the tedious operations required for
+   implementing GitOps with Argo CD and the "rendered YAML branches" pattern.
+   
+   This includes:
+
+     * Integrating with configuration management tools to render plain YAML.
+     * Committing or PR'ing changes to `Application`-specific branches.
+
+   Overall, these functions are well understood and comparatively easy to
+   implement.
+
+2. Progressive delivery: This includes detecting changes and progressing them
+   through the `Station`s enumerated by a `Track`.
+
+   Overall, this is more novel and experimental.
+
+Iteration 4 will attempt to incorporate all logic related to no. 1 above into a
+standalone service. We hope that by the end of the iteration, we will be able to
+leverage that service to eliminate a substantial amount of bespoke "glue code"
+from some of Akuity's own internal processes.
