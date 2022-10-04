@@ -28,6 +28,14 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/k8sta-controller"]
         env:
+        - name: BOOKKEEPER_ADDRESS
+          {{- if .Values.bookkeeper.server.tls.enabled }}
+          value: https://{{ include "k8sta.bookkeeper.server.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+          {{- else }}
+          value: http://{{ include "k8sta.bookkeeper.server.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+          {{- end }}
+        - name: BOOKKEEPER_IGNORE_CERT_WARNINGS
+          value: {{ quote (and .Values.bookkeeper.server.tls.enabled .Values.controller.bookkeeper.tls.ignoreCertWarnings) }}
         - name: LOG_LEVEL
           value: {{ .Values.controller.logLevel }}
         resources:
