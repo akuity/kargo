@@ -43,32 +43,53 @@ func NewClient(address string, opts *ClientOptions) Service {
 	}
 }
 
-func (c *client) Handle(ctx context.Context, req Request) (Response, error) {
+func (c *client) RenderConfig(
+	ctx context.Context,
+	req RenderRequest,
+) (Response, error) {
+	return c.doRequest(ctx, http.MethodPost, "render-config", req)
+}
+
+func (c *client) UpdateImage(
+	ctx context.Context,
+	req ImageUpdateRequest,
+) (Response, error) {
+	return c.doRequest(ctx, http.MethodPost, "update-image", req)
+}
+
+func (c *client) doRequest(
+	ctx context.Context,
+	method string,
+	path string,
+	body any,
+) (Response, error) {
 	res := Response{}
-	reqBodyBytes, err := json.Marshal(req)
-	if err != nil {
-		return res, errors.Wrap(err, "error marshaling HTTP(S) request body")
+	var reqBodyReader io.Reader
+	if body != nil {
+		reqBodyBytes, err := json.Marshal(body)
+		if err != nil {
+			return res, errors.Wrap(err, "error marshaling HTTP(S) request body")
+		}
+		reqBodyReader = bytes.NewBuffer(reqBodyBytes)
 	}
-	reqBodyReader := bytes.NewBuffer(reqBodyBytes)
 	httpReq, err := http.NewRequest(
-		http.MethodPost,
-		fmt.Sprintf("%s/v1alpha1", c.address),
+		method,
+		fmt.Sprintf("%s/v1alpha1/%s", c.address, path),
 		reqBodyReader,
 	)
 	if err != nil {
-		return res, errors.Wrap(err, "error preparing HTTP(S) POST request")
+		return res, errors.Wrap(err, "error creating HTTP(S) request")
 	}
 	httpReq = httpReq.WithContext(ctx)
 	httpReq.Header.Add("Content-Type", "application/json")
 	httpReq.Header.Add("Accept", "application/json")
 	httpRes, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return res, errors.Wrap(err, "error making HTTP(S) POST request")
+		return res, errors.Wrap(err, "error making HTTP(S) request")
 	}
 	if httpRes.StatusCode != http.StatusOK {
-		return res, errors.Wrapf(
-			err,
-			"HTTP(S) POST request received unexpected error code %d",
+		return res, errors.Errorf(
+			"HTTP(S) request received unexpected error code %d",
 			httpRes.StatusCode,
 		)
 	}

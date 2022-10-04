@@ -24,16 +24,25 @@ func (t *ticketReconciler) promote(
 	}
 
 	// Call the Bookkeeping service
-	res, err := t.bookkeeperService.Handle(
-		ctx,
-		bookkeeper.Request{
-			RepoURL:          app.Spec.Source.RepoURL,
-			RepoCreds:        repoCreds,
-			Path:             app.Spec.Source.TargetRevision,
-			TargetBranch:     app.Spec.Source.TargetRevision,
-			ConfigManagement: track.Spec.ConfigManagement,
-		},
-	)
+	renderReq := bookkeeper.RenderRequest{
+		RepoURL:          app.Spec.Source.RepoURL,
+		RepoCreds:        repoCreds,
+		Path:             app.Spec.Source.TargetRevision,
+		TargetBranch:     app.Spec.Source.TargetRevision,
+		ConfigManagement: track.Spec.ConfigManagement,
+	}
+	var res bookkeeper.Response
+	if ticket.Change.BaseConfiguration != nil {
+		res, err = t.bookkeeperService.RenderConfig(ctx, renderReq)
+	} else {
+		res, err = t.bookkeeperService.UpdateImage(
+			ctx,
+			bookkeeper.ImageUpdateRequest{
+				RenderRequest: renderReq,
+				Images:        ticket.Change.NewImages.Images,
+			},
+		)
+	}
 	if err != nil {
 		return "", errors.Wrapf(err, "bookkeeping error")
 	}
