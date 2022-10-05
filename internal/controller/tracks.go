@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -185,67 +184,12 @@ func (t *trackReconciler) syncGitRepo(
 		return nil
 	}
 
-	// Were any of the commits since the last sync not authored by K8sTA itself?
-	var diffContainsNonK8staAuthors bool
-	// The following command returns results like these:
-	//
-	//   3a41b887f95870a8a7b2d419de64728fd70b896c Committer Name
-	//   80ea8286d8b6f94c80f104abc45c726d4b2bda42 Committer Name
-	//   4e17b9a53911a0dea2fb45664ac005eca1083655 Committer Name
-	cmd := exec.Command( // nolint: gosec
-		"git",
-		"log",
-		fmt.Sprintf("HEAD...%s", track.Status.GitSyncStatus.Commit),
-		`--format="%H %an"`,
-	)
-	cmd.Dir = repo.WorkingDir() // We need to be in the root of the repo for this
-	commitListBytes, err := cmd.Output()
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"error getting listing commits between HEAD and commit %q",
-			track.Status.GitSyncStatus.Commit,
-		)
-	}
-	commits := strings.Split(
-		strings.TrimSpace(string(commitListBytes)),
-		"\n",
-	)
-	for _, commit := range commits {
-		author := strings.ToLower(strings.SplitN(commit, " ", 2)[1])
-		// "k8sta bookkeeper" is currently used, but we used to use "k8sta"
-		if author != "k8sta" && author != "k8sta bookkeeper" {
-			diffContainsNonK8staAuthors = true
-			break
-		}
-	}
-
-	// If the diffs don't include any non-k8sta authors, then k8sta already knows
-	// about and has already applied all the changes we just discovered. This can
-	// happen, for instance, if a Track is subscribed to an image repository and a
-	// push to that repository has already triggered progression of a new image
-	// along the Track and, in the wake of that, this sync procedure discovers
-	// commits that k8sta made in the course of rolling out the new image AND no
-	// one else has also made commits since the last sync.
-	//
-	// In a case such as the above, there is nothing to do except update sync
-	// status.
-	if !diffContainsNonK8staAuthors {
-		t.logger.WithFields(log.Fields{
-			"repo":           track.Spec.GitRepositorySubscription.RepoURL,
-			"previousCommit": track.Status.GitSyncStatus.Commit,
-			"currentCommit":  mostRecentSHA,
-		}).Debug("found no changes that were not authored by k8sta")
-		updateSyncStatus(track, mostRecentSHA)
-		return nil
-	}
-
 	// Do any of the commits since the last sync contain changes to the base
 	// configuration? Only changes to the base configuration have the potential
 	// to affect every environment, and therefore only those changes are eligible
 	// for a Ticket to be created that will progress the changes along the Track.
 	// nolint: gosec
-	cmd = exec.Command(
+	cmd := exec.Command(
 		"git",
 		"diff",
 		track.Status.GitSyncStatus.Commit,

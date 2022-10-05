@@ -55,6 +55,10 @@ type Repo interface {
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
 	// in the remote repository.
 	RemoteBranchExists(branch string) (bool, error)
+	// Reset unstages all changes in the working directory.
+	Reset() error
+	// Clean cleans the working directory.
+	Clean() error
 	// Close cleans up file system resources used by this repository. This should
 	// always be called before a repository goes out of scope.
 	Close() error
@@ -323,6 +327,20 @@ func (r *repo) RemoteBranchExists(branch string) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+func (r *repo) Reset() error {
+	cmd := exec.Command("git", "reset", ".")
+	cmd.Dir = r.dir
+	_, err := r.execCommand(cmd)
+	return errors.Wrapf(err, "error resetting branch %q", r.currentBranch)
+}
+
+func (r *repo) Clean() error {
+	cmd := exec.Command("git", "clean", "-fd")
+	cmd.Dir = r.dir
+	_, err := r.execCommand(cmd)
+	return errors.Wrapf(err, "error cleaning branch %q", r.currentBranch)
 }
 
 func (r *repo) execCommand(cmd *exec.Cmd) ([]byte, error) {
