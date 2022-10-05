@@ -7,10 +7,10 @@ import (
 	"github.com/akuityio/k8sta/internal/git"
 )
 
-// Request is a request for Bookkeeper to render some environment-specific
+// RenderRequest is a request for Bookkeeper to render some environment-specific
 // configuration from the repository specified by RepoURL into plain YAML in an
 // environment-specific branch.
-type Request struct {
+type RenderRequest struct {
 	// RepoURL is the URL of a remote GitOps repository.
 	RepoURL string `json:"repoURL,omitempty"`
 	// RepoCreds encapsulates read/write credentials for the remote GitOps
@@ -29,6 +29,17 @@ type Request struct {
 	ConfigManagement api.ConfigManagementConfig `json:"configManagement,omitempty"` // nolint: lll
 }
 
+// ImageUpdateRequest is a request for Bookkeeper to edit environment-specific
+// configuration from the repository specified by RepoURL to include the image
+// specified by the Image field and then render that environment-specific
+// configuration into plain YAML in an environment-specific branch.
+type ImageUpdateRequest struct {
+	RenderRequest
+	// Images specifies images to incorporate into environment-specific
+	// configuration.
+	Images []api.Image `json:"images,omitempty"`
+}
+
 // Response encapsulates details of a successful rendering of some some
 // environment-specific configuration into plain YAML in an environment-specific
 // branch.
@@ -41,6 +52,9 @@ type Response struct {
 // Service is an interface for components that can handle bookkeeping requests.
 // Implementations of this interface are transport-agnostic.
 type Service interface {
-	// Handle handles a bookkeeping request.
-	Handle(context.Context, Request) (Response, error)
+	// RenderConfig handles a bookkeeping request.
+	RenderConfig(context.Context, RenderRequest) (Response, error)
+	// UpdateImage handles a specialized bookkeeping request that updates
+	// environment-specific configuration to reference a new image.
+	UpdateImage(context.Context, ImageUpdateRequest) (Response, error)
 }
