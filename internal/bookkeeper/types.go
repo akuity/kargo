@@ -8,20 +8,18 @@ import (
 )
 
 // RenderRequest is a request for Bookkeeper to render some environment-specific
-// configuration from the repository specified by RepoURL into plain YAML in an
-// environment-specific branch.
+// configuration from the default branch of the repository specified by RepoURL
+// into plain YAML in an environment-specific branch.
 type RenderRequest struct {
 	// RepoURL is the URL of a remote GitOps repository.
 	RepoURL string `json:"repoURL,omitempty"`
 	// RepoCreds encapsulates read/write credentials for the remote GitOps
 	// repository referenced by the RepoURL field.
 	RepoCreds git.RepoCredentials `json:"repoCreds,omitempty"`
-	// Path is the path to a directory in the GitOps repository referenced by the
-	// RepoURL field which contains environment-specific configuration.
-	Path string `json:"path,omitempty"`
 	// TargetBranch is the name of an environment-specific branch in the GitOps
 	// repository referenced by the RepoURL field into which plain YAML should be
-	// rendered.
+	// rendered. The path to environment-specific configuration in the
+	// repository's default branch is inferred to be equal to this value.
 	TargetBranch string `json:"targetBranch,omitempty"`
 	// ConfigManagement encapsulates details of which configuration management
 	// tool is to be used and, if applicable, configuration options for the
