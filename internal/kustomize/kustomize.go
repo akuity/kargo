@@ -17,31 +17,22 @@ var kustomizationBytes = []byte(
 kind: Kustomization
 
 resources:
-- all.yaml`,
+- ephemeral.yaml
+`,
 )
 
-// EnsurePrerenderDir ensures the existence of an environment-specific directory
-// under .bookkeeper/. If it has to create this directory, it will also create
-// the kustomize configuration required to perform last-mile rendering. It
-// returns a bool value indicating whether the directory was newly created or
-// not.
-func EnsurePrerenderDir(dir string) (bool, error) {
-	if exists, err := file.Exists(dir); err != nil {
-		return false, err
-	} else if exists {
-		return false, nil
-	}
-
+// EnsureBookkeeperDir ensures the existence of a .bookkeeper directory and the
+// kustomize configuration required to perform last-mile rendering.
+func EnsureBookkeeperDir(dir string) error {
 	// Ensure the existence of the directory
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return true,
-			errors.Wrapf(err, "error ensuring existence of directory %q", dir)
+		return errors.Wrapf(err, "error ensuring existence of directory %q", dir)
 	}
 
 	// Ensure the existence of kustomization.yaml
 	kustomizationFile := filepath.Join(dir, "kustomization.yaml")
 	if exists, err := file.Exists(kustomizationFile); err != nil {
-		return true, errors.Wrapf(
+		return errors.Wrapf(
 			err,
 			"error checking for existence of %q",
 			kustomizationFile,
@@ -52,7 +43,7 @@ func EnsurePrerenderDir(dir string) (bool, error) {
 			kustomizationBytes,
 			0644,
 		); err != nil {
-			return true, errors.Wrapf(
+			return errors.Wrapf(
 				err,
 				"error writing to %q",
 				kustomizationFile,
@@ -60,7 +51,7 @@ func EnsurePrerenderDir(dir string) (bool, error) {
 		}
 	}
 
-	return true, nil
+	return nil
 }
 
 // SetImage runs `kustomize edit set image ...` in the specified directory.

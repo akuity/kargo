@@ -37,32 +37,11 @@ func (s *service) RenderConfig(
 	return s.renderConfig(
 		ctx,
 		req,
-		func(repo git.Repo) (string, error) {
-			// Ensure the existence of the directory into which we will pre-render
-			// intermediate state
-			bkEnvDir :=
-				filepath.Join(repo.WorkingDir(), ".bookkeeper", req.TargetBranch)
-			if _, err := kustomize.EnsurePrerenderDir(bkEnvDir); err != nil {
-				return "", errors.Wrapf(
-					err,
-					"error setting up pre-render directory %q",
-					bkEnvDir,
-				)
-			}
-			// Pre-render
-			if err := s.preRender(repo, req); err != nil {
-				return "", err
-			}
-			// This is the last commit on the default branch
-			lastCommit, err := repo.LastCommitID()
-			if err != nil {
-				return "", errors.Wrap(
-					err,
-					"error obtaining ID of the last commit to the default branch",
-				)
-			}
+		// This operation is nearly a no-op. It just returns a commit message based
+		// on the provided ID of the last commit to the default branch.
+		func(_, lastCommit string) (string, error) {
 			return fmt.Sprintf(
-				"bookkeeper: pre-rendering configuration from %s",
+				"bookkeeper: rendering configuration from %s",
 				lastCommit,
 			), nil
 		},
@@ -76,44 +55,29 @@ func (s *service) UpdateImage(
 	return s.renderConfig(
 		ctx,
 		req.RenderRequest,
-		func(repo git.Repo) (string, error) {
-			// Ensure the existence of the directory into which we will pre-render
-			// intermediate state
-			bkEnvDir :=
-				filepath.Join(repo.WorkingDir(), ".bookkeeper", req.TargetBranch)
-			if created, err := kustomize.EnsurePrerenderDir(bkEnvDir); err != nil {
-				return "", errors.Wrapf(
-					err,
-					"error setting up pre-render directory %q",
-					bkEnvDir,
-				)
-			} else if created {
-				// Initial pre-render
-				if err := s.preRender(repo, req.RenderRequest); err != nil {
-					return "", err
-				}
-			}
-			// Set images
+		// This operation runs kustomize edit set image and returns a commit message
+		// based on the provided ID of the last commit to the default branch.
+		func(bkDir, lastCommit string) (string, error) {
 			for _, image := range req.Images {
-				if err := kustomize.SetImage(bkEnvDir, image); err != nil {
+				if err := kustomize.SetImage(bkDir, image); err != nil {
 					return "", errors.Wrapf(
 						err,
 						"error setting image in pre-render directory %q",
-						bkEnvDir,
+						bkDir,
 					)
 				}
 			}
 			if len(req.Images) == 1 {
 				return fmt.Sprintf(
-					"bookkeeper: updating %s to use image %s:%s",
-					req.TargetBranch,
+					"bookkeeper: rendering configuration from %s with new image %s:%s",
+					lastCommit,
 					req.Images[0].Repo,
 					req.Images[0].Tag,
 				), nil
 			}
 			commitMsg := fmt.Sprintf(
-				"bookkeeper: updating %s to use new images",
-				req.TargetBranch,
+				"bookkeeper: rendering configuration from %s with new images",
+				lastCommit,
 			)
 			for _, image := range req.Images {
 				commitMsg = fmt.Sprintf(
@@ -131,7 +95,7 @@ func (s *service) UpdateImage(
 func (s *service) renderConfig(
 	ctx context.Context,
 	req RenderRequest,
-	op func(git.Repo) (string, error),
+	op func(bkDir, lastCommit string) (string, error),
 ) (Response, error) {
 	logger := s.logger.WithFields(
 		log.Fields{
@@ -148,110 +112,111 @@ func (s *service) renderConfig(
 	}
 	defer repo.Close()
 
-	commitMsg, err := op(repo)
+	lastCommitID, err := repo.LastCommitID()
+	if err != nil {
+		return res,
+			errors.Wrap(err, "error getting last commit ID from the default branch")
+	}
+
+	// Pre-render
+	preRenderedBytes, err := s.preRender(repo, req)
 	if err != nil {
 		return res, err
 	}
 
-	// Commit pre-rendered config to the local default branch
-	if err = repo.AddAllAndCommit(commitMsg); err != nil {
-		return res, errors.Wrap(
-			err,
-			"error committing pre-rendered configuration to the default branch",
-		)
-	}
-	logger.Debug("committed pre-rendered configuration to the default branch")
-
-	// Push the pre-rendered configuration to the default branch
-	if err = repo.Push(); err != nil {
-		return res, errors.Wrap(
-			err,
-			"error pushing pre-rendered configuration to the default branch",
-		)
-	}
-	logger.Debug("pushed pre-rendered configuration to the default branch")
-
-	// Now take everything the last mile with kustomize and write the
-	// fully-rendered config to a target branch...
-
-	// This is the NEW last commit on the default branch
-	lastCommit, err := repo.LastCommitID()
-	if err != nil {
-		return res, errors.Wrap(
-			err,
-			"error obtaining ID of the last commit to the default branch",
-		)
-	}
-
-	// Last mile rendering
-	bkEnvDir := filepath.Join(repo.WorkingDir(), ".bookkeeper", req.TargetBranch)
-	renderedBytes, err := kustomize.Render(bkEnvDir)
-	if err != nil {
-		return res, errors.Wrapf(
-			err,
-			"error rendering configuration from %q",
-			bkEnvDir,
-		)
-	}
-
-	// Switch to the target branch. This means checking out from a remote branch
-	// if it exists or else creating a new orphaned branch.
+	// Switch to the target branch
 	if err = s.switchToTargetBranch(repo, req.TargetBranch); err != nil {
 		return res, errors.Wrap(err, "error switching to target branch")
 	}
 
-	// Remove existing fully-rendered config (or files from the default branch
-	// that were left behind from the default branch when the orphaned target
-	// branch was created)
-	if err = s.deleteAll(repo); err != nil {
+	// Ensure the .bookkeeper directory exists and is set up correctly
+	bkDir := filepath.Join(repo.WorkingDir(), ".bookkeeper")
+	if err = kustomize.EnsureBookkeeperDir(bkDir); err != nil {
 		return res, errors.Wrapf(
 			err,
-			"error deleting existing files from %q",
-			repo.WorkingDir(),
+			"error setting up .bookkeeper directory %q",
+			bkDir,
 		)
 	}
-	logger.Debug("removed existing fully-rendered configuration")
+
+	// Write the pre-rendered config to a temporary location
+	preRenderedPath := filepath.Join(bkDir, "ephemeral.yaml")
+	// nolint: gosec
+	if err = os.WriteFile(preRenderedPath, preRenderedBytes, 0644); err != nil {
+		return res, errors.Wrapf(
+			err,
+			"error writing ephemeral, pre-rendered configuration to %q",
+			preRenderedPath,
+		)
+	}
+	logger.Debugf("wrote pre-rendered configuration to %q", preRenderedPath)
+
+	commitMsg, err := op(bkDir, lastCommitID)
+	if err != nil {
+		return res, err
+	}
+
+	// Now take everything the last mile with kustomize and write the
+	// fully-rendered config to a target branch...
+
+	// Last mile rendering
+	fullyRenderedBytes, err := kustomize.Render(bkDir)
+	if err != nil {
+		return res, errors.Wrapf(
+			err,
+			"error rendering configuration from %q",
+			bkDir,
+		)
+	}
 
 	// Write the new fully-rendered config to the root of the repo
 	allPath := filepath.Join(repo.WorkingDir(), "all.yaml")
 	// nolint: gosec
-	if err = os.WriteFile(allPath, renderedBytes, 0644); err != nil {
+	if err = os.WriteFile(allPath, fullyRenderedBytes, 0644); err != nil {
 		return res, errors.Wrapf(
 			err,
 			"error writing fully-rendered configuration to %q",
 			allPath,
 		)
 	}
-	logger.Debug("wrote fully-rendered configuration to the target branch")
+	logger.Debug("wrote fully-rendered configuration")
 
-	// Commit the fully-rendered configuration to the target branch
-	if err = repo.AddAllAndCommit(
-		fmt.Sprintf(
-			"bookkeeper: rendering configuration from %s",
-			lastCommit,
-		),
-	); err != nil {
+	// Delete the ephemeral, pre-rendered configuration
+	if err = os.Remove(preRenderedPath); err != nil {
 		return res, errors.Wrapf(
 			err,
-			"error committing fully-rendered configuration to the target branch",
+			"error deleting ephemeral, pre-rendered configuration from %q",
+			preRenderedPath,
 		)
 	}
-	logger.Debug("committed fully-rendered configuration to the target branch")
+
+	// Commit the fully-rendered configuration
+	if err = repo.AddAllAndCommit(commitMsg); err != nil {
+		return res, errors.Wrapf(
+			err,
+			"error committing fully-rendered configuration",
+		)
+	}
+	logger.Debug("committed fully-rendered configuration")
 
 	// Push the fully-rendered configuration to the remote target branch
 	if err = repo.Push(); err != nil {
 		return res, errors.Wrap(
 			err,
-			"error pushing fully-rendered configuration to the target branch",
+			"error pushing fully-rendered configuration",
 		)
 	}
-	logger.Debug("pushed fully-rendered configuration to the target branch")
+	logger.Debug("pushed fully-rendered configuration")
 
 	// Get the ID of the last commit on the target branch
 	if res.CommitID, err = repo.LastCommitID(); err != nil {
-		return res, err
+		return res, errors.Wrap(
+			err,
+			"error getting last commit ID from the target branch",
+		)
 	}
-	logger.Debug("obtained sha of commit to the target branch")
+	logger.Debug("obtained sha of last commit")
+
 	return res, nil
 }
 
@@ -282,35 +247,13 @@ func (s *service) switchToTargetBranch(
 		}
 		logger.Debug("created orphaned target branch")
 	}
-	return nil
+	if err := repo.Reset(); err != nil {
+		return errors.Wrap(err, "error resetting repo")
+	}
+	return errors.Wrap(repo.Clean(), "error cleaning repo")
 }
 
-// deleteAll deletes everything from the working copy of the specified repo
-// EXCEPT the .git directory.
-func (s *service) deleteAll(repo git.Repo) error {
-	files, err := filepath.Glob(filepath.Join(repo.WorkingDir(), "*"))
-	if err != nil {
-		return errors.Wrapf(err, "error listing files in %q", repo.WorkingDir())
-	}
-	for _, file := range files {
-		if _, fileName := filepath.Split(file); fileName == ".git" {
-			continue
-		}
-		if err = os.RemoveAll(file); err != nil {
-			return errors.Wrapf(err, "error deleting %q", file)
-		}
-	}
-	return nil
-}
-
-func (s *service) preRender(repo git.Repo, req RenderRequest) error {
-	logger := s.logger.WithFields(
-		log.Fields{
-			"repo":         req.RepoURL,
-			"targetBranch": req.TargetBranch,
-		},
-	)
-
+func (s *service) preRender(repo git.Repo, req RenderRequest) ([]byte, error) {
 	baseDir := filepath.Join(repo.WorkingDir(), "base")
 	envDir := filepath.Join(repo.WorkingDir(), req.TargetBranch)
 
@@ -328,30 +271,10 @@ func (s *service) preRender(repo git.Repo, req RenderRequest) error {
 	} else if req.ConfigManagement.Ytt != nil {
 		preRenderedBytes, err = ytt.Render(baseDir, envDir)
 	} else {
-		return errors.New(
+		return nil, errors.New(
 			"no configuration management strategy was specified by the request",
 		)
 	}
-	if err != nil {
-		return err
-	}
 
-	// Write/overwrite the pre-rendered config
-	allPath := filepath.Join(
-		repo.WorkingDir(),
-		".bookkeeper",
-		req.TargetBranch,
-		"all.yaml",
-	)
-	// nolint: gosec
-	if err = os.WriteFile(allPath, preRenderedBytes, 0644); err != nil {
-		return errors.Wrapf(
-			err,
-			"error writing pre-rendered configuration to %q in the default branch",
-			allPath,
-		)
-	}
-	logger.Debug("wrote pre-rendered configuration to the default branch")
-
-	return nil
+	return preRenderedBytes, err
 }
