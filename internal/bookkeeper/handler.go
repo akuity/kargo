@@ -68,7 +68,6 @@ func (h *handler) RenderConfig(w http.ResponseWriter, r *http.Request) {
 	// context to the logger.
 	logger = logger.WithFields(log.Fields{
 		"repo":         req.RepoURL,
-		"path":         req.Path,
 		"targetBranch": req.TargetBranch,
 	})
 
@@ -126,7 +125,6 @@ func (h *handler) UpdateImage(w http.ResponseWriter, r *http.Request) {
 	// context to the logger.
 	logger = logger.WithFields(log.Fields{
 		"repo":         req.RepoURL,
-		"path":         req.Path,
 		"targetBranch": req.TargetBranch,
 	})
 

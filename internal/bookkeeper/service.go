@@ -40,7 +40,8 @@ func (s *service) RenderConfig(
 		func(repo git.Repo) (string, error) {
 			// Ensure the existence of the directory into which we will pre-render
 			// intermediate state
-			bkEnvDir := filepath.Join(repo.WorkingDir(), ".bookkeeper", req.Path)
+			bkEnvDir :=
+				filepath.Join(repo.WorkingDir(), ".bookkeeper", req.TargetBranch)
 			if _, err := kustomize.EnsurePrerenderDir(bkEnvDir); err != nil {
 				return "", errors.Wrapf(
 					err,
@@ -78,7 +79,8 @@ func (s *service) UpdateImage(
 		func(repo git.Repo) (string, error) {
 			// Ensure the existence of the directory into which we will pre-render
 			// intermediate state
-			bkEnvDir := filepath.Join(repo.WorkingDir(), ".bookkeeper", req.Path)
+			bkEnvDir :=
+				filepath.Join(repo.WorkingDir(), ".bookkeeper", req.TargetBranch)
 			if created, err := kustomize.EnsurePrerenderDir(bkEnvDir); err != nil {
 				return "", errors.Wrapf(
 					err,
@@ -104,14 +106,14 @@ func (s *service) UpdateImage(
 			if len(req.Images) == 1 {
 				return fmt.Sprintf(
 					"bookkeeper: updating %s to use image %s:%s",
-					req.Path,
+					req.TargetBranch,
 					req.Images[0].Repo,
 					req.Images[0].Tag,
 				), nil
 			}
 			commitMsg := fmt.Sprintf(
 				"bookkeeper: updating %s to use new images",
-				req.Path,
+				req.TargetBranch,
 			)
 			for _, image := range req.Images {
 				commitMsg = fmt.Sprintf(
@@ -134,7 +136,6 @@ func (s *service) renderConfig(
 	logger := s.logger.WithFields(
 		log.Fields{
 			"repo":         req.RepoURL,
-			"path":         req.Path,
 			"targetBranch": req.TargetBranch,
 		},
 	)
@@ -183,7 +184,7 @@ func (s *service) renderConfig(
 	}
 
 	// Last mile rendering
-	bkEnvDir := filepath.Join(repo.WorkingDir(), ".bookkeeper", req.Path)
+	bkEnvDir := filepath.Join(repo.WorkingDir(), ".bookkeeper", req.TargetBranch)
 	renderedBytes, err := kustomize.Render(bkEnvDir)
 	if err != nil {
 		return res, errors.Wrapf(
@@ -306,13 +307,12 @@ func (s *service) preRender(repo git.Repo, req RenderRequest) error {
 	logger := s.logger.WithFields(
 		log.Fields{
 			"repo":         req.RepoURL,
-			"path":         req.Path,
 			"targetBranch": req.TargetBranch,
 		},
 	)
 
 	baseDir := filepath.Join(repo.WorkingDir(), "base")
-	envDir := filepath.Join(repo.WorkingDir(), req.Path)
+	envDir := filepath.Join(repo.WorkingDir(), req.TargetBranch)
 
 	// Use the caller's preferred config management tool for pre-rendering.
 	var preRenderedBytes []byte
@@ -337,8 +337,12 @@ func (s *service) preRender(repo git.Repo, req RenderRequest) error {
 	}
 
 	// Write/overwrite the pre-rendered config
-	allPath :=
-		filepath.Join(repo.WorkingDir(), ".bookkeeper", req.Path, "all.yaml")
+	allPath := filepath.Join(
+		repo.WorkingDir(),
+		".bookkeeper",
+		req.TargetBranch,
+		"all.yaml",
+	)
 	// nolint: gosec
 	if err = os.WriteFile(allPath, preRenderedBytes, 0644); err != nil {
 		return errors.Wrapf(

@@ -27,7 +27,6 @@ func (t *ticketReconciler) promote(
 	renderReq := bookkeeper.RenderRequest{
 		RepoURL:          app.Spec.Source.RepoURL,
 		RepoCreds:        repoCreds,
-		Path:             app.Spec.Source.TargetRevision,
 		TargetBranch:     app.Spec.Source.TargetRevision,
 		ConfigManagement: track.Spec.ConfigManagement,
 	}
