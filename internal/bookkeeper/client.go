@@ -54,7 +54,7 @@ func (c *client) UpdateImage(
 	ctx context.Context,
 	req ImageUpdateRequest,
 ) (Response, error) {
-	return c.doRequest(ctx, http.MethodPost, "update-image", req)
+	return c.doRequest(ctx, http.MethodPost, "update-images", req)
 }
 
 func (c *client) doRequest(
