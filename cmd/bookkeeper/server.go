@@ -49,6 +49,7 @@ func RunServer(ctx context.Context, config config.Config) error {
 		handler.UpdateImage,
 	).Methods(http.MethodPost)
 	router.HandleFunc("/healthz", libHTTP.Healthz).Methods(http.MethodGet)
+	router.HandleFunc("/version", libHTTP.Version).Methods(http.MethodGet)
 
 	return libHTTP.NewServer(
 		router,

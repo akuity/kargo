@@ -1,8 +1,6 @@
 package bookkeeper
 
 import (
-	"context"
-
 	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/akuityio/k8sta/internal/git"
 )
@@ -45,14 +43,4 @@ type Response struct {
 	// CommitID is the ID (sha) of the commit to the environment-specific branch
 	// containing the rendered configuration.
 	CommitID string `json:"commitID,omitempty"`
-}
-
-// Service is an interface for components that can handle bookkeeping requests.
-// Implementations of this interface are transport-agnostic.
-type Service interface {
-	// RenderConfig handles a bookkeeping request.
-	RenderConfig(context.Context, RenderRequest) (Response, error)
-	// UpdateImage handles a specialized bookkeeping request that updates
-	// environment-specific configuration to reference a new image.
-	UpdateImage(context.Context, ImageUpdateRequest) (Response, error)
 }
