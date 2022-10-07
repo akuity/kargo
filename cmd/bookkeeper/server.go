@@ -45,10 +45,11 @@ func RunServer(ctx context.Context, config config.Config) error {
 		handler.RenderConfig,
 	).Methods(http.MethodPost)
 	router.HandleFunc(
-		"/v1alpha1/update-image",
+		"/v1alpha1/update-images",
 		handler.UpdateImage,
 	).Methods(http.MethodPost)
 	router.HandleFunc("/healthz", libHTTP.Healthz).Methods(http.MethodGet)
+	router.HandleFunc("/version", libHTTP.Version).Methods(http.MethodGet)
 
 	return libHTTP.NewServer(
 		router,

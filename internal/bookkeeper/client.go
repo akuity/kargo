@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/akuityio/k8sta/internal/common/version"
 	"github.com/pkg/errors"
 )
 
@@ -18,6 +19,14 @@ type ClientOptions struct {
 	AllowInsecureConnections bool
 }
 
+// Client is an interface for components that can handle bookkeeping requests
+// by delegating to a remote server.
+type Client interface {
+	Service
+	// ServerVersion returns version information from the server.
+	ServerVersion(context.Context) (version.Version, error)
+}
+
 // client is an implementation of the Service interface that handles bookkeeping
 // requests by delegating to a remote server.
 type client struct {
@@ -25,9 +34,9 @@ type client struct {
 	httpClient *http.Client
 }
 
-// NewClient returns an implementation of the Service interface for
+// NewClient returns an implementation of the Client interface for
 // handling bookkeeping requests by delegating to a remote server.
-func NewClient(address string, opts *ClientOptions) Service {
+func NewClient(address string, opts *ClientOptions) Client {
 	if opts == nil {
 		opts = &ClientOptions{}
 	}
@@ -47,14 +56,33 @@ func (c *client) RenderConfig(
 	ctx context.Context,
 	req RenderRequest,
 ) (Response, error) {
-	return c.doRequest(ctx, http.MethodPost, "render-config", req)
+	res := Response{}
+	return res, c.doRequest(
+		ctx,
+		http.MethodPost,
+		"v1alpha1/render-config",
+		req,
+		&res,
+	)
 }
 
 func (c *client) UpdateImage(
 	ctx context.Context,
 	req ImageUpdateRequest,
 ) (Response, error) {
-	return c.doRequest(ctx, http.MethodPost, "update-image", req)
+	res := Response{}
+	return res, c.doRequest(
+		ctx,
+		http.MethodPost,
+		"v1alpha1/update-images",
+		req,
+		&res,
+	)
+}
+
+func (c *client) ServerVersion(ctx context.Context) (version.Version, error) {
+	ver := version.Version{}
+	return ver, c.doRequest(ctx, http.MethodGet, "version", nil, &ver)
 }
 
 func (c *client) doRequest(
@@ -62,43 +90,43 @@ func (c *client) doRequest(
 	method string,
 	path string,
 	body any,
-) (Response, error) {
-	res := Response{}
+	res any,
+) error {
 	var reqBodyReader io.Reader
 	if body != nil {
 		reqBodyBytes, err := json.Marshal(body)
 		if err != nil {
-			return res, errors.Wrap(err, "error marshaling HTTP(S) request body")
+			return errors.Wrap(err, "error marshaling HTTP(S) request body")
 		}
 		reqBodyReader = bytes.NewBuffer(reqBodyBytes)
 	}
 	httpReq, err := http.NewRequest(
 		method,
-		fmt.Sprintf("%s/v1alpha1/%s", c.address, path),
+		fmt.Sprintf("%s/%s", c.address, path),
 		reqBodyReader,
 	)
 	if err != nil {
-		return res, errors.Wrap(err, "error creating HTTP(S) request")
+		return errors.Wrap(err, "error creating HTTP(S) request")
 	}
 	httpReq = httpReq.WithContext(ctx)
 	httpReq.Header.Add("Content-Type", "application/json")
 	httpReq.Header.Add("Accept", "application/json")
 	httpRes, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return res, errors.Wrap(err, "error making HTTP(S) request")
+		return errors.Wrap(err, "error making HTTP(S) request")
 	}
 	if httpRes.StatusCode != http.StatusOK {
-		return res, errors.Errorf(
+		return errors.Errorf(
 			"HTTP(S) request received unexpected error code %d",
 			httpRes.StatusCode,
 		)
 	}
 	resBodyBytes, err := io.ReadAll(httpRes.Body)
 	if err != nil {
-		return res, errors.Wrap(err, "error reading HTTP(S) response body")
+		return errors.Wrap(err, "error reading HTTP(S) response body")
 	}
-	if err = json.Unmarshal(resBodyBytes, &res); err != nil {
-		return res, errors.Wrap(err, "error unmarshaling HTTP(S) response body")
+	if err = json.Unmarshal(resBodyBytes, res); err != nil {
+		return errors.Wrap(err, "error unmarshaling HTTP(S) response body")
 	}
-	return res, nil
+	return nil
 }

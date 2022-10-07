@@ -2,18 +2,17 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 
 	"github.com/akuityio/k8sta/cmd/bookkeeper"
+	"github.com/akuityio/k8sta/cmd/cli"
 	"github.com/akuityio/k8sta/cmd/controller"
 	"github.com/akuityio/k8sta/cmd/server"
-	"github.com/akuityio/k8sta/internal/common/version"
 )
 
 const binaryNameEnvVar = "K8STA_BINARY_NAME"
@@ -24,15 +23,6 @@ func main() {
 		binaryName = val
 	}
 
-	if len(os.Args) > 1 && os.Args[1] == "version" {
-		versionBytes, err := json.MarshalIndent(version.GetVersion(), "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(versionBytes))
-		return
-	}
-
 	ctx := context.Background()
 
 	config, err := k8staConfig()
@@ -41,8 +31,19 @@ func main() {
 	}
 
 	switch binaryName {
-	case "bookkeeper":
-		log.Fatal("the bookkeeper CLI is not implemented yet")
+	case "bookkeeper",
+		"bookkeeper-darwin-amd64", "bookkeeper-darwin-arm64",
+		"bookkeeper-linux-amd64", "bookkeeper-linux-arm64",
+		"bookkeeper.exe", "bookkeeper-windows-amd64.exe":
+		var cmd *cobra.Command
+		cmd, err = cli.NewRootCommand()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err = cmd.Execute(); err != nil {
+			// Cobra will display the error for us. No need to do it ourselves.
+			os.Exit(1)
+		}
 	case "bookkeeper-server":
 		err = bookkeeper.RunServer(ctx, config)
 	case "k8sta-controller":

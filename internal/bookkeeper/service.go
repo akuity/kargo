@@ -16,6 +16,16 @@ import (
 	"github.com/akuityio/k8sta/internal/ytt"
 )
 
+// Service is an interface for components that can handle bookkeeping requests.
+// Implementations of this interface are transport-agnostic.
+type Service interface {
+	// RenderConfig handles a bookkeeping request.
+	RenderConfig(context.Context, RenderRequest) (Response, error)
+	// UpdateImage handles a specialized bookkeeping request that updates
+	// environment-specific configuration to reference a new image.
+	UpdateImage(context.Context, ImageUpdateRequest) (Response, error)
+}
+
 type service struct {
 	logger *log.Logger
 }
