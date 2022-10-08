@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	api "github.com/akuityio/k8sta/api/v1alpha1"
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -24,24 +25,19 @@ func (t *ticketReconciler) promote(
 	}
 
 	// Call the Bookkeeping service
-	renderReq := bookkeeper.RenderRequest{
+	req := bookkeeper.RenderRequest{
 		RepoURL:          app.Spec.Source.RepoURL,
 		RepoCreds:        repoCreds,
 		TargetBranch:     app.Spec.Source.TargetRevision,
 		ConfigManagement: track.Spec.ConfigManagement,
 	}
-	var res bookkeeper.Response
-	if ticket.Change.BaseConfiguration != nil {
-		res, err = t.bookkeeperService.RenderConfig(ctx, renderReq)
-	} else {
-		res, err = t.bookkeeperService.UpdateImage(
-			ctx,
-			bookkeeper.ImageUpdateRequest{
-				RenderRequest: renderReq,
-				Images:        ticket.Change.NewImages.Images,
-			},
-		)
+	if ticket.Change.NewImages != nil {
+		req.Images = make([]string, len(ticket.Change.NewImages.Images))
+		for i, image := range ticket.Change.NewImages.Images {
+			req.Images[i] = fmt.Sprintf("%s:%s", image.Repo, image.Tag)
+		}
 	}
+	res, err := t.bookkeeperService.RenderConfig(ctx, req)
 	if err != nil {
 		return "", errors.Wrapf(err, "bookkeeping error")
 	}

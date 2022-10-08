@@ -21,9 +21,6 @@ import (
 type Service interface {
 	// RenderConfig handles a bookkeeping request.
 	RenderConfig(context.Context, RenderRequest) (Response, error)
-	// UpdateImage handles a specialized bookkeeping request that updates
-	// environment-specific configuration to reference a new image.
-	UpdateImage(context.Context, ImageUpdateRequest) (Response, error)
 }
 
 type service struct {
@@ -43,69 +40,6 @@ func NewService(config config.Config) Service {
 func (s *service) RenderConfig(
 	ctx context.Context,
 	req RenderRequest,
-) (Response, error) {
-	return s.renderConfig(
-		ctx,
-		req,
-		// This operation is nearly a no-op. It just returns a commit message based
-		// on the provided ID of the last commit to the default branch.
-		func(_, lastCommit string) (string, error) {
-			return fmt.Sprintf(
-				"bookkeeper: rendering configuration from %s",
-				lastCommit,
-			), nil
-		},
-	)
-}
-
-func (s *service) UpdateImage(
-	ctx context.Context,
-	req ImageUpdateRequest,
-) (Response, error) {
-	return s.renderConfig(
-		ctx,
-		req.RenderRequest,
-		// This operation runs kustomize edit set image and returns a commit message
-		// based on the provided ID of the last commit to the default branch.
-		func(bkDir, lastCommit string) (string, error) {
-			for _, image := range req.Images {
-				if err := kustomize.SetImage(bkDir, image); err != nil {
-					return "", errors.Wrapf(
-						err,
-						"error setting image in pre-render directory %q",
-						bkDir,
-					)
-				}
-			}
-			if len(req.Images) == 1 {
-				return fmt.Sprintf(
-					"bookkeeper: rendering configuration from %s with new image %s:%s",
-					lastCommit,
-					req.Images[0].Repo,
-					req.Images[0].Tag,
-				), nil
-			}
-			commitMsg := fmt.Sprintf(
-				"bookkeeper: rendering configuration from %s with new images",
-				lastCommit,
-			)
-			for _, image := range req.Images {
-				commitMsg = fmt.Sprintf(
-					"%s\n * %s:%s",
-					commitMsg,
-					image.Repo,
-					image.Tag,
-				)
-			}
-			return commitMsg, nil
-		},
-	)
-}
-
-func (s *service) renderConfig(
-	ctx context.Context,
-	req RenderRequest,
-	op func(bkDir, lastCommit string) (string, error),
 ) (Response, error) {
 	logger := s.logger.WithFields(
 		log.Fields{
@@ -161,9 +95,42 @@ func (s *service) renderConfig(
 	}
 	logger.Debugf("wrote pre-rendered configuration to %q", preRenderedPath)
 
-	commitMsg, err := op(bkDir, lastCommitID)
-	if err != nil {
-		return res, err
+	// Deal with new images if any were specified
+	var commitMsg string
+	if len(req.Images) == 0 {
+		commitMsg = fmt.Sprintf(
+			"bookkeeper: rendering configuration from %s",
+			lastCommitID,
+		)
+	} else {
+		for _, image := range req.Images {
+			if err = kustomize.SetImage(bkDir, image); err != nil {
+				return res, errors.Wrapf(
+					err,
+					"error setting image in pre-render directory %q",
+					bkDir,
+				)
+			}
+		}
+		if len(req.Images) == 1 {
+			commitMsg = fmt.Sprintf(
+				"bookkeeper: rendering configuration from %s with new image %s",
+				lastCommitID,
+				req.Images[0],
+			)
+		} else {
+			commitMsg = fmt.Sprintf(
+				"bookkeeper: rendering configuration from %s with new images",
+				lastCommitID,
+			)
+			for _, image := range req.Images {
+				commitMsg = fmt.Sprintf(
+					"%s\n * %s",
+					commitMsg,
+					image,
+				)
+			}
+		}
 	}
 
 	// Now take everything the last mile with kustomize and write the

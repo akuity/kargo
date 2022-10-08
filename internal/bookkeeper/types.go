@@ -23,17 +23,9 @@ type RenderRequest struct {
 	// tool is to be used and, if applicable, configuration options for the
 	// selected tool.
 	ConfigManagement api.ConfigManagementConfig `json:"configManagement,omitempty"` // nolint: lll
-}
-
-// ImageUpdateRequest is a request for Bookkeeper to edit environment-specific
-// configuration from the repository specified by RepoURL to include the image
-// specified by the Image field and then render that environment-specific
-// configuration into plain YAML in an environment-specific branch.
-type ImageUpdateRequest struct {
-	RenderRequest
 	// Images specifies images to incorporate into environment-specific
 	// configuration.
-	Images []api.Image `json:"images,omitempty"`
+	Images []string `json:"images,omitempty"`
 }
 
 // Response encapsulates details of a successful rendering of some some
