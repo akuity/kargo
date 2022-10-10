@@ -26,6 +26,9 @@ type RenderRequest struct {
 	// Images specifies images to incorporate into environment-specific
 	// configuration.
 	Images []string `json:"images,omitempty"`
+	// OpenPR specifies whether to open a PR against TargetBranch (true) instead
+	// of directly committing directly to it (false).
+	OpenPR bool `json:"openPR,omitempty"`
 }
 
 // Response encapsulates details of a successful rendering of some some
@@ -33,6 +36,11 @@ type RenderRequest struct {
 // branch.
 type Response struct {
 	// CommitID is the ID (sha) of the commit to the environment-specific branch
-	// containing the rendered configuration.
+	// containing the rendered configuration. This is only set when the OpenPR
+	// field of the corresponding RenderRequest was false.
 	CommitID string `json:"commitID,omitempty"`
+	// PullRequestURL is a URL for a pull request containing the rendered
+	// configuration. This is only set when the OpenPR field of the corresponding
+	// RenderRequest was true.
+	PullRequestURL string `json:"pullRequestURL,omitempty"`
 }

@@ -5,9 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
+	"github.com/google/go-github/v47/github"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/oauth2"
 
 	"github.com/akuityio/k8sta/internal/common/config"
 	"github.com/akuityio/k8sta/internal/git"
@@ -37,6 +42,7 @@ func NewService(config config.Config) Service {
 	return s
 }
 
+// nolint: gocyclo
 func (s *service) RenderConfig(
 	ctx context.Context,
 	req RenderRequest,
@@ -68,10 +74,15 @@ func (s *service) RenderConfig(
 		return res, err
 	}
 
-	// Switch to the target branch
-	if err = s.switchToTargetBranch(repo, req.TargetBranch); err != nil {
+	// Switch to the commit branch. The commit branch might be the target branch,
+	// but if req.OpenPR is true, it could be a new child of the target branch.
+	commitBranch, err := s.switchToCommitBranch(repo, req)
+	if err != nil {
 		return res, errors.Wrap(err, "error switching to target branch")
 	}
+	logger = logger.WithFields(log.Fields{
+		"commitBranch": commitBranch,
+	})
 
 	// Ensure the .bookkeeper directory exists and is set up correctly
 	bkDir := filepath.Join(repo.WorkingDir(), ".bookkeeper")
@@ -134,7 +145,7 @@ func (s *service) RenderConfig(
 	}
 
 	// Now take everything the last mile with kustomize and write the
-	// fully-rendered config to a target branch...
+	// fully-rendered config to the commit branch...
 
 	// Last mile rendering
 	fullyRenderedBytes, err := kustomize.Render(bkDir)
@@ -176,7 +187,7 @@ func (s *service) RenderConfig(
 	}
 	logger.Debug("committed fully-rendered configuration")
 
-	// Push the fully-rendered configuration to the remote target branch
+	// Push the fully-rendered configuration to the remote commit branch
 	if err = repo.Push(); err != nil {
 		return res, errors.Wrap(
 			err,
@@ -184,6 +195,44 @@ func (s *service) RenderConfig(
 		)
 	}
 	logger.Debug("pushed fully-rendered configuration")
+
+	// Open a PR if requested
+	//
+	// TODO: Support git providers other than GitHub
+	//
+	// TODO: Move this into its own github package
+	if req.OpenPR {
+		var owner, repo string
+		if owner, repo, err = parseGitHubURL(req.RepoURL); err != nil {
+			return res, err
+		}
+		githubClient := github.NewClient(
+			oauth2.NewClient(
+				ctx,
+				oauth2.StaticTokenSource(
+					&oauth2.Token{AccessToken: req.RepoCreds.Password},
+				),
+			),
+		)
+		var pr *github.PullRequest
+		if pr, _, err = githubClient.PullRequests.Create(
+			ctx,
+			owner,
+			repo,
+			&github.NewPullRequest{
+				// PR title is just the first line of the commit message
+				Title:               github.String(strings.Split(commitMsg, "\n")[0]),
+				Base:                github.String(req.TargetBranch),
+				Head:                github.String(commitBranch),
+				MaintainerCanModify: github.Bool(false),
+			},
+		); err != nil {
+			return res,
+				errors.Wrap(err, "error opening pull request to the target branch")
+		}
+		res.PullRequestURL = *pr.HTMLURL
+		return res, nil
+	}
 
 	// Get the ID of the last commit on the target branch
 	if res.CommitID, err = repo.LastCommitID(); err != nil {
@@ -197,37 +246,63 @@ func (s *service) RenderConfig(
 	return res, nil
 }
 
-func (s *service) switchToTargetBranch(
+func (s *service) switchToCommitBranch(
 	repo git.Repo,
-	targetBranch string,
-) error {
+	req RenderRequest,
+) (string, error) {
 	logger := s.logger.WithFields(
 		log.Fields{
 			"repo":         repo.URL(),
-			"targetBranch": targetBranch,
+			"targetBranch": req.TargetBranch,
 		},
 	)
+
+	var commitBranch = req.TargetBranch
+	if req.OpenPR {
+		commitBranch = fmt.Sprintf("bookkeeper/%s", uuid.NewV4().String())
+	}
+
 	// Check if the target branch exists on the remote
 	if envBranchExists,
-		err := repo.RemoteBranchExists(targetBranch); err != nil {
-		return errors.Wrap(err, "error checking for existence of target branch")
+		err := repo.RemoteBranchExists(req.TargetBranch); err != nil {
+		return commitBranch,
+			errors.Wrap(err, "error checking for existence of target branch")
 	} else if envBranchExists {
 		logger.Debug("target branch exists on remote")
-		if err = repo.Checkout(targetBranch); err != nil {
-			return errors.Wrap(err, "error checking out target branch")
+		if err = repo.Checkout(req.TargetBranch); err != nil {
+			return commitBranch,
+				errors.Wrap(err, "error checking out target branch")
 		}
 		logger.Debug("checked out target branch")
+		// If we're supposed to be opening a PR instead of committing directly to
+		// the target branch, we should create and check out a new child of the
+		// target branch.
+		if req.OpenPR {
+			if err = repo.CreateChildBranch(commitBranch); err != nil {
+				return commitBranch,
+					errors.Wrap(err, "error creating child of target branch")
+			}
+			logger.Debug("created child of target branch")
+		}
 	} else {
 		logger.Debug("target branch does not exist on remote")
-		if err = repo.CreateOrphanedBranch(targetBranch); err != nil {
-			return errors.Wrap(err, "error creating orphaned target branch")
+		// If we're supposed to be opening a PR instead of committing directly to
+		// the target branch, then we really cannot accommodate that scenario here
+		// because you cannot open a PR against a branch that doesn't exist.
+		if req.OpenPR {
+			return commitBranch,
+				errors.New("can not open a PR against a non-existing branch")
+		}
+		if err = repo.CreateOrphanedBranch(req.TargetBranch); err != nil {
+			return commitBranch,
+				errors.Wrap(err, "error creating orphaned target branch")
 		}
 		logger.Debug("created orphaned target branch")
 	}
 	if err := repo.Reset(); err != nil {
-		return errors.Wrap(err, "error resetting repo")
+		return commitBranch, errors.Wrap(err, "error resetting repo")
 	}
-	return errors.Wrap(repo.Clean(), "error cleaning repo")
+	return commitBranch, errors.Wrap(repo.Clean(), "error cleaning repo")
 }
 
 func (s *service) preRender(repo git.Repo, req RenderRequest) ([]byte, error) {
@@ -254,4 +329,13 @@ func (s *service) preRender(repo git.Repo, req RenderRequest) ([]byte, error) {
 	}
 
 	return preRenderedBytes, err
+}
+
+func parseGitHubURL(url string) (string, string, error) {
+	regex := regexp.MustCompile(`^https\://github\.com/([\w-]+)/([\w-]+).*`)
+	parts := regex.FindStringSubmatch(url)
+	if len(parts) != 3 {
+		return "", "", errors.Errorf("error parsing github repository URL %q", url)
+	}
+	return parts[1], parts[2], nil
 }
