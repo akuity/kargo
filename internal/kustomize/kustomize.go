@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/akuityio/k8sta/internal/common/file"
+	"github.com/akuityio/k8sta/internal/strings"
 )
 
 var kustomizationBytes = []byte(
@@ -57,17 +57,24 @@ func EnsureBookkeeperDir(dir string) error {
 // SetImage runs `kustomize edit set image ...` in the specified directory.
 // The specified directory must already exist and contain a kustomization.yaml
 // file.
-func SetImage(dir string, image api.Image) error {
+func SetImage(dir string, image string) error {
+	repo, _, err := strings.SplitLast(image, ":")
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"error parsing image name %q",
+			image,
+		)
+	}
 	cmd := exec.Command( // nolint: gosec
 		"kustomize",
 		"edit",
 		"set",
 		"image",
 		fmt.Sprintf(
-			"%s=%s:%s",
-			image.Repo,
-			image.Repo,
-			image.Tag,
+			"%s=%s",
+			repo,
+			image,
 		),
 	)
 	cmd.Dir = dir

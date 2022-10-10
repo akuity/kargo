@@ -29,11 +29,6 @@ func NewRootCommand() (*cobra.Command, error) {
 		return nil, err
 	}
 	command.AddCommand(renderCommand)
-	updateImagesCommand, err := newUpdateImagesCommand()
-	if err != nil {
-		return nil, err
-	}
-	command.AddCommand(updateImagesCommand)
 	command.AddCommand(newVersionCommand())
 	return command, nil
 }

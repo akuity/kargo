@@ -17,8 +17,56 @@ func newRenderCommand() (*cobra.Command, error) {
 		Long:  desc,
 		RunE:  runRenderCmd,
 	}
+	command.Flags().StringArrayP(
+		flagImage,
+		"i",
+		nil,
+		"specify a new image to apply to the final result (this flag may be "+
+			"used more than once)",
+	)
+	command.Flags().BoolP(
+		flagInsecure,
+		"k",
+		false,
+		"tolerate certificate errors for HTTPS connections",
+	)
 	command.Flags().AddFlagSet(flagSetOutput)
-	command.Flags().AddFlagSet(flagSetRender)
+	command.Flags().StringP(
+		flagRepo,
+		"r",
+		"",
+		"the URL of a remote gitops repo (required)",
+	)
+	command.Flags().StringP(
+		flagRepoPassword,
+		"p",
+		"",
+		"password or token for reading from and writing to the remote gitops "+
+			"repo (required; can also be set using the BOOKKEEPER_REPO_PASSWORD "+
+			"environment variable)",
+	)
+	command.Flags().StringP(
+		flagRepoUsername,
+		"u",
+		"",
+		"username for reading from and writing to the remote gitops repo "+
+			"(required can also be set using the BOOKKEEPER_REPO_USERNAME "+
+			"environment variable)",
+	)
+	command.Flags().StringP(
+		flagServer,
+		"s",
+		"",
+		"specify the address of the Bookkeeper server (required; can also be "+
+			"set using the BOOKKEEPER_SERVER environment variable)",
+	)
+	command.Flags().StringP(
+		flagTargetBranch,
+		"t",
+		"",
+		"the environment-specific branch to write fully-rendered configuration "+
+			"to (required)",
+	)
 	if err := command.MarkFlagRequired(flagRepo); err != nil {
 		return nil, err
 	}
@@ -28,29 +76,54 @@ func newRenderCommand() (*cobra.Command, error) {
 	if err := command.MarkFlagRequired(flagRepoPassword); err != nil {
 		return nil, err
 	}
-	if err := command.MarkFlagRequired(flagTargetBranch); err != nil {
+	if err := command.MarkFlagRequired(flagServer); err != nil {
 		return nil, err
 	}
-	command.Flags().AddFlagSet(flagSetServer)
-	if err := command.MarkFlagRequired(flagServer); err != nil {
+	if err := command.MarkFlagRequired(flagTargetBranch); err != nil {
 		return nil, err
 	}
 	return command, nil
 }
 
 func runRenderCmd(cmd *cobra.Command, args []string) error {
-	req, err := buildRenderRequest(cmd)
+	req := bookkeeper.RenderRequest{
+		ConfigManagement: v1alpha1.ConfigManagementConfig{
+			// TODO: Don't hard code this
+			Kustomize: &v1alpha1.KustomizeConfig{},
+		},
+	}
+	var err error
+	req.Images, err = cmd.Flags().GetStringArray(flagImage)
 	if err != nil {
 		return err
 	}
+	req.RepoURL, err = cmd.Flags().GetString(flagRepo)
+	if err != nil {
+		return err
+	}
+	req.RepoCreds.Username, err = cmd.Flags().GetString(flagRepoUsername)
+	if err != nil {
+		return err
+	}
+	req.RepoCreds.Password, err = cmd.Flags().GetString(flagRepoPassword)
+	if err != nil {
+		return err
+	}
+	req.TargetBranch, err = cmd.Flags().GetString(flagTargetBranch)
+	if err != nil {
+		return err
+	}
+
 	client, err := getClient(cmd)
 	if err != nil {
 		return err
 	}
+
 	res, err := client.RenderConfig(cmd.Context(), req)
 	if err != nil {
 		return err
 	}
+
 	outputFormat, err := cmd.Flags().GetString(flagOutput)
 	if err != nil {
 		return err
@@ -68,32 +141,6 @@ func runRenderCmd(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	return nil
-}
 
-func buildRenderRequest(cmd *cobra.Command) (bookkeeper.RenderRequest, error) {
-	req := bookkeeper.RenderRequest{
-		ConfigManagement: v1alpha1.ConfigManagementConfig{
-			// TODO: Don't hard code this
-			Kustomize: &v1alpha1.KustomizeConfig{},
-		},
-	}
-	var err error
-	req.RepoURL, err = cmd.Flags().GetString(flagRepo)
-	if err != nil {
-		return req, err
-	}
-	req.RepoCreds.Username, err = cmd.Flags().GetString(flagRepoUsername)
-	if err != nil {
-		return req, err
-	}
-	req.RepoCreds.Password, err = cmd.Flags().GetString(flagRepoPassword)
-	if err != nil {
-		return req, err
-	}
-	req.TargetBranch, err = cmd.Flags().GetString(flagTargetBranch)
-	if err != nil {
-		return req, err
-	}
-	return req, nil
+	return nil
 }

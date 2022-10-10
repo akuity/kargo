@@ -66,20 +66,6 @@ func (c *client) RenderConfig(
 	)
 }
 
-func (c *client) UpdateImage(
-	ctx context.Context,
-	req ImageUpdateRequest,
-) (Response, error) {
-	res := Response{}
-	return res, c.doRequest(
-		ctx,
-		http.MethodPost,
-		"v1alpha1/update-images",
-		req,
-		&res,
-	)
-}
-
 func (c *client) ServerVersion(ctx context.Context) (version.Version, error) {
 	ver := version.Version{}
 	return ver, c.doRequest(ctx, http.MethodGet, "version", nil, &ver)
