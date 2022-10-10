@@ -12,6 +12,7 @@ const (
 	flagOutput       = "output"
 	flagOutputJSON   = "json"
 	flagOutputYAML   = "yaml"
+	flagPR           = "pr"
 	flagRepo         = "repo"
 	flagRepoPassword = "repo-password"
 	flagRepoUsername = "repo-username"

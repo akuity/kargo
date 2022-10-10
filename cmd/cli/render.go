@@ -31,6 +31,12 @@ func newRenderCommand() (*cobra.Command, error) {
 		"tolerate certificate errors for HTTPS connections",
 	)
 	command.Flags().AddFlagSet(flagSetOutput)
+	command.Flags().Bool(
+		flagPR,
+		false,
+		"open a pull request against the target branch instead of committing "+
+			"rendered configuration directly",
+	)
 	command.Flags().StringP(
 		flagRepo,
 		"r",
@@ -97,6 +103,10 @@ func runRenderCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	req.OpenPR, err = cmd.Flags().GetBool(flagPR)
+	if err != nil {
+		return err
+	}
 	req.RepoURL, err = cmd.Flags().GetString(flagRepo)
 	if err != nil {
 		return err
@@ -130,12 +140,20 @@ func runRenderCmd(cmd *cobra.Command, args []string) error {
 	}
 	out := cmd.OutOrStdout()
 	if outputFormat == "" {
-		fmt.Fprintf(
-			out,
-			"Committed %s to branch %s\n",
-			res.CommitID,
-			req.TargetBranch,
-		)
+		if res.CommitID != "" {
+			fmt.Fprintf(
+				out,
+				"Committed %s to branch %s\n",
+				res.CommitID,
+				req.TargetBranch,
+			)
+		} else {
+			fmt.Fprintf(
+				out,
+				"Opened PR %s\n",
+				res.PullRequestURL,
+			)
+		}
 	} else {
 		if err := output(res, out, outputFormat); err != nil {
 			return err
