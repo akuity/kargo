@@ -36,6 +36,9 @@ type Repo interface {
 	WorkingDir() string
 	// Checkout checks out the specified branch.
 	Checkout(branch string) error
+	// CreateChildBranch creates a new branch that is a child of the current
+	// branch.
+	CreateChildBranch(branch string) error
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
@@ -231,6 +234,30 @@ func (r *repo) Checkout(branch string) error {
 		return errors.Wrapf(
 			err,
 			"error checking out branch %q from repo %q",
+			branch,
+			r.url,
+		)
+	}
+	r.currentBranch = branch
+	return nil
+}
+
+func (r *repo) CreateChildBranch(branch string) error {
+	cmd := exec.Command( // nolint: gosec
+		"git",
+		"checkout",
+		"-b",
+		branch,
+		// The next line makes it crystal clear to git that we're checking out
+		// a branch. We need to do this because branch names can often resemble
+		// paths within the repo.
+		"--",
+	)
+	cmd.Dir = r.dir
+	if _, err := r.execCommand(cmd); err != nil {
+		return errors.Wrapf(
+			err,
+			"error creating new branch %q for repo %q",
 			branch,
 			r.url,
 		)
