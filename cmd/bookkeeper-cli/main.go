@@ -1,16 +1,27 @@
-package cli
+package main
 
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
-	"github.com/akuityio/k8sta/internal/common/os"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
-func NewRootCommand() (*cobra.Command, error) {
+func main() {
+	cmd, err := newRootCommand()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err = cmd.Execute(); err != nil {
+		// Cobra will display the error for us. No need to do it ourselves.
+		os.Exit(1)
+	}
+}
+
+func newRootCommand() (*cobra.Command, error) {
 	const desc = "Bookkeeper renders environment-specific configurations to " +
 		"environment-specific branches of your gitops repos"
 	command := &cobra.Command{
@@ -47,7 +58,7 @@ func persistentPreRun(cmd *cobra.Command, _ []string) {
 							"_",
 						),
 					)
-					envVarValue := os.GetEnvVar(envVarName, "")
+					envVarValue := os.Getenv(envVarName)
 					if envVarValue != "" {
 						if err := cmd.Flags().Set(flag.Name, envVarValue); err != nil {
 							log.Fatal(err)

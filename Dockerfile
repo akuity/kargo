@@ -30,10 +30,11 @@ COPY . .
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -o bin/k8sta \
-      -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+      -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+      ./cmd/components \
+    && bin/k8sta version
 
 WORKDIR /k8sta/bin
-RUN ln -s k8sta bookkeeper
 RUN ln -s k8sta bookkeeper-server
 RUN ln -s k8sta k8sta-controller
 RUN ln -s k8sta k8sta-server
