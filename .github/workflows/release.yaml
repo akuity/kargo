@@ -52,6 +52,32 @@ jobs:
       with:
         image: ${{ steps.meta.outputs.tags }}
 
+  build-and-publish-bookkeeper-cli:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
+      credentials:
+        username: ${{ secrets.GH_USERNAME }}
+        password: ${{ secrets.GH_TOKEN }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: /go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Build Bookkeeper CLI
+      env:
+        SKIP_DOCKER: 'true'
+        VERSION: ${{ github.ref_name }}
+      run: make build-bookkeeper-cli
+    - name: Publish Bookkeeper CLI
+      uses: softprops/action-gh-release@v1
+      with:
+        files: bin/*
+
   publish-chart:
     needs: push
     runs-on: ubuntu-latest
