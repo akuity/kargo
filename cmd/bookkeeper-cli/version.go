@@ -1,4 +1,4 @@
-package cli
+package main
 
 import (
 	"github.com/akuityio/k8sta/internal/bookkeeper"

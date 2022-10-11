@@ -111,3 +111,25 @@ jobs:
         push: false
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+  build-bookkeeper-cli:
+    needs: [test-unit, lint, check-codegen, lint-chart]
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
+      credentials:
+        username: ${{ secrets.GH_USERNAME }}
+        password: ${{ secrets.GH_TOKEN }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: /go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Build Bookkeeper CLI
+      env:
+        SKIP_DOCKER: 'true'
+      run: make build-bookkeeper-cli

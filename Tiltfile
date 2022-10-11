@@ -20,12 +20,10 @@ docker_build(
   '.',
   only = [
     'api/',
-    'cmd/',
+    'cmd/components',
     'internal/',
-    'config.go',
     'go.mod',
-    'go.sum',
-    'main.go'
+    'go.sum'
   ],
   ignore = ['**/*_test.go']
 )
