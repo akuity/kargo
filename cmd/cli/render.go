@@ -17,6 +17,13 @@ func newRenderCommand() (*cobra.Command, error) {
 		Long:  desc,
 		RunE:  runRenderCmd,
 	}
+	command.Flags().StringP(
+		flagCommit,
+		"c",
+		"",
+		"specify a precise commit to render from; if this is not provided, "+
+			"Bookkeeper renders from the head of the default branch",
+	)
 	command.Flags().StringArrayP(
 		flagImage,
 		"i",
@@ -116,6 +123,10 @@ func runRenderCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	req.RepoCreds.Password, err = cmd.Flags().GetString(flagRepoPassword)
+	if err != nil {
+		return err
+	}
+	req.Commit, err = cmd.Flags().GetString(flagCommit)
 	if err != nil {
 		return err
 	}
