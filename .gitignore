@@ -1,3 +1,4 @@
 .vscode/
+bin/
 charts/k8sta/*.tgz
 coverage.txt
