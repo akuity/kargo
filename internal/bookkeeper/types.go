@@ -14,6 +14,10 @@ type RenderRequest struct {
 	// RepoCreds encapsulates read/write credentials for the remote GitOps
 	// repository referenced by the RepoURL field.
 	RepoCreds git.RepoCredentials `json:"repoCreds,omitempty"`
+	// Commit specifies a precise commit to render configuration from. When this
+	// is omitted, the request is assumed to be one to render from the head of the
+	// default branch.
+	Commit string `json:"commit,omitempty"`
 	// TargetBranch is the name of an environment-specific branch in the GitOps
 	// repository referenced by the RepoURL field into which plain YAML should be
 	// rendered. The path to environment-specific configuration in the

@@ -61,9 +61,13 @@ func (s *service) RenderConfig(
 		return res, errors.Wrap(err, "error cloning remote repository")
 	}
 	defer repo.Close()
-
-	lastCommitID, err := repo.LastCommitID()
-	if err != nil {
+	var sourceCommitID string
+	if req.Commit != "" {
+		if err = repo.Checkout(req.Commit); err != nil {
+			return res, errors.Wrapf(err, "error checking out %q", req.Commit)
+		}
+		sourceCommitID = req.Commit
+	} else if sourceCommitID, err = repo.LastCommitID(); err != nil {
 		return res,
 			errors.Wrap(err, "error getting last commit ID from the default branch")
 	}
@@ -111,7 +115,7 @@ func (s *service) RenderConfig(
 	if len(req.Images) == 0 {
 		commitMsg = fmt.Sprintf(
 			"bookkeeper: rendering configuration from %s",
-			lastCommitID,
+			sourceCommitID,
 		)
 	} else {
 		for _, image := range req.Images {
@@ -126,13 +130,13 @@ func (s *service) RenderConfig(
 		if len(req.Images) == 1 {
 			commitMsg = fmt.Sprintf(
 				"bookkeeper: rendering configuration from %s with new image %s",
-				lastCommitID,
+				sourceCommitID,
 				req.Images[0],
 			)
 		} else {
 			commitMsg = fmt.Sprintf(
 				"bookkeeper: rendering configuration from %s with new images",
-				lastCommitID,
+				sourceCommitID,
 			)
 			for _, image := range req.Images {
 				commitMsg = fmt.Sprintf(
