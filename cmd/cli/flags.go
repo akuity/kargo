@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	flagCommit       = "commit"
 	flagImage        = "image"
 	flagInsecure     = "insecure"
 	flagOutput       = "output"
