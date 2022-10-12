@@ -26,10 +26,9 @@ func (t *ticketReconciler) promote(
 
 	// Call the Bookkeeping service
 	req := bookkeeper.RenderRequest{
-		RepoURL:          app.Spec.Source.RepoURL,
-		RepoCreds:        repoCreds,
-		TargetBranch:     app.Spec.Source.TargetRevision,
-		ConfigManagement: track.Spec.ConfigManagement,
+		RepoURL:      app.Spec.Source.RepoURL,
+		RepoCreds:    repoCreds,
+		TargetBranch: app.Spec.Source.TargetRevision,
 	}
 	if ticket.Change.NewImages != nil {
 		req.Images = make([]string, len(ticket.Change.NewImages.Images))
