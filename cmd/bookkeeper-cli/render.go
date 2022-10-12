@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/akuityio/k8sta/internal/bookkeeper"
 	"github.com/spf13/cobra"
 )
@@ -99,12 +98,7 @@ func newRenderCommand() (*cobra.Command, error) {
 }
 
 func runRenderCmd(cmd *cobra.Command, args []string) error {
-	req := bookkeeper.RenderRequest{
-		ConfigManagement: v1alpha1.ConfigManagementConfig{
-			// TODO: Don't hard code this
-			Kustomize: &v1alpha1.KustomizeConfig{},
-		},
-	}
+	req := bookkeeper.RenderRequest{}
 	var err error
 	req.Images, err = cmd.Flags().GetStringArray(flagImage)
 	if err != nil {
