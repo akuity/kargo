@@ -1,7 +1,6 @@
 package bookkeeper
 
 import (
-	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/akuityio/k8sta/internal/git"
 )
 
@@ -23,10 +22,6 @@ type RenderRequest struct {
 	// rendered. The path to environment-specific configuration in the
 	// repository's default branch is inferred to be equal to this value.
 	TargetBranch string `json:"targetBranch,omitempty"`
-	// ConfigManagement encapsulates details of which configuration management
-	// tool is to be used and, if applicable, configuration options for the
-	// selected tool.
-	ConfigManagement api.ConfigManagementConfig `json:"configManagement,omitempty"` // nolint: lll
 	// Images specifies images to incorporate into environment-specific
 	// configuration.
 	Images []string `json:"images,omitempty"`

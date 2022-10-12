@@ -313,18 +313,24 @@ func (s *service) preRender(repo git.Repo, req RenderRequest) ([]byte, error) {
 	baseDir := filepath.Join(repo.WorkingDir(), "base")
 	envDir := filepath.Join(repo.WorkingDir(), req.TargetBranch)
 
+	repoConfig, err := LoadRepoConfig(repo.WorkingDir())
+	if err != nil {
+		return nil,
+			errors.Wrap(err, "error loading Bookkeeper configuration from repo")
+	}
+	branchConfig := repoConfig.GetBranchConfig(req.TargetBranch)
+
 	// Use the caller's preferred config management tool for pre-rendering.
 	var preRenderedBytes []byte
-	var err error
-	if req.ConfigManagement.Helm != nil {
+	if branchConfig.ConfigManagement.Helm != nil {
 		preRenderedBytes, err = helm.Render(
-			req.ConfigManagement.Helm.ReleaseName,
+			branchConfig.ConfigManagement.Helm.ReleaseName,
 			baseDir,
 			envDir,
 		)
-	} else if req.ConfigManagement.Kustomize != nil {
+	} else if branchConfig.ConfigManagement.Kustomize != nil {
 		preRenderedBytes, err = kustomize.Render(envDir)
-	} else if req.ConfigManagement.Ytt != nil {
+	} else if branchConfig.ConfigManagement.Ytt != nil {
 		preRenderedBytes, err = ytt.Render(baseDir, envDir)
 	} else {
 		return nil, errors.New(
