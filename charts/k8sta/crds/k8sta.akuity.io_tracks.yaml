@@ -35,28 +35,6 @@ spec:
           spec:
             description: Spec encapsulates the desired state of a Track.
             properties:
-              configManagement:
-                description: ConfigManagement encapsulates details of which configuration
-                  management tool is to be used for this Track and, if applicable,
-                  configuration options for the selected tool.
-                properties:
-                  helm:
-                    description: Helm encapsulates optional Helm configuration options.
-                    properties:
-                      releaseName:
-                        description: ReleaseName specified the release name that will
-                          be used when running `helm template <release name> <chart>
-                          --values <values>`
-                        type: string
-                    type: object
-                  kustomize:
-                    description: Kustomize encapsulates optional Kustomize configuration
-                      options.
-                    type: object
-                  ytt:
-                    description: Ytt encapsulates optional ytt configuration options.
-                    type: object
-                type: object
               disabled:
                 description: Disabled indicates whether this Track is disabled.
                 type: boolean
