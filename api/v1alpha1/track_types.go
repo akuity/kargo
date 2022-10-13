@@ -56,10 +56,6 @@ type TrackSpec struct {
 	// environments), a new Ticket will be created to effect progression of the
 	// change through the Track's Stations.
 	GitRepositorySubscription *GitRepositorySubscription `json:"gitRepositorySubscription,omitempty"` // nolint: lll
-	// ConfigManagement encapsulates details of which configuration management
-	// tool is to be used for this Track and, if applicable, configuration options
-	// for the selected tool.
-	ConfigManagement ConfigManagementConfig `json:"configManagement,omitempty"`
 	// Stations enumerates points along the Track through which a change
 	// represented by a Ticket may be progressed.
 	Stations []Station `json:"stations,omitempty"`
@@ -91,34 +87,6 @@ type ImageRepositorySubscription struct {
 type GitRepositorySubscription struct {
 	// RepoURL specifies the URL of the git repository to subscribe to.
 	RepoURL string `json:"repoURL,omitempty"`
-}
-
-// ConfigManagementConfig is a wrapper around more specific configuration for
-// one of three supported configuration management tools: helm, kustomize, or
-// ytt. Only one of its fields may be non-nil. Compare this to how a
-// EnvVarSource or VolumeSource works in the core Kubernetes API.
-type ConfigManagementConfig struct {
-	// Helm encapsulates optional Helm configuration options.
-	Helm *HelmConfig `json:"helm,omitempty"`
-	// Kustomize encapsulates optional Kustomize configuration options.
-	Kustomize *KustomizeConfig `json:"kustomize,omitempty"`
-	// Ytt encapsulates optional ytt configuration options.
-	Ytt *YttConfig `json:"ytt,omitempty"`
-}
-
-// HelmConfig encapsulates optional Helm configuration options.
-type HelmConfig struct {
-	// ReleaseName specified the release name that will be used when running
-	// `helm template <release name> <chart> --values <values>`
-	ReleaseName string `json:"releaseName,omitempty"`
-}
-
-// KustomizeConfig encapsulates optional Kustomize configuration options.
-type KustomizeConfig struct {
-}
-
-// YttConfig encapsulates optional ytt configuration options.
-type YttConfig struct {
 }
 
 // Station represents a single point on a Track through which a change
