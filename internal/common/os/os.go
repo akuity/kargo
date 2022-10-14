@@ -3,6 +3,7 @@ package os
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -30,6 +31,16 @@ func GetRequiredEnvVar(name string) (string, error) {
 		)
 	}
 	return val, nil
+}
+
+// GetStringSliceFromEnvVar retrieves comma-delimited values from an environment
+// variable having the specified name and populates a string slice.
+func GetStringSliceFromEnvVar(name string, defaultValue []string) []string {
+	valStr := os.Getenv(name)
+	if valStr == "" {
+		return defaultValue
+	}
+	return strings.Split(valStr, ",")
 }
 
 // GetIntFromEnvVar attempts to parse an integer from a string value retrieved

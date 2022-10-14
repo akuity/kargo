@@ -10,7 +10,8 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/akuityio/k8sta/cmd/components/bookkeeper"
+	bkAction "github.com/akuityio/k8sta/cmd/components/bookkeeper/action"
+	bkServer "github.com/akuityio/k8sta/cmd/components/bookkeeper/server"
 	"github.com/akuityio/k8sta/cmd/components/controller"
 	"github.com/akuityio/k8sta/cmd/components/server"
 	"github.com/akuityio/k8sta/internal/common/version"
@@ -41,8 +42,10 @@ func main() {
 	}
 
 	switch binaryName {
+	case "bookkeeper-action":
+		err = bkAction.Run(ctx, config)
 	case "bookkeeper-server":
-		err = bookkeeper.RunServer(ctx, config)
+		err = bkServer.RunServer(ctx, config)
 	case "k8sta-controller":
 		err = controller.RunController(ctx, config)
 	case "k8sta-server":
