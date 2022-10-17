@@ -283,11 +283,8 @@ metadata:
   name: k8sta-demo
   namespace: argo-cd
 spec:
-  imageRepositorySubscriptions:
   gitRepositorySubscription:
     repoURL: ${GITOPS_REPO_URL}
-  configManagement:
-    kustomize: {}
   stations:
   - name: dev
     applications:
