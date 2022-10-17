@@ -87,6 +87,7 @@ k8s_yaml(
     name = 'k8sta',
     namespace = 'k8sta',
     set = [
+      'bookkeeper.server.enabled=true',
       'bookkeeper.server.logLevel=DEBUG',
       'bookkeeper.server.service.type=NodePort',
       'bookkeeper.server.service.nodePort=30083',

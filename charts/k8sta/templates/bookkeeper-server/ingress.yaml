@@ -1,4 +1,4 @@
-{{- if .Values.bookkeeper.server.ingress.enabled }}
+{{- if and .Values.bookkeeper.server.enabled .Values.bookkeeper.server.ingress.enabled }}
 {{- $networkingApiIsStable := eq (include "networking.apiVersion.isStable" .) "true" -}}
 {{- $networkingApiSupportsIngressClassName := eq (include "networking.apiVersion.supportIngressClassName" .) "true" -}}
 apiVersion: {{ template "networking.apiVersion" . }}

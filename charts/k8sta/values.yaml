@@ -23,6 +23,13 @@ bookkeeper:
   ## All settings for the Bookkeeper server component
   server:
 
+    ## Optionally enable the Bookkeeper server. Other K8sTA components utilize
+    ## Bookkeeper libraries directly and do not require the Bookkeeper server in
+    ## order to function. Enable this only if you have use cases wherein you
+    ## wish to use Bookkeeper as a standalone service (i.e. without the rest of
+    ## K8sTA).
+    enabled: false
+
     replicas: 1
 
     logLevel: INFO

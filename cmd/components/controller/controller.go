@@ -63,10 +63,6 @@ func RunController(ctx context.Context, config config.Config) error {
 		settings.NewSettingsManager(ctx, kubeClient, ""),
 		kubeClient,
 	)
-	bookkeeperAddress, bookkeeperClientOpts, err := bookkeeperClientConfig()
-	if err != nil {
-		return errors.Wrap(err, "error getting Bookkeeper client configuration")
-	}
 
 	if err := controller.SetupTrackReconcilerWithManager(
 		ctx,
@@ -82,7 +78,7 @@ func RunController(ctx context.Context, config config.Config) error {
 		config,
 		mgr,
 		argoDB,
-		bookkeeper.NewClient(bookkeeperAddress, &bookkeeperClientOpts),
+		bookkeeper.NewService(config),
 	); err != nil {
 		return errors.Wrap(err, "error setting up Ticket reconciler")
 	}
