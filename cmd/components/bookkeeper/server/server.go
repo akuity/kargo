@@ -34,18 +34,10 @@ func RunServer(ctx context.Context, config config.Config) error {
 		"tls":     tlsStatus,
 	}).Info("Starting Bookkeeper Server")
 
-	handler := bookkeeper.NewHandler(
-		config,
-		bookkeeper.NewService(config),
-	)
 	router := mux.NewRouter()
 	router.StrictSlash(true)
-	router.HandleFunc(
-		"/v1alpha1/render-config",
-		handler.RenderConfig,
-	).Methods(http.MethodPost)
+	bookkeeper.SetupEndpoints(router, bookkeeper.NewService(config), config)
 	router.HandleFunc("/healthz", libHTTP.Healthz).Methods(http.MethodGet)
-	router.HandleFunc("/version", libHTTP.Version).Methods(http.MethodGet)
 
 	return libHTTP.NewServer(
 		router,

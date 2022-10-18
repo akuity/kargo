@@ -60,7 +60,7 @@ func (c *client) RenderConfig(
 	return res, c.doRequest(
 		ctx,
 		http.MethodPost,
-		"v1alpha1/render-config",
+		"v1alpha1/render",
 		req,
 		&res,
 	)
@@ -102,10 +102,7 @@ func (c *client) doRequest(
 		return errors.Wrap(err, "error making HTTP(S) request")
 	}
 	if httpRes.StatusCode != http.StatusOK {
-		return errors.Errorf(
-			"HTTP(S) request received unexpected error code %d",
-			httpRes.StatusCode,
-		)
+		return c.unmarshalToError(httpRes)
 	}
 	resBodyBytes, err := io.ReadAll(httpRes.Body)
 	if err != nil {
@@ -115,4 +112,30 @@ func (c *client) doRequest(
 		return errors.Wrap(err, "error unmarshaling HTTP(S) response body")
 	}
 	return nil
+}
+
+func (c *client) unmarshalToError(res *http.Response) error {
+	var resErr error
+	switch res.StatusCode {
+	case http.StatusBadRequest:
+		resErr = &ErrBadRequest{}
+	case http.StatusNotFound:
+		resErr = &ErrNotFound{}
+	case http.StatusConflict:
+		resErr = &ErrConflict{}
+	case http.StatusNotImplemented:
+		resErr = &ErrNotSupported{}
+	case http.StatusInternalServerError:
+		resErr = &ErrInternalServer{}
+	default:
+		return errors.Errorf("received %d from Bookkeeper server", res.StatusCode)
+	}
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return errors.Wrap(err, "error reading error response body")
+	}
+	if err = json.Unmarshal(bodyBytes, resErr); err != nil {
+		return errors.Wrap(err, "error unmarshaling error response body")
+	}
+	return resErr
 }
