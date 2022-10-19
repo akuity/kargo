@@ -20,7 +20,7 @@ docker_build(
   '.',
   only = [
     'api/',
-    'cmd/components',
+    'cmd/',
     'internal/',
     'go.mod',
     'go.sum'
