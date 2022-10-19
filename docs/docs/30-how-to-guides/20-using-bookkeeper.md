@@ -405,3 +405,39 @@ addressed in an upcoming release.
 workflow and should have sufficient permissions to both read from and write to
 your repository.
 :::
+
+## The K8sTA image
+
+The official K8sTA Docker image contains a "thick" variant of the Bookkeeper CLI
+that does not require a Bookkeeper server to support it.
+
+If you are integrating Bookkeeper into automated processes that are implemented
+with something other than GitHub Actions and those processes permit execution of
+commands within a Docker container (much as a GitHub action does), then
+utilizing the K8sTA image and this variant of the CLI is a convenient option.
+
+The thick CLI's interface is identical to that of the thin CLI's except that all
+server-related flags are absent. Example usage equivalent to the thin client
+example, therefore, resembles that example with the `--server` flag omitted:
+
+```shell
+docker run -it ghcr.io/akuityio/k8sta-prototype:v0.1.0-alpha.2-rc.3 \
+  bookkeeper render \
+  --repo https://github.com/<your GitHub handle>/bookkeeper-demo-deploy \
+  --repo-username <your GitHub handle> \
+  --repo-password <a GitHub personal access token> \
+  --target-branch env/dev
+```
+
+:::tip
+Although the exact procedure for emulating the example above with vary from one
+automation platform to the next, the K8sTA image and this variant of the CLI
+should permit you to integrate Bookkeeper with a broad range of automation
+platforms including, but not limited to, popular choices such as
+[CircleCI](https://circleci.com/) or [Travis CI](https://www.travis-ci.com/).
+:::
+
+:::caution
+This variant of the Bookkeeper CLI is not designed to be run anywhere except
+within a container based on the official K8sTA image.
+:::
