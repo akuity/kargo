@@ -322,6 +322,9 @@ inputs:
   personalAccessToken:
     description: 'A personal access token that allows Bookkeeper to write to your repository'
     required: true
+  commitSHA:
+    description: 'The ID of the commit from which you want to render configuration'
+    required: true
   targetBranch:
     description: 'The environment-specific branch for which you want to render configuration'
     required: true
@@ -372,13 +375,30 @@ jobs:
         uses: ./.github/actions/bookkeeper/
         with:
           personalAccessToken: ${{ secrets.GITHUB_TOKEN }}
+          commitSHA: ${{ github.sha }}
           targetBranch: env/dev
 ```
 
 In the example `render-dev-manifests` job above, you can see that rendering
 configuration into an environment-specific branch requires little more than
-providing a token and specifying the branch name. The action takes care of the
-rest.
+specifying the commit to render configuration from, providing a token, and
+specifying the branch name. The action takes care of the rest.
+
+:::caution
+`github.sha` is the ID of the commit that triggered the workflow. Depending on
+what your workflow looks like, this may or may not be the right value to provide
+for the `commitSHA` input. For instance, this value would be incorrect if your
+workflows "cascade" and rendering environment-specific configuration into a
+given branch is triggered by merge/push of environment-specific configuration
+into some logically "preceding" environment-specific branch. In such a case
+`github.sha` will point to a commit in an environment-specific branch and
+_won't_ point to the commit in the default branch from which configuration
+should be rendered.
+
+Bookkeeper has no convenient answer yet for how to determine the correct
+`commitSHA` value to use for cases such as this one, but this _will_ be
+addressed in an upcoming release.
+:::
 
 :::note
 `secrets.GITHUB_TOKEN` is automatically available in every GitHub Actions
