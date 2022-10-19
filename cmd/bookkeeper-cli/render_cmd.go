@@ -1,55 +1,51 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
-	"github.com/akuityio/k8sta/internal/bookkeeper"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+
+	"github.com/akuityio/k8sta/internal/bookkeeper"
+	"github.com/akuityio/k8sta/internal/common/config"
 )
 
-func newRenderCommand() (*cobra.Command, error) {
-	const desc = "Render environment-specific configuration from a remote " +
-		"gitops repo to an environment-specific branch"
-	command := &cobra.Command{
-		Use:   "render",
-		Short: desc,
-		Long:  desc,
-		RunE:  runRenderCmd,
-	}
-	command.Flags().StringP(
+var renderCmdFlagSet = pflag.NewFlagSet(
+	"render",
+	pflag.ErrorHandling(flag.ExitOnError),
+)
+
+func init() {
+	renderCmdFlagSet.AddFlagSet(flagSetOutput)
+	renderCmdFlagSet.StringP(
 		flagCommit,
 		"c",
 		"",
 		"specify a precise commit to render from; if this is not provided, "+
 			"Bookkeeper renders from the head of the default branch",
 	)
-	command.Flags().StringArrayP(
+	renderCmdFlagSet.StringArrayP(
 		flagImage,
 		"i",
 		nil,
 		"specify a new image to apply to the final result (this flag may be "+
 			"used more than once)",
 	)
-	command.Flags().BoolP(
-		flagInsecure,
-		"k",
-		false,
-		"tolerate certificate errors for HTTPS connections",
-	)
-	command.Flags().AddFlagSet(flagSetOutput)
-	command.Flags().Bool(
+	renderCmdFlagSet.Bool(
 		flagPR,
 		false,
 		"open a pull request against the target branch instead of committing "+
 			"rendered configuration directly",
 	)
-	command.Flags().StringP(
+	renderCmdFlagSet.StringP(
 		flagRepo,
 		"r",
 		"",
 		"the URL of a remote gitops repo (required)",
 	)
-	command.Flags().StringP(
+	renderCmdFlagSet.StringP(
 		flagRepoPassword,
 		"p",
 		"",
@@ -57,7 +53,7 @@ func newRenderCommand() (*cobra.Command, error) {
 			"repo (required; can also be set using the BOOKKEEPER_REPO_PASSWORD "+
 			"environment variable)",
 	)
-	command.Flags().StringP(
+	renderCmdFlagSet.StringP(
 		flagRepoUsername,
 		"u",
 		"",
@@ -65,36 +61,43 @@ func newRenderCommand() (*cobra.Command, error) {
 			"(required can also be set using the BOOKKEEPER_REPO_USERNAME "+
 			"environment variable)",
 	)
-	command.Flags().StringP(
-		flagServer,
-		"s",
-		"",
-		"specify the address of the Bookkeeper server (required; can also be "+
-			"set using the BOOKKEEPER_SERVER environment variable)",
-	)
-	command.Flags().StringP(
+	renderCmdFlagSet.StringP(
 		flagTargetBranch,
 		"t",
 		"",
 		"the environment-specific branch to write fully-rendered configuration "+
 			"to (required)",
 	)
-	if err := command.MarkFlagRequired(flagRepo); err != nil {
+}
+
+func newRenderCommand() (*cobra.Command, error) {
+	const desc = "Render environment-specific configuration from a remote " +
+		"gitops repo to an environment-specific branch"
+	cmd := &cobra.Command{
+		Use:   "render",
+		Short: desc,
+		Long:  desc,
+		RunE:  runRenderCmd,
+	}
+	cmd.Flags().AddFlagSet(renderCmdFlagSet)
+	if err := cmd.MarkFlagRequired(flagRepo); err != nil {
 		return nil, err
 	}
-	if err := command.MarkFlagRequired(flagRepoUsername); err != nil {
+	if err := cmd.MarkFlagRequired(flagRepoUsername); err != nil {
 		return nil, err
 	}
-	if err := command.MarkFlagRequired(flagRepoPassword); err != nil {
+	if err := cmd.MarkFlagRequired(flagRepoPassword); err != nil {
 		return nil, err
 	}
-	if err := command.MarkFlagRequired(flagServer); err != nil {
+	if cmd.Flags().Lookup(flagServer) != nil { // Thin CLI only
+		if err := cmd.MarkFlagRequired(flagServer); err != nil {
+			return nil, err
+		}
+	}
+	if err := cmd.MarkFlagRequired(flagTargetBranch); err != nil {
 		return nil, err
 	}
-	if err := command.MarkFlagRequired(flagTargetBranch); err != nil {
-		return nil, err
-	}
-	return command, nil
+	return cmd, nil
 }
 
 func runRenderCmd(cmd *cobra.Command, args []string) error {
@@ -129,12 +132,22 @@ func runRenderCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := getClient(cmd)
-	if err != nil {
-		return err
+	// Choose an appropriate implementation of the bookkeeper.Service interface
+	// based on whether this is the thin or thick CLI...
+	var svc bookkeeper.Service
+	if cmd.Flags().Lookup(flagServer) == nil { // Thick CLI
+		svc = bookkeeper.NewService(
+			config.Config{
+				LogLevel: log.FatalLevel,
+			},
+		)
+	} else { // Thin CLI
+		if svc, err = getClient(cmd); err != nil {
+			return err
+		}
 	}
 
-	res, err := client.RenderConfig(cmd.Context(), req)
+	res, err := svc.RenderConfig(cmd.Context(), req)
 	if err != nil {
 		return err
 	}

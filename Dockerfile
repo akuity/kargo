@@ -29,10 +29,16 @@ RUN go mod download
 COPY . .
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
-      -o bin/k8sta \
       -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+      -o bin/k8sta \
       ./cmd/components \
-    && bin/k8sta version
+    && bin/k8sta version \
+    && GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -tags thick \
+      -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+      -o bin/bookkeeper \
+      ./cmd/bookkeeper-cli \
+    && bin/bookkeeper version
 
 WORKDIR /k8sta/bin
 RUN ln -s k8sta bookkeeper-action

@@ -14,9 +14,9 @@ func output(obj any, out io.Writer, format string) error {
 	var bytes []byte
 	var err error
 	switch strings.ToLower(format) {
-	case "json":
+	case flagOutputJSON:
 		bytes, err = json.MarshalIndent(obj, "", "  ")
-	case "yaml":
+	case flagOutputYAML:
 		bytes, err = yaml.Marshal(obj)
 	default:
 		return errors.Errorf("unsupported output format %q", format)
