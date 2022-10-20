@@ -51,6 +51,10 @@ type Repo interface {
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
+	// HasDiffs returns a bool indicating whether the working directory currently
+	// contains any differences from what's already at the head of the current
+	// branch.
+	HasDiffs() (bool, error)
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
@@ -230,6 +234,14 @@ func (r *repo) CreateOrphanedBranch(branch string) error {
 	}
 	r.currentBranch = branch
 	return nil
+}
+
+func (r *repo) HasDiffs() (bool, error) {
+	cmd := exec.Command("git", "status", "-s")
+	cmd.Dir = r.dir
+	resBytes, err := r.execCommand(cmd)
+	return len(resBytes) > 0,
+		errors.Wrapf(err, "error checking status of branch %q", r.currentBranch)
 }
 
 func (r *repo) LastCommitID() (string, error) {
