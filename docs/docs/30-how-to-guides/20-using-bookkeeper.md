@@ -334,16 +334,16 @@ inputs:
     default: 'false'
 runs:
   using: 'docker'
-  image: 'krancour/mystery-image:v0.1.0-alpha.2-rc.3'
+  image: 'krancour/mystery-image:v0.1.0-alpha.2'
   entrypoint: 'bookkeeper-action'
 ```
 
 :::note
 The odd-looking reference to a Docker image named
-`krancour/mystery-image:v0.1.0-alpha.2-rc.3` is not a mistake. As previously
+`krancour/mystery-image:v0.1.0-alpha.2` is not a mistake. As previously
 noted, GitHub support for private actions is very poor. Among other things, this
 means there is no method of authenticating to a Docker registry to pull private
-images. `krancour/mystery-image:v0.1.0-alpha.2-rc.3` is a public copy of the
+images. `krancour/mystery-image:v0.1.0-alpha.2` is a public copy of the
 official K8sTA image. We hope that its obscure name prevents it from attracting
 much notice.
 :::
@@ -421,7 +421,7 @@ server-related flags are absent. Example usage equivalent to the thin client
 example, therefore, resembles that example with the `--server` flag omitted:
 
 ```shell
-docker run -it ghcr.io/akuityio/k8sta-prototype:v0.1.0-alpha.2-rc.3 \
+docker run -it ghcr.io/akuityio/k8sta-prototype:v0.1.0-alpha.2 \
   bookkeeper render \
   --repo https://github.com/<your GitHub handle>/bookkeeper-demo-deploy \
   --repo-username <your GitHub handle> \
