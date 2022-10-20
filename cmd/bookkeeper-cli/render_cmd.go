@@ -158,18 +158,26 @@ func runRenderCmd(cmd *cobra.Command, args []string) error {
 	}
 	out := cmd.OutOrStdout()
 	if outputFormat == "" {
-		if res.CommitID != "" {
+		switch res.ActionTaken {
+		case bookkeeper.ActionTakenPushedDirectly:
 			fmt.Fprintf(
 				out,
-				"Committed %s to branch %s\n",
+				"\nCommitted %s to branch %s\n",
 				res.CommitID,
 				req.TargetBranch,
 			)
-		} else {
+		case bookkeeper.ActionTakenOpenedPR:
 			fmt.Fprintf(
 				out,
-				"Opened PR %s\n",
+				"\nOpened PR %s\n",
 				res.PullRequestURL,
+			)
+		case bookkeeper.ActionTakenNone:
+			fmt.Fprintf(
+				out,
+				"\nNewly rendered configuration does not differ from the head of "+
+					"branch %s. No action was taken.\n",
+				req.TargetBranch,
 			)
 		}
 	} else {
