@@ -4,6 +4,25 @@ import (
 	"github.com/akuityio/k8sta/internal/git"
 )
 
+// ActionTaken indicates what action, if any was taken in response to a
+// RenderRequest.
+type ActionTaken string
+
+const (
+	// ActionTakenPushedDirectly represents the case where Bookkeeper responded
+	// to a RenderRequest by pushing a new commit directly to the target branch.
+	ActionTakenPushedDirectly ActionTaken = "PUSHED_DIRECTLY"
+	// ActionTakenOpenedPR represents the case where Bookkeeper responded to a
+	// RenderRequest by opening a new pull request against the target branch.
+	ActionTakenOpenedPR ActionTaken = "OPENED_PR"
+	// ActionTakenNone represents the case where Bookkeeper responded
+	// to a RenderRequest by, effectively, doing nothing. This occurs in cases
+	// where the fully rendered configuration that would have been written to the
+	// target branch does not differ from what is already present at the head of
+	// that branch.
+	ActionTakenNone ActionTaken = "NONE"
+)
+
 // RenderRequest is a request for Bookkeeper to render some environment-specific
 // configuration from the default branch of the repository specified by RepoURL
 // into plain YAML in an environment-specific branch.
@@ -34,6 +53,7 @@ type RenderRequest struct {
 // environment-specific configuration into plain YAML in an environment-specific
 // branch.
 type Response struct {
+	ActionTaken ActionTaken `json:"actionTaken,omitempty"`
 	// CommitID is the ID (sha) of the commit to the environment-specific branch
 	// containing the rendered configuration. This is only set when the OpenPR
 	// field of the corresponding RenderRequest was false.
