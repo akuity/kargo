@@ -40,7 +40,7 @@ permissions to pull packages, then:
 ```shell
 helm install k8sta \
   oci://ghcr.io/akuityio/k8sta-chart/k8sta \
-  --version v0.1.0-alpha.1 \
+  --version v0.1.0-alpha.2 \
   --create-namespace \
   --namespace k8sta \
   --wait
@@ -63,7 +63,7 @@ tweaking of the default configuration.
    ```shell
    helm inspect values \
      oci://ghcr.io/akuityio/k8sta-chart/k8sta \
-     --version v0.1.0-alpha.1 > ~/k8sta-values.yaml
+     --version v0.1.0-alpha.2 > ~/k8sta-values.yaml
    ```
 
 1. Edit the saved configuration. The following settings are of particular
@@ -213,7 +213,7 @@ tweaking of the default configuration.
    ```shell
    helm install k8sta \
      oci://ghcr.io/akuityio/k8sta-chart/k8sta \
-     --version v0.1.0-alpha.1 \
+     --version v0.1.0-alpha.2 \
      --create-namespace \
      --namespace k8sta \
      --values ~/k8sta-values.yaml \
