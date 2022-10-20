@@ -182,6 +182,17 @@ func (s *service) RenderConfig(
 		)
 	}
 
+	// Before committing, check if we actually have any diffs from the head of
+	// this branch. We'd have an error if we tried to commit with no diffs!
+	hasDiffs, err := repo.HasDiffs()
+	if err != nil {
+		return res, errors.Wrap(err, "error checking for diffs")
+	}
+	if !hasDiffs {
+		res.ActionTaken = ActionTakenNone
+		return res, nil
+	}
+
 	// Commit the fully-rendered configuration
 	if err = repo.AddAllAndCommit(commitMsg); err != nil {
 		return res, errors.Wrapf(
@@ -234,11 +245,13 @@ func (s *service) RenderConfig(
 			return res,
 				errors.Wrap(err, "error opening pull request to the target branch")
 		}
+		res.ActionTaken = ActionTakenOpenedPR
 		res.PullRequestURL = *pr.HTMLURL
 		return res, nil
 	}
 
 	// Get the ID of the last commit on the target branch
+	res.ActionTaken = ActionTakenPushedDirectly
 	if res.CommitID, err = repo.LastCommitID(); err != nil {
 		return res, errors.Wrap(
 			err,
