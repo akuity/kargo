@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuityio/k8sta/internal/bookkeeper"
+	"github.com/akuityio/bookkeeper"
 )
 
 func (t *ticketReconciler) promote(
@@ -26,8 +26,12 @@ func (t *ticketReconciler) promote(
 
 	// Call the Bookkeeping service
 	req := bookkeeper.RenderRequest{
-		RepoURL:      app.Spec.Source.RepoURL,
-		RepoCreds:    repoCreds,
+		RepoURL: app.Spec.Source.RepoURL,
+		RepoCreds: bookkeeper.RepoCredentials{
+			SSHPrivateKey: repoCreds.SSHPrivateKey,
+			Username:      repoCreds.Username,
+			Password:      repoCreds.Password,
+		},
 		TargetBranch: app.Spec.Source.TargetRevision,
 	}
 	if ticket.Change.NewImages != nil {

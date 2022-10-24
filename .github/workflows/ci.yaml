@@ -26,6 +26,10 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Allow access to private modules
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: Run unit tests
       env:
         SKIP_DOCKER: 'true'
@@ -47,6 +51,10 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Allow access to private modules
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: Run linter
       env:
         SKIP_DOCKER: 'true'
@@ -68,6 +76,10 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Allow access to private modules
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: Run Codegen
       env:
         SKIP_DOCKER: 'true'
@@ -111,25 +123,3 @@ jobs:
         push: false
         cache-from: type=gha
         cache-to: type=gha,mode=max
-
-  build-bookkeeper-cli:
-    needs: [test-unit, lint, check-codegen, lint-chart]
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
-      credentials:
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - uses: actions/cache@v3
-      with:
-        path: /go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-    - name: Build Bookkeeper CLI
-      env:
-        SKIP_DOCKER: 'true'
-      run: make build-bookkeeper-cli

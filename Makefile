@@ -56,23 +56,6 @@ codegen:
 	'
 
 ################################################################################
-# Build CLIs                                                                    #
-################################################################################
-
-.PHONY: build-bookkeeper-cli
-build-bookkeeper-cli:
-	$(DOCKER_CMD) sh -c ' \
-		VERSION=$(VERSION) \
-		OSES="linux darwin windows" \
-		ARCHS=amd64 \
-		./scripts/build-bookkeeper-cli.sh && \
-		VERSION=$(VERSION) \
-		OSES="linux darwin" \
-		ARCHS=arm64 \
-		./scripts/build-bookkeeper-cli.sh \
-	'
-
-################################################################################
 # Hack: Manage a kind cluster with Argo CD and, optionally, Istio and/or Argo  #
 # Rollouts pre-installed                                                       #
 ################################################################################
@@ -152,11 +135,3 @@ hack-add-istio:
 .PHONY: hack-kind-down
 hack-kind-down:
 	ctlptl delete -f hack/kind/cluster.yaml
-
-.PHONY: hack-build-bookkeeper-cli
-hack-build-bookkeeper-cli:
-	$(DOCKER_CMD) sh -c ' \
-		OSES=$(shell go env GOOS) \
-		ARCHS=$(shell go env GOARCH) \
-		./scripts/build-bookkeeper-cli.sh \
-	'
