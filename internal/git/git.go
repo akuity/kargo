@@ -313,28 +313,6 @@ func (r *repo) WorkingDir() string {
 // SetupAuth configures the git CLI for authentication using either SSH or the
 // "store" (username/password-based) credential helper.
 func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
-	// Configure the git client
-	cmd := exec.Command(
-		"git",
-		"config",
-		"--global",
-		"user.name",
-		"K8sTA Bookkeeper",
-	)
-	if _, err := r.execCommand(cmd); err != nil {
-		return errors.Wrapf(err, "error configuring git username")
-	}
-	cmd = exec.Command(
-		"git",
-		"config",
-		"--global",
-		"user.email",
-		"k8sta-bookkeeper@akuity.io",
-	)
-	if _, err := r.execCommand(cmd); err != nil {
-		return errors.Wrapf(err, "error configuring git user email address")
-	}
-
 	// If an SSH key was provided, use that.
 	if repoCreds.SSHPrivateKey != "" {
 		sshConfigPath := filepath.Join(r.homeDir, ".ssh", "config")
@@ -359,7 +337,7 @@ func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
 	// If we get to here, we're authenticating using a password
 
 	// Set up the credential helper
-	cmd = exec.Command("git", "config", "--global", "credential.helper", "store")
+	cmd := exec.Command("git", "config", "--global", "credential.helper", "store")
 	if _, err := r.execCommand(cmd); err != nil {
 		return errors.Wrapf(err, "error configuring git credential helper")
 	}

@@ -12,5 +12,4 @@ kindV1Alpha4Cluster:
       hostPort: 30081
     - containerPort: 30082 # K8sTA Server
       hostPort: 30082
-    - containerPort: 30083 # Bookkeeper Server
-      hostPort: 30083
+

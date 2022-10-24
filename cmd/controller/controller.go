@@ -12,8 +12,8 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/k8sta/api/v1alpha1"
-	"github.com/akuityio/k8sta/internal/bookkeeper"
 	"github.com/akuityio/k8sta/internal/common/config"
 	"github.com/akuityio/k8sta/internal/common/kubernetes"
 	"github.com/akuityio/k8sta/internal/common/version"
@@ -78,7 +78,11 @@ func RunController(ctx context.Context, config config.Config) error {
 		config,
 		mgr,
 		argoDB,
-		bookkeeper.NewService(config),
+		bookkeeper.NewService(
+			&bookkeeper.ServiceOptions{
+				LogLevel: bookkeeper.LogLevel(config.LogLevel),
+			},
+		),
 	); err != nil {
 		return errors.Wrap(err, "error setting up Ticket reconciler")
 	}
