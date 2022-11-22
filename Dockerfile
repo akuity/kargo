@@ -27,7 +27,7 @@ WORKDIR /k8sta/bin
 RUN ln -s k8sta k8sta-controller
 RUN ln -s k8sta k8sta-server
 
-FROM ghcr.io/akuityio/bookkeeper-prototype:v0.1.0-alpha.1-rc.2 as final
+FROM ghcr.io/akuityio/bookkeeper-prototype:v0.1.0-alpha.2-rc.2 as final
 
 USER root
 

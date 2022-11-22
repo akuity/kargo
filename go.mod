@@ -2,11 +2,11 @@ module github.com/akuityio/k8sta
 
 go 1.18
 
-replace github.com/akuityio/bookkeeper v0.1.0-alpha.1-rc.2 => github.com/akuityio/bookkeeper-prototype v0.1.0-alpha.1-rc.2
+replace github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.2 => github.com/akuityio/bookkeeper-prototype v0.1.0-alpha.2-rc.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
-	github.com/akuityio/bookkeeper v0.1.0-alpha.1-rc.2
+	github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.2
 	github.com/argoproj/gitops-engine v0.7.0
 	github.com/argoproj/pkg v0.11.1-0.20211203175135-36c59d8fafe0 // indirect
 	github.com/bombsimon/logrusr/v2 v2.0.1 // indirect
