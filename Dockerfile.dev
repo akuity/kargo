@@ -1,0 +1,14 @@
+FROM golang:1.19.3-bullseye
+
+ARG TARGETARCH
+
+ARG CONTROLLER_GEN_VERSION=v0.10.0
+ARG GOLANGCI_LINT_VERSION=1.49.0
+ARG HELM_VERSION=v3.10.0
+
+RUN go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} \
+    && cd /usr/local/bin \
+    && curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}.tar.gz \
+        | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}/golangci-lint --strip-components=1 \
+    && curl -sSfL https://get.helm.sh/helm-$HELM_VERSION-linux-${TARGETARCH}.tar.gz \
+        | tar xvz linux-${TARGETARCH}/helm --strip-components=1

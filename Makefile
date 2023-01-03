@@ -1,27 +1,23 @@
 SHELL ?= /bin/bash
 
-ifneq ($(SKIP_DOCKER),true)
-	DOCKER_CMD := docker run \
-		-it \
-		--rm \
-		-e SKIP_DOCKER=true \
-		-v gomodcache:/go/pkg/mod \
-		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/k8sta \
-		-w /workspaces/k8sta \
-		ghcr.io/akuityio/k8sta-tools:v0.3.0
-endif
-
 ################################################################################
 # Tests                                                                        #
+#                                                                              #
+# These targets are used by our continuous integration processes. Use these    #
+# directly at your own risk -- they assume required tools (and correct         #
+# versions thereof) to be present on your system.                              #
+#                                                                              #
+# If you prefer to execute these tasks in a container that is pre-loaded with  #
+# required tools, refer to the hacking section toward the bottom of this file. #
 ################################################################################
 
 .PHONY: lint
 lint:
-	$(DOCKER_CMD) golangci-lint run --config golangci.yaml
+	golangci-lint run --config golangci.yaml
 
 .PHONY: test-unit
 test-unit:
-	$(DOCKER_CMD) go test \
+	go test \
 		-v \
 		-timeout=120s \
 		-race \
@@ -31,11 +27,9 @@ test-unit:
 
 .PHONY: lint-chart
 lint-chart:
-	$(DOCKER_CMD) sh -c ' \
-		cd charts/k8sta && \
-		helm dep up && \
-		helm lint . \
-	'
+	cd charts/k8sta && \
+	helm dep up && \
+	helm lint .
 
 ################################################################################
 # Code generation: To be run after modifications to API types                  #
@@ -43,26 +37,75 @@ lint-chart:
 
 .PHONY: codegen
 codegen:
-	$(DOCKER_CMD) sh -c ' \
-		controller-gen \
-			rbac:roleName=manager-role \
-			crd \
-			webhook \
-			paths=./... \
-			output:crd:artifacts:config=charts/k8sta/crds && \
-		controller-gen \
-			object:headerFile=hack/boilerplate.go.txt \
-			paths=./... \
-	'
+	controller-gen \
+		rbac:roleName=manager-role \
+		crd \
+		webhook \
+		paths=./... \
+		output:crd:artifacts:config=charts/k8sta/crds && \
+	controller-gen \
+		object:headerFile=hack/boilerplate.go.txt \
+		paths=./... \
 
 ################################################################################
-# Hack: Manage a kind cluster with Argo CD and, optionally, Istio and/or Argo  #
-# Rollouts pre-installed                                                       #
+# Hack: Targets to help you hack                                               #
+#                                                                              #
+# These targets minimize required developer setup by executing in a container  #
+# that is pre-loaded with required tools.                                      #
 ################################################################################
+
+DOCKER_CMD := docker run \
+	-it \
+	--rm \
+	-v gomodcache:/go/pkg/mod \
+	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/k8sta \
+	-w /workspaces/k8sta \
+	k8sta:dev-tools
+
+.PHONY: hack-build-dev-tools
+hack-build-dev-tools:
+	docker build -f Dockerfile.dev -t k8sta:dev-tools .
+
+.PHONY: hack-lint
+hack-lint: hack-build-dev-tools
+	$(DOCKER_CMD) make lint
+
+.PHONY: hack-test-unit
+hack-test-unit: hack-build-dev-tools
+	$(DOCKER_CMD) make test-unit
+
+.PHONY: hack-lint-chart
+hack-lint-chart: hack-build-dev-tools
+	$(DOCKER_CMD) make lint-chart
+
+.PHONY: hack-codegen
+hack-codegen: hack-build-dev-tools
+	$(DOCKER_CMD) make codegen
+
+.PHONY: hack-build
+hack-build:
+	docker build . -t k8sta:dev
 
 .PHONY: hack-kind-up
 hack-kind-up:
 	ctlptl apply -f hack/kind/cluster.yaml
+	make hack-install-argocd
+
+.PHONY: hack-k3d-up
+hack-k3d-up:
+	ctlptl apply -f hack/k3d/cluster.yaml
+	make hack-install-argocd
+
+.PHONY: hack-kind-down
+hack-kind-down:
+	ctlptl delete -f hack/kind/cluster.yaml
+
+.PHONY: hack-k3d-down
+hack-k3d-down:
+	ctlptl delete -f hack/k3d/cluster.yaml
+
+.PHONY: hack-install-argocd
+hack-install-argocd:
 	helm upgrade argo-cd argo-cd \
 		--repo https://argoproj.github.io/argo-helm \
 		--version 5.5.6 \
@@ -131,7 +174,3 @@ hack-add-istio:
 		--set 'service.ports[2].protocol=TCP' \
 		--set 'service.ports[2].targetPort=443' \
 		--wait
-
-.PHONY: hack-kind-down
-hack-kind-down:
-	ctlptl delete -f hack/kind/cluster.yaml
