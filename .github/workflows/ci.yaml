@@ -13,10 +13,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
-      credentials:
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
+      image: golang:1.19.3-bullseye
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -31,17 +28,12 @@ jobs:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: Run unit tests
-      env:
-        SKIP_DOCKER: 'true'
       run: make test-unit
 
   lint:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
-      credentials:
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
+      image: golang:1.19.3-bullseye
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -55,18 +47,18 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
+    - name: Install linter
+      run: |
+        cd /usr/local/bin
+        curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v1.49.0/golangci-lint-1.49.0-linux-amd64.tar.gz \
+          | tar xvz golangci-lint-1.49.0-linux-amd64/golangci-lint --strip-components=1
     - name: Run linter
-      env:
-        SKIP_DOCKER: 'true'
       run: make lint
 
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
-      credentials:
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
+      image: golang:1.19.3-bullseye
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -80,9 +72,9 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
+    - name: Install controller-gen
+      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.10.0
     - name: Run Codegen
-      env:
-        SKIP_DOCKER: 'true'
       run: make codegen
     - name: Check nothing has changed
       run: git diff --exit-code -- .
@@ -90,16 +82,16 @@ jobs:
   lint-chart:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/akuityio/k8sta-tools:v0.3.0
-      credentials:
-        username: ${{ secrets.GH_USERNAME }}
-        password: ${{ secrets.GH_TOKEN }}
+      image: golang:1.19.3-bullseye
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+    - name: Install linter
+      run: |
+        cd /usr/local/bin
+        curl -sSfL https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz \
+        | tar xvz linux-amd64/helm --strip-components=1
     - name: Run linter
-      env:
-        SKIP_DOCKER: 'true'
       run: make lint-chart
 
   build:

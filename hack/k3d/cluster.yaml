@@ -1,0 +1,17 @@
+apiVersion: ctlptl.dev/v1alpha1
+kind: Cluster
+name: k3d-k8sta-dev-cluster
+product: k3d
+registry: k8sta-dev-registry
+k3d:
+  v1alpha4Simple:
+    ports:
+    - port: 30080:30080
+      nodeFilters:
+      - loadbalancer
+    - port: 30081:30081
+      nodeFilters:
+      - loadbalancer
+    - port: 30082:30082
+      nodeFilters:
+      - loadbalancer
