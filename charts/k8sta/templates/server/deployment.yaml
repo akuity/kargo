@@ -58,7 +58,6 @@ spec:
         {{- include "k8sta.selectorLabels" . | nindent 8 }}
         {{- include "k8sta.server.labels" . | nindent 8 }}
       annotations:
-        checksum/config-secret: {{ include (print $.Template.BasePath "/server/config-secret.yaml") . | sha256sum }}
         {{- if and .Values.server.tls.enabled (or .Values.server.tls.generateSelfSignedCert .Values.server.tls.cert) }}
         checksum/tls-cert: {{ sha256sum $tlsCert }}
         checksum/tls-key: {{ sha256sum $tlsKey }}
@@ -83,17 +82,12 @@ spec:
         - name: TLS_KEY_PATH
           value: /var/k8sta/certs/tls.key
         {{- end }}
-        - name: DOCKERHUB_TOKENS_PATH
-          value: /var/k8sta/secret-config/dockerhub-tokens.json
-        volumeMounts:
         {{- if .Values.server.tls.enabled }}
+        volumeMounts:
         - name: cert
           mountPath: /var/k8sta/certs
           readOnly: true
         {{- end }}
-        - name: secret-config
-          mountPath: /var/k8sta/secret-config
-          readOnly: true
         livenessProbe:
           httpGet:
             port: 8080
@@ -114,15 +108,12 @@ spec:
           periodSeconds: 10
         resources:
           {{- toYaml .Values.server.resources | nindent 10 }}
-      volumes:
       {{- if .Values.server.tls.enabled }}
+      volumes:
       - name: cert
         secret:
           secretName: {{ include "k8sta.server.fullname" . }}-cert
       {{- end }}
-      - name: secret-config
-        secret:
-          secretName: {{ include "k8sta.server.fullname" . }}-config
       {{- with .Values.server.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -38,8 +38,7 @@ k8s_resource(
   objects = [
     'k8sta-server:clusterrole',
     'k8sta-server:clusterrolebinding',
-    'k8sta-server:serviceaccount',
-    'k8sta-server-config:secret'
+    'k8sta-server:serviceaccount'
   ]
 )
 k8s_resource(
@@ -79,8 +78,7 @@ k8s_yaml(
       'server.logLevel=DEBUG',
       'server.service.type=NodePort',
       'server.service.nodePort=30082',
-      'server.tls.enabled=false',
-      'server.dockerhub.tokens.dev-token=insecure-dev-token'
+      'server.tls.enabled=false'
     ]
   )
 )
