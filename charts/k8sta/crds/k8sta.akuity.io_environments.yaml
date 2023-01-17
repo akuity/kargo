@@ -1,0 +1,379 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: environments.k8sta.akuity.io
+spec:
+  group: k8sta.akuity.io
+  names:
+    kind: Environment
+    listKind: EnvironmentList
+    plural: environments
+    singular: environment
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Environment is the K8sTA APIs main type.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec describes the sources of material used by the Environment
+              and how to incorporate newly observed materials into the Environment.
+            properties:
+              gitRepo:
+                description: GitRepo encapsulates the details of a Git repository.
+                  This field is a single place for these details, which are used or
+                  referenced widely throughout this API.
+                properties:
+                  branch:
+                    description: Branch references a particular branch of the repository.
+                      This field is optional. Leaving this unspecified is equivalent
+                      to specifying the repository's default branch, whatever that
+                      may happen to be -- typically "main" or "master".
+                    type: string
+                  url:
+                    description: URL is the repository's URL. This is a required field.
+                    type: string
+                type: object
+              healthChecks:
+                description: HealthChecks describes how the health of the Environment
+                  can be assessed on an ongoing basis. This is a required field.
+                properties:
+                  argoCDApps:
+                    description: ArgoCDApps specifies Argo CD Application resources
+                      whose sync status and health should be evaluated in assessing
+                      the health of the Environment.
+                    items:
+                      type: string
+                    type: array
+                type: object
+              promotionMechanisms:
+                description: PromotionMechanisms describes how to incorporate newly
+                  observed materials into the Environment. This is a required field.
+                properties:
+                  argoCD:
+                    description: ArgoCD describes actions that should be taken in
+                      Argo CD to incorporate newly observed materials into the Environment.
+                      This field is optional, as such actions are not required in
+                      all cases. Note that all actions specified by the ConfigManagement
+                      field, if any, are applied BEFORE these actions.
+                    properties:
+                      appUpdates:
+                        description: AppUpdates describes updates that should be applied
+                          to various Argo CD Application resources to incorporate
+                          newly observed materials into the Environment.
+                        items:
+                          description: ArgoCDAppUpdate describes updates that should
+                            be applied to various Argo CD Application resources to
+                            incorporate newly observed materials into an Environment.
+                          properties:
+                            name:
+                              description: Name specifies the name of an Argo CD Application
+                                resource to be updated.
+                              type: string
+                            refreshAndSync:
+                              description: RefreshAndSync is a bool indicating whether
+                                the specified Argo CD Application resource should
+                                be forcefully synced and refreshed. It defaults to
+                                false. You should set this to true if your Argo CD
+                                Application should sync and refresh after other promotion
+                                mechanisms (e.g. config management-based mechanisms)
+                                have been applied and your Argo CD Application is
+                                configured NOT to automatically sync and refresh.
+                                You may also set this to true even if your Argo CD
+                                Application IS configured to automatically sync and
+                                refresh and you would simply like to accelerate the
+                                promotion process.
+                              type: boolean
+                            updateTargetRevision:
+                              description: UpdateTargetRevision is a bool indicating
+                                whether the specified Argo CD Application resource
+                                should be updated such that its TargetRevision field
+                                points at the most recently observed commit in the
+                                Environment's Git repository. It defaults to false.
+                                When set to true, the affected Application resource
+                                will also be forcefully synced and refreshed after
+                                such an update regardless of the value of the RefreshAndSync
+                                field.
+                              type: boolean
+                          type: object
+                        type: array
+                    type: object
+                  configManagement:
+                    description: ConfigManagement describes actions that should be
+                      taken using various configuration management tools to incorporate
+                      newly observed materials into the Environment. This field is
+                      optional, as such actions are not required in all cases.
+                    properties:
+                      bookkeeper:
+                        description: Bookkeeper describes how to use Bookkeeper to
+                          incorporate newly observed materials into the Environment.
+                          This is mutually exclusive with the Kustomize and Helm fields.
+                        properties:
+                          targetBranch:
+                            description: 'TODO: Document this'
+                            type: string
+                        type: object
+                      helm:
+                        description: Helm describes how to use Helm to incorporate
+                          newly observed materials into the Environment. This is mutually
+                          exclusive with the Bookkeeper and Kustomize fields.
+                        properties:
+                          images:
+                            description: Images describes how specific image versions
+                              can be incorporated into Helm values files.
+                            items:
+                              description: HelmImageUpdate describes how a specific
+                                image version can be incorporated into a specific
+                                Helm values file.
+                              properties:
+                                image:
+                                  description: Image specifies a container image (without
+                                    tag). This is a required field.
+                                  type: string
+                                key:
+                                  description: Key specifies a key within the Helm
+                                    values file that is to be updated. This is a required
+                                    field.
+                                  type: string
+                                value:
+                                  description: Value specifies the new value for the
+                                    specified key in the specified Helm values file.
+                                    Valid values are "Image", which replaces the value
+                                    of the specified key with the entire <image name>:<tag>,
+                                    or "Tag" which replaces the value of the specified
+                                    with just the new tag. This is a required field.
+                                  type: string
+                                valuesFilePath:
+                                  description: ValuesFilePath specifies a path to
+                                    the Helm values file that is to be updated. This
+                                    is a required field.
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
+                      kustomize:
+                        description: Kustomize describes how to use Kustomize to incorporate
+                          newly observed materials into the Environment. This is mutually
+                          exclusive with the Bookkeeper and Helm fields.
+                        properties:
+                          images:
+                            description: Images describes images for which `kustomize
+                              edit set image` should be executed and the paths in
+                              which those commands should be executed.
+                            items:
+                              description: KustomizeImageUpdate describes how to run
+                                `kustomize edit set image` for a given image.
+                              properties:
+                                image:
+                                  description: Image specifies a container image (without
+                                    tag). This is a required field.
+                                  type: string
+                                path:
+                                  description: Path specifies a path in which the
+                                    `kustomize edit set image` command should be executed.
+                                    This is a required field.
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
+                    type: object
+                type: object
+              subscriptions:
+                description: Subscriptions describes the Environment's sources of
+                  material. This is a required field.
+                properties:
+                  repos:
+                    description: Repos describes various sorts of repositories an
+                      Environment uses as sources of material. This field is mutually
+                      exclusive with the UpstreamEnvs field.
+                    properties:
+                      git:
+                        description: Git indicates, when true, that there is a subscription
+                          to the Git repository described by the Environment's GitRepo
+                          field. When false, there is no such subscription.
+                        type: boolean
+                      images:
+                        description: Images describes subscriptions to container image
+                          repositories.
+                        items:
+                          description: ImageSubscription defines a subscription to
+                            an image repository.
+                          properties:
+                            allowTags:
+                              description: AllowTags is a regular expression that
+                                can optionally be used to limit the image tags that
+                                are considered in determining the newest version of
+                                an image. This field is optional.
+                              type: string
+                            ignoreTags:
+                              description: IgnoreTags is a list of tags that must
+                                be ignored when determining the newest version of
+                                an image. No regular expressions or glob patterns
+                                are supported yet. This field is optional.
+                              items:
+                                type: string
+                              type: array
+                            platform:
+                              description: Platform is a string of the form <os>/<arch>
+                                that limits the tags that can be considered when searching
+                                for new versions of an image. This field is optional.
+                                When left unspecified, it is implicitly equivalent
+                                to the OS/architecture of the K8sTA controller. Care
+                                should be taken to set this value correctly in cases
+                                where the image referenced by this ImageRepositorySubscription
+                                will run on a Kubernetes node with a different OS/architecture
+                                than the K8sTA controller. At present this is uncommon,
+                                but not unheard of.
+                              type: string
+                            pullSecret:
+                              description: PullSecret is a reference to a Kubernetes
+                                Secret containing repository credentials. If left
+                                unspecified, K8sTA will fall back on globally configured
+                                repository credentials, if they exist.
+                              type: string
+                            repoURL:
+                              description: RepoURL specifies the URL of the image
+                                repository to subscribe to. The value in this field
+                                MUST NOT include an image tag. This field is required.
+                              type: string
+                            semverConstraint:
+                              description: SemverConstraint specifies constraints
+                                on what new image versions are permissible. This value
+                                in this field only has any effect when the UpdateStrategy
+                                is SemVer or left unspecified (which is implicitly
+                                the same as SemVer). This field is also optional.
+                                When left unspecified, (and the UpdateStrategy is
+                                SemVer or unspecified), there will be no constraints,
+                                which means the latest semantically tagged version
+                                of an image will always be used. Care should be taken
+                                with leaving this field unspecified, as it can lead
+                                to the unanticipated rollout of breaking changes.
+                                Refer to Image Updater documentation for more details.
+                              type: string
+                            updateStrategy:
+                              description: UpdateStrategy specifies the rules for
+                                how to identify the newest version of the image specified
+                                by the RepoURL field. This field is optional. When
+                                left unspecified, the field is implicitly treated
+                                as if its value were "SemVer".
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  upstreamEnvs:
+                    description: UpstreamEnvs identifies other environments as potential
+                      sources of material for the Environment. This field is mutually
+                      exclusive with the Repos field.
+                    items:
+                      type: string
+                    type: array
+                type: object
+            type: object
+          status:
+            description: Status describes the most recently observed versions of this
+              Environment's sources of material as well as the environment's current
+              and recent states.
+            properties:
+              error:
+                description: 'TODO: Document this'
+                type: string
+              states:
+                description: States is a stack of recent Environment states, where
+                  each state is essentially a "bill of materials" describing what
+                  was deployed to the Environment. By default, the last ten states
+                  are stored.
+                items:
+                  description: EnvironmentState is a "bill of materials" describing
+                    what was deployed to an Environment.
+                  properties:
+                    gitCommit:
+                      description: GitCommit describes a specific Git repository commit
+                        that was used in this state.
+                      properties:
+                        actualID:
+                          description: HealthCheckID is the ID of a specific commit
+                            in the Git repository specified by RepoURL. The sync state
+                            and health of Argo CD Application resources associated
+                            with the Environment are often evaluated as part of an
+                            assessment of overall Environment health. In some cases,
+                            the commit ID that Application resources should be synced
+                            to may differ from he commit ID in the ID field (which
+                            specifies a source of materials). When a value exists
+                            in this field, it will be used in determining whether
+                            Application resources associated with this Environment
+                            are synced. When the value of this field is unspecified,
+                            that assessment will fall back on using the value from
+                            the ID field.
+                          type: string
+                        id:
+                          description: ID is the ID of a specific commit in the Git
+                            repository specified by RepoURL.
+                          type: string
+                        repoURL:
+                          description: RepoURL is the URL of a Git repository.
+                          type: string
+                      type: object
+                    health:
+                      description: Health is the state's last observed health. If
+                        this state is the Environment's current state, this will be
+                        continuously re-assessed and updated. If this state is a past
+                        state of the Environment, this field will denote the last
+                        observed health state before transitioning into a different
+                        state.
+                      properties:
+                        status:
+                          description: Status describes the health of the Environment.
+                          type: string
+                        statusReason:
+                          description: StatusReason clarifies why an Environment in
+                            any state other than Healthy is in that state. The value
+                            of this field will always be the empty string when an
+                            Environment is Healthy.
+                          type: string
+                      type: object
+                    id:
+                      description: ID is a unique, system-assigned identifier for
+                        this state.
+                      type: string
+                    images:
+                      description: Images describes container images and versions
+                        thereof that were used in this state.
+                      items:
+                        description: Image describes a specific version of a container
+                          image.
+                        properties:
+                          repoURL:
+                            description: RepoURL describes the repository in which
+                              the image can be found.
+                            type: string
+                          tag:
+                            description: Tag identifies a specific version of the
+                              image in the repository specified by RepoURL.
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
