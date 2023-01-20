@@ -8,12 +8,12 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/akuityio/k8sta/internal/common/config"
-	libHTTP "github.com/akuityio/k8sta/internal/common/http"
-	"github.com/akuityio/k8sta/internal/common/version"
+	"github.com/akuityio/kargo/internal/common/config"
+	libHTTP "github.com/akuityio/kargo/internal/common/http"
+	"github.com/akuityio/kargo/internal/common/version"
 )
 
-// RunServer configures and runs the K8sTA Server.
+// RunServer configures and runs the Kargo Server.
 func RunServer(ctx context.Context, config config.Config) error {
 	version := version.GetVersion()
 
@@ -31,15 +31,15 @@ func RunServer(ctx context.Context, config config.Config) error {
 		"commit":  version.GitCommit,
 		"port":    serverConfig.Port,
 		"tls":     tlsStatus,
-	}).Info("Starting K8sTA Server")
+	}).Info("Starting Kargo Server")
 
 	// TODO: We will probably want to uncomment this in the future, because it's
 	// the key to giving any handlers we register below the ability to manipulate
-	// the K8sTA API.
+	// the Kargo API.
 
 	// scheme := runtime.NewScheme()
 	// if err = api.AddToScheme(scheme); err != nil {
-	// 	return errors.Wrap(err, "error adding K8sTA API to scheme")
+	// 	return errors.Wrap(err, "error adding Kargo API to scheme")
 	// }
 	// controllerRuntimeClient, err := client.New(scheme)
 	// if err != nil {

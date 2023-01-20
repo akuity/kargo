@@ -6,10 +6,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuityio/k8sta/internal/common/config"
+	"github.com/akuityio/kargo/internal/common/config"
 )
 
-func TestK8sTAConfig(t *testing.T) {
+func TestKargoConfig(t *testing.T) {
 	testCases := []struct {
 		name       string
 		setup      func()
@@ -41,7 +41,7 @@ func TestK8sTAConfig(t *testing.T) {
 			if testCase.setup != nil {
 				testCase.setup()
 			}
-			config, err := k8staConfig()
+			config, err := kargoConfig()
 			testCase.assertions(config, err)
 		})
 	}

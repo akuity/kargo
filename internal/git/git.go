@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	libExec "github.com/akuityio/k8sta/internal/exec"
+	libExec "github.com/akuityio/kargo/internal/exec"
 )
 
 // RepoCredentials represents the credentials for connecting to a private git
@@ -318,7 +318,7 @@ func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
 		"config",
 		"--global",
 		"user.name",
-		"K8sTA",
+		"Kargo",
 	)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
@@ -329,7 +329,7 @@ func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
 		"config",
 		"--global",
 		"user.email",
-		"k8sta@akuity.io",
+		"kargo@akuity.io",
 	)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
 	if _, err := libExec.Exec(cmd); err != nil {

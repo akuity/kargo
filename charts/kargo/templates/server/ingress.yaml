@@ -4,10 +4,10 @@
 apiVersion: {{ template "networking.apiVersion" . }}
 kind: Ingress
 metadata:
-  name: {{ include "k8sta.server.fullname" . }}
+  name: {{ include "kargo.server.fullname" . }}
   labels:
-    {{- include "k8sta.labels" . | nindent 4 }}
-    {{- include "k8sta.server.labels" . | nindent 4 }}
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.server.labels" . | nindent 4 }}
   {{- with .Values.server.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -25,7 +25,7 @@ spec:
         path: /
         backend:
           service:
-            name: {{ include "k8sta.server.fullname" . }}
+            name: {{ include "kargo.server.fullname" . }}
             port:
               {{- if .Values.server.tls.enabled }}
               number: 443
@@ -34,7 +34,7 @@ spec:
               {{- end }}
       {{- else }}
       - backend:
-          serviceName: {{ include "k8sta.server.fullname" . }}
+          serviceName: {{ include "kargo.server.fullname" . }}
           {{- if .Values.server.tls.enabled }}
           servicePort: 443
           {{- else }}
@@ -45,6 +45,6 @@ spec:
   tls:
   - hosts:
     - {{ .Values.server.host }}
-    secretName: {{ include "k8sta.server.fullname" . }}-ingress-cert
+    secretName: {{ include "kargo.server.fullname" . }}-ingress-cert
   {{- end }}
 {{- end }}

@@ -8,15 +8,15 @@ if 'ENABLE_NGROK_EXTENSION' in os.environ and os.environ['ENABLE_NGROK_EXTENSION
 trigger_mode(TRIGGER_MODE_MANUAL)
 
 load('ext://namespace', 'namespace_create')
-namespace_create('k8sta')
+namespace_create('kargo')
 k8s_resource(
   new_name = 'namespace',
-  objects = ['k8sta:namespace'],
-  labels = ['k8sta']
+  objects = ['kargo:namespace'],
+  labels = ['kargo']
 )
 
 docker_build(
-  'ghcr.io/akuityio/k8sta-prototype',
+  'ghcr.io/akuityio/kargo-prototype',
   '.',
   only = [
     'api/',
@@ -28,50 +28,50 @@ docker_build(
   ignore = ['**/*_test.go']
 )
 k8s_resource(
-  workload = 'k8sta-server',
+  workload = 'kargo-server',
   new_name = 'server',
   port_forwards = '30082:8080',
-  labels = ['k8sta']
+  labels = ['kargo']
 )
 k8s_resource(
   workload = 'server',
   objects = [
-    'k8sta-server:clusterrole',
-    'k8sta-server:clusterrolebinding',
-    'k8sta-server:serviceaccount'
+    'kargo-server:clusterrole',
+    'kargo-server:clusterrolebinding',
+    'kargo-server:serviceaccount'
   ]
 )
 k8s_resource(
-  workload = 'k8sta-controller',
+  workload = 'kargo-controller',
   new_name = 'controller',
-  labels = ['k8sta']
+  labels = ['kargo']
 )
 k8s_resource(
   workload = 'controller',
   objects = [
-    'k8sta-controller:clusterrole',
-    'k8sta-controller:clusterrolebinding',
-    'k8sta-controller:serviceaccount'
+    'kargo-controller:clusterrole',
+    'kargo-controller:clusterrolebinding',
+    'kargo-controller:serviceaccount'
   ]
 )
 k8s_resource(
   new_name = 'crds',
   objects = [
-    'environments.k8sta.akuity.io:customresourcedefinition'
+    'environments.kargo.akuity.io:customresourcedefinition'
   ],
-  labels = ['k8sta']
+  labels = ['kargo']
 )
 k8s_resource(
   new_name = 'image-pull-secret',
-  objects = ['k8sta-image-pull-secret:secret'],
-  labels = ['k8sta']
+  objects = ['kargo-image-pull-secret:secret'],
+  labels = ['kargo']
 )
 
 k8s_yaml(
   helm(
-    './charts/k8sta',
-    name = 'k8sta',
-    namespace = 'k8sta',
+    './charts/kargo',
+    name = 'kargo',
+    namespace = 'kargo',
     set = [
       'controller.logLevel=DEBUG',
       'server.logLevel=DEBUG',

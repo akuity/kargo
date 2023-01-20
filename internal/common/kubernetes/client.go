@@ -6,7 +6,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/akuityio/k8sta/internal/common/os"
+	"github.com/akuityio/kargo/internal/common/os"
 )
 
 // Client returns an implementation of kubernetes.Interface.

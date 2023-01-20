@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: environments.k8sta.akuity.io
+  name: environments.kargo.akuity.io
 spec:
-  group: k8sta.akuity.io
+  group: kargo.akuity.io
   names:
     kind: Environment
     listKind: EnvironmentList
@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Environment is the K8sTA APIs main type.
+        description: Environment is the Kargo API's main type.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -235,17 +235,17 @@ spec:
                                 that limits the tags that can be considered when searching
                                 for new versions of an image. This field is optional.
                                 When left unspecified, it is implicitly equivalent
-                                to the OS/architecture of the K8sTA controller. Care
+                                to the OS/architecture of the Kargo controller. Care
                                 should be taken to set this value correctly in cases
                                 where the image referenced by this ImageRepositorySubscription
                                 will run on a Kubernetes node with a different OS/architecture
-                                than the K8sTA controller. At present this is uncommon,
+                                than the Kargo controller. At present this is uncommon,
                                 but not unheard of.
                               type: string
                             pullSecret:
                               description: PullSecret is a reference to a Kubernetes
                                 Secret containing repository credentials. If left
-                                unspecified, K8sTA will fall back on globally configured
+                                unspecified, Kargo will fall back on globally configured
                                 repository credentials, if they exist.
                               type: string
                             repoURL:

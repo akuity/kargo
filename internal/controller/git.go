@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/akuityio/k8sta/api/v1alpha1"
-	"github.com/akuityio/k8sta/internal/git"
+	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/git"
 )
 
 func (e *environmentReconciler) getLatestCommit(

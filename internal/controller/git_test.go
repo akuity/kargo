@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	api "github.com/akuityio/k8sta/api/v1alpha1"
-	"github.com/akuityio/k8sta/internal/git"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+
+	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/git"
 )
 
 func TestGetLatestCommit(t *testing.T) {

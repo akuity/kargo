@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuityio/k8sta/internal/common/http"
+	"github.com/akuityio/kargo/internal/common/http"
 )
 
 func TestServerConfig(t *testing.T) {

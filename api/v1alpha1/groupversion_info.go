@@ -1,7 +1,7 @@
-// Package v1alpha1 contains API Schema definitions for the k8sta v1alpha1 API
+// Package v1alpha1 contains API Schema definitions for the kargo v1alpha1 API
 // group
-//+kubebuilder:object:generate=true
-//+groupName=k8sta.akuity.io
+// +kubebuilder:object:generate=true
+// +groupName=kargo.akuity.io
 package v1alpha1
 
 import (
@@ -12,7 +12,7 @@ import (
 var (
 	// GroupVersion is group version used to register these objects
 	GroupVersion = schema.GroupVersion{
-		Group:   "k8sta.akuity.io",
+		Group:   "kargo.akuity.io",
 		Version: "v1alpha1",
 	}
 

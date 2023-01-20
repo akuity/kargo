@@ -17,7 +17,7 @@ const (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Environment is the K8sTA APIs main type.
+// Environment is the Kargo API's main type.
 type Environment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -114,14 +114,14 @@ type ImageSubscription struct {
 	// Platform is a string of the form <os>/<arch> that limits the tags that can
 	// be considered when searching for new versions of an image. This field is
 	// optional. When left unspecified, it is implicitly equivalent to the
-	// OS/architecture of the K8sTA controller. Care should be taken to set this
+	// OS/architecture of the Kargo controller. Care should be taken to set this
 	// value correctly in cases where the image referenced by this
 	// ImageRepositorySubscription will run on a Kubernetes node with a different
-	// OS/architecture than the K8sTA controller. At present this is uncommon, but
+	// OS/architecture than the Kargo controller. At present this is uncommon, but
 	// not unheard of.
 	Platform string `json:"platform,omitempty"`
 	// PullSecret is a reference to a Kubernetes Secret containing repository
-	// credentials. If left unspecified, K8sTA will fall back on globally
+	// credentials. If left unspecified, Kargo will fall back on globally
 	// configured repository credentials, if they exist.
 	PullSecret string `json:"pullSecret,omitempty"`
 }

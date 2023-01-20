@@ -1,9 +1,9 @@
-## Default values for k8sta
+## Default values for kargo
 ## This is a YAML-formatted file.
 ## Declare variables to be passed into your templates.
 
 image:
-  repository: ghcr.io/akuityio/k8sta-prototype
+  repository: ghcr.io/akuityio/kargo-prototype
   ## tag should only be specified if you want to override Chart.appVersion
   ## The default tag is the value of .Chart.AppVersion
   # tag:
@@ -11,7 +11,7 @@ image:
 
 rbac:
   ## Indicates whether relevant cluster-scoped roles should be installed/updated
-  ## by this chart. Set to false if this is NOT the first install of K8sTA in
+  ## by this chart. Set to false if this is NOT the first install of Kargo in
   ## a given cluster, otherwise this chart will attempt to create resources that
   ## already exist.
   installGlobalResources: true
@@ -30,7 +30,7 @@ server:
   ## (advanced). Keeping the default value or otherwise setting this
   ## inaccurately may result in invalid routing rules or untrusted certificates
   ## (untrusted beyond merely having been self-signed).
-  host: k8sta.example.com
+  host: kargo.example.com
 
   service:
     ## If you're not going to enable ingress, you may want to change this value
@@ -50,7 +50,7 @@ server:
     ## 1. Set generateSelfSignedCert below to true (the default)
     ## 2. OR Set values for BOTH the cert and key fields below
     ## 3. OR create a cert secret named <Helm release name>-server-cert in
-    ##    the same namespace as K8sTA. This secret could be created manually
+    ##    the same namespace as Kargo. This secret could be created manually
     ##    or through other means, such as a cert manager.
     enabled: true
     ## Whether to generate a self-signed certificate. Since the certificate is
@@ -59,7 +59,7 @@ server:
     ## discourages the more heavy-handed option to disable TLS entirely. If TLS
     ## is enabled and cert generation is DISABLED, users MUST provide their own
     ## cert and private key below OR create a cert secret named <Helm release
-    ## name>-server-cert in the same namespace as K8sTA.
+    ## name>-server-cert in the same namespace as Kargo.
     generateSelfSignedCert: true
     # cert: base 64 encoded cert goes here
     # key: base 64 encoded key goes here
@@ -84,7 +84,7 @@ server:
       ## 2. OR Set values for BOTH the cert and key fields below
       ## 3. OR create a cert secret named
       ##    <Helm release name>-server-ingress-cert in the same namespace as
-      ##    K8sTA. This secret could be created manually or through other
+      ##    Kargo. This secret could be created manually or through other
       ##    means, such as a cert manager.
       ##
       ## Note there is a wide disparity in the feature set of various ingress
@@ -99,7 +99,7 @@ server:
       ## entirely. If ingress TLS is enabled and cert generation is DISABLED,
       ## users MUST provide their own cert and private key below OR create a
       ## cert secret named <Helm release name>-server-ingress-cert in the same
-      ## namespace as K8sTA.
+      ## namespace as Kargo.
       generateSelfSignedCert: true
       # cert: base 64 encoded cert goes here
       # key: base 64 encoded key goes here

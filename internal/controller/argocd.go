@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	api "github.com/akuityio/k8sta/api/v1alpha1"
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
 func (e *environmentReconciler) checkHealth(

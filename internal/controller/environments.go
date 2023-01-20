@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/akuityio/bookkeeper"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/registry"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/tag"
@@ -24,10 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/akuityio/bookkeeper"
-	api "github.com/akuityio/k8sta/api/v1alpha1"
-	"github.com/akuityio/k8sta/internal/common/config"
-	"github.com/akuityio/k8sta/internal/git"
+	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/common/config"
+	"github.com/akuityio/kargo/internal/git"
 )
 
 const (

@@ -1,3 +1,3 @@
-# K8sTA contributor guide
+# Kargo contributor guide
 
-See https://docs-k8sta-akuity-io.netlify.app/contributor-guide/
+See https://docs-kargo-akuity-io.netlify.app/contributor-guide/

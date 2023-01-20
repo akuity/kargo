@@ -2,7 +2,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "k8sta.name" -}}
+{{- define "kargo.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
@@ -11,7 +11,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "k8sta.fullname" -}}
+{{- define "kargo.fullname" -}}
 {{- $name := default .Chart.Name .Values.nameOverride -}}
 {{- if contains $name .Release.Name -}}
 {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
@@ -20,27 +20,27 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 {{- end -}}
 
-{{- define "k8sta.server.fullname" -}}
-{{ include "k8sta.fullname" . | printf "%s-server" }}
+{{- define "kargo.server.fullname" -}}
+{{ include "kargo.fullname" . | printf "%s-server" }}
 {{- end -}}
 
-{{- define "k8sta.controller.fullname" -}}
-{{ include "k8sta.fullname" . | printf "%s-controller" }}
+{{- define "kargo.controller.fullname" -}}
+{{ include "kargo.fullname" . | printf "%s-controller" }}
 {{- end -}}
 
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "k8sta.chart" -}}
+{{- define "kargo.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
 Common labels
 */}}
-{{- define "k8sta.labels" -}}
-helm.sh/chart: {{ include "k8sta.chart" . }}
-{{ include "k8sta.selectorLabels" . }}
+{{- define "kargo.labels" -}}
+helm.sh/chart: {{ include "kargo.chart" . }}
+{{ include "kargo.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -50,16 +50,16 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "k8sta.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "k8sta.name" . }}
+{{- define "kargo.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "kargo.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
-{{- define "k8sta.server.labels" -}}
+{{- define "kargo.server.labels" -}}
 app.kubernetes.io/component: server
 {{- end -}}
 
-{{- define "k8sta.controller.labels" -}}
+{{- define "kargo.controller.labels" -}}
 app.kubernetes.io/component: controller
 {{- end -}}
 

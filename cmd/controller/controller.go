@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 
+	"github.com/akuityio/bookkeeper"
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/util/db"
 	"github.com/argoproj/argo-cd/v2/util/settings"
@@ -12,22 +13,21 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/akuityio/bookkeeper"
-	api "github.com/akuityio/k8sta/api/v1alpha1"
-	"github.com/akuityio/k8sta/internal/common/config"
-	"github.com/akuityio/k8sta/internal/common/kubernetes"
-	"github.com/akuityio/k8sta/internal/common/version"
-	"github.com/akuityio/k8sta/internal/controller"
+	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/common/config"
+	"github.com/akuityio/kargo/internal/common/kubernetes"
+	"github.com/akuityio/kargo/internal/common/version"
+	"github.com/akuityio/kargo/internal/controller"
 )
 
-// RunController configures and runs the K8sTA controller.
+// RunController configures and runs the Kargo controller.
 func RunController(ctx context.Context, config config.Config) error {
 	version := version.GetVersion()
 
 	log.WithFields(log.Fields{
 		"version": version.Version,
 		"commit":  version.GitCommit,
-	}).Info("Starting K8sTA Controller")
+	}).Info("Starting Kargo Controller")
 
 	mgrConfig, err := ctrl.GetConfig()
 	if err != nil {
@@ -41,7 +41,7 @@ func RunController(ctx context.Context, config config.Config) error {
 		return errors.Wrap(err, "error adding ArgoCD API to scheme")
 	}
 	if err = api.AddToScheme(scheme); err != nil {
-		return errors.Wrap(err, "error adding K8sTA API to scheme")
+		return errors.Wrap(err, "error adding Kargo API to scheme")
 	}
 	mgr, err := ctrl.NewManager(
 		mgrConfig,
