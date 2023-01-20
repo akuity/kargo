@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/akuityio/k8sta/internal/common/http"
-	libOS "github.com/akuityio/k8sta/internal/common/os"
+	"github.com/akuityio/kargo/internal/common/http"
+	libOS "github.com/akuityio/kargo/internal/common/os"
 )
 
 // serverConfig populates configuration for the HTTP/S server from environment

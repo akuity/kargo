@@ -27,7 +27,7 @@ test-unit:
 
 .PHONY: lint-chart
 lint-chart:
-	cd charts/k8sta && \
+	cd charts/kargo && \
 	helm dep up && \
 	helm lint .
 
@@ -42,7 +42,7 @@ codegen:
 		crd \
 		webhook \
 		paths=./... \
-		output:crd:artifacts:config=charts/k8sta/crds && \
+		output:crd:artifacts:config=charts/kargo/crds && \
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./... \
@@ -58,13 +58,13 @@ DOCKER_CMD := docker run \
 	-it \
 	--rm \
 	-v gomodcache:/go/pkg/mod \
-	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/k8sta \
-	-w /workspaces/k8sta \
-	k8sta:dev-tools
+	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
+	-w /workspaces/kargo \
+	kargo:dev-tools
 
 .PHONY: hack-build-dev-tools
 hack-build-dev-tools:
-	docker build -f Dockerfile.dev -t k8sta:dev-tools .
+	docker build -f Dockerfile.dev -t kargo:dev-tools .
 
 .PHONY: hack-lint
 hack-lint: hack-build-dev-tools
@@ -84,7 +84,7 @@ hack-codegen: hack-build-dev-tools
 
 .PHONY: hack-build
 hack-build:
-	docker build . -t k8sta:dev
+	docker build . -t kargo:dev
 
 .PHONY: hack-kind-up
 hack-kind-up:

@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/akuityio/bookkeeper"
-	api "github.com/akuityio/k8sta/api/v1alpha1"
-	"github.com/akuityio/k8sta/internal/common/config"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/common/config"
 )
 
 func TestNewEnvironmentReconciler(t *testing.T) {

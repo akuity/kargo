@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/akuityio/k8sta/api/v1alpha1"
+	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
 func init() {

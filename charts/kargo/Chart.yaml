@@ -1,12 +1,11 @@
 apiVersion: v2
-name: k8sta
-description: |
-  The Kubernetes Transit Authority
+name: kargo
+description: Kargo
 type: application
 version: 0.1.0
 appVersion: v0.1.0
 sources:
-- https://github.com/akuityio/k8sta-prototype
+- https://github.com/akuityio/kargo-prototype
 maintainers:
 - name: Kent Rancourt
   email: kent@akuity.io

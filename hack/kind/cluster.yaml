@@ -1,8 +1,8 @@
 apiVersion: ctlptl.dev/v1alpha1
 kind: Cluster
-name: kind-k8sta-dev-cluster
+name: kind-kargo-dev-cluster
 product: kind
-registry: k8sta-dev-registry
+registry: kargo-dev-registry
 kindV1Alpha4Cluster:
   nodes:
   - extraPortMappings:
@@ -10,6 +10,6 @@ kindV1Alpha4Cluster:
       hostPort: 30080
     - containerPort: 30081 # Argo CD
       hostPort: 30081
-    - containerPort: 30082 # K8sTA Server
+    - containerPort: 30082 # Kargo Server
       hostPort: 30082
 

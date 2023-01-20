@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/akuityio/k8sta/internal/common/file"
+	"github.com/akuityio/kargo/internal/common/file"
 )
 
 // ServerConfig represents optional configuration for an HTTP/S server.

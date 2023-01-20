@@ -1,4 +1,4 @@
-module github.com/akuityio/k8sta
+module github.com/akuityio/kargo
 
 go 1.19
 

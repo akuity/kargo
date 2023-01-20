@@ -5,12 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	api "github.com/akuityio/k8sta/api/v1alpha1"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/registry"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/tag"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+
+	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
 func TestGetLatestImages(t *testing.T) {

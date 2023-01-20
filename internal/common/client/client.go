@@ -7,7 +7,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuityio/k8sta/internal/common/os"
+	"github.com/akuityio/kargo/internal/common/os"
 )
 
 // New returns an implementation of the controller runtime client.

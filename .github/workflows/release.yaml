@@ -28,7 +28,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: ghcr.io/akuityio/k8sta-prototype
+        images: ghcr.io/akuityio/kargo-prototype
         flavor: latest=false
         tags: type=semver,pattern={{raw}}
     - name: Build and push
@@ -71,10 +71,10 @@ jobs:
     - name: Publish chart
       env:
         HELM_EXPERIMENTAL_OCI: '1'
-        HELM_REPO: ghcr.io/akuityio/k8sta-chart
+        HELM_REPO: ghcr.io/akuityio/kargo-chart
         VERSION: ${{ github.ref_name }}
       run: |
-        cd charts/k8sta
+        cd charts/kargo
         helm dep up
         helm package . --version ${VERSION} --app-version ${VERSION}
-        helm push k8sta-${VERSION}.tgz oci://${HELM_REPO}
+        helm push kargo-${VERSION}.tgz oci://${HELM_REPO}

@@ -2,10 +2,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "k8sta.controller.fullname" . }}
+  name: {{ include "kargo.controller.fullname" . }}
   labels:
-    {{- include "k8sta.labels" . | nindent 4 }}
-    {{- include "k8sta.controller.labels" . | nindent 4 }}
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - ""
@@ -26,7 +26,7 @@ rules:
   - patch
   - watch
 - apiGroups:
-  - k8sta.akuity.io
+  - kargo.akuity.io
   resources:
   - environments
   verbs:
@@ -34,7 +34,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - k8sta.akuity.io
+  - kargo.akuity.io
   resources:
   - environments/status
   verbs:

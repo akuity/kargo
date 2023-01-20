@@ -1,16 +1,16 @@
 domain: akuity.io
 layout:
 - go.kubebuilder.io/v3
-projectName: k8sta
-repo: github.com/akuityio/k8sta
+projectName: kargo
+repo: github.com/akuityio/kargo
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
   domain: akuity.io
-  group: k8sta
+  group: kargo
   kind: Environment
-  path: github.com/akuityio/k8sta/api/v1alpha1
+  path: github.com/akuityio/kargo/api/v1alpha1
   version: v1alpha1
 version: "3"

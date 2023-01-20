@@ -10,12 +10,12 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/akuityio/k8sta/cmd/controller"
-	"github.com/akuityio/k8sta/cmd/server"
-	"github.com/akuityio/k8sta/internal/common/version"
+	"github.com/akuityio/kargo/cmd/controller"
+	"github.com/akuityio/kargo/cmd/server"
+	"github.com/akuityio/kargo/internal/common/version"
 )
 
-const binaryNameEnvVar = "K8STA_BINARY_NAME"
+const binaryNameEnvVar = "KARGO_BINARY_NAME"
 
 func main() {
 	binaryName := filepath.Base(os.Args[0])
@@ -34,15 +34,15 @@ func main() {
 
 	ctx := context.Background()
 
-	config, err := k8staConfig()
+	config, err := kargoConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	switch binaryName {
-	case "k8sta-controller":
+	case "kargo-controller":
 		err = controller.RunController(ctx, config)
-	case "k8sta-server":
+	case "kargo-server":
 		err = server.RunServer(ctx, config)
 	default:
 		err = errors.Errorf("unrecognized component name %q", binaryName)

@@ -1,8 +1,8 @@
 apiVersion: ctlptl.dev/v1alpha1
 kind: Cluster
-name: k3d-k8sta-dev-cluster
+name: k3d-kargo-dev-cluster
 product: k3d
-registry: k8sta-dev-registry
+registry: kargo-dev-registry
 k3d:
   v1alpha4Simple:
     ports:

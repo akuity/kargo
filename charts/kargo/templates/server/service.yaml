@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "k8sta.server.fullname" . }}
+  name: {{ include "kargo.server.fullname" . }}
   labels:
-    {{- include "k8sta.labels" . | nindent 4 }}
-    {{- include "k8sta.server.labels" . | nindent 4 }}
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.server.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.server.service.type }}
   ports:
@@ -19,5 +19,5 @@ spec:
     {{- end }}
     protocol: TCP
   selector:
-    {{- include "k8sta.selectorLabels" . | nindent 8 }}
-    {{- include "k8sta.server.labels" . | nindent 8 }}
+    {{- include "kargo.selectorLabels" . | nindent 8 }}
+    {{- include "kargo.server.labels" . | nindent 8 }}

@@ -1,4 +1,4 @@
 .vscode/
 bin/
-charts/k8sta/*.tgz
+charts/kargo/*.tgz
 coverage.txt

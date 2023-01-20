@@ -2,18 +2,18 @@
 {{- $tlsKey := "" }}
 {{- if .Values.server.tls.enabled }} 
   {{- if .Values.server.tls.generateSelfSignedCert }}
-    {{- $data := (lookup "v1" "Secret" .Release.Namespace (printf "%s-cert" (include "k8sta.server.fullname" . ))).data }}
+    {{- $data := (lookup "v1" "Secret" .Release.Namespace (printf "%s-cert" (include "kargo.server.fullname" . ))).data }}
     {{- if $data }}
       # Reuse the existing cert and key
       {{- $tlsCert = index $data "tls.crt" }}
       {{- $tlsKey = index $data "tls.key" }}
     {{- else }}
       # Generate a new cert and key
-      {{- $altName1 := include "k8sta.server.fullname" . }}
-      {{- $altName2 := printf "%s.%s" (include "k8sta.server.fullname" .) .Release.Namespace }}
-      {{- $altName3 := printf "%s.%s.svc" (include "k8sta.server.fullname" .) .Release.Namespace }}
-      {{- $altName4 := printf "%s.%s.svc.cluster" (include "k8sta.server.fullname" .) .Release.Namespace }}
-      {{- $altName5 := printf "%s.%s.svc.cluster.local" (include "k8sta.server.fullname" .) .Release.Namespace }}
+      {{- $altName1 := include "kargo.server.fullname" . }}
+      {{- $altName2 := printf "%s.%s" (include "kargo.server.fullname" .) .Release.Namespace }}
+      {{- $altName3 := printf "%s.%s.svc" (include "kargo.server.fullname" .) .Release.Namespace }}
+      {{- $altName4 := printf "%s.%s.svc.cluster" (include "kargo.server.fullname" .) .Release.Namespace }}
+      {{- $altName5 := printf "%s.%s.svc.cluster.local" (include "kargo.server.fullname" .) .Release.Namespace }}
       {{- $cert := genSelfSignedCert .Values.server.host nil (list .Values.server.host $altName1 $altName2 $altName3 $altName4 $altName5) 3650 }}
       {{- $tlsCert = b64enc $cert.Cert }}
       {{- $tlsKey = b64enc $cert.Key }}
@@ -29,10 +29,10 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "k8sta.server.fullname" . }}-cert
+  name: {{ include "kargo.server.fullname" . }}-cert
   labels:
-    {{- include "k8sta.labels" . | nindent 4 }}
-    {{- include "k8sta.server.labels" . | nindent 4 }}
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.server.labels" . | nindent 4 }}
 type: Opaque
 data:
   tls.crt: {{ $tlsCert }}
@@ -42,35 +42,35 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "k8sta.server.fullname" . }}
+  name: {{ include "kargo.server.fullname" . }}
   labels:
-    {{- include "k8sta.labels" . | nindent 4 }}
-    {{- include "k8sta.server.labels" . | nindent 4 }}
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.server.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.server.replicas }}
   selector:
     matchLabels:
-      {{- include "k8sta.selectorLabels" . | nindent 6 }}
-      {{- include "k8sta.server.labels" . | nindent 6 }}
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.server.labels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "k8sta.selectorLabels" . | nindent 8 }}
-        {{- include "k8sta.server.labels" . | nindent 8 }}
+        {{- include "kargo.selectorLabels" . | nindent 8 }}
+        {{- include "kargo.server.labels" . | nindent 8 }}
       annotations:
         {{- if and .Values.server.tls.enabled (or .Values.server.tls.generateSelfSignedCert .Values.server.tls.cert) }}
         checksum/tls-cert: {{ sha256sum $tlsCert }}
         checksum/tls-key: {{ sha256sum $tlsKey }}
         {{- end }}
     spec:
-      serviceAccount: {{ include "k8sta.server.fullname" . }}
+      serviceAccount: {{ include "kargo.server.fullname" . }}
       imagePullSecrets:
-      - name: {{ include "k8sta.fullname" . }}-image-pull-secret
+      - name: {{ include "kargo.fullname" . }}-image-pull-secret
       containers:
       - name: server
         image: {{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["/usr/local/bin/k8sta-server"]
+        command: ["/usr/local/bin/kargo-server"]
         env:
         - name: LOG_LEVEL
           value: {{ .Values.server.logLevel }}
@@ -78,14 +78,14 @@ spec:
           value: {{ quote .Values.server.tls.enabled }}
         {{- if .Values.server.tls.enabled }}
         - name: TLS_CERT_PATH
-          value: /var/k8sta/certs/tls.crt
+          value: /var/kargo/certs/tls.crt
         - name: TLS_KEY_PATH
-          value: /var/k8sta/certs/tls.key
+          value: /var/kargo/certs/tls.key
         {{- end }}
         {{- if .Values.server.tls.enabled }}
         volumeMounts:
         - name: cert
-          mountPath: /var/k8sta/certs
+          mountPath: /var/kargo/certs
           readOnly: true
         {{- end }}
         livenessProbe:
@@ -112,7 +112,7 @@ spec:
       volumes:
       - name: cert
         secret:
-          secretName: {{ include "k8sta.server.fullname" . }}-cert
+          secretName: {{ include "kargo.server.fullname" . }}-cert
       {{- end }}
       {{- with .Values.server.nodeSelector }}
       nodeSelector:
