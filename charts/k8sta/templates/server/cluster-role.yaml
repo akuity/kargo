@@ -6,19 +6,5 @@ metadata:
   labels:
     {{- include "k8sta.labels" . | nindent 4 }}
     {{- include "k8sta.server.labels" . | nindent 4 }}
-rules:
-- apiGroups:
-  - k8sta.akuity.io
-  resources:
-  - tickets
-  verbs:
-  - create
-- apiGroups:
-  - k8sta.akuity.io
-  resources:
-  - tracks
-  verbs:
-  - get
-  - list
-  - watch
+  rules: []
 {{- end }}

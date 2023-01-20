@@ -1,85 +1,12 @@
 package server
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuityio/k8sta/internal/common/http"
-	"github.com/akuityio/k8sta/internal/dockerhub"
 )
-
-func TestTokenFilterConfig(t *testing.T) {
-	testCases := []struct {
-		name       string
-		setup      func()
-		assertions func(dockerhub.TokenFilterConfig, error)
-	}{
-		{
-			name: "DOCKERHUB_TOKENS_PATH not set",
-			assertions: func(_ dockerhub.TokenFilterConfig, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "value not found for")
-				require.Contains(t, err.Error(), "DOCKERHUB_TOKENS_PATH")
-			},
-		},
-		{
-			name: "DOCKERHUB_TOKENS_PATH path does not exist",
-			setup: func() {
-				t.Setenv("DOCKERHUB_TOKENS_PATH", "/completely/bogus/path")
-			},
-			assertions: func(_ dockerhub.TokenFilterConfig, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"file /completely/bogus/path does not exist",
-				)
-			},
-		},
-		{
-			name: "DOCKERHUB_TOKENS_PATH does not contain valid json",
-			setup: func() {
-				tokensFile, err := os.CreateTemp("", "tokens.json")
-				require.NoError(t, err)
-				defer tokensFile.Close()
-				_, err = tokensFile.Write([]byte("this is not json"))
-				require.NoError(t, err)
-				t.Setenv("DOCKERHUB_TOKENS_PATH", tokensFile.Name())
-			},
-			assertions: func(_ dockerhub.TokenFilterConfig, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t, err.Error(), "invalid character",
-				)
-			},
-		},
-		{
-			name: "success",
-			setup: func() {
-				tokensFile, err := os.CreateTemp("", "tokens.json")
-				require.NoError(t, err)
-				defer tokensFile.Close()
-				_, err = tokensFile.Write([]byte(`{"foo": "bar"}`))
-				require.NoError(t, err)
-				t.Setenv("DOCKERHUB_TOKENS_PATH", tokensFile.Name())
-			},
-			assertions: func(config dockerhub.TokenFilterConfig, err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			if testCase.setup != nil {
-				testCase.setup()
-			}
-			config, err := dockerhubFilterConfig()
-			testCase.assertions(config, err)
-		})
-	}
-}
 
 func TestServerConfig(t *testing.T) {
 	testCases := []struct {

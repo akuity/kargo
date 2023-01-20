@@ -28,25 +28,15 @@ rules:
 - apiGroups:
   - k8sta.akuity.io
   resources:
-  - tickets
+  - environments
   verbs:
-  - create
   - get
   - list
   - watch
 - apiGroups:
   - k8sta.akuity.io
   resources:
-  - tickets/status
-  - tracks/status
+  - environments/status
   verbs:
   - update
-- apiGroups:
-  - k8sta.akuity.io
-  resources:
-  - tracks
-  verbs:
-  - get
-  - list
-  - watch
 {{- end }}

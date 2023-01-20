@@ -64,19 +64,11 @@ func RunController(ctx context.Context, config config.Config) error {
 		kubeClient,
 	)
 
-	if err := controller.SetupTrackReconcilerWithManager(
+	if err := controller.SetupEnvironmentReconcilerWithManager(
 		ctx,
 		config,
 		mgr,
-		argoDB,
-	); err != nil {
-		return errors.Wrap(err, "error setting up Track reconciler")
-	}
-
-	if err := controller.SetupTicketReconcilerWithManager(
-		ctx,
-		config,
-		mgr,
+		kubeClient,
 		argoDB,
 		bookkeeper.NewService(
 			&bookkeeper.ServiceOptions{
@@ -84,7 +76,7 @@ func RunController(ctx context.Context, config config.Config) error {
 			},
 		),
 	); err != nil {
-		return errors.Wrap(err, "error setting up Ticket reconciler")
+		return errors.Wrap(err, "error setting up Environment reconciler")
 	}
 
 	return errors.Wrap(

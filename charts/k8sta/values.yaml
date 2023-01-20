@@ -30,7 +30,7 @@ server:
   ## (advanced). Keeping the default value or otherwise setting this
   ## inaccurately may result in invalid routing rules or untrusted certificates
   ## (untrusted beyond merely having been self-signed).
-  host: github.example.com
+  host: k8sta.example.com
 
   service:
     ## If you're not going to enable ingress, you may want to change this value
@@ -103,20 +103,6 @@ server:
       generateSelfSignedCert: true
       # cert: base 64 encoded cert goes here
       # key: base 64 encoded key goes here
-
-  dockerhub:
-    ## The tokens field defines tokens (shared secrets) that may be used for
-    ## authenticating to this server. The keys are completely ignored by the
-    ## server and only the values (tokens) matter. The keys only serve as
-    ## recognizable token identifiers for human operators.
-    ##
-    ## Tokens should be lengthy and hard-to-guess. Also, because tokens are
-    ## included in webhook requests via URL query parameters, it is highly
-    ## recommended to restrict tokens to only base64 characters to avoid the
-    ## complication of having to URL encode tokens prior to use.
-    tokens: {}
-      ## Example:
-      # myToken: MySharedSecret
 
   resources: {}
     # We usually recommend not to specify default resources and to leave this as
