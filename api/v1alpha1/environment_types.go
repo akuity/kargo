@@ -277,6 +277,11 @@ type EnvironmentState struct {
 	// Images describes container images and versions thereof that were used
 	// in this state.
 	Images []Image `json:"images,omitempty"`
+	// HealthCheckCommit is the ID of a specific commit in the Environment's Git
+	// repository. When determining environment health checks, associated Argo CD
+	// Application resources will be checked not only for their own health status,
+	// but also to see whether they are synced to this specific commit.
+	HealthCheckCommit string `json:"healthCheckCommit,omitempty"`
 	// Health is the state's last observed health. If this state is the
 	// Environment's current state, this will be continuously re-assessed and
 	// updated. If this state is a past state of the Environment, this field will
@@ -332,17 +337,6 @@ type GitCommit struct {
 	// ID is the ID of a specific commit in the Git repository specified by
 	// RepoURL.
 	ID string `json:"id,omitempty"`
-	// HealthCheckID is the ID of a specific commit in the Git repository
-	// specified by RepoURL. The sync state and health of Argo CD Application
-	// resources associated with the Environment are often evaluated as part of an
-	// assessment of overall Environment health. In some cases, the commit ID that
-	// Application resources should be synced to may differ from he commit ID in
-	// the ID field (which specifies a source of materials). When a value exists
-	// in this field, it will be used in determining whether Application resources
-	// associated with this Environment are synced. When the value of this field
-	// is unspecified, that assessment will fall back on using the value from the
-	// ID field.
-	HealthCheckID string `json:"actualID,omitempty"`
 }
 
 // Equals returns a bool indicating whether two GitCommits are equivalent.
