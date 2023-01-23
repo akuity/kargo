@@ -23,7 +23,7 @@ func (e *environmentReconciler) checkHealth(
 		return nil
 	}
 	for _, appName := range env.Spec.HealthChecks.ArgoCDApps {
-		app, err := e.getArgoCDApp(ctx, env.Namespace, appName)
+		app, err := e.getArgoCDAppFn(ctx, env.Namespace, appName)
 		if err != nil {
 			return &api.Health{
 				Status: api.HealthStateUnknown,
@@ -46,11 +46,7 @@ func (e *environmentReconciler) checkHealth(
 			}
 		}
 
-		if env.Status.States[0].GitCommit != nil {
-			commit := env.Status.States[0].GitCommit.HealthCheckID
-			if commit == "" {
-				commit = env.Status.States[0].GitCommit.ID
-			}
+		if commit := env.Status.States[0].HealthCheckCommit; commit != "" {
 			if synced := e.isArgoCDAppSynced(app, commit); !synced {
 				return &api.Health{
 					Status: api.HealthStateUnhealthy,
@@ -125,13 +121,10 @@ func (e *environmentReconciler) isArgoCDAppSynced(
 	app *argocd.Application,
 	commit string,
 ) bool {
-	if app.Status.Sync.Status != argocd.SyncStatusCodeSynced {
+	if app == nil || app.Status.Sync.Status != argocd.SyncStatusCodeSynced {
 		return false
 	}
-	if len(app.Status.History) == 0 {
-		return false
-	}
-	return app.Status.History[len(app.Status.History)-1].Revision == commit
+	return app.Status.Sync.Revision == commit
 }
 
 func (e *environmentReconciler) refreshAndSyncArgoCDApp(

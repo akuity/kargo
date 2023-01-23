@@ -26,7 +26,6 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 		bookkeeper.NewService(nil),
 	)
 	require.Equal(t, testConfig, e.config)
-	require.NotNil(t, e.bookkeeperService)
 	require.NotNil(t, e.logger)
 	require.Equal(t, testConfig.LogLevel, e.logger.Level)
 	// Assert that all overridable behaviors were initialized to a default
@@ -42,6 +41,8 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.getImageTagsFn)
 	require.NotNil(t, e.getNewestImageTagFn)
 	require.NotNil(t, e.promoteFn)
+	require.NotNil(t, e.renderManifestsWithBookkeeperFn)
+	require.NotNil(t, e.getArgoCDAppFn)
 }
 
 func TestSync(t *testing.T) {

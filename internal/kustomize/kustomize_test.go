@@ -14,7 +14,7 @@ func TestBuildSetImageCmd(t *testing.T) {
 	const testTag = "some-tag"
 	cmd := buildSetImageCmd(testDir, testImage, testTag)
 	require.NotNil(t, cmd)
-	require.True(t, strings.HasSuffix(cmd.Path, "/kustomize"))
+	require.True(t, strings.HasSuffix(cmd.Path, "kustomize"))
 	require.Equal(
 		t,
 		[]string{
