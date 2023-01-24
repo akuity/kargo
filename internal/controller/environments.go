@@ -36,12 +36,11 @@ const (
 
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
-	config            config.Config
-	client            client.Client
-	kubeClient        kubernetes.Interface
-	argoDB            db.ArgoDB
-	bookkeeperService bookkeeper.Service
-	logger            *log.Logger
+	config     config.Config
+	client     client.Client
+	kubeClient kubernetes.Interface
+	argoDB     db.ArgoDB
+	logger     *log.Logger
 	// The following behaviors are all overridable for testing purposes
 	getNextStateFn func(
 		context.Context,
@@ -92,6 +91,20 @@ type environmentReconciler struct {
 		env *api.Environment,
 		newState api.EnvironmentState,
 	) (api.EnvironmentState, error)
+	renderManifestsWithBookkeeperFn func(
+		context.Context,
+		bookkeeper.RenderRequest,
+	) (bookkeeper.RenderResponse, error)
+	getArgoCDAppFn func(
+		ctx context.Context,
+		namespace string,
+		name string,
+	) (*argocd.Application, error)
+	refreshAndSyncArgoCDAppFn func(
+		ctx context.Context,
+		namespace string,
+		name string,
+	) error
 }
 
 // SetupEnvironmentReconcilerWithManager initializes a reconciler for
@@ -156,12 +169,11 @@ func newEnvironmentReconciler(
 	logger := log.New()
 	logger.SetLevel(config.LogLevel)
 	e := &environmentReconciler{
-		config:            config,
-		client:            client,
-		kubeClient:        kubeClient,
-		argoDB:            argoDB,
-		bookkeeperService: bookkeeperService,
-		logger:            logger,
+		config:     config,
+		client:     client,
+		kubeClient: kubeClient,
+		argoDB:     argoDB,
+		logger:     logger,
 	}
 	// Defaults for overridable behaviors:
 	e.getNextStateFn = e.getNextState
@@ -176,6 +188,9 @@ func newEnvironmentReconciler(
 	e.getImageTagsFn = getImageTags
 	e.getNewestImageTagFn = getNewestImageTag
 	e.promoteFn = e.promote
+	e.renderManifestsWithBookkeeperFn = bookkeeperService.RenderManifests
+	e.getArgoCDAppFn = e.getArgoCDApp
+	e.refreshAndSyncArgoCDAppFn = e.refreshAndSyncArgoCDApp
 	return e
 }
 
