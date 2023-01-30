@@ -217,10 +217,9 @@ func (e *environmentReconciler) promoteWithKustomize(
 		//
 		// TODO: This seems correct for zero environment, but it might not hold up
 		// for non-zero environments.
-		if env.Spec.Subscriptions != nil &&
-			env.Spec.Subscriptions.Repos != nil &&
-			env.Spec.Subscriptions.Repos.Git {
-			newState.HealthCheckCommit, err = repo.LastCommitID()
+		if newState.GitCommit != nil {
+			newState.GitCommit.ID, err = repo.LastCommitID()
+			newState.HealthCheckCommit = newState.GitCommit.ID
 		}
 		return newState, errors.Wrap(err, "error getting last commit ID")
 	}
@@ -246,10 +245,9 @@ func (e *environmentReconciler) promoteWithKustomize(
 	//
 	// TODO: This seems correct for zero environment, but it might not hold up
 	// for non-zero environments.
-	if env.Spec.Subscriptions != nil &&
-		env.Spec.Subscriptions.Repos != nil &&
-		env.Spec.Subscriptions.Repos.Git {
-		newState.HealthCheckCommit, err = repo.LastCommitID()
+	if newState.GitCommit != nil {
+		newState.GitCommit.ID, err = repo.LastCommitID()
+		newState.HealthCheckCommit = newState.GitCommit.ID
 	}
 	return newState, errors.Wrap(err, "error getting last commit ID")
 }
@@ -351,10 +349,9 @@ func (e *environmentReconciler) promoteWithHelm(
 		//
 		// TODO: This seems correct for zero environment, but it might not hold up
 		// for non-zero environments.
-		if env.Spec.Subscriptions != nil &&
-			env.Spec.Subscriptions.Repos != nil &&
-			env.Spec.Subscriptions.Repos.Git {
-			newState.HealthCheckCommit, err = repo.LastCommitID()
+		if newState.GitCommit != nil {
+			newState.GitCommit.ID, err = repo.LastCommitID()
+			newState.HealthCheckCommit = newState.GitCommit.ID
 		}
 		return newState, errors.Wrap(err, "error getting last commit ID")
 	}
@@ -380,10 +377,9 @@ func (e *environmentReconciler) promoteWithHelm(
 	//
 	// TODO: This seems correct for zero environment, but it might not hold up
 	// for non-zero environments.
-	if env.Spec.Subscriptions != nil &&
-		env.Spec.Subscriptions.Repos != nil &&
-		env.Spec.Subscriptions.Repos.Git {
-		newState.HealthCheckCommit, err = repo.LastCommitID()
+	if newState.GitCommit != nil {
+		newState.GitCommit.ID, err = repo.LastCommitID()
+		newState.HealthCheckCommit = newState.GitCommit.ID
 	}
 	return newState, errors.Wrap(err, "error getting last commit ID")
 }
