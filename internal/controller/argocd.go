@@ -173,3 +173,54 @@ func (e *environmentReconciler) refreshAndSyncArgoCDApp(
 
 	return nil
 }
+
+func (e *environmentReconciler) updateArgoCDAppTargetRevision(
+	ctx context.Context,
+	namespace string,
+	name string,
+	revision string,
+) error {
+	app, err := e.getArgoCDApp(ctx, namespace, name)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"error finding Argo CD Application %q in namespace %q",
+			name,
+			namespace,
+		)
+	}
+	if app == nil {
+		return errors.Errorf(
+			"unable to find Argo CD Application %q in namespace %q",
+			name,
+			namespace,
+		)
+	}
+
+	// Update target revision and force the Argo CD Application to refresh and
+	// sync.
+	patch := client.MergeFrom(app.DeepCopy())
+	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] =
+		string(argocd.RefreshTypeHard)
+	app.Spec.Source.TargetRevision = revision
+	app.Operation = &argocd.Operation{
+		Sync: &argocd.SyncOperation{
+			Revision: revision,
+		},
+	}
+	if err = e.client.Patch(ctx, app, patch, &client.PatchOptions{}); err != nil {
+		return errors.Wrapf(
+			err,
+			"error patching Argo CD Application %q with new target revision",
+			app.Name,
+		)
+	}
+	e.logger.WithFields(log.Fields{
+		"namespace": namespace,
+		"name":      name,
+		"app":       name,
+		"revision":  revision,
+	}).Debug("patched Argo CD Application with new target revision")
+
+	return nil
+}
