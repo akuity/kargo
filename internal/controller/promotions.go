@@ -440,11 +440,22 @@ func (e *environmentReconciler) promoteWithArgoCD(
 	}
 
 	for _, appUpdate := range env.Spec.PromotionMechanisms.ArgoCD.AppUpdates {
-		if appUpdate.UpdateTargetRevision {
-			return errors.Errorf(
-				"updating target revision of an Argo CD Application resource is " +
-					"not yet supported",
-			)
+		if appUpdate.UpdateTargetRevision && newState.GitCommit != nil {
+			if err := e.updateArgoCDAppTargetRevisionFn(
+				ctx,
+				env.Namespace,
+				appUpdate.Name,
+				newState.GitCommit.ID,
+			); err != nil {
+				return errors.Wrapf(
+					err,
+					"error updating target revision for Argo CD Application %q in "+
+						"namespace %q",
+					appUpdate.Name,
+					env.Namespace,
+				)
+			}
+			continue
 		}
 		if appUpdate.RefreshAndSync {
 			if err := e.refreshAndSyncArgoCDAppFn(
