@@ -44,6 +44,7 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.renderManifestsWithBookkeeperFn)
 	require.NotNil(t, e.getArgoCDAppFn)
 	require.NotNil(t, e.updateArgoCDAppTargetRevisionFn)
+	require.NotNil(t, e.updateArgoCDAppHelmParamsFn)
 	require.NotNil(t, e.refreshAndSyncArgoCDAppFn)
 }
 

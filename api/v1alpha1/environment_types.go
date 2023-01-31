@@ -6,6 +6,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ImageUpdateValueType string
+
+const (
+	ImageUpdateValueTypeImage ImageUpdateValueType = "Image"
+	ImageUpdateValueTypeTag   ImageUpdateValueType = "Tag"
+)
+
 type HealthState string
 
 const (
@@ -203,14 +210,11 @@ type HelmImageUpdate struct {
 	// Key specifies a key within the Helm values file that is to be updated. This
 	// is a required field.
 	Key string `json:"key,omitempty"`
-
-	// TODO: Make Value its own type
-
 	// Value specifies the new value for the specified key in the specified Helm
 	// values file. Valid values are "Image", which replaces the value of the
 	// specified key with the entire <image name>:<tag>, or "Tag" which replaces
 	// the value of the specified with just the new tag. This is a required field.
-	Value string `json:"value,omitempty"`
+	Value ImageUpdateValueType `json:"value,omitempty"`
 }
 
 // ArgoCDPromotionMechanism describes actions that should be taken in Argo CD to
@@ -245,6 +249,35 @@ type ArgoCDAppUpdate struct {
 	// Application resource will also be forcefully synced and refreshed after
 	// such an update regardless of the value of the RefreshAndSync field.
 	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
+	// Helm describes updates to an Argo CD Application's Helm-specific
+	// attributes. The affected Application resource will also be forcefully
+	// synced and refreshed after such an update regardless of the value of the
+	// RefreshAndSync field.
+	Helm *ArgoCDHelm `json:"helm,omitempty"`
+}
+
+// ArgoCDHelm describes updates to an Argo CD Application's Helm-specific
+// attributes to incorporate newly observed materials into an Environment.
+type ArgoCDHelm struct {
+	// Images describes how specific image versions can be incorporated into an
+	// Argo CD Application's Helm parameters.
+	Images []ArgoCDHelmImageUpdate `json:"images,omitempty"`
+}
+
+// ArgoCDHelmImageUpdate describes how a specific image version can be
+// incorporated into an Argo CD Application's Helm parameters.
+type ArgoCDHelmImageUpdate struct {
+	// Image specifies a container image (without tag). This is a required field.
+	Image string `json:"image,omitempty"`
+	// Key specifies a key within an Argo CD Application's Helm parameters that is
+	// to be updated. This is a required field.
+	Key string `json:"key,omitempty"`
+	// Value specifies the new value for the specified key in the Argo CD
+	// Application's Helm parameters. Valid values are "Image", which replaces the
+	// value of the specified key with the entire <image name>:<tag>, or "Tag"
+	// which replaces the value of the specified with just the new tag. This is a
+	// required field.
+	Value ImageUpdateValueType `json:"value,omitempty"`
 }
 
 // HealthChecks describes how the health of an Environment can be assessed on an

@@ -26,17 +26,22 @@ func (e *environmentReconciler) promote(
 	}
 
 	var err error
-	if env.Spec.PromotionMechanisms.ConfigManagement.Bookkeeper != nil {
-		if newState, err = e.promoteWithBookkeeper(ctx, env, newState); err != nil {
-			return newState, errors.Wrap(err, "error promoting via Bookkeeper")
-		}
-	} else if env.Spec.PromotionMechanisms.ConfigManagement.Kustomize != nil {
-		if newState, err = e.promoteWithKustomize(ctx, env, newState); err != nil {
-			return newState, errors.Wrap(err, "error promoting via Kustomize")
-		}
-	} else if env.Spec.PromotionMechanisms.ConfigManagement.Helm != nil {
-		if newState, err = e.promoteWithHelm(ctx, env, newState); err != nil {
-			return newState, errors.Wrap(err, "error promoting via Helm")
+	if env.Spec.PromotionMechanisms.ConfigManagement != nil {
+		if env.Spec.PromotionMechanisms.ConfigManagement.Bookkeeper != nil {
+			if newState, err =
+				e.promoteWithBookkeeper(ctx, env, newState); err != nil {
+				return newState, errors.Wrap(err, "error promoting via Bookkeeper")
+			}
+		} else if env.Spec.PromotionMechanisms.ConfigManagement.Kustomize != nil {
+			if newState, err =
+				e.promoteWithKustomize(ctx, env, newState); err != nil {
+				return newState, errors.Wrap(err, "error promoting via Kustomize")
+			}
+		} else if env.Spec.PromotionMechanisms.ConfigManagement.Helm != nil {
+			if newState, err =
+				e.promoteWithHelm(ctx, env, newState); err != nil {
+				return newState, errors.Wrap(err, "error promoting via Helm")
+			}
 		}
 	}
 
@@ -398,7 +403,8 @@ func buildChangeMapsByFile(
 
 	changesByFile := map[string]map[string]string{}
 	for _, imageUpdate := range imageUpdates {
-		if imageUpdate.Value != "Image" && imageUpdate.Value != "Tag" {
+		if imageUpdate.Value != api.ImageUpdateValueTypeImage &&
+			imageUpdate.Value != api.ImageUpdateValueTypeTag {
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
@@ -410,7 +416,7 @@ func buildChangeMapsByFile(
 		if _, found = changesByFile[imageUpdate.ValuesFilePath]; !found {
 			changesByFile[imageUpdate.ValuesFilePath] = map[string]string{}
 		}
-		if imageUpdate.Value == "Image" {
+		if imageUpdate.Value == api.ImageUpdateValueTypeImage {
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
 				fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 		} else {
@@ -453,6 +459,26 @@ func (e *environmentReconciler) promoteWithArgoCD(
 			}
 			continue
 		}
+
+		if appUpdate.Helm != nil {
+			if err := e.updateArgoCDAppHelmParamsFn(
+				ctx,
+				env.Namespace,
+				appUpdate.Name,
+				newState.Images,
+				appUpdate.Helm.Images,
+			); err != nil {
+				return errors.Wrapf(
+					err,
+					"error updating Helm parameters for Argo CD Application %q in "+
+						"namespace %q",
+					appUpdate.Name,
+					env.Namespace,
+				)
+			}
+			continue
+		}
+
 		if appUpdate.RefreshAndSync {
 			if err := e.refreshAndSyncArgoCDAppFn(
 				ctx,

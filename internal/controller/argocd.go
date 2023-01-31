@@ -174,6 +174,109 @@ func (e *environmentReconciler) refreshAndSyncArgoCDApp(
 	return nil
 }
 
+func (e *environmentReconciler) updateArgoCDAppHelmParams(
+	ctx context.Context,
+	namespace string,
+	name string,
+	images []api.Image,
+	imageUpdates []api.ArgoCDHelmImageUpdate,
+) error {
+	app, err := e.getArgoCDApp(ctx, namespace, name)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"error finding Argo CD Application %q in namespace %q",
+			name,
+			namespace,
+		)
+	}
+	if app == nil {
+		return errors.Errorf(
+			"unable to find Argo CD Application %q in namespace %q",
+			name,
+			namespace,
+		)
+	}
+
+	changes := buildChangesMap(images, imageUpdates)
+
+	// Update Helm parameters and force the Argo CD Application to refresh and
+	// sync.
+	patch := client.MergeFrom(app.DeepCopy())
+	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] =
+		string(argocd.RefreshTypeHard)
+	if app.Spec.Source.Helm == nil {
+		app.Spec.Source.Helm = &argocd.ApplicationSourceHelm{}
+	}
+	if app.Spec.Source.Helm.Parameters == nil {
+		app.Spec.Source.Helm.Parameters = []argocd.HelmParameter{}
+	}
+imageUpdateLoop:
+	for k, v := range changes {
+		newParam := argocd.HelmParameter{
+			Name:  k,
+			Value: v,
+		}
+		for i, param := range app.Spec.Source.Helm.Parameters {
+			if param.Name == k {
+				app.Spec.Source.Helm.Parameters[i] = newParam
+				continue imageUpdateLoop
+			}
+		}
+		app.Spec.Source.Helm.Parameters =
+			append(app.Spec.Source.Helm.Parameters, newParam)
+	}
+
+	app.Operation = &argocd.Operation{
+		Sync: &argocd.SyncOperation{
+			Revision: app.Spec.Source.TargetRevision,
+		},
+	}
+	if err = e.client.Patch(ctx, app, patch, &client.PatchOptions{}); err != nil {
+		return errors.Wrapf(
+			err,
+			"error patching Argo CD Application %q with new Helm parameters",
+			app.Name,
+		)
+	}
+	e.logger.WithFields(log.Fields{
+		"namespace": namespace,
+		"name":      name,
+		"app":       name,
+	}).Debug("patched Argo CD Application with new Helm parameters")
+
+	return nil
+}
+
+func buildChangesMap(
+	images []api.Image,
+	imageUpdates []api.ArgoCDHelmImageUpdate,
+) map[string]string {
+	tagsByImage := map[string]string{}
+	for _, image := range images {
+		tagsByImage[image.RepoURL] = image.Tag
+	}
+	changes := map[string]string{}
+	for _, imageUpdate := range imageUpdates {
+		if imageUpdate.Value != api.ImageUpdateValueTypeImage &&
+			imageUpdate.Value != api.ImageUpdateValueTypeTag {
+			// This really shouldn't happen, so we'll ignore it.
+			continue
+		}
+		tag, found := tagsByImage[imageUpdate.Image]
+		if !found {
+			// There's no change to make in this case.
+			continue
+		}
+		if imageUpdate.Value == api.ImageUpdateValueTypeImage {
+			changes[imageUpdate.Key] = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
+		} else {
+			changes[imageUpdate.Key] = tag
+		}
+	}
+	return changes
+}
+
 func (e *environmentReconciler) updateArgoCDAppTargetRevision(
 	ctx context.Context,
 	namespace string,
