@@ -817,13 +817,14 @@ func TestBuildChangeMapsByFile(t *testing.T) {
 
 func TestPromoteWithArgoCD(t *testing.T) {
 	testCases := []struct {
-		name      string
-		env       *api.Environment
-		newState  api.EnvironmentState
-		syncAppFn func(
+		name        string
+		env         *api.Environment
+		newState    api.EnvironmentState
+		updateAppFn func(
 			ctx context.Context,
-			namespace string,
-			name string,
+			env *api.Environment,
+			newState api.EnvironmentState,
+			appUpdate api.ArgoCDAppUpdate,
 		) error
 		assertions func(err error)
 	}{
@@ -882,12 +883,17 @@ func TestPromoteWithArgoCD(t *testing.T) {
 					},
 				},
 			},
-			syncAppFn: func(ctx context.Context, namespace, name string) error {
+			updateAppFn: func(
+				context.Context,
+				*api.Environment,
+				api.EnvironmentState,
+				api.ArgoCDAppUpdate,
+			) error {
 				return errors.New("something went wrong")
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "error syncing Argo CD Application ")
+				require.Contains(t, err.Error(), "error updating Argo CD Application")
 				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
@@ -907,7 +913,12 @@ func TestPromoteWithArgoCD(t *testing.T) {
 					},
 				},
 			},
-			syncAppFn: func(ctx context.Context, namespace, name string) error {
+			updateAppFn: func(
+				context.Context,
+				*api.Environment,
+				api.EnvironmentState,
+				api.ArgoCDAppUpdate,
+			) error {
 				return nil
 			},
 			assertions: func(err error) {
@@ -918,8 +929,8 @@ func TestPromoteWithArgoCD(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:                    log.New(),
-				refreshAndSyncArgoCDAppFn: testCase.syncAppFn,
+				logger:            log.New(),
+				updateArgoCDAppFn: testCase.updateAppFn,
 			}
 			reconciler.logger.SetLevel(log.ErrorLevel)
 			testCase.assertions(

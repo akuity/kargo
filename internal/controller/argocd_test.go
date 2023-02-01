@@ -321,6 +321,33 @@ func TestIsArgoCDAppSynced(t *testing.T) {
 	}
 }
 
+func TestBuildKustomizeImages(t *testing.T) {
+	images := []api.Image{
+		{
+			RepoURL: "fake-url",
+			Tag:     "fake-tag",
+		},
+		{
+			RepoURL: "another-fake-url",
+			Tag:     "another-fake-tag",
+		},
+	}
+	imageUpdates := []string{
+		"fake-url",
+		"another-fake-url",
+		"image-that-is-not-in-list",
+	}
+	result := buildKustomizeImages(images, imageUpdates)
+	require.Equal(
+		t,
+		argocd.KustomizeImages{
+			"fake-url=fake-url:fake-tag",
+			"another-fake-url=another-fake-url:another-fake-tag",
+		},
+		result,
+	)
+}
+
 func TestBuildChangesMap(t *testing.T) {
 	images := []api.Image{
 		{
