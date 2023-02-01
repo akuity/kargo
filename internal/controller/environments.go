@@ -106,6 +106,13 @@ type environmentReconciler struct {
 		name string,
 		revision string,
 	) error
+	updateArgoCDAppHelmParamsFn func(
+		ctx context.Context,
+		namespace string,
+		name string,
+		images []api.Image,
+		imageUpdates []api.ArgoCDHelmImageUpdate,
+	) error
 	refreshAndSyncArgoCDAppFn func(
 		ctx context.Context,
 		namespace string,
@@ -197,6 +204,7 @@ func newEnvironmentReconciler(
 	e.renderManifestsWithBookkeeperFn = bookkeeperService.RenderManifests
 	e.getArgoCDAppFn = e.getArgoCDApp
 	e.updateArgoCDAppTargetRevisionFn = e.updateArgoCDAppTargetRevision
+	e.updateArgoCDAppHelmParamsFn = e.updateArgoCDAppHelmParams
 	e.refreshAndSyncArgoCDAppFn = e.refreshAndSyncArgoCDApp
 	return e
 }

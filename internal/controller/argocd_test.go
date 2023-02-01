@@ -320,3 +320,42 @@ func TestIsArgoCDAppSynced(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildChangesMap(t *testing.T) {
+	images := []api.Image{
+		{
+			RepoURL: "fake-url",
+			Tag:     "fake-tag",
+		},
+		{
+			RepoURL: "another-fake-url",
+			Tag:     "another-fake-tag",
+		},
+	}
+	imageUpdates := []api.ArgoCDHelmImageUpdate{
+		{
+			Image: "fake-url",
+			Key:   "fake-key",
+			Value: "Image",
+		},
+		{
+			Image: "another-fake-url",
+			Key:   "another-fake-key",
+			Value: "Tag",
+		},
+		{
+			Image: "image-that-is-not-in-list",
+			Key:   "fake-key",
+			Value: "Tag",
+		},
+	}
+	result := buildChangesMap(images, imageUpdates)
+	require.Equal(
+		t,
+		map[string]string{
+			"fake-key":         "fake-url:fake-tag",
+			"another-fake-key": "another-fake-tag",
+		},
+		result,
+	)
+}

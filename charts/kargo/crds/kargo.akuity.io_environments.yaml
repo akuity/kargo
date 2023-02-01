@@ -83,6 +83,44 @@ spec:
                             be applied to various Argo CD Application resources to
                             incorporate newly observed materials into an Environment.
                           properties:
+                            helm:
+                              description: Helm describes updates to an Argo CD Application's
+                                Helm-specific attributes. The affected Application
+                                resource will also be forcefully synced and refreshed
+                                after such an update regardless of the value of the
+                                RefreshAndSync field.
+                              properties:
+                                images:
+                                  description: Images describes how specific image
+                                    versions can be incorporated into an Argo CD Application's
+                                    Helm parameters.
+                                  items:
+                                    description: ArgoCDHelmImageUpdate describes how
+                                      a specific image version can be incorporated
+                                      into an Argo CD Application's Helm parameters.
+                                    properties:
+                                      image:
+                                        description: Image specifies a container image
+                                          (without tag). This is a required field.
+                                        type: string
+                                      key:
+                                        description: Key specifies a key within an
+                                          Argo CD Application's Helm parameters that
+                                          is to be updated. This is a required field.
+                                        type: string
+                                      value:
+                                        description: Value specifies the new value
+                                          for the specified key in the Argo CD Application's
+                                          Helm parameters. Valid values are "Image",
+                                          which replaces the value of the specified
+                                          key with the entire <image name>:<tag>,
+                                          or "Tag" which replaces the value of the
+                                          specified with just the new tag. This is
+                                          a required field.
+                                        type: string
+                                    type: object
+                                  type: array
+                              type: object
                             name:
                               description: Name specifies the name of an Argo CD Application
                                 resource to be updated.
