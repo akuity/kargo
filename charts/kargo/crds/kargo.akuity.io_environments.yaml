@@ -121,6 +121,19 @@ spec:
                                     type: object
                                   type: array
                               type: object
+                            kustomize:
+                              description: Kustomize describes updates to an Argo
+                                CD Application's Kustomize-specific attributes. The
+                                affected Application resource will also be forcefully
+                                synced and refreshed after such an update regardless
+                                of the value of the RefreshAndSync field.
+                              properties:
+                                images:
+                                  description: 'TODO: Document this'
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
                             name:
                               description: Name specifies the name of an Argo CD Application
                                 resource to be updated.

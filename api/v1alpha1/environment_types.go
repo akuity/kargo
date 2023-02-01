@@ -249,11 +249,24 @@ type ArgoCDAppUpdate struct {
 	// Application resource will also be forcefully synced and refreshed after
 	// such an update regardless of the value of the RefreshAndSync field.
 	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
+	// Kustomize describes updates to an Argo CD Application's Kustomize-specific
+	// attributes. The affected Application resource will also be forcefully
+	// synced and refreshed after such an update regardless of the value of the
+	// RefreshAndSync field.
+	Kustomize *ArgoCDKustomize `json:"kustomize,omitempty"`
 	// Helm describes updates to an Argo CD Application's Helm-specific
 	// attributes. The affected Application resource will also be forcefully
 	// synced and refreshed after such an update regardless of the value of the
 	// RefreshAndSync field.
 	Helm *ArgoCDHelm `json:"helm,omitempty"`
+}
+
+// ArgoCDKustomize describes updates to an Argo CD Application's
+// Kustomize-specific attributes to incorporate newly observed materials into an
+// Environment.
+type ArgoCDKustomize struct {
+	// TODO: Document this
+	Images []string `json:"images,omitempty"`
 }
 
 // ArgoCDHelm describes updates to an Argo CD Application's Helm-specific
