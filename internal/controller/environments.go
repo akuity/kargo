@@ -28,6 +28,7 @@ import (
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/common/config"
 	"github.com/akuityio/kargo/internal/git"
+	"github.com/akuityio/kargo/internal/helm"
 )
 
 const (
@@ -86,6 +87,14 @@ type environmentReconciler struct {
 		*image.VersionConstraint,
 		*tag.ImageTagList,
 	) (*tag.ImageTag, error)
+	getLatestChartsFn func(
+		ctx context.Context,
+		env *api.Environment,
+	) ([]api.Chart, error)
+	getChartRegistryCredentialsFn func(
+		ctx context.Context,
+		repoURL string,
+	) (*helm.RepoCredentials, error)
 	promoteFn func(
 		ctx context.Context,
 		env *api.Environment,
@@ -188,6 +197,8 @@ func newEnvironmentReconciler(
 	e.getImageRepoCredentialsFn = e.getImageRepoCredentials
 	e.getImageTagsFn = getImageTags
 	e.getNewestImageTagFn = getNewestImageTag
+	e.getLatestChartsFn = e.getLatestCharts
+	e.getChartRegistryCredentialsFn = e.getChartRegistryCredentials
 	e.promoteFn = e.promote
 	e.renderManifestsWithBookkeeperFn = bookkeeperService.RenderManifests
 	e.getArgoCDAppFn = e.getArgoCDApp
@@ -356,10 +367,22 @@ func (e *environmentReconciler) getNextStateFromUpstreamRepos(
 		)
 	}
 
+	latestCharts, err := e.getLatestChartsFn(ctx, env)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"error syncing chart repo subscriptions for Environment %q in "+
+				"namespace %q",
+			env.Name,
+			env.Namespace,
+		)
+	}
+
 	return &api.EnvironmentState{
 		ID:        uuid.NewV4().String(),
 		GitCommit: latestGitCommit,
 		Images:    latestImages,
+		Charts:    latestCharts,
 	}, nil
 }
 

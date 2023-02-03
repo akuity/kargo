@@ -74,6 +74,9 @@ type Repo interface {
 	RemoteBranchExists(branch string) (bool, error)
 	// URL returns the remote URL of the repository.
 	URL() string
+	// HomeDir returns an absolute path to the home directory of the system user
+	// who has cloned this repo.
+	HomeDir() string
 	// WorkingDir returns an absolute path to the repository's working tree.
 	WorkingDir() string
 }
@@ -303,6 +306,10 @@ func (r *repo) RemoteBranchExists(branch string) (bool, error) {
 
 func (r *repo) URL() string {
 	return r.url
+}
+
+func (r *repo) HomeDir() string {
+	return r.homeDir
 }
 
 func (r *repo) WorkingDir() string {

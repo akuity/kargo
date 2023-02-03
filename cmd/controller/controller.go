@@ -60,7 +60,8 @@ func RunController(ctx context.Context, config config.Config) error {
 	}
 	argoDB := db.NewDB(
 		"",
-		settings.NewSettingsManager(ctx, kubeClient, ""),
+		// TODO: Do not hard-code the namespace
+		settings.NewSettingsManager(ctx, kubeClient, "argo-cd"),
 		kubeClient,
 	)
 

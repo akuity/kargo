@@ -166,11 +166,11 @@ spec:
                           type: object
                         type: array
                     type: object
-                  configManagement:
-                    description: ConfigManagement describes actions that should be
-                      taken using various configuration management tools to incorporate
-                      newly observed materials into the Environment. This field is
-                      optional, as such actions are not required in all cases.
+                  git:
+                    description: Git describes actions that should be applied to a
+                      Git repository to incorporate newly observed materials into
+                      the Environment. This field is optional, as such actions are
+                      not required in all cases.
                     properties:
                       bookkeeper:
                         description: Bookkeeper describes how to use Bookkeeper to
@@ -186,6 +186,22 @@ spec:
                           newly observed materials into the Environment. This is mutually
                           exclusive with the Bookkeeper and Kustomize fields.
                         properties:
+                          charts:
+                            description: 'TODO: Document this'
+                            items:
+                              description: 'TODO: Document this'
+                              properties:
+                                chartPath:
+                                  description: 'TODO: Document this'
+                                  type: string
+                                name:
+                                  description: 'TODO: Document this'
+                                  type: string
+                                registryURL:
+                                  description: 'TODO: Document this'
+                                  type: string
+                              type: object
+                            type: array
                           images:
                             description: Images describes how specific image versions
                               can be incorporated into Helm values files.
@@ -255,6 +271,33 @@ spec:
                       Environment uses as sources of material. This field is mutually
                       exclusive with the UpstreamEnvs field.
                     properties:
+                      charts:
+                        description: Charts describes subscriptions to Helm charts.
+                        items:
+                          description: ChartSubscription defines a subscription to
+                            a Helm chart repository.
+                          properties:
+                            name:
+                              description: Name specifies a Helm chart to subscribe
+                                to within the Helm chart registry specified by the
+                                RegistryURL field. This field is required.
+                              type: string
+                            registryURL:
+                              description: RegistryURL specifies the URL of a Helm
+                                chart registry. It may be a classic chart registry
+                                (using HTTP/S) OR an OCI registry. This field is required.
+                              type: string
+                            semverConstraint:
+                              description: SemverConstraint specifies constraints
+                                on what new chart versions are permissible. This field
+                                is optional. When left unspecified, there will be
+                                no constraints, which means the latest version of
+                                the chart will always be used. Care should be taken
+                                with leaving this field unspecified, as it can lead
+                                to the unanticipated rollout of breaking changes.
+                              type: string
+                          type: object
+                        type: array
                       git:
                         description: Git indicates, when true, that there is a subscription
                           to the Git repository described by the Environment's GitRepo
@@ -354,6 +397,26 @@ spec:
                   description: EnvironmentState is a "bill of materials" describing
                     what was deployed to an Environment.
                   properties:
+                    charts:
+                      description: Charts describes Helm charts that were used in
+                        this state.
+                      items:
+                        description: Chart describes a specific version of a Helm
+                          chart.
+                        properties:
+                          name:
+                            description: Name specifies the name of the chart.
+                            type: string
+                          registryURL:
+                            description: RepoURL specifies the remote registry in
+                              which this chart is located.
+                            type: string
+                          version:
+                            description: Version specifies a particular version of
+                              the chart.
+                            type: string
+                        type: object
+                      type: array
                     gitCommit:
                       description: GitCommit describes a specific Git repository commit
                         that was used in this state.
