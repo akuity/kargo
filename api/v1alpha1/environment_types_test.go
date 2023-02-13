@@ -126,6 +126,20 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 			expectedResult: false,
 		},
 		{
+			name: "charts have different cardinality",
+			lhs:  &EnvironmentState{},
+			rhs: &EnvironmentState{
+				Charts: []Chart{
+					{
+						RegistryURL: "fake-registry",
+						Name:        "fake-chart",
+						Version:     "fake-version",
+					},
+				},
+			},
+			expectedResult: false,
+		},
+		{
 			name: "images have same cardinality, but differ",
 			lhs: &EnvironmentState{
 				Images: []Image{
@@ -146,9 +160,29 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 			expectedResult: false,
 		},
 		{
+			name: "charts have same cardinality, but differ",
+			lhs: &EnvironmentState{
+				Charts: []Chart{
+					{
+						RegistryURL: "fake-registry",
+						Name:        "fake-chart",
+						Version:     "fake-version",
+					},
+				},
+			},
+			rhs: &EnvironmentState{
+				Charts: []Chart{
+					{
+						RegistryURL: "fake-registry",
+						Name:        "fake-chart",
+						Version:     "different-fake-version",
+					},
+				},
+			},
+			expectedResult: false,
+		},
+		{
 			name: "perfect match",
-			// Note that we make a point of putting the images in different orders
-			// here, because order shouldn't matter.
 			lhs: &EnvironmentState{
 				Images: []Image{
 					{
@@ -160,8 +194,22 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 						Tag:     "1.0.0",
 					},
 				},
+				Charts: []Chart{
+					{
+						RegistryURL: "fake-registry",
+						Name:        "fake-chart",
+						Version:     "fake-version",
+					},
+					{
+						RegistryURL: "another-fake-registry",
+						Name:        "another-fake-chart",
+						Version:     "another-fake-version",
+					},
+				},
 			},
 			rhs: &EnvironmentState{
+				// Note that we make a point of putting the images in different orders
+				// here, because order shouldn't matter.
 				Images: []Image{
 					{
 						RepoURL: "bar",
@@ -170,6 +218,20 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 					{
 						RepoURL: "foo",
 						Tag:     "1.0.0",
+					},
+				},
+				// Note that we make a point of putting the charts in different orders
+				// here, because order shouldn't matter.
+				Charts: []Chart{
+					{
+						RegistryURL: "another-fake-registry",
+						Name:        "another-fake-chart",
+						Version:     "another-fake-version",
+					},
+					{
+						RegistryURL: "fake-registry",
+						Name:        "fake-chart",
+						Version:     "fake-version",
 					},
 				},
 			},

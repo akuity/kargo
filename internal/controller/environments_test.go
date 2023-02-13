@@ -40,6 +40,8 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.getImageRepoCredentialsFn)
 	require.NotNil(t, e.getImageTagsFn)
 	require.NotNil(t, e.getNewestImageTagFn)
+	require.NotNil(t, e.getLatestChartsFn)
+	require.NotNil(t, e.getChartRegistryCredentialsFn)
 	require.NotNil(t, e.promoteFn)
 	require.NotNil(t, e.renderManifestsWithBookkeeperFn)
 	require.NotNil(t, e.getArgoCDAppFn)
@@ -378,6 +380,7 @@ func TestGetNextStateFromUpstreamRepos(t *testing.T) {
 		spec       api.EnvironmentSpec
 		gitFn      func(context.Context, *api.Environment) (*api.GitCommit, error)
 		imagesFn   func(context.Context, *api.Environment) ([]api.Image, error)
+		chartsFn   func(context.Context, *api.Environment) ([]api.Chart, error)
 		assertions func(*api.EnvironmentState, error)
 	}{
 		{
@@ -437,6 +440,32 @@ func TestGetNextStateFromUpstreamRepos(t *testing.T) {
 			},
 		},
 		{
+			name: "error getting latest charts",
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
+			gitFn: func(context.Context, *api.Environment) (*api.GitCommit, error) {
+				return nil, nil
+			},
+			imagesFn: func(context.Context, *api.Environment) ([]api.Image, error) {
+				return nil, nil
+			},
+			chartsFn: func(context.Context, *api.Environment) ([]api.Chart, error) {
+				return nil, errors.New("something went wrong")
+			},
+			assertions: func(state *api.EnvironmentState, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error syncing chart repo subscriptions",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
 			name: "success",
 			spec: api.EnvironmentSpec{
 				Subscriptions: &api.Subscriptions{
@@ -454,6 +483,15 @@ func TestGetNextStateFromUpstreamRepos(t *testing.T) {
 					{
 						RepoURL: "fake-url",
 						Tag:     "fake-tag",
+					},
+				}, nil
+			},
+			chartsFn: func(context.Context, *api.Environment) ([]api.Chart, error) {
+				return []api.Chart{
+					{
+						RegistryURL: "fake-registry",
+						Name:        "fake-chart",
+						Version:     "fake-version",
 					},
 				}, nil
 			},
@@ -479,6 +517,17 @@ func TestGetNextStateFromUpstreamRepos(t *testing.T) {
 					},
 					state.Images,
 				)
+				require.Equal(
+					t,
+					[]api.Chart{
+						{
+							RegistryURL: "fake-registry",
+							Name:        "fake-chart",
+							Version:     "fake-version",
+						},
+					},
+					state.Charts,
+				)
 				require.Nil(t, state.Health)
 			},
 		},
@@ -495,6 +544,7 @@ func TestGetNextStateFromUpstreamRepos(t *testing.T) {
 			logger:            log.New(),
 			getLatestCommitFn: testCase.gitFn,
 			getLatestImagesFn: testCase.imagesFn,
+			getLatestChartsFn: testCase.chartsFn,
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(

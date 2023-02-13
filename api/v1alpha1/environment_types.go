@@ -85,6 +85,8 @@ type RepoSubscriptions struct {
 	Git bool `json:"git,omitempty"`
 	// Images describes subscriptions to container image repositories.
 	Images []ImageSubscription `json:"images,omitempty"`
+	// Charts describes subscriptions to Helm charts.
+	Charts []ChartSubscription `json:"charts,omitempty"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -133,14 +135,29 @@ type ImageSubscription struct {
 	PullSecret string `json:"pullSecret,omitempty"`
 }
 
+// ChartSubscription defines a subscription to a Helm chart repository.
+type ChartSubscription struct {
+	// RegistryURL specifies the URL of a Helm chart registry. It may be a classic
+	// chart registry (using HTTP/S) OR an OCI registry. This field is required.
+	RegistryURL string `json:"registryURL,omitempty"`
+	// Name specifies a Helm chart to subscribe to within the Helm chart registry
+	// specified by the RegistryURL field. This field is required.
+	Name string `json:"name,omitempty"`
+	// SemverConstraint specifies constraints on what new chart versions are
+	// permissible. This field is optional. When left unspecified, there will be
+	// no constraints, which means the latest version of the chart will always be
+	// used. Care should be taken with leaving this field unspecified, as it can
+	// lead to the unanticipated rollout of breaking changes.
+	SemverConstraint string `json:"semverConstraint,omitempty"`
+}
+
 // PromotionMechanisms describes how incorporate newly observed materials into
 // an Environment.
 type PromotionMechanisms struct {
-	// ConfigManagement describes actions that should be taken using various
-	// configuration management tools to incorporate newly observed materials into
-	// the Environment. This field is optional, as such actions are not required
-	// in all cases.
-	ConfigManagement *ConfigManagementPromotionMechanism `json:"configManagement,omitempty"` // nolint: lll
+	// Git describes actions that should be applied to a Git repository to
+	// incorporate newly observed materials into the Environment. This field is
+	// optional, as such actions are not required in all cases.
+	Git *GitPromotionMechanism `json:"git,omitempty"` // nolint: lll
 	// ArgoCD describes actions that should be taken in Argo CD to incorporate
 	// newly observed materials into the Environment. This field is optional, as
 	// such actions are not required in all cases. Note that all actions specified
@@ -148,10 +165,10 @@ type PromotionMechanisms struct {
 	ArgoCD *ArgoCDPromotionMechanism `json:"argoCD,omitempty"`
 }
 
-// ConfigManagementPromotionMechanism describes actions that should be taken
-// using various configuration management tools to incorporate newly observed
-// materials into an Environment.
-type ConfigManagementPromotionMechanism struct {
+// GitPromotionMechanism describes actions that should be applied to a Git
+// repository (using various configuration management tools) to incorporate
+// newly observed materials into an Environment.
+type GitPromotionMechanism struct {
 	// Bookkeeper describes how to use Bookkeeper to incorporate newly observed
 	// materials into the Environment. This is mutually exclusive with the
 	// Kustomize and Helm fields.
@@ -197,6 +214,8 @@ type HelmPromotionMechanism struct {
 	// Images describes how specific image versions can be incorporated into Helm
 	// values files.
 	Images []HelmImageUpdate `json:"images,omitempty"`
+	// TODO: Document this
+	Charts []HelmChartDependencyUpdate `json:"charts,omitempty"`
 }
 
 // HelmImageUpdate describes how a specific image version can be incorporated
@@ -215,6 +234,16 @@ type HelmImageUpdate struct {
 	// specified key with the entire <image name>:<tag>, or "Tag" which replaces
 	// the value of the specified with just the new tag. This is a required field.
 	Value ImageUpdateValueType `json:"value,omitempty"`
+}
+
+// TODO: Document this
+type HelmChartDependencyUpdate struct {
+	// TODO: Document this
+	RegistryURL string `json:"registryURL,omitempty"`
+	// TODO: Document this
+	Name string `json:"name,omitempty"`
+	// TODO: Document this
+	ChartPath string `json:"chartPath,omitempty"`
 }
 
 // ArgoCDPromotionMechanism describes actions that should be taken in Argo CD to
@@ -323,6 +352,8 @@ type EnvironmentState struct {
 	// Images describes container images and versions thereof that were used
 	// in this state.
 	Images []Image `json:"images,omitempty"`
+	// Charts describes Helm charts that were used in this state.
+	Charts []Chart `json:"charts,omitempty"`
 	// HealthCheckCommit is the ID of a specific commit in the Environment's Git
 	// repository. When determining environment health checks, associated Argo CD
 	// Application resources will be checked not only for their own health status,
@@ -348,12 +379,14 @@ func (e *EnvironmentState) SameMaterials(rhs *EnvironmentState) bool {
 	if !e.GitCommit.Equals(rhs.GitCommit) {
 		return false
 	}
-	// If we get to here, it all comes down to images. Because of the order of
-	// images shouldn't matter, we have some work to do to make an effective
-	// comparison...
 	if len(e.Images) != len(rhs.Images) {
 		return false
 	}
+	if len(e.Charts) != len(rhs.Charts) {
+		return false
+	}
+	// The order of images shouldn't matter, we have some work to do to make an
+	// effective comparison...
 	lhsImgVersions := map[string]struct{}{}
 	for _, lImg := range e.Images {
 		lhsImgVersions[fmt.Sprintf("%s:%s", lImg.RepoURL, lImg.Tag)] = struct{}{}
@@ -361,6 +394,17 @@ func (e *EnvironmentState) SameMaterials(rhs *EnvironmentState) bool {
 	for _, rImg := range rhs.Images {
 		if _, exists :=
 			lhsImgVersions[fmt.Sprintf("%s:%s", rImg.RepoURL, rImg.Tag)]; !exists {
+			return false
+		}
+	}
+	// The order of charts shouldn't matter, we have some work to do to make an
+	// effective comparison...
+	lhsChartVersions := map[string]struct{}{}
+	for _, lChart := range e.Charts {
+		lhsChartVersions[fmt.Sprintf("%s:%s:%s", lChart.RegistryURL, lChart.Name, lChart.Version)] = struct{}{} // nolint: lll
+	}
+	for _, rChart := range rhs.Charts {
+		if _, exists := lhsChartVersions[fmt.Sprintf("%s:%s:%s", rChart.RegistryURL, rChart.Name, rChart.Version)]; !exists { // nolint: lll
 			return false
 		}
 	}
@@ -374,6 +418,16 @@ type Image struct {
 	// Tag identifies a specific version of the image in the repository specified
 	// by RepoURL.
 	Tag string `json:"tag,omitempty"`
+}
+
+// Chart describes a specific version of a Helm chart.
+type Chart struct {
+	// RepoURL specifies the remote registry in which this chart is located.
+	RegistryURL string `json:"registryURL,omitempty"`
+	// Name specifies the name of the chart.
+	Name string `json:"name,omitempty"`
+	// Version specifies a particular version of the chart.
+	Version string `json:"version,omitempty"`
 }
 
 // GitCommit describes a specific commit from a specific Git repository.

@@ -4,13 +4,143 @@ import (
 	"context"
 	"testing"
 
-	api "github.com/akuityio/kargo/api/v1alpha1"
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	argoHealth "github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+
+	api "github.com/akuityio/kargo/api/v1alpha1"
 )
+
+func TestPromoteWithArgoCD(t *testing.T) {
+	testCases := []struct {
+		name        string
+		env         *api.Environment
+		newState    api.EnvironmentState
+		updateAppFn func(
+			ctx context.Context,
+			env *api.Environment,
+			newState api.EnvironmentState,
+			appUpdate api.ArgoCDAppUpdate,
+		) error
+		assertions func(err error)
+	}{
+		{
+			name: "environment is nil",
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "PromotionMechanisms is nil",
+			env: &api.Environment{
+				Spec: api.EnvironmentSpec{},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "ArgoCD is nil",
+			env: &api.Environment{
+				Spec: api.EnvironmentSpec{
+					PromotionMechanisms: &api.PromotionMechanisms{},
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "ArgoCD promotion mechanism has len(AppUpdates) == 0",
+			env: &api.Environment{
+				Spec: api.EnvironmentSpec{
+					PromotionMechanisms: &api.PromotionMechanisms{
+						ArgoCD: &api.ArgoCDPromotionMechanism{},
+					},
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error making App refresh and sync",
+			env: &api.Environment{
+				Spec: api.EnvironmentSpec{
+					PromotionMechanisms: &api.PromotionMechanisms{
+						ArgoCD: &api.ArgoCDPromotionMechanism{
+							AppUpdates: []api.ArgoCDAppUpdate{
+								{
+									Name:           "fake-app",
+									RefreshAndSync: true,
+								},
+							},
+						},
+					},
+				},
+			},
+			updateAppFn: func(
+				context.Context,
+				*api.Environment,
+				api.EnvironmentState,
+				api.ArgoCDAppUpdate,
+			) error {
+				return errors.New("something went wrong")
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error updating Argo CD Application")
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			env: &api.Environment{
+				Spec: api.EnvironmentSpec{
+					PromotionMechanisms: &api.PromotionMechanisms{
+						ArgoCD: &api.ArgoCDPromotionMechanism{
+							AppUpdates: []api.ArgoCDAppUpdate{
+								{
+									Name:           "fake-app",
+									RefreshAndSync: true,
+								},
+							},
+						},
+					},
+				},
+			},
+			updateAppFn: func(
+				context.Context,
+				*api.Environment,
+				api.EnvironmentState,
+				api.ArgoCDAppUpdate,
+			) error {
+				return nil
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			reconciler := environmentReconciler{
+				logger:            log.New(),
+				updateArgoCDAppFn: testCase.updateAppFn,
+			}
+			reconciler.logger.SetLevel(log.ErrorLevel)
+			testCase.assertions(
+				reconciler.promoteWithArgoCD(
+					context.Background(),
+					testCase.env,
+					testCase.newState,
+				),
+			)
+		})
+	}
+}
 
 func TestCheckHealth(t *testing.T) {
 	testCases := []struct {
@@ -321,7 +451,7 @@ func TestIsArgoCDAppSynced(t *testing.T) {
 	}
 }
 
-func TestBuildKustomizeImages(t *testing.T) {
+func TestBuildKustomizeImagesForArgoCDApp(t *testing.T) {
 	images := []api.Image{
 		{
 			RepoURL: "fake-url",
@@ -337,7 +467,7 @@ func TestBuildKustomizeImages(t *testing.T) {
 		"another-fake-url",
 		"image-that-is-not-in-list",
 	}
-	result := buildKustomizeImages(images, imageUpdates)
+	result := buildKustomizeImagesForArgoCDApp(images, imageUpdates)
 	require.Equal(
 		t,
 		argocd.KustomizeImages{
@@ -348,7 +478,7 @@ func TestBuildKustomizeImages(t *testing.T) {
 	)
 }
 
-func TestBuildChangesMap(t *testing.T) {
+func TestBuildHelmParamChangesForArgoCDApp(t *testing.T) {
 	images := []api.Image{
 		{
 			RepoURL: "fake-url",
@@ -376,7 +506,7 @@ func TestBuildChangesMap(t *testing.T) {
 			Value: "Tag",
 		},
 	}
-	result := buildChangesMap(images, imageUpdates)
+	result := buildHelmParamChangesForArgoCDApp(images, imageUpdates)
 	require.Equal(
 		t,
 		map[string]string{
