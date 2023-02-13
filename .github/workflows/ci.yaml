@@ -29,6 +29,10 @@ jobs:
       run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: Run unit tests
       run: make test-unit
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   lint:
     runs-on: ubuntu-latest
