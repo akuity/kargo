@@ -25,7 +25,6 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
 
 WORKDIR /kargo/bin
 RUN ln -s kargo kargo-controller
-RUN ln -s kargo kargo-server
 
 FROM ghcr.io/akuityio/bookkeeper-prototype:v0.1.0-alpha.2-rc.2 as final
 
