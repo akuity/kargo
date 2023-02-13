@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuityio/kargo/cmd/controller"
-	"github.com/akuityio/kargo/internal/common/version"
+	"github.com/akuityio/kargo/internal/version"
 )
 
 const binaryNameEnvVar = "KARGO_BINARY_NAME"

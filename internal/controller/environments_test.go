@@ -11,7 +11,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/common/config"
+	"github.com/akuityio/kargo/internal/config"
 )
 
 func TestNewEnvironmentReconciler(t *testing.T) {

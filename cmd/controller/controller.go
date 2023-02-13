@@ -14,10 +14,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/common/config"
-	"github.com/akuityio/kargo/internal/common/kubernetes"
-	"github.com/akuityio/kargo/internal/common/version"
+	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/controller"
+	"github.com/akuityio/kargo/internal/kubernetes"
+	"github.com/akuityio/kargo/internal/version"
 )
 
 // RunController configures and runs the Kargo controller.
