@@ -20,10 +20,6 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 {{- end -}}
 
-{{- define "kargo.server.fullname" -}}
-{{ include "kargo.fullname" . | printf "%s-server" }}
-{{- end -}}
-
 {{- define "kargo.controller.fullname" -}}
 {{ include "kargo.fullname" . | printf "%s-controller" }}
 {{- end -}}
@@ -53,10 +49,6 @@ Selector labels
 {{- define "kargo.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "kargo.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end -}}
-
-{{- define "kargo.server.labels" -}}
-app.kubernetes.io/component: server
 {{- end -}}
 
 {{- define "kargo.controller.labels" -}}

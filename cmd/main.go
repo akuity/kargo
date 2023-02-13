@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuityio/kargo/cmd/controller"
-	"github.com/akuityio/kargo/cmd/server"
 	"github.com/akuityio/kargo/internal/common/version"
 )
 
@@ -42,8 +41,6 @@ func main() {
 	switch binaryName {
 	case "kargo-controller":
 		err = controller.RunController(ctx, config)
-	case "kargo-server":
-		err = server.RunServer(ctx, config)
 	default:
 		err = errors.Errorf("unrecognized component name %q", binaryName)
 	}
