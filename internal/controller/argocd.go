@@ -160,6 +160,8 @@ func (e *environmentReconciler) getArgoCDApp(
 	return &app, nil
 }
 
+// TODO: Break up this large function
+// nolint: gocyclo
 func (e *environmentReconciler) updateArgoCDApp(
 	ctx context.Context,
 	env *api.Environment,
@@ -198,28 +200,43 @@ func (e *environmentReconciler) updateArgoCDApp(
 			appUpdate.Kustomize.Images,
 		)
 	} else if appUpdate.Helm != nil {
-		if app.Spec.Source.Helm == nil {
-			app.Spec.Source.Helm = &argocd.ApplicationSourceHelm{}
-		}
-		if app.Spec.Source.Helm.Parameters == nil {
-			app.Spec.Source.Helm.Parameters = []argocd.HelmParameter{}
-		}
-		changes :=
-			buildHelmParamChangesForArgoCDApp(newState.Images, appUpdate.Helm.Images)
-	imageUpdateLoop:
-		for k, v := range changes {
-			newParam := argocd.HelmParameter{
-				Name:  k,
-				Value: v,
+		if len(appUpdate.Helm.Images) > 0 {
+			if app.Spec.Source.Helm == nil {
+				app.Spec.Source.Helm = &argocd.ApplicationSourceHelm{}
 			}
-			for i, param := range app.Spec.Source.Helm.Parameters {
-				if param.Name == k {
-					app.Spec.Source.Helm.Parameters[i] = newParam
-					continue imageUpdateLoop
+			if app.Spec.Source.Helm.Parameters == nil {
+				app.Spec.Source.Helm.Parameters = []argocd.HelmParameter{}
+			}
+			changes := buildHelmParamChangesForArgoCDApp(
+				newState.Images,
+				appUpdate.Helm.Images,
+			)
+		imageUpdateLoop:
+			for k, v := range changes {
+				newParam := argocd.HelmParameter{
+					Name:  k,
+					Value: v,
+				}
+				for i, param := range app.Spec.Source.Helm.Parameters {
+					if param.Name == k {
+						app.Spec.Source.Helm.Parameters[i] = newParam
+						continue imageUpdateLoop
+					}
+				}
+				app.Spec.Source.Helm.Parameters =
+					append(app.Spec.Source.Helm.Parameters, newParam)
+			}
+		}
+		if appUpdate.Helm.Chart != nil {
+			for _, chart := range newState.Charts {
+				if chart.RegistryURL == appUpdate.Helm.Chart.RegistryURL &&
+					chart.Name == appUpdate.Helm.Chart.Name {
+					app.Spec.Source.RepoURL = chart.RegistryURL
+					app.Spec.Source.Chart = chart.Name
+					app.Spec.Source.TargetRevision = chart.Version
+					break
 				}
 			}
-			app.Spec.Source.Helm.Parameters =
-				append(app.Spec.Source.Helm.Parameters, newParam)
 		}
 	}
 

@@ -304,6 +304,8 @@ type ArgoCDHelm struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Helm parameters.
 	Images []ArgoCDHelmImageUpdate `json:"images,omitempty"`
+	// TODO: Document this
+	Chart *ArgoCDHelmChartUpdate `json:"chart,omitempty"`
 }
 
 // ArgoCDHelmImageUpdate describes how a specific image version can be
@@ -320,6 +322,15 @@ type ArgoCDHelmImageUpdate struct {
 	// which replaces the value of the specified with just the new tag. This is a
 	// required field.
 	Value ImageUpdateValueType `json:"value,omitempty"`
+}
+
+// ArgoCDHelmChartUpdate describes how a specific version of a Helm Chart can be
+// incorporated into an Argo CD Application.
+type ArgoCDHelmChartUpdate struct {
+	// TODO: Document this
+	RegistryURL string `json:"registryURL,omitempty"`
+	// TODO: Document this
+	Name string `json:"name,omitempty"`
 }
 
 // HealthChecks describes how the health of an Environment can be assessed on an
