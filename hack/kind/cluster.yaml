@@ -6,10 +6,6 @@ registry: kargo-dev-registry
 kindV1Alpha4Cluster:
   nodes:
   - extraPortMappings:
-    - containerPort: 30080 # Istio HTTP
+    - containerPort: 30080 # Argo CD
       hostPort: 30080
-    - containerPort: 30081 # Argo CD
-      hostPort: 30081
-    - containerPort: 30082 # Kargo Server
-      hostPort: 30082
 
