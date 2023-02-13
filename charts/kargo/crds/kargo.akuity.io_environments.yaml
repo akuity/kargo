@@ -90,6 +90,16 @@ spec:
                                 after such an update regardless of the value of the
                                 RefreshAndSync field.
                               properties:
+                                chart:
+                                  description: 'TODO: Document this'
+                                  properties:
+                                    name:
+                                      description: 'TODO: Document this'
+                                      type: string
+                                    registryURL:
+                                      description: 'TODO: Document this'
+                                      type: string
+                                  type: object
                                 images:
                                   description: Images describes how specific image
                                     versions can be incorporated into an Argo CD Application's
