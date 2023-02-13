@@ -3,8 +3,8 @@ package main
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/akuityio/kargo/internal/common/config"
-	"github.com/akuityio/kargo/internal/common/os"
+	"github.com/akuityio/kargo/internal/config"
+	"github.com/akuityio/kargo/internal/os"
 )
 
 func kargoConfig() (config.Config, error) {

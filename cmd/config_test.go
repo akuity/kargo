@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuityio/kargo/internal/common/config"
+	"github.com/akuityio/kargo/internal/config"
 )
 
 func TestKargoConfig(t *testing.T) {
