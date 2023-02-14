@@ -395,6 +395,94 @@ spec:
               Environment's sources of material as well as the environment's current
               and recent states.
             properties:
+              availableStates:
+                description: AvailableStates is a stack of available Environment states,
+                  where each state is essentially a "bill of materials" describing
+                  what can be automatically or manually deployed to the Environment.
+                items:
+                  description: EnvironmentState is a "bill of materials" describing
+                    what was deployed to an Environment.
+                  properties:
+                    charts:
+                      description: Charts describes Helm charts that were used in
+                        this state.
+                      items:
+                        description: Chart describes a specific version of a Helm
+                          chart.
+                        properties:
+                          name:
+                            description: Name specifies the name of the chart.
+                            type: string
+                          registryURL:
+                            description: RepoURL specifies the remote registry in
+                              which this chart is located.
+                            type: string
+                          version:
+                            description: Version specifies a particular version of
+                              the chart.
+                            type: string
+                        type: object
+                      type: array
+                    gitCommit:
+                      description: GitCommit describes a specific Git repository commit
+                        that was used in this state.
+                      properties:
+                        id:
+                          description: ID is the ID of a specific commit in the Git
+                            repository specified by RepoURL.
+                          type: string
+                        repoURL:
+                          description: RepoURL is the URL of a Git repository.
+                          type: string
+                      type: object
+                    health:
+                      description: Health is the state's last observed health. If
+                        this state is the Environment's current state, this will be
+                        continuously re-assessed and updated. If this state is a past
+                        state of the Environment, this field will denote the last
+                        observed health state before transitioning into a different
+                        state.
+                      properties:
+                        status:
+                          description: Status describes the health of the Environment.
+                          type: string
+                        statusReason:
+                          description: StatusReason clarifies why an Environment in
+                            any state other than Healthy is in that state. The value
+                            of this field will always be the empty string when an
+                            Environment is Healthy.
+                          type: string
+                      type: object
+                    healthCheckCommit:
+                      description: HealthCheckCommit is the ID of a specific commit
+                        in the Environment's Git repository. When determining environment
+                        health checks, associated Argo CD Application resources will
+                        be checked not only for their own health status, but also
+                        to see whether they are synced to this specific commit.
+                      type: string
+                    id:
+                      description: ID is a unique, system-assigned identifier for
+                        this state.
+                      type: string
+                    images:
+                      description: Images describes container images and versions
+                        thereof that were used in this state.
+                      items:
+                        description: Image describes a specific version of a container
+                          image.
+                        properties:
+                          repoURL:
+                            description: RepoURL describes the repository in which
+                              the image can be found.
+                            type: string
+                          tag:
+                            description: Tag identifies a specific version of the
+                              image in the repository specified by RepoURL.
+                            type: string
+                        type: object
+                      type: array
+                  type: object
+                type: array
               error:
                 description: 'TODO: Document this'
                 type: string

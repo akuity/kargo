@@ -43,7 +43,7 @@ type environmentReconciler struct {
 	argoDB     db.ArgoDB
 	logger     *log.Logger
 	// The following behaviors are all overridable for testing purposes
-	getNextStateFn func(
+	getNextAvailableStateFn func(
 		context.Context,
 		*api.Environment,
 	) (*api.EnvironmentState, error)
@@ -186,7 +186,7 @@ func newEnvironmentReconciler(
 		logger:     logger,
 	}
 	// Defaults for overridable behaviors:
-	e.getNextStateFn = e.getNextState
+	e.getNextAvailableStateFn = e.getNextAvailableState
 	e.getNextStateFromUpstreamReposFn = e.getNextStateFromUpstreamRepos
 	e.getLatestCommitFn = e.getLatestCommit
 	e.getGitRepoCredentialsFn = e.getGitRepoCredentials
@@ -292,33 +292,49 @@ func (e *environmentReconciler) sync(
 		status.States[0].Health = health
 	}
 
-	nextStatePtr, err := e.getNextStateFn(ctx, env)
+	nextAvailableState, err := e.getNextAvailableStateFn(ctx, env)
 	if err != nil {
 		status.Error = err.Error()
 		return status
 	}
 
-	if nextStatePtr == nil ||
-		(len(status.States) > 0 && nextStatePtr.SameMaterials(&status.States[0])) {
-		// Nothing to do
+	if nextAvailableState != nil &&
+		(len(status.AvailableStates) == 0 ||
+			!nextAvailableState.SameMaterials(&status.AvailableStates[0])) {
+		status.AvailableStates = append(
+			[]api.EnvironmentState{*nextAvailableState},
+			status.AvailableStates...,
+		)
+		const maxAvailableStates = 10 // TODO: Make this configurable?
+		if len(status.AvailableStates) > maxAvailableStates {
+			status.AvailableStates = status.AvailableStates[:maxAvailableStates]
+		}
+	}
+
+	if len(status.AvailableStates) == 0 {
+		// Nothing further to do
 		return status
 	}
 
-	nextState := *nextStatePtr
-	if nextState, err = e.promoteFn(ctx, env, nextState); err != nil {
-		status.Error = err.Error()
-		return status
-	}
-	status.States = append([]api.EnvironmentState{nextState}, status.States...)
-	const maxStates = 10 // TODO: Make this configurable
-	if len(status.States) > maxStates {
-		status.States = status.States[0:maxStates]
+	nextStateCandidate := status.AvailableStates[0]
+	if len(status.States) == 0 ||
+		!nextStateCandidate.SameMaterials(&status.States[0]) {
+		nextState := nextStateCandidate
+		if nextState, err = e.promoteFn(ctx, env, nextState); err != nil {
+			status.Error = err.Error()
+			return status
+		}
+		status.States = append([]api.EnvironmentState{nextState}, status.States...)
+		const maxStates = 10 // TODO: Make this configurable?
+		if len(status.States) > maxStates {
+			status.States = status.States[:maxStates]
+		}
 	}
 
 	return status
 }
 
-func (e *environmentReconciler) getNextState(
+func (e *environmentReconciler) getNextAvailableState(
 	ctx context.Context,
 	env *api.Environment,
 ) (*api.EnvironmentState, error) {
