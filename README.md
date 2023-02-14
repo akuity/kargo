@@ -1,6 +1,7 @@
 # Kargo Prototype
 
 ![CI](https://github.com/akuityio/kargo-prototype/actions/workflows/ci.yaml/badge.svg)
+[![codecov](https://codecov.io/gh/akuityio/kargo-prototype/branch/main/graph/badge.svg?token=DWEYXEJCYZ)](https://codecov.io/gh/akuityio/kargo-prototype)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 Placeholder
