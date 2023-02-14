@@ -29,7 +29,7 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.logger)
 	require.Equal(t, testConfig.LogLevel, e.logger.Level)
 	// Assert that all overridable behaviors were initialized to a default
-	require.NotNil(t, e.getNextStateFn)
+	require.NotNil(t, e.getNextAvailableStateFn)
 	require.NotNil(t, e.getNextStateFromUpstreamReposFn)
 	require.NotNil(t, e.getLatestCommitFn)
 	require.NotNil(t, e.getGitRepoCredentialsFn)
@@ -50,9 +50,9 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 
 func TestSync(t *testing.T) {
 	testCases := []struct {
-		name          string
-		initialStatus api.EnvironmentStatus
-		nextStateFn   func(
+		name                 string
+		initialStatus        api.EnvironmentStatus
+		nextAvailableStateFn func(
 			context.Context,
 			*api.Environment,
 		) (*api.EnvironmentState, error)
@@ -64,9 +64,9 @@ func TestSync(t *testing.T) {
 		assertions func(initialStatus, newStatus api.EnvironmentStatus)
 	}{
 		{
-			name: "error getting next state",
+			name: "error getting next available state",
 			// Status should be returned unchanged -- except for Error field
-			nextStateFn: func(
+			nextAvailableStateFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -79,9 +79,9 @@ func TestSync(t *testing.T) {
 			},
 		},
 		{
-			name: "next state is nil",
+			name: "no new state available",
 			// Status should be returned unchanged
-			nextStateFn: func(
+			nextAvailableStateFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -92,9 +92,23 @@ func TestSync(t *testing.T) {
 			},
 		},
 		{
-			name: "next state isn't different from existing state",
+			name: "next available state isn't new",
 			// Status should be returned unchanged
 			initialStatus: api.EnvironmentStatus{
+				AvailableStates: []api.EnvironmentState{
+					{
+						GitCommit: &api.GitCommit{
+							RepoURL: "fake-url",
+							ID:      "fake-commit",
+						},
+						Images: []api.Image{
+							{
+								RepoURL: "fake-url",
+								Tag:     "fake-tag",
+							},
+						},
+					},
+				},
 				States: []api.EnvironmentState{
 					{
 						GitCommit: &api.GitCommit{
@@ -110,7 +124,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
-			nextStateFn: func(
+			nextAvailableStateFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -132,9 +146,10 @@ func TestSync(t *testing.T) {
 			},
 		},
 		{
-			name: "error executing promotion",
-			// Status should be returned unchanged -- except for Error field
-			nextStateFn: func(
+			name: "next available state is new; error executing promotion",
+			// Status should be returned unchanged -- except for AvailableStates and
+			// Error fields
+			nextAvailableStateFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -149,6 +164,8 @@ func TestSync(t *testing.T) {
 			},
 			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
 				require.Equal(t, "something went wrong", newStatus.Error)
+				require.NotEmpty(t, newStatus.AvailableStates)
+				newStatus.AvailableStates = nil
 				newStatus.Error = ""
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -156,7 +173,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "successful promotion",
 			// Status should reflect the next state
-			nextStateFn: func(
+			nextAvailableStateFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -182,61 +199,8 @@ func TestSync(t *testing.T) {
 			},
 			assertions: func(_, newStatus api.EnvironmentStatus) {
 				require.Empty(t, newStatus.Error)
+				require.Len(t, newStatus.AvailableStates, 1)
 				require.Len(t, newStatus.States, 1)
-			},
-		},
-		{
-			name: "state history exceeds max",
-			// Status should reflect the next state
-			initialStatus: api.EnvironmentStatus{
-				States: []api.EnvironmentState{
-					{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, // Ten
-				},
-			},
-			nextStateFn: func(
-				context.Context,
-				*api.Environment,
-			) (*api.EnvironmentState, error) {
-				return &api.EnvironmentState{
-					GitCommit: &api.GitCommit{
-						RepoURL: "fake-url",
-						ID:      "fake-commit",
-					},
-					Images: []api.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
-						},
-					},
-				}, nil
-			},
-			promoteFn: func(
-				_ context.Context,
-				_ *api.Environment,
-				newState api.EnvironmentState,
-			) (api.EnvironmentState, error) {
-				return newState, nil
-			},
-			assertions: func(_, newStatus api.EnvironmentStatus) {
-				require.Empty(t, newStatus.Error)
-				require.Len(t, newStatus.States, 10) // Verify cap was respected
-				// Verify the states behave as a stack with FILO semantics
-				require.Equal(
-					t,
-					api.EnvironmentState{
-						GitCommit: &api.GitCommit{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
-						},
-						Images: []api.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
-					},
-					newStatus.States[0],
-				)
 			},
 		},
 	}
@@ -249,9 +213,9 @@ func TestSync(t *testing.T) {
 			Status: testCase.initialStatus,
 		}
 		testReconciler := &environmentReconciler{
-			logger:         log.New(),
-			getNextStateFn: testCase.nextStateFn,
-			promoteFn:      testCase.promoteFn,
+			logger:                  log.New(),
+			getNextAvailableStateFn: testCase.nextAvailableStateFn,
+			promoteFn:               testCase.promoteFn,
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
@@ -262,7 +226,7 @@ func TestSync(t *testing.T) {
 	}
 }
 
-func TestGetNextState(t *testing.T) {
+func TestGetNextAvailableState(t *testing.T) {
 	testCases := []struct {
 		name            string
 		spec            api.EnvironmentSpec
@@ -368,7 +332,7 @@ func TestGetNextState(t *testing.T) {
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testReconciler.getNextState(context.Background(), testEnv),
+				testReconciler.getNextAvailableState(context.Background(), testEnv),
 			)
 		})
 	}

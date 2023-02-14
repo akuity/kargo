@@ -344,6 +344,10 @@ type HealthChecks struct {
 // EnvironmentStatus describes the most recently observed versions of an
 // Environment's sources of material as well as its current and recent states.
 type EnvironmentStatus struct {
+	// AvailableStates is a stack of available Environment states, where each
+	// state is essentially a "bill of materials" describing what can be
+	// automatically or manually deployed to the Environment.
+	AvailableStates []EnvironmentState `json:"availableStates,omitempty"`
 	// States is a stack of recent Environment states, where each state is
 	// essentially a "bill of materials" describing what was deployed to the
 	// Environment. By default, the last ten states are stored.
