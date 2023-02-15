@@ -423,6 +423,16 @@ spec:
                             type: string
                         type: object
                       type: array
+                    firstSeen:
+                      description: FirstSeen represents the date/time when this EnvironmentState
+                        first entered the system. This is useful and important information
+                        because it enables the controller to block auto-promotion
+                        of EnvironmentStates that are older than an Environment's
+                        current state, which is a case that can arise if an Environment
+                        has ROLLED BACK to an older state whilst a downstream Environment
+                        is already on to a newer state.
+                      format: date-time
+                      type: string
                     gitCommit:
                       description: GitCommit describes a specific Git repository commit
                         that was used in this state.
@@ -515,6 +525,16 @@ spec:
                             type: string
                         type: object
                       type: array
+                    firstSeen:
+                      description: FirstSeen represents the date/time when this EnvironmentState
+                        first entered the system. This is useful and important information
+                        because it enables the controller to block auto-promotion
+                        of EnvironmentStates that are older than an Environment's
+                        current state, which is a case that can arise if an Environment
+                        has ROLLED BACK to an older state whilst a downstream Environment
+                        is already on to a newer state.
+                      format: date-time
+                      type: string
                     gitCommit:
                       description: GitCommit describes a specific Git repository commit
                         that was used in this state.
