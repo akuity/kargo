@@ -347,11 +347,11 @@ type EnvironmentStatus struct {
 	// AvailableStates is a stack of available Environment states, where each
 	// state is essentially a "bill of materials" describing what can be
 	// automatically or manually deployed to the Environment.
-	AvailableStates []EnvironmentState `json:"availableStates,omitempty"`
+	AvailableStates EnvironmentStateStack `json:"availableStates,omitempty"`
 	// States is a stack of recent Environment states, where each state is
 	// essentially a "bill of materials" describing what was deployed to the
 	// Environment. By default, the last ten states are stored.
-	States []EnvironmentState `json:"states,omitempty"`
+	States EnvironmentStateStack `json:"states,omitempty"`
 	// TODO: Document this
 	Error string `json:"error,omitempty"`
 }
@@ -361,6 +361,13 @@ type EnvironmentStatus struct {
 type EnvironmentState struct {
 	// ID is a unique, system-assigned identifier for this state.
 	ID string `json:"id,omitempty"`
+	// FirstSeen represents the date/time when this EnvironmentState first entered
+	// the system. This is useful and important information because it enables the
+	// controller to block auto-promotion of EnvironmentStates that are older than
+	// an Environment's current state, which is a case that can arise if an
+	// Environment has ROLLED BACK to an older state whilst a downstream
+	// Environment is already on to a newer state.
+	FirstSeen *metav1.Time `json:"firstSeen,omitempty"`
 	// GitCommit describes a specific Git repository commit that was used in this
 	// state.
 	GitCommit *GitCommit `json:"gitCommit,omitempty"`
@@ -380,6 +387,63 @@ type EnvironmentState struct {
 	// denote the last observed health state before transitioning into a different
 	// state.
 	Health *Health `json:"health,omitempty"`
+}
+
+type EnvironmentStateStack []EnvironmentState
+
+// Empty returns a bool indicating whether or not the EnvironmentStateStack is
+// empty. nil counts as empty.
+func (e EnvironmentStateStack) Empty() bool {
+	return len(e) == 0
+}
+
+// Top returns the leading element of the EnvironmentStateStack if the
+// EnvironmentStateStack is not empty. nil counts as empty. When the
+// EnvironmentStateStack is empty, a new EnvironmentStateStack is returned. A
+// boolean is also returned indicating whether the returned
+// EnvironmentStateStack came from the top of the stack (true) or is a zero
+// value for that type (false).
+func (e EnvironmentStateStack) Top() (EnvironmentState, bool) {
+	if len(e) == 0 {
+		return EnvironmentState{}, false
+	}
+	return e[0], true
+}
+
+// Pop returns the EnvironmentStateStack with its leading element removed as
+// well as the leading element itself if the EnvironmentStateStack is not empty.
+// nil counts as empty. When the EnvironmentStateStack is empty, the
+// EnvironmentStack is returned unmodified with a new EnvironmentStateStack. A
+// boolean is also returned indicating whether the returned
+// EnvironmentStateStack came from the top of the stack (true) or is a zero
+// value for that type (false).
+func (e EnvironmentStateStack) Pop() (
+	EnvironmentStateStack,
+	EnvironmentState,
+	bool,
+) {
+	if e.Empty() {
+		return e, EnvironmentState{}, false
+	}
+	return e[1:], e[0], true
+}
+
+// Push pushes one or more EnvironmentStates onto the EnvironmentStateStack. The
+// order of the new elements at the top of the stack will be equal to the order
+// in which they were passed to this function. i.e. The first new element passed
+// will be the element at the top of the stack. If resulting modification grow
+// the depth of the stack beyond 10 elements, the stack is truncated at the
+// bottom. i.e. Modified to contain only the top 10 elements. In all cases, the
+// modified stack is returned.
+func (e EnvironmentStateStack) Push(
+	states ...EnvironmentState,
+) EnvironmentStateStack {
+	e = append(states, e...)
+	const max = 10
+	if len(e) > max {
+		return e[:max]
+	}
+	return e
 }
 
 // SameMaterials returns a bool indicating whether or not two EnvironmentStates

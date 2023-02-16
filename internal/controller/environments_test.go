@@ -29,8 +29,8 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.logger)
 	require.Equal(t, testConfig.LogLevel, e.logger.Level)
 	// Assert that all overridable behaviors were initialized to a default
-	require.NotNil(t, e.getNextAvailableStateFn)
-	require.NotNil(t, e.getNextStateFromUpstreamReposFn)
+	require.NotNil(t, e.getLatestStateFromReposFn)
+	require.NotNil(t, e.getAvailableStatesFromUpstreamEnvsFn)
 	require.NotNil(t, e.getLatestCommitFn)
 	require.NotNil(t, e.getGitRepoCredentialsFn)
 	require.NotNil(t, e.gitCloneFn)
@@ -50,12 +50,17 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 
 func TestSync(t *testing.T) {
 	testCases := []struct {
-		name                 string
-		initialStatus        api.EnvironmentStatus
-		nextAvailableStateFn func(
+		name                      string
+		spec                      api.EnvironmentSpec
+		initialStatus             api.EnvironmentStatus
+		getLatestStateFromReposFn func(
 			context.Context,
 			*api.Environment,
 		) (*api.EnvironmentState, error)
+		getAvailableStatesFromUpstreamEnvsFn func(
+			context.Context,
+			*api.Environment,
+		) ([]api.EnvironmentState, error)
 		promoteFn func(
 			ctx context.Context,
 			env *api.Environment,
@@ -64,9 +69,27 @@ func TestSync(t *testing.T) {
 		assertions func(initialStatus, newStatus api.EnvironmentStatus)
 	}{
 		{
-			name: "error getting next available state",
+			name: "no subscriptions",
+			// Status should be returned unchanged
+			initialStatus: api.EnvironmentStatus{
+				States: api.EnvironmentStateStack{
+					{},
+				},
+			},
+			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "error getting latest state from repos",
 			// Status should be returned unchanged -- except for Error field
-			nextAvailableStateFn: func(
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
+			getLatestStateFromReposFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -78,10 +101,16 @@ func TestSync(t *testing.T) {
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
+
 		{
-			name: "no new state available",
+			name: "no latest state from repos",
 			// Status should be returned unchanged
-			nextAvailableStateFn: func(
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
+			getLatestStateFromReposFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -91,9 +120,15 @@ func TestSync(t *testing.T) {
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
+
 		{
-			name: "next available state isn't new",
+			name: "latest state from repos isn't new",
 			// Status should be returned unchanged
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
 			initialStatus: api.EnvironmentStatus{
 				AvailableStates: []api.EnvironmentState{
 					{
@@ -124,7 +159,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
-			nextAvailableStateFn: func(
+			getLatestStateFromReposFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -145,11 +180,17 @@ func TestSync(t *testing.T) {
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
+
 		{
-			name: "next available state is new; error executing promotion",
+			name: "latest state from repos is new; error executing promotion",
 			// Status should be returned unchanged -- except for AvailableStates and
 			// Error fields
-			nextAvailableStateFn: func(
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
+			getLatestStateFromReposFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -170,10 +211,64 @@ func TestSync(t *testing.T) {
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
+
+		{
+			name: "error getting available states from upstream envs",
+			// Status should be returned unchanged -- except for Error field
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					UpstreamEnvs: []string{"foo"},
+				},
+			},
+			getAvailableStatesFromUpstreamEnvsFn: func(
+				ctx context.Context,
+				env *api.Environment,
+			) ([]api.EnvironmentState, error) {
+				return nil, errors.New("something went wrong")
+			},
+			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
+				require.Equal(t, "something went wrong", newStatus.Error)
+				newStatus.Error = ""
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "not auto-promotion eligible",
+			// Status should have updated AvailableStates updated and no Error
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					UpstreamEnvs: []string{"foo", "bar"},
+				},
+			},
+			getAvailableStatesFromUpstreamEnvsFn: func(
+				ctx context.Context,
+				env *api.Environment,
+			) ([]api.EnvironmentState, error) {
+				return []api.EnvironmentState{
+					{},
+					{},
+				}, nil
+			},
+			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
+				require.Empty(t, newStatus.Error)
+				require.Equal(
+					t,
+					api.EnvironmentStateStack{{}, {}},
+					newStatus.AvailableStates,
+				)
+			},
+		},
+
 		{
 			name: "successful promotion",
-			// Status should reflect the next state
-			nextAvailableStateFn: func(
+			// Status should reflect the new state
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
+			getLatestStateFromReposFn: func(
 				context.Context,
 				*api.Environment,
 			) (*api.EnvironmentState, error) {
@@ -210,12 +305,14 @@ func TestSync(t *testing.T) {
 				Name:      "foo",
 				Namespace: "bar",
 			},
+			Spec:   testCase.spec,
 			Status: testCase.initialStatus,
 		}
 		testReconciler := &environmentReconciler{
-			logger:                  log.New(),
-			getNextAvailableStateFn: testCase.nextAvailableStateFn,
-			promoteFn:               testCase.promoteFn,
+			logger:                               log.New(),
+			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
+			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn, // nolint: lll
+			promoteFn:                            testCase.promoteFn,
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
@@ -226,119 +323,7 @@ func TestSync(t *testing.T) {
 	}
 }
 
-func TestGetNextAvailableState(t *testing.T) {
-	testCases := []struct {
-		name            string
-		spec            api.EnvironmentSpec
-		upstreamReposFn func(
-			context.Context,
-			*api.Environment,
-		) (*api.EnvironmentState, error)
-		assertions func(*api.EnvironmentState, error)
-	}{
-		{
-			name: "spec has no subscriptions",
-			assertions: func(state *api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Nil(t, state)
-			},
-		},
-		{
-			name: "spec has no upstream repo subscriptions",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{},
-			},
-			assertions: func(state *api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Nil(t, state)
-			},
-		},
-		{
-			name: "error getting next state from upstream repos",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-			},
-			upstreamReposFn: func(
-				context.Context,
-				*api.Environment,
-			) (*api.EnvironmentState, error) {
-				return nil, errors.New("something went wrong")
-			},
-			assertions: func(state *api.EnvironmentState, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error getting next state")
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, state)
-			},
-		},
-		{
-			name: "success getting next state from upstream repos",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-			},
-			upstreamReposFn: func(
-				context.Context,
-				*api.Environment,
-			) (*api.EnvironmentState, error) {
-				return &api.EnvironmentState{
-					GitCommit: &api.GitCommit{
-						RepoURL: "fake-url",
-						ID:      "fake-commit",
-					},
-					Images: []api.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
-						},
-					},
-				}, nil
-			},
-			assertions: func(state *api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(
-					t,
-					&api.EnvironmentState{
-						GitCommit: &api.GitCommit{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
-						},
-						Images: []api.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
-					},
-					state,
-				)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		testEnv := &api.Environment{
-			ObjectMeta: v1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "bar",
-			},
-			Spec: testCase.spec,
-		}
-		testReconciler := &environmentReconciler{
-			logger:                          log.New(),
-			getNextStateFromUpstreamReposFn: testCase.upstreamReposFn,
-		}
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testReconciler.getNextAvailableState(context.Background(), testEnv),
-			)
-		})
-	}
-}
-
-func TestGetNextStateFromUpstreamRepos(t *testing.T) {
+func TestGetLatestStateFromRepos(t *testing.T) {
 	testCases := []struct {
 		name       string
 		spec       api.EnvironmentSpec
@@ -463,6 +448,7 @@ func TestGetNextStateFromUpstreamRepos(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, state)
 				require.NotEmpty(t, state.ID)
+				require.NotNil(t, state.FirstSeen)
 				require.Equal(
 					t,
 					&api.GitCommit{
@@ -512,7 +498,7 @@ func TestGetNextStateFromUpstreamRepos(t *testing.T) {
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testReconciler.getNextStateFromUpstreamRepos(
+				testReconciler.getLatestStateFromRepos(
 					context.Background(),
 					testEnv,
 				),

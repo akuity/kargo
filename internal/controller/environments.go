@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -43,14 +44,14 @@ type environmentReconciler struct {
 	argoDB     db.ArgoDB
 	logger     *log.Logger
 	// The following behaviors are all overridable for testing purposes
-	getNextAvailableStateFn func(
+	getLatestStateFromReposFn func(
 		context.Context,
 		*api.Environment,
 	) (*api.EnvironmentState, error)
-	getNextStateFromUpstreamReposFn func(
+	getAvailableStatesFromUpstreamEnvsFn func(
 		context.Context,
 		*api.Environment,
-	) (*api.EnvironmentState, error)
+	) ([]api.EnvironmentState, error)
 	getLatestCommitFn func(
 		context.Context,
 		*api.Environment,
@@ -186,8 +187,8 @@ func newEnvironmentReconciler(
 		logger:     logger,
 	}
 	// Defaults for overridable behaviors:
-	e.getNextAvailableStateFn = e.getNextAvailableState
-	e.getNextStateFromUpstreamReposFn = e.getNextStateFromUpstreamRepos
+	e.getLatestStateFromReposFn = e.getLatestStateFromRepos
+	e.getAvailableStatesFromUpstreamEnvsFn = e.getAvailableStatesFromUpstreamEnvs
 	e.getLatestCommitFn = e.getLatestCommit
 	e.getGitRepoCredentialsFn = e.getGitRepoCredentials
 	e.gitCloneFn = git.Clone
@@ -287,74 +288,87 @@ func (e *environmentReconciler) sync(
 	status := *statusPtr
 	status.Error = ""
 
-	health := e.checkHealth(ctx, env)
-	if len(status.States) > 0 {
-		status.States[0].Health = health
+	// Only perform health checks if we have a current state to update
+	var currentState api.EnvironmentState
+	var ok bool
+	if status.States, currentState, ok = status.States.Pop(); ok {
+		currentState.Health = e.checkHealth(ctx, env)
+		status.States = status.States.Push(currentState)
 	}
 
-	nextAvailableState, err := e.getNextAvailableStateFn(ctx, env)
-	if err != nil {
-		status.Error = err.Error()
-		return status
+	if env.Spec.Subscriptions == nil {
+		return status // Nothing further to do
 	}
 
-	if nextAvailableState != nil &&
-		(len(status.AvailableStates) == 0 ||
-			!nextAvailableState.SameMaterials(&status.AvailableStates[0])) {
-		status.AvailableStates = append(
-			[]api.EnvironmentState{*nextAvailableState},
-			status.AvailableStates...,
-		)
-		const maxAvailableStates = 10 // TODO: Make this configurable?
-		if len(status.AvailableStates) > maxAvailableStates {
-			status.AvailableStates = status.AvailableStates[:maxAvailableStates]
-		}
-	}
+	var autoPromote bool
 
-	if len(status.AvailableStates) == 0 {
-		// Nothing further to do
-		return status
-	}
+	if env.Spec.Subscriptions.Repos != nil {
 
-	nextStateCandidate := status.AvailableStates[0]
-	if len(status.States) == 0 ||
-		!nextStateCandidate.SameMaterials(&status.States[0]) {
-		nextState := nextStateCandidate
-		if nextState, err = e.promoteFn(ctx, env, nextState); err != nil {
+		latestState, err := e.getLatestStateFromReposFn(ctx, env)
+		if err != nil {
 			status.Error = err.Error()
 			return status
 		}
-		status.States = append([]api.EnvironmentState{nextState}, status.States...)
-		const maxStates = 10 // TODO: Make this configurable?
-		if len(status.States) > maxStates {
-			status.States = status.States[:maxStates]
+		// If not nil, latestState from upstream repos will always have a shiny new
+		// ID. To determine if this is actually new and needs to be pushed onto the
+		// status.AvailableStates stack, either that stack needs to be empty or
+		// latestState's MATERIALS must differ from what is at the top of the
+		// status.AvailableStates stack.
+		if latestState != nil {
+			var topAvailableState api.EnvironmentState
+			if topAvailableState, ok = status.AvailableStates.Top(); !ok ||
+				!latestState.SameMaterials(&topAvailableState) {
+				status.AvailableStates = status.AvailableStates.Push(*latestState)
+			}
 		}
+
+		autoPromote = true
+
+	} else if len(env.Spec.Subscriptions.UpstreamEnvs) > 0 {
+
+		// This returns de-duped, healthy states only from all upstream envs. There
+		// could be up to ten per upstream environment. This is more than the usual
+		// quantity we permit in status.AvailableStates, but we'll allow it.
+		//
+		// TODO: This is a placeholder. Call a real function.
+		latestStatesFromEnvs, err :=
+			e.getAvailableStatesFromUpstreamEnvsFn(ctx, env)
+		if err != nil {
+			status.Error = err.Error()
+			return status
+		}
+		status.AvailableStates = latestStatesFromEnvs
+
+		// If we're subscribed to more than one upstream environment, then it's
+		// ambiguous which of the status.AvailableStates we should use, so
+		// auto-promotion is off the table.
+		autoPromote = len(env.Spec.Subscriptions.UpstreamEnvs) == 1
+
+	}
+
+	if !autoPromote || status.AvailableStates.Empty() {
+		return status // Nothing further to do
+	}
+
+	nextStateCandidate, _ := status.AvailableStates.Top()
+	// Proceed with promotion if there is no currentState OR the
+	// nextStateCandidate is different and NEWER than the currentState
+	if currentState, ok = status.States.Top(); !ok ||
+		(nextStateCandidate.ID != currentState.ID &&
+			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
+		nextState := nextStateCandidate
+		nextState, err := e.promoteFn(ctx, env, nextState)
+		if err != nil {
+			status.Error = err.Error()
+			return status
+		}
+		status.States = status.States.Push(nextState)
 	}
 
 	return status
 }
 
-func (e *environmentReconciler) getNextAvailableState(
-	ctx context.Context,
-	env *api.Environment,
-) (*api.EnvironmentState, error) {
-	if env.Spec.Subscriptions == nil || env.Spec.Subscriptions.Repos == nil {
-		return nil, nil
-	}
-
-	nextState, err := e.getNextStateFromUpstreamReposFn(ctx, env)
-	return nextState, errors.Wrapf(
-		err,
-		"error getting next state for Environment %q in namespace %q from "+
-			"upstream repos",
-		env.Name,
-		env.Namespace,
-	)
-
-	// TODO: Handle subscription to upstream environments
-}
-
-func (e *environmentReconciler) getNextStateFromUpstreamRepos(
+func (e *environmentReconciler) getLatestStateFromRepos(
 	ctx context.Context,
 	env *api.Environment,
 ) (*api.EnvironmentState, error) {
@@ -394,12 +408,22 @@ func (e *environmentReconciler) getNextStateFromUpstreamRepos(
 		)
 	}
 
+	now := metav1.Now()
 	return &api.EnvironmentState{
 		ID:        uuid.NewV4().String(),
+		FirstSeen: &now,
 		GitCommit: latestGitCommit,
 		Images:    latestImages,
 		Charts:    latestCharts,
 	}, nil
+}
+
+// TODO: Implement this
+func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
+	ctx context.Context,
+	env *api.Environment,
+) ([]api.EnvironmentState, error) {
+	return nil, nil
 }
 
 // getEnv returns a pointer to the Environment resource specified by the
