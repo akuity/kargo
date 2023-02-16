@@ -1,5 +1,7 @@
 SHELL ?= /bin/bash
 
+ARGO_CD_CHART_VERSION := 5.21.0
+
 ################################################################################
 # Tests                                                                        #
 #                                                                              #
@@ -108,7 +110,7 @@ hack-k3d-down:
 hack-install-argocd:
 	helm upgrade argo-cd argo-cd \
 		--repo https://argoproj.github.io/argo-helm \
-		--version 5.5.6 \
+		--version $(ARGO_CD_CHART_VERSION) \
 		--install \
 		--create-namespace \
 		--namespace argo-cd \
@@ -121,7 +123,7 @@ hack-install-argocd:
 hack-add-rollouts:
 	helm upgrade argo-cd argo-cd \
 		--repo https://argoproj.github.io/argo-helm \
-		--version 5.5.6 \
+		--version $(ARGO_CD_CHART_VERSION) \
 		--namespace argo-cd \
 		--reuse-values \
 		--set server.extensions.enabled=true \
