@@ -2,13 +2,13 @@ module github.com/akuityio/kargo
 
 go 1.19
 
-replace github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.9 => github.com/akuityio/bookkeeper-prototype v0.1.0-alpha.2-rc.9
+replace github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.9 => github.com/akuityio/bookkeeper-prototype v0.1.0-alpha.2-rc.12
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/TomOnTime/utfutil v0.0.0-20180511104225-09c41003ee1d // indirect
-	github.com/argoproj/gitops-engine v0.7.1-0.20221108210551-e284fd71cb96
-	github.com/argoproj/pkg v0.13.7-0.20221115212233-27bd8ce31415 // indirect
+	github.com/argoproj/gitops-engine v0.7.1-0.20221208230615-917f5a0f16d5
+	github.com/argoproj/pkg v0.13.7-0.20221221191914-44694015343d // indirect
 	github.com/bombsimon/logrusr/v2 v2.0.1 // indirect
 	github.com/bradleyfalzon/ghinstallation/v2 v2.1.0 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
@@ -41,7 +41,6 @@ require (
 	github.com/spf13/cobra v1.6.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.8.1
-	github.com/yuin/gopher-lua v0.0.0-20220504180219-658193537a64 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb // indirect
@@ -70,7 +69,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.9
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
-	github.com/argoproj/argo-cd/v2 v2.5.7
+	github.com/argoproj/argo-cd/v2 v2.6.2
 	github.com/satori/go.uuid v1.2.0
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go v1.2.2
@@ -155,7 +154,7 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	github.com/robfig/cron v1.2.0 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/vmihailenco/go-tinylfu v0.2.1 // indirect
