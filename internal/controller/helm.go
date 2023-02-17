@@ -6,183 +6,78 @@ import (
 	"os"
 	"path/filepath"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/git"
-	"github.com/akuityio/kargo/internal/helm"
-	libYAML "github.com/akuityio/kargo/internal/yaml"
 )
 
-// TODO: Add some logging to this function
-//
-// TODO: There's more than one kind of Helm promotion we might have to do.
-// We could be updating images or charts -- or  both.
-func (e *environmentReconciler) promoteWithHelm(
-	ctx context.Context,
-	env *api.Environment,
+func (e *environmentReconciler) applyHelm(
 	newState api.EnvironmentState,
-) (api.EnvironmentState, error) {
-	if env == nil ||
-		env.Spec.PromotionMechanisms == nil ||
-		env.Spec.PromotionMechanisms.Git == nil ||
-		env.Spec.PromotionMechanisms.Git.Helm == nil ||
-		(len(env.Spec.PromotionMechanisms.Git.Helm.Images) == 0 &&
-			len(env.Spec.PromotionMechanisms.Git.Helm.Charts) == 0) ||
-		(len(newState.Images) == 0 && len(newState.Charts) == 0) {
-		return newState, nil
+	update api.HelmPromotionMechanism,
+	homeDir string,
+	repoDir string,
+) error {
+	// Image updates
+	changesByFile := buildValuesFilesChanges(newState.Images, update.Images)
+	for file, changes := range changesByFile {
+		if err := e.setStringsInYAMLFileFn(
+			filepath.Join(repoDir, file),
+			changes,
+		); err != nil {
+			return errors.Wrapf(err, "error updating values in file %q", file)
+		}
 	}
 
-	if env.Spec.GitRepo == nil || env.Spec.GitRepo.URL == "" {
-		return newState, errors.New(
-			"cannot promote images via Helm because spec does not contain " +
-				"git repo details",
-		)
-	}
-
-	return e.promoteWithGit(
-		ctx,
-		env,
-		newState,
-		"updating images",
-		func(repo git.Repo) error {
-			// Image updates
-			imgUpdates := env.Spec.PromotionMechanisms.Git.Helm.Images
-			changesByFile := buildValuesFilesChanges(newState.Images, imgUpdates)
-			for file, changes := range changesByFile {
-				if err := libYAML.SetStringsInFile(
-					filepath.Join(repo.WorkingDir(), file),
-					changes,
-				); err != nil {
-					return errors.Wrapf(
-						err,
-						"error updating values in file %q",
-						file,
-					)
-				}
-			}
-
-			// Chart dependency updates
-			chartDependencyUpdates := env.Spec.PromotionMechanisms.Git.Helm.Charts
-			changesByChart, err := buildChartDependencyChanges(
-				repo.WorkingDir(),
-				newState.Charts,
-				chartDependencyUpdates,
-			)
-			if err != nil {
-				return errors.Wrap(
-					err,
-					"error preparing changes to affected Chart.yaml files",
-				)
-			}
-			for chart, changes := range changesByChart {
-				chartPath := filepath.Join(repo.WorkingDir(), chart)
-				chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
-				if err := libYAML.SetStringsInFile(chartYAMLPath, changes); err != nil {
-					return errors.Wrapf(
-						err,
-						"error updating dependencies for chart %q",
-						chart,
-					)
-				}
-				if err :=
-					helm.UpdateChartDependencies(repo.HomeDir(), chartPath); err != nil {
-					return errors.Wrapf(
-						err,
-						"error updating dependencies for chart %q",
-						chart,
-					)
-				}
-			}
-
-			return nil
-		},
+	// Chart dependency updates
+	changesByChart, err := e.buildChartDependencyChangesFn(
+		repoDir,
+		newState.Charts,
+		update.Charts,
 	)
-}
-
-func (e *environmentReconciler) getChartRegistryCredentials(
-	ctx context.Context,
-	registryURL string,
-) (*helm.RepoCredentials, error) {
-	const repoTypeHelm = "helm"
-
-	creds := helm.RepoCredentials{}
-
-	// NB: This next call returns an empty Repository if no such Repository is
-	// found, so instead of continuing to look for credentials if no Repository is
-	// found, what we'll do is continue looking for credentials if the Repository
-	// we get back doesn't have anything we can use, i.e. no password.
-	//
-	// NB: Argo CD Application resources typically reference git repositories.
-	// They can also reference Helm charts, and in such cases, use the same
-	// repository field references a REGISTRY URL. So it seems a bit awkward here,
-	// but we're correct to call e.argoDB.GetRepository to look for REGISTRY
-	// credentials.
-	repo, err := e.argoDB.GetRepository(ctx, registryURL)
 	if err != nil {
-		return nil, errors.Wrapf(
+		return errors.Wrap(
 			err,
-			"error getting Argo CD Repository (Secret) for Helm chart registry %q",
-			registryURL,
+			"error preparing changes to affected Chart.yaml files",
 		)
 	}
-	if repo.Type == repoTypeHelm {
-		creds.Username = repo.Username
-		creds.Password = repo.Password
-	}
-	if creds.Password == "" {
-		// We didn't find any creds yet, so keep looking
-		var repoCreds *argocd.RepoCreds
-		repoCreds, err = e.argoDB.GetRepositoryCredentials(ctx, registryURL)
-		if err != nil {
-			return nil, errors.Wrapf(
+	for chart, changes := range changesByChart {
+		chartPath := filepath.Join(repoDir, chart)
+		chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
+		if err := e.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
+			return errors.Wrapf(
 				err,
-				"error getting Repository Credentials (Secret) for Helm chart "+
-					"registry %q",
-				registryURL,
+				"error updating dependencies for chart %q",
+				chart,
 			)
 		}
-		if repoCreds != nil && repoCreds.Type == repoTypeHelm {
-			creds.Username = repoCreds.Username
-			creds.Password = repoCreds.Password
+		if err :=
+			e.updateChartDependenciesFn(homeDir, chartPath); err != nil {
+			return errors.Wrapf(
+				err,
+				"error updating dependencies for chart %q",
+				chart,
+			)
 		}
 	}
 
-	// We didn't find any creds, so we're done.
-	if creds.Password == "" {
-		return nil, nil
-	}
-
-	return &creds, nil
+	return nil
 }
 
 func (e *environmentReconciler) getLatestCharts(
 	ctx context.Context,
-	env *api.Environment,
+	subs []api.ChartSubscription,
 ) ([]api.Chart, error) {
-	if env.Spec.Subscriptions == nil ||
-		env.Spec.Subscriptions.Repos == nil ||
-		len(env.Spec.Subscriptions.Repos.Charts) == 0 {
-		return nil, nil
-	}
+	charts := make([]api.Chart, len(subs))
 
-	logger := e.logger.WithFields(log.Fields{
-		"environment": env.Name,
-		"namespace":   env.Namespace,
-	})
-
-	charts := make([]api.Chart, len(env.Spec.Subscriptions.Repos.Charts))
-
-	for i, sub := range env.Spec.Subscriptions.Repos.Charts {
-		imgLogger := logger.WithFields(log.Fields{
+	for i, sub := range subs {
+		imgLogger := e.logger.WithFields(log.Fields{
 			"registry": sub.RegistryURL,
 			"chart":    sub.Name,
 		})
 
-		creds, err := e.getChartRegistryCredentialsFn(ctx, sub.RegistryURL)
+		creds, err := e.chartRegistryCredentialsFn(ctx, e.argoDB, sub.RegistryURL)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -192,7 +87,7 @@ func (e *environmentReconciler) getLatestCharts(
 		}
 		imgLogger.Debug("acquired credentials for chart registry/repository")
 
-		vers, err := helm.GetLatestChartVersion(
+		vers, err := e.getLatestChartVersionFn(
 			ctx,
 			sub.RegistryURL,
 			sub.Name,

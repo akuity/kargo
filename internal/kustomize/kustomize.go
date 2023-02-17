@@ -10,7 +10,7 @@ import (
 // SetImage runs `kustomize edit set image ...` in the specified directory.
 // The specified directory must already exist and contain a kustomization.yaml
 // file.
-func SetImage(dir string, repo, tag string) error {
+func SetImage(dir, repo, tag string) error {
 	_, err := libExec.Exec(buildSetImageCmd(dir, repo, tag))
 	return err
 }

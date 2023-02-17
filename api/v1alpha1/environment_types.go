@@ -6,6 +6,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ImageUpdateStrategy string
+
+const (
+	ImageUpdateStrategySemVer ImageUpdateStrategy = "SemVer"
+	ImageUpdateStrategyLatest ImageUpdateStrategy = "Latest"
+	ImageUpdateStrategyName   ImageUpdateStrategy = "Name"
+	ImageUpdateStrategyDigest ImageUpdateStrategy = "Digest"
+)
+
 type ImageUpdateValueType string
 
 const (
@@ -39,10 +48,6 @@ type Environment struct {
 // EnvironmentSpec describes the sources of material used by an Environment and
 // how to incorporate newly observed materials into the Environment.
 type EnvironmentSpec struct {
-	// GitRepo encapsulates the details of a Git repository. This field is a
-	// single place for these details, which are used or referenced widely
-	// throughout this API.
-	GitRepo *GitRepo `json:"gitRepo,omitempty"`
 	// Subscriptions describes the Environment's sources of material. This is a
 	// required field.
 	Subscriptions *Subscriptions `json:"subscriptions,omitempty"`
@@ -51,18 +56,7 @@ type EnvironmentSpec struct {
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty"` // nolint: lll
 	// HealthChecks describes how the health of the Environment can be assessed on
 	// an ongoing basis. This is a required field.
-	HealthChecks *HealthChecks `json:"healthChecks,omitempty"`
-}
-
-// GitRepo encapsulates the details of a Git repository.
-type GitRepo struct {
-	// URL is the repository's URL. This is a required field.
-	URL string `json:"url,omitempty"`
-	// Branch references a particular branch of the repository. This field is
-	// optional. Leaving this unspecified is equivalent to specifying the
-	// repository's default branch, whatever that may happen to be -- typically
-	// "main" or "master".
-	Branch string `json:"branch,omitempty"`
+	HealthChecks HealthChecks `json:"healthChecks,omitempty"`
 }
 
 // Subscriptions describes an Environment's sources of material.
@@ -79,14 +73,23 @@ type Subscriptions struct {
 // RepoSubscriptions describes various sorts of repositories an Environment uses
 // as sources of material.
 type RepoSubscriptions struct {
-	// Git indicates, when true, that there is a subscription to the Git
-	// repository described by the Environment's GitRepo field. When false, there
-	// is no such subscription.
-	Git bool `json:"git,omitempty"`
+	// Git describes subscriptions to Git repositories.
+	Git []GitSubscription `json:"git,omitempty"`
 	// Images describes subscriptions to container image repositories.
 	Images []ImageSubscription `json:"images,omitempty"`
 	// Charts describes subscriptions to Helm charts.
 	Charts []ChartSubscription `json:"charts,omitempty"`
+}
+
+// GitSubscription defines a subscription to a Git repository.
+type GitSubscription struct {
+	// URL is the repository's URL. This is a required field.
+	RepoURL string `json:"repoURL,omitempty"`
+	// Branch references a particular branch of the repository. This field is
+	// optional. Leaving this unspecified is equivalent to specifying the
+	// repository's default branch, whatever that may happen to be -- typically
+	// "main" or "master".
+	Branch string `json:"branch,omitempty"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -94,14 +97,11 @@ type ImageSubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag. This field is required.
 	RepoURL string `json:"repoURL,omitempty"`
-
-	// TODO: Make UpdateStrategy its own type
-
 	// UpdateStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
-	UpdateStrategy string `json:"updateStrategy,omitempty"`
+	UpdateStrategy ImageUpdateStrategy `json:"updateStrategy,omitempty"`
 	// SemverConstraint specifies constraints on what new image versions are
 	// permissible. This value in this field only has any effect when the
 	// UpdateStrategy is SemVer or left unspecified (which is implicitly the same
@@ -151,24 +151,32 @@ type ChartSubscription struct {
 	SemverConstraint string `json:"semverConstraint,omitempty"`
 }
 
-// PromotionMechanisms describes how incorporate newly observed materials into
-// an Environment.
+// PromotionMechanisms describes how to incorporate newly observed materials
+// into an Environment.
 type PromotionMechanisms struct {
-	// Git describes actions that should be applied to a Git repository to
-	// incorporate newly observed materials into the Environment. This field is
+	// GitRepoUpdates describes updates that should be applied to Git repositories
+	// to incorporate newly observed materials into the Environment. This field is
 	// optional, as such actions are not required in all cases.
-	Git *GitPromotionMechanism `json:"git,omitempty"` // nolint: lll
-	// ArgoCD describes actions that should be taken in Argo CD to incorporate
-	// newly observed materials into the Environment. This field is optional, as
-	// such actions are not required in all cases. Note that all actions specified
-	// by the ConfigManagement field, if any, are applied BEFORE these actions.
-	ArgoCD *ArgoCDPromotionMechanism `json:"argoCD,omitempty"`
+	GitRepoUpdates []GitRepoUpdate `json:"gitRepoUpdates,omitempty"`
+	// ArgoCDAppUpdates describes updates that should be applied to Argo CD
+	// Application resources to incorporate newly observed materials into the
+	// Environment. This field is optional, as such actions are not required in
+	// all cases. Note that all updates specified by the GitRepoUpdates field, if
+	// any, are applied BEFORE these.
+	ArgoCDAppUpdates []ArgoCDAppUpdate `json:"argoCDAppUpdates,omitempty"`
 }
 
-// GitPromotionMechanism describes actions that should be applied to a Git
-// repository (using various configuration management tools) to incorporate
-// newly observed materials into an Environment.
-type GitPromotionMechanism struct {
+// GitRepoUpdate describes updates that should be applied to a Git repository
+// (using various configuration management tools) to incorporate newly observed
+// materials into an Environment.
+type GitRepoUpdate struct {
+	// RepoURL is the URL of the repository to update. This is a required field.
+	RepoURL string `json:"repoURL,omitempty"`
+	// Branch references a particular branch of the repository to be updated. This
+	// field is optional. Leaving this unspecified is equivalent to specifying the
+	// repository's default branch, whatever that may happen to be -- typically
+	// "main" or "master".
+	Branch string `json:"branch,omitempty"`
 	// Bookkeeper describes how to use Bookkeeper to incorporate newly observed
 	// materials into the Environment. This is mutually exclusive with the
 	// Kustomize and Helm fields.
@@ -185,10 +193,7 @@ type GitPromotionMechanism struct {
 
 // BookkeeperPromotionMechanism describes how to use Bookkeeper to incorporate
 // newly observed materials into an Environment.
-type BookkeeperPromotionMechanism struct {
-	// TODO: Document this
-	TargetBranch string `json:"targetBranch,omitempty"`
-}
+type BookkeeperPromotionMechanism struct{}
 
 // KustomizePromotionMechanism describes how to use Kustomize to incorporate
 // newly observed materials into an Environment.
@@ -214,7 +219,8 @@ type HelmPromotionMechanism struct {
 	// Images describes how specific image versions can be incorporated into Helm
 	// values files.
 	Images []HelmImageUpdate `json:"images,omitempty"`
-	// TODO: Document this
+	// Charts describes how specific chart versions can be incorporated into an
+	// umbrella chart.
 	Charts []HelmChartDependencyUpdate `json:"charts,omitempty"`
 }
 
@@ -236,76 +242,75 @@ type HelmImageUpdate struct {
 	Value ImageUpdateValueType `json:"value,omitempty"`
 }
 
-// TODO: Document this
+// HelmChartDependencyUpdate describes how a specific Helm chart that is used
+// as a subchart of an umbrella chart can be updated.
 type HelmChartDependencyUpdate struct {
-	// TODO: Document this
+	// RegistryURL along with Name identify a subchart of the umbrella chart at
+	// ChartPath whose version should be updated.
 	RegistryURL string `json:"registryURL,omitempty"`
-	// TODO: Document this
+	// Name along with RegistryURL identify a subchart of the umbrella chart at
+	// ChartPath whose version should be updated.
 	Name string `json:"name,omitempty"`
-	// TODO: Document this
+	// ChartPath is the path to an umbrella chart.
 	ChartPath string `json:"chartPath,omitempty"`
 }
 
-// ArgoCDPromotionMechanism describes actions that should be taken in Argo CD to
-// incorporate newly observed materials into an Environment.
-type ArgoCDPromotionMechanism struct {
-	// AppUpdates describes updates that should be applied to various Argo CD
-	// Application resources to incorporate newly observed materials into the
-	// Environment.
-	AppUpdates []ArgoCDAppUpdate `json:"appUpdates,omitempty"`
-}
-
-// ArgoCDAppUpdate describes updates that should be applied to various Argo CD
+// ArgoCDAppUpdate describes updates that should be applied to an Argo CD
 // Application resources to incorporate newly observed materials into an
 // Environment.
 type ArgoCDAppUpdate struct {
-	// Name specifies the name of an Argo CD Application resource to be updated.
-	Name string `json:"name,omitempty"`
-	// RefreshAndSync is a bool indicating whether the specified Argo CD
-	// Application resource should be forcefully synced and refreshed. It defaults
-	// to false. You should set this to true if your Argo CD Application should
-	// sync and refresh after other promotion mechanisms (e.g. config
-	// management-based mechanisms) have been applied and your Argo CD Application
-	// is configured NOT to automatically sync and refresh. You may also set this
-	// to true even if your Argo CD Application IS configured to automatically
-	// sync and refresh and you would simply like to accelerate the promotion
-	// process.
-	RefreshAndSync bool `json:"refreshAndSync,omitempty"`
-	// UpdateTargetRevision is a bool indicating whether the specified Argo CD
-	// Application resource should be updated such that its TargetRevision field
-	// points at the most recently observed commit in the Environment's Git
-	// repository. It defaults to false. When set to true, the affected
-	// Application resource will also be forcefully synced and refreshed after
-	// such an update regardless of the value of the RefreshAndSync field.
+	// AppName specifies the name of an Argo CD Application resource to be
+	// updated.
+	AppName string `json:"appName,omitempty"`
+	// AppNamespace specifies the namespace of an Argo CD Application resource to
+	// be updated.
+	AppNamespace string `json:"appNamespace,omitempty"`
+	// SourceUpdates describes updates to be applied to various sources of the
+	// specified Argo CD Application resource.
+	SourceUpdates []ArgoCDSourceUpdate `json:"sourceUpdates,omitempty"`
+}
+
+// ArgoCDSourceUpdate describes updates that should be applied to one of an Argo
+// CD Application resource's sources.
+type ArgoCDSourceUpdate struct {
+	// RepoURL identifies which of the Argo CD Application's sources this update
+	// is intended for. Note: As of Argo CD 2.6, Application's can use multiple
+	// sources.
+	RepoURL string `json:"repoURL,omitempty"`
+	// Chart specifies a chart within a Helm chart registry if RepoURL points to a
+	// Helm chart registry. Application sources that point directly at a chart do
+	// so through a combination of their own RepoURL (registry) and Chart fields,
+	// so BOTH of those are used as criteria in selecting an Application source to
+	// update. This field MUST always be used when RepoURL points at a Helm chart
+	// registry. This field MUST never be used when RepoURL points at a Git
+	// repository.
+	Chart string `json:"chart,omitempty"`
+	// UpdateTargetRevision is a bool indicating whether the source should be
+	// updated such that its TargetRevision field points at the most recently git
+	// commit (if RepoURL references a git repository) or chart version (if
+	// RepoURL references a chart repository).
 	UpdateTargetRevision bool `json:"updateTargetRevision,omitempty"`
-	// Kustomize describes updates to an Argo CD Application's Kustomize-specific
-	// attributes. The affected Application resource will also be forcefully
-	// synced and refreshed after such an update regardless of the value of the
-	// RefreshAndSync field.
+	// Kustomize describes updates to the source's Kustomize-specific attributes.
 	Kustomize *ArgoCDKustomize `json:"kustomize,omitempty"`
-	// Helm describes updates to an Argo CD Application's Helm-specific
-	// attributes. The affected Application resource will also be forcefully
-	// synced and refreshed after such an update regardless of the value of the
-	// RefreshAndSync field.
+	// Helm describes updates to the source's Helm-specific attributes.
 	Helm *ArgoCDHelm `json:"helm,omitempty"`
 }
 
-// ArgoCDKustomize describes updates to an Argo CD Application's
+// ArgoCDKustomize describes updates to an Argo CD Application source's
 // Kustomize-specific attributes to incorporate newly observed materials into an
 // Environment.
 type ArgoCDKustomize struct {
-	// TODO: Document this
+	// Images describes how specific image versions can be incorporated into an
+	// Argo CD Application's Kustomize parameters.
 	Images []string `json:"images,omitempty"`
 }
 
-// ArgoCDHelm describes updates to an Argo CD Application's Helm-specific
+// ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
 // attributes to incorporate newly observed materials into an Environment.
 type ArgoCDHelm struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Helm parameters.
 	Images []ArgoCDHelmImageUpdate `json:"images,omitempty"`
-	// TODO: Document this
-	Chart *ArgoCDHelmChartUpdate `json:"chart,omitempty"`
 }
 
 // ArgoCDHelmImageUpdate describes how a specific image version can be
@@ -324,21 +329,21 @@ type ArgoCDHelmImageUpdate struct {
 	Value ImageUpdateValueType `json:"value,omitempty"`
 }
 
-// ArgoCDHelmChartUpdate describes how a specific version of a Helm Chart can be
-// incorporated into an Argo CD Application.
-type ArgoCDHelmChartUpdate struct {
-	// TODO: Document this
-	RegistryURL string `json:"registryURL,omitempty"`
-	// TODO: Document this
-	Name string `json:"name,omitempty"`
-}
-
 // HealthChecks describes how the health of an Environment can be assessed on an
 // ongoing basis.
 type HealthChecks struct {
-	// ArgoCDApps specifies Argo CD Application resources whose sync status and
-	// health should be evaluated in assessing the health of the Environment.
-	ArgoCDApps []string `json:"argoCDApps,omitempty"`
+	// ArgoCDAppChecks specifies Argo CD Application resources whose sync status
+	// and health should be evaluated in assessing the health of the Environment.
+	ArgoCDAppChecks []ArgoCDAppCheck `json:"argoCDAppChecks,omitempty"`
+}
+
+// ArgoCDAppCheck describes a health check to perform on an Argo CD Application
+// resource.
+type ArgoCDAppCheck struct {
+	// AppName specifies the name of the Argo CD Application resource.
+	AppName string `json:"appName,omitempty"`
+	// AppNamespace specifies the namespace of the Argo CD Application resource.
+	AppNamespace string `json:"appNamespace,omitempty"`
 }
 
 // EnvironmentStatus describes the most recently observed versions of an
@@ -352,7 +357,10 @@ type EnvironmentStatus struct {
 	// essentially a "bill of materials" describing what was deployed to the
 	// Environment. By default, the last ten states are stored.
 	States EnvironmentStateStack `json:"states,omitempty"`
-	// TODO: Document this
+	// Error describes any errors that are preventing the Environment controller
+	// from assessing Environment health, polling repositories or upstream
+	// environments to discover new states, or promoting the environment to a new
+	// state.
 	Error string `json:"error,omitempty"`
 }
 
@@ -368,19 +376,14 @@ type EnvironmentState struct {
 	// Environment has ROLLED BACK to an older state whilst a downstream
 	// Environment is already on to a newer state.
 	FirstSeen *metav1.Time `json:"firstSeen,omitempty"`
-	// GitCommit describes a specific Git repository commit that was used in this
+	// Commits describes specific Git repository commits that were used in this
 	// state.
-	GitCommit *GitCommit `json:"gitCommit,omitempty"`
+	Commits []GitCommit `json:"commits,omitempty"`
 	// Images describes container images and versions thereof that were used
 	// in this state.
 	Images []Image `json:"images,omitempty"`
 	// Charts describes Helm charts that were used in this state.
 	Charts []Chart `json:"charts,omitempty"`
-	// HealthCheckCommit is the ID of a specific commit in the Environment's Git
-	// repository. When determining environment health checks, associated Argo CD
-	// Application resources will be checked not only for their own health status,
-	// but also to see whether they are synced to this specific commit.
-	HealthCheckCommit string `json:"healthCheckCommit,omitempty"`
 	// Health is the state's last observed health. If this state is the
 	// Environment's current state, this will be continuously re-assessed and
 	// updated. If this state is a past state of the Environment, this field will
@@ -395,19 +398,6 @@ type EnvironmentStateStack []EnvironmentState
 // empty. nil counts as empty.
 func (e EnvironmentStateStack) Empty() bool {
 	return len(e) == 0
-}
-
-// Top returns the leading element of the EnvironmentStateStack if the
-// EnvironmentStateStack is not empty. nil counts as empty. When the
-// EnvironmentStateStack is empty, a new EnvironmentStateStack is returned. A
-// boolean is also returned indicating whether the returned
-// EnvironmentStateStack came from the top of the stack (true) or is a zero
-// value for that type (false).
-func (e EnvironmentStateStack) Top() (EnvironmentState, bool) {
-	if len(e) == 0 {
-		return EnvironmentState{}, false
-	}
-	return e[0], true
 }
 
 // Pop returns the EnvironmentStateStack with its leading element removed as
@@ -425,7 +415,7 @@ func (e EnvironmentStateStack) Pop() (
 	if e.Empty() {
 		return e, EnvironmentState{}, false
 	}
-	return e[1:], e[0], true
+	return e[1:], *e[0].DeepCopy(), true
 }
 
 // Push pushes one or more EnvironmentStates onto the EnvironmentStateStack. The
@@ -455,7 +445,7 @@ func (e *EnvironmentState) SameMaterials(rhs *EnvironmentState) bool {
 	if (e == nil && rhs != nil) || (e != nil && rhs == nil) {
 		return false
 	}
-	if !e.GitCommit.Equals(rhs.GitCommit) {
+	if len(e.Commits) != len(rhs.Commits) {
 		return false
 	}
 	if len(e.Images) != len(rhs.Images) {
@@ -464,7 +454,21 @@ func (e *EnvironmentState) SameMaterials(rhs *EnvironmentState) bool {
 	if len(e.Charts) != len(rhs.Charts) {
 		return false
 	}
-	// The order of images shouldn't matter, we have some work to do to make an
+
+	// The order of commits shouldn't matter. We have some work to do to make an
+	// effective comparison...
+	lhsCommits := map[string]struct{}{}
+	for _, lCommit := range e.Commits {
+		lhsCommits[fmt.Sprintf("%s:%s", lCommit.RepoURL, lCommit.ID)] = struct{}{}
+	}
+	for _, rCommit := range rhs.Commits {
+		if _, exists :=
+			lhsCommits[fmt.Sprintf("%s:%s", rCommit.RepoURL, rCommit.ID)]; !exists {
+			return false
+		}
+	}
+
+	// The order of images shouldn't matter. We have some work to do to make an
 	// effective comparison...
 	lhsImgVersions := map[string]struct{}{}
 	for _, lImg := range e.Images {
@@ -476,7 +480,8 @@ func (e *EnvironmentState) SameMaterials(rhs *EnvironmentState) bool {
 			return false
 		}
 	}
-	// The order of charts shouldn't matter, we have some work to do to make an
+
+	// The order of charts shouldn't matter. We have some work to do to make an
 	// effective comparison...
 	lhsChartVersions := map[string]struct{}{}
 	for _, lChart := range e.Charts {
@@ -516,6 +521,14 @@ type GitCommit struct {
 	// ID is the ID of a specific commit in the Git repository specified by
 	// RepoURL.
 	ID string `json:"id,omitempty"`
+	// HealthCheckCommit is the ID of a specific commit. When specified,
+	// assessments of Environment health will used this value (instead of ID) when
+	// determining if applicable sources of Argo CD Application resources
+	// associated with the environment are or are not synced to this commit. Note
+	// that there are cases (as in that of Bookkeeper being utilized as a
+	// promotion mechanism) wherein the value of this field may differ from the
+	// commit ID found in the ID field.
+	HealthCheckCommit string `json:"healthCheckCommit,omitempty"`
 }
 
 // Equals returns a bool indicating whether two GitCommits are equivalent.

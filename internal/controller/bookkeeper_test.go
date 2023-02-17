@@ -6,113 +6,88 @@ import (
 
 	"github.com/akuityio/bookkeeper"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/git"
 )
 
-func TestPromoteWithBookkeeper(t *testing.T) {
+func TestApplyBookkeeperUpdate(t *testing.T) {
 	testCases := []struct {
 		name        string
-		env         *api.Environment
 		newState    api.EnvironmentState
+		update      api.GitRepoUpdate
 		repoCredsFn func(
 			context.Context,
+			libArgoCD.DB,
 			string,
-		) (git.RepoCredentials, error)
-		bookkeeperRenderFn func(
-			context.Context,
-			bookkeeper.RenderRequest,
-		) (bookkeeper.RenderResponse, error)
-		assertions func(inState, outState api.EnvironmentState, err error)
+		) (*git.RepoCredentials, error)
+		bookkeeperService bookkeeper.Service
+		assertions        func(inState, outState api.EnvironmentState, err error)
 	}{
 		{
-			name: "environment is nil",
+			name: "update doesn't actually use Bookkeeper",
 			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.NoError(t, err)
 				require.Equal(t, inState, outState)
 			},
 		},
-		{
-			name: "PromotionMechanisms is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "ConfigManagement is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "Bookkeeper is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{},
-					},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
+
 		{
 			name: "target branch is unspecified",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Bookkeeper: &api.BookkeeperPromotionMechanism{},
-						},
-					},
-				},
+			update: api.GitRepoUpdate{
+				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
+			assertions: func(_, _ api.EnvironmentState, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "no target branch is specified")
 			},
 		},
+
+		{
+			name: "state doesn't contain any information about the repo",
+			update: api.GitRepoUpdate{
+				Branch:     "env/fake",
+				Bookkeeper: &api.BookkeeperPromotionMechanism{},
+			},
+			assertions: func(_, _ api.EnvironmentState, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"environment does not subscribe to repo",
+				)
+			},
+		},
+
 		{
 			name: "error getting Git repo credentials",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Bookkeeper: &api.BookkeeperPromotionMechanism{
-								TargetBranch: "env/fake-branch",
-							},
-						},
-					},
-				},
-			},
 			newState: api.EnvironmentState{
-				GitCommit: &api.GitCommit{
-					RepoURL: "fake-url",
+				Commits: []api.GitCommit{
+					{
+						RepoURL: "fake-git-url",
+						ID:      "fake-commit",
+					},
 				},
 				Images: []api.Image{
 					{
-						RepoURL: "fake-url",
+						RepoURL: "fake-image-url",
 						Tag:     "fake-tag",
 					},
 				},
 			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, errors.New("something went wrong")
+			update: api.GitRepoUpdate{
+				RepoURL:    "fake-git-url",
+				Branch:     "env/fake",
+				Bookkeeper: &api.BookkeeperPromotionMechanism{},
+			},
+			repoCredsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*git.RepoCredentials, error) {
+				return nil, errors.New("something went wrong")
 			},
 			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.Error(t, err)
@@ -125,38 +100,42 @@ func TestPromoteWithBookkeeper(t *testing.T) {
 				require.Equal(t, inState, outState)
 			},
 		},
+
 		{
 			name: "error rendering manifests",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Bookkeeper: &api.BookkeeperPromotionMechanism{
-								TargetBranch: "env/fake-branch",
-							},
-						},
-					},
-				},
-			},
 			newState: api.EnvironmentState{
-				GitCommit: &api.GitCommit{
-					RepoURL: "fake-url",
-					ID:      "fake-commit",
+				Commits: []api.GitCommit{
+					{
+						RepoURL: "fake-git-url",
+						ID:      "fake-commit",
+					},
 				},
 				Images: []api.Image{
 					{
-						RepoURL: "fake-url",
+						RepoURL: "fake-image-url",
 						Tag:     "fake-tag",
 					},
 				},
 			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
+			update: api.GitRepoUpdate{
+				RepoURL:    "fake-git-url",
+				Branch:     "env/fake",
+				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			bookkeeperRenderFn: func(
+			repoCredsFn: func(
 				context.Context,
-				bookkeeper.RenderRequest) (bookkeeper.RenderResponse, error) {
-				return bookkeeper.RenderResponse{}, errors.New("something went wrong")
+				libArgoCD.DB,
+				string,
+			) (*git.RepoCredentials, error) {
+				return nil, nil
+			},
+			bookkeeperService: &fakeBookkeeperService{
+				renderManifestsFn: func(
+					context.Context,
+					bookkeeper.RenderRequest,
+				) (bookkeeper.RenderResponse, error) {
+					return bookkeeper.RenderResponse{}, errors.New("something went wrong")
+				},
 			},
 			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.Error(t, err)
@@ -169,46 +148,55 @@ func TestPromoteWithBookkeeper(t *testing.T) {
 				require.Equal(t, inState, outState)
 			},
 		},
+
 		{
 			name: "success",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Bookkeeper: &api.BookkeeperPromotionMechanism{
-								TargetBranch: "env/fake-branch",
-							},
-						},
-					},
-				},
-			},
 			newState: api.EnvironmentState{
-				GitCommit: &api.GitCommit{
-					RepoURL: "fake-url",
-					ID:      "fake-commit",
+				Commits: []api.GitCommit{
+					{
+						RepoURL: "fake-git-url",
+						ID:      "fake-commit",
+					},
 				},
 				Images: []api.Image{
 					{
-						RepoURL: "fake-url",
+						RepoURL: "fake-image-url",
 						Tag:     "fake-tag",
 					},
 				},
 			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
+			update: api.GitRepoUpdate{
+				RepoURL:    "fake-git-url",
+				Branch:     "env/fake",
+				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			bookkeeperRenderFn: func(
+			repoCredsFn: func(
 				context.Context,
-				bookkeeper.RenderRequest) (bookkeeper.RenderResponse, error) {
-				return bookkeeper.RenderResponse{
-					ActionTaken: bookkeeper.ActionTakenPushedDirectly,
-					CommitID:    "new-fake-commit",
-				}, nil
+				libArgoCD.DB,
+				string,
+			) (*git.RepoCredentials, error) {
+				return nil, nil
+			},
+			bookkeeperService: &fakeBookkeeperService{
+				renderManifestsFn: func(
+					context.Context,
+					bookkeeper.RenderRequest,
+				) (bookkeeper.RenderResponse, error) {
+					return bookkeeper.RenderResponse{
+						ActionTaken: bookkeeper.ActionTakenPushedDirectly,
+						CommitID:    "new-fake-commit",
+					}, nil
+				},
 			},
 			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.NoError(t, err)
-				require.Equal(t, "new-fake-commit", outState.HealthCheckCommit)
-				outState.HealthCheckCommit = ""
+				require.Len(t, outState.Commits, 1)
+				require.Equal(
+					t, "new-fake-commit",
+					outState.Commits[0].HealthCheckCommit,
+				)
+				// inState and outState should otherwise match
+				outState.Commits[0].HealthCheckCommit = ""
 				require.Equal(t, inState, outState)
 			},
 		},
@@ -216,17 +204,29 @@ func TestPromoteWithBookkeeper(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:                          log.New(),
-				getGitRepoCredentialsFn:         testCase.repoCredsFn,
-				renderManifestsWithBookkeeperFn: testCase.bookkeeperRenderFn,
+				gitRepoCredentialsFn: testCase.repoCredsFn,
+				bookkeeperService:    testCase.bookkeeperService,
 			}
-			reconciler.logger.SetLevel(log.ErrorLevel)
-			newState, err := reconciler.promoteWithBookkeeper(
+			newState, err := reconciler.applyBookkeeperUpdate(
 				context.Background(),
-				testCase.env,
 				testCase.newState,
+				testCase.update,
 			)
 			testCase.assertions(testCase.newState, newState, err)
 		})
 	}
+}
+
+type fakeBookkeeperService struct {
+	renderManifestsFn func(
+		context.Context,
+		bookkeeper.RenderRequest,
+	) (bookkeeper.RenderResponse, error)
+}
+
+func (f *fakeBookkeeperService) RenderManifests(
+	ctx context.Context,
+	req bookkeeper.RenderRequest,
+) (bookkeeper.RenderResponse, error) {
+	return f.renderManifestsFn(ctx, req)
 }

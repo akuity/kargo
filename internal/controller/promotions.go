@@ -9,6 +9,7 @@ import (
 	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
+// TODO: This function could use some tests
 func (e *environmentReconciler) promote(
 	ctx context.Context,
 	env *api.Environment,
@@ -20,37 +21,37 @@ func (e *environmentReconciler) promote(
 	}
 
 	var err error
-	if env.Spec.PromotionMechanisms.Git != nil {
-		if env.Spec.PromotionMechanisms.Git.Bookkeeper != nil {
+
+	for _, gitRepoUpdate := range env.Spec.PromotionMechanisms.GitRepoUpdates {
+		if gitRepoUpdate.Bookkeeper != nil {
 			if newState, err =
-				e.promoteWithBookkeeper(ctx, env, newState); err != nil {
-				return newState, errors.Wrap(err, "error promoting via Bookkeeper")
+				e.applyBookkeeperUpdate(ctx, newState, gitRepoUpdate); err != nil {
+				return newState, errors.Wrap(err, "error promoting via Git")
 			}
-		} else if env.Spec.PromotionMechanisms.Git.Kustomize != nil {
+		} else {
 			if newState, err =
-				e.promoteWithKustomize(ctx, env, newState); err != nil {
-				return newState, errors.Wrap(err, "error promoting via Kustomize")
-			}
-		} else if env.Spec.PromotionMechanisms.Git.Helm != nil {
-			if newState, err =
-				e.promoteWithHelm(ctx, env, newState); err != nil {
-				return newState, errors.Wrap(err, "error promoting via Helm")
+				e.applyGitRepoUpdate(ctx, newState, gitRepoUpdate); err != nil {
+				return newState, errors.Wrap(err, "error promoting via Git")
 			}
 		}
 	}
 
-	if env.Spec.PromotionMechanisms.ArgoCD != nil {
-		if err = e.promoteWithArgoCD(ctx, env, newState); err != nil {
+	for _, argoCDAppUpdate := range env.Spec.PromotionMechanisms.ArgoCDAppUpdates { // nolint: lll
+		if err =
+			e.applyArgoCDAppUpdate(ctx, newState, argoCDAppUpdate); err != nil {
 			return newState, errors.Wrap(err, "error promoting via Argo CD")
 		}
+	}
+
+	newState.Health = &api.Health{
+		Status:       api.HealthStateUnknown,
+		StatusReason: "Health has not yet been assessed",
 	}
 
 	e.logger.WithFields(log.Fields{
 		"namespace": env.Namespace,
 		"name":      env.Name,
-		"state":     newState.ID,
-		"git":       newState.GitCommit,
-		"images":    newState.Images,
+		"state":     newState,
 	}).Debug("completed promotion")
 
 	return newState, nil

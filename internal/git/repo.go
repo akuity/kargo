@@ -2,7 +2,6 @@ package git
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -14,22 +13,6 @@ import (
 
 	libExec "github.com/akuityio/kargo/internal/exec"
 )
-
-// RepoCredentials represents the credentials for connecting to a private git
-// repository.
-type RepoCredentials struct {
-	// SSHPrivateKey is a private key that can be used for both reading from and
-	// writing to some remote repository.
-	SSHPrivateKey string `json:"sshPrivateKey,omitempty"`
-	// Username identifies a principal, which combined with the value of the
-	// Password field, can be used for both reading from and writing to some
-	// remote repository.
-	Username string `json:"username,omitempty"`
-	// Password, when combined with the principal identified by the Username
-	// field, can be used for both reading from and writing to some remote
-	// repository.
-	Password string `json:"password,omitempty"`
-}
 
 // Repo is an interface for interacting with a git repository.
 type Repo interface {
@@ -95,11 +78,7 @@ type repo struct {
 // NOT suitable for use across multiple goroutines. This function will also
 // perform any setup that is required for successfully authenticating to the
 // remote repository.
-func Clone(
-	ctx context.Context,
-	url string,
-	repoCreds RepoCredentials,
-) (Repo, error) {
+func Clone(url string, repoCreds *RepoCredentials) (Repo, error) {
 	homeDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -113,8 +92,10 @@ func Clone(
 		homeDir: homeDir,
 		dir:     filepath.Join(homeDir, "repo"),
 	}
-	if err = r.setupAuth(ctx, repoCreds); err != nil {
-		return nil, err
+	if repoCreds != nil {
+		if err = r.setupAuth(*repoCreds); err != nil {
+			return nil, err
+		}
 	}
 	return r, r.clone()
 }
@@ -318,7 +299,7 @@ func (r *repo) WorkingDir() string {
 
 // SetupAuth configures the git CLI for authentication using either SSH or the
 // "store" (username/password-based) credential helper.
-func (r *repo) setupAuth(ctx context.Context, repoCreds RepoCredentials) error {
+func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 	// Configure the git client
 	cmd := r.buildCommand(
 		"git",

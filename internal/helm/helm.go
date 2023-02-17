@@ -19,32 +19,32 @@ import (
 	libExec "github.com/akuityio/kargo/internal/exec"
 )
 
-// RepoCredentials represents the credentials for connecting to a private Helm
-// chart repository.
-type RepoCredentials struct {
+// RegistryCredentials represents the credentials for connecting to a private
+// Helm chart registry.
+type RegistryCredentials struct {
 	// Username identifies a principal, which combined with the value of the
-	// Password field, can be used for reading from some remote repository.
+	// Password field, can be used for reading from some remote registry.
 	Username string `json:"username,omitempty"`
 	// Password, when combined with the principal identified by the Username
-	// field, can be used for both reading from some remote repository.
+	// field, can be used for both reading from some remote registry.
 	Password string `json:"password,omitempty"`
 }
 
-// GetLatestChartVersion connects to the Helm chart repository specified by
-// repoURL and retrieves all available versions of the chart found therein. The
-// repository can be either a classic Helm repository (using HTTP/S) or an OCI
-// repository. If no semverConstraint is provided (empty string is passed), then
+// GetLatestChartVersion connects to the Helm chart registry specified by
+// registryURL and retrieves all available versions of the chart found therein.
+// The registry can be either a classic chart registry (using HTTP/S) or an OCI
+// registry. If no semverConstraint is provided (empty string is passed), then
 // the version that is semantically greatest will be returned. If a
 // semverConstraint is specified, then the semantically greatest version
 // satisfying that constraint will be returned. If no version satisfies the
 // constraint, the empty string is returned. Provided credentials may be nil for
-// public repositories, but must be non-nil for private repositories.
+// public registries, but must be non-nil for private registries.
 func GetLatestChartVersion(
 	ctx context.Context,
 	registryURL string,
 	chart string,
 	semverConstraint string,
-	creds *RepoCredentials,
+	creds *RegistryCredentials,
 ) (string, error) {
 	var versions []string
 	var err error
@@ -75,15 +75,15 @@ func GetLatestChartVersion(
 	)
 }
 
-// getChartVersionsFromClassicRegistry connects to the classic (HTTP/S) Helm
-// chart registry specified by registryURL and retrieves all available versions
-// of the specified chart. The provided registryURL MUST begin with protocol
-// http:// or https://. Provided credentials may be nil for public repositories,
-// but must be non-nil for private repositories.
+// getChartVersionsFromClassicRegistry connects to the classic (HTTP/S) chart
+// registry specified by registryURL and retrieves all available versions of the
+// specified chart. The provided registryURL MUST begin with protocol http:// or
+// https://. Provided credentials may be nil for public registries, but must be
+// non-nil for private registries.
 func getChartVersionsFromClassicRegistry(
 	registryURL string,
 	chart string,
-	creds *RepoCredentials,
+	creds *RegistryCredentials,
 ) ([]string, error) {
 	indexURL := fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(registryURL, "/"))
 	req, err := http.NewRequest(http.MethodGet, indexURL, nil)
@@ -139,13 +139,13 @@ func getChartVersionsFromClassicRegistry(
 
 // getChartVersionsFromOCIRegistry connects to the OCI registry specified by
 // registryURL and retrieves all available versions of the specified chart.
-// Provided credentials may be nil for public repositories, but must be non-nil
-// for private repositories.
+// Provided credentials may be nil for public registries, but must be non-nil
+// for private registries.
 func getChartVersionsFromOCIRegistry(
 	ctx context.Context,
 	registryURL string,
 	chart string,
-	creds *RepoCredentials,
+	creds *RegistryCredentials,
 ) ([]string, error) {
 	rep := &remote.Repository{
 		Reference: registry.Reference{
@@ -153,7 +153,7 @@ func getChartVersionsFromOCIRegistry(
 			Repository: chart,
 		},
 		Client: &auth.Client{
-			Credential: func(ctx context.Context, s string) (auth.Credential, error) {
+			Credential: func(context.Context, string) (auth.Credential, error) {
 				if creds != nil {
 					return auth.Credential{
 						Username: creds.Username,

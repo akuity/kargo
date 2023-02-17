@@ -5,267 +5,256 @@ import (
 	"fmt"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 )
-
-func (e *environmentReconciler) promoteWithArgoCD(
-	ctx context.Context,
-	env *api.Environment,
-	newState api.EnvironmentState,
-) error {
-	// If any of the following is true, this function ought not to have been
-	// invoked, but we don't take that on faith.
-	if env == nil ||
-		env.Spec.PromotionMechanisms == nil ||
-		env.Spec.PromotionMechanisms.ArgoCD == nil ||
-		len(env.Spec.PromotionMechanisms.ArgoCD.AppUpdates) == 0 {
-		return nil
-	}
-
-	for _, appUpdate := range env.Spec.PromotionMechanisms.ArgoCD.AppUpdates {
-		if err := e.updateArgoCDAppFn(
-			ctx,
-			env,
-			newState,
-			appUpdate,
-		); err != nil {
-			return errors.Wrapf(
-				err,
-				"error updating Argo CD Application %q in namespace %q",
-				appUpdate.Name,
-				env.Namespace,
-			)
-		}
-	}
-
-	return nil
-}
 
 func (e *environmentReconciler) checkHealth(
 	ctx context.Context,
-	env *api.Environment,
-) *api.Health {
-	if env.Spec.HealthChecks == nil ||
-		len(env.Spec.HealthChecks.ArgoCDApps) == 0 ||
-		len(env.Status.States) == 0 {
-		return nil
+	currentState api.EnvironmentState,
+	healthChecks api.HealthChecks,
+) api.Health {
+	if len(healthChecks.ArgoCDAppChecks) == 0 {
+		return api.Health{
+			Status: api.HealthStateUnknown,
+			StatusReason: "spec.healthChecks contains insufficient instructions " +
+				"to assess Environment health",
+		}
 	}
-	for _, appName := range env.Spec.HealthChecks.ArgoCDApps {
-		app, err := e.getArgoCDAppFn(ctx, env.Namespace, appName)
+
+	for _, check := range healthChecks.ArgoCDAppChecks {
+		app, err :=
+			e.getArgoCDAppFn(ctx, e.client, check.AppNamespace, check.AppName)
 		if err != nil {
-			return &api.Health{
+			return api.Health{
 				Status: api.HealthStateUnknown,
 				StatusReason: fmt.Sprintf(
 					"error finding Argo CD Application %q in namespace %q: %s",
-					appName,
-					env.Namespace,
+					check.AppName,
+					check.AppNamespace,
 					err,
 				),
 			}
 		}
 		if app == nil {
-			return &api.Health{
+			return api.Health{
 				Status: api.HealthStateUnknown,
 				StatusReason: fmt.Sprintf(
 					"unable to find Argo CD Application %q in namespace %q",
-					appName,
-					env.Namespace,
+					check.AppName,
+					check.AppNamespace,
 				),
 			}
 		}
 
-		if commit := env.Status.States[0].HealthCheckCommit; commit != "" {
-			if synced := e.isArgoCDAppSynced(app, commit); !synced {
-				return &api.Health{
-					Status: api.HealthStateUnhealthy,
-					StatusReason: fmt.Sprintf(
-						"Argo CD Application %q in namespace %q is not synced to current "+
-							"Environment state",
-						appName,
-						env.Namespace,
-					),
+		if len(app.Spec.Sources) > 0 {
+			return api.Health{
+				Status: api.HealthStateUnknown,
+				StatusReason: fmt.Sprintf(
+					"bugs in Argo CD currently prevent a comprehensive assessment of "+
+						"the health of multi-source Application %q in namespace %q",
+					check.AppName,
+					check.AppNamespace,
+				),
+			}
+		}
+
+		var desiredRevision string
+		for _, commit := range currentState.Commits {
+			if commit.RepoURL == app.Spec.Source.RepoURL {
+				if commit.HealthCheckCommit != "" {
+					desiredRevision = commit.HealthCheckCommit
+				} else {
+					desiredRevision = commit.ID
+				}
+			}
+		}
+		if desiredRevision == "" {
+			for _, chart := range currentState.Charts {
+				if chart.RegistryURL == app.Spec.Source.RepoURL &&
+					chart.Name == app.Spec.Source.Chart {
+					desiredRevision = chart.Version
 				}
 			}
 		}
 
-		if app.Status.Health.Status != health.HealthStatusHealthy {
-			return &api.Health{
-				Status: api.HealthStateUnhealthy,
-				StatusReason: fmt.Sprintf(
-					"Argo CD Application %q in namespace %q has health state %q",
-					appName,
-					env.Namespace,
-					app.Status.Health.Status,
-				),
+		if healthy, reason := libArgoCD.IsApplicationHealthyAndSynced(
+			app,
+			desiredRevision,
+		); !healthy {
+			return api.Health{
+				Status:       api.HealthStateUnhealthy,
+				StatusReason: reason,
 			}
 		}
 	}
 
-	return &api.Health{
+	return api.Health{
 		Status: api.HealthStateHealthy,
 	}
 }
 
-// TODO: This probably has more things it needs to take into account, for
-// instance, in the event that image substitutions are applied directly to the
-// Argo CD App, we had better check that they match the current Environment
-// state.
-func (e *environmentReconciler) isArgoCDAppSynced(
-	app *argocd.Application,
-	commit string,
-) bool {
-	if app == nil || app.Status.Sync.Status != argocd.SyncStatusCodeSynced {
-		return false
-	}
-	return app.Status.Sync.Revision == commit
-}
-
-// getArgoCDApp returns a pointer to the Argo CD Application resource specified
-// by the namespacedName argument. If no such resource is found, nil is returned
-// instead.
-func (e *environmentReconciler) getArgoCDApp(
+func (e *environmentReconciler) applyArgoCDAppUpdate(
 	ctx context.Context,
-	namespace string,
-	name string,
-) (*argocd.Application, error) {
-	// TODO: Logging can be improved in this function
-	app := argocd.Application{}
-	if err := e.client.Get(
-		ctx,
-		client.ObjectKey{
-			Namespace: namespace,
-			Name:      name,
-		},
-		&app,
-	); err != nil {
-		if err = client.IgnoreNotFound(err); err == nil {
-			e.logger.WithFields(log.Fields{
-				"namespace": namespace,
-				"name":      name,
-			}).Warn("Argo CD Application not found")
-			return nil, nil
-		}
-		return nil, errors.Wrapf(
-			err,
-			"error getting Argo CD Application %q in namespace %q",
-			name,
-			namespace,
-		)
-	}
-	return &app, nil
-}
-
-// TODO: Break up this large function
-// nolint: gocyclo
-func (e *environmentReconciler) updateArgoCDApp(
-	ctx context.Context,
-	env *api.Environment,
 	newState api.EnvironmentState,
-	appUpdate api.ArgoCDAppUpdate,
+	update api.ArgoCDAppUpdate,
 ) error {
-	app, err := e.getArgoCDAppFn(ctx, env.Namespace, appUpdate.Name)
+	app, err :=
+		e.getArgoCDAppFn(ctx, e.client, update.AppNamespace, update.AppName)
 	if err != nil {
 		return errors.Wrapf(
 			err,
 			"error finding Argo CD Application %q in namespace %q",
-			appUpdate.Name,
-			env.Namespace,
+			update.AppName,
+			update.AppNamespace,
 		)
 	}
 	if app == nil {
 		return errors.Errorf(
 			"unable to find Argo CD Application %q in namespace %q",
-			appUpdate.Name,
-			env.Namespace,
+			update.AppName,
+			update.AppNamespace,
 		)
 	}
 
 	patch := client.MergeFrom(app.DeepCopy())
 
-	if appUpdate.UpdateTargetRevision && newState.GitCommit != nil {
-		app.Spec.Source.TargetRevision = newState.GitCommit.ID
+	for _, srcUpdate := range update.SourceUpdates {
+		if app.Spec.Source != nil {
+			var source argocd.ApplicationSource
+			source, err = e.applyArgoCDSourceUpdateFn(
+				*app.Spec.Source,
+				newState,
+				srcUpdate,
+			)
+			if err != nil {
+				return errors.Wrapf(
+					err,
+					"error updating source of Argo CD Application %q in namespace %q",
+					update.AppName,
+					update.AppNamespace,
+				)
+			}
+			app.Spec.Source = &source
+		}
+		for i, source := range app.Spec.Sources {
+			if source, err = e.applyArgoCDSourceUpdateFn(
+				source,
+				newState,
+				srcUpdate,
+			); err != nil {
+				return errors.Wrapf(
+					err,
+					"error updating source(s) of Argo CD Application %q in namespace %q",
+					update.AppName,
+					update.AppNamespace,
+				)
+			}
+			app.Spec.Sources[i] = source
+		}
 	}
 
-	if appUpdate.Kustomize != nil {
-		if app.Spec.Source.Kustomize == nil {
-			app.Spec.Source.Kustomize = &argocd.ApplicationSourceKustomize{}
+	if app.ObjectMeta.Annotations == nil {
+		app.ObjectMeta.Annotations = map[string]string{}
+	}
+	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] =
+		string(argocd.RefreshTypeHard)
+	app.Operation = &argocd.Operation{
+		Sync: &argocd.SyncOperation{
+			Revisions: []string{},
+		},
+	}
+	if app.Spec.Source != nil {
+		app.Operation.Sync.Revisions = []string{app.Spec.Source.TargetRevision}
+	}
+	for _, source := range app.Spec.Sources {
+		app.Operation.Sync.Revisions =
+			append(app.Operation.Sync.Revisions, source.TargetRevision)
+	}
+
+	if err = e.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
+		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
+	}
+	e.logger.WithFields(log.Fields{
+		"app": app.Name,
+	}).Debug("patched Argo CD Application")
+
+	return nil
+}
+
+func (e *environmentReconciler) applyArgoCDSourceUpdate(
+	source argocd.ApplicationSource,
+	newState api.EnvironmentState,
+	update api.ArgoCDSourceUpdate,
+) (argocd.ApplicationSource, error) {
+	if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
+		return source, nil
+	}
+
+	if update.UpdateTargetRevision {
+		var done bool
+		for _, commit := range newState.Commits {
+			if commit.RepoURL == source.RepoURL {
+				source.TargetRevision = commit.ID
+				done = true
+				break
+			}
 		}
-		app.Spec.Source.Kustomize.Images = buildKustomizeImagesForArgoCDApp(
-			newState.Images,
-			appUpdate.Kustomize.Images,
-		)
-	} else if appUpdate.Helm != nil {
-		if len(appUpdate.Helm.Images) > 0 {
-			if app.Spec.Source.Helm == nil {
-				app.Spec.Source.Helm = &argocd.ApplicationSourceHelm{}
-			}
-			if app.Spec.Source.Helm.Parameters == nil {
-				app.Spec.Source.Helm.Parameters = []argocd.HelmParameter{}
-			}
-			changes := buildHelmParamChangesForArgoCDApp(
-				newState.Images,
-				appUpdate.Helm.Images,
-			)
-		imageUpdateLoop:
-			for k, v := range changes {
-				newParam := argocd.HelmParameter{
-					Name:  k,
-					Value: v,
-				}
-				for i, param := range app.Spec.Source.Helm.Parameters {
-					if param.Name == k {
-						app.Spec.Source.Helm.Parameters[i] = newParam
-						continue imageUpdateLoop
-					}
-				}
-				app.Spec.Source.Helm.Parameters =
-					append(app.Spec.Source.Helm.Parameters, newParam)
-			}
-		}
-		if appUpdate.Helm.Chart != nil {
+		if !done {
 			for _, chart := range newState.Charts {
-				if chart.RegistryURL == appUpdate.Helm.Chart.RegistryURL &&
-					chart.Name == appUpdate.Helm.Chart.Name {
-					app.Spec.Source.RepoURL = chart.RegistryURL
-					app.Spec.Source.Chart = chart.Name
-					app.Spec.Source.TargetRevision = chart.Version
+				if chart.RegistryURL == source.RepoURL && chart.Name == source.Chart {
+					source.TargetRevision = chart.Version
 					break
 				}
 			}
 		}
 	}
 
-	if appUpdate.RefreshAndSync ||
-		(appUpdate.UpdateTargetRevision && newState.GitCommit != nil) ||
-		appUpdate.Kustomize != nil ||
-		appUpdate.Helm != nil {
-		app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] =
-			string(argocd.RefreshTypeHard)
-		app.Operation = &argocd.Operation{
-			Sync: &argocd.SyncOperation{
-				Revision: app.Spec.Source.TargetRevision,
-			},
+	if update.Kustomize != nil && len(update.Kustomize.Images) > 0 {
+		if source.Kustomize == nil {
+			source.Kustomize = &argocd.ApplicationSourceKustomize{}
+		}
+		source.Kustomize.Images = buildKustomizeImagesForArgoCDAppSource(
+			newState.Images,
+			update.Kustomize.Images,
+		)
+	}
+
+	if update.Helm != nil && len(update.Helm.Images) > 0 {
+		if source.Helm == nil {
+			source.Helm = &argocd.ApplicationSourceHelm{}
+		}
+		if source.Helm.Parameters == nil {
+			source.Helm.Parameters = []argocd.HelmParameter{}
+		}
+		changes := buildHelmParamChangesForArgoCDAppSource(
+			newState.Images,
+			update.Helm.Images,
+		)
+	imageUpdateLoop:
+		for k, v := range changes {
+			newParam := argocd.HelmParameter{
+				Name:  k,
+				Value: v,
+			}
+			for i, param := range source.Helm.Parameters {
+				if param.Name == k {
+					source.Helm.Parameters[i] = newParam
+					continue imageUpdateLoop
+				}
+			}
+			source.Helm.Parameters = append(source.Helm.Parameters, newParam)
 		}
 	}
 
-	if err = e.client.Patch(ctx, app, patch, &client.PatchOptions{}); err != nil {
-		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
-	}
-	e.logger.WithFields(log.Fields{
-		"namespace": env.Namespace,
-		"env":       env.Name,
-		"app":       app.Name,
-	}).Debug("patched Argo CD Application")
-
-	return nil
+	return source, nil
 }
 
-func buildKustomizeImagesForArgoCDApp(
+func buildKustomizeImagesForArgoCDAppSource(
 	images []api.Image,
 	imageUpdates []string,
 ) argocd.KustomizeImages {
@@ -290,7 +279,7 @@ func buildKustomizeImagesForArgoCDApp(
 	return kustomizeImages
 }
 
-func buildHelmParamChangesForArgoCDApp(
+func buildHelmParamChangesForArgoCDAppSource(
 	images []api.Image,
 	imageUpdates []api.ArgoCDHelmImageUpdate,
 ) map[string]string {

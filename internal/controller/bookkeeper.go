@@ -10,45 +10,70 @@ import (
 	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
-func (e *environmentReconciler) promoteWithBookkeeper(
+func (e *environmentReconciler) applyBookkeeperUpdate(
 	ctx context.Context,
-	env *api.Environment,
 	newState api.EnvironmentState,
+	update api.GitRepoUpdate,
 ) (api.EnvironmentState, error) {
-	// If any of the following is true, this function ought not to have been
-	// invoked, but we don't take that on faith.
-	if env == nil ||
-		env.Spec.PromotionMechanisms == nil ||
-		env.Spec.PromotionMechanisms.Git == nil ||
-		env.Spec.PromotionMechanisms.Git.Bookkeeper == nil ||
-		env.Spec.PromotionMechanisms.Git.Bookkeeper.TargetBranch == "" { // nolint: lll
+	if update.Bookkeeper == nil {
 		return newState, nil
+	}
+
+	if update.Branch == "" {
+		return newState, errors.Errorf(
+			"cannot update repo %q using Bookkeeper because no target branch "+
+				"is specified",
+			update.RepoURL,
+		)
+	}
+
+	var commitID string
+	var commitIndex int
+	var commit api.GitCommit
+	for commitIndex, commit = range newState.Commits {
+		if commit.RepoURL == update.RepoURL {
+			commitID = commit.ID
+			break
+		}
+	}
+	if commitID == "" {
+		return newState, errors.Errorf(
+			"cannot update repo %q using Bookkeeper because the environment does "+
+				"not subscribe to repo %q",
+			update.RepoURL,
+			update.RepoURL,
+		)
 	}
 
 	images := make([]string, len(newState.Images))
 	for i, image := range newState.Images {
 		images[i] = fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
 	}
-	creds, err := e.getGitRepoCredentialsFn(ctx, newState.GitCommit.RepoURL)
+
+	creds, err := e.gitRepoCredentialsFn(ctx, e.argoDB, update.RepoURL)
 	if err != nil {
 		return newState, errors.Wrapf(
 			err,
 			"error obtaining credentials for git repo %q",
-			newState.GitCommit.RepoURL,
+			update.RepoURL,
 		)
 	}
-	req := bookkeeper.RenderRequest{
-		RepoURL: newState.GitCommit.RepoURL,
-		RepoCreds: bookkeeper.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
-		},
-		Commit:       newState.GitCommit.ID,
-		Images:       images,
-		TargetBranch: env.Spec.PromotionMechanisms.Git.Bookkeeper.TargetBranch,
+
+	repoCreds := bookkeeper.RepoCredentials{}
+	if creds != nil {
+		repoCreds.Username = creds.Username
+		repoCreds.Password = creds.Password
+		repoCreds.SSHPrivateKey = creds.SSHPrivateKey
 	}
-	res, err := e.renderManifestsWithBookkeeperFn(ctx, req)
+
+	req := bookkeeper.RenderRequest{
+		RepoURL:      update.RepoURL,
+		RepoCreds:    repoCreds,
+		Commit:       commitID,
+		Images:       images,
+		TargetBranch: update.Branch,
+	}
+	res, err := e.bookkeeperService.RenderManifests(ctx, req)
 	if err != nil {
 		return newState,
 			errors.Wrap(err, "error rendering manifests via Bookkeeper")
@@ -56,10 +81,8 @@ func (e *environmentReconciler) promoteWithBookkeeper(
 
 	if res.ActionTaken == bookkeeper.ActionTakenPushedDirectly ||
 		res.ActionTaken == bookkeeper.ActionTakenNone {
-		newState.HealthCheckCommit = res.CommitID
-	}
-	// TODO: This is a fairly large outstanding question. How do we deal with PRs?
-	// When a PR is opened, we don't immediately know the
+		newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
+	} // TODO: Not sure yet how to handle PRs.
 
 	return newState, nil
 }
