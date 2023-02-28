@@ -15,13 +15,7 @@ func (e *environmentReconciler) promote(
 	env *api.Environment,
 	newState api.EnvironmentState,
 ) (api.EnvironmentState, error) {
-	if env.Spec.PromotionMechanisms == nil {
-		return newState,
-			errors.New("spec contains insufficient instructions to reach new state")
-	}
-
 	var err error
-
 	for _, gitRepoUpdate := range env.Spec.PromotionMechanisms.GitRepoUpdates {
 		if gitRepoUpdate.Bookkeeper != nil {
 			if newState, err =

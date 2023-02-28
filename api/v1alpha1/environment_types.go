@@ -50,10 +50,10 @@ type Environment struct {
 type EnvironmentSpec struct {
 	// Subscriptions describes the Environment's sources of material. This is a
 	// required field.
-	Subscriptions *Subscriptions `json:"subscriptions,omitempty"`
+	Subscriptions Subscriptions `json:"subscriptions,omitempty"`
 	// PromotionMechanisms describes how to incorporate newly observed materials
 	// into the Environment. This is a required field.
-	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty"` // nolint: lll
+	PromotionMechanisms PromotionMechanisms `json:"promotionMechanisms,omitempty"` // nolint: lll
 	// HealthChecks describes how the health of the Environment can be assessed on
 	// an ongoing basis. This is a required field.
 	HealthChecks HealthChecks `json:"healthChecks,omitempty"`
@@ -67,7 +67,7 @@ type Subscriptions struct {
 	Repos *RepoSubscriptions `json:"repos,omitempty"`
 	// UpstreamEnvs identifies other environments as potential sources of material
 	// for the Environment. This field is mutually exclusive with the Repos field.
-	UpstreamEnvs []string `json:"upstreamEnvs,omitempty"`
+	UpstreamEnvs []EnvironmentSubscription `json:"upstreamEnvs,omitempty"`
 }
 
 // RepoSubscriptions describes various sorts of repositories an Environment uses
@@ -149,6 +149,15 @@ type ChartSubscription struct {
 	// used. Care should be taken with leaving this field unspecified, as it can
 	// lead to the unanticipated rollout of breaking changes.
 	SemverConstraint string `json:"semverConstraint,omitempty"`
+}
+
+// EnvironmentSubscription defines a subscription to states from another
+// Environment.
+type EnvironmentSubscription struct {
+	// Name specifies the name of an Environment.
+	Name string `json:"name,omitempty"`
+	// Namespace specifies the namespace of the Environment.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // PromotionMechanisms describes how to incorporate newly observed materials
@@ -376,6 +385,10 @@ type EnvironmentState struct {
 	// Environment has ROLLED BACK to an older state whilst a downstream
 	// Environment is already on to a newer state.
 	FirstSeen *metav1.Time `json:"firstSeen,omitempty"`
+	// Provenance describes the proximate source of this EnvironmentState. i.e.
+	// Did it come directly from upstream repositories? Or an upstream
+	// environment.
+	Provenance string `json:"provenance,omitempty"`
 	// Commits describes specific Git repository commits that were used in this
 	// state.
 	Commits []GitCommit `json:"commits,omitempty"`
