@@ -1,280 +1,88 @@
 package controller
 
 import (
-	"context"
 	"testing"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/git"
 )
 
-func TestPromoteWithKustomize(t *testing.T) {
+func TestApplyKustomize(t *testing.T) {
 	testCases := []struct {
-		name        string
-		env         *api.Environment
-		newState    api.EnvironmentState
-		repoCredsFn func(context.Context, string) (git.RepoCredentials, error)
-		cloneFn     func(
-			context.Context,
-			string,
-			git.RepoCredentials,
-		) (git.Repo, error)
-		checkoutFn func(repo git.Repo, branch string) error
-		assertions func(inState, outState api.EnvironmentState, err error)
+		name                string
+		newState            api.EnvironmentState
+		update              api.KustomizePromotionMechanism
+		kustomizeSetImageFn func(dir, repo, tag string) error
+		assertions          func(error)
 	}{
 		{
-			name: "environment is nil",
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "PromotionMechanisms is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "ConfigManagement is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "Kustomize is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{},
-					},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "Kustomize promotion mechanism has len(Images) == 0",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Kustomize: &api.KustomizePromotionMechanism{},
-						},
-					},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "new Environment state has has len(Images) == 0",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Kustomize: &api.KustomizePromotionMechanism{
-								Images: []api.KustomizeImageUpdate{
-									{},
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "Environment spec is missing Git repo details",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Kustomize: &api.KustomizePromotionMechanism{
-								Images: []api.KustomizeImageUpdate{
-									{},
-								},
-							},
-						},
-					},
-				},
-			},
+			name: "error setting image",
 			newState: api.EnvironmentState{
 				Images: []api.Image{
-					{},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.Error(t, err)
-				require.Equal(
-					t,
-					"cannot promote images via Kustomize because spec does not contain "+
-						"git repo details",
-					err.Error(),
-				)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "error getting Git repo credentials",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					GitRepo: &api.GitRepo{
-						URL: "fake-url",
-					},
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Kustomize: &api.KustomizePromotionMechanism{
-								Images: []api.KustomizeImageUpdate{
-									{},
-								},
-							},
-						},
+					{
+						RepoURL: "fake-url",
+						Tag:     "fake-tag",
 					},
 				},
 			},
-			newState: api.EnvironmentState{
-				Images: []api.Image{
-					{},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, errors.New("something went wrong")
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error obtaining credentials for git repo",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "error cloning Git repo",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					GitRepo: &api.GitRepo{
-						URL: "fake-url",
-					},
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Kustomize: &api.KustomizePromotionMechanism{
-								Images: []api.KustomizeImageUpdate{
-									{},
-								},
-							},
-						},
+			update: api.KustomizePromotionMechanism{
+				Images: []api.KustomizeImageUpdate{
+					{
+						Image: "fake-url",
+						Path:  "/fake/path",
 					},
 				},
 			},
-			newState: api.EnvironmentState{
-				Images: []api.Image{
-					{},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
-				context.Context,
-				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
-				return nil, errors.New("something went wrong")
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error cloning git repo")
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "error checking out branch",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					GitRepo: &api.GitRepo{
-						URL:    "fake-url",
-						Branch: "fake-branch",
-					},
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Kustomize: &api.KustomizePromotionMechanism{
-								Images: []api.KustomizeImageUpdate{
-									{},
-								},
-							},
-						},
-					},
-				},
-			},
-			newState: api.EnvironmentState{
-				Images: []api.Image{
-					{},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
-				context.Context,
-				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
-				return nil, nil
-			},
-			checkoutFn: func(git.Repo, string) error {
+			kustomizeSetImageFn: func(string, string, string) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "error checking out branch")
+				require.Contains(t, err.Error(), "error updating image")
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, inState, outState)
 			},
 		},
-		// TODO: Add more test cases. Testing beyond here is difficult because we
-		// have no convenient way of mocking a Git Repo object.
+
+		{
+			name: "success",
+			newState: api.EnvironmentState{
+				Images: []api.Image{
+					{
+						RepoURL: "fake-url",
+						Tag:     "fake-tag",
+					},
+				},
+			},
+			update: api.KustomizePromotionMechanism{
+				Images: []api.KustomizeImageUpdate{
+					{
+						Image: "fake-url",
+						Path:  "/fake/path",
+					},
+				},
+			},
+			kustomizeSetImageFn: func(string, string, string) error {
+				return nil
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:                  log.New(),
-				getGitRepoCredentialsFn: testCase.repoCredsFn,
-				gitCloneFn:              testCase.cloneFn,
-				checkoutBranchFn:        testCase.checkoutFn,
+				kustomizeSetImageFn: testCase.kustomizeSetImageFn,
 			}
-			reconciler.logger.SetLevel(log.ErrorLevel)
-			newState, err := reconciler.promoteWithKustomize(
-				context.Background(),
-				testCase.env,
-				testCase.newState,
+			testCase.assertions(
+				reconciler.applyKustomize(
+					testCase.newState,
+					testCase.update,
+					"",
+				),
 			)
-			testCase.assertions(testCase.newState, newState, err)
 		})
 	}
 }

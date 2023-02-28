@@ -97,17 +97,14 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name: "git commits differ",
-			lhs: &EnvironmentState{
-				GitCommit: &GitCommit{
-					RepoURL: "fake-url",
-					ID:      "old-commit",
-				},
-			},
+			name: "commits have different cardinality",
+			lhs:  &EnvironmentState{},
 			rhs: &EnvironmentState{
-				GitCommit: &GitCommit{
-					RepoURL: "fake-url",
-					ID:      "new-commit",
+				Commits: []GitCommit{
+					{
+						RepoURL: "fake-url",
+						ID:      "fake-commit",
+					},
 				},
 			},
 			expectedResult: false,
@@ -118,8 +115,8 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 			rhs: &EnvironmentState{
 				Images: []Image{
 					{
-						RepoURL: "nginx",
-						Tag:     "1.23.3",
+						RepoURL: "fake-url",
+						Tag:     "fake-tag",
 					},
 				},
 			},
@@ -140,20 +137,40 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 			expectedResult: false,
 		},
 		{
+			name: "commits have same cardinality, but differ",
+			lhs: &EnvironmentState{
+				Commits: []GitCommit{
+					{
+						RepoURL: "fake-url",
+						ID:      "fake-commit",
+					},
+				},
+			},
+			rhs: &EnvironmentState{
+				Commits: []GitCommit{
+					{
+						RepoURL: "fake-url",
+						ID:      "different-fake-commit",
+					},
+				},
+			},
+			expectedResult: false,
+		},
+		{
 			name: "images have same cardinality, but differ",
 			lhs: &EnvironmentState{
 				Images: []Image{
 					{
-						RepoURL: "nginx",
-						Tag:     "1.23.2",
+						RepoURL: "fake-url",
+						Tag:     "fake-version",
 					},
 				},
 			},
 			rhs: &EnvironmentState{
 				Images: []Image{
 					{
-						RepoURL: "nginx",
-						Tag:     "1.23.3",
+						RepoURL: "fake-url",
+						Tag:     "different-fake-version",
 					},
 				},
 			},
@@ -184,14 +201,24 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 		{
 			name: "perfect match",
 			lhs: &EnvironmentState{
-				Images: []Image{
+				Commits: []GitCommit{
 					{
-						RepoURL: "foo",
-						Tag:     "1.0.0",
+						RepoURL: "fake-git-repo",
+						ID:      "fake-commit",
 					},
 					{
-						RepoURL: "bar",
-						Tag:     "1.0.0",
+						RepoURL: "another-fake-git-repo",
+						ID:      "another-fake-commit",
+					},
+				},
+				Images: []Image{
+					{
+						RepoURL: "fake-image",
+						Tag:     "fake-tag",
+					},
+					{
+						RepoURL: "another-fake-image",
+						Tag:     "another-fake-tag",
 					},
 				},
 				Charts: []Chart{
@@ -208,19 +235,31 @@ func TestEnvironmentStateSameMaterials(t *testing.T) {
 				},
 			},
 			rhs: &EnvironmentState{
-				// Note that we make a point of putting the images in different orders
+				// Note that we make a point of putting the commits in a different order
+				// here, because order shouldn't matter.
+				Commits: []GitCommit{
+					{
+						RepoURL: "another-fake-git-repo",
+						ID:      "another-fake-commit",
+					},
+					{
+						RepoURL: "fake-git-repo",
+						ID:      "fake-commit",
+					},
+				},
+				// Note that we make a point of putting the images in a different order
 				// here, because order shouldn't matter.
 				Images: []Image{
 					{
-						RepoURL: "bar",
-						Tag:     "1.0.0",
+						RepoURL: "another-fake-image",
+						Tag:     "another-fake-tag",
 					},
 					{
-						RepoURL: "foo",
-						Tag:     "1.0.0",
+						RepoURL: "fake-image",
+						Tag:     "fake-tag",
 					},
 				},
-				// Note that we make a point of putting the charts in different orders
+				// Note that we make a point of putting the charts in a different order
 				// here, because order shouldn't matter.
 				Charts: []Chart{
 					{
@@ -274,41 +313,6 @@ func TestEnvironmentStateStackEmpty(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			require.Equal(t, testCase.expectedResult, testCase.stack.Empty())
-		})
-	}
-}
-
-func TestEnvironmentStateStackTop(t *testing.T) {
-	testCases := []struct {
-		name          string
-		stack         EnvironmentStateStack
-		expectedState EnvironmentState
-		expectedOK    bool
-	}{
-		{
-			name:          "stack is nil",
-			stack:         nil,
-			expectedState: EnvironmentState{},
-			expectedOK:    false,
-		},
-		{
-			name:          "stack is empty",
-			stack:         EnvironmentStateStack{},
-			expectedState: EnvironmentState{},
-			expectedOK:    false,
-		},
-		{
-			name:          "stack has items",
-			stack:         EnvironmentStateStack{{ID: "foo"}},
-			expectedState: EnvironmentState{ID: "foo"},
-			expectedOK:    true,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			state, ok := testCase.stack.Top()
-			require.Equal(t, testCase.expectedState, state)
-			require.Equal(t, testCase.expectedOK, ok)
 		})
 	}
 }

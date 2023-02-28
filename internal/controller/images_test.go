@@ -5,273 +5,70 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
-	"github.com/argoproj-labs/argocd-image-updater/pkg/registry"
-	"github.com/argoproj-labs/argocd-image-updater/pkg/tag"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/images"
 )
 
 func TestGetLatestImages(t *testing.T) {
 	testCases := []struct {
-		name        string
-		spec        api.EnvironmentSpec
-		repoCredsFn func(
+		name           string
+		getLatestTagFn func(
 			context.Context,
+			kubernetes.Interface,
 			string,
-			api.ImageSubscription,
-			*registry.RegistryEndpoint,
-		) (image.Credential, error)
-		tagsFn func(
-			*registry.RegistryEndpoint,
-			*image.ContainerImage,
-			registry.RegistryClient,
-			*image.VersionConstraint,
-		) (*tag.ImageTagList, error)
-		newestTagFn func(
-			*image.ContainerImage,
-			*image.VersionConstraint,
-			*tag.ImageTagList,
-		) (*tag.ImageTag, error)
+			images.ImageUpdateStrategy,
+			string,
+			string,
+			[]string,
+			string,
+			string,
+		) (string, error)
 		assertions func([]api.Image, error)
 	}{
 		{
-			name: "spec has no subscriptions",
-			assertions: func(images []api.Image, err error) {
-				require.NoError(t, err)
-				require.Nil(t, images)
+			name: "error getting latest version of an image",
+			getLatestTagFn: func(
+				ctx context.Context,
+				kubeClient kubernetes.Interface,
+				repoURL string,
+				updateStrategy images.ImageUpdateStrategy,
+				semverConstraint string,
+				allowTags string,
+				ignoreTags []string,
+				platform string,
+				pullSecret string,
+			) (string, error) {
+				return "", errors.New("something went wrong")
 			},
-		},
-		{
-			name: "spec has no upstream repo subscriptions",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{},
-			},
-			assertions: func(images []api.Image, err error) {
-				require.NoError(t, err)
-				require.Nil(t, images)
-			},
-		},
-		{
-			name: "spec has no image repo subscriptions",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-			},
-			assertions: func(images []api.Image, err error) {
-				require.NoError(t, err)
-				require.Nil(t, images)
-			},
-		},
-		{
-			name: "error parsing image platform",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Images: []api.ImageSubscription{
-							{
-								RepoURL:  "fake-url",
-								Platform: "bogus", // This will force an error
-							},
-						},
-					},
-				},
-			},
-			assertions: func(images []api.Image, err error) {
+			assertions: func(_ []api.Image, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing platform")
-				require.Nil(t, images)
-			},
-		},
-		{
-			name: "error getting image repo credentials",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Images: []api.ImageSubscription{
-							{
-								RepoURL: "fake-url",
-							},
-						},
-					},
-				},
-			},
-			repoCredsFn: func(
-				context.Context,
-				string,
-				api.ImageSubscription,
-				*registry.RegistryEndpoint,
-			) (image.Credential, error) {
-				return image.Credential{}, errors.New("something went wrong")
-			},
-			assertions: func(images []api.Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error getting credentials for image")
+				require.Contains(
+					t,
+					err.Error(),
+					"error getting latest suitable tag for image",
+				)
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, images)
 			},
 		},
-		{
-			name: "error fetching tags",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Images: []api.ImageSubscription{
-							{
-								RepoURL: "fake-url",
-							},
-						},
-					},
-				},
-			},
-			repoCredsFn: func(
-				context.Context,
-				string,
-				api.ImageSubscription,
-				*registry.RegistryEndpoint,
-			) (image.Credential, error) {
-				return image.Credential{}, nil
-			},
-			tagsFn: func(
-				*registry.RegistryEndpoint,
-				*image.ContainerImage,
-				registry.RegistryClient,
-				*image.VersionConstraint,
-			) (*tag.ImageTagList, error) {
-				return nil, errors.New("something went wrong")
-			},
-			assertions: func(images []api.Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error fetching tags for image")
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, images)
-			},
-		},
-		{
-			name: "error finding newest tag",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Images: []api.ImageSubscription{
-							{
-								RepoURL: "fake-url",
-							},
-						},
-					},
-				},
-			},
-			repoCredsFn: func(
-				context.Context,
-				string,
-				api.ImageSubscription,
-				*registry.RegistryEndpoint,
-			) (image.Credential, error) {
-				return image.Credential{}, nil
-			},
-			tagsFn: func(
-				*registry.RegistryEndpoint,
-				*image.ContainerImage,
-				registry.RegistryClient,
-				*image.VersionConstraint,
-			) (*tag.ImageTagList, error) {
-				return tag.NewImageTagList(), nil
-			},
-			newestTagFn: func(
-				*image.ContainerImage,
-				*image.VersionConstraint,
-				*tag.ImageTagList,
-			) (*tag.ImageTag, error) {
-				return nil, errors.New("something went wrong")
-			},
-			assertions: func(images []api.Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error finding newest tag")
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, images)
-			},
-		},
-		{
-			name: "no suitable image version found",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Images: []api.ImageSubscription{
-							{
-								RepoURL: "fake-url",
-							},
-						},
-					},
-				},
-			},
-			repoCredsFn: func(
-				context.Context,
-				string,
-				api.ImageSubscription,
-				*registry.RegistryEndpoint,
-			) (image.Credential, error) {
-				return image.Credential{}, nil
-			},
-			tagsFn: func(
-				*registry.RegistryEndpoint,
-				*image.ContainerImage,
-				registry.RegistryClient,
-				*image.VersionConstraint,
-			) (*tag.ImageTagList, error) {
-				return tag.NewImageTagList(), nil
-			},
-			newestTagFn: func(
-				*image.ContainerImage,
-				*image.VersionConstraint,
-				*tag.ImageTagList,
-			) (*tag.ImageTag, error) {
-				return nil, nil
-			},
-			assertions: func(images []api.Image, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "found no suitable version of image")
-				require.Nil(t, images)
-			},
-		},
+
 		{
 			name: "success",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Images: []api.ImageSubscription{
-							{
-								RepoURL: "fake-url",
-							},
-						},
-					},
-				},
-			},
-			repoCredsFn: func(
-				context.Context,
-				string,
-				api.ImageSubscription,
-				*registry.RegistryEndpoint,
-			) (image.Credential, error) {
-				return image.Credential{}, nil
-			},
-			tagsFn: func(
-				*registry.RegistryEndpoint,
-				*image.ContainerImage,
-				registry.RegistryClient,
-				*image.VersionConstraint,
-			) (*tag.ImageTagList, error) {
-				return tag.NewImageTagList(), nil
-			},
-			newestTagFn: func(
-				*image.ContainerImage,
-				*image.VersionConstraint,
-				*tag.ImageTagList,
-			) (*tag.ImageTag, error) {
-				return &tag.ImageTag{
-					TagName: "fake-tag",
-				}, nil
+			getLatestTagFn: func(
+				ctx context.Context,
+				kubeClient kubernetes.Interface,
+				repoURL string,
+				updateStrategy images.ImageUpdateStrategy,
+				semverConstraint string,
+				allowTags string,
+				ignoreTags []string,
+				platform string,
+				pullSecret string,
+			) (string, error) {
+				return "fake-tag", nil
 			},
 			assertions: func(images []api.Image, err error) {
 				require.NoError(t, err)
@@ -289,17 +86,19 @@ func TestGetLatestImages(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			testSubs := []api.ImageSubscription{
+				{
+					RepoURL: "fake-url",
+				},
+			}
 			reconciler := environmentReconciler{
-				logger:                    log.New(),
-				getImageRepoCredentialsFn: testCase.repoCredsFn,
-				getImageTagsFn:            testCase.tagsFn,
-				getNewestImageTagFn:       testCase.newestTagFn,
+				logger:         log.New(),
+				getLatestTagFn: testCase.getLatestTagFn,
 			}
 			reconciler.logger.SetLevel(log.ErrorLevel)
-			env := &api.Environment{
-				Spec: testCase.spec,
-			}
-			testCase.assertions(reconciler.getLatestImages(context.Background(), env))
+			testCase.assertions(
+				reconciler.getLatestImages(context.Background(), testSubs),
+			)
 		})
 	}
 }

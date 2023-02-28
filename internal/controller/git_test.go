@@ -9,88 +9,36 @@ import (
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/git"
 )
 
-func TestGetLatestCommit(t *testing.T) {
+func TestApplyGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
 		name           string
-		spec           api.EnvironmentSpec
-		repoCredsFn    func(context.Context, string) (git.RepoCredentials, error)
-		checkoutFn     func(git.Repo, string) error
-		lastCommitIDFn func(git.Repo) (string, error)
-		cloneFn        func(
+		gitRepoCredsFn func(
 			context.Context,
+			libArgoCD.DB,
 			string,
-			git.RepoCredentials,
-		) (git.Repo, error)
-		assertions func(commit *api.GitCommit, err error)
+		) (*git.RepoCredentials, error)
+		gitApplyUpdateFn func(
+			string,
+			string,
+			*git.RepoCredentials,
+			func(homeDir, workingDir string) (string, error),
+		) (string, error)
+		assertions func(inState, outState api.EnvironmentState, err error)
 	}{
 		{
-			name: "spec has no subscriptions",
-			assertions: func(commit *api.GitCommit, err error) {
-				require.NoError(t, err)
-				require.Nil(t, commit)
-			},
-		},
-		{
-			name: "spec has no upstream repo subscriptions",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{},
-			},
-			assertions: func(commit *api.GitCommit, err error) {
-				require.NoError(t, err)
-				require.Nil(t, commit)
-			},
-		},
-		{
-			name: "spec has no git repo subscription",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-			},
-			assertions: func(commit *api.GitCommit, err error) {
-				require.NoError(t, err)
-				require.Nil(t, commit)
-			},
-		},
-		{
-			name: "spec has a git repo subscription, but no repo details",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Git: true,
-					},
-				},
-			},
-			assertions: func(commit *api.GitCommit, err error) {
-				require.Error(t, err)
-				require.Equal(
-					t,
-					"environment subscribes to a git repo, but does not specify its "+
-						"details",
-					err.Error(),
-				)
-				require.Nil(t, commit)
-			},
-		},
-		{
 			name: "error getting repo credentials",
-			spec: api.EnvironmentSpec{
-				GitRepo: &api.GitRepo{
-					URL: "fake-url",
-				},
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Git: true,
-					},
-				},
+			gitRepoCredsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*git.RepoCredentials, error) {
+				return nil, errors.New("something went wrong")
 			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, errors.New("something went wrong")
-			},
-			assertions: func(commit *api.GitCommit, err error) {
+			assertions: func(_, _ api.EnvironmentState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -98,187 +46,178 @@ func TestGetLatestCommit(t *testing.T) {
 					"error obtaining credentials for git repo",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, commit)
 			},
 		},
+
 		{
-			name: "error cloning repo",
-			spec: api.EnvironmentSpec{
-				GitRepo: &api.GitRepo{
-					URL: "fake-url",
-				},
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Git: true,
-					},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
+			name: "error applying updates",
+			gitRepoCredsFn: func(
 				context.Context,
+				libArgoCD.DB,
 				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
-				return nil, errors.New("something went wrong")
-			},
-			assertions: func(commit *api.GitCommit, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error cloning git repo")
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, commit)
-			},
-		},
-		{
-			name: "error checking out branch",
-			spec: api.EnvironmentSpec{
-				GitRepo: &api.GitRepo{
-					URL:    "fake-url",
-					Branch: "fake-branch",
-				},
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Git: true,
-					},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
-				context.Context,
-				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
+			) (*git.RepoCredentials, error) {
 				return nil, nil
 			},
-			checkoutFn: func(git.Repo, string) error {
-				return errors.New("something went wrong")
-			},
-			assertions: func(commit *api.GitCommit, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error checking out branch")
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, commit)
-			},
-		},
-		{
-			name: "error getting last commit ID from specific branch",
-			spec: api.EnvironmentSpec{
-				GitRepo: &api.GitRepo{
-					URL:    "fake-url",
-					Branch: "fake-branch",
-				},
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Git: true,
-					},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
-				context.Context,
+			gitApplyUpdateFn: func(
 				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
-				return nil, nil
-			},
-			checkoutFn: func(git.Repo, string) error {
-				return nil
-			},
-			lastCommitIDFn: func(r git.Repo) (string, error) {
+				string,
+				*git.RepoCredentials,
+				func(string, string) (string, error),
+			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
-			assertions: func(commit *api.GitCommit, err error) {
+			assertions: func(_, _ api.EnvironmentState, err error) {
 				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error determining last commit ID from branch",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, commit)
+				require.Equal(t, err.Error(), "something went wrong")
 			},
 		},
-		{
-			name: "error getting last commit ID from default branch",
-			spec: api.EnvironmentSpec{
-				GitRepo: &api.GitRepo{
-					URL: "fake-url",
-				},
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Git: true,
-					},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
-				context.Context,
-				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
-				return nil, nil
-			},
-			checkoutFn: func(git.Repo, string) error {
-				return nil
-			},
-			lastCommitIDFn: func(r git.Repo) (string, error) {
-				return "", errors.New("something went wrong")
-			},
-			assertions: func(commit *api.GitCommit, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error determining last commit ID from default branch",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Nil(t, commit)
-			},
-		},
+
 		{
 			name: "success",
-			spec: api.EnvironmentSpec{
-				GitRepo: &api.GitRepo{
-					URL: "fake-url",
-				},
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{
-						Git: true,
-					},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
+			gitRepoCredsFn: func(
 				context.Context,
+				libArgoCD.DB,
 				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
+			) (*git.RepoCredentials, error) {
 				return nil, nil
 			},
-			checkoutFn: func(git.Repo, string) error {
-				return nil
+			gitApplyUpdateFn: func(
+				string,
+				string,
+				*git.RepoCredentials,
+				func(string, string) (string, error),
+			) (string, error) {
+				return "new-fake-commit", nil
 			},
-			lastCommitIDFn: func(r git.Repo) (string, error) {
-				return "fake-commit", nil
-			},
-			assertions: func(commit *api.GitCommit, err error) {
+			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.NoError(t, err)
-				require.Equal(
-					t,
-					&api.GitCommit{
+				require.Len(t, outState.Commits, 1)
+				// Check that the commit ID in the state was updated
+				require.Equal(t, "new-fake-commit", outState.Commits[0].ID)
+				// Everything else should be unchanged
+				outState.Commits[0].ID = "fake-commit"
+				require.Equal(t, inState, outState)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			reconciler := environmentReconciler{
+				logger:               log.New(),
+				gitRepoCredentialsFn: testCase.gitRepoCredsFn,
+				gitApplyUpdateFn:     testCase.gitApplyUpdateFn,
+			}
+			reconciler.logger.SetLevel(log.ErrorLevel)
+			newState := api.EnvironmentState{
+				Commits: []api.GitCommit{
+					{
 						RepoURL: "fake-url",
 						ID:      "fake-commit",
 					},
-					commit,
+				},
+			}
+			outState, err := reconciler.applyGitRepoUpdate(
+				context.Background(),
+				newState,
+				api.GitRepoUpdate{
+					RepoURL: "fake-url",
+				},
+			)
+			testCase.assertions(newState, outState, err)
+		})
+	}
+}
+
+func TestGetLatestCommits(t *testing.T) {
+	testCases := []struct {
+		name           string
+		gitRepoCredsFn func(
+			context.Context,
+			libArgoCD.DB,
+			string,
+		) (*git.RepoCredentials, error)
+		getLatestCommitIDFn func(
+			string,
+			string,
+			*git.RepoCredentials,
+		) (string, error)
+		assertions func(commits []api.GitCommit, err error)
+	}{
+		{
+			name: "error getting repo credentials",
+			gitRepoCredsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*git.RepoCredentials, error) {
+				return nil, errors.New("something went wrong")
+			},
+			assertions: func(commits []api.GitCommit, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error obtaining credentials for git repo",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Empty(t, commits)
+			},
+		},
+
+		{
+			name: "error getting last commit ID",
+			gitRepoCredsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*git.RepoCredentials, error) {
+				return nil, nil
+			},
+			getLatestCommitIDFn: func(
+				string,
+				string,
+				*git.RepoCredentials,
+			) (string, error) {
+				return "", errors.New("something went wrong")
+			},
+			assertions: func(commits []api.GitCommit, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error determining latest commit ID of git repo",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Empty(t, commits)
+			},
+		},
+
+		{
+			name: "success",
+			gitRepoCredsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*git.RepoCredentials, error) {
+				return nil, nil
+			},
+			getLatestCommitIDFn: func(
+				string,
+				string,
+				*git.RepoCredentials,
+			) (string, error) {
+				return "fake-commit", nil
+			},
+			assertions: func(commits []api.GitCommit, err error) {
+				require.NoError(t, err)
+				require.Len(t, commits, 1)
+				require.Equal(
+					t,
+					api.GitCommit{
+						RepoURL: "fake-url",
+						ID:      "fake-commit",
+					},
+					commits[0],
 				)
 			},
 		},
@@ -286,17 +225,21 @@ func TestGetLatestCommit(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:                  log.New(),
-				getGitRepoCredentialsFn: testCase.repoCredsFn,
-				gitCloneFn:              testCase.cloneFn,
-				checkoutBranchFn:        testCase.checkoutFn,
-				getLastCommitIDFn:       testCase.lastCommitIDFn,
+				logger:               log.New(),
+				gitRepoCredentialsFn: testCase.gitRepoCredsFn,
+				getLatestCommitIDFn:  testCase.getLatestCommitIDFn,
 			}
 			reconciler.logger.SetLevel(log.ErrorLevel)
-			env := &api.Environment{
-				Spec: testCase.spec,
-			}
-			testCase.assertions(reconciler.getLatestCommit(context.Background(), env))
+			testCase.assertions(
+				reconciler.getLatestCommits(
+					context.Background(),
+					[]api.GitSubscription{
+						{
+							RepoURL: "fake-url",
+						},
+					},
+				),
+			)
 		})
 	}
 }

@@ -11,270 +11,306 @@ import (
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/git"
+	libArgoCD "github.com/akuityio/kargo/internal/argocd"
+	"github.com/akuityio/kargo/internal/helm"
 )
 
-func TestPromoteWithHelm(t *testing.T) {
+func TestApplyHelm(t *testing.T) {
 	testCases := []struct {
-		name        string
-		env         *api.Environment
-		newState    api.EnvironmentState
-		repoCredsFn func(context.Context, string) (git.RepoCredentials, error)
-		cloneFn     func(
-			context.Context,
+		name                   string
+		newState               api.EnvironmentState
+		update                 api.HelmPromotionMechanism
+		setStringsInYAMLFileFn func(
 			string,
-			git.RepoCredentials,
-		) (git.Repo, error)
-		checkoutFn func(repo git.Repo, branch string) error
-		assertions func(inState, outState api.EnvironmentState, err error)
+			map[string]string,
+		) error
+		buildChartDependencyChangesFn func(
+			string,
+			[]api.Chart,
+			[]api.HelmChartDependencyUpdate,
+		) (map[string]map[string]string, error)
+		updateChartDependenciesFn func(homePath, chartPath string) error
+		assertions                func(err error)
 	}{
 		{
-			name: "environment is nil",
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "PromotionMechanisms is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "ConfigManagement is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "Helm is nil",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{},
-					},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "Helm promotion mechanism has len(Images) == 0",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Helm: &api.HelmPromotionMechanism{},
-						},
-					},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "new Environment state has has len(Images) == 0",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Helm: &api.HelmPromotionMechanism{
-								Images: []api.HelmImageUpdate{
-									{},
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "Environment spec is missing Git repo details",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Helm: &api.HelmPromotionMechanism{
-								Images: []api.HelmImageUpdate{
-									{},
-								},
-							},
-						},
-					},
-				},
-			},
+			name: "error modifying values.yaml",
 			newState: api.EnvironmentState{
 				Images: []api.Image{
-					{},
+					{
+						RepoURL: "fake-url",
+						Tag:     "fake-tag",
+					},
 				},
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			update: api.HelmPromotionMechanism{
+				Images: []api.HelmImageUpdate{
+					{
+						Image: "fake-url",
+						Key:   "image",
+						Value: "Image",
+					},
+				},
+			},
+			setStringsInYAMLFileFn: func(string, map[string]string) error {
+				return errors.New("something went wrong")
+			},
+			assertions: func(err error) {
 				require.Error(t, err)
-				require.Equal(
-					t,
-					"cannot promote images via Helm because spec does not contain "+
-						"git repo details",
-					err.Error(),
-				)
-				require.Equal(t, inState, outState)
+				require.Contains(t, err.Error(), "error updating values in file")
+				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
+
 		{
-			name: "error getting Git repo credentials",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					GitRepo: &api.GitRepo{
-						URL: "fake-url",
-					},
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Helm: &api.HelmPromotionMechanism{
-								Images: []api.HelmImageUpdate{
-									{},
-								},
-							},
-						},
-					},
-				},
+			name: "error building chart dependency changes",
+			buildChartDependencyChangesFn: func(
+				string,
+				[]api.Chart,
+				[]api.HelmChartDependencyUpdate,
+			) (map[string]map[string]string, error) {
+				return nil, errors.New("something went wrong")
 			},
-			newState: api.EnvironmentState{
-				Images: []api.Image{
-					{},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, errors.New("something went wrong")
-			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
 					err.Error(),
-					"error obtaining credentials for git repo",
+					"error preparing changes to affected Chart.yaml files",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, inState, outState)
 			},
 		},
+
 		{
-			name: "error cloning Git repo",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					GitRepo: &api.GitRepo{
-						URL: "fake-url",
-					},
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Helm: &api.HelmPromotionMechanism{
-								Images: []api.HelmImageUpdate{
-									{},
-								},
-							},
-						},
-					},
-				},
-			},
-			newState: api.EnvironmentState{
-				Images: []api.Image{
-					{},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
-				context.Context,
+			name: "error updating Chart.yaml",
+			buildChartDependencyChangesFn: func(
 				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
-				return nil, errors.New("something went wrong")
+				[]api.Chart,
+				[]api.HelmChartDependencyUpdate,
+			) (map[string]map[string]string, error) {
+				// We only need to build enough of a change map to make sure we get into
+				// the loop
+				return map[string]map[string]string{
+					"/fake/path/Chart.yaml": {},
+				}, nil
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error cloning git repo")
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, inState, outState)
-			},
-		},
-		{
-			name: "error checking out branch",
-			env: &api.Environment{
-				Spec: api.EnvironmentSpec{
-					GitRepo: &api.GitRepo{
-						URL:    "fake-url",
-						Branch: "fake-branch",
-					},
-					PromotionMechanisms: &api.PromotionMechanisms{
-						Git: &api.GitPromotionMechanism{
-							Helm: &api.HelmPromotionMechanism{
-								Images: []api.HelmImageUpdate{
-									{},
-								},
-							},
-						},
-					},
-				},
-			},
-			newState: api.EnvironmentState{
-				Images: []api.Image{
-					{},
-				},
-			},
-			repoCredsFn: func(context.Context, string) (git.RepoCredentials, error) {
-				return git.RepoCredentials{}, nil
-			},
-			cloneFn: func(
-				context.Context,
-				string,
-				git.RepoCredentials,
-			) (git.Repo, error) {
-				return nil, nil
-			},
-			checkoutFn: func(git.Repo, string) error {
+			setStringsInYAMLFileFn: func(string, map[string]string) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "error checking out branch")
+				require.Contains(
+					t,
+					err.Error(),
+					"error updating dependencies for chart",
+				)
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, inState, outState)
+			},
+		},
+
+		{
+			name: "error updating chart dependencies",
+			buildChartDependencyChangesFn: func(
+				string,
+				[]api.Chart,
+				[]api.HelmChartDependencyUpdate,
+			) (map[string]map[string]string, error) {
+				return map[string]map[string]string{
+					// We only need to build enough of a change map to make sure we get
+					// into the loop
+					"/fake/path/Chart.yaml": {},
+				}, nil
+			},
+			setStringsInYAMLFileFn: func(string, map[string]string) error {
+				return nil
+			},
+			updateChartDependenciesFn: func(string, string) error {
+				return errors.New("something went wrong")
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error updating dependencies for chart",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+
+		{
+			name: "success",
+			buildChartDependencyChangesFn: func(
+				string,
+				[]api.Chart,
+				[]api.HelmChartDependencyUpdate,
+			) (map[string]map[string]string, error) {
+				return nil, nil
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:                  log.New(),
-				getGitRepoCredentialsFn: testCase.repoCredsFn,
-				gitCloneFn:              testCase.cloneFn,
-				checkoutBranchFn:        testCase.checkoutFn,
+				setStringsInYAMLFileFn:        testCase.setStringsInYAMLFileFn,
+				buildChartDependencyChangesFn: testCase.buildChartDependencyChangesFn,
+				updateChartDependenciesFn:     testCase.updateChartDependenciesFn,
+			}
+			testCase.assertions(
+				reconciler.applyHelm(
+					testCase.newState,
+					testCase.update,
+					"",
+					"",
+				),
+			)
+		})
+	}
+}
+
+func TestGetLatestCharts(t *testing.T) {
+	testCases := []struct {
+		name                       string
+		chartRegistryCredentialsFn func(
+			context.Context,
+			libArgoCD.DB,
+			string,
+		) (*helm.RegistryCredentials, error)
+		getLatestChartVersionFn func(
+			context.Context,
+			string,
+			string,
+			string,
+			*helm.RegistryCredentials,
+		) (string, error)
+		assertions func([]api.Chart, error)
+	}{
+		{
+			name: "error getting registry credentials",
+			chartRegistryCredentialsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*helm.RegistryCredentials, error) {
+				return nil, errors.New("something went wrong")
+			},
+			assertions: func(_ []api.Chart, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error getting credentials for chart registry",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+
+		{
+			name: "error getting latest chart version",
+			chartRegistryCredentialsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*helm.RegistryCredentials, error) {
+				return nil, nil
+			},
+			getLatestChartVersionFn: func(
+				context.Context,
+				string,
+				string,
+				string,
+				*helm.RegistryCredentials,
+			) (string, error) {
+				return "", errors.New("something went wrong")
+			},
+			assertions: func(_ []api.Chart, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error searching for latest version of chart",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+
+		{
+			name: "no chart found",
+			chartRegistryCredentialsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*helm.RegistryCredentials, error) {
+				return nil, nil
+			},
+			getLatestChartVersionFn: func(
+				context.Context,
+				string,
+				string,
+				string,
+				*helm.RegistryCredentials,
+			) (string, error) {
+				return "", nil
+			},
+			assertions: func(_ []api.Chart, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "found no suitable version of chart")
+			},
+		},
+
+		{
+			name: "success",
+			chartRegistryCredentialsFn: func(
+				context.Context,
+				libArgoCD.DB,
+				string,
+			) (*helm.RegistryCredentials, error) {
+				return nil, nil
+			},
+			getLatestChartVersionFn: func(
+				context.Context,
+				string,
+				string,
+				string,
+				*helm.RegistryCredentials,
+			) (string, error) {
+				return "1.0.0", nil
+			},
+			assertions: func(charts []api.Chart, err error) {
+				require.NoError(t, err)
+				require.Len(t, charts, 1)
+				require.Equal(
+					t,
+					api.Chart{
+						RegistryURL: "fake-url",
+						Name:        "fake-chart",
+						Version:     "1.0.0",
+					},
+					charts[0],
+				)
+			},
+		},
+	}
+	testSubs := []api.ChartSubscription{
+		{
+			RegistryURL: "fake-url",
+			Name:        "fake-chart",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			reconciler := environmentReconciler{
+				logger:                     log.New(),
+				chartRegistryCredentialsFn: testCase.chartRegistryCredentialsFn,
+				getLatestChartVersionFn:    testCase.getLatestChartVersionFn,
 			}
 			reconciler.logger.SetLevel(log.ErrorLevel)
-			newState, err := reconciler.promoteWithHelm(
-				context.Background(),
-				testCase.env,
-				testCase.newState,
+			testCase.assertions(
+				reconciler.getLatestCharts(context.Background(), testSubs),
 			)
-			testCase.assertions(testCase.newState, newState, err)
 		})
 	}
 }

@@ -2,12 +2,10 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/akuityio/bookkeeper"
-	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
-	"github.com/argoproj-labs/argocd-image-updater/pkg/registry"
-	"github.com/argoproj-labs/argocd-image-updater/pkg/tag"
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/util/db"
 	"github.com/pkg/errors"
@@ -27,9 +25,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/git"
 	"github.com/akuityio/kargo/internal/helm"
+	"github.com/akuityio/kargo/internal/images"
+	"github.com/akuityio/kargo/internal/kustomize"
+	"github.com/akuityio/kargo/internal/yaml"
 )
 
 const (
@@ -38,83 +40,138 @@ const (
 
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
-	config     config.Config
-	client     client.Client
-	kubeClient kubernetes.Interface
-	argoDB     db.ArgoDB
-	logger     *log.Logger
-	// The following behaviors are all overridable for testing purposes
+	config            config.Config
+	client            client.Client
+	kubeClient        kubernetes.Interface
+	argoDB            db.ArgoDB
+	bookkeeperService bookkeeper.Service
+	logger            *log.Logger
+
+	// The following behaviors are overridable for testing purposes:
+
+	// Common:
+	getArgoCDAppFn func(
+		ctx context.Context,
+		client client.Client,
+		namespace string,
+		name string,
+	) (*argocd.Application, error)
+
+	gitRepoCredentialsFn func(
+		ctx context.Context,
+		argoDB libArgoCD.DB,
+		repoURL string,
+	) (*git.RepoCredentials, error)
+
+	// Health checks:
+	checkHealthFn func(
+		context.Context,
+		api.EnvironmentState,
+		api.HealthChecks,
+	) api.Health
+
+	// Syncing:
 	getLatestStateFromReposFn func(
 		context.Context,
 		*api.Environment,
 	) (*api.EnvironmentState, error)
+
 	getAvailableStatesFromUpstreamEnvsFn func(
 		context.Context,
 		*api.Environment,
 	) ([]api.EnvironmentState, error)
-	getLatestCommitFn func(
+
+	getLatestCommitsFn func(
+		context.Context,
+		[]api.GitSubscription,
+	) ([]api.GitCommit, error)
+
+	getLatestImagesFn func(
+		context.Context,
+		[]api.ImageSubscription,
+	) ([]api.Image, error)
+
+	getLatestTagFn func(
+		ctx context.Context,
+		kubeClient kubernetes.Interface,
+		repoURL string,
+		updateStrategy images.ImageUpdateStrategy,
+		semverConstraint string,
+		allowTags string,
+		ignoreTags []string,
+		platform string,
+		pullSecret string,
+	) (string, error)
+
+	chartRegistryCredentialsFn func(
+		ctx context.Context,
+		argoDB libArgoCD.DB,
+		registryURL string,
+	) (*helm.RegistryCredentials, error)
+
+	getLatestChartsFn func(
+		context.Context,
+		[]api.ChartSubscription,
+	) ([]api.Chart, error)
+
+	getLatestChartVersionFn func(
+		ctx context.Context,
+		registryURL string,
+		chart string,
+		semverConstraint string,
+		creds *helm.RegistryCredentials,
+	) (string, error)
+
+	getLatestCommitIDFn func(
+		repoURL string,
+		branch string,
+		creds *git.RepoCredentials,
+	) (string, error)
+
+	// Promotions (general):
+	promoteFn func(
 		context.Context,
 		*api.Environment,
-	) (*api.GitCommit, error)
-	getGitRepoCredentialsFn func(
-		ctx context.Context,
-		repoURL string,
-	) (git.RepoCredentials, error)
-	gitCloneFn func(
-		ctx context.Context,
-		url string,
-		repoCreds git.RepoCredentials,
-	) (git.Repo, error)
-	checkoutBranchFn  func(repo git.Repo, branch string) error
-	getLastCommitIDFn func(git.Repo) (string, error)
-	getLatestImagesFn func(
-		ctx context.Context,
-		env *api.Environment,
-	) ([]api.Image, error)
-	getImageRepoCredentialsFn func(
-		ctx context.Context,
-		namespace string,
-		sub api.ImageSubscription,
-		rep *registry.RegistryEndpoint,
-	) (image.Credential, error)
-	getImageTagsFn func(
-		*registry.RegistryEndpoint,
-		*image.ContainerImage,
-		registry.RegistryClient,
-		*image.VersionConstraint,
-	) (*tag.ImageTagList, error)
-	getNewestImageTagFn func(
-		*image.ContainerImage,
-		*image.VersionConstraint,
-		*tag.ImageTagList,
-	) (*tag.ImageTag, error)
-	getLatestChartsFn func(
-		ctx context.Context,
-		env *api.Environment,
-	) ([]api.Chart, error)
-	getChartRegistryCredentialsFn func(
-		ctx context.Context,
-		repoURL string,
-	) (*helm.RepoCredentials, error)
-	promoteFn func(
-		ctx context.Context,
-		env *api.Environment,
-		newState api.EnvironmentState,
+		api.EnvironmentState,
 	) (api.EnvironmentState, error)
-	renderManifestsWithBookkeeperFn func(
-		context.Context,
-		bookkeeper.RenderRequest,
-	) (bookkeeper.RenderResponse, error)
-	getArgoCDAppFn func(
+
+	// Promotions via Git:
+	gitApplyUpdateFn func(
+		repoURL string,
+		branch string,
+		creds *git.RepoCredentials,
+		updateFn func(homeDir, workingDir string) (string, error),
+	) (string, error)
+
+	// Promotions via Git + Kustomize:
+	kustomizeSetImageFn func(dir, repo, tag string) error
+
+	// Promotions via Git + Helm:
+	buildChartDependencyChangesFn func(
+		repoDir string,
+		charts []api.Chart,
+		chartUpdates []api.HelmChartDependencyUpdate,
+	) (map[string]map[string]string, error)
+
+	updateChartDependenciesFn func(homePath, chartPath string) error
+
+	setStringsInYAMLFileFn func(
+		file string,
+		changes map[string]string,
+	) error
+
+	// Promotions via Argo CD:
+	applyArgoCDSourceUpdateFn func(
+		argocd.ApplicationSource,
+		api.EnvironmentState,
+		api.ArgoCDSourceUpdate,
+	) (argocd.ApplicationSource, error)
+
+	patchFn func(
 		ctx context.Context,
-		namespace string,
-		name string,
-	) (*argocd.Application, error)
-	updateArgoCDAppFn func(
-		ctx context.Context,
-		env *api.Environment,
-		newState api.EnvironmentState,
-		appUpdate api.ArgoCDAppUpdate,
+		obj client.Object,
+		patch client.Patch,
+		opts ...client.PatchOption,
 	) error
 }
 
@@ -138,10 +195,12 @@ func SetupEnvironmentReconcilerWithManager(
 		envsByAppIndexField,
 		func(obj client.Object) []string {
 			env := obj.(*api.Environment) // nolint: forcetypeassert
-			if env.Spec.HealthChecks != nil {
-				return env.Spec.HealthChecks.ArgoCDApps
+			apps := make([]string, len(env.Spec.HealthChecks.ArgoCDAppChecks))
+			for i, appCheck := range env.Spec.HealthChecks.ArgoCDAppChecks {
+				apps[i] =
+					fmt.Sprintf("%s:%s", appCheck.AppNamespace, appCheck.AppName)
 			}
-			return nil
+			return apps
 		},
 	); err != nil {
 		return errors.Wrap(
@@ -180,30 +239,50 @@ func newEnvironmentReconciler(
 	logger := log.New()
 	logger.SetLevel(config.LogLevel)
 	e := &environmentReconciler{
-		config:     config,
-		client:     client,
-		kubeClient: kubeClient,
-		argoDB:     argoDB,
-		logger:     logger,
+		config:            config,
+		client:            client,
+		kubeClient:        kubeClient,
+		argoDB:            argoDB,
+		bookkeeperService: bookkeeperService,
+		logger:            logger,
 	}
-	// Defaults for overridable behaviors:
+
+	// The following default behaviors are overridable for testing purposes:
+
+	// Common:
+	e.getArgoCDAppFn = libArgoCD.GetApplication
+	e.gitRepoCredentialsFn = libArgoCD.GetGitRepoCredentials
+
+	// Health checks:
+	e.checkHealthFn = e.checkHealth
+
+	// Syncing:
 	e.getLatestStateFromReposFn = e.getLatestStateFromRepos
 	e.getAvailableStatesFromUpstreamEnvsFn = e.getAvailableStatesFromUpstreamEnvs
-	e.getLatestCommitFn = e.getLatestCommit
-	e.getGitRepoCredentialsFn = e.getGitRepoCredentials
-	e.gitCloneFn = git.Clone
-	e.checkoutBranchFn = checkoutBranch
-	e.getLastCommitIDFn = getLastCommitID
+	e.getLatestCommitsFn = e.getLatestCommits
 	e.getLatestImagesFn = e.getLatestImages
-	e.getImageRepoCredentialsFn = e.getImageRepoCredentials
-	e.getImageTagsFn = getImageTags
-	e.getNewestImageTagFn = getNewestImageTag
+	e.getLatestTagFn = images.GetLatestTag
+	e.chartRegistryCredentialsFn = libArgoCD.GetChartRegistryCredentials
 	e.getLatestChartsFn = e.getLatestCharts
-	e.getChartRegistryCredentialsFn = e.getChartRegistryCredentials
+	e.getLatestChartVersionFn = helm.GetLatestChartVersion
+	e.getLatestCommitIDFn = git.GetLatestCommitID
+
+	// Promotions (general):
 	e.promoteFn = e.promote
-	e.renderManifestsWithBookkeeperFn = bookkeeperService.RenderManifests
-	e.getArgoCDAppFn = e.getArgoCDApp
-	e.updateArgoCDAppFn = e.updateArgoCDApp
+	// Promotions via Git:
+	e.gitApplyUpdateFn = git.ApplyUpdate
+	// Promotions via Git + Kustomize:
+	e.kustomizeSetImageFn = kustomize.SetImage
+	// Promotions via Git + Helm:
+	e.buildChartDependencyChangesFn = buildChartDependencyChanges
+	e.updateChartDependenciesFn = helm.UpdateChartDependencies
+	e.setStringsInYAMLFileFn = yaml.SetStringsInFile
+	// Promotions via Argo CD:
+	e.applyArgoCDSourceUpdateFn = e.applyArgoCDSourceUpdate
+	if client != nil { // This can be nil during testing
+		e.patchFn = client.Patch
+	}
+
 	return e
 }
 
@@ -221,7 +300,7 @@ func (e *environmentReconciler) findEnvsForApp(
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
 				envsByAppIndexField,
-				app.GetName(),
+				fmt.Sprintf("%s:%s", app.GetNamespace(), app.GetName()),
 			),
 		},
 	); err != nil {
@@ -292,7 +371,8 @@ func (e *environmentReconciler) sync(
 	var currentState api.EnvironmentState
 	var ok bool
 	if status.States, currentState, ok = status.States.Pop(); ok {
-		currentState.Health = e.checkHealth(ctx, env)
+		health := e.checkHealthFn(ctx, currentState, env.Spec.HealthChecks)
+		currentState.Health = &health
 		status.States = status.States.Push(currentState)
 	}
 
@@ -315,8 +395,7 @@ func (e *environmentReconciler) sync(
 		// latestState's MATERIALS must differ from what is at the top of the
 		// status.AvailableStates stack.
 		if latestState != nil {
-			var topAvailableState api.EnvironmentState
-			if topAvailableState, ok = status.AvailableStates.Top(); !ok ||
+			if _, topAvailableState, ok := status.AvailableStates.Pop(); !ok ||
 				!latestState.SameMaterials(&topAvailableState) {
 				status.AvailableStates = status.AvailableStates.Push(*latestState)
 			}
@@ -329,8 +408,6 @@ func (e *environmentReconciler) sync(
 		// This returns de-duped, healthy states only from all upstream envs. There
 		// could be up to ten per upstream environment. This is more than the usual
 		// quantity we permit in status.AvailableStates, but we'll allow it.
-		//
-		// TODO: This is a placeholder. Call a real function.
 		latestStatesFromEnvs, err :=
 			e.getAvailableStatesFromUpstreamEnvsFn(ctx, env)
 		if err != nil {
@@ -350,19 +427,29 @@ func (e *environmentReconciler) sync(
 		return status // Nothing further to do
 	}
 
-	nextStateCandidate, _ := status.AvailableStates.Top()
+	// Note: We're careful not to make any further modifications to the state
+	// stacks until we know a promotion has been successful.
+	_, nextStateCandidate, _ := status.AvailableStates.Pop()
 	// Proceed with promotion if there is no currentState OR the
 	// nextStateCandidate is different and NEWER than the currentState
-	if currentState, ok = status.States.Top(); !ok ||
+	if _, currentState, ok := status.States.Pop(); !ok ||
 		(nextStateCandidate.ID != currentState.ID &&
 			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
-		nextState := nextStateCandidate
-		nextState, err := e.promoteFn(ctx, env, nextState)
+		nextState, err := e.promoteFn(ctx, env, nextStateCandidate)
 		if err != nil {
 			status.Error = err.Error()
 			return status
 		}
 		status.States = status.States.Push(nextState)
+
+		// Promotion is successful that this point. Replace the top available state
+		// because the promotion process may have updated some commit IDs.
+		var topAvailableState api.EnvironmentState
+		status.AvailableStates, topAvailableState, _ = status.AvailableStates.Pop()
+		for i := range topAvailableState.Commits {
+			topAvailableState.Commits[i].ID = nextState.Commits[i].ID
+		}
+		status.AvailableStates = status.AvailableStates.Push(topAvailableState)
 	}
 
 	return status
@@ -376,17 +463,19 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 		return nil, nil
 	}
 
-	latestGitCommit, err := e.getLatestCommitFn(ctx, env)
+	latestCommits, err :=
+		e.getLatestCommitsFn(ctx, env.Spec.Subscriptions.Repos.Git)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
-			"error syncing git repo subscription for Environment %q in namespace %q",
+			"error syncing git repo subscriptions for Environment %q in namespace %q",
 			env.Name,
 			env.Namespace,
 		)
 	}
 
-	latestImages, err := e.getLatestImagesFn(ctx, env)
+	latestImages, err :=
+		e.getLatestImagesFn(ctx, env.Spec.Subscriptions.Repos.Images)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
@@ -397,7 +486,8 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 		)
 	}
 
-	latestCharts, err := e.getLatestChartsFn(ctx, env)
+	latestCharts, err :=
+		e.getLatestChartsFn(ctx, env.Spec.Subscriptions.Repos.Charts)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
@@ -412,7 +502,7 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 	return &api.EnvironmentState{
 		ID:        uuid.NewV4().String(),
 		FirstSeen: &now,
-		GitCommit: latestGitCommit,
+		Commits:   latestCommits,
 		Images:    latestImages,
 		Charts:    latestCharts,
 	}, nil
@@ -461,6 +551,6 @@ func (e *environmentReconciler) updateStatus(
 		e.logger.WithFields(log.Fields{
 			"namespace": env.Namespace,
 			"name":      env.Name,
-		}).Error("error updating Environment status")
+		}).Errorf("error updating Environment status: %s", err)
 	}
 }
