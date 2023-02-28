@@ -81,7 +81,7 @@ func TestSync(t *testing.T) {
 		) (*api.EnvironmentState, error)
 		getAvailableStatesFromUpstreamEnvsFn func(
 			context.Context,
-			*api.Environment,
+			[]api.EnvironmentSubscription,
 		) ([]api.EnvironmentState, error)
 		promoteFn func(
 			context.Context,
@@ -102,7 +102,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "error getting latest state from repos",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
@@ -123,7 +123,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "no latest state from repos",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
@@ -142,7 +142,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "latest state from repos isn't new",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
@@ -220,13 +220,18 @@ func TestSync(t *testing.T) {
 		{
 			name: "error getting available states from upstream envs",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					UpstreamEnvs: []string{"foo"},
+				Subscriptions: api.Subscriptions{
+					UpstreamEnvs: []api.EnvironmentSubscription{
+						{
+							Name:      "fake-name",
+							Namespace: "fake-namespace",
+						},
+					},
 				},
 			},
 			getAvailableStatesFromUpstreamEnvsFn: func(
-				ctx context.Context,
-				env *api.Environment,
+				context.Context,
+				[]api.EnvironmentSubscription,
 			) ([]api.EnvironmentState, error) {
 				return nil, errors.New("something went wrong")
 			},
@@ -241,13 +246,22 @@ func TestSync(t *testing.T) {
 		{
 			name: "not auto-promotion eligible",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					UpstreamEnvs: []string{"foo", "bar"},
+				Subscriptions: api.Subscriptions{
+					UpstreamEnvs: []api.EnvironmentSubscription{
+						{
+							Name:      "fake-name",
+							Namespace: "fake-namespace",
+						},
+						{
+							Name:      "another-fake-name",
+							Namespace: "fake-namespace",
+						},
+					},
 				},
 			},
 			getAvailableStatesFromUpstreamEnvsFn: func(
-				ctx context.Context,
-				env *api.Environment,
+				context.Context,
+				[]api.EnvironmentSubscription,
 			) ([]api.EnvironmentState, error) {
 				return []api.EnvironmentState{
 					{},
@@ -268,7 +282,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "error executing promotion",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
@@ -299,7 +313,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "successful promotion",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
@@ -392,7 +406,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		{
 			name: "spec has no upstream repo subscriptions",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{},
+				Subscriptions: api.Subscriptions{},
 			},
 			assertions: func(state *api.EnvironmentState, err error) {
 				require.NoError(t, err)
@@ -403,7 +417,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		{
 			name: "error getting latest git commit",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
@@ -423,7 +437,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		{
 			name: "error getting latest images",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
@@ -453,7 +467,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		{
 			name: "error getting latest charts",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
@@ -489,7 +503,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		{
 			name: "success",
 			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
+				Subscriptions: api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},

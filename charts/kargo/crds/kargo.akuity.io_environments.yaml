@@ -418,7 +418,16 @@ spec:
                       sources of material for the Environment. This field is mutually
                       exclusive with the Repos field.
                     items:
-                      type: string
+                      description: EnvironmentSubscription defines a subscription
+                        to states from another Environment.
+                      properties:
+                        name:
+                          description: Name specifies the name of an Environment.
+                          type: string
+                        namespace:
+                          description: Namespace specifies the namespace of the Environment.
+                          type: string
+                      type: object
                     type: array
                 type: object
             type: object
@@ -531,6 +540,11 @@ spec:
                             type: string
                         type: object
                       type: array
+                    provenance:
+                      description: Provenance describes the proximate source of this
+                        EnvironmentState. i.e. Did it come directly from upstream
+                        repositories? Or an upstream environment.
+                      type: string
                   type: object
                 type: array
               error:
@@ -644,6 +658,11 @@ spec:
                             type: string
                         type: object
                       type: array
+                    provenance:
+                      description: Provenance describes the proximate source of this
+                        EnvironmentState. i.e. Did it come directly from upstream
+                        repositories? Or an upstream environment.
+                      type: string
                   type: object
                 type: array
             type: object

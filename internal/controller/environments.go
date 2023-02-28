@@ -78,7 +78,7 @@ type environmentReconciler struct {
 
 	getAvailableStatesFromUpstreamEnvsFn func(
 		context.Context,
-		*api.Environment,
+		[]api.EnvironmentSubscription,
 	) ([]api.EnvironmentState, error)
 
 	getLatestCommitsFn func(
@@ -376,10 +376,6 @@ func (e *environmentReconciler) sync(
 		status.States = status.States.Push(currentState)
 	}
 
-	if env.Spec.Subscriptions == nil {
-		return status // Nothing further to do
-	}
-
 	var autoPromote bool
 
 	if env.Spec.Subscriptions.Repos != nil {
@@ -408,8 +404,10 @@ func (e *environmentReconciler) sync(
 		// This returns de-duped, healthy states only from all upstream envs. There
 		// could be up to ten per upstream environment. This is more than the usual
 		// quantity we permit in status.AvailableStates, but we'll allow it.
-		latestStatesFromEnvs, err :=
-			e.getAvailableStatesFromUpstreamEnvsFn(ctx, env)
+		latestStatesFromEnvs, err := e.getAvailableStatesFromUpstreamEnvsFn(
+			ctx,
+			env.Spec.Subscriptions.UpstreamEnvs,
+		)
 		if err != nil {
 			status.Error = err.Error()
 			return status
@@ -459,7 +457,7 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 	ctx context.Context,
 	env *api.Environment,
 ) (*api.EnvironmentState, error) {
-	if env.Spec.Subscriptions == nil || env.Spec.Subscriptions.Repos == nil {
+	if env.Spec.Subscriptions.Repos == nil {
 		return nil, nil
 	}
 
@@ -508,12 +506,48 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 	}, nil
 }
 
-// TODO: Implement this
+// TODO: Test this
 func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 	ctx context.Context,
-	env *api.Environment,
+	subs []api.EnvironmentSubscription,
 ) ([]api.EnvironmentState, error) {
-	return nil, nil
+	if len(subs) == 0 {
+		return nil, nil
+	}
+
+	availableStates := []api.EnvironmentState{}
+	stateSet := map[string]struct{}{} // We'll use this to de-dupe
+	for _, sub := range subs {
+		upstreamEnv, err := e.getEnv(
+			ctx,
+			types.NamespacedName{
+				Namespace: sub.Namespace,
+				Name:      sub.Name,
+			},
+		)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"error finding upstream environment %q in namespace %q",
+				sub.Name,
+				sub.Namespace,
+			)
+		}
+		for _, state := range upstreamEnv.Status.States {
+			if _, ok := stateSet[state.ID]; !ok &&
+				state.Health != nil && state.Health.Status == api.HealthStateHealthy {
+				state.Provenance = upstreamEnv.Name
+				for i := range state.Commits {
+					state.Commits[i].HealthCheckCommit = ""
+				}
+				state.Health = nil
+				availableStates = append(availableStates, state)
+				stateSet[state.ID] = struct{}{}
+			}
+		}
+	}
+
+	return availableStates, nil
 }
 
 // getEnv returns a pointer to the Environment resource specified by the
