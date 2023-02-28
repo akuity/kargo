@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 )
@@ -12,11 +11,11 @@ import (
 // TODO: This function could use some tests
 func (e *environmentReconciler) promote(
 	ctx context.Context,
-	env *api.Environment,
+	promoMechanisms api.PromotionMechanisms,
 	newState api.EnvironmentState,
 ) (api.EnvironmentState, error) {
 	var err error
-	for _, gitRepoUpdate := range env.Spec.PromotionMechanisms.GitRepoUpdates {
+	for _, gitRepoUpdate := range promoMechanisms.GitRepoUpdates {
 		if gitRepoUpdate.Bookkeeper != nil {
 			if newState, err =
 				e.applyBookkeeperUpdate(ctx, newState, gitRepoUpdate); err != nil {
@@ -30,7 +29,7 @@ func (e *environmentReconciler) promote(
 		}
 	}
 
-	for _, argoCDAppUpdate := range env.Spec.PromotionMechanisms.ArgoCDAppUpdates { // nolint: lll
+	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
 		if err =
 			e.applyArgoCDAppUpdate(ctx, newState, argoCDAppUpdate); err != nil {
 			return newState, errors.Wrap(err, "error promoting via Argo CD")
@@ -42,11 +41,7 @@ func (e *environmentReconciler) promote(
 		StatusReason: "Health has not yet been assessed",
 	}
 
-	e.logger.WithFields(log.Fields{
-		"namespace": env.Namespace,
-		"name":      env.Name,
-		"state":     newState,
-	}).Debug("completed promotion")
+	e.logger.Debug("completed promotion")
 
 	return newState, nil
 }
