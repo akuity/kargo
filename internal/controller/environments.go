@@ -73,7 +73,7 @@ type environmentReconciler struct {
 	// Syncing:
 	getLatestStateFromReposFn func(
 		context.Context,
-		*api.Environment,
+		api.RepoSubscriptions,
 	) (*api.EnvironmentState, error)
 
 	getAvailableStatesFromUpstreamEnvsFn func(
@@ -131,7 +131,7 @@ type environmentReconciler struct {
 	// Promotions (general):
 	promoteFn func(
 		context.Context,
-		*api.Environment,
+		api.PromotionMechanisms,
 		api.EnvironmentState,
 	) (api.EnvironmentState, error)
 
@@ -380,7 +380,8 @@ func (e *environmentReconciler) sync(
 
 	if env.Spec.Subscriptions.Repos != nil {
 
-		latestState, err := e.getLatestStateFromReposFn(ctx, env)
+		latestState, err :=
+			e.getLatestStateFromReposFn(ctx, *env.Spec.Subscriptions.Repos)
 		if err != nil {
 			status.Error = err.Error()
 			return status
@@ -433,7 +434,8 @@ func (e *environmentReconciler) sync(
 	if _, currentState, ok := status.States.Pop(); !ok ||
 		(nextStateCandidate.ID != currentState.ID &&
 			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
-		nextState, err := e.promoteFn(ctx, env, nextStateCandidate)
+		nextState, err :=
+			e.promoteFn(ctx, env.Spec.PromotionMechanisms, nextStateCandidate)
 		if err != nil {
 			status.Error = err.Error()
 			return status
@@ -455,47 +457,20 @@ func (e *environmentReconciler) sync(
 
 func (e *environmentReconciler) getLatestStateFromRepos(
 	ctx context.Context,
-	env *api.Environment,
+	repoSubs api.RepoSubscriptions,
 ) (*api.EnvironmentState, error) {
-	if env.Spec.Subscriptions.Repos == nil {
-		return nil, nil
-	}
-
-	latestCommits, err :=
-		e.getLatestCommitsFn(ctx, env.Spec.Subscriptions.Repos.Git)
+	latestCommits, err := e.getLatestCommitsFn(ctx, repoSubs.Git)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error syncing git repo subscriptions for Environment %q in namespace %q",
-			env.Name,
-			env.Namespace,
-		)
+		return nil, errors.Wrap(err, "error syncing git repo subscriptions")
 	}
-
-	latestImages, err :=
-		e.getLatestImagesFn(ctx, env.Spec.Subscriptions.Repos.Images)
+	latestImages, err := e.getLatestImagesFn(ctx, repoSubs.Images)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error syncing image repo subscriptions for Environment %q in "+
-				"namespace %q",
-			env.Name,
-			env.Namespace,
-		)
+		return nil, errors.Wrap(err, "error syncing image repo subscriptions")
 	}
-
-	latestCharts, err :=
-		e.getLatestChartsFn(ctx, env.Spec.Subscriptions.Repos.Charts)
+	latestCharts, err := e.getLatestChartsFn(ctx, repoSubs.Charts)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error syncing chart repo subscriptions for Environment %q in "+
-				"namespace %q",
-			env.Name,
-			env.Namespace,
-		)
+		return nil, errors.Wrap(err, "error syncing chart repo subscriptions")
 	}
-
 	now := metav1.Now()
 	return &api.EnvironmentState{
 		ID:        uuid.NewV4().String(),

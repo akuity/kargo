@@ -77,7 +77,7 @@ func TestSync(t *testing.T) {
 		) api.Health
 		getLatestStateFromReposFn func(
 			context.Context,
-			*api.Environment,
+			api.RepoSubscriptions,
 		) (*api.EnvironmentState, error)
 		getAvailableStatesFromUpstreamEnvsFn func(
 			context.Context,
@@ -85,7 +85,7 @@ func TestSync(t *testing.T) {
 		) ([]api.EnvironmentState, error)
 		promoteFn func(
 			context.Context,
-			*api.Environment,
+			api.PromotionMechanisms,
 			api.EnvironmentState,
 		) (api.EnvironmentState, error)
 		assertions func(initialStatus, newStatus api.EnvironmentStatus)
@@ -108,7 +108,7 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
-				*api.Environment,
+				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return nil, errors.New("something went wrong")
 			},
@@ -129,7 +129,7 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
-				*api.Environment,
+				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return nil, nil
 			},
@@ -194,7 +194,7 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
-				*api.Environment,
+				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return &api.EnvironmentState{
 					Commits: []api.GitCommit{
@@ -288,13 +288,13 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
-				*api.Environment,
+				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return &api.EnvironmentState{}, nil
 			},
 			promoteFn: func(
 				_ context.Context,
-				_ *api.Environment,
+				_ api.PromotionMechanisms,
 				newState api.EnvironmentState,
 			) (api.EnvironmentState, error) {
 				return newState, errors.New("something went wrong")
@@ -319,7 +319,7 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
-				*api.Environment,
+				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return &api.EnvironmentState{
 					Commits: []api.GitCommit{
@@ -338,7 +338,7 @@ func TestSync(t *testing.T) {
 			},
 			promoteFn: func(
 				_ context.Context,
-				_ *api.Environment,
+				_ api.PromotionMechanisms,
 				newState api.EnvironmentState,
 			) (api.EnvironmentState, error) {
 				return newState, nil
@@ -380,7 +380,6 @@ func TestSync(t *testing.T) {
 func TestGetLatestStateFromRepos(t *testing.T) {
 	testCases := []struct {
 		name               string
-		spec               api.EnvironmentSpec
 		getLatestCommitsFn func(
 			context.Context,
 			[]api.GitSubscription,
@@ -396,31 +395,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		assertions func(*api.EnvironmentState, error)
 	}{
 		{
-			name: "spec has no subscriptions",
-			assertions: func(state *api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Nil(t, state)
-			},
-		},
-
-		{
-			name: "spec has no upstream repo subscriptions",
-			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{},
-			},
-			assertions: func(state *api.EnvironmentState, err error) {
-				require.NoError(t, err)
-				require.Nil(t, state)
-			},
-		},
-
-		{
 			name: "error getting latest git commit",
-			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-			},
 			getLatestCommitsFn: func(
 				context.Context,
 				[]api.GitSubscription,
@@ -436,11 +411,6 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 
 		{
 			name: "error getting latest images",
-			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-			},
 			getLatestCommitsFn: func(
 				context.Context,
 				[]api.GitSubscription,
@@ -466,11 +436,6 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 
 		{
 			name: "error getting latest charts",
-			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-			},
 			getLatestCommitsFn: func(
 				context.Context,
 				[]api.GitSubscription,
@@ -502,11 +467,6 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 
 		{
 			name: "success",
-			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-			},
 			getLatestCommitsFn: func(
 				context.Context,
 				[]api.GitSubscription,
@@ -578,13 +538,6 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		testEnv := &api.Environment{
-			ObjectMeta: v1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "bar",
-			},
-			Spec: testCase.spec,
-		}
 		testReconciler := &environmentReconciler{
 			logger:             log.New(),
 			getLatestCommitsFn: testCase.getLatestCommitsFn,
@@ -595,7 +548,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			testCase.assertions(
 				testReconciler.getLatestStateFromRepos(
 					context.Background(),
-					testEnv,
+					api.RepoSubscriptions{},
 				),
 			)
 		})
