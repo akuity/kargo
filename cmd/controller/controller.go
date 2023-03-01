@@ -65,6 +65,10 @@ func RunController(ctx context.Context, config config.Config) error {
 		kubeClient,
 	)
 
+	if err := (&api.Environment{}).SetupWebhookWithManager(mgr); err != nil {
+		return errors.Wrap(err, "error creating webhook")
+	}
+
 	if err := controller.SetupEnvironmentReconcilerWithManager(
 		ctx,
 		config,
