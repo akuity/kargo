@@ -5,7 +5,7 @@ type: application
 version: 0.1.0
 appVersion: v0.1.0
 sources:
-- https://github.com/akuityio/kargo-prototype
+- https://github.com/akuityio/kargo
 maintainers:
 - name: Kent Rancourt
   email: kent@akuity.io
