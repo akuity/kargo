@@ -83,6 +83,13 @@ func RunController(ctx context.Context, config config.Config) error {
 	); err != nil {
 		return errors.Wrap(err, "error setting up Environment reconciler")
 	}
+	if err := controller.SetupPromotionReconcilerWithManager(
+		ctx,
+		config,
+		mgr,
+	); err != nil {
+		return errors.Wrap(err, "error setting up Environment reconciler")
+	}
 
 	return errors.Wrap(
 		mgr.Start(ctrl.SetupSignalHandler()),
