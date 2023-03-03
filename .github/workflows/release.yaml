@@ -28,7 +28,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: ghcr.io/akuityio/kargo-prototype
+        images: ghcr.io/akuityio/kargo
         flavor: latest=false
         tags: type=semver,pattern={{raw}}
     - name: Build and push

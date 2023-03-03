@@ -9,7 +9,7 @@ k8s_resource(
 )
 
 docker_build(
-  'ghcr.io/akuityio/kargo-prototype',
+  'ghcr.io/akuityio/kargo',
   '.',
   only = [
     'api/',
@@ -28,9 +28,11 @@ k8s_resource(
 k8s_resource(
   workload = 'controller',
   objects = [
+    'kargo:validatingwebhookconfiguration',
     'kargo-controller:clusterrole',
     'kargo-controller:clusterrolebinding',
-    'kargo-controller:serviceaccount'
+    'kargo-controller:serviceaccount',
+    'kargo-webhook-server-cert:secret'
   ]
 )
 k8s_resource(
