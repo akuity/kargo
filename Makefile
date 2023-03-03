@@ -115,6 +115,7 @@ hack-install-argocd:
 		--create-namespace \
 		--namespace argo-cd \
 		--set 'configs.secret.argocdServerAdminPassword=$$2a$$10$$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
+		--set 'configs.params."application\.namespaces"=*' \
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30080 \
 		--wait
