@@ -1,7 +1,7 @@
-# Kargo Prototype
+# Kargo
 
-![CI](https://github.com/akuityio/kargo-prototype/actions/workflows/ci.yaml/badge.svg)
-[![codecov](https://codecov.io/gh/akuityio/kargo-prototype/branch/main/graph/badge.svg?token=DWEYXEJCYZ)](https://codecov.io/gh/akuityio/kargo-prototype)
+![CI](https://github.com/akuityio/kargo/actions/workflows/ci.yaml/badge.svg)
+[![codecov](https://codecov.io/gh/akuityio/kargo/branch/main/graph/badge.svg?token=DWEYXEJCYZ)](https://codecov.io/gh/akuityio/kargo)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 Placeholder
@@ -35,7 +35,7 @@ for more info on how to get started quickly and easily.
 ## Support & Feedback
 
 To report an issue, request a feature, or ask a question, please open an issue
-[here](https://github.com/akuityio/kargo-prototype/issues).
+[here](https://github.com/akuityio/kargo/issues).
 
 ## Code of Conduct
 
