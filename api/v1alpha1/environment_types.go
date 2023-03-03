@@ -30,6 +30,7 @@ const (
 	HealthStateUnknown   HealthState = "Unknown"
 )
 
+//+kubebuilder:resource:shortName={env,envs}
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
