@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/akuityio/bookkeeper"
 	"github.com/pkg/errors"
 
+	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 

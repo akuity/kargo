@@ -1,0 +1,25 @@
+run:
+  deadline: 10m
+  skip-files:
+    - api/.*/groupversion_info.go
+  go: "1.19"
+
+linters:
+  enable:
+    - errcheck
+    - gci
+    - gofmt
+    - govet
+    - revive
+    - staticcheck
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/akuity)
+      - dot
+      - blank
+    skip-generated: true
+    custom-order: true
