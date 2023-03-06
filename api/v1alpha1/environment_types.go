@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +kubebuilder:validation:Enum={SemVer,Latest,Name,Digest}
 type ImageUpdateStrategy string
 
 const (
@@ -15,6 +16,7 @@ const (
 	ImageUpdateStrategyDigest ImageUpdateStrategy = "Digest"
 )
 
+// +kubebuilder:validation:Enum={Image,Tag}
 type ImageUpdateValueType string
 
 const (
@@ -40,7 +42,9 @@ type Environment struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec describes the sources of material used by the Environment and how
 	// to incorporate newly observed materials into the Environment.
-	Spec EnvironmentSpec `json:"spec,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Spec EnvironmentSpec `json:"spec"`
 	// Status describes the most recently observed versions of this Environment's
 	// sources of material as well as the environment's current and recent states.
 	Status EnvironmentStatus `json:"status,omitempty"`
@@ -51,16 +55,26 @@ type Environment struct {
 type EnvironmentSpec struct {
 	// Subscriptions describes the Environment's sources of material. This is a
 	// required field.
-	Subscriptions Subscriptions `json:"subscriptions,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Subscriptions Subscriptions `json:"subscriptions"`
 	// PromotionMechanisms describes how to incorporate newly observed materials
 	// into the Environment. This is a required field.
-	PromotionMechanisms PromotionMechanisms `json:"promotionMechanisms,omitempty"` // nolint: lll
+	//
+	//+kubebuilder:validation:Required
+	PromotionMechanisms PromotionMechanisms `json:"promotionMechanisms"`
 	// HealthChecks describes how the health of the Environment can be assessed on
 	// an ongoing basis. This is a required field.
-	HealthChecks HealthChecks `json:"healthChecks,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	HealthChecks HealthChecks `json:"healthChecks"`
 }
 
 // Subscriptions describes an Environment's sources of material.
+//
+// TODO: Kubebuilder doesn't have an annotation yet for "oneof" semantics, so
+// we probably need to use a validating webhook to ensure that one and only one
+// of Repos or UpstreamEnvs is non-empty.
 type Subscriptions struct {
 	// Repos describes various sorts of repositories an Environment uses as
 	// sources of material. This field is mutually exclusive with the UpstreamEnvs
@@ -85,11 +99,16 @@ type RepoSubscriptions struct {
 // GitSubscription defines a subscription to a Git repository.
 type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
-	RepoURL string `json:"repoURL,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
+	RepoURL string `json:"repoURL"`
 	// Branch references a particular branch of the repository. This field is
 	// optional. Leaving this unspecified is equivalent to specifying the
 	// repository's default branch, whatever that may happen to be -- typically
 	// "main" or "master".
+	//
+	//+kubebuilder:validation:Optional
 	Branch string `json:"branch,omitempty"`
 }
 
@@ -97,11 +116,16 @@ type GitSubscription struct {
 type ImageSubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag. This field is required.
-	RepoURL string `json:"repoURL,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
+	RepoURL string `json:"repoURL"`
 	// UpdateStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
+	//
+	// +kubebuilder:default=SemVer
 	UpdateStrategy ImageUpdateStrategy `json:"updateStrategy,omitempty"`
 	// SemverConstraint specifies constraints on what new image versions are
 	// permissible. This value in this field only has any effect when the
@@ -112,14 +136,23 @@ type ImageSubscription struct {
 	// be used. Care should be taken with leaving this field unspecified, as it
 	// can lead to the unanticipated rollout of breaking changes. Refer to Image
 	// Updater documentation for more details.
+	//
+	// TODO: Use Masterminds/semver package within a validating webhook to try and
+	// parse SemverConstraint.
+	//
+	//+kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// image tags that are considered in determining the newest version of an
 	// image. This field is optional.
+	//
+	//+kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest version of an image. No regular expressions or glob patterns are
 	// supported yet. This field is optional.
+	//
+	//+kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty"`
 	// Platform is a string of the form <os>/<arch> that limits the tags that can
 	// be considered when searching for new versions of an image. This field is
@@ -129,10 +162,22 @@ type ImageSubscription struct {
 	// ImageRepositorySubscription will run on a Kubernetes node with a different
 	// OS/architecture than the Kargo controller. At present this is uncommon, but
 	// not unheard of.
+	//
+	// TODO: Use image.ParsePlatform from Argo CD Image Updater within a
+	// validating webhook to try and parse Platform.
+	//
+	//+kubebuilder:validation:Optional
 	Platform string `json:"platform,omitempty"`
 	// PullSecret is a reference to a Kubernetes Secret containing repository
 	// credentials. If left unspecified, Kargo will fall back on globally
 	// configured repository credentials, if they exist.
+	//
+	// TODO: The PullSecret is temporary. We will implement logic that locates
+	// appropriate credentials for image repositories without requiring the user
+	// to explicitly reference them here. (i.e. Will find credentials similarly
+	// to how Argo CD does.)
+	//
+	//+kubebuilder:validation:Optional
 	PullSecret string `json:"pullSecret,omitempty"`
 }
 
@@ -140,15 +185,25 @@ type ImageSubscription struct {
 type ChartSubscription struct {
 	// RegistryURL specifies the URL of a Helm chart registry. It may be a classic
 	// chart registry (using HTTP/S) OR an OCI registry. This field is required.
-	RegistryURL string `json:"registryURL,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$`
+	RegistryURL string `json:"registryURL"`
 	// Name specifies a Helm chart to subscribe to within the Helm chart registry
 	// specified by the RegistryURL field. This field is required.
-	Name string `json:"name,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Name string `json:"name"`
 	// SemverConstraint specifies constraints on what new chart versions are
 	// permissible. This field is optional. When left unspecified, there will be
 	// no constraints, which means the latest version of the chart will always be
 	// used. Care should be taken with leaving this field unspecified, as it can
 	// lead to the unanticipated rollout of breaking changes.
+	//
+	// TODO: Use Masterminds/semver package within a validating webhook to try and
+	// parse SemverConstraint.
+	//
+	//+kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty"`
 }
 
@@ -156,13 +211,26 @@ type ChartSubscription struct {
 // Environment.
 type EnvironmentSubscription struct {
 	// Name specifies the name of an Environment.
-	Name string `json:"name,omitempty"`
-	// Namespace specifies the namespace of the Environment.
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Name string `json:"name"`
+	// Namespace specifies the namespace of the Environment. If left unspecified,
+	// the namespace of the upstream repository will be defaulted to that of this
+	// Environment.
+	//
+	// TODO: Use a defaulting webhook to set this if it's left unspecified.
+	//
+	//+kubebuilder:validation:Optional
+	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Namespace string `json:"namespace,omitempty"`
 }
 
 // PromotionMechanisms describes how to incorporate newly observed materials
 // into an Environment.
+//
+// TODO: Use a validating webhook to confirm that at least one of GitRepoUpdates
+// or ArgoCDAppUpdates is non-empty.
 type PromotionMechanisms struct {
 	// GitRepoUpdates describes updates that should be applied to Git repositories
 	// to incorporate newly observed materials into the Environment. This field is
@@ -179,13 +247,22 @@ type PromotionMechanisms struct {
 // GitRepoUpdate describes updates that should be applied to a Git repository
 // (using various configuration management tools) to incorporate newly observed
 // materials into an Environment.
+//
+// TODO: Kubebuilder doesn't have an annotation yet for "oneof" semantics, so we
+// probably need to use a validating webhook to ensure that one and only one of
+// Bookkeeper, Kustomize, or Helm is defined.
 type GitRepoUpdate struct {
 	// RepoURL is the URL of the repository to update. This is a required field.
-	RepoURL string `json:"repoURL,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
+	RepoURL string `json:"repoURL"`
 	// Branch references a particular branch of the repository to be updated. This
 	// field is optional. Leaving this unspecified is equivalent to specifying the
 	// repository's default branch, whatever that may happen to be -- typically
 	// "main" or "master".
+	//
+	//+kubebuilder:validation:Optional
 	Branch string `json:"branch,omitempty"`
 	// Bookkeeper describes how to use Bookkeeper to incorporate newly observed
 	// materials into the Environment. This is mutually exclusive with the
@@ -210,6 +287,9 @@ type BookkeeperPromotionMechanism struct{}
 type KustomizePromotionMechanism struct {
 	// Images describes images for which `kustomize edit set image` should be
 	// executed and the paths in which those commands should be executed.
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinItems=1
 	Images []KustomizeImageUpdate `json:"images,omitempty"`
 }
 
@@ -217,14 +297,22 @@ type KustomizePromotionMechanism struct {
 // for a given image.
 type KustomizeImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
-	Image string `json:"image,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Image string `json:"image"`
 	// Path specifies a path in which the `kustomize edit set image` command
 	// should be executed. This is a required field.
-	Path string `json:"path,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
+	Path string `json:"path"`
 }
 
 // HelmPromotionMechanism describes how to use Helm to incorporate newly
 // observed materials into an Environment.
+//
+// TODO: Use a validating webhook to confirm that at least one of Images or
+// Charts is non-empty.
 type HelmPromotionMechanism struct {
 	// Images describes how specific image versions can be incorporated into Helm
 	// values files.
@@ -238,18 +326,28 @@ type HelmPromotionMechanism struct {
 // into a specific Helm values file.
 type HelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
-	Image string `json:"image,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
+	Image string `json:"image"`
 	// ValuesFilePath specifies a path to the Helm values file that is to be
 	// updated. This is a required field.
-	ValuesFilePath string `json:"valuesFilePath,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
+	ValuesFilePath string `json:"valuesFilePath"`
 	// Key specifies a key within the Helm values file that is to be updated. This
 	// is a required field.
-	Key string `json:"key,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Key string `json:"key"`
 	// Value specifies the new value for the specified key in the specified Helm
 	// values file. Valid values are "Image", which replaces the value of the
 	// specified key with the entire <image name>:<tag>, or "Tag" which replaces
 	// the value of the specified with just the new tag. This is a required field.
-	Value ImageUpdateValueType `json:"value,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Value ImageUpdateValueType `json:"value"`
 }
 
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
@@ -257,12 +355,20 @@ type HelmImageUpdate struct {
 type HelmChartDependencyUpdate struct {
 	// RegistryURL along with Name identify a subchart of the umbrella chart at
 	// ChartPath whose version should be updated.
-	RegistryURL string `json:"registryURL,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$`
+	RegistryURL string `json:"registryURL"`
 	// Name along with RegistryURL identify a subchart of the umbrella chart at
 	// ChartPath whose version should be updated.
-	Name string `json:"name,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Name string `json:"name"`
 	// ChartPath is the path to an umbrella chart.
-	ChartPath string `json:"chartPath,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
+	ChartPath string `json:"chartPath"`
 }
 
 // ArgoCDAppUpdate describes updates that should be applied to an Argo CD
@@ -271,9 +377,18 @@ type HelmChartDependencyUpdate struct {
 type ArgoCDAppUpdate struct {
 	// AppName specifies the name of an Argo CD Application resource to be
 	// updated.
-	AppName string `json:"appName,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	AppName string `json:"appName"`
 	// AppNamespace specifies the namespace of an Argo CD Application resource to
-	// be updated.
+	// be updated. If left unspecified, the namespace of this Application resource
+	// is defaulted to that of the Environment.
+	//
+	// TODO: Use a defaulting webhook to set this if it's left unspecified.
+	//
+	//+kubebuilder:validation:Optional
+	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	AppNamespace string `json:"appNamespace,omitempty"`
 	// SourceUpdates describes updates to be applied to various sources of the
 	// specified Argo CD Application resource.
@@ -286,7 +401,9 @@ type ArgoCDSourceUpdate struct {
 	// RepoURL identifies which of the Argo CD Application's sources this update
 	// is intended for. Note: As of Argo CD 2.6, Application's can use multiple
 	// sources.
-	RepoURL string `json:"repoURL,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	RepoURL string `json:"repoURL"`
 	// Chart specifies a chart within a Helm chart registry if RepoURL points to a
 	// Helm chart registry. Application sources that point directly at a chart do
 	// so through a combination of their own RepoURL (registry) and Chart fields,
@@ -294,6 +411,8 @@ type ArgoCDSourceUpdate struct {
 	// update. This field MUST always be used when RepoURL points at a Helm chart
 	// registry. This field MUST never be used when RepoURL points at a Git
 	// repository.
+	//
+	//+kubebuilder:validation:Optional
 	Chart string `json:"chart,omitempty"`
 	// UpdateTargetRevision is a bool indicating whether the source should be
 	// updated such that its TargetRevision field points at the most recently git
@@ -327,16 +446,22 @@ type ArgoCDHelm struct {
 // incorporated into an Argo CD Application's Helm parameters.
 type ArgoCDHelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
-	Image string `json:"image,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Image string `json:"image"`
 	// Key specifies a key within an Argo CD Application's Helm parameters that is
 	// to be updated. This is a required field.
-	Key string `json:"key,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Key string `json:"key"`
 	// Value specifies the new value for the specified key in the Argo CD
 	// Application's Helm parameters. Valid values are "Image", which replaces the
 	// value of the specified key with the entire <image name>:<tag>, or "Tag"
 	// which replaces the value of the specified with just the new tag. This is a
 	// required field.
-	Value ImageUpdateValueType `json:"value,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	Value ImageUpdateValueType `json:"value"`
 }
 
 // HealthChecks describes how the health of an Environment can be assessed on an
@@ -351,8 +476,18 @@ type HealthChecks struct {
 // resource.
 type ArgoCDAppCheck struct {
 	// AppName specifies the name of the Argo CD Application resource.
-	AppName string `json:"appName,omitempty"`
+	//
+	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	AppName string `json:"appName"`
 	// AppNamespace specifies the namespace of the Argo CD Application resource.
+	// If left unspecified, the namespace of this Application resource is
+	// defaulted to be the same as that of the Environment.
+	//
+	// TODO: Use a defaulting webhook to set this if it's left unspecified.
+	//
+	//+kubebuilder:validation:Optional
+	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	AppNamespace string `json:"appNamespace,omitempty"`
 }
 

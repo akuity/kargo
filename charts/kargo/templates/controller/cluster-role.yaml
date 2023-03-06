@@ -29,6 +29,7 @@ rules:
   - kargo.akuity.io
   resources:
   - environments
+  - promotions
   verbs:
   - get
   - list
@@ -37,6 +38,7 @@ rules:
   - kargo.akuity.io
   resources:
   - environments/status
+  - promotions/status
   verbs:
   - update
 {{- end }}
