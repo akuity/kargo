@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/akuityio/bookkeeper"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/git"

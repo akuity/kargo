@@ -15,7 +15,7 @@ ARGO_CD_CHART_VERSION := 5.21.0
 
 .PHONY: lint
 lint:
-	golangci-lint run --config golangci.yaml
+	golangci-lint run
 
 .PHONY: test-unit
 test-unit:
