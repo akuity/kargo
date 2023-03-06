@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"fmt"
-
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/util/db"
 	"github.com/argoproj/argo-cd/v2/util/settings"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,23 +35,23 @@ func newControllerCommand() *cobra.Command {
 
 			config, err := kargoConfig()
 			if err != nil {
-				return fmt.Errorf("new kargo config: %w", err)
+				return errors.Wrap(err, "new kargo config")
 			}
 
 			mgrCfg, err := ctrl.GetConfig()
 			if err != nil {
-				return fmt.Errorf("get controller config: %w", err)
+				return errors.Wrap(err, "get controller config")
 			}
 
 			scheme := runtime.NewScheme()
 			if err = clientgoscheme.AddToScheme(scheme); err != nil {
-				return fmt.Errorf("add kubernetes api to scheme: %w", err)
+				return errors.Wrap(err, "add kubernetes api to scheme")
 			}
 			if err = argocd.AddToScheme(scheme); err != nil {
-				return fmt.Errorf("add argocd api to scheme: %w", err)
+				return errors.Wrap(err, "add argocd api to scheme")
 			}
 			if err = api.AddToScheme(scheme); err != nil {
-				return fmt.Errorf("add kargo api to scheme: %w", err)
+				return errors.Wrap(err, "add kargo api to scheme")
 			}
 			mgr, err := ctrl.NewManager(
 				mgrCfg,
@@ -62,12 +61,12 @@ func newControllerCommand() *cobra.Command {
 				},
 			)
 			if err != nil {
-				return fmt.Errorf("create manager: %w", err)
+				return errors.Wrap(err, "create manager")
 			}
 
 			kubeClient, err := kubernetes.Client()
 			if err != nil {
-				return fmt.Errorf("new kubernetes client: %w", err)
+				return errors.Wrap(err, "new kubernetes client")
 			}
 			argoDB := db.NewDB(
 				"",
@@ -77,7 +76,7 @@ func newControllerCommand() *cobra.Command {
 			)
 
 			if err := (&api.Environment{}).SetupWebhookWithManager(mgr); err != nil {
-				return fmt.Errorf("create webhook: %w", err)
+				return errors.Wrap(err, "create webhook")
 			}
 
 			if err := controller.SetupEnvironmentReconcilerWithManager(
@@ -92,18 +91,18 @@ func newControllerCommand() *cobra.Command {
 					},
 				),
 			); err != nil {
-				return fmt.Errorf("setup environment reconciler: %w", err)
+				return errors.Wrap(err, "setup environment reconciler")
 			}
 			if err := controller.SetupPromotionReconcilerWithManager(
 				ctx,
 				config,
 				mgr,
 			); err != nil {
-				return fmt.Errorf("setup promotion reconciler: %w", err)
+				return errors.Wrap(err, "setup promotion reconciler")
 			}
 
 			if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-				return fmt.Errorf("start controller: %w", err)
+				return errors.Wrap(err, "start controller")
 			}
 			return nil
 		},
