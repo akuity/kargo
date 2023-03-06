@@ -28,6 +28,7 @@ k8s_resource(
 k8s_resource(
   workload = 'controller',
   objects = [
+    'kargo:mutatingwebhookconfiguration',
     'kargo:validatingwebhookconfiguration',
     'kargo-controller:clusterrole',
     'kargo-controller:clusterrolebinding',
