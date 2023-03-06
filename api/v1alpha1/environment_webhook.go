@@ -11,6 +11,12 @@ func (e *Environment) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
+// Default implements webhook.Defaulter so a webhook will be registered for the
+// type
+func (e *Environment) Default() {
+	// TODO: Add defaults
+}
+
 // ValidateCreate implements webhook.Validator so a webhook will be registered
 // for the type
 func (e *Environment) ValidateCreate() error {
