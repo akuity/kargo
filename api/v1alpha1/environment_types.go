@@ -168,17 +168,6 @@ type ImageSubscription struct {
 	//
 	//+kubebuilder:validation:Optional
 	Platform string `json:"platform,omitempty"`
-	// PullSecret is a reference to a Kubernetes Secret containing repository
-	// credentials. If left unspecified, Kargo will fall back on globally
-	// configured repository credentials, if they exist.
-	//
-	// TODO: The PullSecret is temporary. We will implement logic that locates
-	// appropriate credentials for image repositories without requiring the user
-	// to explicitly reference them here. (i.e. Will find credentials similarly
-	// to how Argo CD does.)
-	//
-	//+kubebuilder:validation:Optional
-	PullSecret string `json:"pullSecret,omitempty"`
 }
 
 // ChartSubscription defines a subscription to a Helm chart repository.

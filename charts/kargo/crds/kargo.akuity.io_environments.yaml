@@ -443,17 +443,6 @@ spec:
                                 from Argo CD Image Updater within a validating webhook
                                 to try and parse Platform."
                               type: string
-                            pullSecret:
-                              description: "PullSecret is a reference to a Kubernetes
-                                Secret containing repository credentials. If left
-                                unspecified, Kargo will fall back on globally configured
-                                repository credentials, if they exist. \n TODO: The
-                                PullSecret is temporary. We will implement logic that
-                                locates appropriate credentials for image repositories
-                                without requiring the user to explicitly reference
-                                them here. (i.e. Will find credentials similarly to
-                                how Argo CD does.)"
-                              type: string
                             repoURL:
                               description: RepoURL specifies the URL of the image
                                 repository to subscribe to. The value in this field
