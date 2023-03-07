@@ -6,7 +6,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestGetLatestTag(t *testing.T) {
@@ -15,7 +14,6 @@ func TestGetLatestTag(t *testing.T) {
 		repoURL          string
 		platform         string
 		semverConstraint string
-		pullSecret       string
 		assertions       func(string, error)
 	}{
 		{
@@ -25,17 +23,6 @@ func TestGetLatestTag(t *testing.T) {
 			assertions: func(s string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing platform")
-			},
-		},
-
-		{
-			name:    "error getting credentials",
-			repoURL: "nginx",
-			// This will force a failure because the secret doesn't exist
-			pullSecret: "bogus",
-			assertions: func(s string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error getting credentials for image")
 			},
 		},
 
@@ -77,14 +64,13 @@ func TestGetLatestTag(t *testing.T) {
 			testCase.assertions(
 				GetLatestTag(
 					context.Background(),
-					fake.NewSimpleClientset(),
 					testCase.repoURL,
 					ImageUpdateStrategySemVer,
 					testCase.semverConstraint,
 					"",
 					nil,
 					testCase.platform,
-					testCase.pullSecret,
+					&Credentials{},
 				),
 			)
 		})

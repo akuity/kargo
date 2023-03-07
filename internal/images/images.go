@@ -9,7 +9,6 @@ import (
 	"github.com/argoproj-labs/argocd-image-updater/pkg/options"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/registry"
 	"github.com/pkg/errors"
-	"k8s.io/client-go/kubernetes"
 )
 
 type ImageUpdateStrategy string
@@ -30,14 +29,13 @@ func init() {
 
 func GetLatestTag(
 	ctx context.Context,
-	kubeClient kubernetes.Interface,
 	repoURL string,
 	updateStrategy ImageUpdateStrategy,
 	semverConstraint string,
 	allowTags string,
 	ignoreTags []string,
 	platform string,
-	pullSecret string,
+	creds *Credentials,
 ) (string, error) {
 	img := image.NewFromIdentifier(repoURL)
 	vc := &image.VersionConstraint{
@@ -72,21 +70,9 @@ func GetLatestTag(
 		)
 	}
 
-	creds, err := getRegistryCredentials(
-		ctx,
-		kubeClient,
-		repoURL,
-		pullSecret,
-		rep,
-	)
-	if err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error getting credentials for image %q",
-			repoURL,
-		)
+	if creds == nil {
+		creds = &Credentials{}
 	}
-
 	regClient, err := registry.NewClient(rep, creds.Username, creds.Password)
 	if err != nil {
 		return "", errors.Wrapf(
