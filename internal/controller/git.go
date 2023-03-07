@@ -6,14 +6,17 @@ import (
 	"github.com/pkg/errors"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/git"
 )
 
 func (e *environmentReconciler) applyGitRepoUpdate(
 	ctx context.Context,
+	namespace string,
 	newState api.EnvironmentState,
 	update api.GitRepoUpdate,
 ) (api.EnvironmentState, error) {
-	creds, err := e.gitRepoCredentialsFn(ctx, e.argoDB, update.RepoURL)
+	creds, ok, err :=
+		e.credentialsDB.get(ctx, namespace, credentialsTypeGit, update.RepoURL)
 	if err != nil {
 		return newState, errors.Wrapf(
 			err,
@@ -21,8 +24,16 @@ func (e *environmentReconciler) applyGitRepoUpdate(
 			update.RepoURL,
 		)
 	}
+	var repoCreds *git.Credentials
+	if ok {
+		repoCreds = &git.Credentials{
+			Username:      creds.Username,
+			Password:      creds.Password,
+			SSHPrivateKey: creds.SSHPrivateKey,
+		}
+	}
 
-	commitID, err := e.gitApplyUpdateFn(update.RepoURL, update.Branch, creds,
+	commitID, err := e.gitApplyUpdateFn(update.RepoURL, update.Branch, repoCreds,
 		func(homeDir, workingDir string) (string, error) {
 			if update.Kustomize != nil {
 				if err = e.applyKustomize(
@@ -93,11 +104,13 @@ func (e *environmentReconciler) applyGitRepoUpdate(
 
 func (e *environmentReconciler) getLatestCommits(
 	ctx context.Context,
+	namespace string,
 	subs []api.GitSubscription,
 ) ([]api.GitCommit, error) {
 	latestCommits := make([]api.GitCommit, len(subs))
 	for i, sub := range subs {
-		creds, err := e.gitRepoCredentialsFn(ctx, e.argoDB, sub.RepoURL)
+		creds, ok, err :=
+			e.credentialsDB.get(ctx, namespace, credentialsTypeGit, sub.RepoURL)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -105,7 +118,16 @@ func (e *environmentReconciler) getLatestCommits(
 				sub.RepoURL,
 			)
 		}
-		commit, err := e.getLatestCommitIDFn(sub.RepoURL, sub.Branch, creds)
+		var repoCreds *git.Credentials
+		if ok {
+			repoCreds = &git.Credentials{
+				Username:      creds.Username,
+				Password:      creds.Password,
+				SSHPrivateKey: creds.SSHPrivateKey,
+			}
+		}
+
+		commit, err := e.getLatestCommitIDFn(sub.RepoURL, sub.Branch, repoCreds)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,

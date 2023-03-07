@@ -12,6 +12,7 @@ import (
 
 func (e *environmentReconciler) applyBookkeeperUpdate(
 	ctx context.Context,
+	namespace string,
 	newState api.EnvironmentState,
 	update api.GitRepoUpdate,
 ) (api.EnvironmentState, error) {
@@ -50,7 +51,8 @@ func (e *environmentReconciler) applyBookkeeperUpdate(
 		images[i] = fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
 	}
 
-	creds, err := e.gitRepoCredentialsFn(ctx, e.argoDB, update.RepoURL)
+	creds, ok, err :=
+		e.credentialsDB.get(ctx, namespace, credentialsTypeGit, update.RepoURL)
 	if err != nil {
 		return newState, errors.Wrapf(
 			err,
@@ -58,9 +60,8 @@ func (e *environmentReconciler) applyBookkeeperUpdate(
 			update.RepoURL,
 		)
 	}
-
 	repoCreds := bookkeeper.RepoCredentials{}
-	if creds != nil {
+	if ok {
 		repoCreds.Username = creds.Username
 		repoCreds.Password = creds.Password
 		repoCreds.SSHPrivateKey = creds.SSHPrivateKey

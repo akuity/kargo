@@ -7,7 +7,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/images"
@@ -16,31 +15,40 @@ import (
 func TestGetLatestImages(t *testing.T) {
 	testCases := []struct {
 		name           string
+		credentialsDB  credentialsDBIface
 		getLatestTagFn func(
 			context.Context,
-			kubernetes.Interface,
 			string,
 			images.ImageUpdateStrategy,
 			string,
 			string,
 			[]string,
 			string,
-			string,
+			*images.Credentials,
 		) (string, error)
 		assertions func([]api.Image, error)
 	}{
 		{
 			name: "error getting latest version of an image",
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
+			},
 			getLatestTagFn: func(
 				ctx context.Context,
-				kubeClient kubernetes.Interface,
 				repoURL string,
 				updateStrategy images.ImageUpdateStrategy,
 				semverConstraint string,
 				allowTags string,
 				ignoreTags []string,
 				platform string,
-				pullSecret string,
+				creds *images.Credentials,
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
@@ -57,16 +65,25 @@ func TestGetLatestImages(t *testing.T) {
 
 		{
 			name: "success",
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
+			},
 			getLatestTagFn: func(
 				ctx context.Context,
-				kubeClient kubernetes.Interface,
 				repoURL string,
 				updateStrategy images.ImageUpdateStrategy,
 				semverConstraint string,
 				allowTags string,
 				ignoreTags []string,
 				platform string,
-				pullSecret string,
+				creds *images.Credentials,
 			) (string, error) {
 				return "fake-tag", nil
 			},
@@ -93,11 +110,16 @@ func TestGetLatestImages(t *testing.T) {
 			}
 			reconciler := environmentReconciler{
 				logger:         log.New(),
+				credentialsDB:  testCase.credentialsDB,
 				getLatestTagFn: testCase.getLatestTagFn,
 			}
 			reconciler.logger.SetLevel(log.ErrorLevel)
 			testCase.assertions(
-				reconciler.getLatestImages(context.Background(), testSubs),
+				reconciler.getLatestImages(
+					context.Background(),
+					"fake-namespace",
+					testSubs,
+				),
 			)
 		})
 	}

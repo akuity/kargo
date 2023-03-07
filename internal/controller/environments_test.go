@@ -18,13 +18,13 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	testConfig := config.Config{
 		LogLevel: log.DebugLevel,
 	}
-	e := newEnvironmentReconciler(
+	e, err := newEnvironmentReconciler(
+		context.Background(),
 		testConfig,
-		nil, // TODO: Don't know an easy way to mock this yet
-		nil, // TODO: Don't know an easy way to mock this yet
-		nil, // TODO: Don't know an easy way to mock this yet
+		nil, // TODO: Don't know an easy way to mock a controller manager yet
 		bookkeeper.NewService(nil),
 	)
+	require.NoError(t, err)
 	require.Equal(t, testConfig, e.config)
 	require.NotNil(t, e.logger)
 	require.Equal(t, testConfig.LogLevel, e.logger.Level)
@@ -32,7 +32,6 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 
 	// Common:
 	require.NotNil(t, e.getArgoCDAppFn)
-	require.NotNil(t, e.gitRepoCredentialsFn)
 
 	// Health checks:
 	require.NotNil(t, e.checkHealthFn)
@@ -43,7 +42,6 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestCommitsFn)
 	require.NotNil(t, e.getLatestImagesFn)
 	require.NotNil(t, e.getLatestTagFn)
-	require.NotNil(t, e.chartRegistryCredentialsFn)
 	require.NotNil(t, e.getLatestChartsFn)
 	require.NotNil(t, e.getLatestChartVersionFn)
 	require.NotNil(t, e.getLatestCommitIDFn)
@@ -77,6 +75,7 @@ func TestSync(t *testing.T) {
 		) api.Health
 		getLatestStateFromReposFn func(
 			context.Context,
+			string,
 			api.RepoSubscriptions,
 		) (*api.EnvironmentState, error)
 		getAvailableStatesFromUpstreamEnvsFn func(
@@ -85,6 +84,7 @@ func TestSync(t *testing.T) {
 		) ([]api.EnvironmentState, error)
 		promoteFn func(
 			context.Context,
+			string,
 			api.PromotionMechanisms,
 			api.EnvironmentState,
 		) (api.EnvironmentState, error)
@@ -108,6 +108,7 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
+				string,
 				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return nil, errors.New("something went wrong")
@@ -129,6 +130,7 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
+				string,
 				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return nil, nil
@@ -194,6 +196,7 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
+				string,
 				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return &api.EnvironmentState{
@@ -288,12 +291,14 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
+				string,
 				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return &api.EnvironmentState{}, nil
 			},
 			promoteFn: func(
 				_ context.Context,
+				_ string,
 				_ api.PromotionMechanisms,
 				newState api.EnvironmentState,
 			) (api.EnvironmentState, error) {
@@ -319,6 +324,7 @@ func TestSync(t *testing.T) {
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
+				string,
 				api.RepoSubscriptions,
 			) (*api.EnvironmentState, error) {
 				return &api.EnvironmentState{
@@ -338,6 +344,7 @@ func TestSync(t *testing.T) {
 			},
 			promoteFn: func(
 				_ context.Context,
+				_ string,
 				_ api.PromotionMechanisms,
 				newState api.EnvironmentState,
 			) (api.EnvironmentState, error) {
@@ -382,14 +389,17 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		name               string
 		getLatestCommitsFn func(
 			context.Context,
+			string,
 			[]api.GitSubscription,
 		) ([]api.GitCommit, error)
 		getLatestImagesFn func(
 			context.Context,
+			string,
 			[]api.ImageSubscription,
 		) ([]api.Image, error)
 		getLatestChartsFn func(
 			context.Context,
+			string,
 			[]api.ChartSubscription,
 		) ([]api.Chart, error)
 		assertions func(*api.EnvironmentState, error)
@@ -398,6 +408,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			name: "error getting latest git commit",
 			getLatestCommitsFn: func(
 				context.Context,
+				string,
 				[]api.GitSubscription,
 			) ([]api.GitCommit, error) {
 				return nil, errors.New("something went wrong")
@@ -413,12 +424,14 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			name: "error getting latest images",
 			getLatestCommitsFn: func(
 				context.Context,
+				string,
 				[]api.GitSubscription,
 			) ([]api.GitCommit, error) {
 				return nil, nil
 			},
 			getLatestImagesFn: func(
 				context.Context,
+				string,
 				[]api.ImageSubscription,
 			) ([]api.Image, error) {
 				return nil, errors.New("something went wrong")
@@ -438,18 +451,21 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			name: "error getting latest charts",
 			getLatestCommitsFn: func(
 				context.Context,
+				string,
 				[]api.GitSubscription,
 			) ([]api.GitCommit, error) {
 				return nil, nil
 			},
 			getLatestImagesFn: func(
 				context.Context,
+				string,
 				[]api.ImageSubscription,
 			) ([]api.Image, error) {
 				return nil, nil
 			},
 			getLatestChartsFn: func(
 				context.Context,
+				string,
 				[]api.ChartSubscription,
 			) ([]api.Chart, error) {
 				return nil, errors.New("something went wrong")
@@ -469,6 +485,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			name: "success",
 			getLatestCommitsFn: func(
 				context.Context,
+				string,
 				[]api.GitSubscription,
 			) ([]api.GitCommit, error) {
 				return []api.GitCommit{
@@ -480,6 +497,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			},
 			getLatestImagesFn: func(
 				context.Context,
+				string,
 				[]api.ImageSubscription,
 			) ([]api.Image, error) {
 				return []api.Image{
@@ -491,6 +509,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			},
 			getLatestChartsFn: func(
 				context.Context,
+				string,
 				[]api.ChartSubscription,
 			) ([]api.Chart, error) {
 				return []api.Chart{
@@ -548,6 +567,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			testCase.assertions(
 				testReconciler.getLatestStateFromRepos(
 					context.Background(),
+					"fake-namespace",
 					api.RepoSubscriptions{},
 				),
 			)

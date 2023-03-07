@@ -9,20 +9,14 @@ import (
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuityio/kargo/internal/argocd"
-	"github.com/akuityio/kargo/internal/git"
 )
 
 func TestApplyBookkeeperUpdate(t *testing.T) {
 	testCases := []struct {
-		name        string
-		newState    api.EnvironmentState
-		update      api.GitRepoUpdate
-		repoCredsFn func(
-			context.Context,
-			libArgoCD.DB,
-			string,
-		) (*git.RepoCredentials, error)
+		name              string
+		newState          api.EnvironmentState
+		update            api.GitRepoUpdate
+		credentialsDB     credentialsDBIface
 		bookkeeperService bookkeeper.Service
 		assertions        func(inState, outState api.EnvironmentState, err error)
 	}{
@@ -82,12 +76,15 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				Branch:     "env/fake",
 				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			repoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, errors.New("something went wrong")
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, errors.New("something went wrong")
+				},
 			},
 			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.Error(t, err)
@@ -122,12 +119,15 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				Branch:     "env/fake",
 				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			repoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			bookkeeperService: &fakeBookkeeperService{
 				renderManifestsFn: func(
@@ -170,12 +170,15 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				Branch:     "env/fake",
 				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			repoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			bookkeeperService: &fakeBookkeeperService{
 				renderManifestsFn: func(
@@ -204,11 +207,12 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				gitRepoCredentialsFn: testCase.repoCredsFn,
-				bookkeeperService:    testCase.bookkeeperService,
+				credentialsDB:     testCase.credentialsDB,
+				bookkeeperService: testCase.bookkeeperService,
 			}
 			newState, err := reconciler.applyBookkeeperUpdate(
 				context.Background(),
+				"fake-namespace",
 				testCase.newState,
 				testCase.update,
 			)

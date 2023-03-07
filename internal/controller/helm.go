@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/helm"
 )
 
 func (e *environmentReconciler) applyHelm(
@@ -67,6 +68,7 @@ func (e *environmentReconciler) applyHelm(
 
 func (e *environmentReconciler) getLatestCharts(
 	ctx context.Context,
+	namespace string,
 	subs []api.ChartSubscription,
 ) ([]api.Chart, error) {
 	charts := make([]api.Chart, len(subs))
@@ -77,22 +79,31 @@ func (e *environmentReconciler) getLatestCharts(
 			"chart":    sub.Name,
 		})
 
-		creds, err := e.chartRegistryCredentialsFn(ctx, e.argoDB, sub.RegistryURL)
+		creds, ok, err :=
+			e.credentialsDB.get(ctx, namespace, credentialsTypeHelm, sub.RegistryURL)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error getting credentials for chart registry %q",
+				"error obtaining credentials for chart registry %q",
 				sub.RegistryURL,
 			)
 		}
 		imgLogger.Debug("acquired credentials for chart registry/repository")
+
+		var helmCreds *helm.Credentials
+		if ok {
+			helmCreds = &helm.Credentials{
+				Username: creds.Username,
+				Password: creds.Password,
+			}
+		}
 
 		vers, err := e.getLatestChartVersionFn(
 			ctx,
 			sub.RegistryURL,
 			sub.Name,
 			sub.SemverConstraint,
-			creds,
+			helmCreds,
 		)
 		if err != nil {
 			return nil, errors.Wrapf(

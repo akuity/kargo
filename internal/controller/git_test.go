@@ -9,34 +9,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/git"
 )
 
 func TestApplyGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
-		name           string
-		gitRepoCredsFn func(
-			context.Context,
-			libArgoCD.DB,
-			string,
-		) (*git.RepoCredentials, error)
+		name             string
+		credentialsDB    credentialsDBIface
 		gitApplyUpdateFn func(
 			string,
 			string,
-			*git.RepoCredentials,
+			*git.Credentials,
 			func(homeDir, workingDir string) (string, error),
 		) (string, error)
 		assertions func(inState, outState api.EnvironmentState, err error)
 	}{
 		{
 			name: "error getting repo credentials",
-			gitRepoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, errors.New("something went wrong")
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, errors.New("something went wrong")
+				},
 			},
 			assertions: func(_, _ api.EnvironmentState, err error) {
 				require.Error(t, err)
@@ -51,17 +49,20 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 
 		{
 			name: "error applying updates",
-			gitRepoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			gitApplyUpdateFn: func(
 				string,
 				string,
-				*git.RepoCredentials,
+				*git.Credentials,
 				func(string, string) (string, error),
 			) (string, error) {
 				return "", errors.New("something went wrong")
@@ -74,17 +75,20 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 
 		{
 			name: "success",
-			gitRepoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			gitApplyUpdateFn: func(
 				string,
 				string,
-				*git.RepoCredentials,
+				*git.Credentials,
 				func(string, string) (string, error),
 			) (string, error) {
 				return "new-fake-commit", nil
@@ -103,9 +107,9 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:               log.New(),
-				gitRepoCredentialsFn: testCase.gitRepoCredsFn,
-				gitApplyUpdateFn:     testCase.gitApplyUpdateFn,
+				logger:           log.New(),
+				credentialsDB:    testCase.credentialsDB,
+				gitApplyUpdateFn: testCase.gitApplyUpdateFn,
 			}
 			reconciler.logger.SetLevel(log.ErrorLevel)
 			newState := api.EnvironmentState{
@@ -118,6 +122,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 			}
 			outState, err := reconciler.applyGitRepoUpdate(
 				context.Background(),
+				"fake-namespace",
 				newState,
 				api.GitRepoUpdate{
 					RepoURL: "fake-url",
@@ -130,27 +135,26 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 
 func TestGetLatestCommits(t *testing.T) {
 	testCases := []struct {
-		name           string
-		gitRepoCredsFn func(
-			context.Context,
-			libArgoCD.DB,
-			string,
-		) (*git.RepoCredentials, error)
+		name                string
+		credentialsDB       credentialsDBIface
 		getLatestCommitIDFn func(
 			string,
 			string,
-			*git.RepoCredentials,
+			*git.Credentials,
 		) (string, error)
 		assertions func(commits []api.GitCommit, err error)
 	}{
 		{
 			name: "error getting repo credentials",
-			gitRepoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, errors.New("something went wrong")
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, errors.New("something went wrong")
+				},
 			},
 			assertions: func(commits []api.GitCommit, err error) {
 				require.Error(t, err)
@@ -166,17 +170,20 @@ func TestGetLatestCommits(t *testing.T) {
 
 		{
 			name: "error getting last commit ID",
-			gitRepoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			getLatestCommitIDFn: func(
 				string,
 				string,
-				*git.RepoCredentials,
+				*git.Credentials,
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
@@ -194,17 +201,20 @@ func TestGetLatestCommits(t *testing.T) {
 
 		{
 			name: "success",
-			gitRepoCredsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*git.RepoCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			getLatestCommitIDFn: func(
 				string,
 				string,
-				*git.RepoCredentials,
+				*git.Credentials,
 			) (string, error) {
 				return "fake-commit", nil
 			},
@@ -225,14 +235,15 @@ func TestGetLatestCommits(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:               log.New(),
-				gitRepoCredentialsFn: testCase.gitRepoCredsFn,
-				getLatestCommitIDFn:  testCase.getLatestCommitIDFn,
+				logger:              log.New(),
+				credentialsDB:       testCase.credentialsDB,
+				getLatestCommitIDFn: testCase.getLatestCommitIDFn,
 			}
 			reconciler.logger.SetLevel(log.ErrorLevel)
 			testCase.assertions(
 				reconciler.getLatestCommits(
 					context.Background(),
+					"fake-namespace",
 					[]api.GitSubscription{
 						{
 							RepoURL: "fake-url",
