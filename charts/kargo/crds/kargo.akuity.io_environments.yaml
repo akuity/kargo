@@ -54,6 +54,7 @@ spec:
                         appName:
                           description: AppName specifies the name of the Argo CD Application
                             resource.
+                          minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
                         appNamespace:
@@ -67,7 +68,10 @@ spec:
                       required:
                       - appName
                       type: object
+                    minItems: 1
                     type: array
+                required:
+                - argoCDAppChecks
                 type: object
               promotionMechanisms:
                 description: PromotionMechanisms describes how to incorporate newly
@@ -88,6 +92,7 @@ spec:
                         appName:
                           description: AppName specifies the name of an Argo CD Application
                             resource to be updated.
+                          minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
                         appNamespace:
@@ -136,12 +141,14 @@ spec:
                                           description: Image specifies a container
                                             image (without tag). This is a required
                                             field.
+                                          minLength: 1
                                           type: string
                                         key:
                                           description: Key specifies a key within
                                             an Argo CD Application's Helm parameters
                                             that is to be updated. This is a required
                                             field.
+                                          minLength: 1
                                           type: string
                                         value:
                                           description: Value specifies the new value
@@ -180,6 +187,7 @@ spec:
                                   CD Application''s sources this update is intended
                                   for. Note: As of Argo CD 2.6, Application''s can
                                   use multiple sources.'
+                                minLength: 1
                                 type: string
                               updateTargetRevision:
                                 description: UpdateTargetRevision is a bool indicating
@@ -192,9 +200,11 @@ spec:
                             required:
                             - repoURL
                             type: object
+                          minItems: 1
                           type: array
                       required:
                       - appName
+                      - sourceUpdates
                       type: object
                     type: array
                   gitRepoUpdates:
@@ -240,17 +250,20 @@ spec:
                                   chartPath:
                                     description: ChartPath is the path to an umbrella
                                       chart.
+                                    minLength: 1
                                     pattern: ^[\w-\.]+(/[\w-\.]+)*$
                                     type: string
                                   name:
                                     description: Name along with RegistryURL identify
                                       a subchart of the umbrella chart at ChartPath
                                       whose version should be updated.
+                                    minLength: 1
                                     type: string
                                   registryURL:
                                     description: RegistryURL along with Name identify
                                       a subchart of the umbrella chart at ChartPath
                                       whose version should be updated.
+                                    minLength: 1
                                     pattern: ^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$
                                     type: string
                                 required:
@@ -270,12 +283,14 @@ spec:
                                   image:
                                     description: Image specifies a container image
                                       (without tag). This is a required field.
+                                    minLength: 1
                                     pattern: ^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$
                                     type: string
                                   key:
                                     description: Key specifies a key within the Helm
                                       values file that is to be updated. This is a
                                       required field.
+                                    minLength: 1
                                     type: string
                                   value:
                                     description: Value specifies the new value for
@@ -293,6 +308,7 @@ spec:
                                     description: ValuesFilePath specifies a path to
                                       the Helm values file that is to be updated.
                                       This is a required field.
+                                    minLength: 1
                                     pattern: ^[\w-\.]+(/[\w-\.]+)*$
                                     type: string
                                 required:
@@ -320,11 +336,13 @@ spec:
                                   image:
                                     description: Image specifies a container image
                                       (without tag). This is a required field.
+                                    minLength: 1
                                     type: string
                                   path:
                                     description: Path specifies a path in which the
                                       `kustomize edit set image` command should be
                                       executed. This is a required field.
+                                    minLength: 1
                                     pattern: ^[\w-\.]+(/[\w-\.]+)*$
                                     type: string
                                 required:
@@ -333,10 +351,13 @@ spec:
                                 type: object
                               minItems: 1
                               type: array
+                          required:
+                          - images
                           type: object
                         repoURL:
                           description: RepoURL is the URL of the repository to update.
                             This is a required field.
+                          minLength: 1
                           pattern: ^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$
                           type: string
                       required:
@@ -363,11 +384,13 @@ spec:
                               description: Name specifies a Helm chart to subscribe
                                 to within the Helm chart registry specified by the
                                 RegistryURL field. This field is required.
+                              minLength: 1
                               type: string
                             registryURL:
                               description: RegistryURL specifies the URL of a Helm
                                 chart registry. It may be a classic chart registry
                                 (using HTTP/S) OR an OCI registry. This field is required.
+                              minLength: 1
                               pattern: ^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$
                               type: string
                             semverConstraint:
@@ -402,6 +425,7 @@ spec:
                             repoURL:
                               description: URL is the repository's URL. This is a
                                 required field.
+                              minLength: 1
                               pattern: ^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$
                               type: string
                           required:
@@ -458,6 +482,7 @@ spec:
                               description: RepoURL specifies the URL of the image
                                 repository to subscribe to. The value in this field
                                 MUST NOT include an image tag. This field is required.
+                              minLength: 1
                               pattern: ^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$
                               type: string
                             semverConstraint:
@@ -504,6 +529,7 @@ spec:
                       properties:
                         name:
                           description: Name specifies the name of an Environment.
+                          minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
                         namespace:
