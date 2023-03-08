@@ -44,7 +44,7 @@ type Environment struct {
 	// to incorporate newly observed materials into the Environment.
 	//
 	//+kubebuilder:validation:Required
-	Spec EnvironmentSpec `json:"spec"`
+	Spec *EnvironmentSpec `json:"spec"`
 	// Status describes the most recently observed versions of this Environment's
 	// sources of material as well as the environment's current and recent states.
 	Status EnvironmentStatus `json:"status,omitempty"`
@@ -57,17 +57,17 @@ type EnvironmentSpec struct {
 	// required field.
 	//
 	//+kubebuilder:validation:Required
-	Subscriptions Subscriptions `json:"subscriptions"`
+	Subscriptions *Subscriptions `json:"subscriptions"`
 	// PromotionMechanisms describes how to incorporate newly observed materials
 	// into the Environment. This is a required field.
 	//
 	//+kubebuilder:validation:Required
-	PromotionMechanisms PromotionMechanisms `json:"promotionMechanisms"`
+	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms"`
 	// HealthChecks describes how the health of the Environment can be assessed on
 	// an ongoing basis. This is a required field.
 	//
 	//+kubebuilder:validation:Required
-	HealthChecks HealthChecks `json:"healthChecks"`
+	HealthChecks *HealthChecks `json:"healthChecks"`
 }
 
 // Subscriptions describes an Environment's sources of material.
@@ -87,6 +87,9 @@ type Subscriptions struct {
 
 // RepoSubscriptions describes various sorts of repositories an Environment uses
 // as sources of material.
+//
+// TODO: Use a validating webhook to ensure at least one of Git, Images, or
+// Charts is non-empty.
 type RepoSubscriptions struct {
 	// Git describes subscriptions to Git repositories.
 	Git []GitSubscription `json:"git,omitempty"`
@@ -100,7 +103,7 @@ type RepoSubscriptions struct {
 type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
 	RepoURL string `json:"repoURL"`
 	// Branch references a particular branch of the repository. This field is
@@ -117,7 +120,7 @@ type ImageSubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag. This field is required.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
 	RepoURL string `json:"repoURL"`
 	// UpdateStrategy specifies the rules for how to identify the newest version
@@ -186,13 +189,13 @@ type ChartSubscription struct {
 	// RegistryURL specifies the URL of a Helm chart registry. It may be a classic
 	// chart registry (using HTTP/S) OR an OCI registry. This field is required.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$`
 	RegistryURL string `json:"registryURL"`
 	// Name specifies a Helm chart to subscribe to within the Helm chart registry
 	// specified by the RegistryURL field. This field is required.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 	// SemverConstraint specifies constraints on what new chart versions are
 	// permissible. This field is optional. When left unspecified, there will be
@@ -212,7 +215,7 @@ type ChartSubscription struct {
 type EnvironmentSubscription struct {
 	// Name specifies the name of an Environment.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Name string `json:"name"`
 	// Namespace specifies the namespace of the Environment. If left unspecified,
@@ -254,7 +257,7 @@ type PromotionMechanisms struct {
 type GitRepoUpdate struct {
 	// RepoURL is the URL of the repository to update. This is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
 	RepoURL string `json:"repoURL"`
 	// Branch references a particular branch of the repository to be updated. This
@@ -288,9 +291,8 @@ type KustomizePromotionMechanism struct {
 	// Images describes images for which `kustomize edit set image` should be
 	// executed and the paths in which those commands should be executed.
 	//
-	//+kubebuilder:validation:Required
 	//+kubebuilder:validation:MinItems=1
-	Images []KustomizeImageUpdate `json:"images,omitempty"`
+	Images []KustomizeImageUpdate `json:"images"`
 }
 
 // KustomizeImageUpdate describes how to run `kustomize edit set image`
@@ -298,12 +300,12 @@ type KustomizePromotionMechanism struct {
 type KustomizeImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	Image string `json:"image"`
 	// Path specifies a path in which the `kustomize edit set image` command
 	// should be executed. This is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
 	Path string `json:"path"`
 }
@@ -327,26 +329,24 @@ type HelmPromotionMechanism struct {
 type HelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
 	Image string `json:"image"`
 	// ValuesFilePath specifies a path to the Helm values file that is to be
 	// updated. This is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
 	ValuesFilePath string `json:"valuesFilePath"`
 	// Key specifies a key within the Helm values file that is to be updated. This
 	// is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
 	// Value specifies the new value for the specified key in the specified Helm
 	// values file. Valid values are "Image", which replaces the value of the
 	// specified key with the entire <image name>:<tag>, or "Tag" which replaces
 	// the value of the specified with just the new tag. This is a required field.
-	//
-	//+kubebuilder:validation:Required
 	Value ImageUpdateValueType `json:"value"`
 }
 
@@ -356,17 +356,17 @@ type HelmChartDependencyUpdate struct {
 	// RegistryURL along with Name identify a subchart of the umbrella chart at
 	// ChartPath whose version should be updated.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$`
 	RegistryURL string `json:"registryURL"`
 	// Name along with RegistryURL identify a subchart of the umbrella chart at
 	// ChartPath whose version should be updated.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 	// ChartPath is the path to an umbrella chart.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
 	ChartPath string `json:"chartPath"`
 }
@@ -378,7 +378,7 @@ type ArgoCDAppUpdate struct {
 	// AppName specifies the name of an Argo CD Application resource to be
 	// updated.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	AppName string `json:"appName"`
 	// AppNamespace specifies the namespace of an Argo CD Application resource to
@@ -392,7 +392,9 @@ type ArgoCDAppUpdate struct {
 	AppNamespace string `json:"appNamespace,omitempty"`
 	// SourceUpdates describes updates to be applied to various sources of the
 	// specified Argo CD Application resource.
-	SourceUpdates []ArgoCDSourceUpdate `json:"sourceUpdates,omitempty"`
+	//
+	//+kubebuilder:validation:MinItems=1
+	SourceUpdates []ArgoCDSourceUpdate `json:"sourceUpdates"`
 }
 
 // ArgoCDSourceUpdate describes updates that should be applied to one of an Argo
@@ -402,7 +404,7 @@ type ArgoCDSourceUpdate struct {
 	// is intended for. Note: As of Argo CD 2.6, Application's can use multiple
 	// sources.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	RepoURL string `json:"repoURL"`
 	// Chart specifies a chart within a Helm chart registry if RepoURL points to a
 	// Helm chart registry. Application sources that point directly at a chart do
@@ -447,20 +449,18 @@ type ArgoCDHelm struct {
 type ArgoCDHelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	Image string `json:"image"`
 	// Key specifies a key within an Argo CD Application's Helm parameters that is
 	// to be updated. This is a required field.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
 	// Value specifies the new value for the specified key in the Argo CD
 	// Application's Helm parameters. Valid values are "Image", which replaces the
 	// value of the specified key with the entire <image name>:<tag>, or "Tag"
 	// which replaces the value of the specified with just the new tag. This is a
 	// required field.
-	//
-	//+kubebuilder:validation:Required
 	Value ImageUpdateValueType `json:"value"`
 }
 
@@ -469,7 +469,9 @@ type ArgoCDHelmImageUpdate struct {
 type HealthChecks struct {
 	// ArgoCDAppChecks specifies Argo CD Application resources whose sync status
 	// and health should be evaluated in assessing the health of the Environment.
-	ArgoCDAppChecks []ArgoCDAppCheck `json:"argoCDAppChecks,omitempty"`
+	//
+	//+kubebuilder:validation:MinItems=1
+	ArgoCDAppChecks []ArgoCDAppCheck `json:"argoCDAppChecks"`
 }
 
 // ArgoCDAppCheck describes a health check to perform on an Argo CD Application
@@ -477,7 +479,7 @@ type HealthChecks struct {
 type ArgoCDAppCheck struct {
 	// AppName specifies the name of the Argo CD Application resource.
 	//
-	//+kubebuilder:validation:Required
+	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	AppName string `json:"appName"`
 	// AppNamespace specifies the namespace of the Argo CD Application resource.
