@@ -35,6 +35,8 @@ const (
 //+kubebuilder:resource:shortName={env,envs}
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name=Current State,type=string,JSONPath=`.status.states[0].id`
+//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.states[0].health.status`
 
 // Environment is the Kargo API's main type.
 type Environment struct {
