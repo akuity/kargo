@@ -1,7 +1,35 @@
 package config
 
-import log "github.com/sirupsen/logrus"
+import (
+	"github.com/sirupsen/logrus"
+)
 
-type Config struct {
-	LogLevel log.Level
+type BaseConfig struct {
+	LogLevel logrus.Level
+}
+
+func newBaseConfig() BaseConfig {
+	return BaseConfig{
+		LogLevel: MustParseLogLevel(MustGetEnv("LOG_LEVEL", "INFO")),
+	}
+}
+
+type APIConfig struct {
+	BaseConfig
+}
+
+func NewAPIConfig() APIConfig {
+	return APIConfig{
+		BaseConfig: newBaseConfig(),
+	}
+}
+
+type ControllerConfig struct {
+	BaseConfig
+}
+
+func NewControllerConfig() ControllerConfig {
+	return ControllerConfig{
+		BaseConfig: newBaseConfig(),
+	}
 }

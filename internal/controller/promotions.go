@@ -26,7 +26,7 @@ type promotionReconciler struct {
 // Promotion resources and registers it with the provided Manager.
 func SetupPromotionReconcilerWithManager(
 	ctx context.Context,
-	config config.Config,
+	config config.ControllerConfig,
 	mgr manager.Manager,
 ) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -38,7 +38,7 @@ func SetupPromotionReconcilerWithManager(
 }
 
 func newPromotionReconciler(
-	config config.Config,
+	config config.ControllerConfig,
 	client client.Client,
 ) *promotionReconciler {
 	logger := log.New()
