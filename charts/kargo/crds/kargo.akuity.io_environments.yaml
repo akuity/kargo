@@ -18,7 +18,14 @@ spec:
     singular: environment
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.states[0].id
+      name: Current State
+      type: string
+    - jsonPath: .status.states[0].health.status
+      name: Health
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Environment is the Kargo API's main type.
