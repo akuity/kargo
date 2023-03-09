@@ -2,47 +2,65 @@ package config
 
 import (
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMustGetEnv(t *testing.T) {
+func TestMustAtoi(t *testing.T) {
+	t.Parallel()
 	testSets := map[string]struct {
-		Envs      map[string]string
-		Key       string
-		Default   string
-		Expected  string
+		Input     string
+		Expected  int
 		MustPanic bool
 	}{
-		"return env value": {
-			Envs: map[string]string{
-				"test": "some value",
-			},
-			Key:      "test",
-			Expected: "some value",
+		"valid integer": {
+			Input:    "123",
+			Expected: 123,
 		},
-		"return default value if env not exists": {
-			Key:      "test",
-			Default:  "some value",
-			Expected: "some value",
-		},
-		"empty default value": {
-			Key:       "test",
+		"invalid integer": {
+			Input:     "the integer",
 			MustPanic: true,
 		},
 	}
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
-			for k, v := range ts.Envs {
-				t.Setenv(k, v)
-			}
 			if ts.MustPanic {
 				require.Panics(t, func() {
-					_ = MustGetEnv(ts.Key, ts.Default)
+					_ = MustAtoi(ts.Input)
 				})
 			} else {
-				require.Equal(t, ts.Expected, MustGetEnv(ts.Key, ts.Default))
+				require.Equal(t, ts.Expected, MustAtoi(ts.Input))
+			}
+		})
+	}
+}
+
+func TestMustParseDuration(t *testing.T) {
+	t.Parallel()
+	testSets := map[string]struct {
+		Input     string
+		Expected  time.Duration
+		MustPanic bool
+	}{
+		"valid duration": {
+			Input:    "30s",
+			Expected: 30 * time.Second,
+		},
+		"invalid duration": {
+			Input:     "life, the universe, and everything",
+			MustPanic: true,
+		},
+	}
+	for name, ts := range testSets {
+		t.Run(name, func(t *testing.T) {
+			if ts.MustPanic {
+				require.Panics(t, func() {
+					_ = MustParseDuration(ts.Input)
+				})
+			} else {
+				require.Equal(t, ts.Expected, MustParseDuration(ts.Input))
 			}
 		})
 	}
