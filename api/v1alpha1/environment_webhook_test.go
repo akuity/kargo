@@ -14,20 +14,28 @@ func TestDefault(t *testing.T) {
 			Name:      "fake-stage-env",
 			Namespace: testNamespace,
 		},
-	}
-	e.Spec.Subscriptions.UpstreamEnvs = []EnvironmentSubscription{
-		{
-			Name: "fake-test-env",
-		},
-	}
-	e.Spec.PromotionMechanisms.ArgoCDAppUpdates = []ArgoCDAppUpdate{
-		{
-			AppName: "fake-prod-app",
-		},
-	}
-	e.Spec.HealthChecks.ArgoCDAppChecks = []ArgoCDAppCheck{
-		{
-			AppName: "fake-prod-app",
+		Spec: &EnvironmentSpec{
+			Subscriptions: &Subscriptions{
+				UpstreamEnvs: []EnvironmentSubscription{
+					{
+						Name: "fake-test-env",
+					},
+				},
+			},
+			PromotionMechanisms: &PromotionMechanisms{
+				ArgoCDAppUpdates: []ArgoCDAppUpdate{
+					{
+						AppName: "fake-prod-app",
+					},
+				},
+			},
+			HealthChecks: &HealthChecks{
+				ArgoCDAppChecks: []ArgoCDAppCheck{
+					{
+						AppName: "fake-prod-app",
+					},
+				},
+			},
 		},
 	}
 	e.Default()

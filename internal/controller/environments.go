@@ -371,7 +371,7 @@ func (e *environmentReconciler) sync(
 	var currentState api.EnvironmentState
 	var ok bool
 	if status.States, currentState, ok = status.States.Pop(); ok {
-		health := e.checkHealthFn(ctx, currentState, env.Spec.HealthChecks)
+		health := e.checkHealthFn(ctx, currentState, *env.Spec.HealthChecks)
 		currentState.Health = &health
 		status.States = status.States.Push(currentState)
 	}
@@ -435,7 +435,7 @@ func (e *environmentReconciler) sync(
 		(nextStateCandidate.ID != currentState.ID &&
 			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
 		nextState, err :=
-			e.promoteFn(ctx, env.Spec.PromotionMechanisms, nextStateCandidate)
+			e.promoteFn(ctx, *env.Spec.PromotionMechanisms, nextStateCandidate)
 		if err != nil {
 			status.Error = err.Error()
 			return status
