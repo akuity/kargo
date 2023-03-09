@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kargo.api.fullname" . }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.api.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kargo.selectorLabels" . | nindent 8 }}
+        {{- include "kargo.api.labels" . | nindent 8 }}
+    spec:
+      serviceAccount: {{ include "kargo.api.fullname" . }}
+      imagePullSecrets:
+        - name: {{ include "kargo.fullname" . }}-image-pull-secret
+      containers:
+{{- if .Values.api.enableProxy }}
+        - name: api-proxy
+          image: {{ include "kargo.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/local/bin/kargo", "api-proxy"]
+          env:
+            - name: LOG_LEVEL
+              value: {{ .Values.api.logLevel }}
+          ports:
+            - containerPort: 8080
+              name: api-proxy
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: api-proxy
+            initialDelaySeconds: 5
+          resources: {{ toYaml .Values.api.resources }}
+{{- end }}
+        - name: api
+          image: {{ include "kargo.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/local/bin/kargo", "api"]
+          env:
+            - name: LOG_LEVEL
+              value: {{ .Values.api.logLevel }}
+          ports:
+            - containerPort: 50051
+              name: api
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:50051"]
+            initialDelaySeconds: 5
+          resources: {{ toYaml .Values.api.resources }}
+      {{- with .Values.api.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

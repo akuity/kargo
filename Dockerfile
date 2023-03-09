@@ -25,11 +25,25 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
 
 WORKDIR /kargo/bin
 
+
+FROM curlimages/curl:7.88.1 as tools
+
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /tools
+
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
+    curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
+    chmod +x /tools/grpc_health_probe
+
+
 FROM ghcr.io/akuityio/bookkeeper-prototype:v0.1.0-alpha.2-rc.2 as final
 
 USER root
 
 COPY --from=builder /kargo/bin/ /usr/local/bin/
+COPY --from=tools /tools/ /usr/local/bin/
 
 USER nonroot
 
