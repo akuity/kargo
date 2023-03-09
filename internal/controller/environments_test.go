@@ -91,7 +91,12 @@ func TestSync(t *testing.T) {
 		assertions func(initialStatus, newStatus api.EnvironmentStatus)
 	}{
 		{
-			name:          "no subscriptions",
+			name: "no subscriptions",
+			spec: api.EnvironmentSpec{
+				Subscriptions:       &api.Subscriptions{},
+				PromotionMechanisms: &api.PromotionMechanisms{},
+				HealthChecks:        &api.HealthChecks{},
+			},
 			initialStatus: api.EnvironmentStatus{},
 			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
 				// Status should be returned unchanged
@@ -102,9 +107,11 @@ func TestSync(t *testing.T) {
 		{
 			name: "error getting latest state from repos",
 			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
+				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
+				PromotionMechanisms: &api.PromotionMechanisms{},
+				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
@@ -124,9 +131,11 @@ func TestSync(t *testing.T) {
 		{
 			name: "no latest state from repos",
 			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
+				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
+				PromotionMechanisms: &api.PromotionMechanisms{},
+				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
@@ -144,9 +153,11 @@ func TestSync(t *testing.T) {
 		{
 			name: "latest state from repos isn't new",
 			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
+				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
+				PromotionMechanisms: &api.PromotionMechanisms{},
+				HealthChecks:        &api.HealthChecks{},
 			},
 			initialStatus: api.EnvironmentStatus{
 				AvailableStates: []api.EnvironmentState{
@@ -223,7 +234,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "error getting available states from upstream envs",
 			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
+				Subscriptions: &api.Subscriptions{
 					UpstreamEnvs: []api.EnvironmentSubscription{
 						{
 							Name:      "fake-name",
@@ -231,6 +242,8 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
+				PromotionMechanisms: &api.PromotionMechanisms{},
+				HealthChecks:        &api.HealthChecks{},
 			},
 			getAvailableStatesFromUpstreamEnvsFn: func(
 				context.Context,
@@ -249,7 +262,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "not auto-promotion eligible",
 			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
+				Subscriptions: &api.Subscriptions{
 					UpstreamEnvs: []api.EnvironmentSubscription{
 						{
 							Name:      "fake-name",
@@ -261,6 +274,8 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
+				PromotionMechanisms: &api.PromotionMechanisms{},
+				HealthChecks:        &api.HealthChecks{},
 			},
 			getAvailableStatesFromUpstreamEnvsFn: func(
 				context.Context,
@@ -285,9 +300,11 @@ func TestSync(t *testing.T) {
 		{
 			name: "error executing promotion",
 			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
+				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
+				PromotionMechanisms: &api.PromotionMechanisms{},
+				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
@@ -318,9 +335,11 @@ func TestSync(t *testing.T) {
 		{
 			name: "successful promotion",
 			spec: api.EnvironmentSpec{
-				Subscriptions: api.Subscriptions{
+				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
+				PromotionMechanisms: &api.PromotionMechanisms{},
+				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
@@ -364,7 +383,7 @@ func TestSync(t *testing.T) {
 				Name:      "foo",
 				Namespace: "bar",
 			},
-			Spec:   testCase.spec,
+			Spec:   &testCase.spec,
 			Status: testCase.initialStatus,
 		}
 		reconciler := &environmentReconciler{
