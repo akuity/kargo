@@ -16,7 +16,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 		name              string
 		newState          api.EnvironmentState
 		update            api.GitRepoUpdate
-		credentialsDB     credentialsDBIface
+		credentialsDB     credentialsDB
 		bookkeeperService bookkeeper.Service
 		assertions        func(inState, outState api.EnvironmentState, err error)
 	}{

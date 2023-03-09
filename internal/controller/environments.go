@@ -40,7 +40,7 @@ const (
 type environmentReconciler struct {
 	config            config.Config
 	client            client.Client
-	credentialsDB     credentialsDBIface
+	credentialsDB     credentialsDB
 	bookkeeperService bookkeeper.Service
 	logger            *log.Logger
 
@@ -227,11 +227,12 @@ func newEnvironmentReconciler(
 	logger := log.New()
 	logger.SetLevel(config.LogLevel)
 
-	var credentialsDB credentialsDBIface
+	var credentialsDB credentialsDB
 	if mgr != nil { // This can be nil during tests
 		// TODO: Do not hardcode the Argo CD namespace
 		var err error
-		if credentialsDB, err = newCredentialsDB(ctx, "argo-cd", mgr); err != nil {
+		if credentialsDB, err =
+			newKubernetesCredentialsDB(ctx, "argo-cd", mgr); err != nil {
 			return nil, errors.Wrap(err, "error initializing credentials DB")
 		}
 	}

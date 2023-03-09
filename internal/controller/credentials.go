@@ -47,8 +47,8 @@ type credentials struct {
 	SSHPrivateKey string
 }
 
-// credentialsDBIface is an interface for a credentials store.
-type credentialsDBIface interface {
+// credentialsDB is an interface for a credentials store.
+type credentialsDB interface {
 	get(
 		ctx context.Context,
 		namespace string,
@@ -57,23 +57,23 @@ type credentialsDBIface interface {
 	) (credentials, bool, error)
 }
 
-// credentialsDB is an implementation of the credentialsDBIface interface that
-// utilizes a Kubernetes controller runtime client to index and retrieve
-// credentials stored in Kubernetes Secrets.
-type credentialsDB struct {
+// kubernetesCredentialsDB is an implementation of the credentialsDB
+// interface that utilizes a Kubernetes controller runtime client to index and
+// retrieve credentials stored in Kubernetes Secrets.
+type kubernetesCredentialsDB struct {
 	argoCDNamespace string
 	client          client.Client
 }
 
-// newCredentialsDB initializes a new instance of credentialsDB. This function
-// carries out the important task of indexing credentials stored in Kubernetes
-// Secrets by repository type + URL.
-func newCredentialsDB(
+// newKubernetesCredentialsDB initializes a new instance of
+// kubernetesCredentialsDB. This function carries out the important task of
+// indexing credentials stored in Kubernetes Secrets by repository type + URL.
+func newKubernetesCredentialsDB(
 	ctx context.Context,
 	argoCDNamespace string,
 	mgr manager.Manager,
-) (credentialsDBIface, error) {
-	c := &credentialsDB{
+) (credentialsDB, error) {
+	k := &kubernetesCredentialsDB{
 		argoCDNamespace: argoCDNamespace,
 		client:          mgr.GetClient(),
 	}
@@ -81,18 +81,18 @@ func newCredentialsDB(
 		ctx,
 		&corev1.Secret{},
 		secretsByRepo,
-		c.index,
+		k.index,
 	)
-	return c, errors.Wrap(err, "error indexing Secrets by repo")
+	return k, errors.Wrap(err, "error indexing Secrets by repo")
 }
 
-func (c *credentialsDB) index(obj client.Object) []string {
+func (k *kubernetesCredentialsDB) index(obj client.Object) []string {
 	secret := obj.(*corev1.Secret) // nolint: forcetypeassert
 	// Refuse to index this secret if it has no labels or data.
 	if secret.Labels == nil || secret.Data == nil {
 		return nil
 	}
-	if secret.Namespace == c.argoCDNamespace {
+	if secret.Namespace == k.argoCDNamespace {
 		// If the Secret is in Argo CD's namespace, expect that it should be
 		// labeled like an Argo CD Secret. If it isn't refuse to index this
 		// Secret. We're also not interested in indexing Secrets that represent
@@ -143,7 +143,7 @@ func (c *credentialsDB) index(obj client.Object) []string {
 	return []string{credsSecretIndexVal(credsType, repoURL)}
 }
 
-func (c *credentialsDB) get(
+func (k *kubernetesCredentialsDB) get(
 	ctx context.Context,
 	namespace string,
 	credType credentialsType,
@@ -160,7 +160,7 @@ func (c *credentialsDB) get(
 	var err error
 
 	// Check namespace for credentials
-	if secret, err = c.getCredentialsSecret(
+	if secret, err = k.getCredentialsSecret(
 		ctx,
 		namespace,
 		labels.Set(map[string]string{
@@ -175,7 +175,7 @@ func (c *credentialsDB) get(
 
 	if secret == nil {
 		// Check namespace for credentials template
-		if secret, err = c.getCredentialsTemplateSecret(
+		if secret, err = k.getCredentialsTemplateSecret(
 			ctx,
 			namespace,
 			labels.Set(map[string]string{
@@ -189,9 +189,9 @@ func (c *credentialsDB) get(
 
 	if secret == nil {
 		// Check Argo CD's namespace for credentials
-		if secret, err = c.getCredentialsSecret(
+		if secret, err = k.getCredentialsSecret(
 			ctx,
-			c.argoCDNamespace,
+			k.argoCDNamespace,
 			labels.Set(map[string]string{
 				utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepository,
 			}).AsSelector(),
@@ -205,9 +205,9 @@ func (c *credentialsDB) get(
 
 	if secret == nil {
 		// Check Argo CD's namespace for credentials template
-		if secret, err = c.getCredentialsTemplateSecret(
+		if secret, err = k.getCredentialsTemplateSecret(
 			ctx,
-			c.argoCDNamespace,
+			k.argoCDNamespace,
 			labels.Set(map[string]string{
 				utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
 			}).AsSelector(),
@@ -223,14 +223,14 @@ func (c *credentialsDB) get(
 	return creds, true, nil
 }
 
-func (c *credentialsDB) getCredentialsSecret(
+func (k *kubernetesCredentialsDB) getCredentialsSecret(
 	ctx context.Context,
 	namespace string,
 	labelSelector labels.Selector,
 	fieldSelector fields.Selector,
 ) (*corev1.Secret, error) {
 	secrets := corev1.SecretList{}
-	if err := c.client.List(
+	if err := k.client.List(
 		ctx,
 		&secrets,
 		&client.ListOptions{
@@ -249,14 +249,14 @@ func (c *credentialsDB) getCredentialsSecret(
 	return &(secrets.Items[0]), nil
 }
 
-func (c *credentialsDB) getCredentialsTemplateSecret(
+func (k *kubernetesCredentialsDB) getCredentialsTemplateSecret(
 	ctx context.Context,
 	namespace string,
 	labelSelector labels.Selector,
 	repoURL string,
 ) (*corev1.Secret, error) {
 	secrets := corev1.SecretList{}
-	if err := c.client.List(
+	if err := k.client.List(
 		ctx,
 		&secrets,
 		&client.ListOptions{

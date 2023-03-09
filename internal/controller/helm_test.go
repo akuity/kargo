@@ -173,7 +173,7 @@ func TestApplyHelm(t *testing.T) {
 func TestGetLatestCharts(t *testing.T) {
 	testCases := []struct {
 		name                    string
-		credentialsDB           credentialsDBIface
+		credentialsDB           credentialsDB
 		getLatestChartVersionFn func(
 			context.Context,
 			string,

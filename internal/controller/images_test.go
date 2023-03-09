@@ -15,7 +15,7 @@ import (
 func TestGetLatestImages(t *testing.T) {
 	testCases := []struct {
 		name           string
-		credentialsDB  credentialsDBIface
+		credentialsDB  credentialsDB
 		getLatestTagFn func(
 			context.Context,
 			string,

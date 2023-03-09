@@ -142,7 +142,7 @@ func TestIndex(t *testing.T) {
 			expectedResult: []string{"git:fake-url"},
 		},
 	}
-	credsDB := &credentialsDB{
+	credsDB := &kubernetesCredentialsDB{
 		argoCDNamespace: "argo-cd",
 	}
 	for _, testCase := range testCases {
@@ -186,7 +186,7 @@ func TestGetCredentialsSecret(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			credsDB := &credentialsDB{
+			credsDB := &kubernetesCredentialsDB{
 				client: testCase.clientBuilder.Build(),
 			}
 			testCase.assertions(
@@ -254,7 +254,7 @@ func TestGetCredentialsTemplateSecret(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			credsDB := &credentialsDB{
+			credsDB := &kubernetesCredentialsDB{
 				client: testCase.clientBuilder.Build(),
 			}
 			testCase.assertions(
@@ -269,8 +269,8 @@ func TestGetCredentialsTemplateSecret(t *testing.T) {
 	}
 }
 
-// fakeCredentialsDB is a mock implementation of the credentialsDBIface
-// interface that is used to facilitate unit testing.
+// fakeCredentialsDB is a mock implementation of the credentialsDB interface
+// that is used to facilitate unit testing.
 type fakeCredentialsDB struct {
 	getFn func(
 		ctx context.Context,

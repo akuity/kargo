@@ -15,7 +15,7 @@ import (
 func TestApplyGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
 		name             string
-		credentialsDB    credentialsDBIface
+		credentialsDB    credentialsDB
 		gitApplyUpdateFn func(
 			string,
 			string,
@@ -136,7 +136,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 func TestGetLatestCommits(t *testing.T) {
 	testCases := []struct {
 		name                string
-		credentialsDB       credentialsDBIface
+		credentialsDB       credentialsDB
 		getLatestCommitIDFn func(
 			string,
 			string,
