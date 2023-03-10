@@ -73,10 +73,6 @@ type EnvironmentSpec struct {
 }
 
 // Subscriptions describes an Environment's sources of material.
-//
-// TODO: Kubebuilder doesn't have an annotation yet for "oneof" semantics, so
-// we probably need to use a validating webhook to ensure that one and only one
-// of Repos or UpstreamEnvs is non-empty.
 type Subscriptions struct {
 	// Repos describes various sorts of repositories an Environment uses as
 	// sources of material. This field is mutually exclusive with the UpstreamEnvs
@@ -89,9 +85,6 @@ type Subscriptions struct {
 
 // RepoSubscriptions describes various sorts of repositories an Environment uses
 // as sources of material.
-//
-// TODO: Use a validating webhook to ensure at least one of Git, Images, or
-// Charts is non-empty.
 type RepoSubscriptions struct {
 	// Git describes subscriptions to Git repositories.
 	Git []GitSubscription `json:"git,omitempty"`
@@ -142,9 +135,6 @@ type ImageSubscription struct {
 	// can lead to the unanticipated rollout of breaking changes. Refer to Image
 	// Updater documentation for more details.
 	//
-	// TODO: Use Masterminds/semver package within a validating webhook to try and
-	// parse SemverConstraint.
-	//
 	//+kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty"`
 	// AllowTags is a regular expression that can optionally be used to limit the
@@ -167,9 +157,6 @@ type ImageSubscription struct {
 	// ImageRepositorySubscription will run on a Kubernetes node with a different
 	// OS/architecture than the Kargo controller. At present this is uncommon, but
 	// not unheard of.
-	//
-	// TODO: Use image.ParsePlatform from Argo CD Image Updater within a
-	// validating webhook to try and parse Platform.
 	//
 	//+kubebuilder:validation:Optional
 	Platform string `json:"platform,omitempty"`
@@ -194,9 +181,6 @@ type ChartSubscription struct {
 	// used. Care should be taken with leaving this field unspecified, as it can
 	// lead to the unanticipated rollout of breaking changes.
 	//
-	// TODO: Use Masterminds/semver package within a validating webhook to try and
-	// parse SemverConstraint.
-	//
 	//+kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty"`
 }
@@ -213,8 +197,6 @@ type EnvironmentSubscription struct {
 	// the namespace of the upstream repository will be defaulted to that of this
 	// Environment.
 	//
-	// TODO: Use a defaulting webhook to set this if it's left unspecified.
-	//
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Namespace string `json:"namespace,omitempty"`
@@ -222,9 +204,6 @@ type EnvironmentSubscription struct {
 
 // PromotionMechanisms describes how to incorporate newly observed materials
 // into an Environment.
-//
-// TODO: Use a validating webhook to confirm that at least one of GitRepoUpdates
-// or ArgoCDAppUpdates is non-empty.
 type PromotionMechanisms struct {
 	// GitRepoUpdates describes updates that should be applied to Git repositories
 	// to incorporate newly observed materials into the Environment. This field is
@@ -241,10 +220,6 @@ type PromotionMechanisms struct {
 // GitRepoUpdate describes updates that should be applied to a Git repository
 // (using various configuration management tools) to incorporate newly observed
 // materials into an Environment.
-//
-// TODO: Kubebuilder doesn't have an annotation yet for "oneof" semantics, so we
-// probably need to use a validating webhook to ensure that one and only one of
-// Bookkeeper, Kustomize, or Helm is defined.
 type GitRepoUpdate struct {
 	// RepoURL is the URL of the repository to update. This is a required field.
 	//
@@ -303,9 +278,6 @@ type KustomizeImageUpdate struct {
 
 // HelmPromotionMechanism describes how to use Helm to incorporate newly
 // observed materials into an Environment.
-//
-// TODO: Use a validating webhook to confirm that at least one of Images or
-// Charts is non-empty.
 type HelmPromotionMechanism struct {
 	// Images describes how specific image versions can be incorporated into Helm
 	// values files.
@@ -376,8 +348,6 @@ type ArgoCDAppUpdate struct {
 	// be updated. If left unspecified, the namespace of this Application resource
 	// is defaulted to that of the Environment.
 	//
-	// TODO: Use a defaulting webhook to set this if it's left unspecified.
-	//
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	AppNamespace string `json:"appNamespace,omitempty"`
@@ -424,7 +394,9 @@ type ArgoCDSourceUpdate struct {
 type ArgoCDKustomize struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Kustomize parameters.
-	Images []string `json:"images,omitempty"`
+	//
+	//+kubebuilder:validation:MinItems=1
+	Images []string `json:"images"`
 }
 
 // ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
@@ -432,7 +404,9 @@ type ArgoCDKustomize struct {
 type ArgoCDHelm struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Helm parameters.
-	Images []ArgoCDHelmImageUpdate `json:"images,omitempty"`
+	//
+	//+kubebuilder:validation:MinItems=1
+	Images []ArgoCDHelmImageUpdate `json:"images"`
 }
 
 // ArgoCDHelmImageUpdate describes how a specific image version can be
@@ -476,8 +450,6 @@ type ArgoCDAppCheck struct {
 	// AppNamespace specifies the namespace of the Argo CD Application resource.
 	// If left unspecified, the namespace of this Application resource is
 	// defaulted to be the same as that of the Environment.
-	//
-	// TODO: Use a defaulting webhook to set this if it's left unspecified.
 	//
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
