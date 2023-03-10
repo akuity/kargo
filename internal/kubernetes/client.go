@@ -11,8 +11,8 @@ import (
 
 // Client returns an implementation of kubernetes.Interface.
 func Client() (kubernetes.Interface, error) {
-	masterURL := os.GetEnvVar("KUBE_MASTER", "")
-	kubeConfigPath := os.GetEnvVar("KUBE_CONFIG", "")
+	masterURL := os.GetEnv("KUBE_MASTER", "")
+	kubeConfigPath := os.GetEnv("KUBE_CONFIG", "")
 
 	var cfg *rest.Config
 	var err error
