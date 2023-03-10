@@ -15,8 +15,10 @@ import (
 )
 
 func TestNewEnvironmentReconciler(t *testing.T) {
-	testConfig := config.Config{
-		LogLevel: log.DebugLevel,
+	testConfig := config.ControllerConfig{
+		BaseConfig: config.BaseConfig{
+			LogLevel: log.DebugLevel,
+		},
 	}
 	e, err := newEnvironmentReconciler(
 		context.Background(),

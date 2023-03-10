@@ -11,6 +11,7 @@ import (
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/controller"
 	versionpkg "github.com/akuityio/kargo/internal/version"
 )
@@ -30,11 +31,7 @@ func newControllerCommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo Controller")
 
-			config, err := kargoConfig()
-			if err != nil {
-				return errors.Wrap(err, "new kargo config")
-			}
-
+			config := config.NewControllerConfig()
 			mgrCfg, err := ctrl.GetConfig()
 			if err != nil {
 				return errors.Wrap(err, "get controller config")

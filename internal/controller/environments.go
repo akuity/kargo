@@ -38,7 +38,7 @@ const (
 
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
-	config            config.Config
+	config            config.ControllerConfig
 	client            client.Client
 	credentialsDB     credentialsDB
 	bookkeeperService bookkeeper.Service
@@ -168,7 +168,7 @@ type environmentReconciler struct {
 // Environment resources and registers it with the provided Manager.
 func SetupEnvironmentReconcilerWithManager(
 	ctx context.Context,
-	config config.Config,
+	config config.ControllerConfig,
 	mgr manager.Manager,
 	bookkeeperService bookkeeper.Service,
 ) error {
@@ -220,7 +220,7 @@ func SetupEnvironmentReconcilerWithManager(
 
 func newEnvironmentReconciler(
 	ctx context.Context,
-	config config.Config,
+	config config.ControllerConfig,
 	mgr manager.Manager,
 	bookkeeperService bookkeeper.Service,
 ) (*environmentReconciler, error) {
