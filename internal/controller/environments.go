@@ -40,7 +40,7 @@ const (
 
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
-	config            config.Config
+	config            config.ControllerConfig
 	client            client.Client
 	kubeClient        kubernetes.Interface
 	argoDB            db.ArgoDB
@@ -179,7 +179,7 @@ type environmentReconciler struct {
 // Environment resources and registers it with the provided Manager.
 func SetupEnvironmentReconcilerWithManager(
 	ctx context.Context,
-	config config.Config,
+	config config.ControllerConfig,
 	mgr manager.Manager,
 	kubeClient kubernetes.Interface,
 	argoDB db.ArgoDB,
@@ -230,7 +230,7 @@ func SetupEnvironmentReconcilerWithManager(
 }
 
 func newEnvironmentReconciler(
-	config config.Config,
+	config config.ControllerConfig,
 	client client.Client,
 	kubeClient kubernetes.Interface,
 	argoDB db.ArgoDB,
