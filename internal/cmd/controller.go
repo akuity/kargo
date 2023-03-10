@@ -2,8 +2,6 @@ package cmd
 
 import (
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/argo-cd/v2/util/db"
-	"github.com/argoproj/argo-cd/v2/util/settings"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -15,7 +13,6 @@ import (
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/controller"
-	"github.com/akuityio/kargo/internal/kubernetes"
 	versionpkg "github.com/akuityio/kargo/internal/version"
 )
 
@@ -61,17 +58,6 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "create manager")
 			}
 
-			kubeClient, err := kubernetes.Client()
-			if err != nil {
-				return errors.Wrap(err, "new kubernetes client")
-			}
-			argoDB := db.NewDB(
-				"",
-				// TODO: Do not hard-code the namespace
-				settings.NewSettingsManager(ctx, kubeClient, "argo-cd"),
-				kubeClient,
-			)
-
 			if err := (&api.Environment{}).SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "create webhook")
 			}
@@ -80,8 +66,6 @@ func newControllerCommand() *cobra.Command {
 				ctx,
 				config,
 				mgr,
-				kubeClient,
-				argoDB,
 				bookkeeper.NewService(
 					&bookkeeper.ServiceOptions{
 						LogLevel: bookkeeper.LogLevel(config.LogLevel),

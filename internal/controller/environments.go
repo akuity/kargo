@@ -6,14 +6,12 @@ import (
 	"time"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/argo-cd/v2/util/db"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -42,8 +40,7 @@ const (
 type environmentReconciler struct {
 	config            config.ControllerConfig
 	client            client.Client
-	kubeClient        kubernetes.Interface
-	argoDB            db.ArgoDB
+	credentialsDB     credentialsDB
 	bookkeeperService bookkeeper.Service
 	logger            *log.Logger
 
@@ -57,12 +54,6 @@ type environmentReconciler struct {
 		name string,
 	) (*argocd.Application, error)
 
-	gitRepoCredentialsFn func(
-		ctx context.Context,
-		argoDB libArgoCD.DB,
-		repoURL string,
-	) (*git.RepoCredentials, error)
-
 	// Health checks:
 	checkHealthFn func(
 		context.Context,
@@ -72,8 +63,9 @@ type environmentReconciler struct {
 
 	// Syncing:
 	getLatestStateFromReposFn func(
-		context.Context,
-		api.RepoSubscriptions,
+		ctx context.Context,
+		namespace string,
+		subs api.RepoSubscriptions,
 	) (*api.EnvironmentState, error)
 
 	getAvailableStatesFromUpstreamEnvsFn func(
@@ -82,36 +74,32 @@ type environmentReconciler struct {
 	) ([]api.EnvironmentState, error)
 
 	getLatestCommitsFn func(
-		context.Context,
-		[]api.GitSubscription,
+		ctx context.Context,
+		namespace string,
+		subs []api.GitSubscription,
 	) ([]api.GitCommit, error)
 
 	getLatestImagesFn func(
-		context.Context,
-		[]api.ImageSubscription,
+		ctx context.Context,
+		namespace string,
+		subs []api.ImageSubscription,
 	) ([]api.Image, error)
 
 	getLatestTagFn func(
 		ctx context.Context,
-		kubeClient kubernetes.Interface,
 		repoURL string,
 		updateStrategy images.ImageUpdateStrategy,
 		semverConstraint string,
 		allowTags string,
 		ignoreTags []string,
 		platform string,
-		pullSecret string,
+		creds *images.Credentials,
 	) (string, error)
 
-	chartRegistryCredentialsFn func(
-		ctx context.Context,
-		argoDB libArgoCD.DB,
-		registryURL string,
-	) (*helm.RegistryCredentials, error)
-
 	getLatestChartsFn func(
-		context.Context,
-		[]api.ChartSubscription,
+		ctx context.Context,
+		namespace string,
+		subs []api.ChartSubscription,
 	) ([]api.Chart, error)
 
 	getLatestChartVersionFn func(
@@ -119,27 +107,28 @@ type environmentReconciler struct {
 		registryURL string,
 		chart string,
 		semverConstraint string,
-		creds *helm.RegistryCredentials,
+		creds *helm.Credentials,
 	) (string, error)
 
 	getLatestCommitIDFn func(
 		repoURL string,
 		branch string,
-		creds *git.RepoCredentials,
+		creds *git.Credentials,
 	) (string, error)
 
 	// Promotions (general):
 	promoteFn func(
-		context.Context,
-		api.PromotionMechanisms,
-		api.EnvironmentState,
+		ctx context.Context,
+		namespace string,
+		promoMechanisms api.PromotionMechanisms,
+		newState api.EnvironmentState,
 	) (api.EnvironmentState, error)
 
 	// Promotions via Git:
 	gitApplyUpdateFn func(
 		repoURL string,
 		branch string,
-		creds *git.RepoCredentials,
+		creds *git.Credentials,
 		updateFn func(homeDir, workingDir string) (string, error),
 	) (string, error)
 
@@ -181,8 +170,6 @@ func SetupEnvironmentReconcilerWithManager(
 	ctx context.Context,
 	config config.ControllerConfig,
 	mgr manager.Manager,
-	kubeClient kubernetes.Interface,
-	argoDB db.ArgoDB,
 	bookkeeperService bookkeeper.Service,
 ) error {
 	logger := log.New()
@@ -209,13 +196,15 @@ func SetupEnvironmentReconcilerWithManager(
 		)
 	}
 
-	e := newEnvironmentReconciler(
+	e, err := newEnvironmentReconciler(
+		ctx,
 		config,
-		mgr.GetClient(),
-		kubeClient,
-		argoDB,
+		mgr,
 		bookkeeperService,
 	)
+	if err != nil {
+		return errors.Wrap(err, "error initializing Environment reconciler")
+	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Environment{}).WithEventFilter(predicate.Funcs{
@@ -230,28 +219,38 @@ func SetupEnvironmentReconcilerWithManager(
 }
 
 func newEnvironmentReconciler(
+	ctx context.Context,
 	config config.ControllerConfig,
-	client client.Client,
-	kubeClient kubernetes.Interface,
-	argoDB db.ArgoDB,
+	mgr manager.Manager,
 	bookkeeperService bookkeeper.Service,
-) *environmentReconciler {
+) (*environmentReconciler, error) {
 	logger := log.New()
 	logger.SetLevel(config.LogLevel)
+
+	var credentialsDB credentialsDB
+	if mgr != nil { // This can be nil during tests
+		// TODO: Do not hardcode the Argo CD namespace
+		var err error
+		if credentialsDB, err =
+			newKubernetesCredentialsDB(ctx, "argo-cd", mgr); err != nil {
+			return nil, errors.Wrap(err, "error initializing credentials DB")
+		}
+	}
+
 	e := &environmentReconciler{
 		config:            config,
-		client:            client,
-		kubeClient:        kubeClient,
-		argoDB:            argoDB,
+		credentialsDB:     credentialsDB,
 		bookkeeperService: bookkeeperService,
 		logger:            logger,
+	}
+	if mgr != nil { // This can be nil during tests
+		e.client = mgr.GetClient()
 	}
 
 	// The following default behaviors are overridable for testing purposes:
 
 	// Common:
 	e.getArgoCDAppFn = libArgoCD.GetApplication
-	e.gitRepoCredentialsFn = libArgoCD.GetGitRepoCredentials
 
 	// Health checks:
 	e.checkHealthFn = e.checkHealth
@@ -262,7 +261,6 @@ func newEnvironmentReconciler(
 	e.getLatestCommitsFn = e.getLatestCommits
 	e.getLatestImagesFn = e.getLatestImages
 	e.getLatestTagFn = images.GetLatestTag
-	e.chartRegistryCredentialsFn = libArgoCD.GetChartRegistryCredentials
 	e.getLatestChartsFn = e.getLatestCharts
 	e.getLatestChartVersionFn = helm.GetLatestChartVersion
 	e.getLatestCommitIDFn = git.GetLatestCommitID
@@ -279,11 +277,11 @@ func newEnvironmentReconciler(
 	e.setStringsInYAMLFileFn = yaml.SetStringsInFile
 	// Promotions via Argo CD:
 	e.applyArgoCDSourceUpdateFn = e.applyArgoCDSourceUpdate
-	if client != nil { // This can be nil during testing
-		e.patchFn = client.Patch
+	if mgr != nil { // This can be nil during testing
+		e.patchFn = mgr.GetClient().Patch
 	}
 
-	return e
+	return e, nil
 }
 
 // findEnvsForApp dynamically returns reconciliation requests for all
@@ -380,8 +378,11 @@ func (e *environmentReconciler) sync(
 
 	if env.Spec.Subscriptions.Repos != nil {
 
-		latestState, err :=
-			e.getLatestStateFromReposFn(ctx, *env.Spec.Subscriptions.Repos)
+		latestState, err := e.getLatestStateFromReposFn(
+			ctx,
+			env.Namespace,
+			*env.Spec.Subscriptions.Repos,
+		)
 		if err != nil {
 			status.Error = err.Error()
 			return status
@@ -434,8 +435,12 @@ func (e *environmentReconciler) sync(
 	if _, currentState, ok := status.States.Pop(); !ok ||
 		(nextStateCandidate.ID != currentState.ID &&
 			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
-		nextState, err :=
-			e.promoteFn(ctx, *env.Spec.PromotionMechanisms, nextStateCandidate)
+		nextState, err := e.promoteFn(
+			ctx,
+			env.Namespace,
+			*env.Spec.PromotionMechanisms,
+			nextStateCandidate,
+		)
 		if err != nil {
 			status.Error = err.Error()
 			return status
@@ -457,17 +462,18 @@ func (e *environmentReconciler) sync(
 
 func (e *environmentReconciler) getLatestStateFromRepos(
 	ctx context.Context,
+	namespace string,
 	repoSubs api.RepoSubscriptions,
 ) (*api.EnvironmentState, error) {
-	latestCommits, err := e.getLatestCommitsFn(ctx, repoSubs.Git)
+	latestCommits, err := e.getLatestCommitsFn(ctx, namespace, repoSubs.Git)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing git repo subscriptions")
 	}
-	latestImages, err := e.getLatestImagesFn(ctx, repoSubs.Images)
+	latestImages, err := e.getLatestImagesFn(ctx, namespace, repoSubs.Images)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing image repo subscriptions")
 	}
-	latestCharts, err := e.getLatestChartsFn(ctx, repoSubs.Charts)
+	latestCharts, err := e.getLatestChartsFn(ctx, namespace, repoSubs.Charts)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing chart repo subscriptions")
 	}
@@ -528,19 +534,28 @@ func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 // TODO: This function could use some tests
 func (e *environmentReconciler) promote(
 	ctx context.Context,
+	namespace string,
 	promoMechanisms api.PromotionMechanisms,
 	newState api.EnvironmentState,
 ) (api.EnvironmentState, error) {
 	var err error
 	for _, gitRepoUpdate := range promoMechanisms.GitRepoUpdates {
 		if gitRepoUpdate.Bookkeeper != nil {
-			if newState, err =
-				e.applyBookkeeperUpdate(ctx, newState, gitRepoUpdate); err != nil {
+			if newState, err = e.applyBookkeeperUpdate(
+				ctx,
+				namespace,
+				newState,
+				gitRepoUpdate,
+			); err != nil {
 				return newState, errors.Wrap(err, "error promoting via Git")
 			}
 		} else {
-			if newState, err =
-				e.applyGitRepoUpdate(ctx, newState, gitRepoUpdate); err != nil {
+			if newState, err = e.applyGitRepoUpdate(
+				ctx,
+				namespace,
+				newState,
+				gitRepoUpdate,
+			); err != nil {
 				return newState, errors.Wrap(err, "error promoting via Git")
 			}
 		}

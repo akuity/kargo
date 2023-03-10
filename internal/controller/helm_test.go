@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/helm"
 )
 
@@ -173,36 +172,35 @@ func TestApplyHelm(t *testing.T) {
 
 func TestGetLatestCharts(t *testing.T) {
 	testCases := []struct {
-		name                       string
-		chartRegistryCredentialsFn func(
-			context.Context,
-			libArgoCD.DB,
-			string,
-		) (*helm.RegistryCredentials, error)
+		name                    string
+		credentialsDB           credentialsDB
 		getLatestChartVersionFn func(
 			context.Context,
 			string,
 			string,
 			string,
-			*helm.RegistryCredentials,
+			*helm.Credentials,
 		) (string, error)
 		assertions func([]api.Chart, error)
 	}{
 		{
 			name: "error getting registry credentials",
-			chartRegistryCredentialsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*helm.RegistryCredentials, error) {
-				return nil, errors.New("something went wrong")
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, errors.New("something went wrong")
+				},
 			},
 			assertions: func(_ []api.Chart, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
 					err.Error(),
-					"error getting credentials for chart registry",
+					"error obtaining credentials for chart registry",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -210,19 +208,22 @@ func TestGetLatestCharts(t *testing.T) {
 
 		{
 			name: "error getting latest chart version",
-			chartRegistryCredentialsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*helm.RegistryCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			getLatestChartVersionFn: func(
 				context.Context,
 				string,
 				string,
 				string,
-				*helm.RegistryCredentials,
+				*helm.Credentials,
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
@@ -239,19 +240,22 @@ func TestGetLatestCharts(t *testing.T) {
 
 		{
 			name: "no chart found",
-			chartRegistryCredentialsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*helm.RegistryCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			getLatestChartVersionFn: func(
 				context.Context,
 				string,
 				string,
 				string,
-				*helm.RegistryCredentials,
+				*helm.Credentials,
 			) (string, error) {
 				return "", nil
 			},
@@ -263,19 +267,22 @@ func TestGetLatestCharts(t *testing.T) {
 
 		{
 			name: "success",
-			chartRegistryCredentialsFn: func(
-				context.Context,
-				libArgoCD.DB,
-				string,
-			) (*helm.RegistryCredentials, error) {
-				return nil, nil
+			credentialsDB: &fakeCredentialsDB{
+				getFn: func(
+					context.Context,
+					string,
+					credentialsType,
+					string,
+				) (credentials, bool, error) {
+					return credentials{}, false, nil
+				},
 			},
 			getLatestChartVersionFn: func(
 				context.Context,
 				string,
 				string,
 				string,
-				*helm.RegistryCredentials,
+				*helm.Credentials,
 			) (string, error) {
 				return "1.0.0", nil
 			},
@@ -303,13 +310,17 @@ func TestGetLatestCharts(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:                     log.New(),
-				chartRegistryCredentialsFn: testCase.chartRegistryCredentialsFn,
-				getLatestChartVersionFn:    testCase.getLatestChartVersionFn,
+				logger:                  log.New(),
+				credentialsDB:           testCase.credentialsDB,
+				getLatestChartVersionFn: testCase.getLatestChartVersionFn,
 			}
 			reconciler.logger.SetLevel(log.ErrorLevel)
 			testCase.assertions(
-				reconciler.getLatestCharts(context.Background(), testSubs),
+				reconciler.getLatestCharts(
+					context.Background(),
+					"fake-namespace",
+					testSubs,
+				),
 			)
 		})
 	}

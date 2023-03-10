@@ -19,17 +19,6 @@ import (
 	libExec "github.com/akuityio/kargo/internal/exec"
 )
 
-// RegistryCredentials represents the credentials for connecting to a private
-// Helm chart registry.
-type RegistryCredentials struct {
-	// Username identifies a principal, which combined with the value of the
-	// Password field, can be used for reading from some remote registry.
-	Username string `json:"username,omitempty"`
-	// Password, when combined with the principal identified by the Username
-	// field, can be used for both reading from some remote registry.
-	Password string `json:"password,omitempty"`
-}
-
 // GetLatestChartVersion connects to the Helm chart registry specified by
 // registryURL and retrieves all available versions of the chart found therein.
 // The registry can be either a classic chart registry (using HTTP/S) or an OCI
@@ -44,7 +33,7 @@ func GetLatestChartVersion(
 	registryURL string,
 	chart string,
 	semverConstraint string,
-	creds *RegistryCredentials,
+	creds *Credentials,
 ) (string, error) {
 	var versions []string
 	var err error
@@ -83,7 +72,7 @@ func GetLatestChartVersion(
 func getChartVersionsFromClassicRegistry(
 	registryURL string,
 	chart string,
-	creds *RegistryCredentials,
+	creds *Credentials,
 ) ([]string, error) {
 	indexURL := fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(registryURL, "/"))
 	req, err := http.NewRequest(http.MethodGet, indexURL, nil)
@@ -145,7 +134,7 @@ func getChartVersionsFromOCIRegistry(
 	ctx context.Context,
 	registryURL string,
 	chart string,
-	creds *RegistryCredentials,
+	creds *Credentials,
 ) ([]string, error) {
 	rep := &remote.Repository{
 		Reference: registry.Reference{

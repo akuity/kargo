@@ -7,7 +7,7 @@ import (
 func GetLatestCommitID(
 	repoURL string,
 	branch string,
-	creds *RepoCredentials,
+	creds *Credentials,
 ) (string, error) {
 	repo, err := Clone(repoURL, creds)
 	if err != nil {
@@ -42,7 +42,7 @@ func GetLatestCommitID(
 func ApplyUpdate(
 	repoURL string,
 	branch string,
-	creds *RepoCredentials,
+	creds *Credentials,
 	updateFn func(homeDir, workingDir string) (string, error),
 ) (string, error) {
 	repo, err := Clone(repoURL, creds)

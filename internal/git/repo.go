@@ -78,7 +78,7 @@ type repo struct {
 // NOT suitable for use across multiple goroutines. This function will also
 // perform any setup that is required for successfully authenticating to the
 // remote repository.
-func Clone(url string, repoCreds *RepoCredentials) (Repo, error) {
+func Clone(url string, repoCreds *Credentials) (Repo, error) {
 	homeDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, errors.Wrapf(
@@ -299,7 +299,7 @@ func (r *repo) WorkingDir() string {
 
 // SetupAuth configures the git CLI for authentication using either SSH or the
 // "store" (username/password-based) credential helper.
-func (r *repo) setupAuth(repoCreds RepoCredentials) error {
+func (r *repo) setupAuth(repoCreds Credentials) error {
 	// Configure the git client
 	cmd := r.buildCommand(
 		"git",
