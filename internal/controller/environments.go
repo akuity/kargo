@@ -366,12 +366,10 @@ func (e *environmentReconciler) sync(
 	status.Error = ""
 
 	// Only perform health checks if we have a current state to update
-	var currentState api.EnvironmentState
-	var ok bool
-	if status.States, currentState, ok = status.States.Pop(); ok {
+	if currentState, ok := status.States.Pop(); ok {
 		health := e.checkHealthFn(ctx, currentState, *env.Spec.HealthChecks)
 		currentState.Health = &health
-		status.States = status.States.Push(currentState)
+		status.States.Push(currentState)
 	}
 
 	var autoPromote bool
@@ -393,9 +391,9 @@ func (e *environmentReconciler) sync(
 		// latestState's MATERIALS must differ from what is at the top of the
 		// status.AvailableStates stack.
 		if latestState != nil {
-			if _, topAvailableState, ok := status.AvailableStates.Pop(); !ok ||
+			if topAvailableState, ok := status.AvailableStates.Top(); !ok ||
 				!latestState.SameMaterials(&topAvailableState) {
-				status.AvailableStates = status.AvailableStates.Push(*latestState)
+				status.AvailableStates.Push(*latestState)
 			}
 		}
 
@@ -429,10 +427,10 @@ func (e *environmentReconciler) sync(
 
 	// Note: We're careful not to make any further modifications to the state
 	// stacks until we know a promotion has been successful.
-	_, nextStateCandidate, _ := status.AvailableStates.Pop()
+	nextStateCandidate, _ := status.AvailableStates.Top()
 	// Proceed with promotion if there is no currentState OR the
 	// nextStateCandidate is different and NEWER than the currentState
-	if _, currentState, ok := status.States.Pop(); !ok ||
+	if currentState, ok := status.States.Top(); !ok ||
 		(nextStateCandidate.ID != currentState.ID &&
 			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
 		nextState, err := e.promoteFn(
@@ -445,16 +443,15 @@ func (e *environmentReconciler) sync(
 			status.Error = err.Error()
 			return status
 		}
-		status.States = status.States.Push(nextState)
+		status.States.Push(nextState)
 
 		// Promotion is successful that this point. Replace the top available state
 		// because the promotion process may have updated some commit IDs.
-		var topAvailableState api.EnvironmentState
-		status.AvailableStates, topAvailableState, _ = status.AvailableStates.Pop()
+		topAvailableState, _ := status.AvailableStates.Pop()
 		for i := range topAvailableState.Commits {
 			topAvailableState.Commits[i].ID = nextState.Commits[i].ID
 		}
-		status.AvailableStates = status.AvailableStates.Push(topAvailableState)
+		status.AvailableStates.Push(topAvailableState)
 	}
 
 	return status

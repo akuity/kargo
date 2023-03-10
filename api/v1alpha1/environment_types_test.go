@@ -320,28 +320,28 @@ func TestEnvironmentStateStackEmpty(t *testing.T) {
 func TestEnvironmentStateStackPop(t *testing.T) {
 	testCases := []struct {
 		name          string
-		initialStack  EnvironmentStateStack
+		stack         EnvironmentStateStack
 		expectedStack EnvironmentStateStack
 		expectedState EnvironmentState
 		expectedOK    bool
 	}{
 		{
 			name:          "stack is nil",
-			initialStack:  nil,
+			stack:         nil,
 			expectedStack: nil,
 			expectedState: EnvironmentState{},
 			expectedOK:    false,
 		},
 		{
 			name:          "stack is empty",
-			initialStack:  EnvironmentStateStack{},
+			stack:         EnvironmentStateStack{},
 			expectedStack: EnvironmentStateStack{},
 			expectedState: EnvironmentState{},
 			expectedOK:    false,
 		},
 		{
 			name:          "stack has items",
-			initialStack:  EnvironmentStateStack{{ID: "foo"}, {ID: "bar"}},
+			stack:         EnvironmentStateStack{{ID: "foo"}, {ID: "bar"}},
 			expectedStack: EnvironmentStateStack{{ID: "bar"}},
 			expectedState: EnvironmentState{ID: "foo"},
 			expectedOK:    true,
@@ -349,8 +349,45 @@ func TestEnvironmentStateStackPop(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			stack, state, ok := testCase.initialStack.Pop()
-			require.Equal(t, testCase.expectedStack, stack)
+			state, ok := testCase.stack.Pop()
+			require.Equal(t, testCase.expectedStack, testCase.stack)
+			require.Equal(t, testCase.expectedState, state)
+			require.Equal(t, testCase.expectedOK, ok)
+		})
+	}
+}
+
+func TestEnvironmentStateStackTop(t *testing.T) {
+	testCases := []struct {
+		name          string
+		stack         EnvironmentStateStack
+		expectedState EnvironmentState
+		expectedOK    bool
+	}{
+		{
+			name:          "stack is nil",
+			stack:         nil,
+			expectedState: EnvironmentState{},
+			expectedOK:    false,
+		},
+		{
+			name:          "stack is empty",
+			stack:         EnvironmentStateStack{},
+			expectedState: EnvironmentState{},
+			expectedOK:    false,
+		},
+		{
+			name:          "stack has items",
+			stack:         EnvironmentStateStack{{ID: "foo"}, {ID: "bar"}},
+			expectedState: EnvironmentState{ID: "foo"},
+			expectedOK:    true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			initialLen := len(testCase.stack)
+			state, ok := testCase.stack.Top()
+			require.Len(t, testCase.stack, initialLen)
 			require.Equal(t, testCase.expectedState, state)
 			require.Equal(t, testCase.expectedOK, ok)
 		})
@@ -360,25 +397,25 @@ func TestEnvironmentStateStackPop(t *testing.T) {
 func TestEnvironmentStateStackPush(t *testing.T) {
 	testCases := []struct {
 		name          string
-		initialStack  EnvironmentStateStack
+		stack         EnvironmentStateStack
 		newStates     []EnvironmentState
 		expectedStack EnvironmentStateStack
 	}{
 		{
 			name:          "initial stack is nil",
-			initialStack:  nil,
+			stack:         nil,
 			newStates:     []EnvironmentState{{ID: "foo"}, {ID: "bar"}},
 			expectedStack: EnvironmentStateStack{{ID: "foo"}, {ID: "bar"}},
 		},
 		{
 			name:          "initial stack is not nil",
-			initialStack:  EnvironmentStateStack{{ID: "foo"}},
+			stack:         EnvironmentStateStack{{ID: "foo"}},
 			newStates:     []EnvironmentState{{ID: "bar"}},
 			expectedStack: EnvironmentStateStack{{ID: "bar"}, {ID: "foo"}},
 		},
 		{
 			name: "initial stack is full",
-			initialStack: EnvironmentStateStack{
+			stack: EnvironmentStateStack{
 				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
 			newStates: []EnvironmentState{{ID: "foo"}},
@@ -389,11 +426,8 @@ func TestEnvironmentStateStackPush(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expectedStack,
-				testCase.initialStack.Push(testCase.newStates...),
-			)
+			testCase.stack.Push(testCase.newStates...)
+			require.Equal(t, testCase.expectedStack, testCase.stack)
 		})
 	}
 }
