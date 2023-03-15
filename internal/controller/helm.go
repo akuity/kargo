@@ -12,6 +12,7 @@ import (
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/helm"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 func (e *environmentReconciler) applyHelm(
@@ -74,7 +75,7 @@ func (e *environmentReconciler) getLatestCharts(
 	charts := make([]api.Chart, len(subs))
 
 	for i, sub := range subs {
-		imgLogger := e.logger.WithFields(log.Fields{
+		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 			"registry": sub.RegistryURL,
 			"chart":    sub.Name,
 		})
@@ -88,7 +89,6 @@ func (e *environmentReconciler) getLatestCharts(
 				sub.RegistryURL,
 			)
 		}
-		imgLogger.Debug("acquired credentials for chart registry/repository")
 
 		var helmCreds *helm.Credentials
 		if ok {
@@ -96,6 +96,9 @@ func (e *environmentReconciler) getLatestCharts(
 				Username: creds.Username,
 				Password: creds.Password,
 			}
+			logger.Debug("obtained credentials for chart repo")
+		} else {
+			logger.Debug("found no credentials for chart repo")
 		}
 
 		vers, err := e.getLatestChartVersionFn(
@@ -115,10 +118,10 @@ func (e *environmentReconciler) getLatestCharts(
 		}
 
 		if vers != "" {
-			imgLogger.WithField("version", vers).
+			logger.WithField("version", vers).
 				Debug("found latest suitable chart version")
 		} else {
-			imgLogger.Error("found no suitable chart version")
+			logger.Error("found no suitable chart version")
 			return nil, errors.Errorf(
 				"found no suitable version of chart %q in registry %q",
 				sub.Name,

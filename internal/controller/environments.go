@@ -29,6 +29,7 @@ import (
 	"github.com/akuityio/kargo/internal/helm"
 	"github.com/akuityio/kargo/internal/images"
 	"github.com/akuityio/kargo/internal/kustomize"
+	"github.com/akuityio/kargo/internal/logging"
 	"github.com/akuityio/kargo/internal/yaml"
 )
 
@@ -303,6 +304,7 @@ func (e *environmentReconciler) findEnvsForApp(
 		},
 	); err != nil {
 		e.logger.WithFields(log.Fields{
+			"namespace":   app.GetNamespace(),
 			"application": app.GetName(),
 		}).Error("error listing Environments associated with Application")
 		return nil
@@ -328,10 +330,10 @@ func (e *environmentReconciler) Reconcile(
 	result := ctrl.Result{}
 
 	logger := e.logger.WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"name":      req.NamespacedName.Name,
+		"namespace":   req.NamespacedName.Namespace,
+		"environment": req.NamespacedName.Name,
 	})
-
+	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Environment")
 
 	// Find the environment
@@ -344,12 +346,15 @@ func (e *environmentReconciler) Reconcile(
 		// the current reconciliation request was issued.
 		return result, nil
 	}
+	logger.Debug("found Environment")
 
 	env.Status = e.sync(ctx, env)
 	if env.Status.Error != "" {
-		logger.Error(env.Status.Error)
+		logger.Errorf("error syncing Environment: %s", env.Status.Error)
 	}
 	e.updateStatus(ctx, env)
+
+	logger.Debug("done reconciling Environment")
 
 	// TODO: Make RequeueAfter configurable (via API, probably)
 	// TODO: Or consider using a progressive backoff here when there has been an
@@ -365,6 +370,8 @@ func (e *environmentReconciler) sync(
 	status := *statusPtr
 	status.Error = ""
 
+	logger := logging.LoggerFromContext(ctx)
+
 	// Only perform health checks if we have a current state to update
 	var currentState api.EnvironmentState
 	var ok bool
@@ -372,6 +379,9 @@ func (e *environmentReconciler) sync(
 		health := e.checkHealthFn(ctx, currentState, *env.Spec.HealthChecks)
 		currentState.Health = &health
 		status.States = status.States.Push(currentState)
+		logger.WithField("health", health.Status).Debug("completed health checks")
+	} else {
+		logger.Debug("Environment has no current state; skipping health checks")
 	}
 
 	var autoPromote bool
@@ -387,16 +397,23 @@ func (e *environmentReconciler) sync(
 			status.Error = err.Error()
 			return status
 		}
+
 		// If not nil, latestState from upstream repos will always have a shiny new
 		// ID. To determine if this is actually new and needs to be pushed onto the
 		// status.AvailableStates stack, either that stack needs to be empty or
 		// latestState's MATERIALS must differ from what is at the top of the
 		// status.AvailableStates stack.
 		if latestState != nil {
+			logger.Debug("got latest state from upstream repositories")
 			if _, topAvailableState, ok := status.AvailableStates.Pop(); !ok ||
 				!latestState.SameMaterials(&topAvailableState) {
 				status.AvailableStates = status.AvailableStates.Push(*latestState)
+				logger.Debug("latest state is new; added to available states")
+			} else {
+				logger.Debug("latest state is not new")
 			}
+		} else {
+			logger.Debug("found no state from upstream repositories")
 		}
 
 		autoPromote = true
@@ -415,6 +432,11 @@ func (e *environmentReconciler) sync(
 			return status
 		}
 		status.AvailableStates = latestStatesFromEnvs
+		if len(latestStatesFromEnvs) == 0 {
+			logger.Debug("got no available states from upstream Environments")
+		} else {
+			logger.Debug("got available states from upstream Environments")
+		}
 
 		// If we're subscribed to more than one upstream environment, then it's
 		// ambiguous which of the status.AvailableStates we should use, so
@@ -424,6 +446,7 @@ func (e *environmentReconciler) sync(
 	}
 
 	if !autoPromote || status.AvailableStates.Empty() {
+		logger.Debug("auto-promotion cannot proceed")
 		return status // Nothing further to do
 	}
 
@@ -435,6 +458,9 @@ func (e *environmentReconciler) sync(
 	if _, currentState, ok := status.States.Pop(); !ok ||
 		(nextStateCandidate.ID != currentState.ID &&
 			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
+		logger = logger.WithField("state", nextStateCandidate.ID)
+		logger.Debug("auto-promotion will proceed")
+		ctx = logging.ContextWithLogger(ctx, logger)
 		nextState, err := e.promoteFn(
 			ctx,
 			env.Namespace,
@@ -446,8 +472,9 @@ func (e *environmentReconciler) sync(
 			return status
 		}
 		status.States = status.States.Push(nextState)
+		logger.Debug("promoted Environment to new state")
 
-		// Promotion is successful that this point. Replace the top available state
+		// Promotion is successful at this point. Replace the top available state
 		// because the promotion process may have updated some commit IDs.
 		var topAvailableState api.EnvironmentState
 		status.AvailableStates, topAvailableState, _ = status.AvailableStates.Pop()
@@ -455,6 +482,8 @@ func (e *environmentReconciler) sync(
 			topAvailableState.Commits[i].ID = nextState.Commits[i].ID
 		}
 		status.AvailableStates = status.AvailableStates.Push(topAvailableState)
+	} else {
+		logger.Debug("found nothing to promote")
 	}
 
 	return status
@@ -465,18 +494,32 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 	namespace string,
 	repoSubs api.RepoSubscriptions,
 ) (*api.EnvironmentState, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	latestCommits, err := e.getLatestCommitsFn(ctx, namespace, repoSubs.Git)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing git repo subscriptions")
 	}
+	if len(repoSubs.Git) > 0 {
+		logger.Debug("synced git repo subscriptions")
+	}
+
 	latestImages, err := e.getLatestImagesFn(ctx, namespace, repoSubs.Images)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing image repo subscriptions")
 	}
+	if len(repoSubs.Images) > 0 {
+		logger.Debug("synced image repo subscriptions")
+	}
+
 	latestCharts, err := e.getLatestChartsFn(ctx, namespace, repoSubs.Charts)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing chart repo subscriptions")
 	}
+	if len(repoSubs.Charts) > 0 {
+		logger.Debug("synced chart repo subscriptions")
+	}
+
 	now := metav1.Now()
 	return &api.EnvironmentState{
 		ID:        uuid.NewV4().String(),
@@ -538,6 +581,9 @@ func (e *environmentReconciler) promote(
 	promoMechanisms api.PromotionMechanisms,
 	newState api.EnvironmentState,
 ) (api.EnvironmentState, error) {
+	logger := logging.LoggerFromContext(ctx)
+	logger.WithField("state", newState.ID)
+	logger.Debug("executing promotion to new state")
 	var err error
 	for _, gitRepoUpdate := range promoMechanisms.GitRepoUpdates {
 		if gitRepoUpdate.Bookkeeper != nil {
@@ -560,6 +606,9 @@ func (e *environmentReconciler) promote(
 			}
 		}
 	}
+	if len(promoMechanisms.GitRepoUpdates) > 0 {
+		logger.Debug("completed git-based promotion steps")
+	}
 
 	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
 		if err =
@@ -567,13 +616,16 @@ func (e *environmentReconciler) promote(
 			return newState, errors.Wrap(err, "error promoting via Argo CD")
 		}
 	}
+	if len(promoMechanisms.ArgoCDAppUpdates) > 0 {
+		logger.Debug("completed Argo CD-based promotion steps")
+	}
 
 	newState.Health = &api.Health{
 		Status:       api.HealthStateUnknown,
 		StatusReason: "Health has not yet been assessed",
 	}
 
-	e.logger.Debug("completed promotion")
+	logger.Debug("completed promotion")
 
 	return newState, nil
 }
@@ -588,9 +640,9 @@ func (e *environmentReconciler) getEnv(
 	env := api.Environment{}
 	if err := e.client.Get(ctx, namespacedName, &env); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
-			e.logger.WithFields(log.Fields{
-				"namespace": namespacedName.Namespace,
-				"name":      namespacedName.Name,
+			logging.LoggerFromContext(ctx).WithFields(log.Fields{
+				"namespace":   namespacedName.Namespace,
+				"environment": namespacedName.Name,
 			}).Warn("Environment not found")
 			return nil, nil
 		}
@@ -610,9 +662,9 @@ func (e *environmentReconciler) updateStatus(
 	env *api.Environment,
 ) {
 	if err := e.client.Status().Update(ctx, env); err != nil {
-		e.logger.WithFields(log.Fields{
-			"namespace": env.Namespace,
-			"name":      env.Name,
+		logging.LoggerFromContext(ctx).WithFields(log.Fields{
+			"namespace":   env.Namespace,
+			"environment": env.Name,
 		}).Errorf("error updating Environment status: %s", err)
 	}
 }

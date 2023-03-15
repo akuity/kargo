@@ -11,6 +11,7 @@ import (
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 func (e *environmentReconciler) checkHealth(
@@ -179,7 +180,8 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 	if err = e.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}
-	e.logger.WithFields(log.Fields{
+
+	logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"app": app.Name,
 	}).Debug("patched Argo CD Application")
 
