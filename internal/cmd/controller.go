@@ -1,18 +1,21 @@
 package cmd
 
 import (
+	"context"
+
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/controller"
+	"github.com/akuityio/kargo/internal/logging"
 	versionpkg "github.com/akuityio/kargo/internal/version"
 )
 
@@ -23,7 +26,6 @@ func newControllerCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
 
 			version := versionpkg.GetVersion()
 			log.WithFields(log.Fields{
@@ -32,13 +34,20 @@ func newControllerCommand() *cobra.Command {
 			}).Info("Starting Kargo Controller")
 
 			config := config.NewControllerConfig()
+			logger := log.New()
+			logger.SetLevel(config.LogLevel)
+			ctx := logging.ContextWithLogger(
+				ctrl.SetupSignalHandler(),
+				logger.WithFields(nil),
+			)
+
 			mgrCfg, err := ctrl.GetConfig()
 			if err != nil {
 				return errors.Wrap(err, "get controller config")
 			}
 
 			scheme := runtime.NewScheme()
-			if err = clientgoscheme.AddToScheme(scheme); err != nil {
+			if err = corev1.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "add kubernetes api to scheme")
 			}
 			if err = argocd.AddToScheme(scheme); err != nil {
@@ -52,6 +61,12 @@ func newControllerCommand() *cobra.Command {
 				ctrl.Options{
 					Scheme: scheme,
 					Port:   9443,
+					// This has to be set or every reconciler.Reconciler(...) call
+					// receives a background context, which means no access to out
+					// context-bound logger.
+					BaseContext: func() context.Context {
+						return ctx
+					},
 				},
 			)
 			if err != nil {
@@ -64,7 +79,6 @@ func newControllerCommand() *cobra.Command {
 
 			if err := controller.SetupEnvironmentReconcilerWithManager(
 				ctx,
-				config,
 				mgr,
 				bookkeeper.NewService(
 					&bookkeeper.ServiceOptions{
@@ -82,7 +96,7 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "setup promotion reconciler")
 			}
 
-			if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+			if err := mgr.Start(ctx); err != nil {
 				return errors.Wrap(err, "start controller")
 			}
 			return nil

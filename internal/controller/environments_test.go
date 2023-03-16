@@ -5,31 +5,20 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/config"
 )
 
 func TestNewEnvironmentReconciler(t *testing.T) {
-	testConfig := config.ControllerConfig{
-		BaseConfig: config.BaseConfig{
-			LogLevel: log.DebugLevel,
-		},
-	}
 	e, err := newEnvironmentReconciler(
 		context.Background(),
-		testConfig,
 		nil, // TODO: Don't know an easy way to mock a controller manager yet
 		bookkeeper.NewService(nil),
 	)
 	require.NoError(t, err)
-	require.Equal(t, testConfig, e.config)
-	require.NotNil(t, e.logger)
-	require.Equal(t, testConfig.LogLevel, e.logger.Level)
 	// Assert that all overridable behaviors were initialized to a default:
 
 	// Common:
@@ -389,13 +378,11 @@ func TestSync(t *testing.T) {
 			Status: testCase.initialStatus,
 		}
 		reconciler := &environmentReconciler{
-			logger:                               log.New(),
 			checkHealthFn:                        testCase.checkHealthFn,
 			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
 			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn, // nolint: lll
 			promoteFn:                            testCase.promoteFn,
 		}
-		reconciler.logger.SetLevel(log.ErrorLevel)
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				testCase.initialStatus,
@@ -579,7 +566,6 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		testReconciler := &environmentReconciler{
-			logger:             log.New(),
 			getLatestCommitsFn: testCase.getLatestCommitsFn,
 			getLatestImagesFn:  testCase.getLatestImagesFn,
 			getLatestChartsFn:  testCase.getLatestChartsFn,

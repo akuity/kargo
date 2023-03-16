@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
@@ -107,11 +106,9 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:           log.New(),
 				credentialsDB:    testCase.credentialsDB,
 				gitApplyUpdateFn: testCase.gitApplyUpdateFn,
 			}
-			reconciler.logger.SetLevel(log.ErrorLevel)
 			newState := api.EnvironmentState{
 				Commits: []api.GitCommit{
 					{
@@ -235,11 +232,9 @@ func TestGetLatestCommits(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reconciler := environmentReconciler{
-				logger:              log.New(),
 				credentialsDB:       testCase.credentialsDB,
 				getLatestCommitIDFn: testCase.getLatestCommitIDFn,
 			}
-			reconciler.logger.SetLevel(log.ErrorLevel)
 			testCase.assertions(
 				reconciler.getLatestCommits(
 					context.Background(),

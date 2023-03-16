@@ -24,7 +24,6 @@ import (
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
-	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/git"
 	"github.com/akuityio/kargo/internal/helm"
 	"github.com/akuityio/kargo/internal/images"
@@ -39,11 +38,9 @@ const (
 
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
-	config            config.ControllerConfig
 	client            client.Client
 	credentialsDB     credentialsDB
 	bookkeeperService bookkeeper.Service
-	logger            *log.Logger
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -169,13 +166,9 @@ type environmentReconciler struct {
 // Environment resources and registers it with the provided Manager.
 func SetupEnvironmentReconcilerWithManager(
 	ctx context.Context,
-	config config.ControllerConfig,
 	mgr manager.Manager,
 	bookkeeperService bookkeeper.Service,
 ) error {
-	logger := log.New()
-	logger.SetLevel(config.LogLevel)
-
 	// Index Environments by Argo CD Applications
 	if err := mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -199,7 +192,6 @@ func SetupEnvironmentReconcilerWithManager(
 
 	e, err := newEnvironmentReconciler(
 		ctx,
-		config,
 		mgr,
 		bookkeeperService,
 	)
@@ -215,19 +207,19 @@ func SetupEnvironmentReconcilerWithManager(
 		},
 	}).Watches(
 		&source.Kind{Type: &argocd.Application{}},
-		handler.EnqueueRequestsFromMapFunc(e.findEnvsForApp),
+		handler.EnqueueRequestsFromMapFunc(
+			func(obj client.Object) []reconcile.Request {
+				return e.findEnvsForApp(ctx, obj)
+			},
+		),
 	).Complete(e)
 }
 
 func newEnvironmentReconciler(
 	ctx context.Context,
-	config config.ControllerConfig,
 	mgr manager.Manager,
 	bookkeeperService bookkeeper.Service,
 ) (*environmentReconciler, error) {
-	logger := log.New()
-	logger.SetLevel(config.LogLevel)
-
 	var credentialsDB credentialsDB
 	if mgr != nil { // This can be nil during tests
 		// TODO: Do not hardcode the Argo CD namespace
@@ -239,10 +231,8 @@ func newEnvironmentReconciler(
 	}
 
 	e := &environmentReconciler{
-		config:            config,
 		credentialsDB:     credentialsDB,
 		bookkeeperService: bookkeeperService,
-		logger:            logger,
 	}
 	if mgr != nil { // This can be nil during tests
 		e.client = mgr.GetClient()
@@ -290,11 +280,12 @@ func newEnvironmentReconciler(
 // propagate reconciliation requests to Environments whose state should be
 // affected by changes to related Application resources.
 func (e *environmentReconciler) findEnvsForApp(
+	ctx context.Context,
 	app client.Object,
 ) []reconcile.Request {
 	envs := &api.EnvironmentList{}
 	if err := e.client.List(
-		context.Background(),
+		ctx,
 		envs,
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
@@ -303,7 +294,7 @@ func (e *environmentReconciler) findEnvsForApp(
 			),
 		},
 	); err != nil {
-		e.logger.WithFields(log.Fields{
+		logging.LoggerFromContext(ctx).WithFields(log.Fields{
 			"namespace":   app.GetNamespace(),
 			"application": app.GetName(),
 		}).Error("error listing Environments associated with Application")
@@ -329,7 +320,7 @@ func (e *environmentReconciler) Reconcile(
 ) (ctrl.Result, error) {
 	result := ctrl.Result{}
 
-	logger := e.logger.WithFields(log.Fields{
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"namespace":   req.NamespacedName.Namespace,
 		"environment": req.NamespacedName.Name,
 	})

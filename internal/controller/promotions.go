@@ -14,12 +14,12 @@ import (
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/config"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 // promotionReconciler reconciles Promotion resources.
 type promotionReconciler struct {
 	client client.Client
-	logger *log.Logger
 }
 
 // SetupPromotionReconcilerWithManager initializes a reconciler for
@@ -45,7 +45,6 @@ func newPromotionReconciler(
 	logger.SetLevel(config.LogLevel)
 	return &promotionReconciler{
 		client: client,
-		logger: logger,
 	}
 }
 
@@ -57,11 +56,11 @@ func (p *promotionReconciler) Reconcile(
 ) (ctrl.Result, error) {
 	result := ctrl.Result{}
 
-	logger := p.logger.WithFields(log.Fields{
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"namespace": req.NamespacedName.Namespace,
-		"name":      req.NamespacedName.Name,
+		"promotion": req.NamespacedName.Name,
 	})
-
+	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
@@ -108,9 +107,9 @@ func (p *promotionReconciler) getPromo(
 	promo := api.Promotion{}
 	if err := p.client.Get(ctx, namespacedName, &promo); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
-			p.logger.WithFields(log.Fields{
+			logging.LoggerFromContext(ctx).WithFields(log.Fields{
 				"namespace": namespacedName.Namespace,
-				"name":      namespacedName.Name,
+				"promotion": namespacedName.Name,
 			}).Warn("Promotion not found")
 			return nil, nil
 		}
@@ -130,9 +129,9 @@ func (p *promotionReconciler) updateStatus(
 	promo *api.Promotion,
 ) {
 	if err := p.client.Status().Update(ctx, promo); err != nil {
-		p.logger.WithFields(log.Fields{
+		logging.LoggerFromContext(ctx).WithFields(log.Fields{
 			"namespace": promo.Namespace,
-			"name":      promo.Name,
+			"promotion": promo.Name,
 		}).Errorf("error updating Promotion status: %s", err)
 	}
 }
