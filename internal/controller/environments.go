@@ -119,7 +119,7 @@ type environmentReconciler struct {
 	// Promotions (general):
 	promoteFn func(
 		ctx context.Context,
-		namespace string,
+		envMeta metav1.ObjectMeta,
 		promoMechanisms api.PromotionMechanisms,
 		newState api.EnvironmentState,
 	) (api.EnvironmentState, error)
@@ -437,7 +437,7 @@ func (e *environmentReconciler) sync(
 			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
 		nextState, err := e.promoteFn(
 			ctx,
-			env.Namespace,
+			env.ObjectMeta,
 			*env.Spec.PromotionMechanisms,
 			nextStateCandidate,
 		)
@@ -534,7 +534,7 @@ func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 // TODO: This function could use some tests
 func (e *environmentReconciler) promote(
 	ctx context.Context,
-	namespace string,
+	envMeta metav1.ObjectMeta,
 	promoMechanisms api.PromotionMechanisms,
 	newState api.EnvironmentState,
 ) (api.EnvironmentState, error) {
@@ -543,7 +543,7 @@ func (e *environmentReconciler) promote(
 		if gitRepoUpdate.Bookkeeper != nil {
 			if newState, err = e.applyBookkeeperUpdate(
 				ctx,
-				namespace,
+				envMeta.Namespace,
 				newState,
 				gitRepoUpdate,
 			); err != nil {
@@ -552,7 +552,7 @@ func (e *environmentReconciler) promote(
 		} else {
 			if newState, err = e.applyGitRepoUpdate(
 				ctx,
-				namespace,
+				envMeta.Namespace,
 				newState,
 				gitRepoUpdate,
 			); err != nil {
@@ -562,8 +562,12 @@ func (e *environmentReconciler) promote(
 	}
 
 	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
-		if err =
-			e.applyArgoCDAppUpdate(ctx, newState, argoCDAppUpdate); err != nil {
+		if err = e.applyArgoCDAppUpdate(
+			ctx,
+			envMeta,
+			newState,
+			argoCDAppUpdate,
+		); err != nil {
 			return newState, errors.Wrap(err, "error promoting via Argo CD")
 		}
 	}

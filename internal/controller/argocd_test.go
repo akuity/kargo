@@ -8,6 +8,7 @@ import (
 	argoHealth "github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
@@ -476,6 +477,75 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 	}
 }
 
+func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
+	testCases := []struct {
+		name    string
+		app     *argocd.Application
+		allowed bool
+	}{
+		{
+			name: "annotations are nil",
+			app:  &argocd.Application{},
+		},
+		{
+			name: "annotation is missing",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+		},
+		{
+			name: "annotation cannot be parsed",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedEnvAnnotationKey: "bogus",
+					},
+				},
+			},
+		},
+		{
+			name: "mutation is not allowed",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedEnvAnnotationKey: "ns-nope:name-nope",
+					},
+				},
+			},
+		},
+		{
+			name: "mutation is allowed",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedEnvAnnotationKey: "ns-yep:name-yep",
+					},
+				},
+			},
+			allowed: true,
+		},
+	}
+	reconciler := environmentReconciler{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := reconciler.authorizeArgoCDAppUpdate(
+				v1.ObjectMeta{
+					Name:      "name-yep",
+					Namespace: "ns-yep",
+				},
+				testCase.app,
+			)
+			if testCase.allowed {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
 func TestApplyArgoCDAppUpdate(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -534,6 +604,27 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 		},
 
 		{
+			name: "update not allowed",
+			getArgoCDAppFn: func(
+				context.Context,
+				client.Client,
+				string,
+				string,
+			) (*argocd.Application, error) {
+				// This is not annotated properly to allow the Environment to mutate it
+				return &argocd.Application{}, nil
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"does not permit mutation by Kargo Environment",
+				)
+			},
+		},
+
+		{
 			name: "error applying source update (single-source app)",
 			update: api.ArgoCDAppUpdate{
 				SourceUpdates: []api.ArgoCDSourceUpdate{
@@ -547,6 +638,11 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				string,
 			) (*argocd.Application, error) {
 				return &argocd.Application{
+					ObjectMeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							authorizedEnvAnnotationKey: "fake-namespace:fake-env",
+						},
+					},
 					Spec: argocd.ApplicationSpec{
 						Source: &argocd.ApplicationSource{},
 					},
@@ -584,6 +680,11 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				string,
 			) (*argocd.Application, error) {
 				return &argocd.Application{
+					ObjectMeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							authorizedEnvAnnotationKey: "fake-namespace:fake-env",
+						},
+					},
 					Spec: argocd.ApplicationSpec{
 						Sources: argocd.ApplicationSources{
 							{},
@@ -623,6 +724,11 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				string,
 			) (*argocd.Application, error) {
 				return &argocd.Application{
+					ObjectMeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							authorizedEnvAnnotationKey: "fake-namespace:fake-env",
+						},
+					},
 					Spec: argocd.ApplicationSpec{
 						Source: &argocd.ApplicationSource{},
 					},
@@ -664,6 +770,10 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 			testCase.assertions(
 				reconciler.applyArgoCDAppUpdate(
 					context.Background(),
+					v1.ObjectMeta{
+						Name:      "fake-env",
+						Namespace: "fake-namespace",
+					},
 					testCase.newState,
 					testCase.update,
 				),

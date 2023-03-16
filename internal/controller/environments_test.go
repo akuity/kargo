@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
@@ -86,7 +86,7 @@ func TestSync(t *testing.T) {
 		) ([]api.EnvironmentState, error)
 		promoteFn func(
 			context.Context,
-			string,
+			metav1.ObjectMeta,
 			api.PromotionMechanisms,
 			api.EnvironmentState,
 		) (api.EnvironmentState, error)
@@ -317,7 +317,7 @@ func TestSync(t *testing.T) {
 			},
 			promoteFn: func(
 				_ context.Context,
-				_ string,
+				_ metav1.ObjectMeta,
 				_ api.PromotionMechanisms,
 				newState api.EnvironmentState,
 			) (api.EnvironmentState, error) {
@@ -365,7 +365,7 @@ func TestSync(t *testing.T) {
 			},
 			promoteFn: func(
 				_ context.Context,
-				_ string,
+				_ metav1.ObjectMeta,
 				_ api.PromotionMechanisms,
 				newState api.EnvironmentState,
 			) (api.EnvironmentState, error) {
@@ -381,7 +381,7 @@ func TestSync(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		testEnv := &api.Environment{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "bar",
 			},
