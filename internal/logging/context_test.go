@@ -15,11 +15,12 @@ func TestContextWithLogger(t *testing.T) {
 }
 
 func TestLoggerFromContext(t *testing.T) {
-	l := LoggerFromContext(context.Background())
-	// This should give us a fresh logger if one was never explicitly added to
+	logger := LoggerFromContext(context.Background())
+	// This should give us the global logger if one was never explicitly added to
 	// the context.
-	require.NotNil(t, l)
-	require.IsType(t, &log.Entry{}, l)
+	require.NotNil(t, logger)
+	require.IsType(t, &log.Entry{}, logger)
+	require.Equal(t, log.PanicLevel, logger.Logger.Level)
 
 	testLogger := log.New().WithFields(nil)
 	ctx := context.WithValue(context.Background(), loggerContextKey{}, testLogger)
