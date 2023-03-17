@@ -74,7 +74,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: Install controller-gen
-      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.10.0
+      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3
     - name: Run Codegen
       run: make codegen
     - name: Check nothing has changed
