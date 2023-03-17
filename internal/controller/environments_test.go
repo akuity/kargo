@@ -270,10 +270,6 @@ func TestSync(t *testing.T) {
 							Name:      "fake-name",
 							Namespace: "fake-namespace",
 						},
-						{
-							Name:      "another-fake-name",
-							Namespace: "fake-namespace",
-						},
 					},
 				},
 				PromotionMechanisms: &api.PromotionMechanisms{},
@@ -306,6 +302,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 				PromotionMechanisms: &api.PromotionMechanisms{},
+				EnableAutoPromotion: true,
 				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
@@ -341,6 +338,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 				PromotionMechanisms: &api.PromotionMechanisms{},
+				EnableAutoPromotion: true,
 				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
