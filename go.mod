@@ -71,6 +71,7 @@ require (
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
 	github.com/argoproj/argo-cd/v2 v2.6.2
 	github.com/satori/go.uuid v1.2.0
+	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go v1.2.2
 )
