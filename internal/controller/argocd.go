@@ -7,12 +7,12 @@ import (
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 const authorizedEnvAnnotationKey = "kargo.akuity.io/authorized-env"
@@ -189,9 +189,9 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 	if err = e.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}
-	e.logger.WithFields(log.Fields{
-		"app": app.Name,
-	}).Debug("patched Argo CD Application")
+
+	logging.LoggerFromContext(ctx).WithField("app", app.Name).
+		Debug("patched Argo CD Application")
 
 	return nil
 }

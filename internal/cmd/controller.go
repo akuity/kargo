@@ -64,7 +64,6 @@ func newControllerCommand() *cobra.Command {
 
 			if err := controller.SetupEnvironmentReconcilerWithManager(
 				ctx,
-				config,
 				mgr,
 				bookkeeper.NewService(
 					&bookkeeper.ServiceOptions{
@@ -76,7 +75,6 @@ func newControllerCommand() *cobra.Command {
 			}
 			if err := controller.SetupPromotionReconcilerWithManager(
 				ctx,
-				config,
 				mgr,
 			); err != nil {
 				return errors.Wrap(err, "setup promotion reconciler")

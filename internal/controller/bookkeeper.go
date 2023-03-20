@@ -8,6 +8,7 @@ import (
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 func (e *environmentReconciler) applyBookkeeperUpdate(
@@ -51,6 +52,8 @@ func (e *environmentReconciler) applyBookkeeperUpdate(
 		images[i] = fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
 	}
 
+	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
+
 	creds, ok, err :=
 		e.credentialsDB.get(ctx, namespace, credentialsTypeGit, update.RepoURL)
 	if err != nil {
@@ -65,6 +68,9 @@ func (e *environmentReconciler) applyBookkeeperUpdate(
 		repoCreds.Username = creds.Username
 		repoCreds.Password = creds.Password
 		repoCreds.SSHPrivateKey = creds.SSHPrivateKey
+		logger.Debug("obtained credentials for git repo")
+	} else {
+		logger.Debug("found no credentials for git repo")
 	}
 
 	req := bookkeeper.RenderRequest{
@@ -80,10 +86,17 @@ func (e *environmentReconciler) applyBookkeeperUpdate(
 			errors.Wrap(err, "error rendering manifests via Bookkeeper")
 	}
 
-	if res.ActionTaken == bookkeeper.ActionTakenPushedDirectly ||
-		res.ActionTaken == bookkeeper.ActionTakenNone {
+	switch res.ActionTaken {
+	case bookkeeper.ActionTakenPushedDirectly:
+		logger.WithField("commit", res.CommitID).
+			Debug("pushed new commit to repo via Bookkeeper")
 		newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
-	} // TODO: Not sure yet how to handle PRs.
+	case bookkeeper.ActionTakenNone:
+		logger.Debug("Bookkeeper made no changes to repo")
+		newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
+	default:
+		// TODO: Not sure yet how to handle PRs.
+	}
 
 	return newState, nil
 }

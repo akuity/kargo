@@ -70,6 +70,7 @@ require (
 	github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.9
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
 	github.com/argoproj/argo-cd/v2 v2.6.2
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	gopkg.in/yaml.v3 v3.0.1
@@ -130,7 +131,6 @@ require (
 	github.com/google/go-github/v47 v47.1.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/huandu/xstrings v1.3.1 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect

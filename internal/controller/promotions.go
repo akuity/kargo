@@ -12,39 +12,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/config"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 // promotionReconciler reconciles Promotion resources.
 type promotionReconciler struct {
 	client client.Client
-	logger *log.Logger
 }
 
 // SetupPromotionReconcilerWithManager initializes a reconciler for
 // Promotion resources and registers it with the provided Manager.
 func SetupPromotionReconcilerWithManager(
 	ctx context.Context,
-	config config.ControllerConfig,
 	mgr manager.Manager,
 ) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Promotion{}).
 		WithEventFilter(predicate.Funcs{}).
-		Complete(
-			newPromotionReconciler(config, mgr.GetClient()),
-		)
+		Complete(newPromotionReconciler(mgr.GetClient()))
 }
 
-func newPromotionReconciler(
-	config config.ControllerConfig,
-	client client.Client,
-) *promotionReconciler {
-	logger := log.New()
-	logger.SetLevel(config.LogLevel)
+func newPromotionReconciler(client client.Client) *promotionReconciler {
 	return &promotionReconciler{
 		client: client,
-		logger: logger,
 	}
 }
 
@@ -61,11 +51,11 @@ func (p *promotionReconciler) Reconcile(
 		RequeueAfter: 0,
 	}
 
-	logger := p.logger.WithFields(log.Fields{
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"namespace": req.NamespacedName.Namespace,
 		"promotion": req.NamespacedName.Name,
 	})
-
+	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
@@ -127,9 +117,9 @@ func (p *promotionReconciler) getPromo(
 	promo := api.Promotion{}
 	if err := p.client.Get(ctx, namespacedName, &promo); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
-			p.logger.WithFields(log.Fields{
+			logging.LoggerFromContext(ctx).WithFields(log.Fields{
 				"namespace": namespacedName.Namespace,
-				"name":      namespacedName.Name,
+				"promotion": namespacedName.Name,
 			}).Warn("Promotion not found")
 			return nil, nil
 		}
