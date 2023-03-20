@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"context"
-
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -15,7 +13,6 @@ import (
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/controller"
-	"github.com/akuityio/kargo/internal/logging"
 	versionpkg "github.com/akuityio/kargo/internal/version"
 )
 
@@ -34,12 +31,6 @@ func newControllerCommand() *cobra.Command {
 			}).Info("Starting Kargo Controller")
 
 			config := config.NewControllerConfig()
-			logger := log.New()
-			logger.SetLevel(config.LogLevel)
-			ctx := logging.ContextWithLogger(
-				ctrl.SetupSignalHandler(),
-				logger.WithFields(nil),
-			)
 
 			mgrCfg, err := ctrl.GetConfig()
 			if err != nil {
@@ -61,12 +52,6 @@ func newControllerCommand() *cobra.Command {
 				ctrl.Options{
 					Scheme: scheme,
 					Port:   9443,
-					// This has to be set or every reconciler.Reconciler(...) call
-					// receives a background context, which means no access to our
-					// context-bound logger.
-					BaseContext: func() context.Context {
-						return ctx
-					},
 				},
 			)
 			if err != nil {
@@ -76,6 +61,8 @@ func newControllerCommand() *cobra.Command {
 			if err := (&api.Environment{}).SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "create webhook")
 			}
+
+			ctx := ctrl.SetupSignalHandler()
 
 			if err := controller.SetupEnvironmentReconcilerWithManager(
 				ctx,

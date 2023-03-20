@@ -96,7 +96,7 @@ spec:
       - name: {{ include "kargo.fullname" . }}-image-pull-secret
       containers:
       - name: controller
-        image: {{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}
+        image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/kargo", "controller"]
         env:
@@ -117,11 +117,11 @@ spec:
         secret:
           defaultMode: 420
           secretName: {{ include "kargo.fullname" . }}-webhook-server-cert
-      {{- with .Values.nodeSelector }}
+      {{- with .Values.controller.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.controller.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
