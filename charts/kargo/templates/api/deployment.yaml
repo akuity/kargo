@@ -6,7 +6,7 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
 spec:
-  replicas: 3
+  replicas: {{ .Values.api.replicas | default 1 }}
   strategy:
     type: RollingUpdate
   selector:

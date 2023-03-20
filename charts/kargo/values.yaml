@@ -19,6 +19,9 @@ rbac:
 ## All settings for the api component
 api:
 
+  ## The number of API server pods. (Default: 1)
+  # replicas: 3
+
   enableProxy: true
 
   logLevel: INFO
