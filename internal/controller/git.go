@@ -7,6 +7,7 @@ import (
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/git"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 func (e *environmentReconciler) applyGitRepoUpdate(
@@ -15,6 +16,8 @@ func (e *environmentReconciler) applyGitRepoUpdate(
 	newState api.EnvironmentState,
 	update api.GitRepoUpdate,
 ) (api.EnvironmentState, error) {
+	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
+
 	creds, ok, err :=
 		e.credentialsDB.get(ctx, namespace, credentialsTypeGit, update.RepoURL)
 	if err != nil {
@@ -31,6 +34,9 @@ func (e *environmentReconciler) applyGitRepoUpdate(
 			Password:      creds.Password,
 			SSHPrivateKey: creds.SSHPrivateKey,
 		}
+		logger.Debug("obtained credentials for git repo")
+	} else {
+		logger.Debug("found no credentials for git repo")
 	}
 
 	commitID, err := e.gitApplyUpdateFn(update.RepoURL, update.Branch, repoCreds,
@@ -92,11 +98,14 @@ func (e *environmentReconciler) applyGitRepoUpdate(
 	// indicates no change was committed to the repository and there's nothing to
 	// update here.
 	if commitID != "" {
+		logger.WithField("commit", commitID).Debug("pushed new commit to repo")
 		for i := range newState.Commits {
 			if newState.Commits[i].RepoURL == update.RepoURL {
 				newState.Commits[i].ID = commitID
 			}
 		}
+	} else {
+		logger.Debug("no changes pushed to repo")
 	}
 
 	return newState, nil
@@ -109,6 +118,7 @@ func (e *environmentReconciler) getLatestCommits(
 ) ([]api.GitCommit, error) {
 	latestCommits := make([]api.GitCommit, len(subs))
 	for i, sub := range subs {
+		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 		creds, ok, err :=
 			e.credentialsDB.get(ctx, namespace, credentialsTypeGit, sub.RepoURL)
 		if err != nil {
@@ -125,6 +135,9 @@ func (e *environmentReconciler) getLatestCommits(
 				Password:      creds.Password,
 				SSHPrivateKey: creds.SSHPrivateKey,
 			}
+			logger.Debug("obtained credentials for git repo")
+		} else {
+			logger.Debug("found no credentials for git repo")
 		}
 
 		commit, err := e.getLatestCommitIDFn(sub.RepoURL, sub.Branch, repoCreds)
@@ -135,6 +148,8 @@ func (e *environmentReconciler) getLatestCommits(
 				sub.RepoURL,
 			)
 		}
+		logger.WithField("commit", commit).
+			Debug("found latest commit from repo")
 		latestCommits[i] = api.GitCommit{
 			RepoURL: sub.RepoURL,
 			ID:      commit,

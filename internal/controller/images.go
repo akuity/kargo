@@ -7,6 +7,7 @@ import (
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/images"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 func (e *environmentReconciler) getLatestImages(
@@ -16,6 +17,9 @@ func (e *environmentReconciler) getLatestImages(
 ) ([]api.Image, error) {
 	imgs := make([]api.Image, len(subs))
 	for i, sub := range subs {
+
+		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
+
 		creds, ok, err :=
 			e.credentialsDB.get(ctx, namespace, credentialsTypeImage, sub.RepoURL)
 		if err != nil {
@@ -31,6 +35,9 @@ func (e *environmentReconciler) getLatestImages(
 				Username: creds.Username,
 				Password: creds.Password,
 			}
+			logger.Debug("obtained credentials for image repo")
+		} else {
+			logger.Debug("found no credentials for image repo")
 		}
 
 		tag, err := e.getLatestTagFn(
@@ -54,6 +61,8 @@ func (e *environmentReconciler) getLatestImages(
 			RepoURL: sub.RepoURL,
 			Tag:     tag,
 		}
+		logger.WithField("tag", tag).
+			Debug("found latest suitable image tag")
 	}
 	return imgs, nil
 }

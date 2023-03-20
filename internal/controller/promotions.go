@@ -14,8 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/controller/runtime"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 // promotionReconciler reconciles Promotion resources.
@@ -23,7 +23,6 @@ type promotionReconciler struct {
 	client             client.Client
 	promoQueuesByEnv   map[types.NamespacedName]runtime.PriorityQueue
 	promoQueuesByEnvMu sync.Mutex
-	logger             *log.Logger
 	initializeOnce     sync.Once
 }
 
@@ -31,27 +30,18 @@ type promotionReconciler struct {
 // Promotion resources and registers it with the provided Manager.
 func SetupPromotionReconcilerWithManager(
 	ctx context.Context,
-	config config.ControllerConfig,
 	mgr manager.Manager,
 ) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Promotion{}).
 		WithEventFilter(predicate.Funcs{}).
-		Complete(
-			newPromotionReconciler(config, mgr.GetClient()),
-		)
+		Complete(newPromotionReconciler(mgr.GetClient()))
 }
 
-func newPromotionReconciler(
-	config config.ControllerConfig,
-	client client.Client,
-) *promotionReconciler {
-	logger := log.New()
-	logger.SetLevel(config.LogLevel)
+func newPromotionReconciler(client client.Client) *promotionReconciler {
 	return &promotionReconciler{
 		client:           client,
 		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{},
-		logger:           logger,
 	}
 }
 
@@ -78,7 +68,14 @@ func (p *promotionReconciler) Reconcile(
 	p.promoQueuesByEnvMu.Lock()
 	defer p.promoQueuesByEnvMu.Unlock()
 
-	result := ctrl.Result{}
+	result := ctrl.Result{
+		// Note: If there is a failure, controller runtime ignores this and uses
+		// progressive backoff instead. So this value only prevents requeueing
+		// a Promotion if THIS reconciliation succeeds.
+		RequeueAfter: 0,
+	}
+
+	logger := logging.LoggerFromContext(ctx)
 
 	// Note that initialization occurs here because we basically know that the
 	// controller runtime client's cache is ready at this point. We cannot attempt
@@ -86,7 +83,7 @@ func (p *promotionReconciler) Reconcile(
 	var err error
 	p.initializeOnce.Do(func() {
 		if err = p.initializeQueues(ctx); err == nil {
-			p.logger.Debug(
+			logger.Debug(
 				"initialized Environment-specific Promotion queues from list of " +
 					"existing Promotions",
 			)
@@ -97,6 +94,13 @@ func (p *promotionReconciler) Reconcile(
 	if err != nil {
 		return result, errors.Wrap(err, "error initializing Promotion queues")
 	}
+
+	logger = logger.WithFields(log.Fields{
+		"namespace": req.NamespacedName.Namespace,
+		"promotion": req.NamespacedName.Name,
+	})
+	ctx = logging.ContextWithLogger(ctx, logger)
+	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
 	promo, err := p.getPromo(ctx, req.NamespacedName)
@@ -109,14 +113,25 @@ func (p *promotionReconciler) Reconcile(
 		return result, nil
 	}
 
-	p.logger.WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"name":      req.NamespacedName.Name,
-	}).Debug("reconciling Promotion")
+	promo.Status, err = p.sync(ctx, promo)
+	if err != nil {
+		logger.Error(err)
+	}
 
-	promo.Status = p.sync(ctx, promo)
-	p.updateStatus(ctx, promo)
+	updateErr := p.client.Status().Update(ctx, promo)
+	if updateErr != nil {
+		logger.Errorf("error updating Promotion status: %s", updateErr)
+	}
 
+	// If we had no error, but couldn't update, then we DO have an error. But we
+	// do it this way so that a failure to update is never counted as THE failure
+	// when something else more serious occurred first.
+	if err == nil {
+		err = updateErr
+	}
+
+	// Controller runtime automatically gives us a progressive backoff if err is
+	// not nil
 	return result, err
 }
 
@@ -129,6 +144,7 @@ func (p *promotionReconciler) initializeQueues(ctx context.Context) error {
 	if err := p.client.List(ctx, &promos); err != nil {
 		return errors.Wrap(err, "error listing promotions")
 	}
+	logger := logging.LoggerFromContext(ctx)
 	for _, promo := range promos.Items {
 		switch promo.Status.Phase {
 		case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
@@ -156,16 +172,16 @@ func (p *promotionReconciler) initializeQueues(ctx context.Context) error {
 		// The only error that can occur here happens when you push a nil and we
 		// know we're not doing that.
 		pq.Push(&promo) // nolint: errcheck
-		p.logger.WithFields(log.Fields{
-			"name":        promo.Name,
+		logger.WithFields(log.Fields{
+			"promotion":   promo.Name,
 			"namespace":   promo.Namespace,
 			"environment": promo.Spec.Environment,
 			"phase":       promo.Status.Phase,
 		}).Debug("pushed Promotion onto Environment-specific Promotion queue")
 	}
-	if p.logger.IsLevelEnabled(log.DebugLevel) {
+	if logger.Logger.IsLevelEnabled(log.DebugLevel) {
 		for env, pq := range p.promoQueuesByEnv {
-			p.logger.WithFields(log.Fields{
+			logger.WithFields(log.Fields{
 				"environment": env.Name,
 				"namespace":   env.Namespace,
 				"depth":       pq.Depth(),
@@ -180,12 +196,12 @@ func (p *promotionReconciler) initializeQueues(ctx context.Context) error {
 func (p *promotionReconciler) sync(
 	ctx context.Context,
 	promo *api.Promotion,
-) api.PromotionStatus {
+) (api.PromotionStatus, error) {
 	status := *promo.Status.DeepCopy()
 
 	// Only deal with brand new Promotions
 	if promo.Status.Phase != "" {
-		return status
+		return status, nil
 	}
 
 	promo.Status.Phase = api.PromotionPhasePending
@@ -207,14 +223,14 @@ func (p *promotionReconciler) sync(
 	// try to push a nil onto the queue and we know we're not doing that.
 	pq.Push(promo) // nolint: errcheck
 
-	p.logger.WithField("depth", pq.Depth()).
+	logging.LoggerFromContext(ctx).WithField("depth", pq.Depth()).
 		Infof("pushed Promotion %q to Queue for Environment %q in namespace %q ",
 			promo.Name,
 			promo.Spec.Environment,
 			promo.Namespace,
 		)
 
-	return status
+	return status, nil
 }
 
 func (p *promotionReconciler) serializedSync(
@@ -233,8 +249,8 @@ func (p *promotionReconciler) serializedSync(
 			if popped := pq.Pop(); popped != nil {
 				promo := popped.(*api.Promotion)
 
-				promoLogger := p.logger.WithFields(log.Fields{
-					"name":      promo.Name,
+				logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
+					"promotion": promo.Name,
 					"namespace": promo.Namespace,
 				})
 
@@ -247,14 +263,19 @@ func (p *promotionReconciler) serializedSync(
 						Name:      promo.Name,
 					},
 				); err != nil {
-					promoLogger.Error("error finding Promotion")
+					logger.Error("error finding Promotion")
 				}
 
 				// TODO: Actual promotion logic goes here
 
 				promo.Status.Phase = api.PromotionPhaseComplete
-				p.updateStatus(ctx, promo)
-				promoLogger.WithFields(log.Fields{
+
+				updateErr := p.client.Status().Update(ctx, promo)
+				if updateErr != nil {
+					logger.Errorf("error updating Environment status: %s", updateErr)
+				}
+
+				logger.WithFields(log.Fields{
 					"environment": promo.Spec.Environment,
 					"state":       promo.Spec.State,
 				}).Debug("handled Promotion")
@@ -273,9 +294,9 @@ func (p *promotionReconciler) getPromo(
 	promo := api.Promotion{}
 	if err := p.client.Get(ctx, namespacedName, &promo); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
-			p.logger.WithFields(log.Fields{
+			logging.LoggerFromContext(ctx).WithFields(log.Fields{
 				"namespace": namespacedName.Namespace,
-				"name":      namespacedName.Name,
+				"promotion": namespacedName.Name,
 			}).Warn("Promotion not found")
 			return nil, nil
 		}
@@ -287,17 +308,4 @@ func (p *promotionReconciler) getPromo(
 		)
 	}
 	return &promo, nil
-}
-
-// updateStatus updates the status subresource of the provided Promotion.
-func (p *promotionReconciler) updateStatus(
-	ctx context.Context,
-	promo *api.Promotion,
-) {
-	if err := p.client.Status().Update(ctx, promo); err != nil {
-		p.logger.WithFields(log.Fields{
-			"namespace": promo.Namespace,
-			"name":      promo.Name,
-		}).Errorf("error updating Promotion status: %s", err)
-	}
 }

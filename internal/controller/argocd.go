@@ -3,15 +3,19 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
+	"github.com/akuityio/kargo/internal/logging"
 )
+
+const authorizedEnvAnnotationKey = "kargo.akuity.io/authorized-env"
 
 func (e *environmentReconciler) checkHealth(
 	ctx context.Context,
@@ -100,6 +104,7 @@ func (e *environmentReconciler) checkHealth(
 
 func (e *environmentReconciler) applyArgoCDAppUpdate(
 	ctx context.Context,
+	envMeta metav1.ObjectMeta,
 	newState api.EnvironmentState,
 	update api.ArgoCDAppUpdate,
 ) error {
@@ -119,6 +124,11 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 			update.AppName,
 			update.AppNamespace,
 		)
+	}
+
+	// Make sure this is allowed!
+	if err = e.authorizeArgoCDAppUpdate(envMeta, app); err != nil {
+		return err
 	}
 
 	patch := client.MergeFrom(app.DeepCopy())
@@ -179,10 +189,47 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 	if err = e.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}
-	e.logger.WithFields(log.Fields{
-		"app": app.Name,
-	}).Debug("patched Argo CD Application")
 
+	logging.LoggerFromContext(ctx).WithField("app", app.Name).
+		Debug("patched Argo CD Application")
+
+	return nil
+}
+
+func (e *environmentReconciler) authorizeArgoCDAppUpdate(
+	envMeta metav1.ObjectMeta,
+	app *argocd.Application,
+) error {
+	permErr := errors.Errorf(
+		"Argo CD Application %q in namespace %q does not permit mutation by "+
+			"Kargo Environment %s in namespace %s",
+		app.Name,
+		app.Namespace,
+		envMeta.Name,
+		envMeta.Namespace,
+	)
+	if app.Annotations == nil {
+		return permErr
+	}
+	allowedEnv, ok := app.Annotations[authorizedEnvAnnotationKey]
+	if !ok {
+		return permErr
+	}
+	tokens := strings.SplitN(allowedEnv, ":", 2)
+	if len(tokens) != 2 {
+		return errors.Errorf(
+			"unable to parse value of annotation %q (%q) on Argo CD Application "+
+				"%q in namespace %q",
+			authorizedEnvAnnotationKey,
+			allowedEnv,
+			app.Name,
+			app.Namespace,
+		)
+	}
+	allowedNamespace, allowedName := tokens[0], tokens[1]
+	if envMeta.Namespace != allowedNamespace || envMeta.Name != allowedName {
+		return permErr
+	}
 	return nil
 }
 

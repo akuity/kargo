@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
@@ -109,11 +108,9 @@ func TestGetLatestImages(t *testing.T) {
 				},
 			}
 			reconciler := environmentReconciler{
-				logger:         log.New(),
 				credentialsDB:  testCase.credentialsDB,
 				getLatestTagFn: testCase.getLatestTagFn,
 			}
-			reconciler.logger.SetLevel(log.ErrorLevel)
 			testCase.assertions(
 				reconciler.getLatestImages(
 					context.Background(),

@@ -65,6 +65,17 @@ type EnvironmentSpec struct {
 	//
 	//+kubebuilder:validation:Required
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms"`
+	// EnableAutoPromotion indicates whether new EnvironmentStates can
+	// automatically be promoted into this Environment. Note: There are other
+	// conditions also required for an auto-promotion to occur. Specifically,
+	// there must be a single source of new EnvironmentStates, so regardless of
+	// the value of this field, an auto-promotion could never occur for an
+	// Environment subscribed to MULTIPLE upstream environments. This field
+	// defaults to false, but is commonly set to true for Environments that
+	// subscribe to repositories instead of other, upstream Environments. This
+	// allows users to define Environments that are automatically updated as soon
+	// as new materials are detected.
+	EnableAutoPromotion bool `json:"enableAutoPromotion,omitempty"`
 	// HealthChecks describes how the health of the Environment can be assessed on
 	// an ongoing basis. This is a required field.
 	//
@@ -514,22 +525,30 @@ func (e EnvironmentStateStack) Empty() bool {
 	return len(e) == 0
 }
 
-// Pop returns the EnvironmentStateStack with its leading element removed as
-// well as the leading element itself if the EnvironmentStateStack is not empty.
-// nil counts as empty. When the EnvironmentStateStack is empty, the
-// EnvironmentStack is returned unmodified with a new EnvironmentStateStack. A
-// boolean is also returned indicating whether the returned
-// EnvironmentStateStack came from the top of the stack (true) or is a zero
-// value for that type (false).
-func (e EnvironmentStateStack) Pop() (
-	EnvironmentStateStack,
-	EnvironmentState,
-	bool,
-) {
-	if e.Empty() {
-		return e, EnvironmentState{}, false
+// Pop removes and returns the leading element from EnvironmentStateStack. If
+// the EnvironmentStateStack is empty, the EnvironmentStack is not modified and
+// a empty EnvironmentState is returned instead. A boolean is also returned
+// indicating whether the returned EnvironmentState came from the top of the
+// stack (true) or is a zero value for that type (false).
+func (e *EnvironmentStateStack) Pop() (EnvironmentState, bool) {
+	item, ok := e.Top()
+	if ok {
+		*e = (*e)[1:]
 	}
-	return e[1:], *e[0].DeepCopy(), true
+	return item, ok
+}
+
+// Top returns the leading element from EnvironmentStateStack without modifying
+// the EnvironmentStateStack. If the EnvironmentStateStack is empty, an empty
+// EnvironmentState is returned instead. A boolean is also returned indicating
+// whether the returned EnvironmentState came from the top of the stack (true)
+// or is a zero value for that type (false).
+func (e EnvironmentStateStack) Top() (EnvironmentState, bool) {
+	if e.Empty() {
+		return EnvironmentState{}, false
+	}
+	item := *e[0].DeepCopy()
+	return item, true
 }
 
 // Push pushes one or more EnvironmentStates onto the EnvironmentStateStack. The
@@ -537,17 +556,13 @@ func (e EnvironmentStateStack) Pop() (
 // in which they were passed to this function. i.e. The first new element passed
 // will be the element at the top of the stack. If resulting modification grow
 // the depth of the stack beyond 10 elements, the stack is truncated at the
-// bottom. i.e. Modified to contain only the top 10 elements. In all cases, the
-// modified stack is returned.
-func (e EnvironmentStateStack) Push(
-	states ...EnvironmentState,
-) EnvironmentStateStack {
-	e = append(states, e...)
+// bottom. i.e. Modified to contain only the top 10 elements.
+func (e *EnvironmentStateStack) Push(states ...EnvironmentState) {
+	*e = append(states, *e...)
 	const max = 10
-	if len(e) > max {
-		return e[:max]
+	if len(*e) > max {
+		*e = (*e)[:max]
 	}
-	return e
 }
 
 // SameMaterials returns a bool indicating whether or not two EnvironmentStates
