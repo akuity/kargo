@@ -20,8 +20,21 @@ If release name contains chart name it will be used as a full name.
 {{- end -}}
 {{- end -}}
 
+{{- define "kargo.api.fullname" -}}
+{{ include "kargo.fullname" . | printf "%s-api" }}
+{{- end -}}
+
 {{- define "kargo.controller.fullname" -}}
 {{ include "kargo.fullname" . | printf "%s-controller" }}
+{{- end -}}
+
+{{/*
+Create image reference as used by resources.
+*/}}
+
+{{- define "kargo.image" -}}
+{{- $tag := default .Chart.AppVersion .Values.image.tag -}}
+{{- printf "%s:%s" .Values.image.repository $tag -}}
 {{- end -}}
 
 {{/*
@@ -49,6 +62,10 @@ Selector labels
 {{- define "kargo.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "kargo.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
+{{- define "kargo.api.labels" -}}
+app.kubernetes.io/component: api
 {{- end -}}
 
 {{- define "kargo.controller.labels" -}}

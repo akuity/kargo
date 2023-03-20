@@ -21,6 +21,19 @@ docker_build(
   ignore = ['**/*_test.go']
 )
 k8s_resource(
+  workload = 'kargo-api',
+  new_name = 'api',
+  labels = ['kargo']
+)
+k8s_resource(
+  workload = 'api',
+  objects = [
+    'kargo-api:clusterrole',
+    'kargo-api:clusterrolebinding',
+    'kargo-api:serviceaccount'
+  ]
+)
+k8s_resource(
   workload = 'kargo-controller',
   new_name = 'controller',
   labels = ['kargo']
@@ -56,6 +69,8 @@ k8s_yaml(
     name = 'kargo',
     namespace = 'kargo',
     set = [
+      'api.logLevel=DEBUG',
+      'api-proxy.logLevel=DEBUG',
       'controller.logLevel=DEBUG'
     ]
   )
