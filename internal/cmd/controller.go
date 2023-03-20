@@ -62,7 +62,7 @@ func newControllerCommand() *cobra.Command {
 					Scheme: scheme,
 					Port:   9443,
 					// This has to be set or every reconciler.Reconciler(...) call
-					// receives a background context, which means no access to out
+					// receives a background context, which means no access to our
 					// context-bound logger.
 					BaseContext: func() context.Context {
 						return ctx
