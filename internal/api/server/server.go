@@ -30,6 +30,7 @@ func NewServer(cfg config.APIConfig) Server {
 
 func (s *server) Serve(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
+	log.Info("Server is listening on ", addr)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return errors.Wrapf(err, "listen %s", addr)

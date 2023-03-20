@@ -33,6 +33,7 @@ func NewServer(cfg config.APIProxyConfig) Server {
 
 func (s *server) Serve(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
+	log.Info("Proxy is listening on ", addr)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return errors.Wrapf(err, "listen %s", addr)
