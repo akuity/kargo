@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/akuityio/kargo/internal/api/proxy"
 	"github.com/akuityio/kargo/internal/config"
-	"github.com/akuityio/kargo/internal/os"
 )
 
 func newAPIProxyCommand() *cobra.Command {
@@ -15,9 +15,7 @@ func newAPIProxyCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx, cancel := os.NotifyOnShutdown(cmd.Context())
-			defer cancel()
-
+			ctx := signals.SetupSignalHandler()
 			cfg := config.NewAPIProxyConfig()
 			srv := proxy.NewServer(cfg)
 			return srv.Serve(ctx)
