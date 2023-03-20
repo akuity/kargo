@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
   name: environments.kargo.akuity.io
 spec:
@@ -46,6 +46,18 @@ spec:
             description: Spec describes the sources of material used by the Environment
               and how to incorporate newly observed materials into the Environment.
             properties:
+              enableAutoPromotion:
+                description: 'EnableAutoPromotion indicates whether new EnvironmentStates
+                  can automatically be promoted into this Environment. Note: There
+                  are other conditions also required for an auto-promotion to occur.
+                  Specifically, there must be a single source of new EnvironmentStates,
+                  so regardless of the value of this field, an auto-promotion could
+                  never occur for an Environment subscribed to MULTIPLE upstream environments.
+                  This field defaults to false, but is commonly set to true for Environments
+                  that subscribe to repositories instead of other, upstream Environments.
+                  This allows users to define Environments that are automatically
+                  updated as soon as new materials are detected.'
+                type: boolean
               healthChecks:
                 description: HealthChecks describes how the health of the Environment
                   can be assessed on an ongoing basis. This is a required field.

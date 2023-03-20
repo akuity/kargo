@@ -53,7 +53,7 @@ require (
 	k8s.io/api v1.22.4
 	k8s.io/apiextensions-apiserver v0.25.0 // indirect
 	k8s.io/apimachinery v1.22.4
-	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible
+	k8s.io/client-go v11.0.1-0.20190816222228-6d55c1b1f1ca+incompatible // indirect
 	k8s.io/klog/v2 v2.70.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	k8s.io/kubectl v0.24.2 // indirect
@@ -71,6 +71,7 @@ require (
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
 	github.com/argoproj/argo-cd/v2 v2.6.2
 	github.com/satori/go.uuid v1.2.0
+	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go v1.2.2
 )

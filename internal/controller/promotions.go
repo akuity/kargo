@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -54,7 +53,12 @@ func (p *promotionReconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	result := ctrl.Result{}
+	result := ctrl.Result{
+		// Note: If there is a failure, controller runtime ignores this and uses
+		// progressive backoff instead. So this value only prevents requeueing
+		// a Promotion if THIS reconciliation succeeds.
+		RequeueAfter: 0,
+	}
 
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"namespace": req.NamespacedName.Namespace,
@@ -74,27 +78,42 @@ func (p *promotionReconciler) Reconcile(
 		return result, nil
 	}
 
-	promo.Status = p.sync(ctx, promo)
-	if promo.Status.Error != "" {
-		logger.Error(promo.Status.Error)
+	promo.Status, err = p.sync(ctx, promo)
+	if err != nil {
+		promo.Status.Error = err.Error()
+		logger.Error(err)
+	} else {
+		// Be sure to blank this out in case there's an error in this field from
+		// the previous reconciliation
+		promo.Status.Error = ""
 	}
-	p.updateStatus(ctx, promo)
 
-	// TODO: Make RequeueAfter configurable (via API, probably)
-	// TODO: Or consider using a progressive backoff here when there has been an
-	// error.
-	return ctrl.Result{RequeueAfter: time.Minute}, err
+	updateErr := p.client.Status().Update(ctx, promo)
+	if updateErr != nil {
+		logger.Errorf("error updating Promotion status: %s", updateErr)
+	}
+
+	// If we had no error, but couldn't update, then we DO have an error. But we
+	// do it this way so that a failure to update is never counted as THE failure
+	// when something else more serious occurred first.
+	if err == nil {
+		err = updateErr
+	}
+
+	// Controller runtime automatically gives us a progressive backoff if err is
+	// not nil
+	return result, err
 }
 
 func (p *promotionReconciler) sync(
 	ctx context.Context,
 	promo *api.Promotion,
-) api.PromotionStatus {
+) (api.PromotionStatus, error) {
 	status := *promo.Status.DeepCopy()
 
 	// TODO: Implement sync
 
-	return status
+	return status, nil
 }
 
 // getPromo returns a pointer to the Promotion resource specified by the
@@ -121,17 +140,4 @@ func (p *promotionReconciler) getPromo(
 		)
 	}
 	return &promo, nil
-}
-
-// updateStatus updates the status subresource of the provided Promotion.
-func (p *promotionReconciler) updateStatus(
-	ctx context.Context,
-	promo *api.Promotion,
-) {
-	if err := p.client.Status().Update(ctx, promo); err != nil {
-		logging.LoggerFromContext(ctx).WithFields(log.Fields{
-			"namespace": promo.Namespace,
-			"promotion": promo.Name,
-		}).Errorf("error updating Promotion status: %s", err)
-	}
 }
