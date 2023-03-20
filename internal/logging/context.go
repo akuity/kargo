@@ -3,6 +3,7 @@ package logging
 import (
 	"context"
 
+	"github.com/akuityio/kargo/internal/os"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -11,9 +12,12 @@ type loggerContextKey struct{}
 var globalLogger *log.Entry
 
 func init() {
-	logger := log.New()
-	logger.SetLevel(log.PanicLevel)
-	globalLogger = logger.WithFields(nil)
+	globalLogger = log.New().WithFields(nil)
+	level, err := log.ParseLevel(os.GetEnv("LOG_LEVEL", "PANIC"))
+	if err != nil {
+		panic(err)
+	}
+	globalLogger.Logger.SetLevel(level)
 }
 
 // ContextWithLogger returns a context.Context that has been augmented with
