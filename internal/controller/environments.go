@@ -394,7 +394,7 @@ func (e *environmentReconciler) sync(
 		status.States = status.States.Push(currentState)
 	}
 
-	var autoPromote bool
+	autoPromote := env.Spec.EnableAutoPromotion
 
 	if env.Spec.Subscriptions.Repos != nil {
 
@@ -418,8 +418,6 @@ func (e *environmentReconciler) sync(
 			}
 		}
 
-		autoPromote = true
-
 	} else if len(env.Spec.Subscriptions.UpstreamEnvs) > 0 {
 
 		// This returns de-duped, healthy states only from all upstream envs. There
@@ -437,7 +435,7 @@ func (e *environmentReconciler) sync(
 		// If we're subscribed to more than one upstream environment, then it's
 		// ambiguous which of the status.AvailableStates we should use, so
 		// auto-promotion is off the table.
-		autoPromote = len(env.Spec.Subscriptions.UpstreamEnvs) == 1
+		autoPromote = autoPromote && len(env.Spec.Subscriptions.UpstreamEnvs) == 1
 
 	}
 
