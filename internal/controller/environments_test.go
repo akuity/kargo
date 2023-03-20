@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
@@ -14,11 +15,15 @@ import (
 
 func TestNewEnvironmentReconciler(t *testing.T) {
 	e, err := newEnvironmentReconciler(
-		context.Background(),
-		nil, // TODO: Don't know an easy way to mock a controller manager yet
+		fake.NewClientBuilder().Build(),
+		&fakeCredentialsDB{},
 		bookkeeper.NewService(nil),
 	)
 	require.NoError(t, err)
+	require.NotNil(t, e.client)
+	require.NotNil(t, e.credentialsDB)
+	require.NotNil(t, e.bookkeeperService)
+
 	// Assert that all overridable behaviors were initialized to a default:
 
 	// Common:
@@ -49,9 +54,7 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.setStringsInYAMLFileFn)
 	// Promotions via Argo CD:
 	require.NotNil(t, e.applyArgoCDSourceUpdateFn)
-	// TODO: Can't check this until we figure out how to mock a controller runtime
-	// client
-	// require.NotNil(t, e.patchFn)
+	require.NotNil(t, e.patchFn)
 }
 
 func TestSync(t *testing.T) {

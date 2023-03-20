@@ -190,9 +190,16 @@ func SetupEnvironmentReconcilerWithManager(
 		)
 	}
 
+	// TODO: Do not hardcode the Argo CD namespace
+	var err error
+	credentialsDB, err := newKubernetesCredentialsDB(ctx, "argo-cd", mgr)
+	if err != nil {
+		return errors.Wrap(err, "error initializing credentials DB")
+	}
+
 	e, err := newEnvironmentReconciler(
-		ctx,
-		mgr,
+		mgr.GetClient(),
+		credentialsDB,
 		bookkeeperService,
 	)
 	if err != nil {
@@ -216,26 +223,14 @@ func SetupEnvironmentReconcilerWithManager(
 }
 
 func newEnvironmentReconciler(
-	ctx context.Context,
-	mgr manager.Manager,
+	client client.Client,
+	credentialsDB credentialsDB,
 	bookkeeperService bookkeeper.Service,
 ) (*environmentReconciler, error) {
-	var credentialsDB credentialsDB
-	if mgr != nil { // This can be nil during tests
-		// TODO: Do not hardcode the Argo CD namespace
-		var err error
-		if credentialsDB, err =
-			newKubernetesCredentialsDB(ctx, "argo-cd", mgr); err != nil {
-			return nil, errors.Wrap(err, "error initializing credentials DB")
-		}
-	}
-
 	e := &environmentReconciler{
+		client:            client,
 		credentialsDB:     credentialsDB,
 		bookkeeperService: bookkeeperService,
-	}
-	if mgr != nil { // This can be nil during tests
-		e.client = mgr.GetClient()
 	}
 
 	// The following default behaviors are overridable for testing purposes:
@@ -268,9 +263,7 @@ func newEnvironmentReconciler(
 	e.setStringsInYAMLFileFn = yaml.SetStringsInFile
 	// Promotions via Argo CD:
 	e.applyArgoCDSourceUpdateFn = e.applyArgoCDSourceUpdate
-	if mgr != nil { // This can be nil during testing
-		e.patchFn = mgr.GetClient().Patch
-	}
+	e.patchFn = client.Patch
 
 	return e, nil
 }
