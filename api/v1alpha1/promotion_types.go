@@ -8,8 +8,8 @@ type PromotionPhase string
 
 const (
 	PromotionPhasePending    PromotionPhase = "Pending"
-	PromotionPhaseInProgress PromotionPhase = "In-Progress"
-	PromotionPhaseComplete   PromotionPhase = "Complete"
+	PromotionPhaseInProgress PromotionPhase = "Promoting"
+	PromotionPhaseComplete   PromotionPhase = "Completed"
 	PromotionPhaseFailed     PromotionPhase = "Failed"
 )
 
