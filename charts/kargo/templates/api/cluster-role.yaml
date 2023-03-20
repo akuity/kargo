@@ -6,39 +6,5 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - argoproj.io
-  resources:
-  - applications
-  verbs:
-  - get
-  - list
-  - patch
-  - watch
-- apiGroups:
-  - kargo.akuity.io
-  resources:
-  - environments
-  - promotions
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - kargo.akuity.io
-  resources:
-  - environments/status
-  - promotions/status
-  verbs:
-  - update
+rules: []
 {{- end }}
