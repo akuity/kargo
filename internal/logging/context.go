@@ -3,8 +3,9 @@ package logging
 import (
 	"context"
 
-	"github.com/akuityio/kargo/internal/os"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/akuityio/kargo/internal/os"
 )
 
 type loggerContextKey struct{}
