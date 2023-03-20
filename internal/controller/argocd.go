@@ -7,7 +7,6 @@ import (
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -191,9 +190,8 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}
 
-	logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"app": app.Name,
-	}).Debug("patched Argo CD Application")
+	logging.LoggerFromContext(ctx).WithField("app", app.Name).
+		Debug("patched Argo CD Application")
 
 	return nil
 }
