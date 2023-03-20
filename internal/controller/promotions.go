@@ -28,7 +28,7 @@ func SetupPromotionReconcilerWithManager(
 ) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Promotion{}).
-		WithEventFilter(predicate.Funcs{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(newPromotionReconciler(mgr.GetClient()))
 }
 
