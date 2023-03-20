@@ -25,7 +25,7 @@ func TestGRPCHealthCheckV1(t *testing.T) {
 	for name, ts := range testSets {
 		ts := ts
 		t.Run(name, func(t *testing.T) {
-			actual, err := NewGRPCHealthCheckV1()(context.TODO(), ts.in)
+			actual, err := NewGRPCHealthCheckV1()(context.Background(), ts.in)
 			require.NoError(t, err)
 			require.True(t, proto.Equal(ts.expected, actual))
 		})
