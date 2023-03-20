@@ -23,6 +23,7 @@ func newControllerCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
 
 			version := versionpkg.GetVersion()
 			log.WithFields(log.Fields{
@@ -31,7 +32,6 @@ func newControllerCommand() *cobra.Command {
 			}).Info("Starting Kargo Controller")
 
 			config := config.NewControllerConfig()
-
 			mgrCfg, err := ctrl.GetConfig()
 			if err != nil {
 				return errors.Wrap(err, "get controller config")
@@ -62,8 +62,6 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "create webhook")
 			}
 
-			ctx := ctrl.SetupSignalHandler()
-
 			if err := controller.SetupEnvironmentReconcilerWithManager(
 				ctx,
 				mgr,
@@ -77,13 +75,12 @@ func newControllerCommand() *cobra.Command {
 			}
 			if err := controller.SetupPromotionReconcilerWithManager(
 				ctx,
-				config,
 				mgr,
 			); err != nil {
 				return errors.Wrap(err, "setup promotion reconciler")
 			}
 
-			if err := mgr.Start(ctx); err != nil {
+			if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 				return errors.Wrap(err, "start controller")
 			}
 			return nil

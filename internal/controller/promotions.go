@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/logging"
 )
 
@@ -25,23 +24,15 @@ type promotionReconciler struct {
 // Promotion resources and registers it with the provided Manager.
 func SetupPromotionReconcilerWithManager(
 	ctx context.Context,
-	config config.ControllerConfig,
 	mgr manager.Manager,
 ) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Promotion{}).
 		WithEventFilter(predicate.Funcs{}).
-		Complete(
-			newPromotionReconciler(config, mgr.GetClient()),
-		)
+		Complete(newPromotionReconciler(mgr.GetClient()))
 }
 
-func newPromotionReconciler(
-	config config.ControllerConfig,
-	client client.Client,
-) *promotionReconciler {
-	logger := log.New()
-	logger.SetLevel(config.LogLevel)
+func newPromotionReconciler(client client.Client) *promotionReconciler {
 	return &promotionReconciler{
 		client: client,
 	}
