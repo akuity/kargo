@@ -119,7 +119,7 @@ type environmentReconciler struct {
 	// Promotions (general):
 	promoteFn func(
 		ctx context.Context,
-		namespace string,
+		envMeta metav1.ObjectMeta,
 		promoMechanisms api.PromotionMechanisms,
 		newState api.EnvironmentState,
 	) (api.EnvironmentState, error)
@@ -325,16 +325,22 @@ func (e *environmentReconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	result := ctrl.Result{}
+	result := ctrl.Result{
+		// TODO: Make this configurable
+		// Note: If there is a failure, controller runtime ignores this and uses
+		// progressive backoff instead. So this value only affects when we will
+		// reconcile next if THIS reconciliation succeeds.
+		RequeueAfter: 5 * time.Minute,
+	}
 
 	logger := e.logger.WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"name":      req.NamespacedName.Name,
+		"namespace":   req.NamespacedName.Namespace,
+		"environment": req.NamespacedName.Name,
 	})
 
 	logger.Debug("reconciling Environment")
 
-	// Find the environment
+	// Find the Environment
 	env, err := e.getEnv(ctx, req.NamespacedName)
 	if err != nil {
 		return result, err
@@ -342,28 +348,42 @@ func (e *environmentReconciler) Reconcile(
 	if env == nil {
 		// Ignore if not found. This can happen if the Environment was deleted after
 		// the current reconciliation request was issued.
+		result.RequeueAfter = 0 // Do not requeue
 		return result, nil
 	}
 
-	env.Status = e.sync(ctx, env)
-	if env.Status.Error != "" {
-		logger.Error(env.Status.Error)
+	env.Status, err = e.sync(ctx, env)
+	if err != nil {
+		env.Status.Error = err.Error()
+		logger.Error(err)
+	} else {
+		// Be sure to blank this out in case there's an error in this field from
+		// the previous reconciliation
+		env.Status.Error = ""
 	}
-	e.updateStatus(ctx, env)
 
-	// TODO: Make RequeueAfter configurable (via API, probably)
-	// TODO: Or consider using a progressive backoff here when there has been an
-	// error.
-	return ctrl.Result{RequeueAfter: time.Minute}, err
+	updateErr := e.client.Status().Update(ctx, env)
+	if updateErr != nil {
+		logger.Errorf("error updating Environment status: %s", updateErr)
+	}
+
+	// If we had no error, but couldn't update, then we DO have an error. But we
+	// do it this way so that a failure to update is never counted as THE failure
+	// when something else more serious occurred first.
+	if err == nil {
+		err = updateErr
+	}
+
+	// Controller runtime automatically gives us a progressive backoff if err is
+	// not nil
+	return result, err
 }
 
 func (e *environmentReconciler) sync(
 	ctx context.Context,
 	env *api.Environment,
-) api.EnvironmentStatus {
-	statusPtr := env.Status.DeepCopy()
-	status := *statusPtr
-	status.Error = ""
+) (api.EnvironmentStatus, error) {
+	status := *env.Status.DeepCopy()
 
 	// Only perform health checks if we have a current state to update
 	if currentState, ok := status.States.Pop(); ok {
@@ -372,7 +392,7 @@ func (e *environmentReconciler) sync(
 		status.States.Push(currentState)
 	}
 
-	var autoPromote bool
+	autoPromote := env.Spec.EnableAutoPromotion
 
 	if env.Spec.Subscriptions.Repos != nil {
 
@@ -382,8 +402,7 @@ func (e *environmentReconciler) sync(
 			*env.Spec.Subscriptions.Repos,
 		)
 		if err != nil {
-			status.Error = err.Error()
-			return status
+			return status, err
 		}
 		// If not nil, latestState from upstream repos will always have a shiny new
 		// ID. To determine if this is actually new and needs to be pushed onto the
@@ -397,8 +416,6 @@ func (e *environmentReconciler) sync(
 			}
 		}
 
-		autoPromote = true
-
 	} else if len(env.Spec.Subscriptions.UpstreamEnvs) > 0 {
 
 		// This returns de-duped, healthy states only from all upstream envs. There
@@ -409,20 +426,19 @@ func (e *environmentReconciler) sync(
 			env.Spec.Subscriptions.UpstreamEnvs,
 		)
 		if err != nil {
-			status.Error = err.Error()
-			return status
+			return status, err
 		}
 		status.AvailableStates = latestStatesFromEnvs
 
 		// If we're subscribed to more than one upstream environment, then it's
 		// ambiguous which of the status.AvailableStates we should use, so
 		// auto-promotion is off the table.
-		autoPromote = len(env.Spec.Subscriptions.UpstreamEnvs) == 1
+		autoPromote = autoPromote && len(env.Spec.Subscriptions.UpstreamEnvs) == 1
 
 	}
 
 	if !autoPromote || status.AvailableStates.Empty() {
-		return status // Nothing further to do
+		return status, nil // Nothing further to do
 	}
 
 	// Note: We're careful not to make any further modifications to the state
@@ -435,17 +451,16 @@ func (e *environmentReconciler) sync(
 			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
 		nextState, err := e.promoteFn(
 			ctx,
-			env.Namespace,
+			env.ObjectMeta,
 			*env.Spec.PromotionMechanisms,
 			nextStateCandidate,
 		)
 		if err != nil {
-			status.Error = err.Error()
-			return status
+			return status, err
 		}
 		status.States.Push(nextState)
 
-		// Promotion is successful that this point. Replace the top available state
+		// Promotion is successful at this point. Replace the top available state
 		// because the promotion process may have updated some commit IDs.
 		topAvailableState, _ := status.AvailableStates.Pop()
 		for i := range topAvailableState.Commits {
@@ -454,7 +469,7 @@ func (e *environmentReconciler) sync(
 		status.AvailableStates.Push(topAvailableState)
 	}
 
-	return status
+	return status, nil
 }
 
 func (e *environmentReconciler) getLatestStateFromRepos(
@@ -531,7 +546,7 @@ func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 // TODO: This function could use some tests
 func (e *environmentReconciler) promote(
 	ctx context.Context,
-	namespace string,
+	envMeta metav1.ObjectMeta,
 	promoMechanisms api.PromotionMechanisms,
 	newState api.EnvironmentState,
 ) (api.EnvironmentState, error) {
@@ -540,7 +555,7 @@ func (e *environmentReconciler) promote(
 		if gitRepoUpdate.Bookkeeper != nil {
 			if newState, err = e.applyBookkeeperUpdate(
 				ctx,
-				namespace,
+				envMeta.Namespace,
 				newState,
 				gitRepoUpdate,
 			); err != nil {
@@ -549,7 +564,7 @@ func (e *environmentReconciler) promote(
 		} else {
 			if newState, err = e.applyGitRepoUpdate(
 				ctx,
-				namespace,
+				envMeta.Namespace,
 				newState,
 				gitRepoUpdate,
 			); err != nil {
@@ -559,8 +574,12 @@ func (e *environmentReconciler) promote(
 	}
 
 	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
-		if err =
-			e.applyArgoCDAppUpdate(ctx, newState, argoCDAppUpdate); err != nil {
+		if err = e.applyArgoCDAppUpdate(
+			ctx,
+			envMeta,
+			newState,
+			argoCDAppUpdate,
+		); err != nil {
 			return newState, errors.Wrap(err, "error promoting via Argo CD")
 		}
 	}
@@ -599,17 +618,4 @@ func (e *environmentReconciler) getEnv(
 		)
 	}
 	return &env, nil
-}
-
-// updateStatus updates the status subresource of the provided Environment.
-func (e *environmentReconciler) updateStatus(
-	ctx context.Context,
-	env *api.Environment,
-) {
-	if err := e.client.Status().Update(ctx, env); err != nil {
-		e.logger.WithFields(log.Fields{
-			"namespace": env.Namespace,
-			"name":      env.Name,
-		}).Errorf("error updating Environment status: %s", err)
-	}
 }

@@ -65,6 +65,17 @@ type EnvironmentSpec struct {
 	//
 	//+kubebuilder:validation:Required
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms"`
+	// EnableAutoPromotion indicates whether new EnvironmentStates can
+	// automatically be promoted into this Environment. Note: There are other
+	// conditions also required for an auto-promotion to occur. Specifically,
+	// there must be a single source of new EnvironmentStates, so regardless of
+	// the value of this field, an auto-promotion could never occur for an
+	// Environment subscribed to MULTIPLE upstream environments. This field
+	// defaults to false, but is commonly set to true for Environments that
+	// subscribe to repositories instead of other, upstream Environments. This
+	// allows users to define Environments that are automatically updated as soon
+	// as new materials are detected.
+	EnableAutoPromotion bool `json:"enableAutoPromotion,omitempty"`
 	// HealthChecks describes how the health of the Environment can be assessed on
 	// an ongoing basis. This is a required field.
 	//

@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
@@ -86,11 +86,11 @@ func TestSync(t *testing.T) {
 		) ([]api.EnvironmentState, error)
 		promoteFn func(
 			context.Context,
-			string,
+			metav1.ObjectMeta,
 			api.PromotionMechanisms,
 			api.EnvironmentState,
 		) (api.EnvironmentState, error)
-		assertions func(initialStatus, newStatus api.EnvironmentStatus)
+		assertions func(initialStatus, newStatus api.EnvironmentStatus, err error)
 	}{
 		{
 			name: "no subscriptions",
@@ -100,7 +100,12 @@ func TestSync(t *testing.T) {
 				HealthChecks:        &api.HealthChecks{},
 			},
 			initialStatus: api.EnvironmentStatus{},
-			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -122,10 +127,14 @@ func TestSync(t *testing.T) {
 			) (*api.EnvironmentState, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
-				// Status should be returned unchanged -- except for Error field
-				require.Equal(t, "something went wrong", newStatus.Error)
-				newStatus.Error = ""
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+				// Status should be unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
@@ -146,7 +155,12 @@ func TestSync(t *testing.T) {
 			) (*api.EnvironmentState, error) {
 				return nil, nil
 			},
-			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -227,7 +241,12 @@ func TestSync(t *testing.T) {
 					},
 				}, nil
 			},
-			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -253,10 +272,14 @@ func TestSync(t *testing.T) {
 			) ([]api.EnvironmentState, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
-				// Status should be returned unchanged -- except for Error field
-				require.Equal(t, "something went wrong", newStatus.Error)
-				newStatus.Error = ""
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+				// Status should be unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
@@ -268,10 +291,6 @@ func TestSync(t *testing.T) {
 					UpstreamEnvs: []api.EnvironmentSubscription{
 						{
 							Name:      "fake-name",
-							Namespace: "fake-namespace",
-						},
-						{
-							Name:      "another-fake-name",
 							Namespace: "fake-namespace",
 						},
 					},
@@ -288,14 +307,20 @@ func TestSync(t *testing.T) {
 					{},
 				}, nil
 			},
-			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
-				// Status should have updated AvailableStates updated and no Error
-				require.Empty(t, newStatus.Error)
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should have updated AvailableStates and otherwise be unchanged
 				require.Equal(
 					t,
 					api.EnvironmentStateStack{{}, {}},
 					newStatus.AvailableStates,
 				)
+				newStatus.AvailableStates = initialStatus.AvailableStates
+				require.Equal(t, initialStatus, newStatus)
 			},
 		},
 
@@ -306,6 +331,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 				PromotionMechanisms: &api.PromotionMechanisms{},
+				EnableAutoPromotion: true,
 				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
@@ -317,19 +343,22 @@ func TestSync(t *testing.T) {
 			},
 			promoteFn: func(
 				_ context.Context,
-				_ string,
+				_ metav1.ObjectMeta,
 				_ api.PromotionMechanisms,
 				newState api.EnvironmentState,
 			) (api.EnvironmentState, error) {
 				return newState, errors.New("something went wrong")
 			},
-			assertions: func(initialStatus, newStatus api.EnvironmentStatus) {
-				// Status should be returned unchanged -- except for AvailableStates and
-				// Error fields
-				require.Equal(t, "something went wrong", newStatus.Error)
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+				// Status should have updated AvailableStates and otherwise be unchanged
 				require.NotEmpty(t, newStatus.AvailableStates)
-				newStatus.AvailableStates = nil
-				newStatus.Error = ""
+				newStatus.AvailableStates = initialStatus.AvailableStates
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
@@ -341,6 +370,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 				PromotionMechanisms: &api.PromotionMechanisms{},
+				EnableAutoPromotion: true,
 				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
@@ -365,15 +395,19 @@ func TestSync(t *testing.T) {
 			},
 			promoteFn: func(
 				_ context.Context,
-				_ string,
+				_ metav1.ObjectMeta,
 				_ api.PromotionMechanisms,
 				newState api.EnvironmentState,
 			) (api.EnvironmentState, error) {
 				return newState, nil
 			},
-			assertions: func(_, newStatus api.EnvironmentStatus) {
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.NoError(t, err)
 				// Status should reflect the new state
-				require.Empty(t, newStatus.Error)
 				require.Len(t, newStatus.AvailableStates, 1)
 				require.Len(t, newStatus.States, 1)
 			},
@@ -381,7 +415,7 @@ func TestSync(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		testEnv := &api.Environment{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: "bar",
 			},
@@ -397,10 +431,8 @@ func TestSync(t *testing.T) {
 		}
 		reconciler.logger.SetLevel(log.ErrorLevel)
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.initialStatus,
-				reconciler.sync(context.Background(), testEnv),
-			)
+			newStatus, err := reconciler.sync(context.Background(), testEnv)
+			testCase.assertions(testCase.initialStatus, newStatus, err)
 		})
 	}
 }
