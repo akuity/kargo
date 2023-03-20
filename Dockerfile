@@ -26,6 +26,8 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
 WORKDIR /kargo/bin
 
 
+# `tools` stage allows us to take the leverage of the parallel build.
+# For example, this stage can be cached and re-used when we have to rebuild code base.
 FROM curlimages/curl:7.88.1 as tools
 
 ARG TARGETOS
