@@ -5,8 +5,8 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/akuityio/bookkeeper"
@@ -38,7 +38,7 @@ func newControllerCommand() *cobra.Command {
 			}
 
 			scheme := runtime.NewScheme()
-			if err = clientgoscheme.AddToScheme(scheme); err != nil {
+			if err = corev1.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "add kubernetes api to scheme")
 			}
 			if err = argocd.AddToScheme(scheme); err != nil {
