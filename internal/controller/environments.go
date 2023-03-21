@@ -203,19 +203,23 @@ func SetupEnvironmentReconcilerWithManager(
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&api.Environment{}).WithEventFilter(predicate.Funcs{
-		DeleteFunc: func(event.DeleteEvent) bool {
-			// We're not interested in any deletes
-			return false
-		},
-	}).Watches(
-		&source.Kind{Type: &argocd.Application{}},
-		handler.EnqueueRequestsFromMapFunc(
-			func(obj client.Object) []reconcile.Request {
-				return e.findEnvsForApp(ctx, obj)
+		For(&api.Environment{}).
+		WithEventFilter(predicate.Funcs{
+			DeleteFunc: func(event.DeleteEvent) bool {
+				// We're not interested in any deletes
+				return false
 			},
-		),
-	).Complete(e)
+		}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Watches(
+			&source.Kind{Type: &argocd.Application{}},
+			handler.EnqueueRequestsFromMapFunc(
+				func(obj client.Object) []reconcile.Request {
+					return e.findEnvsForApp(ctx, obj)
+				},
+			),
+		).
+		Complete(e)
 }
 
 func newEnvironmentReconciler(
