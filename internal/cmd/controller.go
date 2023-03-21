@@ -70,6 +70,7 @@ func newControllerCommand() *cobra.Command {
 						LogLevel: bookkeeper.LogLevel(config.LogLevel),
 					},
 				),
+				config,
 			); err != nil {
 				return errors.Wrap(err, "setup environment reconciler")
 			}
