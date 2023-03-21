@@ -46,6 +46,9 @@ api:
 ## All settings for the controller component
 controller:
 
+  ## The namespace into which Argo CD is installed.
+  argocdNamespace: argocd
+
   logLevel: INFO
 
   resources: {}
