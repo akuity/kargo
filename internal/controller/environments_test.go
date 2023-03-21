@@ -10,6 +10,7 @@ import (
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/config"
 )
 
 func TestNewEnvironmentReconciler(t *testing.T) {
@@ -17,6 +18,7 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 		context.Background(),
 		nil, // TODO: Don't know an easy way to mock a controller manager yet
 		bookkeeper.NewService(nil),
+		config.ControllerConfig{},
 	)
 	require.NoError(t, err)
 	// Assert that all overridable behaviors were initialized to a default:
