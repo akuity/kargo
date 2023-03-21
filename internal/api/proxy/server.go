@@ -9,12 +9,12 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/akuityio/kargo/internal/config"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 type server struct {
@@ -33,7 +33,7 @@ func NewServer(cfg config.APIProxyConfig) Server {
 
 func (s *server) Serve(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
-	log.Info("Proxy is listening on ", addr)
+	logging.LoggerFromContext(ctx).Infof("Proxy is listening on %q", addr)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return errors.Wrapf(err, "listen %s", addr)
@@ -58,7 +58,7 @@ func (s *server) Serve(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		log.Info("gracefully stopping server")
+		logging.LoggerFromContext(ctx).Info("Gracefully stopping server...")
 		time.Sleep(s.cfg.GracefulShutdownTimeout)
 		return srv.Shutdown(context.Background())
 	case err := <-errCh:
