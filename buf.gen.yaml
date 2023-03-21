@@ -1,0 +1,21 @@
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/akuityio/kargo/pkg/api/gen
+    except:
+      - buf.build/googleapis/googleapis
+      - buf.build/grpc-ecosystem/grpc-gateway
+plugins:
+  - plugin: buf.build/grpc-ecosystem/gateway
+    out: pkg/api/gen
+    opt:
+      - paths=source_relative
+  - plugin: buf.build/grpc/go
+    out: pkg/api/gen
+    opt:
+      - paths=source_relative
+  - plugin: buf.build/protocolbuffers/go
+    out: pkg/api/gen
+    opt:
+      - paths=source_relative
