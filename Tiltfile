@@ -23,6 +23,10 @@ docker_build(
 k8s_resource(
   workload = 'kargo-api',
   new_name = 'api',
+  port_forwards = [
+    '30081:50051',
+    '30082:8080'
+  ],
   labels = ['kargo']
 )
 k8s_resource(

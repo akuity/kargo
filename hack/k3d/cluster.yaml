@@ -6,6 +6,12 @@ registry: kargo-dev-registry
 k3d:
   v1alpha4Simple:
     ports:
-    - port: 30080:30080
+    - port: 30080:30080 # Argo CD
+      nodeFilters:
+      - loadbalancer
+    - port: 30081:30081 # Kargo API server
+      nodeFilters:
+      - loadbalancer
+    - port: 30082:30082 # Kargo API server proxy
       nodeFilters:
       - loadbalancer
