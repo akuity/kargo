@@ -24,7 +24,6 @@ import (
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
-	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/git"
 	"github.com/akuityio/kargo/internal/helm"
@@ -169,8 +168,8 @@ type environmentReconciler struct {
 func SetupEnvironmentReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
+	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
-	config config.ControllerConfig,
 ) error {
 	// Index Environments by Argo CD Applications
 	if err := mgr.GetFieldIndexer().IndexField(
@@ -191,12 +190,6 @@ func SetupEnvironmentReconcilerWithManager(
 			err,
 			"error indexing Environments by Argo CD Applications",
 		)
-	}
-
-	credentialsDB, err :=
-		credentials.NewKubernetesDatabase(ctx, config.ArgoCDNamespace, mgr)
-	if err != nil {
-		return errors.Wrap(err, "error initializing credentials DB")
 	}
 
 	e, err := newEnvironmentReconciler(
