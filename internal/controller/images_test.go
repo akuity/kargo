@@ -8,13 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/images"
 )
 
 func TestGetLatestImages(t *testing.T) {
 	testCases := []struct {
 		name           string
-		credentialsDB  credentialsDB
+		credentialsDB  credentials.Database
 		getLatestTagFn func(
 			context.Context,
 			string,
@@ -33,10 +34,10 @@ func TestGetLatestImages(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			getLatestTagFn: func(
@@ -68,10 +69,10 @@ func TestGetLatestImages(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			getLatestTagFn: func(

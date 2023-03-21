@@ -25,6 +25,7 @@ import (
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/config"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/git"
 	"github.com/akuityio/kargo/internal/helm"
 	"github.com/akuityio/kargo/internal/images"
@@ -40,7 +41,7 @@ const (
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
 	client            client.Client
-	credentialsDB     credentialsDB
+	credentialsDB     credentials.Database
 	bookkeeperService bookkeeper.Service
 
 	// The following behaviors are overridable for testing purposes:
@@ -193,7 +194,7 @@ func SetupEnvironmentReconcilerWithManager(
 	}
 
 	credentialsDB, err :=
-		newKubernetesCredentialsDB(ctx, config.ArgoCDNamespace, mgr)
+		credentials.NewKubernetesDatabase(ctx, config.ArgoCDNamespace, mgr)
 	if err != nil {
 		return errors.Wrap(err, "error initializing credentials DB")
 	}
@@ -229,7 +230,7 @@ func SetupEnvironmentReconcilerWithManager(
 
 func newEnvironmentReconciler(
 	client client.Client,
-	credentialsDB credentialsDB,
+	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
 ) (*environmentReconciler, error) {
 	e := &environmentReconciler{
