@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 var (
@@ -14,7 +16,11 @@ var (
 		SilenceUsage:      true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// Initialize context
-			ctx := context.Background()
+			ctx := cmd.Context()
+			if ctx == nil {
+				ctx = context.Background()
+			}
+			ctx = logging.ContextWithLogger(ctx, logging.LoggerFromContext(ctx))
 			cmd.SetContext(ctx)
 			return nil
 		},
@@ -24,10 +30,10 @@ var (
 	}
 )
 
-func Execute() error {
+func Execute(ctx context.Context) error {
 	rootCmd.AddCommand(newAPICommand())
 	rootCmd.AddCommand(newAPIProxyCommand())
 	rootCmd.AddCommand(newControllerCommand())
 	rootCmd.AddCommand(newVersionCommand())
-	return rootCmd.Execute()
+	return rootCmd.ExecuteContext(ctx)
 }

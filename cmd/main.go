@@ -3,14 +3,16 @@ package main
 import (
 	"os"
 
-	log "github.com/sirupsen/logrus"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/akuityio/kargo/internal/cmd"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
-		log.Error(err)
+	ctx := signals.SetupSignalHandler()
+	if err := cmd.Execute(ctx); err != nil {
+		logging.LoggerFromContext(ctx).Error(err)
 		os.Exit(1)
 	}
 }
