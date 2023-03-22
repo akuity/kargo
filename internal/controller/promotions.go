@@ -24,6 +24,16 @@ type promotionReconciler struct {
 	promoQueuesByEnv   map[types.NamespacedName]runtime.PriorityQueue
 	promoQueuesByEnvMu sync.Mutex
 	initializeOnce     sync.Once
+
+	// The following behaviors are overridable for testing purposes:
+
+	// Promotions (general):
+	promoteFn func(
+		ctx context.Context,
+		envName string,
+		envNamespace string,
+		stateID string,
+	) error
 }
 
 // SetupPromotionReconcilerWithManager initializes a reconciler for
@@ -39,10 +49,15 @@ func SetupPromotionReconcilerWithManager(
 }
 
 func newPromotionReconciler(client client.Client) *promotionReconciler {
-	return &promotionReconciler{
+	p := &promotionReconciler{
 		client:           client,
 		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
+
+	// Promotions (general):
+	p.promoteFn = p.promote
+
+	return p
 }
 
 func newPromotionsQueue() runtime.PriorityQueue {
@@ -264,24 +279,54 @@ func (p *promotionReconciler) serializedSync(
 					},
 				); err != nil {
 					logger.Error("error finding Promotion")
+					continue
+				}
+				if promo == nil || promo.Status.Phase != api.PromotionPhasePending {
+					continue
 				}
 
-				// TODO: Actual promotion logic goes here
-
-				promo.Status.Phase = api.PromotionPhaseComplete
-
-				updateErr := p.client.Status().Update(ctx, promo)
-				if updateErr != nil {
-					logger.Errorf("error updating Environment status: %s", updateErr)
-				}
-
-				logger.WithFields(log.Fields{
+				logger = logger.WithFields(log.Fields{
 					"environment": promo.Spec.Environment,
 					"state":       promo.Spec.State,
-				}).Debug("handled Promotion")
+				})
+				logger.Debug("executing Promotion")
+
+				promoCtx := logging.ContextWithLogger(ctx, logger)
+
+				if err = p.promoteFn(
+					promoCtx,
+					promo.Spec.Environment,
+					promo.Namespace,
+					promo.Spec.State,
+				); err != nil {
+					promo.Status.Phase = api.PromotionPhaseFailed
+					promo.Status.Error = err.Error()
+					logger.Errorf("error executing Promotion: %s", err)
+				} else {
+					promo.Status.Phase = api.PromotionPhaseComplete
+					promo.Status.Error = ""
+				}
+
+				if err = p.client.Status().Update(ctx, promo); err != nil {
+					logger.Errorf("error updating Promotion status: %s", err)
+				}
+
+				if promo.Status.Phase == api.PromotionPhaseComplete && err == nil {
+					logger.Debug("completed Promotion")
+				}
 			}
 		}
 	}
+}
+
+// TODO: Implement this
+func (p *promotionReconciler) promote(
+	ctx context.Context,
+	envName string,
+	envNamespace string,
+	stateID string,
+) error {
+	return nil
 }
 
 // getPromo returns a pointer to the Promotion resource specified by the

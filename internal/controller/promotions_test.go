@@ -19,6 +19,11 @@ func TestNewPromotionReconciler(t *testing.T) {
 	p := newPromotionReconciler(fake.NewClientBuilder().Build())
 	require.NotNil(t, p.client)
 	require.NotNil(t, p.promoQueuesByEnv)
+
+	// Assert that all overridable behaviors were initialized to a default:
+
+	// Promotions (general):
+	require.NotNil(t, p.promoteFn)
 }
 
 func TestInitializeQueues(t *testing.T) {
@@ -209,6 +214,9 @@ func TestSerializedSync(t *testing.T) {
 			Environment: "fake-env",
 			State:       "fake-state",
 		},
+		Status: api.PromotionStatus{
+			Phase: api.PromotionPhasePending,
+		},
 	}
 
 	scheme, err := api.SchemeBuilder.Build()
@@ -224,6 +232,9 @@ func TestSerializedSync(t *testing.T) {
 		client: client,
 		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{
 			{Namespace: "fake-namespace", Name: "fake-env"}: pq,
+		},
+		promoteFn: func(context.Context, string, string, string) error {
+			return nil
 		},
 	}
 
