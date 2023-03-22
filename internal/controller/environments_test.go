@@ -87,9 +87,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "no subscriptions",
 			spec: api.EnvironmentSpec{
-				Subscriptions:       &api.Subscriptions{},
-				PromotionMechanisms: &api.PromotionMechanisms{},
-				HealthChecks:        &api.HealthChecks{},
+				Subscriptions: &api.Subscriptions{},
 			},
 			initialStatus: api.EnvironmentStatus{},
 			assertions: func(
@@ -109,8 +107,6 @@ func TestSync(t *testing.T) {
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
-				PromotionMechanisms: &api.PromotionMechanisms{},
-				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
@@ -137,8 +133,6 @@ func TestSync(t *testing.T) {
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
-				PromotionMechanisms: &api.PromotionMechanisms{},
-				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
@@ -164,8 +158,7 @@ func TestSync(t *testing.T) {
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
-				PromotionMechanisms: &api.PromotionMechanisms{},
-				HealthChecks:        &api.HealthChecks{},
+				HealthChecks: &api.HealthChecks{},
 			},
 			initialStatus: api.EnvironmentStatus{
 				AvailableStates: []api.EnvironmentState{
@@ -255,8 +248,6 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
-				PromotionMechanisms: &api.PromotionMechanisms{},
-				HealthChecks:        &api.HealthChecks{},
 			},
 			getAvailableStatesFromUpstreamEnvsFn: func(
 				context.Context,
@@ -277,7 +268,7 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "not auto-promotion eligible",
+			name: "no latest state from upstream envs",
 			spec: api.EnvironmentSpec{
 				Subscriptions: &api.Subscriptions{
 					UpstreamEnvs: []api.EnvironmentSubscription{
@@ -287,8 +278,42 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
-				PromotionMechanisms: &api.PromotionMechanisms{},
-				HealthChecks:        &api.HealthChecks{},
+			},
+			getAvailableStatesFromUpstreamEnvsFn: func(
+				context.Context,
+				[]api.EnvironmentSubscription,
+			) ([]api.EnvironmentState, error) {
+				return nil, nil
+			},
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should be unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "multiple upstream envs",
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					UpstreamEnvs: []api.EnvironmentSubscription{
+						// Subscribing to multiple upstream environments should block
+						// auto-promotion
+						{
+							Name:      "fake-name",
+							Namespace: "fake-namespace",
+						},
+						{
+							Name:      "another-fake-name",
+							Namespace: "another-fake-namespace",
+						},
+					},
+				},
+				EnableAutoPromotion: true,
 			},
 			getAvailableStatesFromUpstreamEnvsFn: func(
 				context.Context,
@@ -309,6 +334,65 @@ func TestSync(t *testing.T) {
 				require.Equal(
 					t,
 					api.EnvironmentStateStack{{}, {}},
+					newStatus.AvailableStates,
+				)
+				newStatus.AvailableStates = initialStatus.AvailableStates
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "auto-promotion not enabled",
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
+			getLatestStateFromReposFn: func(
+				context.Context,
+				string,
+				api.RepoSubscriptions,
+			) (*api.EnvironmentState, error) {
+				return &api.EnvironmentState{
+					Commits: []api.GitCommit{
+						{
+							RepoURL: "fake-url",
+							ID:      "fake-commit",
+						},
+					},
+					Images: []api.Image{
+						{
+							RepoURL: "fake-url",
+							Tag:     "fake-tag",
+						},
+					},
+				}, nil
+			},
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should have updated AvailableStates and otherwise be unchanged
+				require.Equal(
+					t,
+					api.EnvironmentStateStack{
+						{
+							Commits: []api.GitCommit{
+								{
+									RepoURL: "fake-url",
+									ID:      "fake-commit",
+								},
+							},
+							Images: []api.Image{
+								{
+									RepoURL: "fake-url",
+									Tag:     "fake-tag",
+								},
+							},
+						},
+					},
 					newStatus.AvailableStates,
 				)
 				newStatus.AvailableStates = initialStatus.AvailableStates
