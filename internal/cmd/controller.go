@@ -70,6 +70,7 @@ func newControllerCommand() *cobra.Command {
 						LogLevel: bookkeeper.LogLevel(config.LogLevel),
 					},
 				),
+				config,
 			); err != nil {
 				return errors.Wrap(err, "setup environment reconciler")
 			}
@@ -80,7 +81,7 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "setup promotion reconciler")
 			}
 
-			if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+			if err := mgr.Start(ctx); err != nil {
 				return errors.Wrap(err, "start controller")
 			}
 			return nil

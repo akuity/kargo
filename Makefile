@@ -110,12 +110,12 @@ hack-k3d-down:
 
 .PHONY: hack-install-argocd
 hack-install-argocd:
-	helm upgrade argo-cd argo-cd \
+	helm upgrade argocd argo-cd \
 		--repo https://argoproj.github.io/argo-helm \
 		--version $(ARGO_CD_CHART_VERSION) \
 		--install \
 		--create-namespace \
-		--namespace argo-cd \
+		--namespace argocd \
 		--set 'configs.secret.argocdServerAdminPassword=$$2a$$10$$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
 		--set 'configs.params."application\.namespaces"=*' \
 		--set server.service.type=NodePort \
@@ -124,10 +124,10 @@ hack-install-argocd:
 
 .PHONY: hack-add-rollouts
 hack-add-rollouts:
-	helm upgrade argo-cd argo-cd \
+	helm upgrade argocd argo-cd \
 		--repo https://argoproj.github.io/argo-helm \
 		--version $(ARGO_CD_CHART_VERSION) \
-		--namespace argo-cd \
+		--namespace argocd \
 		--reuse-values \
 		--set server.extensions.enabled=true \
 		--set server.extensions.contents[0].name=argo-rollouts \
