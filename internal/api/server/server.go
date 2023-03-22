@@ -29,8 +29,9 @@ func NewServer(cfg config.APIConfig) Server {
 }
 
 func (s *server) Serve(ctx context.Context) error {
+	log := logging.LoggerFromContext(ctx)
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
-	logging.LoggerFromContext(ctx).Infof("Server is listening on %q", addr)
+	log.Infof("Server is listening on %q", addr)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return errors.Wrapf(err, "listen %s", addr)
@@ -44,7 +45,7 @@ func (s *server) Serve(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		logging.LoggerFromContext(ctx).Info("Gracefully stopping server...")
+		log.Info("Gracefully stopping server...")
 		time.Sleep(s.cfg.GracefulShutdownTimeout)
 		srv.GracefulStop()
 		return nil
