@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
@@ -17,19 +16,15 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	e, err := newEnvironmentReconciler(
 		fake.NewClientBuilder().Build(),
 		&fakeCredentialsDB{},
-		bookkeeper.NewService(nil),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
-	require.NotNil(t, e.bookkeeperService)
 
 	// Assert that all overridable behaviors were initialized to a default:
 
-	// Common:
-	require.NotNil(t, e.getArgoCDAppFn)
-
 	// Health checks:
+	require.NotNil(t, e.getArgoCDAppFn)
 	require.NotNil(t, e.checkHealthFn)
 
 	// Syncing:
@@ -41,20 +36,6 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestChartsFn)
 	require.NotNil(t, e.getLatestChartVersionFn)
 	require.NotNil(t, e.getLatestCommitIDFn)
-
-	// Promotions (general):
-	require.NotNil(t, e.promoteFn)
-	// Promotions via Git:
-	require.NotNil(t, e.gitApplyUpdateFn)
-	// Promotions via Git + Kustomize:
-	require.NotNil(t, e.kustomizeSetImageFn)
-	// Promotions via Git + Helm:
-	require.NotNil(t, e.buildChartDependencyChangesFn)
-	require.NotNil(t, e.updateChartDependenciesFn)
-	require.NotNil(t, e.setStringsInYAMLFileFn)
-	// Promotions via Argo CD:
-	require.NotNil(t, e.applyArgoCDSourceUpdateFn)
-	require.NotNil(t, e.patchFn)
 }
 
 func TestSync(t *testing.T) {
@@ -76,12 +57,6 @@ func TestSync(t *testing.T) {
 			context.Context,
 			[]api.EnvironmentSubscription,
 		) ([]api.EnvironmentState, error)
-		promoteFn func(
-			context.Context,
-			metav1.ObjectMeta,
-			api.PromotionMechanisms,
-			api.EnvironmentState,
-		) (api.EnvironmentState, error)
 		assertions func(initialStatus, newStatus api.EnvironmentStatus, err error)
 	}{
 		{
@@ -413,7 +388,6 @@ func TestSync(t *testing.T) {
 			checkHealthFn:                        testCase.checkHealthFn,
 			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
 			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn, // nolint: lll
-			promoteFn:                            testCase.promoteFn,
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			newStatus, err := reconciler.sync(context.Background(), testEnv)

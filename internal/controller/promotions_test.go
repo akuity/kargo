@@ -11,19 +11,39 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/controller/runtime"
 )
 
 func TestNewPromotionReconciler(t *testing.T) {
-	p := newPromotionReconciler(fake.NewClientBuilder().Build())
+	p := newPromotionReconciler(
+		fake.NewClientBuilder().Build(),
+		&fakeCredentialsDB{},
+		bookkeeper.NewService(nil),
+	)
 	require.NotNil(t, p.client)
+	require.NotNil(t, p.credentialsDB)
+	require.NotNil(t, p.bookkeeperService)
 	require.NotNil(t, p.promoQueuesByEnv)
 
 	// Assert that all overridable behaviors were initialized to a default:
 
 	// Promotions (general):
 	require.NotNil(t, p.promoteFn)
+	require.NotNil(t, p.applyPromotionMechanismsFn)
+	// Promotions via Git:
+	require.NotNil(t, p.gitApplyUpdateFn)
+	// Promotions via Git + Kustomize:
+	require.NotNil(t, p.kustomizeSetImageFn)
+	// Promotions via Git + Helm:
+	require.NotNil(t, p.buildChartDependencyChangesFn)
+	require.NotNil(t, p.updateChartDependenciesFn)
+	require.NotNil(t, p.setStringsInYAMLFileFn)
+	// Promotions via Argo CD:
+	require.NotNil(t, p.getArgoCDAppFn)
+	require.NotNil(t, p.applyArgoCDSourceUpdateFn)
+	require.NotNil(t, p.patchFn)
 }
 
 func TestInitializeQueues(t *testing.T) {

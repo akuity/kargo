@@ -11,7 +11,7 @@ import (
 	"github.com/akuityio/kargo/internal/logging"
 )
 
-func (e *environmentReconciler) applyGitRepoUpdate(
+func (p *promotionReconciler) applyGitRepoUpdate(
 	ctx context.Context,
 	namespace string,
 	newState api.EnvironmentState,
@@ -20,7 +20,7 @@ func (e *environmentReconciler) applyGitRepoUpdate(
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	creds, ok, err :=
-		e.credentialsDB.Get(ctx, namespace, credentials.TypeGit, update.RepoURL)
+		p.credentialsDB.Get(ctx, namespace, credentials.TypeGit, update.RepoURL)
 	if err != nil {
 		return newState, errors.Wrapf(
 			err,
@@ -40,10 +40,10 @@ func (e *environmentReconciler) applyGitRepoUpdate(
 		logger.Debug("found no credentials for git repo")
 	}
 
-	commitID, err := e.gitApplyUpdateFn(update.RepoURL, update.Branch, repoCreds,
+	commitID, err := p.gitApplyUpdateFn(update.RepoURL, update.Branch, repoCreds,
 		func(homeDir, workingDir string) (string, error) {
 			if update.Kustomize != nil {
-				if err = e.applyKustomize(
+				if err = p.applyKustomize(
 					newState,
 					*update.Kustomize,
 					workingDir,
@@ -65,7 +65,7 @@ func (e *environmentReconciler) applyGitRepoUpdate(
 			}
 
 			if update.Helm != nil {
-				if err = e.applyHelm(
+				if err = p.applyHelm(
 					newState,
 					*update.Helm,
 					homeDir,

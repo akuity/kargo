@@ -73,17 +73,18 @@ func newControllerCommand() *cobra.Command {
 				ctx,
 				mgr,
 				credentialsDB,
-				bookkeeper.NewService(
-					&bookkeeper.ServiceOptions{
-						LogLevel: bookkeeper.LogLevel(config.LogLevel),
-					},
-				),
 			); err != nil {
 				return errors.Wrap(err, "setup environment reconciler")
 			}
 			if err := controller.SetupPromotionReconcilerWithManager(
 				ctx,
 				mgr,
+				credentialsDB,
+				bookkeeper.NewService(
+					&bookkeeper.ServiceOptions{
+						LogLevel: bookkeeper.LogLevel(config.LogLevel),
+					},
+				),
 			); err != nil {
 				return errors.Wrap(err, "setup promotion reconciler")
 			}
