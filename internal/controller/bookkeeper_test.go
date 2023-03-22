@@ -9,6 +9,7 @@ import (
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/credentials"
 )
 
 func TestApplyBookkeeperUpdate(t *testing.T) {
@@ -16,7 +17,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 		name              string
 		newState          api.EnvironmentState
 		update            api.GitRepoUpdate
-		credentialsDB     credentialsDB
+		credentialsDB     credentials.Database
 		bookkeeperService bookkeeper.Service
 		assertions        func(inState, outState api.EnvironmentState, err error)
 	}{
@@ -80,10 +81,11 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, errors.New("something went wrong")
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false,
+						errors.New("something went wrong")
 				},
 			},
 			assertions: func(inState, outState api.EnvironmentState, err error) {
@@ -123,10 +125,10 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			bookkeeperService: &fakeBookkeeperService{
@@ -174,10 +176,10 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			bookkeeperService: &fakeBookkeeperService{

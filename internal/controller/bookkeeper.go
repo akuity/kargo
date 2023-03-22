@@ -8,6 +8,7 @@ import (
 
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/logging"
 )
 
@@ -55,7 +56,7 @@ func (e *environmentReconciler) applyBookkeeperUpdate(
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	creds, ok, err :=
-		e.credentialsDB.get(ctx, namespace, credentialsTypeGit, update.RepoURL)
+		e.credentialsDB.Get(ctx, namespace, credentials.TypeGit, update.RepoURL)
 	if err != nil {
 		return newState, errors.Wrapf(
 			err,
