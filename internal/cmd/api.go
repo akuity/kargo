@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/akuityio/kargo/internal/api/server"
 	"github.com/akuityio/kargo/internal/config"
+	"github.com/akuityio/kargo/internal/logging"
 )
 
 func newAPICommand() *cobra.Command {
@@ -15,8 +16,10 @@ func newAPICommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := signals.SetupSignalHandler()
 			cfg := config.NewAPIConfig()
+			logger := log.New()
+			logger.SetLevel(cfg.LogLevel)
+			ctx := logging.ContextWithLogger(cmd.Context(), logger.WithFields(nil))
 			srv := server.NewServer(cfg)
 			return srv.Serve(ctx)
 		},
