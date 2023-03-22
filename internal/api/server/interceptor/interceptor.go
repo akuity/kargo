@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	loggableMethods = map[string]bool{
-		"/grpc.health.v1.Health/Check": false,
-		"/grpc.health.v1.Health/Watch": false,
+	nonLoggableMethods = map[string]bool{
+		"/grpc.health.v1.Health/Check": true,
+		"/grpc.health.v1.Health/Watch": true,
 	}
 )
 
@@ -30,11 +30,10 @@ func NewUnaryInterceptor(logger *logrus.Entry) grpc.ServerOption {
 
 func newLogDecider() grpc_logrus.Option {
 	return grpc_logrus.WithDecider(func(fullMethodName string, err error) bool {
-		skip, ok := loggableMethods[fullMethodName]
-		if !ok {
+		if _, ok := nonLoggableMethods[fullMethodName]; !ok {
 			return true
 		}
 		// Log error even if this method should be skipped
-		return err != nil || skip
+		return err != nil
 	})
 }
