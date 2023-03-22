@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/akuityio/kargo/internal/api/server"
@@ -15,9 +16,10 @@ func newAPICommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
 			cfg := config.NewAPIConfig()
-			logging.LoggerFromContext(ctx).Logger.SetLevel(cfg.LogLevel)
+			logger := log.New()
+			logger.SetLevel(cfg.LogLevel)
+			ctx := logging.ContextWithLogger(cmd.Context(), logger.WithFields(nil))
 			srv := server.NewServer(cfg)
 			return srv.Serve(ctx)
 		},
