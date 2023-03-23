@@ -8,4 +8,7 @@ kindV1Alpha4Cluster:
   - extraPortMappings:
     - containerPort: 30080 # Argo CD
       hostPort: 30080
-
+    - containerPort: 30081 # Kargo API server
+      hostPort: 30081
+    - containerPort: 30082 # Kargo API server proxy
+      hostPort: 30082

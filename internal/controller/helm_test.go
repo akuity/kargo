@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/helm"
 )
 
@@ -172,7 +173,7 @@ func TestApplyHelm(t *testing.T) {
 func TestGetLatestCharts(t *testing.T) {
 	testCases := []struct {
 		name                    string
-		credentialsDB           credentialsDB
+		credentialsDB           credentials.Database
 		getLatestChartVersionFn func(
 			context.Context,
 			string,
@@ -188,10 +189,11 @@ func TestGetLatestCharts(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, errors.New("something went wrong")
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false,
+						errors.New("something went wrong")
 				},
 			},
 			assertions: func(_ []api.Chart, err error) {
@@ -211,10 +213,10 @@ func TestGetLatestCharts(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			getLatestChartVersionFn: func(
@@ -243,10 +245,10 @@ func TestGetLatestCharts(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			getLatestChartVersionFn: func(
@@ -270,10 +272,10 @@ func TestGetLatestCharts(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			getLatestChartVersionFn: func(
