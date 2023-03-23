@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/helm"
 	"github.com/akuityio/kargo/internal/logging"
 )
@@ -81,7 +82,7 @@ func (e *environmentReconciler) getLatestCharts(
 		})
 
 		creds, ok, err :=
-			e.credentialsDB.get(ctx, namespace, credentialsTypeHelm, sub.RegistryURL)
+			e.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RegistryURL)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,

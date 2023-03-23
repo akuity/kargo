@@ -1,4 +1,4 @@
-package controller
+package credentials
 
 import (
 	"context"
@@ -16,16 +16,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// credentialsType is a string type used to represent a type of credentials.
-type credentialsType string
+// Type is a string type used to represent a type of Credentials.
+type Type string
 
 const (
-	// credentialsTypeGit represents credentials for a Git repository.
-	credentialsTypeGit credentialsType = "git"
-	// credentialsTypeHelm represents credentials for a Helm chart repository.
-	credentialsTypeHelm credentialsType = "helm"
-	// credentialsTypeImage represents credentials for an image repository.
-	credentialsTypeImage credentialsType = "image"
+	// TypeGit represents credentials for a Git repository.
+	TypeGit Type = "git"
+	// TypeHelm represents credentials for a Helm chart repository.
+	TypeHelm Type = "helm"
+	// TypeImage represents credentials for an image repository.
+	TypeImage Type = "image"
 
 	// secretsByRepo is the name of the index that credentialsDB uses for indexing
 	// credentials stored in Kubernetes Secrets by repository type + URL.
@@ -34,8 +34,8 @@ const (
 	kargoSecretTypeLabel = "kargo.akuity.io/secret-type"
 )
 
-// credentials generically represents any type of repository credential.
-type credentials struct {
+// Credentials generically represents any type of repository credential.
+type Credentials struct {
 	// Username identifies a principal, which combined with the value of the
 	// Password field, can be used for access to some repository.
 	Username string
@@ -47,33 +47,35 @@ type credentials struct {
 	SSHPrivateKey string
 }
 
-// credentialsDB is an interface for a credentials store.
-type credentialsDB interface {
-	get(
+// Database is an interface for a Credentials store.
+type Database interface {
+	Get(
 		ctx context.Context,
 		namespace string,
-		credType credentialsType,
+		credType Type,
 		repo string,
-	) (credentials, bool, error)
+	) (Credentials, bool, error)
 }
 
-// kubernetesCredentialsDB is an implementation of the credentialsDB
-// interface that utilizes a Kubernetes controller runtime client to index and
-// retrieve credentials stored in Kubernetes Secrets.
-type kubernetesCredentialsDB struct {
+// kubernetesDatabase is an implementation of the Database interface that
+// utilizes a Kubernetes controller runtime client to index and retrieve
+// credentials stored in Kubernetes Secrets.
+type kubernetesDatabase struct {
 	argoCDNamespace string
 	client          client.Client
 }
 
-// newKubernetesCredentialsDB initializes a new instance of
-// kubernetesCredentialsDB. This function carries out the important task of
-// indexing credentials stored in Kubernetes Secrets by repository type + URL.
-func newKubernetesCredentialsDB(
+// NewKubernetesDatabase initializes and returns an implementation of the
+// Database interface that utilizes a Kubernetes controller runtime client to
+// index and retrieve Credentials stored in Kubernetes Secrets. This function
+// carries out the important task of indexing Credentials stored in Kubernetes
+// Secrets by repository type + URL.
+func NewKubernetesDatabase(
 	ctx context.Context,
 	argoCDNamespace string,
 	mgr manager.Manager,
-) (credentialsDB, error) {
-	k := &kubernetesCredentialsDB{
+) (Database, error) {
+	k := &kubernetesDatabase{
 		argoCDNamespace: argoCDNamespace,
 		client:          mgr.GetClient(),
 	}
@@ -86,7 +88,7 @@ func newKubernetesCredentialsDB(
 	return k, errors.Wrap(err, "error indexing Secrets by repo")
 }
 
-func (k *kubernetesCredentialsDB) index(obj client.Object) []string {
+func (k *kubernetesDatabase) index(obj client.Object) []string {
 	secret := obj.(*corev1.Secret) // nolint: forcetypeassert
 	// Refuse to index this secret if it has no labels or data.
 	if secret.Labels == nil || secret.Data == nil {
@@ -114,24 +116,24 @@ func (k *kubernetesCredentialsDB) index(obj client.Object) []string {
 			return nil
 		}
 	}
-	var credsType credentialsType
+	var credsType Type
 	if credsTypeBytes, ok := secret.Data["type"]; ok {
-		credsType = credentialsType(credsTypeBytes)
+		credsType = Type(credsTypeBytes)
 	} else {
 		// If not specified, assume these credentials are for a Git repo.
-		credsType = credentialsTypeGit
+		credsType = TypeGit
 	}
 	// Refuse to index this Secret if we don't recognize what type of
 	// repository these credentials are supposed to be for.
 	switch credsType {
-	case credentialsTypeGit, credentialsTypeHelm, credentialsTypeImage:
+	case TypeGit, TypeHelm, TypeImage:
 	default:
 		return nil
 	}
 	var repoURL string
 	if repoURLBytes, ok := secret.Data["url"]; ok {
 		repoURL = string(repoURLBytes)
-		if credsType == credentialsTypeGit {
+		if credsType == TypeGit {
 			// This is important. We don't want the presence or absence of ".git"
 			// at the end of the URL to affect credential lookups.
 			repoURL = git.NormalizeGitURL(string(repoURLBytes))
@@ -143,18 +145,18 @@ func (k *kubernetesCredentialsDB) index(obj client.Object) []string {
 	return []string{credsSecretIndexVal(credsType, repoURL)}
 }
 
-func (k *kubernetesCredentialsDB) get(
+func (k *kubernetesDatabase) Get(
 	ctx context.Context,
 	namespace string,
-	credType credentialsType,
+	credType Type,
 	repoURL string,
-) (credentials, bool, error) {
-	if credType == credentialsTypeGit {
+) (Credentials, bool, error) {
+	if credType == TypeGit {
 		// This is important. We don't want the presence or absence of ".git" at the
 		// end of the URL to affect credential lookups.
 		repoURL = git.NormalizeGitURL(repoURL)
 	}
-	creds := credentials{}
+	creds := Credentials{}
 
 	var secret *corev1.Secret
 	var err error
@@ -223,7 +225,7 @@ func (k *kubernetesCredentialsDB) get(
 	return creds, true, nil
 }
 
-func (k *kubernetesCredentialsDB) getCredentialsSecret(
+func (k *kubernetesDatabase) getCredentialsSecret(
 	ctx context.Context,
 	namespace string,
 	labelSelector labels.Selector,
@@ -249,7 +251,7 @@ func (k *kubernetesCredentialsDB) getCredentialsSecret(
 	return &(secrets.Items[0]), nil
 }
 
-func (k *kubernetesCredentialsDB) getCredentialsTemplateSecret(
+func (k *kubernetesDatabase) getCredentialsTemplateSecret(
 	ctx context.Context,
 	namespace string,
 	labelSelector labels.Selector,
@@ -279,6 +281,6 @@ func (k *kubernetesCredentialsDB) getCredentialsTemplateSecret(
 	return nil, nil
 }
 
-func credsSecretIndexVal(credsType credentialsType, repoURL string) string {
+func credsSecretIndexVal(credsType Type, repoURL string) string {
 	return fmt.Sprintf("%s:%s", credsType, repoURL)
 }

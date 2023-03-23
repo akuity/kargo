@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/images"
 	"github.com/akuityio/kargo/internal/logging"
 )
@@ -21,7 +22,7 @@ func (e *environmentReconciler) getLatestImages(
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 
 		creds, ok, err :=
-			e.credentialsDB.get(ctx, namespace, credentialsTypeImage, sub.RepoURL)
+			e.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,

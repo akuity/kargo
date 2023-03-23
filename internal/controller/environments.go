@@ -24,7 +24,7 @@ import (
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
-	"github.com/akuityio/kargo/internal/config"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/git"
 	"github.com/akuityio/kargo/internal/helm"
 	"github.com/akuityio/kargo/internal/images"
@@ -40,7 +40,7 @@ const (
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
 	client            client.Client
-	credentialsDB     credentialsDB
+	credentialsDB     credentials.Database
 	bookkeeperService bookkeeper.Service
 
 	// The following behaviors are overridable for testing purposes:
@@ -168,8 +168,8 @@ type environmentReconciler struct {
 func SetupEnvironmentReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
+	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
-	config config.ControllerConfig,
 ) error {
 	// Index Environments by Argo CD Applications
 	if err := mgr.GetFieldIndexer().IndexField(
@@ -190,12 +190,6 @@ func SetupEnvironmentReconcilerWithManager(
 			err,
 			"error indexing Environments by Argo CD Applications",
 		)
-	}
-
-	credentialsDB, err :=
-		newKubernetesCredentialsDB(ctx, config.ArgoCDNamespace, mgr)
-	if err != nil {
-		return errors.Wrap(err, "error initializing credentials DB")
 	}
 
 	e, err := newEnvironmentReconciler(
@@ -229,7 +223,7 @@ func SetupEnvironmentReconcilerWithManager(
 
 func newEnvironmentReconciler(
 	client client.Client,
-	credentialsDB credentialsDB,
+	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
 ) (*environmentReconciler, error) {
 	e := &environmentReconciler{
