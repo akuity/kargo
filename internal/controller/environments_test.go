@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
@@ -57,7 +58,7 @@ func TestSync(t *testing.T) {
 			context.Context,
 			[]api.EnvironmentSubscription,
 		) ([]api.EnvironmentState, error)
-		assertions func(initialStatus, newStatus api.EnvironmentStatus, err error)
+		assertions func(initialStatus, newStatus api.EnvironmentStatus, client client.Client, err error)
 	}{
 		{
 			name: "no subscriptions",
@@ -68,6 +69,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -93,6 +95,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -119,6 +122,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -204,6 +208,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -233,6 +238,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -263,6 +269,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -302,6 +309,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -346,6 +354,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -374,6 +383,72 @@ func TestSync(t *testing.T) {
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
+
+		{
+			name: "successful creation of promotion resource",
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+				EnableAutoPromotion: true,
+			},
+			getLatestStateFromReposFn: func(
+				context.Context,
+				string,
+				api.RepoSubscriptions,
+			) (*api.EnvironmentState, error) {
+				return &api.EnvironmentState{
+					Commits: []api.GitCommit{
+						{
+							RepoURL: "fake-url",
+							ID:      "fake-commit",
+						},
+					},
+					Images: []api.Image{
+						{
+							RepoURL: "fake-url",
+							Tag:     "fake-tag",
+						},
+					},
+				}, nil
+			},
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				client client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should have updated AvailableStates and otherwise be unchanged
+				require.Equal(
+					t,
+					api.EnvironmentStateStack{
+						{
+							Commits: []api.GitCommit{
+								{
+									RepoURL: "fake-url",
+									ID:      "fake-commit",
+								},
+							},
+							Images: []api.Image{
+								{
+									RepoURL: "fake-url",
+									Tag:     "fake-tag",
+								},
+							},
+						},
+					},
+					newStatus.AvailableStates,
+				)
+				newStatus.AvailableStates = initialStatus.AvailableStates
+				require.Equal(t, initialStatus, newStatus)
+				// And a Promotion should have been created
+				promos := api.PromotionList{}
+				err = client.List(context.Background(), &promos)
+				require.NoError(t, err)
+				require.Len(t, promos.Items, 1)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		testEnv := &api.Environment{
@@ -384,14 +459,23 @@ func TestSync(t *testing.T) {
 			Spec:   &testCase.spec,
 			Status: testCase.initialStatus,
 		}
+		scheme, err := api.SchemeBuilder.Build()
+		require.NoError(t, err)
+		// nolint: lll
 		reconciler := &environmentReconciler{
+			client:                               fake.NewClientBuilder().WithScheme(scheme).Build(),
 			checkHealthFn:                        testCase.checkHealthFn,
 			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
-			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn, // nolint: lll
+			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn,
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			newStatus, err := reconciler.sync(context.Background(), testEnv)
-			testCase.assertions(testCase.initialStatus, newStatus, err)
+			testCase.assertions(
+				testCase.initialStatus,
+				newStatus,
+				reconciler.client,
+				err,
+			)
 		})
 	}
 }

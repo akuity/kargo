@@ -392,13 +392,35 @@ func (e *environmentReconciler) sync(
 		)
 		return status, nil
 	}
+	nextState := nextStateCandidate
 
 	// If we get to here, we've determined that auto-promotion is enabled and
 	// safe.
-	logger.WithField("state", nextStateCandidate.ID).
-		Debug("auto-promotion will proceed")
+	logger = logger.WithField("state", nextState.ID)
+	logger.Debug("auto-promotion will proceed")
 
-	// TODO: Create Promotion resource
+	// TODO: If we name this deterministically, we can check first if it already
+	// exists -- which is a thing that could happen if, on a previous
+	// reconciliation, we succeeded in creating the Promotion, but failed to
+	// update the Environment status.
+	promoName := uuid.NewV4().String()
+	if err := e.client.Create(
+		ctx,
+		&api.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      promoName,
+				Namespace: env.Namespace,
+			},
+			Spec: &api.PromotionSpec{
+				Environment: env.Name,
+				State:       nextState.ID,
+			},
+		},
+		&client.CreateOptions{},
+	); err != nil {
+		return status, err
+	}
+	logger.WithField("promotion", promoName).Debug("created Promotion resource")
 
 	return status, nil
 }
