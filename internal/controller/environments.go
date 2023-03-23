@@ -326,7 +326,7 @@ func (e *environmentReconciler) Reconcile(
 	logger.Debug("reconciling Environment")
 
 	// Find the Environment
-	env, err := e.getEnv(ctx, req.NamespacedName)
+	env, err := getEnv(ctx, e.client, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -543,8 +543,9 @@ func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 	availableStates := []api.EnvironmentState{}
 	stateSet := map[string]struct{}{} // We'll use this to de-dupe
 	for _, sub := range subs {
-		upstreamEnv, err := e.getEnv(
+		upstreamEnv, err := getEnv(
 			ctx,
+			e.client,
 			types.NamespacedName{
 				Namespace: sub.Namespace,
 				Name:      sub.Name,
@@ -638,12 +639,13 @@ func (e *environmentReconciler) promote(
 // getEnv returns a pointer to the Environment resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
 // instead.
-func (e *environmentReconciler) getEnv(
+func getEnv(
 	ctx context.Context,
+	c client.Client,
 	namespacedName types.NamespacedName,
 ) (*api.Environment, error) {
 	env := api.Environment{}
-	if err := e.client.Get(ctx, namespacedName, &env); err != nil {
+	if err := c.Get(ctx, namespacedName, &env); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			logging.LoggerFromContext(ctx).WithFields(log.Fields{
 				"namespace":   namespacedName.Namespace,
