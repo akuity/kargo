@@ -30,7 +30,7 @@ func TestAuthRoundTripper(t *testing.T) {
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				w.Write([]byte(req.Header.Get("Authorization")))
+				_, _ = w.Write([]byte(req.Header.Get("Authorization")))
 			}))
 			defer srv.Close()
 
