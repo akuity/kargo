@@ -60,6 +60,10 @@ type PromotionSpec struct {
 type PromotionStatus struct {
 	// Phase describes where the Promotion currently is in its lifecycle.
 	Phase PromotionPhase `json:"phase,omitempty"`
+	// Error describes any errors that are preventing the Promotion controller
+	// from executing this Promotion. i.e. If the Phase field has a value of
+	// Failed, this field can be expected to explain why.
+	Error string `json:"error,omitempty"`
 }
 
 //+kubebuilder:object:root=true
