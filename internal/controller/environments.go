@@ -465,27 +465,10 @@ func (e *environmentReconciler) sync(
 
 	// If we get to here, we've determined that auto-promotion is enabled and
 	// safe.
-	logger = logger.WithField("state", nextStateCandidate.ID)
-	logger.Debug("auto-promotion will proceed")
-	ctx = logging.ContextWithLogger(ctx, logger)
+	logger.WithField("state", nextStateCandidate.ID).
+		Debug("auto-promotion will proceed")
 
-	nextState, err := e.promoteFn(
-		ctx,
-		env.ObjectMeta,
-		*env.Spec.PromotionMechanisms,
-		nextStateCandidate,
-	)
-	if err != nil {
-		return status, err
-	}
-	status.States.Push(nextState)
-	logger.Debug("promoted Environment to new state")
-
-	// Promotion is successful at this point. Update the top available state
-	// in place because the promotion process may have updated some commit IDs.
-	for i := range status.AvailableStates[0].Commits {
-		status.AvailableStates[0].Commits[i].ID = nextState.Commits[i].ID
-	}
+	// TODO: Create Promotion resource
 
 	return status, nil
 }
