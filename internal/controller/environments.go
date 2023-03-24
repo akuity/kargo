@@ -24,7 +24,7 @@ import (
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
-	"github.com/akuityio/kargo/internal/config"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/git"
 	"github.com/akuityio/kargo/internal/helm"
 	"github.com/akuityio/kargo/internal/images"
@@ -40,7 +40,7 @@ const (
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
 	client            client.Client
-	credentialsDB     credentialsDB
+	credentialsDB     credentials.Database
 	bookkeeperService bookkeeper.Service
 
 	// The following behaviors are overridable for testing purposes:
@@ -168,8 +168,8 @@ type environmentReconciler struct {
 func SetupEnvironmentReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
+	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
-	config config.ControllerConfig,
 ) error {
 	// Index Environments by Argo CD Applications
 	if err := mgr.GetFieldIndexer().IndexField(
@@ -190,12 +190,6 @@ func SetupEnvironmentReconcilerWithManager(
 			err,
 			"error indexing Environments by Argo CD Applications",
 		)
-	}
-
-	credentialsDB, err :=
-		newKubernetesCredentialsDB(ctx, config.ArgoCDNamespace, mgr)
-	if err != nil {
-		return errors.Wrap(err, "error initializing credentials DB")
 	}
 
 	e, err := newEnvironmentReconciler(
@@ -229,7 +223,7 @@ func SetupEnvironmentReconcilerWithManager(
 
 func newEnvironmentReconciler(
 	client client.Client,
-	credentialsDB credentialsDB,
+	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
 ) (*environmentReconciler, error) {
 	e := &environmentReconciler{
@@ -332,7 +326,7 @@ func (e *environmentReconciler) Reconcile(
 	logger.Debug("reconciling Environment")
 
 	// Find the Environment
-	env, err := e.getEnv(ctx, req.NamespacedName)
+	env, err := getEnv(ctx, e.client, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -391,8 +385,6 @@ func (e *environmentReconciler) sync(
 		logger.Debug("Environment has no current state; skipping health checks")
 	}
 
-	autoPromote := env.Spec.EnableAutoPromotion
-
 	if env.Spec.Subscriptions.Repos != nil {
 
 		latestState, err := e.getLatestStateFromReposFn(
@@ -403,24 +395,24 @@ func (e *environmentReconciler) sync(
 		if err != nil {
 			return status, err
 		}
+		if latestState == nil {
+			logger.Debug("found no state from upstream repositories")
+			return status, nil
+		}
+		logger.Debug("got latest state from upstream repositories")
 
-		// If not nil, latestState from upstream repos will always have a shiny new
-		// ID. To determine if this is actually new and needs to be pushed onto the
+		// latestState from upstream repos will always have a shiny new ID. To
+		// determine if this is actually new and needs to be pushed onto the
 		// status.AvailableStates stack, either that stack needs to be empty or
 		// latestState's MATERIALS must differ from what is at the top of the
 		// status.AvailableStates stack.
-		if latestState != nil {
-			logger.Debug("got latest state from upstream repositories")
-			if topAvailableState, ok := status.AvailableStates.Top(); !ok ||
-				!latestState.SameMaterials(&topAvailableState) {
-				status.AvailableStates.Push(*latestState)
-				logger.Debug("latest state is new; added to available states")
-			} else {
-				logger.Debug("latest state is not new")
-			}
-		} else {
-			logger.Debug("found no state from upstream repositories")
+		if topAvailableState, ok := status.AvailableStates.Top(); ok &&
+			latestState.SameMaterials(&topAvailableState) {
+			logger.Debug("latest state is not new")
+			return status, nil
 		}
+		status.AvailableStates.Push(*latestState)
+		logger.Debug("latest state is new; added to available states")
 
 	} else if len(env.Spec.Subscriptions.UpstreamEnvs) > 0 {
 
@@ -437,54 +429,62 @@ func (e *environmentReconciler) sync(
 		status.AvailableStates = latestStatesFromEnvs
 		if len(latestStatesFromEnvs) == 0 {
 			logger.Debug("got no available states from upstream Environments")
-		} else {
-			logger.Debug("got available states from upstream Environments")
+			return status, nil
 		}
+		logger.Debug("got available states from upstream Environments")
 
-		// If we're subscribed to more than one upstream environment, then it's
-		// ambiguous which of the status.AvailableStates we should use, so
-		// auto-promotion is off the table.
-		autoPromote = autoPromote && len(env.Spec.Subscriptions.UpstreamEnvs) == 1
-
+		if len(env.Spec.Subscriptions.UpstreamEnvs) > 1 {
+			logger.Debug(
+				"auto-promotion cannot proceed due to multiple upstream Environments",
+			)
+			return status, nil
+		}
+	} else {
+		// This should be impossible if validation is working, but out of an
+		// abundance of caution, bail now if this happens somehow.
+		return status, nil
 	}
 
-	if !autoPromote || status.AvailableStates.Empty() {
-		logger.Debug("auto-promotion cannot proceed")
-		return status, nil // Nothing further to do
+	if !env.Spec.EnableAutoPromotion {
+		logger.Debug("auto-promotion is not enabled for this environment")
+		return status, nil
 	}
 
 	// Note: We're careful not to make any further modifications to the state
 	// stacks until we know a promotion has been successful.
-	nextStateCandidate, _ := status.AvailableStates.Top()
-	// Proceed with promotion if there is no currentState OR the
-	// nextStateCandidate is different and NEWER than the currentState
-	if currentState, ok := status.States.Top(); !ok ||
-		(nextStateCandidate.ID != currentState.ID &&
-			nextStateCandidate.FirstSeen.After(currentState.FirstSeen.Time)) {
-		logger = logger.WithField("state", nextStateCandidate.ID)
-		logger.Debug("auto-promotion will proceed")
-		ctx = logging.ContextWithLogger(ctx, logger)
-		nextState, err := e.promoteFn(
-			ctx,
-			env.ObjectMeta,
-			*env.Spec.PromotionMechanisms,
-			nextStateCandidate,
-		)
-		if err != nil {
-			return status, err
-		}
-		status.States.Push(nextState)
-		logger.Debug("promoted Environment to new state")
 
-		// Promotion is successful at this point. Replace the top available state
-		// because the promotion process may have updated some commit IDs.
-		topAvailableState, _ := status.AvailableStates.Pop()
-		for i := range topAvailableState.Commits {
-			topAvailableState.Commits[i].ID = nextState.Commits[i].ID
-		}
-		status.AvailableStates.Push(topAvailableState)
-	} else {
-		logger.Debug("found nothing to promote")
+	nextStateCandidate, _ := status.AvailableStates.Top()
+	if currentState, ok := status.States.Top(); ok &&
+		nextStateCandidate.FirstSeen.Before(currentState.FirstSeen) {
+		logger.Debug(
+			"newest available state is older than current state; refusing to " +
+				"auto-promote",
+		)
+		return status, nil
+	}
+
+	// If we get to here, we've determined that auto-promotion is enabled and
+	// safe.
+	logger = logger.WithField("state", nextStateCandidate.ID)
+	logger.Debug("auto-promotion will proceed")
+	ctx = logging.ContextWithLogger(ctx, logger)
+
+	nextState, err := e.promoteFn(
+		ctx,
+		env.ObjectMeta,
+		*env.Spec.PromotionMechanisms,
+		nextStateCandidate,
+	)
+	if err != nil {
+		return status, err
+	}
+	status.States.Push(nextState)
+	logger.Debug("promoted Environment to new state")
+
+	// Promotion is successful at this point. Update the top available state
+	// in place because the promotion process may have updated some commit IDs.
+	for i := range status.AvailableStates[0].Commits {
+		status.AvailableStates[0].Commits[i].ID = nextState.Commits[i].ID
 	}
 
 	return status, nil
@@ -543,8 +543,9 @@ func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 	availableStates := []api.EnvironmentState{}
 	stateSet := map[string]struct{}{} // We'll use this to de-dupe
 	for _, sub := range subs {
-		upstreamEnv, err := e.getEnv(
+		upstreamEnv, err := getEnv(
 			ctx,
+			e.client,
 			types.NamespacedName{
 				Namespace: sub.Namespace,
 				Name:      sub.Name,
@@ -638,12 +639,13 @@ func (e *environmentReconciler) promote(
 // getEnv returns a pointer to the Environment resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
 // instead.
-func (e *environmentReconciler) getEnv(
+func getEnv(
 	ctx context.Context,
+	c client.Client,
 	namespacedName types.NamespacedName,
 ) (*api.Environment, error) {
 	env := api.Environment{}
-	if err := e.client.Get(ctx, namespacedName, &env); err != nil {
+	if err := c.Get(ctx, namespacedName, &env); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			logging.LoggerFromContext(ctx).WithFields(log.Fields{
 				"namespace":   namespacedName.Namespace,

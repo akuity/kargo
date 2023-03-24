@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package akuity.io.kargo.v1alpha1;
+
+message Environment {
+  // TODO
+}

@@ -8,13 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/git"
 )
 
 func TestApplyGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
 		name             string
-		credentialsDB    credentialsDB
+		credentialsDB    credentials.Database
 		gitApplyUpdateFn func(
 			string,
 			string,
@@ -29,10 +30,11 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, errors.New("something went wrong")
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false,
+						errors.New("something went wrong")
 				},
 			},
 			assertions: func(_, _ api.EnvironmentState, err error) {
@@ -52,10 +54,10 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			gitApplyUpdateFn: func(
@@ -78,10 +80,10 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			gitApplyUpdateFn: func(
@@ -133,7 +135,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 func TestGetLatestCommits(t *testing.T) {
 	testCases := []struct {
 		name                string
-		credentialsDB       credentialsDB
+		credentialsDB       credentials.Database
 		getLatestCommitIDFn func(
 			string,
 			string,
@@ -147,10 +149,11 @@ func TestGetLatestCommits(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, errors.New("something went wrong")
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false,
+						errors.New("something went wrong")
 				},
 			},
 			assertions: func(commits []api.GitCommit, err error) {
@@ -171,10 +174,10 @@ func TestGetLatestCommits(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			getLatestCommitIDFn: func(
@@ -202,10 +205,10 @@ func TestGetLatestCommits(t *testing.T) {
 				getFn: func(
 					context.Context,
 					string,
-					credentialsType,
+					credentials.Type,
 					string,
-				) (credentials, bool, error) {
-					return credentials{}, false, nil
+				) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{}, false, nil
 				},
 			},
 			getLatestCommitIDFn: func(

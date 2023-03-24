@@ -13,6 +13,7 @@ import (
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/controller"
+	"github.com/akuityio/kargo/internal/credentials"
 	versionpkg "github.com/akuityio/kargo/internal/version"
 )
 
@@ -62,15 +63,21 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "create webhook")
 			}
 
+			credentialsDB, err :=
+				credentials.NewKubernetesDatabase(ctx, config.ArgoCDNamespace, mgr)
+			if err != nil {
+				return errors.Wrap(err, "error initializing credentials DB")
+			}
+
 			if err := controller.SetupEnvironmentReconcilerWithManager(
 				ctx,
 				mgr,
+				credentialsDB,
 				bookkeeper.NewService(
 					&bookkeeper.ServiceOptions{
 						LogLevel: bookkeeper.LogLevel(config.LogLevel),
 					},
 				),
-				config,
 			); err != nil {
 				return errors.Wrap(err, "setup environment reconciler")
 			}

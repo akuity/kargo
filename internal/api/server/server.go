@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
+	"github.com/akuityio/kargo/internal/api/server/interceptor"
 	"github.com/akuityio/kargo/internal/config"
 	"github.com/akuityio/kargo/internal/logging"
 )
@@ -37,7 +38,10 @@ func (s *server) Serve(ctx context.Context) error {
 		return errors.Wrapf(err, "listen %s", addr)
 	}
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(
+		interceptor.NewUnaryInterceptor(log),
+		interceptor.NewStreamInterceptor(log),
+	)
 	grpc_health_v1.RegisterHealthServer(srv, newGRPCHealthV1Server())
 
 	errCh := make(chan error)
