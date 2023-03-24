@@ -22,7 +22,7 @@ func TestAuthRoundTripper(t *testing.T) {
 		},
 		"context with auth credential": {
 			newContext: func() context.Context {
-				return ctxutil.SetAuthCredential(context.Background(), "Bearer token")
+				return ctxutil.WithAuthCredential(context.Background(), "Bearer token")
 			},
 			expected: "Bearer token",
 		},
