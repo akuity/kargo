@@ -21,7 +21,7 @@ func TestGetSet(t *testing.T) {
 		},
 		"context with value": {
 			newContext: func() context.Context {
-				return context.WithValue(context.Background(), dummyKey{}, "kargo")
+				return set(context.Background(), dummyKey{}, "kargo")
 			},
 			expectedValue: "kargo",
 			expectedOK:    true,
