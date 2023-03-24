@@ -73,6 +73,8 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
+    - name: Install buf
+      run: go install github.com/bufbuild/buf/cmd/buf@v1.15.1
     - name: Install controller-gen
       run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3
     - name: Run Codegen
