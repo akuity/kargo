@@ -15,6 +15,7 @@ ARGO_CD_CHART_VERSION := 5.21.0
 
 .PHONY: lint
 lint:
+	buf lint
 	golangci-lint run
 
 .PHONY: test-unit
@@ -39,6 +40,7 @@ lint-chart:
 
 .PHONY: codegen
 codegen:
+	buf generate
 	controller-gen \
 		rbac:roleName=manager-role \
 		crd \
