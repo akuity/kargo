@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	ctxutil "github.com/akuityio/kargo/internal/context"
 )
 
 func TestAuthRoundTripper(t *testing.T) {
@@ -22,7 +20,7 @@ func TestAuthRoundTripper(t *testing.T) {
 		},
 		"context with auth credential": {
 			newContext: func() context.Context {
-				return ctxutil.WithAuthCredential(context.Background(), "Bearer token")
+				return ContextWithAuthCredential(context.Background(), "Bearer token")
 			},
 			expected: "Bearer token",
 		},
