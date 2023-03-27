@@ -403,13 +403,12 @@ func (e *environmentReconciler) sync(
 	// exists -- which is a thing that could happen if, on a previous
 	// reconciliation, we succeeded in creating the Promotion, but failed to
 	// update the Environment status.
-	promoName := uuid.NewV4().String()
 	if err := e.client.Create(
 		ctx,
 		&api.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      promoName,
-				Namespace: env.Namespace,
+				GenerateName: fmt.Sprintf("%s-", env.Name),
+				Namespace:    env.Namespace,
 			},
 			Spec: &api.PromotionSpec{
 				Environment: env.Name,
@@ -420,7 +419,7 @@ func (e *environmentReconciler) sync(
 	); err != nil {
 		return status, err
 	}
-	logger.WithField("promotion", promoName).Debug("created Promotion resource")
+	logger.Debug("created Promotion resource")
 
 	return status, nil
 }
