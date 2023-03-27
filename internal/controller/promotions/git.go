@@ -1,4 +1,4 @@
-package controller
+package promotions
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/akuityio/kargo/internal/logging"
 )
 
-func (p *promotionReconciler) applyGitRepoUpdate(
+func (r *reconciler) applyGitRepoUpdate(
 	ctx context.Context,
 	namespace string,
 	newState api.EnvironmentState,
@@ -20,7 +20,7 @@ func (p *promotionReconciler) applyGitRepoUpdate(
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	creds, ok, err :=
-		p.credentialsDB.Get(ctx, namespace, credentials.TypeGit, update.RepoURL)
+		r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, update.RepoURL)
 	if err != nil {
 		return newState, errors.Wrapf(
 			err,
@@ -40,10 +40,10 @@ func (p *promotionReconciler) applyGitRepoUpdate(
 		logger.Debug("found no credentials for git repo")
 	}
 
-	commitID, err := p.gitApplyUpdateFn(update.RepoURL, update.Branch, repoCreds,
+	commitID, err := r.gitApplyUpdateFn(update.RepoURL, update.Branch, repoCreds,
 		func(homeDir, workingDir string) (string, error) {
 			if update.Kustomize != nil {
-				if err = p.applyKustomize(
+				if err = r.applyKustomize(
 					newState,
 					*update.Kustomize,
 					workingDir,
@@ -65,7 +65,7 @@ func (p *promotionReconciler) applyGitRepoUpdate(
 			}
 
 			if update.Helm != nil {
-				if err = p.applyHelm(
+				if err = r.applyHelm(
 					newState,
 					*update.Helm,
 					homeDir,
@@ -110,51 +110,4 @@ func (p *promotionReconciler) applyGitRepoUpdate(
 	}
 
 	return newState, nil
-}
-
-func (e *environmentReconciler) getLatestCommits(
-	ctx context.Context,
-	namespace string,
-	subs []api.GitSubscription,
-) ([]api.GitCommit, error) {
-	latestCommits := make([]api.GitCommit, len(subs))
-	for i, sub := range subs {
-		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
-		creds, ok, err :=
-			e.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error obtaining credentials for git repo %q",
-				sub.RepoURL,
-			)
-		}
-		var repoCreds *git.Credentials
-		if ok {
-			repoCreds = &git.Credentials{
-				Username:      creds.Username,
-				Password:      creds.Password,
-				SSHPrivateKey: creds.SSHPrivateKey,
-			}
-			logger.Debug("obtained credentials for git repo")
-		} else {
-			logger.Debug("found no credentials for git repo")
-		}
-
-		commit, err := e.getLatestCommitIDFn(sub.RepoURL, sub.Branch, repoCreds)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error determining latest commit ID of git repo %q",
-				sub.RepoURL,
-			)
-		}
-		logger.WithField("commit", commit).
-			Debug("found latest commit from repo")
-		latestCommits[i] = api.GitCommit{
-			RepoURL: sub.RepoURL,
-			ID:      commit,
-		}
-	}
-	return latestCommits, nil
 }

@@ -1,4 +1,4 @@
-package controller
+package promotions
 
 import (
 	"testing"
@@ -73,7 +73,7 @@ func TestApplyKustomize(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := promotionReconciler{
+			reconciler := reconciler{
 				kustomizeSetImageFn: testCase.kustomizeSetImageFn,
 			}
 			testCase.assertions(

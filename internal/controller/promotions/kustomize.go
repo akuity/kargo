@@ -1,4 +1,4 @@
-package controller
+package promotions
 
 import (
 	"path/filepath"
@@ -8,7 +8,7 @@ import (
 	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
-func (p *promotionReconciler) applyKustomize(
+func (r *reconciler) applyKustomize(
 	newState api.EnvironmentState,
 	update api.KustomizePromotionMechanism,
 	repoDir string,
@@ -26,7 +26,7 @@ func (p *promotionReconciler) applyKustomize(
 			continue
 		}
 		dir := filepath.Join(repoDir, imgUpdate.Path)
-		if err := p.kustomizeSetImageFn(dir, imgUpdate.Image, tag); err != nil {
+		if err := r.kustomizeSetImageFn(dir, imgUpdate.Image, tag); err != nil {
 			return errors.Wrapf(
 				err,
 				"error updating image %q to tag %q using Kustomize",

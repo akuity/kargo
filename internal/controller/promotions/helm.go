@@ -1,22 +1,17 @@
-package controller
+package promotions
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/credentials"
-	"github.com/akuityio/kargo/internal/helm"
-	"github.com/akuityio/kargo/internal/logging"
 )
 
-func (p *promotionReconciler) applyHelm(
+func (r *reconciler) applyHelm(
 	newState api.EnvironmentState,
 	update api.HelmPromotionMechanism,
 	homeDir string,
@@ -25,7 +20,7 @@ func (p *promotionReconciler) applyHelm(
 	// Image updates
 	changesByFile := buildValuesFilesChanges(newState.Images, update.Images)
 	for file, changes := range changesByFile {
-		if err := p.setStringsInYAMLFileFn(
+		if err := r.setStringsInYAMLFileFn(
 			filepath.Join(repoDir, file),
 			changes,
 		); err != nil {
@@ -34,7 +29,7 @@ func (p *promotionReconciler) applyHelm(
 	}
 
 	// Chart dependency updates
-	changesByChart, err := p.buildChartDependencyChangesFn(
+	changesByChart, err := r.buildChartDependencyChangesFn(
 		repoDir,
 		newState.Charts,
 		update.Charts,
@@ -48,7 +43,7 @@ func (p *promotionReconciler) applyHelm(
 	for chart, changes := range changesByChart {
 		chartPath := filepath.Join(repoDir, chart)
 		chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
-		if err := p.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
+		if err := r.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
 			return errors.Wrapf(
 				err,
 				"error updating dependencies for chart %q",
@@ -56,7 +51,7 @@ func (p *promotionReconciler) applyHelm(
 			)
 		}
 		if err :=
-			p.updateChartDependenciesFn(homeDir, chartPath); err != nil {
+			r.updateChartDependenciesFn(homeDir, chartPath); err != nil {
 			return errors.Wrapf(
 				err,
 				"error updating dependencies for chart %q",
@@ -66,78 +61,6 @@ func (p *promotionReconciler) applyHelm(
 	}
 
 	return nil
-}
-
-func (e *environmentReconciler) getLatestCharts(
-	ctx context.Context,
-	namespace string,
-	subs []api.ChartSubscription,
-) ([]api.Chart, error) {
-	charts := make([]api.Chart, len(subs))
-
-	for i, sub := range subs {
-		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-			"registry": sub.RegistryURL,
-			"chart":    sub.Name,
-		})
-
-		creds, ok, err :=
-			e.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RegistryURL)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error obtaining credentials for chart registry %q",
-				sub.RegistryURL,
-			)
-		}
-
-		var helmCreds *helm.Credentials
-		if ok {
-			helmCreds = &helm.Credentials{
-				Username: creds.Username,
-				Password: creds.Password,
-			}
-			logger.Debug("obtained credentials for chart repo")
-		} else {
-			logger.Debug("found no credentials for chart repo")
-		}
-
-		vers, err := e.getLatestChartVersionFn(
-			ctx,
-			sub.RegistryURL,
-			sub.Name,
-			sub.SemverConstraint,
-			helmCreds,
-		)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error searching for latest version of chart %q in registry %q",
-				sub.Name,
-				sub.RegistryURL,
-			)
-		}
-
-		if vers != "" {
-			logger.WithField("version", vers).
-				Debug("found latest suitable chart version")
-		} else {
-			logger.Error("found no suitable chart version")
-			return nil, errors.Errorf(
-				"found no suitable version of chart %q in registry %q",
-				sub.Name,
-				sub.RegistryURL,
-			)
-		}
-
-		charts[i] = api.Chart{
-			RegistryURL: sub.RegistryURL,
-			Name:        sub.Name,
-			Version:     vers,
-		}
-	}
-
-	return charts, nil
 }
 
 // buildValuesFilesChanges takes a list of images and a list of instructions
