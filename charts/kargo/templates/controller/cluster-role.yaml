@@ -29,8 +29,16 @@ rules:
   - kargo.akuity.io
   resources:
   - environments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
   - promotions
   verbs:
+  - create
   - get
   - list
   - watch

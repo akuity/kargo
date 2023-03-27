@@ -464,7 +464,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			},
 		},
 	}
-	reconciler := &environmentReconciler{}
+	reconciler := &promotionReconciler{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			updatedSource, err := reconciler.applyArgoCDSourceUpdate(
@@ -527,7 +527,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			allowed: true,
 		},
 	}
-	reconciler := environmentReconciler{}
+	reconciler := promotionReconciler{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			err := reconciler.authorizeArgoCDAppUpdate(
@@ -762,7 +762,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := environmentReconciler{
+			reconciler := promotionReconciler{
 				getArgoCDAppFn:            testCase.getArgoCDAppFn,
 				applyArgoCDSourceUpdateFn: testCase.applyArgoCDSourceUpdateFn,
 				patchFn:                   testCase.patchFn,

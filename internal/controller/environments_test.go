@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
@@ -17,19 +17,15 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	e, err := newEnvironmentReconciler(
 		fake.NewClientBuilder().Build(),
 		&fakeCredentialsDB{},
-		bookkeeper.NewService(nil),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
-	require.NotNil(t, e.bookkeeperService)
 
 	// Assert that all overridable behaviors were initialized to a default:
 
-	// Common:
-	require.NotNil(t, e.getArgoCDAppFn)
-
 	// Health checks:
+	require.NotNil(t, e.getArgoCDAppFn)
 	require.NotNil(t, e.checkHealthFn)
 
 	// Syncing:
@@ -41,20 +37,6 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestChartsFn)
 	require.NotNil(t, e.getLatestChartVersionFn)
 	require.NotNil(t, e.getLatestCommitIDFn)
-
-	// Promotions (general):
-	require.NotNil(t, e.promoteFn)
-	// Promotions via Git:
-	require.NotNil(t, e.gitApplyUpdateFn)
-	// Promotions via Git + Kustomize:
-	require.NotNil(t, e.kustomizeSetImageFn)
-	// Promotions via Git + Helm:
-	require.NotNil(t, e.buildChartDependencyChangesFn)
-	require.NotNil(t, e.updateChartDependenciesFn)
-	require.NotNil(t, e.setStringsInYAMLFileFn)
-	// Promotions via Argo CD:
-	require.NotNil(t, e.applyArgoCDSourceUpdateFn)
-	require.NotNil(t, e.patchFn)
 }
 
 func TestSync(t *testing.T) {
@@ -76,13 +58,7 @@ func TestSync(t *testing.T) {
 			context.Context,
 			[]api.EnvironmentSubscription,
 		) ([]api.EnvironmentState, error)
-		promoteFn func(
-			context.Context,
-			metav1.ObjectMeta,
-			api.PromotionMechanisms,
-			api.EnvironmentState,
-		) (api.EnvironmentState, error)
-		assertions func(initialStatus, newStatus api.EnvironmentStatus, err error)
+		assertions func(initialStatus, newStatus api.EnvironmentStatus, client client.Client, err error)
 	}{
 		{
 			name: "no subscriptions",
@@ -93,6 +69,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -118,6 +95,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -144,6 +122,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -229,6 +208,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -258,6 +238,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -288,6 +269,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -327,6 +309,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -371,6 +354,7 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -401,53 +385,12 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "error executing promotion",
+			name: "successful creation of promotion resource",
 			spec: api.EnvironmentSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
-				PromotionMechanisms: &api.PromotionMechanisms{},
 				EnableAutoPromotion: true,
-				HealthChecks:        &api.HealthChecks{},
-			},
-			getLatestStateFromReposFn: func(
-				context.Context,
-				string,
-				api.RepoSubscriptions,
-			) (*api.EnvironmentState, error) {
-				return &api.EnvironmentState{}, nil
-			},
-			promoteFn: func(
-				_ context.Context,
-				_ metav1.ObjectMeta,
-				_ api.PromotionMechanisms,
-				newState api.EnvironmentState,
-			) (api.EnvironmentState, error) {
-				return newState, errors.New("something went wrong")
-			},
-			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
-				err error,
-			) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
-				// Status should have updated AvailableStates and otherwise be unchanged
-				require.NotEmpty(t, newStatus.AvailableStates)
-				newStatus.AvailableStates = initialStatus.AvailableStates
-				require.Equal(t, initialStatus, newStatus)
-			},
-		},
-
-		{
-			name: "successful promotion",
-			spec: api.EnvironmentSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-				},
-				PromotionMechanisms: &api.PromotionMechanisms{},
-				EnableAutoPromotion: true,
-				HealthChecks:        &api.HealthChecks{},
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
@@ -469,23 +412,41 @@ func TestSync(t *testing.T) {
 					},
 				}, nil
 			},
-			promoteFn: func(
-				_ context.Context,
-				_ metav1.ObjectMeta,
-				_ api.PromotionMechanisms,
-				newState api.EnvironmentState,
-			) (api.EnvironmentState, error) {
-				return newState, nil
-			},
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
+				client client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
-				// Status should reflect the new state
-				require.Len(t, newStatus.AvailableStates, 1)
-				require.Len(t, newStatus.States, 1)
+				// Status should have updated AvailableStates and otherwise be unchanged
+				require.Equal(
+					t,
+					api.EnvironmentStateStack{
+						{
+							Commits: []api.GitCommit{
+								{
+									RepoURL: "fake-url",
+									ID:      "fake-commit",
+								},
+							},
+							Images: []api.Image{
+								{
+									RepoURL: "fake-url",
+									Tag:     "fake-tag",
+								},
+							},
+						},
+					},
+					newStatus.AvailableStates,
+				)
+				newStatus.AvailableStates = initialStatus.AvailableStates
+				require.Equal(t, initialStatus, newStatus)
+				// And a Promotion should have been created
+				promos := api.PromotionList{}
+				err = client.List(context.Background(), &promos)
+				require.NoError(t, err)
+				require.Len(t, promos.Items, 1)
 			},
 		},
 	}
@@ -498,15 +459,23 @@ func TestSync(t *testing.T) {
 			Spec:   &testCase.spec,
 			Status: testCase.initialStatus,
 		}
+		scheme, err := api.SchemeBuilder.Build()
+		require.NoError(t, err)
+		// nolint: lll
 		reconciler := &environmentReconciler{
+			client:                               fake.NewClientBuilder().WithScheme(scheme).Build(),
 			checkHealthFn:                        testCase.checkHealthFn,
 			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
-			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn, // nolint: lll
-			promoteFn:                            testCase.promoteFn,
+			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn,
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			newStatus, err := reconciler.sync(context.Background(), testEnv)
-			testCase.assertions(testCase.initialStatus, newStatus, err)
+			testCase.assertions(
+				testCase.initialStatus,
+				newStatus,
+				reconciler.client,
+				err,
+			)
 		})
 	}
 }

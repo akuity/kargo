@@ -102,14 +102,14 @@ func (e *environmentReconciler) checkHealth(
 	}
 }
 
-func (e *environmentReconciler) applyArgoCDAppUpdate(
+func (p *promotionReconciler) applyArgoCDAppUpdate(
 	ctx context.Context,
 	envMeta metav1.ObjectMeta,
 	newState api.EnvironmentState,
 	update api.ArgoCDAppUpdate,
 ) error {
 	app, err :=
-		e.getArgoCDAppFn(ctx, e.client, update.AppNamespace, update.AppName)
+		p.getArgoCDAppFn(ctx, p.client, update.AppNamespace, update.AppName)
 	if err != nil {
 		return errors.Wrapf(
 			err,
@@ -127,7 +127,7 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 	}
 
 	// Make sure this is allowed!
-	if err = e.authorizeArgoCDAppUpdate(envMeta, app); err != nil {
+	if err = p.authorizeArgoCDAppUpdate(envMeta, app); err != nil {
 		return err
 	}
 
@@ -136,7 +136,7 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 	for _, srcUpdate := range update.SourceUpdates {
 		if app.Spec.Source != nil {
 			var source argocd.ApplicationSource
-			source, err = e.applyArgoCDSourceUpdateFn(
+			source, err = p.applyArgoCDSourceUpdateFn(
 				*app.Spec.Source,
 				newState,
 				srcUpdate,
@@ -152,7 +152,7 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 			app.Spec.Source = &source
 		}
 		for i, source := range app.Spec.Sources {
-			if source, err = e.applyArgoCDSourceUpdateFn(
+			if source, err = p.applyArgoCDSourceUpdateFn(
 				source,
 				newState,
 				srcUpdate,
@@ -186,7 +186,7 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 			append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
 
-	if err = e.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
+	if err = p.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}
 
@@ -196,7 +196,7 @@ func (e *environmentReconciler) applyArgoCDAppUpdate(
 	return nil
 }
 
-func (e *environmentReconciler) authorizeArgoCDAppUpdate(
+func (p *promotionReconciler) authorizeArgoCDAppUpdate(
 	envMeta metav1.ObjectMeta,
 	app *argocd.Application,
 ) error {
@@ -233,7 +233,7 @@ func (e *environmentReconciler) authorizeArgoCDAppUpdate(
 	return nil
 }
 
-func (e *environmentReconciler) applyArgoCDSourceUpdate(
+func (p *promotionReconciler) applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
 	newState api.EnvironmentState,
 	update api.ArgoCDSourceUpdate,

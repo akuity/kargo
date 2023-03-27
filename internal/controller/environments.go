@@ -21,16 +21,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/credentials"
 	"github.com/akuityio/kargo/internal/git"
 	"github.com/akuityio/kargo/internal/helm"
 	"github.com/akuityio/kargo/internal/images"
-	"github.com/akuityio/kargo/internal/kustomize"
 	"github.com/akuityio/kargo/internal/logging"
-	"github.com/akuityio/kargo/internal/yaml"
 )
 
 const (
@@ -39,13 +36,12 @@ const (
 
 // environmentReconciler reconciles Environment resources.
 type environmentReconciler struct {
-	client            client.Client
-	credentialsDB     credentials.Database
-	bookkeeperService bookkeeper.Service
+	client        client.Client
+	credentialsDB credentials.Database
 
 	// The following behaviors are overridable for testing purposes:
 
-	// Common:
+	// Health checks:
 	getArgoCDAppFn func(
 		ctx context.Context,
 		client client.Client,
@@ -53,7 +49,6 @@ type environmentReconciler struct {
 		name string,
 	) (*argocd.Application, error)
 
-	// Health checks:
 	checkHealthFn func(
 		context.Context,
 		api.EnvironmentState,
@@ -114,53 +109,6 @@ type environmentReconciler struct {
 		branch string,
 		creds *git.Credentials,
 	) (string, error)
-
-	// Promotions (general):
-	promoteFn func(
-		ctx context.Context,
-		envMeta metav1.ObjectMeta,
-		promoMechanisms api.PromotionMechanisms,
-		newState api.EnvironmentState,
-	) (api.EnvironmentState, error)
-
-	// Promotions via Git:
-	gitApplyUpdateFn func(
-		repoURL string,
-		branch string,
-		creds *git.Credentials,
-		updateFn func(homeDir, workingDir string) (string, error),
-	) (string, error)
-
-	// Promotions via Git + Kustomize:
-	kustomizeSetImageFn func(dir, repo, tag string) error
-
-	// Promotions via Git + Helm:
-	buildChartDependencyChangesFn func(
-		repoDir string,
-		charts []api.Chart,
-		chartUpdates []api.HelmChartDependencyUpdate,
-	) (map[string]map[string]string, error)
-
-	updateChartDependenciesFn func(homePath, chartPath string) error
-
-	setStringsInYAMLFileFn func(
-		file string,
-		changes map[string]string,
-	) error
-
-	// Promotions via Argo CD:
-	applyArgoCDSourceUpdateFn func(
-		argocd.ApplicationSource,
-		api.EnvironmentState,
-		api.ArgoCDSourceUpdate,
-	) (argocd.ApplicationSource, error)
-
-	patchFn func(
-		ctx context.Context,
-		obj client.Object,
-		patch client.Patch,
-		opts ...client.PatchOption,
-	) error
 }
 
 // SetupEnvironmentReconcilerWithManager initializes a reconciler for
@@ -169,7 +117,6 @@ func SetupEnvironmentReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	credentialsDB credentials.Database,
-	bookkeeperService bookkeeper.Service,
 ) error {
 	// Index Environments by Argo CD Applications
 	if err := mgr.GetFieldIndexer().IndexField(
@@ -195,7 +142,6 @@ func SetupEnvironmentReconcilerWithManager(
 	e, err := newEnvironmentReconciler(
 		mgr.GetClient(),
 		credentialsDB,
-		bookkeeperService,
 	)
 	if err != nil {
 		return errors.Wrap(err, "error initializing Environment reconciler")
@@ -224,12 +170,10 @@ func SetupEnvironmentReconcilerWithManager(
 func newEnvironmentReconciler(
 	client client.Client,
 	credentialsDB credentials.Database,
-	bookkeeperService bookkeeper.Service,
 ) (*environmentReconciler, error) {
 	e := &environmentReconciler{
-		client:            client,
-		credentialsDB:     credentialsDB,
-		bookkeeperService: bookkeeperService,
+		client:        client,
+		credentialsDB: credentialsDB,
 	}
 
 	// The following default behaviors are overridable for testing purposes:
@@ -249,20 +193,6 @@ func newEnvironmentReconciler(
 	e.getLatestChartsFn = e.getLatestCharts
 	e.getLatestChartVersionFn = helm.GetLatestChartVersion
 	e.getLatestCommitIDFn = git.GetLatestCommitID
-
-	// Promotions (general):
-	e.promoteFn = e.promote
-	// Promotions via Git:
-	e.gitApplyUpdateFn = git.ApplyUpdate
-	// Promotions via Git + Kustomize:
-	e.kustomizeSetImageFn = kustomize.SetImage
-	// Promotions via Git + Helm:
-	e.buildChartDependencyChangesFn = buildChartDependencyChanges
-	e.updateChartDependenciesFn = helm.UpdateChartDependencies
-	e.setStringsInYAMLFileFn = yaml.SetStringsInFile
-	// Promotions via Argo CD:
-	e.applyArgoCDSourceUpdateFn = e.applyArgoCDSourceUpdate
-	e.patchFn = client.Patch
 
 	return e, nil
 }
@@ -462,30 +392,34 @@ func (e *environmentReconciler) sync(
 		)
 		return status, nil
 	}
+	nextState := nextStateCandidate
 
 	// If we get to here, we've determined that auto-promotion is enabled and
 	// safe.
-	logger = logger.WithField("state", nextStateCandidate.ID)
+	logger = logger.WithField("state", nextState.ID)
 	logger.Debug("auto-promotion will proceed")
-	ctx = logging.ContextWithLogger(ctx, logger)
 
-	nextState, err := e.promoteFn(
+	// TODO: If we name this deterministically, we can check first if it already
+	// exists -- which is a thing that could happen if, on a previous
+	// reconciliation, we succeeded in creating the Promotion, but failed to
+	// update the Environment status.
+	if err := e.client.Create(
 		ctx,
-		env.ObjectMeta,
-		*env.Spec.PromotionMechanisms,
-		nextStateCandidate,
-	)
-	if err != nil {
+		&api.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: fmt.Sprintf("%s-", env.Name),
+				Namespace:    env.Namespace,
+			},
+			Spec: &api.PromotionSpec{
+				Environment: env.Name,
+				State:       nextState.ID,
+			},
+		},
+		&client.CreateOptions{},
+	); err != nil {
 		return status, err
 	}
-	status.States.Push(nextState)
-	logger.Debug("promoted Environment to new state")
-
-	// Promotion is successful at this point. Update the top available state
-	// in place because the promotion process may have updated some commit IDs.
-	for i := range status.AvailableStates[0].Commits {
-		status.AvailableStates[0].Commits[i].ID = nextState.Commits[i].ID
-	}
+	logger.Debug("created Promotion resource")
 
 	return status, nil
 }
@@ -574,66 +508,6 @@ func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 	}
 
 	return availableStates, nil
-}
-
-// TODO: This function could use some tests
-func (e *environmentReconciler) promote(
-	ctx context.Context,
-	envMeta metav1.ObjectMeta,
-	promoMechanisms api.PromotionMechanisms,
-	newState api.EnvironmentState,
-) (api.EnvironmentState, error) {
-	logger := logging.LoggerFromContext(ctx)
-	logger.WithField("state", newState.ID)
-	logger.Debug("executing promotion to new state")
-	var err error
-	for _, gitRepoUpdate := range promoMechanisms.GitRepoUpdates {
-		if gitRepoUpdate.Bookkeeper != nil {
-			if newState, err = e.applyBookkeeperUpdate(
-				ctx,
-				envMeta.Namespace,
-				newState,
-				gitRepoUpdate,
-			); err != nil {
-				return newState, errors.Wrap(err, "error promoting via Git")
-			}
-		} else {
-			if newState, err = e.applyGitRepoUpdate(
-				ctx,
-				envMeta.Namespace,
-				newState,
-				gitRepoUpdate,
-			); err != nil {
-				return newState, errors.Wrap(err, "error promoting via Git")
-			}
-		}
-	}
-	if len(promoMechanisms.GitRepoUpdates) > 0 {
-		logger.Debug("completed git-based promotion steps")
-	}
-
-	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
-		if err = e.applyArgoCDAppUpdate(
-			ctx,
-			envMeta,
-			newState,
-			argoCDAppUpdate,
-		); err != nil {
-			return newState, errors.Wrap(err, "error promoting via Argo CD")
-		}
-	}
-	if len(promoMechanisms.ArgoCDAppUpdates) > 0 {
-		logger.Debug("completed Argo CD-based promotion steps")
-	}
-
-	newState.Health = &api.Health{
-		Status:       api.HealthStateUnknown,
-		StatusReason: "Health has not yet been assessed",
-	}
-
-	logger.Debug("completed promotion")
-
-	return newState, nil
 }
 
 // getEnv returns a pointer to the Environment resource specified by the

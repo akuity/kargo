@@ -107,7 +107,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := environmentReconciler{
+			reconciler := promotionReconciler{
 				credentialsDB:    testCase.credentialsDB,
 				gitApplyUpdateFn: testCase.gitApplyUpdateFn,
 			}

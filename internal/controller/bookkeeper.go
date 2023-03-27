@@ -12,7 +12,7 @@ import (
 	"github.com/akuityio/kargo/internal/logging"
 )
 
-func (e *environmentReconciler) applyBookkeeperUpdate(
+func (p *promotionReconciler) applyBookkeeperUpdate(
 	ctx context.Context,
 	namespace string,
 	newState api.EnvironmentState,
@@ -56,7 +56,7 @@ func (e *environmentReconciler) applyBookkeeperUpdate(
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	creds, ok, err :=
-		e.credentialsDB.Get(ctx, namespace, credentials.TypeGit, update.RepoURL)
+		p.credentialsDB.Get(ctx, namespace, credentials.TypeGit, update.RepoURL)
 	if err != nil {
 		return newState, errors.Wrapf(
 			err,
@@ -81,7 +81,7 @@ func (e *environmentReconciler) applyBookkeeperUpdate(
 		Images:       images,
 		TargetBranch: update.Branch,
 	}
-	res, err := e.bookkeeperService.RenderManifests(ctx, req)
+	res, err := p.bookkeeperService.RenderManifests(ctx, req)
 	if err != nil {
 		return newState,
 			errors.Wrap(err, "error rendering manifests via Bookkeeper")

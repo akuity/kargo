@@ -16,7 +16,7 @@ import (
 	"github.com/akuityio/kargo/internal/logging"
 )
 
-func (e *environmentReconciler) applyHelm(
+func (p *promotionReconciler) applyHelm(
 	newState api.EnvironmentState,
 	update api.HelmPromotionMechanism,
 	homeDir string,
@@ -25,7 +25,7 @@ func (e *environmentReconciler) applyHelm(
 	// Image updates
 	changesByFile := buildValuesFilesChanges(newState.Images, update.Images)
 	for file, changes := range changesByFile {
-		if err := e.setStringsInYAMLFileFn(
+		if err := p.setStringsInYAMLFileFn(
 			filepath.Join(repoDir, file),
 			changes,
 		); err != nil {
@@ -34,7 +34,7 @@ func (e *environmentReconciler) applyHelm(
 	}
 
 	// Chart dependency updates
-	changesByChart, err := e.buildChartDependencyChangesFn(
+	changesByChart, err := p.buildChartDependencyChangesFn(
 		repoDir,
 		newState.Charts,
 		update.Charts,
@@ -48,7 +48,7 @@ func (e *environmentReconciler) applyHelm(
 	for chart, changes := range changesByChart {
 		chartPath := filepath.Join(repoDir, chart)
 		chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
-		if err := e.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
+		if err := p.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
 			return errors.Wrapf(
 				err,
 				"error updating dependencies for chart %q",
@@ -56,7 +56,7 @@ func (e *environmentReconciler) applyHelm(
 			)
 		}
 		if err :=
-			e.updateChartDependenciesFn(homeDir, chartPath); err != nil {
+			p.updateChartDependenciesFn(homeDir, chartPath); err != nil {
 			return errors.Wrapf(
 				err,
 				"error updating dependencies for chart %q",

@@ -5,25 +5,100 @@ import (
 	"sync"
 	"time"
 
+	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/controller/runtime"
+	"github.com/akuityio/kargo/internal/credentials"
+	"github.com/akuityio/kargo/internal/git"
+	"github.com/akuityio/kargo/internal/helm"
+	"github.com/akuityio/kargo/internal/kustomize"
 	"github.com/akuityio/kargo/internal/logging"
+	"github.com/akuityio/kargo/internal/yaml"
 )
 
 // promotionReconciler reconciles Promotion resources.
 type promotionReconciler struct {
-	client             client.Client
+	client            client.Client
+	credentialsDB     credentials.Database
+	bookkeeperService bookkeeper.Service
+
 	promoQueuesByEnv   map[types.NamespacedName]runtime.PriorityQueue
 	promoQueuesByEnvMu sync.Mutex
 	initializeOnce     sync.Once
+
+	// The following behaviors are overridable for testing purposes:
+
+	// Promotions (general):
+	promoteFn func(
+		ctx context.Context,
+		envName string,
+		envNamespace string,
+		stateID string,
+	) error
+
+	applyPromotionMechanismsFn func(
+		ctx context.Context,
+		envMeta metav1.ObjectMeta,
+		promoMechanisms api.PromotionMechanisms,
+		newState api.EnvironmentState,
+	) (api.EnvironmentState, error)
+
+	// Promotions via Git:
+	gitApplyUpdateFn func(
+		repoURL string,
+		branch string,
+		creds *git.Credentials,
+		updateFn func(homeDir, workingDir string) (string, error),
+	) (string, error)
+
+	// Promotions via Git + Kustomize:
+	kustomizeSetImageFn func(dir, repo, tag string) error
+
+	// Promotions via Git + Helm:
+	buildChartDependencyChangesFn func(
+		repoDir string,
+		charts []api.Chart,
+		chartUpdates []api.HelmChartDependencyUpdate,
+	) (map[string]map[string]string, error)
+
+	updateChartDependenciesFn func(homePath, chartPath string) error
+
+	setStringsInYAMLFileFn func(
+		file string,
+		changes map[string]string,
+	) error
+
+	// Promotions via Argo CD:
+	getArgoCDAppFn func(
+		ctx context.Context,
+		client client.Client,
+		namespace string,
+		name string,
+	) (*argocd.Application, error)
+
+	applyArgoCDSourceUpdateFn func(
+		argocd.ApplicationSource,
+		api.EnvironmentState,
+		api.ArgoCDSourceUpdate,
+	) (argocd.ApplicationSource, error)
+
+	patchFn func(
+		ctx context.Context,
+		obj client.Object,
+		patch client.Patch,
+		opts ...client.PatchOption,
+	) error
 }
 
 // SetupPromotionReconcilerWithManager initializes a reconciler for
@@ -31,18 +106,46 @@ type promotionReconciler struct {
 func SetupPromotionReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
+	credentialsDB credentials.Database,
+	bookkeeperService bookkeeper.Service,
 ) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Promotion{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(newPromotionReconciler(mgr.GetClient()))
+		Complete(
+			newPromotionReconciler(mgr.GetClient(), credentialsDB, bookkeeperService),
+		)
 }
 
-func newPromotionReconciler(client client.Client) *promotionReconciler {
-	return &promotionReconciler{
-		client:           client,
-		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{},
+func newPromotionReconciler(
+	client client.Client,
+	credentialsDB credentials.Database,
+	bookkeeperService bookkeeper.Service,
+) *promotionReconciler {
+	p := &promotionReconciler{
+		client:            client,
+		credentialsDB:     credentialsDB,
+		bookkeeperService: bookkeeperService,
+		promoQueuesByEnv:  map[types.NamespacedName]runtime.PriorityQueue{},
 	}
+
+	// Promotions (general):
+	p.promoteFn = p.promote
+	p.applyPromotionMechanismsFn = p.applyPromotionMechanisms
+	// Promotions via Git:
+	p.gitApplyUpdateFn = git.ApplyUpdate
+	// Promotions via Git + Kustomize:
+	p.kustomizeSetImageFn = kustomize.SetImage
+	// Promotions via Git + Helm:
+	p.buildChartDependencyChangesFn = buildChartDependencyChanges
+	p.updateChartDependenciesFn = helm.UpdateChartDependencies
+	p.setStringsInYAMLFileFn = yaml.SetStringsInFile
+	// Promotions via Argo CD:
+	p.getArgoCDAppFn = libArgoCD.GetApplication
+	p.applyArgoCDSourceUpdateFn = p.applyArgoCDSourceUpdate
+	p.patchFn = client.Patch
+
+	return p
 }
 
 func newPromotionsQueue() runtime.PriorityQueue {
@@ -264,24 +367,187 @@ func (p *promotionReconciler) serializedSync(
 					},
 				); err != nil {
 					logger.Error("error finding Promotion")
+					continue
+				}
+				if promo == nil || promo.Status.Phase != api.PromotionPhasePending {
+					continue
 				}
 
-				// TODO: Actual promotion logic goes here
-
-				promo.Status.Phase = api.PromotionPhaseComplete
-
-				updateErr := p.client.Status().Update(ctx, promo)
-				if updateErr != nil {
-					logger.Errorf("error updating Environment status: %s", updateErr)
-				}
-
-				logger.WithFields(log.Fields{
+				logger = logger.WithFields(log.Fields{
 					"environment": promo.Spec.Environment,
 					"state":       promo.Spec.State,
-				}).Debug("handled Promotion")
+				})
+				logger.Debug("executing Promotion")
+
+				promoCtx := logging.ContextWithLogger(ctx, logger)
+
+				if err = p.promoteFn(
+					promoCtx,
+					promo.Spec.Environment,
+					promo.Namespace,
+					promo.Spec.State,
+				); err != nil {
+					promo.Status.Phase = api.PromotionPhaseFailed
+					promo.Status.Error = err.Error()
+					logger.Errorf("error executing Promotion: %s", err)
+				} else {
+					promo.Status.Phase = api.PromotionPhaseComplete
+					promo.Status.Error = ""
+				}
+
+				if err = p.client.Status().Update(ctx, promo); err != nil {
+					logger.Errorf("error updating Promotion status: %s", err)
+				}
+
+				if promo.Status.Phase == api.PromotionPhaseComplete && err == nil {
+					logger.Debug("completed Promotion")
+				}
 			}
 		}
 	}
+}
+
+// TODO: Implement this
+func (p *promotionReconciler) promote(
+	ctx context.Context,
+	envName string,
+	envNamespace string,
+	stateID string,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+
+	env, err := getEnv(
+		ctx,
+		p.client,
+		types.NamespacedName{
+			Namespace: envNamespace,
+			Name:      envName,
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"error finding Environment %q in namespace %q",
+			envName,
+			envNamespace,
+		)
+	}
+	if env == nil {
+		return errors.Errorf(
+			"could not find Environment %q in namespace %q",
+			envName,
+			envNamespace,
+		)
+	}
+	logger.Debug("found associated Environment")
+
+	if currentState, ok :=
+		env.Status.States.Top(); ok && currentState.ID == stateID {
+		logger.Debug("Environment is already in desired state")
+		return nil
+	}
+
+	var targetStateIndex int
+	var targetState *api.EnvironmentState
+	for i, availableState := range env.Status.AvailableStates {
+		if availableState.ID == stateID {
+			targetStateIndex = i
+			targetState = availableState.DeepCopy()
+			break
+		}
+	}
+	if targetState == nil {
+		return errors.Errorf(
+			"target state %q not found among available states of Environment %q "+
+				"in namespace %q",
+			stateID,
+			envName,
+			envNamespace,
+		)
+	}
+
+	nextState, err := p.applyPromotionMechanismsFn(
+		ctx,
+		env.ObjectMeta,
+		*env.Spec.PromotionMechanisms,
+		*targetState,
+	)
+	if err != nil {
+		return err
+	}
+	env.Status.States.Push(nextState)
+
+	// Promotion is successful at this point. Update target state in place because
+	// the promotion process may have updated some commit IDs.
+	for i := range targetState.Commits {
+		env.Status.AvailableStates[targetStateIndex].Commits[i].ID =
+			nextState.Commits[i].ID
+	}
+
+	err = p.client.Status().Update(ctx, env)
+	return errors.Wrapf(
+		err,
+		"error updating status of Environment %q in namespace %q",
+		envName,
+		envNamespace,
+	)
+}
+
+// TODO: This function could use some tests
+func (p *promotionReconciler) applyPromotionMechanisms(
+	ctx context.Context,
+	envMeta metav1.ObjectMeta,
+	promoMechanisms api.PromotionMechanisms,
+	newState api.EnvironmentState,
+) (api.EnvironmentState, error) {
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("executing promotion mechanisms")
+	var err error
+	for _, gitRepoUpdate := range promoMechanisms.GitRepoUpdates {
+		if gitRepoUpdate.Bookkeeper != nil {
+			if newState, err = p.applyBookkeeperUpdate(
+				ctx,
+				envMeta.Namespace,
+				newState,
+				gitRepoUpdate,
+			); err != nil {
+				return newState, errors.Wrap(err, "error promoting via Git")
+			}
+		} else {
+			if newState, err = p.applyGitRepoUpdate(
+				ctx,
+				envMeta.Namespace,
+				newState,
+				gitRepoUpdate,
+			); err != nil {
+				return newState, errors.Wrap(err, "error promoting via Git")
+			}
+		}
+	}
+	if len(promoMechanisms.GitRepoUpdates) > 0 {
+		logger.Debug("completed git-based promotion steps")
+	}
+
+	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
+		if err = p.applyArgoCDAppUpdate(
+			ctx,
+			envMeta,
+			newState,
+			argoCDAppUpdate,
+		); err != nil {
+			return newState, errors.Wrap(err, "error promoting via Argo CD")
+		}
+	}
+	if len(promoMechanisms.ArgoCDAppUpdates) > 0 {
+		logger.Debug("completed Argo CD-based promotion steps")
+	}
+
+	newState.Health = &api.Health{
+		Status:       api.HealthStateUnknown,
+		StatusReason: "Health has not yet been assessed",
+	}
+
+	return newState, nil
 }
 
 // getPromo returns a pointer to the Promotion resource specified by the
