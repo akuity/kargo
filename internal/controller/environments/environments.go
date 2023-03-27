@@ -1,4 +1,4 @@
-package controller
+package environments
 
 import (
 	"context"
@@ -34,8 +34,8 @@ const (
 	envsByAppIndexField = "applications"
 )
 
-// environmentReconciler reconciles Environment resources.
-type environmentReconciler struct {
+// reconciler reconciles Environment resources.
+type reconciler struct {
 	client        client.Client
 	credentialsDB credentials.Database
 
@@ -111,9 +111,9 @@ type environmentReconciler struct {
 	) (string, error)
 }
 
-// SetupEnvironmentReconcilerWithManager initializes a reconciler for
-// Environment resources and registers it with the provided Manager.
-func SetupEnvironmentReconcilerWithManager(
+// SetupReconcilerWithManager initializes a reconciler for Environment resources
+// and registers it with the provided Manager.
+func SetupReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	credentialsDB credentials.Database,
@@ -139,7 +139,7 @@ func SetupEnvironmentReconcilerWithManager(
 		)
 	}
 
-	e, err := newEnvironmentReconciler(
+	e, err := newReconciler(
 		mgr.GetClient(),
 		credentialsDB,
 	)
@@ -167,11 +167,11 @@ func SetupEnvironmentReconcilerWithManager(
 		Complete(e)
 }
 
-func newEnvironmentReconciler(
+func newReconciler(
 	client client.Client,
 	credentialsDB credentials.Database,
-) (*environmentReconciler, error) {
-	e := &environmentReconciler{
+) (*reconciler, error) {
+	r := &reconciler{
 		client:        client,
 		credentialsDB: credentialsDB,
 	}
@@ -179,34 +179,34 @@ func newEnvironmentReconciler(
 	// The following default behaviors are overridable for testing purposes:
 
 	// Common:
-	e.getArgoCDAppFn = libArgoCD.GetApplication
+	r.getArgoCDAppFn = libArgoCD.GetApplication
 
 	// Health checks:
-	e.checkHealthFn = e.checkHealth
+	r.checkHealthFn = r.checkHealth
 
 	// Syncing:
-	e.getLatestStateFromReposFn = e.getLatestStateFromRepos
-	e.getAvailableStatesFromUpstreamEnvsFn = e.getAvailableStatesFromUpstreamEnvs
-	e.getLatestCommitsFn = e.getLatestCommits
-	e.getLatestImagesFn = e.getLatestImages
-	e.getLatestTagFn = images.GetLatestTag
-	e.getLatestChartsFn = e.getLatestCharts
-	e.getLatestChartVersionFn = helm.GetLatestChartVersion
-	e.getLatestCommitIDFn = git.GetLatestCommitID
+	r.getLatestStateFromReposFn = r.getLatestStateFromRepos
+	r.getAvailableStatesFromUpstreamEnvsFn = r.getAvailableStatesFromUpstreamEnvs
+	r.getLatestCommitsFn = r.getLatestCommits
+	r.getLatestImagesFn = r.getLatestImages
+	r.getLatestTagFn = images.GetLatestTag
+	r.getLatestChartsFn = r.getLatestCharts
+	r.getLatestChartVersionFn = helm.GetLatestChartVersion
+	r.getLatestCommitIDFn = git.GetLatestCommitID
 
-	return e, nil
+	return r, nil
 }
 
 // findEnvsForApp dynamically returns reconciliation requests for all
 // Environments related to a given Argo CD Application. This is used to
 // propagate reconciliation requests to Environments whose state should be
 // affected by changes to related Application resources.
-func (e *environmentReconciler) findEnvsForApp(
+func (r *reconciler) findEnvsForApp(
 	ctx context.Context,
 	app client.Object,
 ) []reconcile.Request {
 	envs := &api.EnvironmentList{}
-	if err := e.client.List(
+	if err := r.client.List(
 		ctx,
 		envs,
 		&client.ListOptions{
@@ -236,7 +236,7 @@ func (e *environmentReconciler) findEnvsForApp(
 
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (e *environmentReconciler) Reconcile(
+func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
@@ -256,7 +256,7 @@ func (e *environmentReconciler) Reconcile(
 	logger.Debug("reconciling Environment")
 
 	// Find the Environment
-	env, err := getEnv(ctx, e.client, req.NamespacedName)
+	env, err := api.GetEnv(ctx, r.client, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -268,7 +268,7 @@ func (e *environmentReconciler) Reconcile(
 	}
 	logger.Debug("found Environment")
 
-	env.Status, err = e.sync(ctx, env)
+	env.Status, err = r.sync(ctx, env)
 	if err != nil {
 		env.Status.Error = err.Error()
 		logger.Errorf("error syncing Environment: %s", env.Status.Error)
@@ -278,7 +278,7 @@ func (e *environmentReconciler) Reconcile(
 		env.Status.Error = ""
 	}
 
-	updateErr := e.client.Status().Update(ctx, env)
+	updateErr := r.client.Status().Update(ctx, env)
 	if updateErr != nil {
 		logger.Errorf("error updating Environment status: %s", updateErr)
 	}
@@ -297,7 +297,7 @@ func (e *environmentReconciler) Reconcile(
 	return result, err
 }
 
-func (e *environmentReconciler) sync(
+func (r *reconciler) sync(
 	ctx context.Context,
 	env *api.Environment,
 ) (api.EnvironmentStatus, error) {
@@ -307,7 +307,7 @@ func (e *environmentReconciler) sync(
 
 	// Only perform health checks if we have a current state to update
 	if currentState, ok := status.States.Pop(); ok {
-		health := e.checkHealthFn(ctx, currentState, *env.Spec.HealthChecks)
+		health := r.checkHealthFn(ctx, currentState, *env.Spec.HealthChecks)
 		currentState.Health = &health
 		status.States.Push(currentState)
 		logger.WithField("health", health.Status).Debug("completed health checks")
@@ -317,7 +317,7 @@ func (e *environmentReconciler) sync(
 
 	if env.Spec.Subscriptions.Repos != nil {
 
-		latestState, err := e.getLatestStateFromReposFn(
+		latestState, err := r.getLatestStateFromReposFn(
 			ctx,
 			env.Namespace,
 			*env.Spec.Subscriptions.Repos,
@@ -349,7 +349,7 @@ func (e *environmentReconciler) sync(
 		// This returns de-duped, healthy states only from all upstream envs. There
 		// could be up to ten per upstream environment. This is more than the usual
 		// quantity we permit in status.AvailableStates, but we'll allow it.
-		latestStatesFromEnvs, err := e.getAvailableStatesFromUpstreamEnvsFn(
+		latestStatesFromEnvs, err := r.getAvailableStatesFromUpstreamEnvsFn(
 			ctx,
 			env.Spec.Subscriptions.UpstreamEnvs,
 		)
@@ -403,7 +403,7 @@ func (e *environmentReconciler) sync(
 	// exists -- which is a thing that could happen if, on a previous
 	// reconciliation, we succeeded in creating the Promotion, but failed to
 	// update the Environment status.
-	if err := e.client.Create(
+	if err := r.client.Create(
 		ctx,
 		&api.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -424,14 +424,14 @@ func (e *environmentReconciler) sync(
 	return status, nil
 }
 
-func (e *environmentReconciler) getLatestStateFromRepos(
+func (r *reconciler) getLatestStateFromRepos(
 	ctx context.Context,
 	namespace string,
 	repoSubs api.RepoSubscriptions,
 ) (*api.EnvironmentState, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	latestCommits, err := e.getLatestCommitsFn(ctx, namespace, repoSubs.Git)
+	latestCommits, err := r.getLatestCommitsFn(ctx, namespace, repoSubs.Git)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing git repo subscriptions")
 	}
@@ -439,7 +439,7 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 		logger.Debug("synced git repo subscriptions")
 	}
 
-	latestImages, err := e.getLatestImagesFn(ctx, namespace, repoSubs.Images)
+	latestImages, err := r.getLatestImagesFn(ctx, namespace, repoSubs.Images)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing image repo subscriptions")
 	}
@@ -447,7 +447,7 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 		logger.Debug("synced image repo subscriptions")
 	}
 
-	latestCharts, err := e.getLatestChartsFn(ctx, namespace, repoSubs.Charts)
+	latestCharts, err := r.getLatestChartsFn(ctx, namespace, repoSubs.Charts)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing chart repo subscriptions")
 	}
@@ -466,7 +466,7 @@ func (e *environmentReconciler) getLatestStateFromRepos(
 }
 
 // TODO: Test this
-func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
+func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
 	ctx context.Context,
 	subs []api.EnvironmentSubscription,
 ) ([]api.EnvironmentState, error) {
@@ -477,9 +477,9 @@ func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 	availableStates := []api.EnvironmentState{}
 	stateSet := map[string]struct{}{} // We'll use this to de-dupe
 	for _, sub := range subs {
-		upstreamEnv, err := getEnv(
+		upstreamEnv, err := api.GetEnv(
 			ctx,
-			e.client,
+			r.client,
 			types.NamespacedName{
 				Namespace: sub.Namespace,
 				Name:      sub.Name,
@@ -508,31 +508,4 @@ func (e *environmentReconciler) getAvailableStatesFromUpstreamEnvs(
 	}
 
 	return availableStates, nil
-}
-
-// getEnv returns a pointer to the Environment resource specified by the
-// namespacedName argument. If no such resource is found, nil is returned
-// instead.
-func getEnv(
-	ctx context.Context,
-	c client.Client,
-	namespacedName types.NamespacedName,
-) (*api.Environment, error) {
-	env := api.Environment{}
-	if err := c.Get(ctx, namespacedName, &env); err != nil {
-		if err = client.IgnoreNotFound(err); err == nil {
-			logging.LoggerFromContext(ctx).WithFields(log.Fields{
-				"namespace":   namespacedName.Namespace,
-				"environment": namespacedName.Name,
-			}).Warn("Environment not found")
-			return nil, nil
-		}
-		return nil, errors.Wrapf(
-			err,
-			"error getting Environment %q in namespace %q",
-			namespacedName.Name,
-			namespacedName.Namespace,
-		)
-	}
-	return &env, nil
 }

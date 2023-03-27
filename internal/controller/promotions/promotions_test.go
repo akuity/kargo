@@ -1,4 +1,4 @@
-package controller
+package promotions
 
 import (
 	"context"
@@ -14,42 +14,43 @@ import (
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/controller/runtime"
+	"github.com/akuityio/kargo/internal/credentials"
 )
 
 func TestNewPromotionReconciler(t *testing.T) {
-	p := newPromotionReconciler(
+	r := newReconciler(
 		fake.NewClientBuilder().Build(),
-		&fakeCredentialsDB{},
+		&credentials.FakeDB{},
 		bookkeeper.NewService(nil),
 	)
-	require.NotNil(t, p.client)
-	require.NotNil(t, p.credentialsDB)
-	require.NotNil(t, p.bookkeeperService)
-	require.NotNil(t, p.promoQueuesByEnv)
+	require.NotNil(t, r.client)
+	require.NotNil(t, r.credentialsDB)
+	require.NotNil(t, r.bookkeeperService)
+	require.NotNil(t, r.promoQueuesByEnv)
 
 	// Assert that all overridable behaviors were initialized to a default:
 
 	// Promotions (general):
-	require.NotNil(t, p.promoteFn)
-	require.NotNil(t, p.applyPromotionMechanismsFn)
+	require.NotNil(t, r.promoteFn)
+	require.NotNil(t, r.applyPromotionMechanismsFn)
 	// Promotions via Git:
-	require.NotNil(t, p.gitApplyUpdateFn)
+	require.NotNil(t, r.gitApplyUpdateFn)
 	// Promotions via Git + Kustomize:
-	require.NotNil(t, p.kustomizeSetImageFn)
+	require.NotNil(t, r.kustomizeSetImageFn)
 	// Promotions via Git + Helm:
-	require.NotNil(t, p.buildChartDependencyChangesFn)
-	require.NotNil(t, p.updateChartDependenciesFn)
-	require.NotNil(t, p.setStringsInYAMLFileFn)
+	require.NotNil(t, r.buildChartDependencyChangesFn)
+	require.NotNil(t, r.updateChartDependenciesFn)
+	require.NotNil(t, r.setStringsInYAMLFileFn)
 	// Promotions via Argo CD:
-	require.NotNil(t, p.getArgoCDAppFn)
-	require.NotNil(t, p.applyArgoCDSourceUpdateFn)
-	require.NotNil(t, p.patchFn)
+	require.NotNil(t, r.getArgoCDAppFn)
+	require.NotNil(t, r.applyArgoCDSourceUpdateFn)
+	require.NotNil(t, r.patchFn)
 }
 
 func TestInitializeQueues(t *testing.T) {
 	scheme, err := api.SchemeBuilder.Build()
 	require.NoError(t, err)
-	reconciler := promotionReconciler{
+	reconciler := reconciler{
 		client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			&api.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
@@ -211,7 +212,7 @@ func TestPromotionSync(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := promotionReconciler{
+			reconciler := reconciler{
 				promoQueuesByEnv: testCase.pqs,
 			}
 			status, err := reconciler.sync(context.Background(), testCase.promo)
@@ -248,7 +249,7 @@ func TestSerializedSync(t *testing.T) {
 	err = pq.Push(promo)
 	require.NoError(t, err)
 
-	reconciler := promotionReconciler{
+	reconciler := reconciler{
 		client: client,
 		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{
 			{Namespace: "fake-namespace", Name: "fake-env"}: pq,
@@ -329,7 +330,7 @@ func TestGetPromo(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := promotionReconciler{
+			reconciler := reconciler{
 				client: testCase.client,
 			}
 			promo, err := reconciler.getPromo(

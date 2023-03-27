@@ -1,4 +1,4 @@
-package controller
+package promotions
 
 import (
 	"context"
@@ -11,105 +11,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuityio/kargo/internal/argocd"
 	"github.com/akuityio/kargo/internal/logging"
 )
 
 const authorizedEnvAnnotationKey = "kargo.akuity.io/authorized-env"
 
-func (e *environmentReconciler) checkHealth(
-	ctx context.Context,
-	currentState api.EnvironmentState,
-	healthChecks api.HealthChecks,
-) api.Health {
-	if len(healthChecks.ArgoCDAppChecks) == 0 {
-		return api.Health{
-			Status: api.HealthStateUnknown,
-			StatusReason: "spec.healthChecks contains insufficient instructions " +
-				"to assess Environment health",
-		}
-	}
-
-	for _, check := range healthChecks.ArgoCDAppChecks {
-		app, err :=
-			e.getArgoCDAppFn(ctx, e.client, check.AppNamespace, check.AppName)
-		if err != nil {
-			return api.Health{
-				Status: api.HealthStateUnknown,
-				StatusReason: fmt.Sprintf(
-					"error finding Argo CD Application %q in namespace %q: %s",
-					check.AppName,
-					check.AppNamespace,
-					err,
-				),
-			}
-		}
-		if app == nil {
-			return api.Health{
-				Status: api.HealthStateUnknown,
-				StatusReason: fmt.Sprintf(
-					"unable to find Argo CD Application %q in namespace %q",
-					check.AppName,
-					check.AppNamespace,
-				),
-			}
-		}
-
-		if len(app.Spec.Sources) > 0 {
-			return api.Health{
-				Status: api.HealthStateUnknown,
-				StatusReason: fmt.Sprintf(
-					"bugs in Argo CD currently prevent a comprehensive assessment of "+
-						"the health of multi-source Application %q in namespace %q",
-					check.AppName,
-					check.AppNamespace,
-				),
-			}
-		}
-
-		var desiredRevision string
-		for _, commit := range currentState.Commits {
-			if commit.RepoURL == app.Spec.Source.RepoURL {
-				if commit.HealthCheckCommit != "" {
-					desiredRevision = commit.HealthCheckCommit
-				} else {
-					desiredRevision = commit.ID
-				}
-			}
-		}
-		if desiredRevision == "" {
-			for _, chart := range currentState.Charts {
-				if chart.RegistryURL == app.Spec.Source.RepoURL &&
-					chart.Name == app.Spec.Source.Chart {
-					desiredRevision = chart.Version
-				}
-			}
-		}
-
-		if healthy, reason := libArgoCD.IsApplicationHealthyAndSynced(
-			app,
-			desiredRevision,
-		); !healthy {
-			return api.Health{
-				Status:       api.HealthStateUnhealthy,
-				StatusReason: reason,
-			}
-		}
-	}
-
-	return api.Health{
-		Status: api.HealthStateHealthy,
-	}
-}
-
-func (p *promotionReconciler) applyArgoCDAppUpdate(
+func (r *reconciler) applyArgoCDAppUpdate(
 	ctx context.Context,
 	envMeta metav1.ObjectMeta,
 	newState api.EnvironmentState,
 	update api.ArgoCDAppUpdate,
 ) error {
 	app, err :=
-		p.getArgoCDAppFn(ctx, p.client, update.AppNamespace, update.AppName)
+		r.getArgoCDAppFn(ctx, r.client, update.AppNamespace, update.AppName)
 	if err != nil {
 		return errors.Wrapf(
 			err,
@@ -127,7 +41,7 @@ func (p *promotionReconciler) applyArgoCDAppUpdate(
 	}
 
 	// Make sure this is allowed!
-	if err = p.authorizeArgoCDAppUpdate(envMeta, app); err != nil {
+	if err = r.authorizeArgoCDAppUpdate(envMeta, app); err != nil {
 		return err
 	}
 
@@ -136,7 +50,7 @@ func (p *promotionReconciler) applyArgoCDAppUpdate(
 	for _, srcUpdate := range update.SourceUpdates {
 		if app.Spec.Source != nil {
 			var source argocd.ApplicationSource
-			source, err = p.applyArgoCDSourceUpdateFn(
+			source, err = r.applyArgoCDSourceUpdateFn(
 				*app.Spec.Source,
 				newState,
 				srcUpdate,
@@ -152,7 +66,7 @@ func (p *promotionReconciler) applyArgoCDAppUpdate(
 			app.Spec.Source = &source
 		}
 		for i, source := range app.Spec.Sources {
-			if source, err = p.applyArgoCDSourceUpdateFn(
+			if source, err = r.applyArgoCDSourceUpdateFn(
 				source,
 				newState,
 				srcUpdate,
@@ -186,7 +100,7 @@ func (p *promotionReconciler) applyArgoCDAppUpdate(
 			append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
 
-	if err = p.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
+	if err = r.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}
 
@@ -196,7 +110,7 @@ func (p *promotionReconciler) applyArgoCDAppUpdate(
 	return nil
 }
 
-func (p *promotionReconciler) authorizeArgoCDAppUpdate(
+func (r *reconciler) authorizeArgoCDAppUpdate(
 	envMeta metav1.ObjectMeta,
 	app *argocd.Application,
 ) error {
@@ -233,7 +147,7 @@ func (p *promotionReconciler) authorizeArgoCDAppUpdate(
 	return nil
 }
 
-func (p *promotionReconciler) applyArgoCDSourceUpdate(
+func (r *reconciler) applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
 	newState api.EnvironmentState,
 	update api.ArgoCDSourceUpdate,

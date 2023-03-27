@@ -1,4 +1,4 @@
-package controller
+package environments
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/akuityio/kargo/internal/logging"
 )
 
-func (e *environmentReconciler) getLatestImages(
+func (r *reconciler) getLatestImages(
 	ctx context.Context,
 	namespace string,
 	subs []api.ImageSubscription,
@@ -22,7 +22,7 @@ func (e *environmentReconciler) getLatestImages(
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 
 		creds, ok, err :=
-			e.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
+			r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -41,7 +41,7 @@ func (e *environmentReconciler) getLatestImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		tag, err := e.getLatestTagFn(
+		tag, err := r.getLatestTagFn(
 			ctx,
 			sub.RepoURL,
 			images.ImageUpdateStrategy(sub.UpdateStrategy),

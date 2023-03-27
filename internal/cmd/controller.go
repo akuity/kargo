@@ -12,7 +12,8 @@ import (
 	"github.com/akuityio/bookkeeper"
 	api "github.com/akuityio/kargo/api/v1alpha1"
 	"github.com/akuityio/kargo/internal/config"
-	"github.com/akuityio/kargo/internal/controller"
+	"github.com/akuityio/kargo/internal/controller/environments"
+	"github.com/akuityio/kargo/internal/controller/promotions"
 	"github.com/akuityio/kargo/internal/credentials"
 	versionpkg "github.com/akuityio/kargo/internal/version"
 )
@@ -69,14 +70,14 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "error initializing credentials DB")
 			}
 
-			if err := controller.SetupEnvironmentReconcilerWithManager(
+			if err := environments.SetupReconcilerWithManager(
 				ctx,
 				mgr,
 				credentialsDB,
 			); err != nil {
 				return errors.Wrap(err, "setup environment reconciler")
 			}
-			if err := controller.SetupPromotionReconcilerWithManager(
+			if err := promotions.SetupReconcilerWithManager(
 				ctx,
 				mgr,
 				credentialsDB,

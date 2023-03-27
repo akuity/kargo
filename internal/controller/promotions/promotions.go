@@ -1,4 +1,4 @@
-package controller
+package promotions
 
 import (
 	"context"
@@ -27,8 +27,8 @@ import (
 	"github.com/akuityio/kargo/internal/yaml"
 )
 
-// promotionReconciler reconciles Promotion resources.
-type promotionReconciler struct {
+// reconciler reconciles Promotion resources.
+type reconciler struct {
 	client            client.Client
 	credentialsDB     credentials.Database
 	bookkeeperService bookkeeper.Service
@@ -101,9 +101,9 @@ type promotionReconciler struct {
 	) error
 }
 
-// SetupPromotionReconcilerWithManager initializes a reconciler for
-// Promotion resources and registers it with the provided Manager.
-func SetupPromotionReconcilerWithManager(
+// SetupReconcilerWithManager initializes a reconciler for Promotion resources
+// and registers it with the provided Manager.
+func SetupReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	credentialsDB credentials.Database,
@@ -113,16 +113,16 @@ func SetupPromotionReconcilerWithManager(
 		For(&api.Promotion{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(
-			newPromotionReconciler(mgr.GetClient(), credentialsDB, bookkeeperService),
+			newReconciler(mgr.GetClient(), credentialsDB, bookkeeperService),
 		)
 }
 
-func newPromotionReconciler(
+func newReconciler(
 	client client.Client,
 	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
-) *promotionReconciler {
-	p := &promotionReconciler{
+) *reconciler {
+	r := &reconciler{
 		client:            client,
 		credentialsDB:     credentialsDB,
 		bookkeeperService: bookkeeperService,
@@ -130,22 +130,22 @@ func newPromotionReconciler(
 	}
 
 	// Promotions (general):
-	p.promoteFn = p.promote
-	p.applyPromotionMechanismsFn = p.applyPromotionMechanisms
+	r.promoteFn = r.promote
+	r.applyPromotionMechanismsFn = r.applyPromotionMechanisms
 	// Promotions via Git:
-	p.gitApplyUpdateFn = git.ApplyUpdate
+	r.gitApplyUpdateFn = git.ApplyUpdate
 	// Promotions via Git + Kustomize:
-	p.kustomizeSetImageFn = kustomize.SetImage
+	r.kustomizeSetImageFn = kustomize.SetImage
 	// Promotions via Git + Helm:
-	p.buildChartDependencyChangesFn = buildChartDependencyChanges
-	p.updateChartDependenciesFn = helm.UpdateChartDependencies
-	p.setStringsInYAMLFileFn = yaml.SetStringsInFile
+	r.buildChartDependencyChangesFn = buildChartDependencyChanges
+	r.updateChartDependenciesFn = helm.UpdateChartDependencies
+	r.setStringsInYAMLFileFn = yaml.SetStringsInFile
 	// Promotions via Argo CD:
-	p.getArgoCDAppFn = libArgoCD.GetApplication
-	p.applyArgoCDSourceUpdateFn = p.applyArgoCDSourceUpdate
-	p.patchFn = client.Patch
+	r.getArgoCDAppFn = libArgoCD.GetApplication
+	r.applyArgoCDSourceUpdateFn = r.applyArgoCDSourceUpdate
+	r.patchFn = client.Patch
 
-	return p
+	return r
 }
 
 func newPromotionsQueue() runtime.PriorityQueue {
@@ -161,15 +161,15 @@ func newPromotionsQueue() runtime.PriorityQueue {
 
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (p *promotionReconciler) Reconcile(
+func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	// We count all of Reconcile() as a critical section of code to ensure we
 	// don't start reconciling a second Promotion before lazy initialization
 	// completes upon reconciliation of the FIRST promotion.
-	p.promoQueuesByEnvMu.Lock()
-	defer p.promoQueuesByEnvMu.Unlock()
+	r.promoQueuesByEnvMu.Lock()
+	defer r.promoQueuesByEnvMu.Unlock()
 
 	result := ctrl.Result{
 		// Note: If there is a failure, controller runtime ignores this and uses
@@ -184,15 +184,15 @@ func (p *promotionReconciler) Reconcile(
 	// controller runtime client's cache is ready at this point. We cannot attempt
 	// to list Promotions prior to that point.
 	var err error
-	p.initializeOnce.Do(func() {
-		if err = p.initializeQueues(ctx); err == nil {
+	r.initializeOnce.Do(func() {
+		if err = r.initializeQueues(ctx); err == nil {
 			logger.Debug(
 				"initialized Environment-specific Promotion queues from list of " +
 					"existing Promotions",
 			)
 		}
 		// TODO: Do not hardcode this interval
-		go p.serializedSync(ctx, 10*time.Second)
+		go r.serializedSync(ctx, 10*time.Second)
 	})
 	if err != nil {
 		return result, errors.Wrap(err, "error initializing Promotion queues")
@@ -206,7 +206,7 @@ func (p *promotionReconciler) Reconcile(
 	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
-	promo, err := p.getPromo(ctx, req.NamespacedName)
+	promo, err := r.getPromo(ctx, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -216,12 +216,12 @@ func (p *promotionReconciler) Reconcile(
 		return result, nil
 	}
 
-	promo.Status, err = p.sync(ctx, promo)
+	promo.Status, err = r.sync(ctx, promo)
 	if err != nil {
 		logger.Error(err)
 	}
 
-	updateErr := p.client.Status().Update(ctx, promo)
+	updateErr := r.client.Status().Update(ctx, promo)
 	if updateErr != nil {
 		logger.Errorf("error updating Promotion status: %s", updateErr)
 	}
@@ -242,9 +242,9 @@ func (p *promotionReconciler) Reconcile(
 // queues. This is intended to be invoked ONCE and the caller MUST ensure that.
 // It is also assumed that the caller has already obtained a lock on
 // promoQueuesByEnvMu.
-func (p *promotionReconciler) initializeQueues(ctx context.Context) error {
+func (r *reconciler) initializeQueues(ctx context.Context) error {
 	promos := api.PromotionList{}
-	if err := p.client.List(ctx, &promos); err != nil {
+	if err := r.client.List(ctx, &promos); err != nil {
 		return errors.Wrap(err, "error listing promotions")
 	}
 	logger := logging.LoggerFromContext(ctx)
@@ -254,7 +254,7 @@ func (p *promotionReconciler) initializeQueues(ctx context.Context) error {
 			continue
 		case "":
 			promo.Status.Phase = api.PromotionPhasePending
-			if err := p.client.Status().Update(ctx, &promo); err != nil {
+			if err := r.client.Status().Update(ctx, &promo); err != nil {
 				return errors.Wrapf(
 					err,
 					"error updating status of Promotion %q in namespace %q",
@@ -267,10 +267,10 @@ func (p *promotionReconciler) initializeQueues(ctx context.Context) error {
 			Namespace: promo.Namespace,
 			Name:      promo.Spec.Environment,
 		}
-		pq, ok := p.promoQueuesByEnv[env]
+		pq, ok := r.promoQueuesByEnv[env]
 		if !ok {
 			pq = newPromotionsQueue()
-			p.promoQueuesByEnv[env] = pq
+			r.promoQueuesByEnv[env] = pq
 		}
 		// The only error that can occur here happens when you push a nil and we
 		// know we're not doing that.
@@ -283,7 +283,7 @@ func (p *promotionReconciler) initializeQueues(ctx context.Context) error {
 		}).Debug("pushed Promotion onto Environment-specific Promotion queue")
 	}
 	if logger.Logger.IsLevelEnabled(log.DebugLevel) {
-		for env, pq := range p.promoQueuesByEnv {
+		for env, pq := range r.promoQueuesByEnv {
 			logger.WithFields(log.Fields{
 				"environment": env.Name,
 				"namespace":   env.Namespace,
@@ -296,7 +296,7 @@ func (p *promotionReconciler) initializeQueues(ctx context.Context) error {
 
 // sync enqueues Promotion requests to an Environment-specific priority queue.
 // This functions assumes the caller has obtained a lock on promoQueuesByEnvMu.
-func (p *promotionReconciler) sync(
+func (r *reconciler) sync(
 	ctx context.Context,
 	promo *api.Promotion,
 ) (api.PromotionStatus, error) {
@@ -314,10 +314,10 @@ func (p *promotionReconciler) sync(
 		Name:      promo.Spec.Environment,
 	}
 
-	pq, ok := p.promoQueuesByEnv[env]
+	pq, ok := r.promoQueuesByEnv[env]
 	if !ok {
 		pq = newPromotionsQueue()
-		p.promoQueuesByEnv[env] = pq
+		r.promoQueuesByEnv[env] = pq
 	}
 
 	status.Phase = api.PromotionPhasePending
@@ -336,7 +336,7 @@ func (p *promotionReconciler) sync(
 	return status, nil
 }
 
-func (p *promotionReconciler) serializedSync(
+func (r *reconciler) serializedSync(
 	ctx context.Context,
 	interval time.Duration,
 ) {
@@ -348,7 +348,7 @@ func (p *promotionReconciler) serializedSync(
 		case <-ctx.Done():
 			return
 		}
-		for _, pq := range p.promoQueuesByEnv {
+		for _, pq := range r.promoQueuesByEnv {
 			if popped := pq.Pop(); popped != nil {
 				promo := popped.(*api.Promotion)
 
@@ -359,7 +359,7 @@ func (p *promotionReconciler) serializedSync(
 
 				// Refresh promo instead of working with something stale
 				var err error
-				if promo, err = p.getPromo(
+				if promo, err = r.getPromo(
 					ctx,
 					types.NamespacedName{
 						Namespace: promo.Namespace,
@@ -381,7 +381,7 @@ func (p *promotionReconciler) serializedSync(
 
 				promoCtx := logging.ContextWithLogger(ctx, logger)
 
-				if err = p.promoteFn(
+				if err = r.promoteFn(
 					promoCtx,
 					promo.Spec.Environment,
 					promo.Namespace,
@@ -395,7 +395,7 @@ func (p *promotionReconciler) serializedSync(
 					promo.Status.Error = ""
 				}
 
-				if err = p.client.Status().Update(ctx, promo); err != nil {
+				if err = r.client.Status().Update(ctx, promo); err != nil {
 					logger.Errorf("error updating Promotion status: %s", err)
 				}
 
@@ -407,8 +407,7 @@ func (p *promotionReconciler) serializedSync(
 	}
 }
 
-// TODO: Implement this
-func (p *promotionReconciler) promote(
+func (r *reconciler) promote(
 	ctx context.Context,
 	envName string,
 	envNamespace string,
@@ -416,9 +415,9 @@ func (p *promotionReconciler) promote(
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	env, err := getEnv(
+	env, err := api.GetEnv(
 		ctx,
-		p.client,
+		r.client,
 		types.NamespacedName{
 			Namespace: envNamespace,
 			Name:      envName,
@@ -466,7 +465,7 @@ func (p *promotionReconciler) promote(
 		)
 	}
 
-	nextState, err := p.applyPromotionMechanismsFn(
+	nextState, err := r.applyPromotionMechanismsFn(
 		ctx,
 		env.ObjectMeta,
 		*env.Spec.PromotionMechanisms,
@@ -484,7 +483,7 @@ func (p *promotionReconciler) promote(
 			nextState.Commits[i].ID
 	}
 
-	err = p.client.Status().Update(ctx, env)
+	err = r.client.Status().Update(ctx, env)
 	return errors.Wrapf(
 		err,
 		"error updating status of Environment %q in namespace %q",
@@ -494,7 +493,7 @@ func (p *promotionReconciler) promote(
 }
 
 // TODO: This function could use some tests
-func (p *promotionReconciler) applyPromotionMechanisms(
+func (r *reconciler) applyPromotionMechanisms(
 	ctx context.Context,
 	envMeta metav1.ObjectMeta,
 	promoMechanisms api.PromotionMechanisms,
@@ -505,7 +504,7 @@ func (p *promotionReconciler) applyPromotionMechanisms(
 	var err error
 	for _, gitRepoUpdate := range promoMechanisms.GitRepoUpdates {
 		if gitRepoUpdate.Bookkeeper != nil {
-			if newState, err = p.applyBookkeeperUpdate(
+			if newState, err = r.applyBookkeeperUpdate(
 				ctx,
 				envMeta.Namespace,
 				newState,
@@ -514,7 +513,7 @@ func (p *promotionReconciler) applyPromotionMechanisms(
 				return newState, errors.Wrap(err, "error promoting via Git")
 			}
 		} else {
-			if newState, err = p.applyGitRepoUpdate(
+			if newState, err = r.applyGitRepoUpdate(
 				ctx,
 				envMeta.Namespace,
 				newState,
@@ -529,7 +528,7 @@ func (p *promotionReconciler) applyPromotionMechanisms(
 	}
 
 	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
-		if err = p.applyArgoCDAppUpdate(
+		if err = r.applyArgoCDAppUpdate(
 			ctx,
 			envMeta,
 			newState,
@@ -553,12 +552,12 @@ func (p *promotionReconciler) applyPromotionMechanisms(
 // getPromo returns a pointer to the Promotion resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
 // instead.
-func (p *promotionReconciler) getPromo(
+func (r *reconciler) getPromo(
 	ctx context.Context,
 	namespacedName types.NamespacedName,
 ) (*api.Promotion, error) {
 	promo := api.Promotion{}
-	if err := p.client.Get(ctx, namespacedName, &promo); err != nil {
+	if err := r.client.Get(ctx, namespacedName, &promo); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			logging.LoggerFromContext(ctx).WithFields(log.Fields{
 				"namespace": namespacedName.Namespace,

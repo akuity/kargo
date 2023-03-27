@@ -1,4 +1,4 @@
-package controller
+package environments
 
 import (
 	"context"
@@ -11,12 +11,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	api "github.com/akuityio/kargo/api/v1alpha1"
+	"github.com/akuityio/kargo/internal/credentials"
 )
 
 func TestNewEnvironmentReconciler(t *testing.T) {
-	e, err := newEnvironmentReconciler(
+	e, err := newReconciler(
 		fake.NewClientBuilder().Build(),
-		&fakeCredentialsDB{},
+		&credentials.FakeDB{},
 	)
 	require.NoError(t, err)
 	require.NotNil(t, e.client)
@@ -462,7 +463,7 @@ func TestSync(t *testing.T) {
 		scheme, err := api.SchemeBuilder.Build()
 		require.NoError(t, err)
 		// nolint: lll
-		reconciler := &environmentReconciler{
+		reconciler := &reconciler{
 			client:                               fake.NewClientBuilder().WithScheme(scheme).Build(),
 			checkHealthFn:                        testCase.checkHealthFn,
 			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
@@ -653,7 +654,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		testReconciler := &environmentReconciler{
+		testReconciler := &reconciler{
 			getLatestCommitsFn: testCase.getLatestCommitsFn,
 			getLatestImagesFn:  testCase.getLatestImagesFn,
 			getLatestChartsFn:  testCase.getLatestChartsFn,

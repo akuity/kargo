@@ -1,4 +1,4 @@
-package controller
+package environments
 
 import (
 	"context"
@@ -30,8 +30,8 @@ func TestGetLatestImages(t *testing.T) {
 	}{
 		{
 			name: "error getting latest version of an image",
-			credentialsDB: &fakeCredentialsDB{
-				getFn: func(
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(
 					context.Context,
 					string,
 					credentials.Type,
@@ -65,8 +65,8 @@ func TestGetLatestImages(t *testing.T) {
 
 		{
 			name: "success",
-			credentialsDB: &fakeCredentialsDB{
-				getFn: func(
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(
 					context.Context,
 					string,
 					credentials.Type,
@@ -108,7 +108,7 @@ func TestGetLatestImages(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			}
-			reconciler := environmentReconciler{
+			reconciler := reconciler{
 				credentialsDB:  testCase.credentialsDB,
 				getLatestTagFn: testCase.getLatestTagFn,
 			}

@@ -22,7 +22,7 @@ lint:
 test-unit:
 	go test \
 		-v \
-		-timeout=120s \
+		-timeout=300s \
 		-race \
 		-coverprofile=coverage.txt \
 		-covermode=atomic \

@@ -1,4 +1,4 @@
-package controller
+package promotions
 
 import (
 	"context"
@@ -77,8 +77,8 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				Branch:     "env/fake",
 				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			credentialsDB: &fakeCredentialsDB{
-				getFn: func(
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(
 					context.Context,
 					string,
 					credentials.Type,
@@ -121,8 +121,8 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				Branch:     "env/fake",
 				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			credentialsDB: &fakeCredentialsDB{
-				getFn: func(
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(
 					context.Context,
 					string,
 					credentials.Type,
@@ -172,8 +172,8 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				Branch:     "env/fake",
 				Bookkeeper: &api.BookkeeperPromotionMechanism{},
 			},
-			credentialsDB: &fakeCredentialsDB{
-				getFn: func(
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(
 					context.Context,
 					string,
 					credentials.Type,
@@ -208,7 +208,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := promotionReconciler{
+			reconciler := reconciler{
 				credentialsDB:     testCase.credentialsDB,
 				bookkeeperService: testCase.bookkeeperService,
 			}
