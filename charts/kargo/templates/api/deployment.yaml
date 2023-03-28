@@ -47,6 +47,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/usr/local/bin/kargo", "api"]
           env:
+{{- if .Values.kubeconfigSecret }}
+            - name: KUBECONFIG
+              value: /etc/kargo/kubeconfig
+{{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.api.logLevel }}
           ports:
@@ -57,7 +61,20 @@ spec:
             exec:
               command: ["/usr/local/bin/grpc_health_probe", "-addr=:50051"]
             initialDelaySeconds: 5
+{{- if .Values.kubeconfigSecret }}
+          volumeMounts:
+            - mountPath: /etc/kargo/kubeconfig
+              name: kubeconfig
+              readOnly: true
+{{- end }}
           resources: {{ toYaml .Values.api.resources }}
+{{- if .Values.kubeconfigSecret }}
+      volumes:
+        - name: kubeconfig
+          secret:
+            defaultMode: 0600
+            secretName: {{ .Values.kubeconfigSecret }}
+{{- end }}
       {{- with .Values.api.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

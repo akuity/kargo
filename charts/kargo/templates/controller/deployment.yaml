@@ -100,6 +100,10 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/kargo", "controller"]
         env:
+        {{- if .Values.kubeconfigSecret }}
+        - name: KUBECONFIG
+          value: /etc/kargo/kubeconfig
+        {{- end }}
         - name: ARGOCD_NAMESPACE
           value: {{ .Values.controller.argocdNamespace }}
         - name: LOG_LEVEL
@@ -112,6 +116,11 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+        {{- if .Values.kubeconfigSecret }}
+        - mountPath: /etc/kargo/kubeconfig
+          name: kubeconfig
+          readOnly: true
+        {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
       volumes:
@@ -119,6 +128,12 @@ spec:
         secret:
           defaultMode: 420
           secretName: {{ include "kargo.fullname" . }}-webhook-server-cert
+      {{- if .Values.kubeconfigSecret }}
+      - name: kubeconfig
+        secret:
+          defaultMode: 0600
+          secretName: {{ .Values.kubeconfigSecret }}
+      {{- end }}
       {{- with .Values.controller.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

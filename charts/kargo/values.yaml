@@ -16,6 +16,15 @@ rbac:
   ## already exist.
   installGlobalResources: true
 
+## kubeconfigSecret may optionally point to a Kubernetes Secret in the same
+## namespace as Kargo that contains the full content of a kubeconfig under the
+## key "kubeconfig.yaml". This is a useful method of running Kargo in one
+## cluster, but having it manage Environments, Promotions, Argo CD Applications,
+## etc. that live in a second cluster. Note that CRDs and
+## ValidatingWebhookConfigurations will need to be installed manually into the
+## cluster Kargo will be managing.
+# kubeconfigSecret:
+
 ## All settings for the api component
 api:
 
