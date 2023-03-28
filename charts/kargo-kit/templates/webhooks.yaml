@@ -18,6 +18,19 @@ webhooks:
     resources: ["environments"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+- name: promotion.kargo.akuity.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  clientConfig:
+    url: {{ .Values.webhooks.server }}/validate-kargo-akuity-io-v1alpha1-promotion
+    caBundle: {{ .Values.webhooks.caBundle }}
+  rules:
+  - scope: Namespaced
+    apiGroups: ["kargo.akuity.io"]
+    apiVersions: ["v1alpha1"]
+    resources: ["promotions"]
+    operations: ["UPDATE"]
+  failurePolicy: Fail
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
