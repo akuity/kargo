@@ -29,9 +29,12 @@ test-unit:
 		-covermode=atomic \
 		./...
 
-.PHONY: lint-chart
-lint-chart:
+.PHONY: lint-charts
+lint-charts:
 	cd charts/kargo && \
+	helm dep up && \
+	helm lint .
+	cd charts/kargo-kit && \
 	helm dep up && \
 	helm lint .
 
@@ -47,7 +50,9 @@ codegen:
 		crd \
 		webhook \
 		paths=./... \
-		output:crd:artifacts:config=charts/kargo/crds && \
+		output:crd:artifacts:config=charts/kargo/crds
+	rm -rf charts/kargo-kit/crds
+	cp -R charts/kargo/crds charts/kargo-kit/crds
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./... \
@@ -79,9 +84,9 @@ hack-lint: hack-build-dev-tools
 hack-test-unit: hack-build-dev-tools
 	$(DOCKER_CMD) make test-unit
 
-.PHONY: hack-lint-chart
-hack-lint-chart: hack-build-dev-tools
-	$(DOCKER_CMD) make lint-chart
+.PHONY: hack-lint-charts
+hack-lint-charts: hack-build-dev-tools
+	$(DOCKER_CMD) make lint-charts
 
 .PHONY: hack-codegen
 hack-codegen: hack-build-dev-tools
