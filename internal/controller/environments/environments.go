@@ -52,7 +52,7 @@ type reconciler struct {
 	checkHealthFn func(
 		context.Context,
 		api.EnvironmentState,
-		api.HealthChecks,
+		*api.HealthChecks,
 	) api.Health
 
 	// Syncing:
@@ -307,7 +307,7 @@ func (r *reconciler) sync(
 
 	// Only perform health checks if we have a current state to update
 	if currentState, ok := status.States.Pop(); ok {
-		health := r.checkHealthFn(ctx, currentState, *env.Spec.HealthChecks)
+		health := r.checkHealthFn(ctx, currentState, env.Spec.HealthChecks)
 		currentState.Health = &health
 		status.States.Push(currentState)
 		logger.WithField("health", health.Status).Debug("completed health checks")

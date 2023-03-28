@@ -11,8 +11,15 @@ import (
 func (r *reconciler) checkHealth(
 	ctx context.Context,
 	currentState api.EnvironmentState,
-	healthChecks api.HealthChecks,
+	healthChecks *api.HealthChecks,
 ) api.Health {
+	if healthChecks == nil {
+		return api.Health{
+			Status:       api.HealthStateUnknown,
+			StatusReason: "spec.healthChecks is undefined",
+		}
+	}
+
 	if len(healthChecks.ArgoCDAppChecks) == 0 {
 		return api.Health{
 			Status: api.HealthStateUnknown,

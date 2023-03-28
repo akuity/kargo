@@ -17,7 +17,7 @@ func TestCheckHealth(t *testing.T) {
 	testCases := []struct {
 		name           string
 		state          api.EnvironmentState
-		appChecks      []api.ArgoCDAppCheck
+		healthChecks   *api.HealthChecks
 		getArgoCDAppFn func(
 			context.Context,
 			client.Client,
@@ -27,7 +27,21 @@ func TestCheckHealth(t *testing.T) {
 		assertions func(api.Health)
 	}{
 		{
-			name: "healthchecks do not include any Argo CD Apps",
+			name: "healthchecks are nil",
+			assertions: func(health api.Health) {
+				require.Equal(t,
+					api.Health{
+						Status:       api.HealthStateUnknown,
+						StatusReason: "spec.healthChecks is undefined",
+					},
+					health,
+				)
+			},
+		},
+
+		{
+			name:         "healthchecks do not include any Argo CD Apps",
+			healthChecks: &api.HealthChecks{},
 			assertions: func(health api.Health) {
 				require.Equal(t,
 					api.Health{
@@ -42,10 +56,12 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "error finding Argo CD App",
-			appChecks: []api.ArgoCDAppCheck{
-				{
-					AppName:      "fake-app",
-					AppNamespace: "fake-namespace",
+			healthChecks: &api.HealthChecks{
+				ArgoCDAppChecks: []api.ArgoCDAppCheck{
+					{
+						AppName:      "fake-app",
+						AppNamespace: "fake-namespace",
+					},
 				},
 			},
 			getArgoCDAppFn: func(
@@ -69,10 +85,12 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App not found",
-			appChecks: []api.ArgoCDAppCheck{
-				{
-					AppName:      "fake-app",
-					AppNamespace: "fake-namespace",
+			healthChecks: &api.HealthChecks{
+				ArgoCDAppChecks: []api.ArgoCDAppCheck{
+					{
+						AppName:      "fake-app",
+						AppNamespace: "fake-namespace",
+					},
 				},
 			},
 			getArgoCDAppFn: func(
@@ -98,10 +116,12 @@ func TestCheckHealth(t *testing.T) {
 			// This doesn't require there to actually BE multiple sources. Simply
 			// using the sources field instead of the source fields should be enough
 			// to trigger this case.
-			appChecks: []api.ArgoCDAppCheck{
-				{
-					AppName:      "fake-app",
-					AppNamespace: "fake-namespace",
+			healthChecks: &api.HealthChecks{
+				ArgoCDAppChecks: []api.ArgoCDAppCheck{
+					{
+						AppName:      "fake-app",
+						AppNamespace: "fake-namespace",
+					},
 				},
 			},
 			getArgoCDAppFn: func(
@@ -131,10 +151,12 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App is not healthy",
-			appChecks: []api.ArgoCDAppCheck{
-				{
-					AppName:      "fake-app",
-					AppNamespace: "fake-namespace",
+			healthChecks: &api.HealthChecks{
+				ArgoCDAppChecks: []api.ArgoCDAppCheck{
+					{
+						AppName:      "fake-app",
+						AppNamespace: "fake-namespace",
+					},
 				},
 			},
 			getArgoCDAppFn: func(
@@ -164,10 +186,12 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App not synced",
-			appChecks: []api.ArgoCDAppCheck{
-				{
-					AppName:      "fake-app",
-					AppNamespace: "fake-namespace",
+			healthChecks: &api.HealthChecks{
+				ArgoCDAppChecks: []api.ArgoCDAppCheck{
+					{
+						AppName:      "fake-app",
+						AppNamespace: "fake-namespace",
+					},
 				},
 			},
 			getArgoCDAppFn: func(
@@ -210,10 +234,12 @@ func TestCheckHealth(t *testing.T) {
 					},
 				},
 			},
-			appChecks: []api.ArgoCDAppCheck{
-				{
-					AppName:      "fake-app",
-					AppNamespace: "fake-namespace",
+			healthChecks: &api.HealthChecks{
+				ArgoCDAppChecks: []api.ArgoCDAppCheck{
+					{
+						AppName:      "fake-app",
+						AppNamespace: "fake-namespace",
+					},
 				},
 			},
 			getArgoCDAppFn: func(
@@ -254,9 +280,7 @@ func TestCheckHealth(t *testing.T) {
 				reconciler.checkHealth(
 					context.Background(),
 					testCase.state,
-					api.HealthChecks{
-						ArgoCDAppChecks: testCase.appChecks,
-					},
+					testCase.healthChecks,
 				),
 			)
 		})
