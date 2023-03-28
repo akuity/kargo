@@ -61,7 +61,10 @@ func newControllerCommand() *cobra.Command {
 			}
 
 			if err := (&api.Environment{}).SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "create webhook")
+				return errors.Wrap(err, "error initializing Environment webhooks")
+			}
+			if err := (&api.Promotion{}).SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "error initializing Environment webhooks")
 			}
 
 			credentialsDB, err :=
