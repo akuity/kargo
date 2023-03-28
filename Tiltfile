@@ -20,6 +20,16 @@ docker_build(
   ],
   ignore = ['**/*_test.go']
 )
+
+k8s_resource(
+  new_name = 'common',
+  labels = ['kargo'],
+  objects = [
+    'kargo-image-pull-secret:secret',
+    'kargo-selfsigned-cert-issuer:issuer'
+  ]
+)
+
 k8s_resource(
   workload = 'kargo-api',
   new_name = 'api',
@@ -27,43 +37,34 @@ k8s_resource(
     '30081:50051',
     '30082:8080'
   ],
-  labels = ['kargo']
-)
-k8s_resource(
-  workload = 'api',
+  labels = ['kargo'],
   objects = [
     'kargo-api:clusterrole',
     'kargo-api:clusterrolebinding',
     'kargo-api:serviceaccount'
   ]
 )
+
 k8s_resource(
   workload = 'kargo-controller',
   new_name = 'controller',
-  labels = ['kargo']
-)
-k8s_resource(
-  workload = 'controller',
+  labels = ['kargo'],
   objects = [
     'kargo:mutatingwebhookconfiguration',
     'kargo:validatingwebhookconfiguration',
     'kargo-controller:clusterrole',
     'kargo-controller:clusterrolebinding',
     'kargo-controller:serviceaccount',
-    'kargo-webhook-server-cert:secret'
+    'kargo-webhook-server:certificate'
   ]
 )
+
 k8s_resource(
   new_name = 'crds',
   objects = [
     'environments.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition'
   ],
-  labels = ['kargo']
-)
-k8s_resource(
-  new_name = 'image-pull-secret',
-  objects = ['kargo-image-pull-secret:secret'],
   labels = ['kargo']
 )
 
