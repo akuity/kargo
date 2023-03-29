@@ -1,6 +1,7 @@
 SHELL ?= /bin/bash
 
 ARGO_CD_CHART_VERSION := 5.21.0
+CERT_MANAGER_CHART_VERSION := 1.11.0
 
 ################################################################################
 # Tests                                                                        #
@@ -93,11 +94,13 @@ hack-build:
 .PHONY: hack-kind-up
 hack-kind-up:
 	ctlptl apply -f hack/kind/cluster.yaml
+	make hack-install-cert-manager
 	make hack-install-argocd
 
 .PHONY: hack-k3d-up
 hack-k3d-up:
 	ctlptl apply -f hack/k3d/cluster.yaml
+	make hack-install-cert-manager
 	make hack-install-argocd
 
 .PHONY: hack-kind-down
@@ -107,6 +110,17 @@ hack-kind-down:
 .PHONY: hack-k3d-down
 hack-k3d-down:
 	ctlptl delete -f hack/k3d/cluster.yaml
+
+.PHONY: hack-install-cert-manager
+hack-install-cert-manager:
+	helm upgrade cert-manager cert-manager \
+		--repo https://charts.jetstack.io \
+		--version $(CERT_MANAGER_CHART_VERSION) \
+		--install \
+		--create-namespace \
+		--namespace cert-manager \
+		--set installCRDs=true \
+		--wait
 
 .PHONY: hack-install-argocd
 hack-install-argocd:
