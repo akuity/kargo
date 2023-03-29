@@ -1,72 +1,3 @@
-{{- $ca := genCA "kargo-webhook-ca" 3650 }}
-{{- $cn := printf "%s-webhook-server" (include "kargo.fullname" .) }}
-{{- $altName1 := printf "%s-webhook-server.%s" (include "kargo.fullname" .) .Release.Namespace }}
-{{- $altName2 := printf "%s-webhook-server.%s.svc" (include "kargo.fullname" .) .Release.Namespace }}
-{{- $altName3 := printf "%s-webhook-server.%s.svc.cluster" (include "kargo.fullname" .) .Release.Namespace }}
-{{- $altName4 := printf "%s-webhook-server.%s.svc.cluster.local" (include "kargo.fullname" .) .Release.Namespace }}
-{{- $cert := genSignedCert $cn nil (list $altName1 $altName2 $altName3 $altName4) 3650 $ca }}
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{ include "kargo.fullname" . }}-webhook-server-cert
-  labels:
-    {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.controller.labels" . | nindent 4 }}
-data:
-  tls.crt: {{ b64enc $cert.Cert }}
-  tls.key: {{ b64enc $cert.Key }}
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  name: {{ include "kargo.fullname" . }}
-  labels:
-    {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.controller.labels" . | nindent 4 }}
-webhooks:
-- name: environment.kargo.akuity.io
-  admissionReviewVersions: ["v1"]
-  sideEffects: None
-  clientConfig:
-    service:
-      namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.fullname" . }}-webhook-server
-      path: /mutate-kargo-akuity-io-v1alpha1-environment
-    caBundle: {{ b64enc $ca.Cert }}
-  rules:
-  - scope: Namespaced
-    apiGroups: ["kargo.akuity.io"]
-    apiVersions: ["v1alpha1"]
-    resources: ["environments"]
-    operations: ["CREATE", "UPDATE"]
-  failurePolicy: Fail
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  name: {{ include "kargo.fullname" . }}
-  labels:
-    {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.controller.labels" . | nindent 4 }}
-webhooks:
-- name: environment.kargo.akuity.io
-  admissionReviewVersions: ["v1"]
-  sideEffects: None
-  clientConfig:
-    service:
-      namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.fullname" . }}-webhook-server
-      path: /validate-kargo-akuity-io-v1alpha1-environment
-    caBundle: {{ b64enc $ca.Cert }}
-  rules:
-  - scope: Namespaced
-    apiGroups: ["kargo.akuity.io"]
-    apiVersions: ["v1alpha1"]
-    resources: ["environments"]
-    operations: ["CREATE", "UPDATE"]
-  failurePolicy: Fail
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -87,9 +18,6 @@ spec:
       labels:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.controller.labels" . | nindent 8 }}
-      annotations:
-        checksum/webhook-server-cert: {{ sha256sum $cert.Cert }}
-        checksum/webhook-server-private-key: {{ sha256sum $cert.Key }}
     spec:
       serviceAccount: {{ include "kargo.controller.fullname" . }}
       imagePullSecrets:

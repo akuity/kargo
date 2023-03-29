@@ -52,7 +52,7 @@ jobs:
       with:
         image: ${{ steps.meta.outputs.tags }}
 
-  publish-chart:
+  publish-charts:
     needs: push
     runs-on: ubuntu-latest
     steps:
@@ -71,10 +71,15 @@ jobs:
     - name: Publish chart
       env:
         HELM_EXPERIMENTAL_OCI: '1'
-        HELM_REPO: ghcr.io/akuityio/kargo-chart
+        KARGO_CHART_REPO: ghcr.io/akuityio/kargo-chart
+        KARGO_KIT_CHART_REPO: ghcr.io/akuityio/kargo-kit
         VERSION: ${{ github.ref_name }}
       run: |
         cd charts/kargo
         helm dep up
         helm package . --version ${VERSION} --app-version ${VERSION}
-        helm push kargo-${VERSION}.tgz oci://${HELM_REPO}
+        helm push kargo-${VERSION}.tgz oci://${KARGO_CHART_REPO}
+        cd ../kargo-kit
+        helm dep up
+        helm package . --version ${VERSION}
+        helm push kargo-kit-${VERSION}.tgz oci://${KARGO_KIT_CHART_REPO}

@@ -1,6 +1,7 @@
 SHELL ?= /bin/bash
 
 ARGO_CD_CHART_VERSION := 5.21.0
+CERT_MANAGER_CHART_VERSION := 1.11.0
 
 ################################################################################
 # Tests                                                                        #
@@ -28,9 +29,12 @@ test-unit:
 		-covermode=atomic \
 		./...
 
-.PHONY: lint-chart
-lint-chart:
+.PHONY: lint-charts
+lint-charts:
 	cd charts/kargo && \
+	helm dep up && \
+	helm lint .
+	cd charts/kargo-kit && \
 	helm dep up && \
 	helm lint .
 
@@ -46,7 +50,9 @@ codegen:
 		crd \
 		webhook \
 		paths=./... \
-		output:crd:artifacts:config=charts/kargo/crds && \
+		output:crd:artifacts:config=charts/kargo/crds
+	rm -rf charts/kargo-kit/crds
+	cp -R charts/kargo/crds charts/kargo-kit/crds
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./... \
@@ -78,9 +84,9 @@ hack-lint: hack-build-dev-tools
 hack-test-unit: hack-build-dev-tools
 	$(DOCKER_CMD) make test-unit
 
-.PHONY: hack-lint-chart
-hack-lint-chart: hack-build-dev-tools
-	$(DOCKER_CMD) make lint-chart
+.PHONY: hack-lint-charts
+hack-lint-charts: hack-build-dev-tools
+	$(DOCKER_CMD) make lint-charts
 
 .PHONY: hack-codegen
 hack-codegen: hack-build-dev-tools
@@ -93,11 +99,13 @@ hack-build:
 .PHONY: hack-kind-up
 hack-kind-up:
 	ctlptl apply -f hack/kind/cluster.yaml
+	make hack-install-cert-manager
 	make hack-install-argocd
 
 .PHONY: hack-k3d-up
 hack-k3d-up:
 	ctlptl apply -f hack/k3d/cluster.yaml
+	make hack-install-cert-manager
 	make hack-install-argocd
 
 .PHONY: hack-kind-down
@@ -107,6 +115,17 @@ hack-kind-down:
 .PHONY: hack-k3d-down
 hack-k3d-down:
 	ctlptl delete -f hack/k3d/cluster.yaml
+
+.PHONY: hack-install-cert-manager
+hack-install-cert-manager:
+	helm upgrade cert-manager cert-manager \
+		--repo https://charts.jetstack.io \
+		--version $(CERT_MANAGER_CHART_VERSION) \
+		--install \
+		--create-namespace \
+		--namespace cert-manager \
+		--set installCRDs=true \
+		--wait
 
 .PHONY: hack-install-argocd
 hack-install-argocd:
