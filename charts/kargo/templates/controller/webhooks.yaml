@@ -50,4 +50,19 @@ webhooks:
     resources: ["environments"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+- name: promotion.kargo.akuity.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: {{ include "kargo.fullname" . }}-webhook-server
+      path: /validate-kargo-akuity-io-v1alpha1-promotion
+  rules:
+  - scope: Namespaced
+    apiGroups: ["kargo.akuity.io"]
+    apiVersions: ["v1alpha1"]
+    resources: ["promotions"]
+    operations: ["UPDATE"]
+  failurePolicy: Fail
 {{- end }}
