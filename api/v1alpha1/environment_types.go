@@ -78,9 +78,7 @@ type EnvironmentSpec struct {
 	EnableAutoPromotion bool `json:"enableAutoPromotion,omitempty"`
 	// HealthChecks describes how the health of the Environment can be assessed on
 	// an ongoing basis. This is a required field.
-	//
-	//+kubebuilder:validation:Required
-	HealthChecks *HealthChecks `json:"healthChecks"`
+	HealthChecks *HealthChecks `json:"healthChecks,omitempty"`
 }
 
 // Subscriptions describes an Environment's sources of material.
@@ -445,9 +443,7 @@ type ArgoCDHelmImageUpdate struct {
 type HealthChecks struct {
 	// ArgoCDAppChecks specifies Argo CD Application resources whose sync status
 	// and health should be evaluated in assessing the health of the Environment.
-	//
-	//+kubebuilder:validation:MinItems=1
-	ArgoCDAppChecks []ArgoCDAppCheck `json:"argoCDAppChecks"`
+	ArgoCDAppChecks []ArgoCDAppCheck `json:"argoCDAppChecks,omitempty"`
 }
 
 // ArgoCDAppCheck describes a health check to perform on an Argo CD Application

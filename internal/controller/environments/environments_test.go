@@ -48,7 +48,7 @@ func TestSync(t *testing.T) {
 		checkHealthFn func(
 			context.Context,
 			api.EnvironmentState,
-			api.HealthChecks,
+			*api.HealthChecks,
 		) api.Health
 		getLatestStateFromReposFn func(
 			context.Context,
@@ -180,7 +180,7 @@ func TestSync(t *testing.T) {
 			checkHealthFn: func(
 				context.Context,
 				api.EnvironmentState,
-				api.HealthChecks,
+				*api.HealthChecks,
 			) api.Health {
 				return api.Health{
 					Status: api.HealthStateHealthy,
