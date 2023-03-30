@@ -82,7 +82,7 @@ jobs:
     - name: Check nothing has changed
       run: git diff --exit-code -- .
 
-  lint-chart:
+  lint-charts:
     runs-on: ubuntu-latest
     container:
       image: golang:1.19.3-bullseye
@@ -95,10 +95,10 @@ jobs:
         curl -sSfL https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz \
         | tar xvz linux-amd64/helm --strip-components=1
     - name: Run linter
-      run: make lint-chart
+      run: make lint-charts
 
   build:
-    needs: [test-unit, lint, check-codegen, lint-chart]
+    needs: [test-unit, lint, check-codegen, lint-charts]
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU

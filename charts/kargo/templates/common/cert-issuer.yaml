@@ -1,0 +1,8 @@
+{{- if .Values.controller.webhooks.tls.selfSignedCert }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "kargo.fullname" . }}-selfsigned-cert-issuer
+spec:
+  selfSigned: {}
+{{- end }}

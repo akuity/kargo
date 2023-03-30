@@ -1,0 +1,13 @@
+{{- if .Values.controller.webhooks.tls.selfSignedCert }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "kargo.fullname" . }}-webhook-server
+spec:
+  dnsNames:
+  - {{ include "kargo.fullname" . }}-webhook-server.{{ .Release.Namespace }}.svc
+  issuerRef:
+    kind: Issuer
+    name: {{ include "kargo.fullname" . }}-selfsigned-cert-issuer
+  secretName: {{ include "kargo.fullname" . }}-webhook-server-cert
+{{- end }}

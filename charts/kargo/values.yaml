@@ -16,13 +16,14 @@ rbac:
   ## already exist.
   installGlobalResources: true
 
-## kubeconfigSecret may optionally point to a Kubernetes Secret in the same
-## namespace as Kargo that contains the full content of a kubeconfig under the
-## key "kubeconfig.yaml". This is a useful method of running Kargo in one
-## cluster, but having it manage Environments, Promotions, Argo CD Applications,
-## etc. that live in a second cluster. Note that CRDs and
-## ValidatingWebhookConfigurations will need to be installed manually into the
-## cluster Kargo will be managing.
+## Optionally point to a Kubernetes Secret in the same namespace as Kargo that
+## contains the full content of a kubeconfig under the key "kubeconfig.yaml".
+## This is a useful method of hosting Kargo in one cluster, but having it manage
+## Environments, Promotions, Argo CD Applications, etc. that live in a second
+## cluster. Note that CRDs, ValidatingWebhookConfigurations, and
+## MutatingWebhookConfigurations will need to be installed manually into the
+## cluster Kargo will be managing. This can be accomplished using the kargo-kit
+## chart.
 # kubeconfigSecret:
 
 ## All settings for the api component
@@ -59,6 +60,25 @@ controller:
   argocdNamespace: argocd
 
   logLevel: INFO
+
+  webhooks:
+    ## Whether to create ValidatingWebhookConfiguration and
+    ## MutatingWebhookConfiguration resources. Since these are installed at a
+    ## cluster scope, there may be circumstances under which one wishes NOT to
+    ## install these. An example would be if Kargo were being hosted in one
+    ## cluster, but managing another cluster. In such a case, the
+    ## ValidatingWebhookConfiguration and MutatingWebhookConfiguration resources
+    ## (as well as CRDs) should be installed into the cluster under management
+    ## using the kargo-kit chart.
+    register: true
+    tls:
+      ## Whether to generate a self-signed certificate for the controller's
+      ## built-in webhook server. If true, cert-manager CRDs MUST be
+      ## pre-installed on this cluster. Kargo will create and use its own
+      ## namespaced issuer. If false, a cert secret named
+      ## <Helm release name>-webhook-server-cert MUST be provided in the same
+      ## namespace as Kargo.
+      selfSignedCert: true
 
   resources: {}
     # We usually recommend not to specify default resources and to leave this as

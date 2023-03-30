@@ -1,0 +1,83 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: promotions.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: Promotion
+    listKind: PromotionList
+    plural: promotions
+    shortNames:
+    - promo
+    - promos
+    singular: promotion
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Promotion represents a request to transition a particular Environment
+          into a particular state.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec describes the desired transition of a specific Environment
+              into a specific EnvironmentState.
+            properties:
+              environment:
+                description: "Environment specifies the name of the Environment to
+                  which this Promotion applies. The Environment referenced by this
+                  field MUST be in the same namespace as the Promotion. \n TODO: Use
+                  a webhook to make this immutable"
+                minLength: 1
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                type: string
+              state:
+                description: "State specifies the specific EnvironmentState into which
+                  the Environment referenced by the Environment field should be transitioned.
+                  The State MUST be among the Environment's Status.AvailableStates
+                  or the Promotion will ultimately fail. \n TODO: Use a webhook to
+                  make this immutable"
+                minLength: 1
+                type: string
+            required:
+            - environment
+            - state
+            type: object
+          status:
+            description: Status describes the current state of the transition represented
+              by this Promotion.
+            properties:
+              error:
+                description: Error describes any errors that are preventing the Promotion
+                  controller from executing this Promotion. i.e. If the Phase field
+                  has a value of Failed, this field can be expected to explain why.
+                type: string
+              phase:
+                description: Phase describes where the Promotion currently is in its
+                  lifecycle.
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
