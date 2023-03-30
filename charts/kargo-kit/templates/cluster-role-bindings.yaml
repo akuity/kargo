@@ -1,0 +1,29 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "kargo-kit.fullname" . }}-api
+  labels:
+    {{- include "kargo-kit.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "kargo-kit.fullname" . }}-api
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Values.rbac.apiServiceAccount.namespace }}
+  name: {{ .Values.rbac.apiServiceAccount.name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "kargo-kit.fullname" . }}-controller
+  labels:
+    {{- include "kargo-kit.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "kargo-kit.fullname" . }}-controller
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Values.rbac.controllerServiceAccount.namespace }}
+  name: {{ .Values.rbac.controllerServiceAccount.name }}
