@@ -13,8 +13,17 @@ rbac:
   ## Indicates whether relevant cluster-scoped roles should be installed/updated
   ## by this chart. Set to false if this is NOT the first install of Kargo in
   ## a given cluster, otherwise this chart will attempt to create resources that
-  ## already exist.
-  installGlobalResources: true
+  ## already exist. You may also wish to set this to false if you are installing
+  ## Kargo into one cluster, but configuring it to manage a DIFFERENT cluster.
+  ## In that case, you should use the kargo-kit chart to install these resources
+  ## in the Kargo-managed cluster.
+  installClusterRoles: true
+  ## Indicates whether relevant ClusterRoleBindings should be installed/updated
+  ## by this chart. You may wish to set this to false if you are installing
+  ## Kargo into one cluster, but configuring it to manage a DIFFERENT cluster.
+  ## In that case, you should use the kargo-kit chart to install these resources
+  ## in the Kargo-managed cluster.
+  installClusterRoleBindings: true
 
 ## Optionally point to a Kubernetes Secret in the same namespace as Kargo that
 ## contains the full content of a kubeconfig under the key "kubeconfig.yaml".

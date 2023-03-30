@@ -1,11 +1,17 @@
-{{- if .Values.rbac.installClusterRoles }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kargo.controller.fullname" . }}
+  name: {{ include "kargo-kit.fullname" . }}-api
   labels:
-    {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo-kit.labels" . | nindent 4 }}
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kargo-kit.fullname" . }}-controller
+  labels:
+    {{- include "kargo-kit.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - ""
@@ -49,4 +55,3 @@ rules:
   - promotions/status
   verbs:
   - update
-{{- end }}
