@@ -72,7 +72,7 @@ spec:
       volumes:
         - name: kubeconfig
           secret:
-            defaultMode: 0600
+            defaultMode: 0644
             secretName: {{ .Values.kubeconfigSecret }}
 {{- end }}
       {{- with .Values.api.nodeSelector }}
