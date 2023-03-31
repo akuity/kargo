@@ -30,7 +30,7 @@ spec:
         env:
         {{- if .Values.kubeconfigSecret }}
         - name: KUBECONFIG
-          value: /etc/kargo/kubeconfig
+          value: /etc/kargo/kubeconfig/kubeconfig.yaml
         {{- end }}
         - name: ARGOCD_NAMESPACE
           value: {{ .Values.controller.argocdNamespace }}
