@@ -54,7 +54,7 @@ spec:
       volumes:
       - name: cert
         secret:
-          defaultMode: 420
+          defaultMode: 0644
           secretName: {{ include "kargo.fullname" . }}-webhook-server-cert
       {{- if .Values.kubeconfigSecret }}
       - name: kubeconfig
