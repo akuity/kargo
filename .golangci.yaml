@@ -2,7 +2,7 @@ run:
   deadline: 10m
   skip-files:
     - api/.*/groupversion_info.go
-  go: "1.19"
+  go: "1.20"
 
 linters:
   enable:
