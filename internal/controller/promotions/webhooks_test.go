@@ -1,27 +1,30 @@
-package v1alpha1
+package promotions
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
 func TestValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
-		setup      func() (*Promotion, *Promotion)
+		setup      func() (*api.Promotion, *api.Promotion)
 		assertions func(error)
 	}{
 		{
 			name: "attempt to mutate",
-			setup: func() (*Promotion, *Promotion) {
-				old := &Promotion{
+			setup: func() (*api.Promotion, *api.Promotion) {
+				old := &api.Promotion{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
-					Spec: &PromotionSpec{
+					Spec: &api.PromotionSpec{
 						Environment: "fake-environment",
 						State:       "fake-state",
 					},
@@ -39,13 +42,13 @@ func TestValidateUpdate(t *testing.T) {
 
 		{
 			name: "update without mutation",
-			setup: func() (*Promotion, *Promotion) {
-				old := &Promotion{
+			setup: func() (*api.Promotion, *api.Promotion) {
+				old := &api.Promotion{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
-					Spec: &PromotionSpec{
+					Spec: &api.PromotionSpec{
 						Environment: "fake-environment",
 						State:       "fake-state",
 					},
@@ -58,10 +61,11 @@ func TestValidateUpdate(t *testing.T) {
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			old, new := testCase.setup()
-			testCase.assertions(new.ValidateUpdate(old))
+			testCase.assertions(w.ValidateUpdate(context.Background(), old, new))
 		})
 	}
 }
