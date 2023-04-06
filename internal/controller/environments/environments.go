@@ -125,6 +125,9 @@ func SetupReconcilerWithManager(
 		envsByAppIndexField,
 		func(obj client.Object) []string {
 			env := obj.(*api.Environment) // nolint: forcetypeassert
+			if env.Spec.HealthChecks == nil {
+				return nil
+			}
 			apps := make([]string, len(env.Spec.HealthChecks.ArgoCDAppChecks))
 			for i, appCheck := range env.Spec.HealthChecks.ArgoCDAppChecks {
 				apps[i] =
