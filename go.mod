@@ -1,6 +1,6 @@
 module github.com/akuityio/kargo
 
-go 1.19
+go 1.20
 
 replace github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.9 => github.com/akuityio/bookkeeper-prototype v0.1.0-alpha.2-rc.12
 
