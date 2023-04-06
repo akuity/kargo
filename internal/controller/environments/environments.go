@@ -306,10 +306,10 @@ func (r *reconciler) sync(
 	logger := logging.LoggerFromContext(ctx)
 
 	// Only perform health checks if we have a current state to update
-	if currentState, ok := status.States.Pop(); ok {
+	if currentState, ok := status.History.Pop(); ok {
 		health := r.checkHealthFn(ctx, currentState, env.Spec.HealthChecks)
 		currentState.Health = &health
-		status.States.Push(currentState)
+		status.History.Push(currentState)
 		logger.WithField("health", health.Status).Debug("completed health checks")
 	} else {
 		logger.Debug("Environment has no current state; skipping health checks")
@@ -384,7 +384,7 @@ func (r *reconciler) sync(
 	// stacks until we know a promotion has been successful.
 
 	nextStateCandidate, _ := status.AvailableStates.Top()
-	if currentState, ok := status.States.Top(); ok &&
+	if currentState, ok := status.History.Top(); ok &&
 		nextStateCandidate.FirstSeen.Before(currentState.FirstSeen) {
 		logger.Debug(
 			"newest available state is older than current state; refusing to " +
@@ -493,7 +493,7 @@ func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
 				sub.Namespace,
 			)
 		}
-		for _, state := range upstreamEnv.Status.States {
+		for _, state := range upstreamEnv.Status.History {
 			if _, ok := stateSet[state.ID]; !ok &&
 				state.Health != nil && state.Health.Status == api.HealthStateHealthy {
 				state.Provenance = upstreamEnv.Name
