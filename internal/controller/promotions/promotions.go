@@ -441,7 +441,7 @@ func (r *reconciler) promote(
 	logger.Debug("found associated Environment")
 
 	if currentState, ok :=
-		env.Status.States.Top(); ok && currentState.ID == stateID {
+		env.Status.History.Top(); ok && currentState.ID == stateID {
 		logger.Debug("Environment is already in desired state")
 		return nil
 	}
@@ -474,7 +474,8 @@ func (r *reconciler) promote(
 	if err != nil {
 		return err
 	}
-	env.Status.States.Push(nextState)
+	env.Status.CurrentState = &nextState
+	env.Status.History.Push(nextState)
 
 	// Promotion is successful at this point. Update target state in place because
 	// the promotion process may have updated some commit IDs.

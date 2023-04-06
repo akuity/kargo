@@ -157,7 +157,7 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
-				States: []api.EnvironmentState{
+				History: []api.EnvironmentState{
 					{
 						Commits: []api.GitCommit{
 							{

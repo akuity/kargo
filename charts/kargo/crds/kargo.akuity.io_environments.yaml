@@ -19,10 +19,10 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.states[0].id
+    - jsonPath: .status.currentState.id
       name: Current State
       type: string
-    - jsonPath: .status.states[0].health.status
+    - jsonPath: .status.currentState.health.status
       name: Health
       type: string
     name: v1alpha1
@@ -662,14 +662,119 @@ spec:
                       type: string
                   type: object
                 type: array
+              currentState:
+                description: CurrentState is the Environment's current state -- a
+                  "bill of materials" describing what is currently deployed to the
+                  Environment.
+                properties:
+                  charts:
+                    description: Charts describes Helm charts that were used in this
+                      state.
+                    items:
+                      description: Chart describes a specific version of a Helm chart.
+                      properties:
+                        name:
+                          description: Name specifies the name of the chart.
+                          type: string
+                        registryURL:
+                          description: RepoURL specifies the remote registry in which
+                            this chart is located.
+                          type: string
+                        version:
+                          description: Version specifies a particular version of the
+                            chart.
+                          type: string
+                      type: object
+                    type: array
+                  commits:
+                    description: Commits describes specific Git repository commits
+                      that were used in this state.
+                    items:
+                      description: GitCommit describes a specific commit from a specific
+                        Git repository.
+                      properties:
+                        healthCheckCommit:
+                          description: HealthCheckCommit is the ID of a specific commit.
+                            When specified, assessments of Environment health will
+                            used this value (instead of ID) when determining if applicable
+                            sources of Argo CD Application resources associated with
+                            the environment are or are not synced to this commit.
+                            Note that there are cases (as in that of Bookkeeper being
+                            utilized as a promotion mechanism) wherein the value of
+                            this field may differ from the commit ID found in the
+                            ID field.
+                          type: string
+                        id:
+                          description: ID is the ID of a specific commit in the Git
+                            repository specified by RepoURL.
+                          type: string
+                        repoURL:
+                          description: RepoURL is the URL of a Git repository.
+                          type: string
+                      type: object
+                    type: array
+                  firstSeen:
+                    description: FirstSeen represents the date/time when this EnvironmentState
+                      first entered the system. This is useful and important information
+                      because it enables the controller to block auto-promotion of
+                      EnvironmentStates that are older than an Environment's current
+                      state, which is a case that can arise if an Environment has
+                      ROLLED BACK to an older state whilst a downstream Environment
+                      is already on to a newer state.
+                    format: date-time
+                    type: string
+                  health:
+                    description: Health is the state's last observed health. If this
+                      state is the Environment's current state, this will be continuously
+                      re-assessed and updated. If this state is a past state of the
+                      Environment, this field will denote the last observed health
+                      state before transitioning into a different state.
+                    properties:
+                      status:
+                        description: Status describes the health of the Environment.
+                        type: string
+                      statusReason:
+                        description: StatusReason clarifies why an Environment in
+                          any state other than Healthy is in that state. The value
+                          of this field will always be the empty string when an Environment
+                          is Healthy.
+                        type: string
+                    type: object
+                  id:
+                    description: ID is a unique, system-assigned identifier for this
+                      state.
+                    type: string
+                  images:
+                    description: Images describes container images and versions thereof
+                      that were used in this state.
+                    items:
+                      description: Image describes a specific version of a container
+                        image.
+                      properties:
+                        repoURL:
+                          description: RepoURL describes the repository in which the
+                            image can be found.
+                          type: string
+                        tag:
+                          description: Tag identifies a specific version of the image
+                            in the repository specified by RepoURL.
+                          type: string
+                      type: object
+                    type: array
+                  provenance:
+                    description: Provenance describes the proximate source of this
+                      EnvironmentState. i.e. Did it come directly from upstream repositories?
+                      Or an upstream environment.
+                    type: string
+                type: object
               error:
                 description: Error describes any errors that are preventing the Environment
                   controller from assessing Environment health, polling repositories
                   or upstream environments to discover new states, or promoting the
                   environment to a new state.
                 type: string
-              states:
-                description: States is a stack of recent Environment states, where
+              history:
+                description: History is a stack of recent Environment states, where
                   each state is essentially a "bill of materials" describing what
                   was deployed to the Environment. By default, the last ten states
                   are stored.
