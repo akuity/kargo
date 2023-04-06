@@ -1,37 +1,40 @@
-package v1alpha1
+package environments
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
 func TestDefault(t *testing.T) {
 	const testNamespace = "fake-namespace"
-	e := Environment{
+	e := &api.Environment{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "fake-stage-env",
 			Namespace: testNamespace,
 		},
-		Spec: &EnvironmentSpec{
-			Subscriptions: &Subscriptions{
-				UpstreamEnvs: []EnvironmentSubscription{
+		Spec: &api.EnvironmentSpec{
+			Subscriptions: &api.Subscriptions{
+				UpstreamEnvs: []api.EnvironmentSubscription{
 					{
 						Name: "fake-test-env",
 					},
 				},
 			},
-			PromotionMechanisms: &PromotionMechanisms{
-				ArgoCDAppUpdates: []ArgoCDAppUpdate{
+			PromotionMechanisms: &api.PromotionMechanisms{
+				ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
 					{
 						AppName: "fake-prod-app",
 					},
 				},
 			},
-			HealthChecks: &HealthChecks{
-				ArgoCDAppChecks: []ArgoCDAppCheck{
+			HealthChecks: &api.HealthChecks{
+				ArgoCDAppChecks: []api.ArgoCDAppCheck{
 					{
 						AppName: "fake-prod-app",
 					},
@@ -39,7 +42,8 @@ func TestDefault(t *testing.T) {
 			},
 		},
 	}
-	e.Default()
+	err := (&webhook{}).Default(context.Background(), e)
+	require.NoError(t, err)
 	require.Len(t, e.Spec.Subscriptions.UpstreamEnvs, 1)
 	require.Equal(
 		t,
@@ -63,30 +67,30 @@ func TestDefault(t *testing.T) {
 func TestValidateSpec(t *testing.T) {
 	testCases := []struct {
 		name       string
-		spec       *EnvironmentSpec
-		assertions func(*EnvironmentSpec, field.ErrorList)
+		spec       *api.EnvironmentSpec
+		assertions func(*api.EnvironmentSpec, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *EnvironmentSpec, errs field.ErrorList) {
+			assertions: func(_ *api.EnvironmentSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 
 		{
 			name: "invalid",
-			spec: &EnvironmentSpec{
+			spec: &api.EnvironmentSpec{
 				// Has two conflicting types of subs...
-				Subscriptions: &Subscriptions{
-					Repos: &RepoSubscriptions{},
-					UpstreamEnvs: []EnvironmentSubscription{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+					UpstreamEnvs: []api.EnvironmentSubscription{
 						{},
 					},
 				},
 				// Doesn't actually define any mechanisms...
-				PromotionMechanisms: &PromotionMechanisms{},
+				PromotionMechanisms: &api.PromotionMechanisms{},
 			},
-			assertions: func(spec *EnvironmentSpec, errs field.ErrorList) {
+			assertions: func(spec *api.EnvironmentSpec, errs field.ErrorList) {
 				// We really want to see that all underlying errors have been bubbled up
 				// to this level and been aggregated.
 				require.Equal(
@@ -115,22 +119,22 @@ func TestValidateSpec(t *testing.T) {
 
 		{
 			name: "valid",
-			spec: &EnvironmentSpec{
+			spec: &api.EnvironmentSpec{
 				// Nil subs and promo mechanisms are caught by declarative validation,
 				// so for the purposes of this test, leaving those completely undefined
 				// should surface no errors.
 			},
-			assertions: func(_ *EnvironmentSpec, errs field.ErrorList) {
+			assertions: func(_ *api.EnvironmentSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
 				testCase.spec,
-				e.validateSpec(
+				w.validateSpec(
 					field.NewPath("spec"),
 					testCase.spec,
 				),
@@ -142,20 +146,20 @@ func TestValidateSpec(t *testing.T) {
 func TestValidateSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
-		subs       *Subscriptions
-		assertions func(*Subscriptions, field.ErrorList)
+		subs       *api.Subscriptions
+		assertions func(*api.Subscriptions, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *Subscriptions, errs field.ErrorList) {
+			assertions: func(_ *api.Subscriptions, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 
 		{
 			name: "no subscriptions",
-			subs: &Subscriptions{},
-			assertions: func(subs *Subscriptions, errs field.ErrorList) {
+			subs: &api.Subscriptions{},
+			assertions: func(subs *api.Subscriptions, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -174,13 +178,13 @@ func TestValidateSubs(t *testing.T) {
 
 		{
 			name: "has repo subs and env subs", // Should be "one of"
-			subs: &Subscriptions{
-				Repos: &RepoSubscriptions{},
-				UpstreamEnvs: []EnvironmentSubscription{
+			subs: &api.Subscriptions{
+				Repos: &api.RepoSubscriptions{},
+				UpstreamEnvs: []api.EnvironmentSubscription{
 					{},
 				},
 			},
-			assertions: func(subs *Subscriptions, errs field.ErrorList) {
+			assertions: func(subs *api.Subscriptions, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -197,12 +201,12 @@ func TestValidateSubs(t *testing.T) {
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
 				testCase.subs,
-				e.validateSubs(
+				w.validateSubs(
 					field.NewPath("subscriptions"),
 					testCase.subs,
 				),
@@ -214,20 +218,20 @@ func TestValidateSubs(t *testing.T) {
 func TestValidateRepoSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
-		subs       *RepoSubscriptions
-		assertions func(*RepoSubscriptions, field.ErrorList)
+		subs       *api.RepoSubscriptions
+		assertions func(*api.RepoSubscriptions, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *RepoSubscriptions, errs field.ErrorList) {
+			assertions: func(_ *api.RepoSubscriptions, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 
 		{
 			name: "no subscriptions",
-			subs: &RepoSubscriptions{}, // Has no subs
-			assertions: func(subs *RepoSubscriptions, errs field.ErrorList) {
+			subs: &api.RepoSubscriptions{}, // Has no subs
+			assertions: func(subs *api.RepoSubscriptions, errs field.ErrorList) {
 				require.Len(t, errs, 1)
 				require.Equal(
 					t,
@@ -245,20 +249,20 @@ func TestValidateRepoSubs(t *testing.T) {
 
 		{
 			name: "invalid subscriptions",
-			subs: &RepoSubscriptions{
-				Images: []ImageSubscription{
+			subs: &api.RepoSubscriptions{
+				Images: []api.ImageSubscription{
 					{
 						SemverConstraint: "bogus",
 						Platform:         "bogus",
 					},
 				},
-				Charts: []ChartSubscription{
+				Charts: []api.ChartSubscription{
 					{
 						SemverConstraint: "bogus",
 					},
 				},
 			},
-			assertions: func(subs *RepoSubscriptions, errs field.ErrorList) {
+			assertions: func(subs *api.RepoSubscriptions, errs field.ErrorList) {
 				require.Len(t, errs, 3)
 				require.Equal(
 					t,
@@ -286,22 +290,22 @@ func TestValidateRepoSubs(t *testing.T) {
 
 		{
 			name: "valid",
-			subs: &RepoSubscriptions{
-				Images: []ImageSubscription{
+			subs: &api.RepoSubscriptions{
+				Images: []api.ImageSubscription{
 					{},
 				},
 			},
-			assertions: func(subs *RepoSubscriptions, errs field.ErrorList) {
+			assertions: func(subs *api.RepoSubscriptions, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
 				testCase.subs,
-				e.validateRepoSubs(field.NewPath("repos"), testCase.subs),
+				w.validateRepoSubs(field.NewPath("repos"), testCase.subs),
 			)
 		})
 	}
@@ -310,12 +314,12 @@ func TestValidateRepoSubs(t *testing.T) {
 func TestValidateImageSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        ImageSubscription
+		sub        api.ImageSubscription
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub: ImageSubscription{
+			sub: api.ImageSubscription{
 				SemverConstraint: "bogus",
 				Platform:         "bogus",
 			},
@@ -346,13 +350,13 @@ func TestValidateImageSubs(t *testing.T) {
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
-				e.validateImageSubs(
+				w.validateImageSubs(
 					field.NewPath("images"),
-					[]ImageSubscription{
+					[]api.ImageSubscription{
 						testCase.sub,
 					},
 				),
@@ -364,12 +368,12 @@ func TestValidateImageSubs(t *testing.T) {
 func TestValidateImageSub(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        ImageSubscription
+		sub        api.ImageSubscription
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub: ImageSubscription{
+			sub: api.ImageSubscription{
 				SemverConstraint: "bogus",
 				Platform:         "bogus",
 			},
@@ -400,11 +404,11 @@ func TestValidateImageSub(t *testing.T) {
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
-				e.validateImageSub(
+				w.validateImageSub(
 					field.NewPath("image"),
 					testCase.sub,
 				),
@@ -416,12 +420,12 @@ func TestValidateImageSub(t *testing.T) {
 func TestValidateChartSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        ChartSubscription
+		sub        api.ChartSubscription
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub: ChartSubscription{
+			sub: api.ChartSubscription{
 				SemverConstraint: "bogus",
 			},
 			assertions: func(errs field.ErrorList) {
@@ -441,19 +445,19 @@ func TestValidateChartSubs(t *testing.T) {
 
 		{
 			name: "valid",
-			sub:  ChartSubscription{},
+			sub:  api.ChartSubscription{},
 			assertions: func(errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 	}
+	w := webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
-				e.validateChartSubs(
+				w.validateChartSubs(
 					field.NewPath("charts"),
-					[]ChartSubscription{
+					[]api.ChartSubscription{
 						testCase.sub,
 					},
 				),
@@ -465,12 +469,12 @@ func TestValidateChartSubs(t *testing.T) {
 func TestValidateChartSub(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        ChartSubscription
+		sub        api.ChartSubscription
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub: ChartSubscription{
+			sub: api.ChartSubscription{
 				SemverConstraint: "bogus",
 			},
 			assertions: func(errs field.ErrorList) {
@@ -490,17 +494,17 @@ func TestValidateChartSub(t *testing.T) {
 
 		{
 			name: "valid",
-			sub:  ChartSubscription{},
+			sub:  api.ChartSubscription{},
 			assertions: func(errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
-				e.validateChartSub(
+				w.validateChartSub(
 					field.NewPath("chart"),
 					testCase.sub,
 				),
@@ -512,12 +516,12 @@ func TestValidateChartSub(t *testing.T) {
 func TestValidatePromotionMechanisms(t *testing.T) {
 	testCases := []struct {
 		name       string
-		promoMechs *PromotionMechanisms
-		assertions func(*PromotionMechanisms, field.ErrorList)
+		promoMechs *api.PromotionMechanisms
+		assertions func(*api.PromotionMechanisms, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *PromotionMechanisms, errs field.ErrorList) {
+			assertions: func(_ *api.PromotionMechanisms, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -525,8 +529,11 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 		{
 			name: "invalid",
 			// Does not define any mechanisms
-			promoMechs: &PromotionMechanisms{},
-			assertions: func(promoMechs *PromotionMechanisms, errs field.ErrorList) {
+			promoMechs: &api.PromotionMechanisms{},
+			assertions: func(
+				promoMechs *api.PromotionMechanisms,
+				errs field.ErrorList,
+			) {
 				require.NotNil(t, errs)
 				require.Equal(
 					t,
@@ -546,24 +553,24 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 
 		{
 			name: "valid",
-			promoMechs: &PromotionMechanisms{
-				GitRepoUpdates: []GitRepoUpdate{
+			promoMechs: &api.PromotionMechanisms{
+				GitRepoUpdates: []api.GitRepoUpdate{
 					{
-						Kustomize: &KustomizePromotionMechanism{},
+						Kustomize: &api.KustomizePromotionMechanism{},
 					},
 				},
 			},
-			assertions: func(_ *PromotionMechanisms, errs field.ErrorList) {
+			assertions: func(_ *api.PromotionMechanisms, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
 				testCase.promoMechs,
-				e.validatePromotionMechanisms(
+				w.validatePromotionMechanisms(
 					field.NewPath("promotionMechanisms"),
 					testCase.promoMechs,
 				),
@@ -575,13 +582,13 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 func TestValidateGitRepoUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
-		update     GitRepoUpdate
-		assertions func(GitRepoUpdate, field.ErrorList)
+		update     api.GitRepoUpdate
+		assertions func(api.GitRepoUpdate, field.ErrorList)
 	}{
 		{
 			name:   "no config management tools specified",
-			update: GitRepoUpdate{},
-			assertions: func(update GitRepoUpdate, errs field.ErrorList) {
+			update: api.GitRepoUpdate{},
+			assertions: func(update api.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -601,12 +608,12 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 
 		{
 			name: "more than one config management tool specified",
-			update: GitRepoUpdate{
-				Bookkeeper: &BookkeeperPromotionMechanism{},
-				Kustomize:  &KustomizePromotionMechanism{},
-				Helm:       &HelmPromotionMechanism{},
+			update: api.GitRepoUpdate{
+				Bookkeeper: &api.BookkeeperPromotionMechanism{},
+				Kustomize:  &api.KustomizePromotionMechanism{},
+				Helm:       &api.HelmPromotionMechanism{},
 			},
-			assertions: func(update GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(update api.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -626,22 +633,22 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 
 		{
 			name: "valid",
-			update: GitRepoUpdate{
-				Kustomize: &KustomizePromotionMechanism{},
+			update: api.GitRepoUpdate{
+				Kustomize: &api.KustomizePromotionMechanism{},
 			},
-			assertions: func(_ GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(_ api.GitRepoUpdate, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
 				testCase.update,
-				e.validateGitRepoUpdates(
+				w.validateGitRepoUpdates(
 					field.NewPath("gitRepoUpdates"),
-					[]GitRepoUpdate{
+					[]api.GitRepoUpdate{
 						testCase.update,
 					},
 				),
@@ -653,13 +660,13 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 func TestValidateGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
-		update     GitRepoUpdate
-		assertions func(GitRepoUpdate, field.ErrorList)
+		update     api.GitRepoUpdate
+		assertions func(api.GitRepoUpdate, field.ErrorList)
 	}{
 		{
 			name:   "no config management tools specified",
-			update: GitRepoUpdate{},
-			assertions: func(update GitRepoUpdate, errs field.ErrorList) {
+			update: api.GitRepoUpdate{},
+			assertions: func(update api.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -679,12 +686,12 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 
 		{
 			name: "more than one config management tool specified",
-			update: GitRepoUpdate{
-				Bookkeeper: &BookkeeperPromotionMechanism{},
-				Kustomize:  &KustomizePromotionMechanism{},
-				Helm:       &HelmPromotionMechanism{},
+			update: api.GitRepoUpdate{
+				Bookkeeper: &api.BookkeeperPromotionMechanism{},
+				Kustomize:  &api.KustomizePromotionMechanism{},
+				Helm:       &api.HelmPromotionMechanism{},
 			},
-			assertions: func(update GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(update api.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -704,20 +711,20 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 
 		{
 			name: "valid",
-			update: GitRepoUpdate{
-				Kustomize: &KustomizePromotionMechanism{},
+			update: api.GitRepoUpdate{
+				Kustomize: &api.KustomizePromotionMechanism{},
 			},
-			assertions: func(_ GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(_ api.GitRepoUpdate, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
 				testCase.update,
-				e.validateGitRepoUpdate(
+				w.validateGitRepoUpdate(
 					field.NewPath("gitRepoUpdate"),
 					testCase.update,
 				),
@@ -729,12 +736,12 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 func TestValidateHelmPromotionMechanism(t *testing.T) {
 	testCases := []struct {
 		name       string
-		promoMech  *HelmPromotionMechanism
-		assertions func(*HelmPromotionMechanism, field.ErrorList)
+		promoMech  *api.HelmPromotionMechanism
+		assertions func(*api.HelmPromotionMechanism, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *HelmPromotionMechanism, errs field.ErrorList) {
+			assertions: func(_ *api.HelmPromotionMechanism, errs field.ErrorList) {
 				require.Empty(t, errs)
 			},
 		},
@@ -742,9 +749,9 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 		{
 			name: "invalid",
 			// Doesn't define any changes
-			promoMech: &HelmPromotionMechanism{},
+			promoMech: &api.HelmPromotionMechanism{},
 			assertions: func(
-				promoMech *HelmPromotionMechanism,
+				promoMech *api.HelmPromotionMechanism,
 				errs field.ErrorList,
 			) {
 				require.Equal(
@@ -765,22 +772,22 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 
 		{
 			name: "valid",
-			promoMech: &HelmPromotionMechanism{
-				Images: []HelmImageUpdate{
+			promoMech: &api.HelmPromotionMechanism{
+				Images: []api.HelmImageUpdate{
 					{},
 				},
 			},
-			assertions: func(_ *HelmPromotionMechanism, errs field.ErrorList) {
+			assertions: func(_ *api.HelmPromotionMechanism, errs field.ErrorList) {
 				require.Empty(t, errs)
 			},
 		},
 	}
+	w := &webhook{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			e := &Environment{}
 			testCase.assertions(
 				testCase.promoMech,
-				e.validateHelmPromotionMechanism(
+				w.validateHelmPromotionMechanism(
 					field.NewPath("helm"),
 					testCase.promoMech,
 				),
