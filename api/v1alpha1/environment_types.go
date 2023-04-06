@@ -35,8 +35,8 @@ const (
 //+kubebuilder:resource:shortName={env,envs}
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name=Current State,type=string,JSONPath=`.status.states[0].id`
-//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.states[0].health.status`
+//+kubebuilder:printcolumn:name=Current State,type=string,JSONPath=`.status.history[0].id`
+//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.history[0].health.status`
 
 // Environment is the Kargo API's main type.
 type Environment struct {
@@ -470,10 +470,10 @@ type EnvironmentStatus struct {
 	// state is essentially a "bill of materials" describing what can be
 	// automatically or manually deployed to the Environment.
 	AvailableStates EnvironmentStateStack `json:"availableStates,omitempty"`
-	// States is a stack of recent Environment states, where each state is
+	// History is a stack of recent Environment states, where each state is
 	// essentially a "bill of materials" describing what was deployed to the
 	// Environment. By default, the last ten states are stored.
-	States EnvironmentStateStack `json:"states,omitempty"`
+	History EnvironmentStateStack `json:"history,omitempty"`
 	// Error describes any errors that are preventing the Environment controller
 	// from assessing Environment health, polling repositories or upstream
 	// environments to discover new states, or promoting the environment to a new
