@@ -1,6 +1,7 @@
-package v1alpha1
+package environments
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver"
@@ -10,76 +11,85 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	api "github.com/akuityio/kargo/api/v1alpha1"
 )
 
-func (e *Environment) SetupWebhookWithManager(mgr ctrl.Manager) error {
+type webhook struct{}
+
+func SetupWebhookWithManager(mgr ctrl.Manager) error {
+	w := &webhook{}
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(e).
+		For(&api.Environment{}).
+		WithDefaulter(w).
+		WithValidator(w).
 		Complete()
 }
 
-// Default implements webhook.Defaulter so a webhook will be registered for the
-// type
-func (e *Environment) Default() {
+func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
+	env := obj.(*api.Environment)
 	// Note that defaults are applied BEFORE validation, so we do not have the
 	// luxury of assuming certain required fields must be non-nil.
-	if e.Spec != nil {
+	if env.Spec != nil {
 
-		if e.Spec.Subscriptions != nil {
+		if env.Spec.Subscriptions != nil {
 			// Default namespace for Environments we subscribe to
-			for i := range e.Spec.Subscriptions.UpstreamEnvs {
-				if e.Spec.Subscriptions.UpstreamEnvs[i].Namespace == "" {
-					e.Spec.Subscriptions.UpstreamEnvs[i].Namespace = e.Namespace
+			for i := range env.Spec.Subscriptions.UpstreamEnvs {
+				if env.Spec.Subscriptions.UpstreamEnvs[i].Namespace == "" {
+					env.Spec.Subscriptions.UpstreamEnvs[i].Namespace = env.Namespace
 				}
 			}
 		}
 
-		if e.Spec.PromotionMechanisms != nil {
+		if env.Spec.PromotionMechanisms != nil {
 			// Default namespace for Argo CD Applications we update
-			for i := range e.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-				if e.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace == "" {
-					e.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace =
-						e.Namespace
+			for i := range env.Spec.PromotionMechanisms.ArgoCDAppUpdates {
+				if env.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace == "" {
+					env.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace =
+						env.Namespace
 				}
 			}
 		}
 
-		if e.Spec.HealthChecks != nil {
+		if env.Spec.HealthChecks != nil {
 			// Default namespace for Argo CD Applications we check health of
-			for i := range e.Spec.HealthChecks.ArgoCDAppChecks {
-				if e.Spec.HealthChecks.ArgoCDAppChecks[i].AppNamespace == "" {
-					e.Spec.HealthChecks.ArgoCDAppChecks[i].AppNamespace = e.Namespace
+			for i := range env.Spec.HealthChecks.ArgoCDAppChecks {
+				if env.Spec.HealthChecks.ArgoCDAppChecks[i].AppNamespace == "" {
+					env.Spec.HealthChecks.ArgoCDAppChecks[i].AppNamespace = env.Namespace
 				}
 			}
 		}
 
 	}
+
+	return nil
 }
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered
-// for the type
-func (e *Environment) ValidateCreate() error {
-	return e.validateCreateOrUpdate()
+func (w *webhook) ValidateCreate(
+	_ context.Context,
+	obj runtime.Object,
+) error {
+	return w.validateCreateOrUpdate(obj.(*api.Environment))
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered
-// for the type
-func (e *Environment) ValidateUpdate(old runtime.Object) error {
-	return e.validateCreateOrUpdate()
+func (w *webhook) ValidateUpdate(
+	_ context.Context,
+	_ runtime.Object,
+	newObj runtime.Object,
+) error {
+	return w.validateCreateOrUpdate(newObj.(*api.Environment))
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered
-// for the type
-func (e *Environment) ValidateDelete() error {
+func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
 	// Nothing to validate upon delete
 	return nil
 }
 
-func (e *Environment) validateCreateOrUpdate() error {
-	if errs := e.validateSpec(field.NewPath("spec"), e.Spec); len(errs) > 0 {
+func (w *webhook) validateCreateOrUpdate(e *api.Environment) error {
+	if errs := w.validateSpec(field.NewPath("spec"), e.Spec); len(errs) > 0 {
 		return apierrors.NewInvalid(
 			schema.GroupKind{
-				Group: GroupVersion.Group,
+				Group: api.GroupVersion.Group,
 				Kind:  "Environment",
 			},
 			e.Name,
@@ -89,25 +99,25 @@ func (e *Environment) validateCreateOrUpdate() error {
 	return nil
 }
 
-func (e *Environment) validateSpec(
+func (w *webhook) validateSpec(
 	f *field.Path,
-	spec *EnvironmentSpec,
+	spec *api.EnvironmentSpec,
 ) field.ErrorList {
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	errs := e.validateSubs(f.Child("subscriptions"), spec.Subscriptions)
+	errs := w.validateSubs(f.Child("subscriptions"), spec.Subscriptions)
 	return append(
 		errs,
-		e.validatePromotionMechanisms(
+		w.validatePromotionMechanisms(
 			f.Child("promotionMechanisms"),
 			spec.PromotionMechanisms)...,
 	)
 }
 
-func (e *Environment) validateSubs(
+func (w *webhook) validateSubs(
 	f *field.Path,
-	subs *Subscriptions,
+	subs *api.Subscriptions,
 ) field.ErrorList {
 	if subs == nil { // nil subs is caught by declarative validations
 		return nil
@@ -127,12 +137,12 @@ func (e *Environment) validateSubs(
 			),
 		}
 	}
-	return e.validateRepoSubs(f.Child("repos"), subs.Repos)
+	return w.validateRepoSubs(f.Child("repos"), subs.Repos)
 }
 
-func (e *Environment) validateRepoSubs(
+func (w *webhook) validateRepoSubs(
 	f *field.Path,
-	subs *RepoSubscriptions,
+	subs *api.RepoSubscriptions,
 ) field.ErrorList {
 	if subs == nil {
 		return nil
@@ -152,24 +162,24 @@ func (e *Environment) validateRepoSubs(
 			),
 		}
 	}
-	errs := e.validateImageSubs(f.Child("images"), subs.Images)
-	return append(errs, e.validateChartSubs(f.Child("charts"), subs.Charts)...)
+	errs := w.validateImageSubs(f.Child("images"), subs.Images)
+	return append(errs, w.validateChartSubs(f.Child("charts"), subs.Charts)...)
 }
 
-func (e *Environment) validateImageSubs(
+func (w *webhook) validateImageSubs(
 	f *field.Path,
-	subs []ImageSubscription,
+	subs []api.ImageSubscription,
 ) field.ErrorList {
 	var errs field.ErrorList
 	for i, sub := range subs {
-		errs = append(errs, e.validateImageSub(f.Index(i), sub)...)
+		errs = append(errs, w.validateImageSub(f.Index(i), sub)...)
 	}
 	return errs
 }
 
-func (e *Environment) validateImageSub(
+func (w *webhook) validateImageSub(
 	f *field.Path,
-	sub ImageSubscription,
+	sub api.ImageSubscription,
 ) field.ErrorList {
 	var errs field.ErrorList
 	if err := validateSemverConstraint(
@@ -186,20 +196,20 @@ func (e *Environment) validateImageSub(
 	return errs
 }
 
-func (e *Environment) validateChartSubs(
+func (w *webhook) validateChartSubs(
 	f *field.Path,
-	subs []ChartSubscription,
+	subs []api.ChartSubscription,
 ) field.ErrorList {
 	var errs field.ErrorList
 	for i, sub := range subs {
-		errs = append(errs, e.validateChartSub(f.Index(i), sub)...)
+		errs = append(errs, w.validateChartSub(f.Index(i), sub)...)
 	}
 	return errs
 }
 
-func (e *Environment) validateChartSub(
+func (w *webhook) validateChartSub(
 	f *field.Path,
-	sub ChartSubscription,
+	sub api.ChartSubscription,
 ) field.ErrorList {
 	if err := validateSemverConstraint(
 		f.Child("semverConstraint"),
@@ -210,9 +220,9 @@ func (e *Environment) validateChartSub(
 	return nil
 }
 
-func (e *Environment) validatePromotionMechanisms(
+func (w *webhook) validatePromotionMechanisms(
 	f *field.Path,
-	promoMechs *PromotionMechanisms,
+	promoMechs *api.PromotionMechanisms,
 ) field.ErrorList {
 	if promoMechs == nil { // nil promoMechs is caught by declarative validations
 		return nil
@@ -233,26 +243,26 @@ func (e *Environment) validatePromotionMechanisms(
 			),
 		}
 	}
-	return e.validateGitRepoUpdates(
+	return w.validateGitRepoUpdates(
 		f.Child("gitRepoUpdates"),
 		promoMechs.GitRepoUpdates,
 	)
 }
 
-func (e *Environment) validateGitRepoUpdates(
+func (w *webhook) validateGitRepoUpdates(
 	f *field.Path,
-	updates []GitRepoUpdate,
+	updates []api.GitRepoUpdate,
 ) field.ErrorList {
 	var errs field.ErrorList
 	for i, update := range updates {
-		errs = append(errs, e.validateGitRepoUpdate(f.Index(i), update)...)
+		errs = append(errs, w.validateGitRepoUpdate(f.Index(i), update)...)
 	}
 	return errs
 }
 
-func (e *Environment) validateGitRepoUpdate(
+func (w *webhook) validateGitRepoUpdate(
 	f *field.Path,
-	update GitRepoUpdate,
+	update api.GitRepoUpdate,
 ) field.ErrorList {
 	var count int
 	if update.Bookkeeper != nil {
@@ -279,12 +289,12 @@ func (e *Environment) validateGitRepoUpdate(
 			),
 		}
 	}
-	return e.validateHelmPromotionMechanism(f.Child("helm"), update.Helm)
+	return w.validateHelmPromotionMechanism(f.Child("helm"), update.Helm)
 }
 
-func (e *Environment) validateHelmPromotionMechanism(
+func (w *webhook) validateHelmPromotionMechanism(
 	f *field.Path,
-	promoMech *HelmPromotionMechanism,
+	promoMech *api.HelmPromotionMechanism,
 ) field.ErrorList {
 	if promoMech == nil {
 		return nil
