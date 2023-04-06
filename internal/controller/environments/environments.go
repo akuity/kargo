@@ -305,12 +305,12 @@ func (r *reconciler) sync(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// Only perform health checks if we have a current state to update
-	if currentState, ok := status.History.Pop(); ok {
-		health := r.checkHealthFn(ctx, currentState, env.Spec.HealthChecks)
-		currentState.Health = &health
-		status.History.Push(currentState)
-		logger.WithField("health", health.Status).Debug("completed health checks")
+	// Only perform health checks if we have a current state
+	if status.CurrentState != nil {
+		health := r.checkHealthFn(ctx, *status.CurrentState, env.Spec.HealthChecks)
+		status.CurrentState.Health = &health
+		status.History.Pop()
+		status.History.Push(*status.CurrentState)
 	} else {
 		logger.Debug("Environment has no current state; skipping health checks")
 	}

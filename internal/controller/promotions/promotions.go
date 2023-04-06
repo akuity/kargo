@@ -474,6 +474,7 @@ func (r *reconciler) promote(
 	if err != nil {
 		return err
 	}
+	env.Status.CurrentState = &nextState
 	env.Status.History.Push(nextState)
 
 	// Promotion is successful at this point. Update target state in place because
