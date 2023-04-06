@@ -334,8 +334,13 @@ func (in *EnvironmentStatus) DeepCopyInto(out *EnvironmentStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.States != nil {
-		in, out := &in.States, &out.States
+	if in.CurrentState != nil {
+		in, out := &in.CurrentState, &out.CurrentState
+		*out = new(EnvironmentState)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.History != nil {
+		in, out := &in.History, &out.History
 		*out = make(EnvironmentStateStack, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
