@@ -2,8 +2,6 @@ module github.com/akuity/kargo
 
 go 1.20
 
-replace github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.9 => github.com/akuityio/bookkeeper-prototype v0.1.0-alpha.2-rc.12
-
 require (
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/TomOnTime/utfutil v0.0.0-20180511104225-09c41003ee1d // indirect
@@ -67,9 +65,9 @@ require k8s.io/apiserver v0.24.2 // indirect
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/akuityio/bookkeeper v0.1.0-alpha.2-rc.9
+	github.com/akuity/bookkeeper v0.1.0-alpha.2-rc.13
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
-	github.com/argoproj/argo-cd/v2 v2.6.2
+	github.com/argoproj/argo-cd/v2 v2.6.7
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b

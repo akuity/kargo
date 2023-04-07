@@ -6,10 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuityio/bookkeeper"
 )
 
 func (r *reconciler) applyBookkeeperUpdate(

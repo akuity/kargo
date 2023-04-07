@@ -40,7 +40,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
     chmod +x /tools/grpc_health_probe
 
 
-FROM ghcr.io/akuityio/bookkeeper-prototype:v0.1.0-alpha.2-rc.2 as final
+FROM ghcr.io/akuity/bookkeeper:v0.1.0-alpha.2-rc.13 as final
 
 USER root
 
