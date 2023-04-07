@@ -1,4 +1,4 @@
-module github.com/akuityio/kargo
+module github.com/akuity/kargo
 
 go 1.20
 

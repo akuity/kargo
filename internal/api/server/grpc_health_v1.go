@@ -5,7 +5,7 @@ import (
 
 	"google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/akuityio/kargo/internal/api/server/handler"
+	"github.com/akuity/kargo/internal/api/server/handler"
 )
 
 type grpcHealthV1Server struct {

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/akuityio/kargo/api/v1alpha1"
+	api "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestCheckHealth(t *testing.T) {

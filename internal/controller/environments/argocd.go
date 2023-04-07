@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	api "github.com/akuityio/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuityio/kargo/internal/argocd"
+	api "github.com/akuity/kargo/api/v1alpha1"
+	libArgoCD "github.com/akuity/kargo/internal/argocd"
 )
 
 func (r *reconciler) checkHealth(

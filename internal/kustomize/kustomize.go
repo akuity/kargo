@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	libExec "github.com/akuityio/kargo/internal/exec"
+	libExec "github.com/akuity/kargo/internal/exec"
 )
 
 // SetImage runs `kustomize edit set image ...` in the specified directory.

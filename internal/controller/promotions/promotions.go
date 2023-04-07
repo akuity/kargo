@@ -15,16 +15,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	api "github.com/akuity/kargo/api/v1alpha1"
+	libArgoCD "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/controller/runtime"
+	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/kustomize"
+	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/yaml"
 	"github.com/akuityio/bookkeeper"
-	api "github.com/akuityio/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuityio/kargo/internal/argocd"
-	"github.com/akuityio/kargo/internal/controller/runtime"
-	"github.com/akuityio/kargo/internal/credentials"
-	"github.com/akuityio/kargo/internal/git"
-	"github.com/akuityio/kargo/internal/helm"
-	"github.com/akuityio/kargo/internal/kustomize"
-	"github.com/akuityio/kargo/internal/logging"
-	"github.com/akuityio/kargo/internal/yaml"
 )
 
 // reconciler reconciles Promotion resources.

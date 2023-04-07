@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/akuityio/kargo/internal/config"
-	"github.com/akuityio/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/config"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 type server struct {

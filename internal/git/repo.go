@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	libExec "github.com/akuityio/kargo/internal/exec"
+	libExec "github.com/akuity/kargo/internal/exec"
 )
 
 // Repo is an interface for interacting with a git repository.

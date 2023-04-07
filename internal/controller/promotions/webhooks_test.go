@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/akuityio/kargo/api/v1alpha1"
+	api "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestValidateUpdate(t *testing.T) {

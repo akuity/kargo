@@ -8,7 +8,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	api "github.com/akuityio/kargo/api/v1alpha1"
+	api "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestDefault(t *testing.T) {

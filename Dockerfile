@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM golang:1.20.2-bullseye as builder
 ARG TARGETOS
 ARG TARGETARCH
 
-ARG VERSION_PACKAGE=github.com/akuityio/kargo/internal/version
+ARG VERSION_PACKAGE=github.com/akuity/kargo/internal/version
 ARG VERSION
 ARG CGO_ENABLED=0
 

@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	versionpkg "github.com/akuityio/kargo/internal/version"
+	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
 func newVersionCommand() *cobra.Command {
