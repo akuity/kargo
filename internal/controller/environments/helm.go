@@ -6,10 +6,10 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/credentials"
-	"github.com/akuityio/kargo/internal/helm"
-	"github.com/akuityio/kargo/internal/logging"
+	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func (r *reconciler) getLatestCharts(

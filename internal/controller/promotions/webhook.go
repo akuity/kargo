@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	api "github.com/akuityio/kargo/api/v1alpha1"
+	api "github.com/akuity/kargo/api/v1alpha1"
 )
 
 type webhook struct{}

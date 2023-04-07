@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	api "github.com/akuityio/kargo/api/v1alpha1"
+	api "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestApplyHelm(t *testing.T) {

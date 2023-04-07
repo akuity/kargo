@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/akuityio/kargo/internal/os"
+	"github.com/akuity/kargo/internal/os"
 )
 
 type loggerContextKey struct{}

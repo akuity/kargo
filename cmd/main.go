@@ -5,8 +5,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	"github.com/akuityio/kargo/internal/cmd"
-	"github.com/akuityio/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/cmd"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func main() {

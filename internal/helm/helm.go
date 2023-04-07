@@ -16,7 +16,7 @@ import (
 	"oras.land/oras-go/pkg/registry/remote"
 	"oras.land/oras-go/pkg/registry/remote/auth"
 
-	libExec "github.com/akuityio/kargo/internal/exec"
+	libExec "github.com/akuity/kargo/internal/exec"
 )
 
 // GetLatestChartVersion connects to the Helm chart registry specified by

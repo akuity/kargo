@@ -11,10 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/runtime"
+	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuityio/bookkeeper"
-	api "github.com/akuityio/kargo/api/v1alpha1"
-	"github.com/akuityio/kargo/internal/controller/runtime"
-	"github.com/akuityio/kargo/internal/credentials"
 )
 
 func TestNewPromotionReconciler(t *testing.T) {
