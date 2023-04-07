@@ -2,12 +2,14 @@ package environments
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -340,7 +342,7 @@ func (r *reconciler) sync(
 		// latestState's MATERIALS must differ from what is at the top of the
 		// status.AvailableStates stack.
 		if topAvailableState, ok := status.AvailableStates.Top(); ok &&
-			latestState.SameMaterials(&topAvailableState) {
+			latestState.ID == topAvailableState.ID {
 			logger.Debug("latest state is not new")
 			return status, nil
 		}
@@ -471,13 +473,14 @@ func (r *reconciler) getLatestStateFromRepos(
 	}
 
 	now := metav1.Now()
-	return &api.EnvironmentState{
-		ID:        uuid.NewV4().String(),
+	state := &api.EnvironmentState{
 		FirstSeen: &now,
 		Commits:   latestCommits,
 		Images:    latestImages,
 		Charts:    latestCharts,
-	}, nil
+	}
+	state.ID = getStateID(*state)
+	return state, nil
 }
 
 // TODO: Test this
@@ -523,4 +526,31 @@ func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
 	}
 
 	return availableStates, nil
+}
+
+func getStateID(state api.EnvironmentState) string {
+	materials := []string{}
+	for _, commit := range state.Commits {
+		materials = append(
+			materials,
+			fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
+		)
+	}
+	for _, image := range state.Images {
+		materials = append(
+			materials,
+			fmt.Sprintf("%s:%s", image.RepoURL, image.Tag),
+		)
+	}
+	for _, chart := range state.Charts {
+		materials = append(
+			materials,
+			fmt.Sprintf("%s/%s:%s", chart.RegistryURL, chart.Name, chart.Version),
+		)
+	}
+	sort.Strings(materials)
+	return fmt.Sprintf(
+		"%x",
+		sha256.Sum256([]byte(strings.Join(materials, "|"))),
+	)
 }
