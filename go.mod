@@ -72,7 +72,6 @@ require (
 	github.com/argoproj/argo-cd/v2 v2.6.2
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
-	github.com/satori/go.uuid v1.2.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go v1.2.2
@@ -166,6 +165,7 @@ require (
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
+	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
