@@ -349,18 +349,24 @@ func (r *reconciler) sync(
 
 	} else if len(env.Spec.Subscriptions.UpstreamEnvs) > 0 {
 
+		// Grab the latest known state before we overwrite status.AvailableStates
+		var latestKnownState *api.EnvironmentState
+		if lks, ok := status.AvailableStates.Top(); ok {
+			latestKnownState = &lks
+		}
+
 		// This returns de-duped, healthy states only from all upstream envs. There
 		// could be up to ten per upstream environment. This is more than the usual
 		// quantity we permit in status.AvailableStates, but we'll allow it.
-		latestStatesFromEnvs, err := r.getAvailableStatesFromUpstreamEnvsFn(
+		var err error
+		if status.AvailableStates, err = r.getAvailableStatesFromUpstreamEnvsFn(
 			ctx,
 			env.Spec.Subscriptions.UpstreamEnvs,
-		)
-		if err != nil {
+		); err != nil {
 			return status, err
 		}
-		status.AvailableStates = latestStatesFromEnvs
-		if len(latestStatesFromEnvs) == 0 {
+
+		if status.AvailableStates.Empty() {
 			logger.Debug("got no available states from upstream Environments")
 			return status, nil
 		}
@@ -371,6 +377,15 @@ func (r *reconciler) sync(
 				"auto-promotion cannot proceed due to multiple upstream Environments",
 			)
 			return status, nil
+		}
+
+		if latestKnownState != nil {
+			// We already know this stack isn't empty
+			latestAvailableState, _ := status.AvailableStates.Top()
+			if latestKnownState.ID == latestAvailableState.ID {
+				logger.Debug("latest state is not new")
+				return status, nil
+			}
 		}
 	} else {
 		// This should be impossible if validation is working, but out of an
@@ -383,12 +398,9 @@ func (r *reconciler) sync(
 		return status, nil
 	}
 
-	// Note: We're careful not to make any further modifications to the state
-	// stacks until we know a promotion has been successful.
-
 	nextStateCandidate, _ := status.AvailableStates.Top()
-	if currentState, ok := status.History.Top(); ok &&
-		nextStateCandidate.FirstSeen.Before(currentState.FirstSeen) {
+	if status.CurrentState != nil &&
+		nextStateCandidate.FirstSeen.Before(status.CurrentState.FirstSeen) {
 		logger.Debug(
 			"newest available state is older than current state; refusing to " +
 				"auto-promote",
