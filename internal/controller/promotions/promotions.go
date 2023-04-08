@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller/runtime"
@@ -24,7 +25,6 @@ import (
 	"github.com/akuity/kargo/internal/kustomize"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/yaml"
-	"github.com/akuityio/bookkeeper"
 )
 
 // reconciler reconciles Promotion resources.

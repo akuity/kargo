@@ -9,13 +9,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/controller/environments"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/credentials"
 	versionpkg "github.com/akuity/kargo/internal/version"
-	"github.com/akuityio/bookkeeper"
 )
 
 func newControllerCommand() *cobra.Command {
