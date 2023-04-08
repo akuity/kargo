@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -562,65 +560,6 @@ func (e *EnvironmentStateStack) Push(states ...EnvironmentState) {
 	if len(*e) > max {
 		*e = (*e)[:max]
 	}
-}
-
-// SameMaterials returns a bool indicating whether or not two EnvironmentStates
-// are composed of the same materials.
-func (e *EnvironmentState) SameMaterials(rhs *EnvironmentState) bool {
-	if e == nil && rhs == nil {
-		return true
-	}
-	if (e == nil && rhs != nil) || (e != nil && rhs == nil) {
-		return false
-	}
-	if len(e.Commits) != len(rhs.Commits) {
-		return false
-	}
-	if len(e.Images) != len(rhs.Images) {
-		return false
-	}
-	if len(e.Charts) != len(rhs.Charts) {
-		return false
-	}
-
-	// The order of commits shouldn't matter. We have some work to do to make an
-	// effective comparison...
-	lhsCommits := map[string]struct{}{}
-	for _, lCommit := range e.Commits {
-		lhsCommits[fmt.Sprintf("%s:%s", lCommit.RepoURL, lCommit.ID)] = struct{}{}
-	}
-	for _, rCommit := range rhs.Commits {
-		if _, exists :=
-			lhsCommits[fmt.Sprintf("%s:%s", rCommit.RepoURL, rCommit.ID)]; !exists {
-			return false
-		}
-	}
-
-	// The order of images shouldn't matter. We have some work to do to make an
-	// effective comparison...
-	lhsImgVersions := map[string]struct{}{}
-	for _, lImg := range e.Images {
-		lhsImgVersions[fmt.Sprintf("%s:%s", lImg.RepoURL, lImg.Tag)] = struct{}{}
-	}
-	for _, rImg := range rhs.Images {
-		if _, exists :=
-			lhsImgVersions[fmt.Sprintf("%s:%s", rImg.RepoURL, rImg.Tag)]; !exists {
-			return false
-		}
-	}
-
-	// The order of charts shouldn't matter. We have some work to do to make an
-	// effective comparison...
-	lhsChartVersions := map[string]struct{}{}
-	for _, lChart := range e.Charts {
-		lhsChartVersions[fmt.Sprintf("%s:%s:%s", lChart.RegistryURL, lChart.Name, lChart.Version)] = struct{}{} // nolint: lll
-	}
-	for _, rChart := range rhs.Charts {
-		if _, exists := lhsChartVersions[fmt.Sprintf("%s:%s:%s", rChart.RegistryURL, rChart.Name, rChart.Version)]; !exists { // nolint: lll
-			return false
-		}
-	}
-	return true
 }
 
 // Image describes a specific version of a container image.
