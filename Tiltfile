@@ -9,7 +9,7 @@ k8s_resource(
 )
 
 docker_build(
-  'ghcr.io/akuityio/kargo',
+  'ghcr.io/akuity/kargo',
   '.',
   only = [
     'api/',
