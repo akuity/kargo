@@ -64,3 +64,83 @@ rules:
   - promotions/status
   verbs:
   - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-admin
+  labels:
+    {{- include "kargo-kit.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - environments
+  - promotions
+  - promotionpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-developer
+  labels:
+    {{- include "kargo-kit.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - environments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  - promotionpolicies
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-promoter
+  labels:
+    {{- include "kargo-kit.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - environments
+  - promotionpolicies
+  verbs:
+  - get
+  - list
+  - watch

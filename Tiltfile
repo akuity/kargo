@@ -9,7 +9,7 @@ k8s_resource(
 )
 
 docker_build(
-  'ghcr.io/akuityio/kargo',
+  'ghcr.io/akuity/kargo',
   '.',
   only = [
     'api/',
@@ -25,7 +25,10 @@ k8s_resource(
   new_name = 'common',
   labels = ['kargo'],
   objects = [
+    'kargo-admin:clusterrole',
+    'kargo-developer:clusterrole',
     'kargo-image-pull-secret:secret',
+    'kargo-promoter:clusterrole',
     'kargo-selfsigned-cert-issuer:issuer'
   ]
 )

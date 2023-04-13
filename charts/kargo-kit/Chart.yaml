@@ -4,7 +4,7 @@ description: Kargo Kit installs resources required by clusters that are managed 
 type: application
 version: 0.1.0
 sources:
-- https://github.com/akuityio/kargo
+- https://github.com/akuity/kargo
 maintainers:
 - name: Kent Rancourt
   email: kent@akuity.io

@@ -2,7 +2,7 @@ package environments
 
 import (
 	"context"
-	"crypto/sha256"
+	"crypto/sha1"
 	"fmt"
 	"sort"
 	"strings"
@@ -586,6 +586,6 @@ func getStateID(state api.EnvironmentState) string {
 	sort.Strings(materials)
 	return fmt.Sprintf(
 		"%x",
-		sha256.Sum256([]byte(strings.Join(materials, "|"))),
+		sha1.Sum([]byte(strings.Join(materials, "|"))),
 	)
 }
