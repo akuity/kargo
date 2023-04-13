@@ -1,0 +1,42 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #e87878;
+  --ifm-color-primary-dark: #e35a5a;
+  --ifm-color-primary-darker: #e04b4b;
+  --ifm-color-primary-darkest: #d32424;
+  --ifm-color-primary-light: #ed9696;
+  --ifm-color-primary-lighter: #f0a5a5;
+  --ifm-color-primary-lightest: #f7d2d2;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  /* Search */
+  --aa-primary-color-rgb: 120, 120, 120 !important;
+  --aa-muted-color-rgb: 120, 120, 120 !important;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #e87878;
+  --ifm-color-primary-dark: #e35a5a;
+  --ifm-color-primary-darker: #e04b4b;
+  --ifm-color-primary-darkest: #d32424;
+  --ifm-color-primary-light: #ed9696;
+  --ifm-color-primary-lighter: #f0a5a5;
+  --ifm-color-primary-lightest: #f7d2d2;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+
+  /* Search */
+  --aa-primary-color-rgb: 232, 232, 232 !important;
+  --aa-muted-color-rgb: 190, 190, 190 !important;
+  --aa-background-color-rgb: 32, 32, 32 !important;
+  --aa-selected-color-rgb: 70, 70, 70 !important;
+  --aa-input-border-color-rgb: 126, 126, 126 !important;
+  --aa-input-background-color-rgb: 32, 32, 32 !important;
+}
