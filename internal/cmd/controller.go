@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -41,7 +42,10 @@ func newControllerCommand() *cobra.Command {
 
 			scheme := runtime.NewScheme()
 			if err = corev1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add kubernetes api to scheme")
+				return errors.Wrap(err, "add kubernetes core api to scheme")
+			}
+			if err = rbacv1.AddToScheme(scheme); err != nil {
+				return errors.Wrap(err, "add kubernetes rbac api to scheme")
 			}
 			if err = argocd.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "add argocd api to scheme")
@@ -63,7 +67,8 @@ func newControllerCommand() *cobra.Command {
 			if err := environments.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "error initializing Environment webhooks")
 			}
-			if err := promotions.SetupWebhookWithManager(mgr); err != nil {
+			if err :=
+				promotions.SetupWebhookWithManager(ctx, mgr, config); err != nil {
 				return errors.Wrap(err, "error initializing Environment webhooks")
 			}
 

@@ -23,6 +23,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - argoproj.io
   resources:
   - applications
@@ -35,6 +43,7 @@ rules:
   - kargo.akuity.io
   resources:
   - environments
+  - promotionpolicies
   verbs:
   - get
   - list

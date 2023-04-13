@@ -1,0 +1,96 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.3
+  creationTimestamp: null
+  name: promotionpolicies.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: PromotionPolicy
+    listKind: PromotionPolicyList
+    plural: promotionpolicies
+    shortNames:
+    - promopolicy
+    - promopolicies
+    singular: promotionpolicy
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: PromotionPolicy provides fine-grained access control beyond what
+          Kubernetes RBAC is capable of. A PromotionPolicy names an Environment and
+          enumerates subjects (such as users, groups, ServiceAccounts, or RBAC Roles)
+          that are authorized to create Promotions for that Environment. It is through
+          PromotionPolicies that multiple users may be permitted to create Promotion
+          resources in a given namespace, but creation of Promotion resources for
+          specific Environments may be restricted.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          authorizedPromoters:
+            description: AuthorizedPromoters enumerates subjects (such as users, groups,
+              ServiceAccounts, or RBAC Roles) that are authorized to create Promotions
+              for the Environment referenced by the Environment field.
+            items:
+              description: AuthorizedPromoter identifies a single subject that is
+                authorized to create Promotion resources referencing a particular
+                Environment.
+              properties:
+                name:
+                  description: Name is the name of a subject authorized to create
+                    Promotion resources referencing a particular Environment. This
+                    could be a username, group name, ServiceAccount name, or Role
+                    name.
+                  type: string
+                subjectType:
+                  description: SubjectType identifies the type of subject being authorized
+                    to create Promotion resources referencing a particular Environment.
+                  enum:
+                  - Group
+                  - Role
+                  - ServiceAccount
+                  - User
+                  type: string
+              required:
+              - name
+              - subjectType
+              type: object
+            type: array
+          enableAutoPromotion:
+            description: 'EnableAutoPromotion indicates whether new EnvironmentStates
+              can automatically be promoted into the Environment referenced by the
+              Environment field. Note: There are other conditions also required for
+              an auto-promotion to occur. Specifically, there must be a single source
+              of new EnvironmentStates, so regardless of the value of this field,
+              an auto-promotion could never occur for an Environment subscribed to
+              MULTIPLE upstream environments. This field defaults to false, but is
+              commonly set to true for Environments that subscribe to repositories
+              instead of other, upstream Environments. This allows users to define
+              Environments that are automatically updated as soon as new materials
+              are detected.'
+            type: boolean
+          environment:
+            description: Environment references an Environment in the same namespace
+              as this PromotionPolicy to which this PromotionPolicy applies.
+            minLength: 1
+            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+        required:
+        - environment
+        type: object
+    served: true
+    storage: true

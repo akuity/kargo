@@ -34,6 +34,10 @@ spec:
         {{- end }}
         - name: ARGOCD_NAMESPACE
           value: {{ .Values.controller.argocdNamespace }}
+        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT
+          value: {{ .Values.controller.webhooks.serviceAccount.name | default (include "kargo.controller.fullname" .) }}
+        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE
+          value: {{ .Values.controller.webhooks.serviceAccount.namespace | default .Release.Namespace }}
         - name: LOG_LEVEL
           value: {{ .Values.controller.logLevel }}
         ports:

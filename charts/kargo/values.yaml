@@ -88,6 +88,14 @@ controller:
       ## <Helm release name>-webhook-server-cert MUST be provided in the same
       ## namespace as Kargo.
       selfSignedCert: true
+    serviceAccount: {}
+      ## Namespace and name of the Kubernetes service account used by the Kargo
+      ## controller. These should generally be left undefined, but in the case
+      ## where Kargo is hosted in one cluster, but manages a different cluster,
+      ## these should be set to reflect the details of the services account used
+      ## by the Kargo controller in the cluster it manages.
+      # namespace:
+      # name:
 
   resources: {}
     # We usually recommend not to specify default resources and to leave this as
