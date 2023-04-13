@@ -1,6 +1,11 @@
 package v1alpha1
 
 import (
+	"crypto/sha1"
+	"fmt"
+	"sort"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -500,6 +505,33 @@ type EnvironmentState struct {
 	// denote the last observed health state before transitioning into a different
 	// state.
 	Health *Health `json:"health,omitempty"`
+}
+
+func (e *EnvironmentState) UpdateStateID() {
+	materials := []string{}
+	for _, commit := range e.Commits {
+		materials = append(
+			materials,
+			fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
+		)
+	}
+	for _, image := range e.Images {
+		materials = append(
+			materials,
+			fmt.Sprintf("%s:%s", image.RepoURL, image.Tag),
+		)
+	}
+	for _, chart := range e.Charts {
+		materials = append(
+			materials,
+			fmt.Sprintf("%s/%s:%s", chart.RegistryURL, chart.Name, chart.Version),
+		)
+	}
+	sort.Strings(materials)
+	e.ID = fmt.Sprintf(
+		"%x",
+		sha1.Sum([]byte(strings.Join(materials, "|"))),
+	)
 }
 
 type EnvironmentStateStack []EnvironmentState

@@ -75,6 +75,41 @@ func TestGitCommitEquals(t *testing.T) {
 	}
 }
 
+func TestEnvironmentStateUpdateID(t *testing.T) {
+	state := EnvironmentState{
+		Commits: []GitCommit{
+			{
+				RepoURL: "fake-git-repo",
+				ID:      "fake-commit-id",
+			},
+		},
+		Images: []Image{
+			{
+				RepoURL: "fake-image-repo",
+				Tag:     "fake-image-tag",
+			},
+		},
+		Charts: []Chart{
+			{
+				RegistryURL: "fake-chart-registry",
+				Name:        "fake-chart",
+				Version:     "fake-chart-version",
+			},
+		},
+	}
+	state.UpdateStateID()
+	result := state.ID
+	// Doing this any number of times should yield the same ID
+	for i := 0; i < 100; i++ {
+		state.UpdateStateID()
+		require.Equal(t, result, state.ID)
+	}
+	// Changing anything should change the result
+	state.Commits[0].ID = "a-different-fake-commit"
+	state.UpdateStateID()
+	require.NotEqual(t, result, state.ID)
+}
+
 func TestEnvironmentStateStackEmpty(t *testing.T) {
 	testCases := []struct {
 		name           string

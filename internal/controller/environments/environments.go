@@ -2,10 +2,7 @@ package environments
 
 import (
 	"context"
-	"crypto/sha1"
 	"fmt"
-	"sort"
-	"strings"
 	"time"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -515,7 +512,7 @@ func (r *reconciler) getLatestStateFromRepos(
 		Images:    latestImages,
 		Charts:    latestCharts,
 	}
-	state.ID = getStateID(*state)
+	state.UpdateStateID()
 	return state, nil
 }
 
@@ -569,31 +566,4 @@ func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
 	}
 
 	return availableStates, nil
-}
-
-func getStateID(state api.EnvironmentState) string {
-	materials := []string{}
-	for _, commit := range state.Commits {
-		materials = append(
-			materials,
-			fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
-		)
-	}
-	for _, image := range state.Images {
-		materials = append(
-			materials,
-			fmt.Sprintf("%s:%s", image.RepoURL, image.Tag),
-		)
-	}
-	for _, chart := range state.Charts {
-		materials = append(
-			materials,
-			fmt.Sprintf("%s/%s:%s", chart.RegistryURL, chart.Name, chart.Version),
-		)
-	}
-	sort.Strings(materials)
-	return fmt.Sprintf(
-		"%x",
-		sha1.Sum([]byte(strings.Join(materials, "|"))),
-	)
 }
