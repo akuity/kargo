@@ -395,11 +395,6 @@ func (r *reconciler) sync(
 		return status, nil
 	}
 
-	if !env.Spec.EnableAutoPromotion {
-		logger.Debug("auto-promotion is not enabled for this environment")
-		return status, nil
-	}
-
 	nextStateCandidate, _ := status.AvailableStates.Top()
 	if status.CurrentState != nil &&
 		nextStateCandidate.FirstSeen.Before(status.CurrentState.FirstSeen) {
@@ -411,8 +406,42 @@ func (r *reconciler) sync(
 	}
 	nextState := nextStateCandidate
 
-	// If we get to here, we've determined that auto-promotion is enabled and
-	// safe.
+	// If we get to here, we've determined that auto-promotion is a possibility.
+	// See if it's actually allowed...
+	policies := api.PromotionPolicyList{}
+	if err := r.client.List(
+		ctx,
+		&policies,
+		&client.ListOptions{
+			Namespace: env.Namespace,
+			FieldSelector: fields.Set(map[string]string{
+				"environment": env.Name,
+			}).AsSelector(),
+		},
+	); err != nil {
+		return status, err
+	}
+	if len(policies.Items) == 0 {
+		logger.Debug(
+			"no PromotionPolicy exists to enable auto-promotion; auto-promotion " +
+				"will not proceed",
+		)
+		return status, nil
+	}
+	if len(policies.Items) > 1 {
+		logger.Debug("found multiple PromotionPolicies associated with " +
+			"Environment; auto-promotion will not proceed",
+		)
+		return status, nil
+	}
+	if !policies.Items[0].EnableAutoPromotion {
+		logger.Debug(
+			"PromotionPolicy does not enable auto-promotion; auto-promotion " +
+				"will not proceed",
+		)
+		return status, nil
+	}
+
 	logger = logger.WithField("state", nextState.ID)
 	logger.Debug("auto-promotion will proceed")
 
@@ -434,7 +463,13 @@ func (r *reconciler) sync(
 		},
 		&client.CreateOptions{},
 	); err != nil {
-		return status, err
+		return status, errors.Wrapf(
+			err,
+			"error creating Promotion of Environment %q in namespace %q to state %q",
+			env.Name,
+			env.Namespace,
+			nextState.ID,
+		)
 	}
 	logger.Debug("created Promotion resource")
 

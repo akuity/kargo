@@ -28,7 +28,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: ghcr.io/akuityio/kargo
+        images: ghcr.io/akuity/kargo
         flavor: latest=false
         tags: type=semver,pattern={{raw}}
     - name: Build and push
@@ -71,7 +71,7 @@ jobs:
     - name: Publish chart
       env:
         HELM_EXPERIMENTAL_OCI: '1'
-        KARGO_CHARTS_REPO: ghcr.io/akuityio/kargo-charts
+        KARGO_CHARTS_REPO: ghcr.io/akuity/kargo-charts
         VERSION: ${{ github.ref_name }}
       run: |
         CHART_VERSION=$(echo $VERSION | cut -c 2-)

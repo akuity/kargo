@@ -56,12 +56,22 @@ func NewAPIProxyConfig() APIProxyConfig {
 
 type ControllerConfig struct {
 	BaseConfig
-	ArgoCDNamespace string
+	ArgoCDNamespace         string
+	ServiceAccount          string
+	ServiceAccountNamespace string
 }
 
 func NewControllerConfig() ControllerConfig {
 	return ControllerConfig{
 		BaseConfig:      newBaseConfig(),
 		ArgoCDNamespace: os.MustGetEnv("ARGOCD_NAMESPACE", "argocd"),
+		ServiceAccount: os.MustGetEnv(
+			"KARGO_CONTROLLER_SERVICE_ACCOUNT",
+			"",
+		),
+		ServiceAccountNamespace: os.MustGetEnv(
+			"KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE",
+			"",
+		),
 	}
 }

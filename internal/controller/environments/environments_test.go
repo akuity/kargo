@@ -41,6 +41,9 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 }
 
 func TestSync(t *testing.T) {
+	scheme, err := api.SchemeBuilder.Build()
+	require.NoError(t, err)
+
 	testCases := []struct {
 		name          string
 		spec          api.EnvironmentSpec
@@ -59,6 +62,7 @@ func TestSync(t *testing.T) {
 			context.Context,
 			[]api.EnvironmentSubscription,
 		) ([]api.EnvironmentState, error)
+		client     client.Client
 		assertions func(initialStatus, newStatus api.EnvironmentStatus, client client.Client, err error)
 	}{
 		{
@@ -296,7 +300,6 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
-				EnableAutoPromotion: true,
 			},
 			getAvailableStatesFromUpstreamEnvsFn: func(
 				context.Context,
@@ -322,6 +325,153 @@ func TestSync(t *testing.T) {
 				)
 				newStatus.AvailableStates = initialStatus.AvailableStates
 				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "no promotion policy found",
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
+			getLatestStateFromReposFn: func(
+				context.Context,
+				string,
+				api.RepoSubscriptions,
+			) (*api.EnvironmentState, error) {
+				return &api.EnvironmentState{
+					Commits: []api.GitCommit{
+						{
+							RepoURL: "fake-url",
+							ID:      "fake-commit",
+						},
+					},
+					Images: []api.Image{
+						{
+							RepoURL: "fake-url",
+							Tag:     "fake-tag",
+						},
+					},
+				}, nil
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				client client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should have updated AvailableStates and otherwise be unchanged
+				require.Equal(
+					t,
+					api.EnvironmentStateStack{
+						{
+							Commits: []api.GitCommit{
+								{
+									RepoURL: "fake-url",
+									ID:      "fake-commit",
+								},
+							},
+							Images: []api.Image{
+								{
+									RepoURL: "fake-url",
+									Tag:     "fake-tag",
+								},
+							},
+						},
+					},
+					newStatus.AvailableStates,
+				)
+				newStatus.AvailableStates = initialStatus.AvailableStates
+				require.Equal(t, initialStatus, newStatus)
+				// And no Promotion should have been created
+				promos := api.PromotionList{}
+				err = client.List(context.Background(), &promos)
+				require.NoError(t, err)
+				require.Empty(t, promos.Items)
+			},
+		},
+
+		{
+			name: "multiple promotion policies found",
+			spec: api.EnvironmentSpec{
+				Subscriptions: &api.Subscriptions{
+					Repos: &api.RepoSubscriptions{},
+				},
+			},
+			getLatestStateFromReposFn: func(
+				context.Context,
+				string,
+				api.RepoSubscriptions,
+			) (*api.EnvironmentState, error) {
+				return &api.EnvironmentState{
+					Commits: []api.GitCommit{
+						{
+							RepoURL: "fake-url",
+							ID:      "fake-commit",
+						},
+					},
+					Images: []api.Image{
+						{
+							RepoURL: "fake-url",
+							Tag:     "fake-tag",
+						},
+					},
+				}, nil
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&api.PromotionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-policy",
+						Namespace: "fake-namespace",
+					},
+					Environment: "fake-environment",
+				},
+				&api.PromotionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "another-fake-policy",
+						Namespace: "fake-namespace",
+					},
+					Environment: "fake-environment",
+				},
+			).Build(),
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				client client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should have updated AvailableStates and otherwise be unchanged
+				require.Equal(
+					t,
+					api.EnvironmentStateStack{
+						{
+							Commits: []api.GitCommit{
+								{
+									RepoURL: "fake-url",
+									ID:      "fake-commit",
+								},
+							},
+							Images: []api.Image{
+								{
+									RepoURL: "fake-url",
+									Tag:     "fake-tag",
+								},
+							},
+						},
+					},
+					newStatus.AvailableStates,
+				)
+				newStatus.AvailableStates = initialStatus.AvailableStates
+				require.Equal(t, initialStatus, newStatus)
+				// And no Promotion should have been created
+				promos := api.PromotionList{}
+				err = client.List(context.Background(), &promos)
+				require.NoError(t, err)
+				require.Empty(t, promos.Items)
 			},
 		},
 
@@ -352,10 +502,19 @@ func TestSync(t *testing.T) {
 					},
 				}, nil
 			},
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&api.PromotionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-policy",
+						Namespace: "fake-namespace",
+					},
+					Environment: "fake-environment",
+				},
+			).Build(),
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
-				_ client.Client,
+				client client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -382,16 +541,20 @@ func TestSync(t *testing.T) {
 				)
 				newStatus.AvailableStates = initialStatus.AvailableStates
 				require.Equal(t, initialStatus, newStatus)
+				// And no Promotion should have been created
+				promos := api.PromotionList{}
+				err = client.List(context.Background(), &promos)
+				require.NoError(t, err)
+				require.Empty(t, promos.Items)
 			},
 		},
 
 		{
-			name: "successful creation of promotion resource",
+			name: "auto-promotion enabled",
 			spec: api.EnvironmentSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
-				EnableAutoPromotion: true,
 			},
 			getLatestStateFromReposFn: func(
 				context.Context,
@@ -413,6 +576,16 @@ func TestSync(t *testing.T) {
 					},
 				}, nil
 			},
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&api.PromotionPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-policy",
+						Namespace: "fake-namespace",
+					},
+					Environment:         "fake-environment",
+					EnableAutoPromotion: true,
+				},
+			).Build(),
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
@@ -454,17 +627,16 @@ func TestSync(t *testing.T) {
 	for _, testCase := range testCases {
 		testEnv := &api.Environment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "bar",
+				Name:      "fake-environment",
+				Namespace: "fake-namespace",
 			},
 			Spec:   &testCase.spec,
 			Status: testCase.initialStatus,
 		}
-		scheme, err := api.SchemeBuilder.Build()
 		require.NoError(t, err)
 		// nolint: lll
 		reconciler := &reconciler{
-			client:                               fake.NewClientBuilder().WithScheme(scheme).Build(),
+			client:                               testCase.client,
 			checkHealthFn:                        testCase.checkHealthFn,
 			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
 			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn,
