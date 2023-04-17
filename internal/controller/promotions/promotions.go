@@ -478,11 +478,13 @@ func (r *reconciler) promote(
 	env.Status.History.Push(nextState)
 
 	// Promotion is successful at this point. Update target state in place because
-	// the promotion process may have updated some commit IDs.
+	// the promotion process may have updated some commit IDs (which, in turn
+	// affects state IDs).
 	for i := range targetState.Commits {
 		env.Status.AvailableStates[targetStateIndex].Commits[i].ID =
 			nextState.Commits[i].ID
 	}
+	env.Status.AvailableStates[targetStateIndex].ID = nextState.ID
 
 	err = r.client.Status().Update(ctx, env)
 	return errors.Wrapf(

@@ -842,35 +842,3 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		})
 	}
 }
-
-func TestGetStateID(t *testing.T) {
-	state := api.EnvironmentState{
-		Commits: []api.GitCommit{
-			{
-				RepoURL: "fake-git-repo",
-				ID:      "fake-commit-id",
-			},
-		},
-		Images: []api.Image{
-			{
-				RepoURL: "fake-image-repo",
-				Tag:     "fake-image-tag",
-			},
-		},
-		Charts: []api.Chart{
-			{
-				RegistryURL: "fake-chart-registry",
-				Name:        "fake-chart",
-				Version:     "fake-chart-version",
-			},
-		},
-	}
-	result := getStateID(state)
-	// Doing this any number of times should yield the same ID
-	for i := 0; i < 100; i++ {
-		require.Equal(t, result, getStateID(state))
-	}
-	// Changing anything should change the result
-	state.Commits[0].ID = "a-different-fake-commit"
-	require.NotEqual(t, result, getStateID(state))
-}
