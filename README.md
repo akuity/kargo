@@ -1,4 +1,5 @@
-# Kargo
+
+![Kargo Open Source project from Akuity, creators of Argo](kargo-logo.png)
 
 ![CI](https://github.com/akuity/kargo/actions/workflows/ci.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/akuity/kargo/branch/main/graph/badge.svg?token=DWEYXEJCYZ)](https://codecov.io/gh/akuity/kargo)
