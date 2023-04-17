@@ -20,8 +20,6 @@ spec:
         {{- include "kargo.api.labels" . | nindent 8 }}
     spec:
       serviceAccount: {{ include "kargo.api.fullname" . }}
-      imagePullSecrets:
-        - name: {{ include "kargo.fullname" . }}-image-pull-secret
       containers:
 {{- if .Values.api.enableProxy }}
         - name: api-proxy

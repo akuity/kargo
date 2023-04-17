@@ -20,8 +20,6 @@ spec:
         {{- include "kargo.controller.labels" . | nindent 8 }}
     spec:
       serviceAccount: {{ include "kargo.controller.fullname" . }}
-      imagePullSecrets:
-      - name: {{ include "kargo.fullname" . }}-image-pull-secret
       containers:
       - name: controller
         image: {{ include "kargo.image" . }}
