@@ -27,7 +27,6 @@ k8s_resource(
   objects = [
     'kargo-admin:clusterrole',
     'kargo-developer:clusterrole',
-    'kargo-image-pull-secret:secret',
     'kargo-promoter:clusterrole',
     'kargo-selfsigned-cert-issuer:issuer'
   ]
