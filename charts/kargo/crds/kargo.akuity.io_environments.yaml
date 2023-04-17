@@ -208,11 +208,9 @@ spec:
                             required:
                             - repoURL
                             type: object
-                          minItems: 1
                           type: array
                       required:
                       - appName
-                      - sourceUpdates
                       type: object
                     type: array
                   gitRepoUpdates:
