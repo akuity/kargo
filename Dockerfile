@@ -10,10 +10,6 @@ ARG CGO_ENABLED=0
 WORKDIR /kargo
 COPY go.mod .
 COPY go.sum .
-# TODO: This is a temporary workaround because the bookkeeper module is private.
-# We won't need this once bookkeeper is public. We can revoke the token before
-# Kargo is public.
-RUN git config --global url."https://krancour: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@github.com".insteadOf https://github.com
 RUN go mod download
 COPY . .
 
