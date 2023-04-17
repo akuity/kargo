@@ -349,9 +349,7 @@ type ArgoCDAppUpdate struct {
 	AppNamespace string `json:"appNamespace,omitempty"`
 	// SourceUpdates describes updates to be applied to various sources of the
 	// specified Argo CD Application resource.
-	//
-	//+kubebuilder:validation:MinItems=1
-	SourceUpdates []ArgoCDSourceUpdate `json:"sourceUpdates"`
+	SourceUpdates []ArgoCDSourceUpdate `json:"sourceUpdates,omitempty"`
 }
 
 // ArgoCDSourceUpdate describes updates that should be applied to one of an Argo
