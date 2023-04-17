@@ -546,6 +546,13 @@ func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
 				sub.Namespace,
 			)
 		}
+		if upstreamEnv == nil {
+			return nil, errors.Errorf(
+				"found no upstream environment %q in namespace %q",
+				sub.Name,
+				sub.Namespace,
+			)
+		}
 		for _, state := range upstreamEnv.Status.History {
 			if _, ok := stateSet[state.ID]; !ok &&
 				state.Health != nil && state.Health.Status == api.HealthStateHealthy {
