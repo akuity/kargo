@@ -6,8 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -115,12 +117,91 @@ func TestValidateUpdate(t *testing.T) {
 }
 
 func TestValidateDelete(t *testing.T) {
-	w := &webhook{
-		authorizeFn: func(context.Context, *api.Promotion, string) error {
-			return nil // Always authorize
+	testCases := []struct {
+		name                          string
+		admissionRequestFromContextFn func(context.Context) (admission.Request, error)
+		authorizeFn                   func(
+			context.Context,
+			*api.Promotion,
+			string,
+		) error
+		assertions func(error)
+	}{
+		{
+			name: "error getting admission request bound to context",
+			admissionRequestFromContextFn: func(
+				context.Context,
+			) (admission.Request, error) {
+				return admission.Request{}, errors.New("something went wrong")
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err))
+				require.Contains(
+					t,
+					err.Error(),
+					"error retrieving admission request from context",
+				)
+			},
+		},
+		{
+			name: "user is namespace controller service account",
+			admissionRequestFromContextFn: func(
+				context.Context,
+			) (admission.Request, error) {
+				return admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						UserInfo: authenticationv1.UserInfo{
+							Username: "system:serviceaccount:kube-system:namespace-controller", // nolint: lll
+						},
+					},
+				}, nil
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "user is not authorized",
+			admissionRequestFromContextFn: func(
+				context.Context,
+			) (admission.Request, error) {
+				return admission.Request{}, nil
+			},
+			authorizeFn: func(context.Context, *api.Promotion, string) error {
+				return errors.Errorf("not authorized")
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Equal(t, "not authorized", err.Error())
+			},
+		},
+		{
+			name: "user is authorized",
+			admissionRequestFromContextFn: func(
+				context.Context,
+			) (admission.Request, error) {
+				return admission.Request{}, nil
+			},
+			authorizeFn: func(context.Context, *api.Promotion, string) error {
+				return nil
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
 		},
 	}
-	require.NoError(t, w.ValidateDelete(context.Background(), &api.Promotion{}))
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			w := &webhook{
+				admissionRequestFromContextFn: testCase.admissionRequestFromContextFn,
+				authorizeFn:                   testCase.authorizeFn,
+			}
+			testCase.assertions(
+				w.ValidateDelete(context.Background(), &api.Promotion{}),
+			)
+		})
+	}
 }
 
 func TestAuthorize(t *testing.T) {
