@@ -105,6 +105,7 @@ func (r *reconciler) applyGitRepoUpdate(
 				newState.Commits[i].ID = commitID
 			}
 		}
+		newState.UpdateStateID()
 	} else {
 		logger.Debug("no changes pushed to repo")
 	}
