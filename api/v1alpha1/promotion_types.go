@@ -16,6 +16,10 @@ const (
 //+kubebuilder:resource:shortName={promo,promos}
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name=Environment,type=string,JSONPath=`.spec.environment`
+//+kubebuilder:printcolumn:name=State,type=string,JSONPath=`.spec.state`
+//+kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
+//+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Promotion represents a request to transition a particular Environment into a
 // particular state.
