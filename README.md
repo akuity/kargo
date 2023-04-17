@@ -1,4 +1,3 @@
-# Kargo
 
 ![Kargo Open Source project from Akuity, creators of Argo](kargo-logo.png)
 
