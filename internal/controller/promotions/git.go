@@ -17,6 +17,8 @@ func (r *reconciler) applyGitRepoUpdate(
 	newState api.EnvironmentState,
 	update api.GitRepoUpdate,
 ) (api.EnvironmentState, error) {
+	newState = *newState.DeepCopy()
+
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	creds, ok, err :=

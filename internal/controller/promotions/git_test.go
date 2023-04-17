@@ -97,10 +97,12 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.NoError(t, err)
 				require.Len(t, outState.Commits, 1)
-				// Check that the commit ID in the state was updated
-				require.Equal(t, "new-fake-commit", outState.Commits[0].ID)
+				// Check that the commit ID and state IDs changed
+				require.NotEqual(t, inState.Commits[0].ID, outState.Commits[0].ID)
+				require.NotEqual(t, inState.ID, outState.ID)
 				// Everything else should be unchanged
-				outState.Commits[0].ID = "fake-commit"
+				outState.Commits[0].ID = inState.Commits[0].ID
+				outState.ID = inState.ID
 				require.Equal(t, inState, outState)
 			},
 		},
