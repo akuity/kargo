@@ -11,6 +11,7 @@ import (
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
@@ -445,16 +446,12 @@ func (r *reconciler) sync(
 	logger = logger.WithField("state", nextState.ID)
 	logger.Debug("auto-promotion will proceed")
 
-	// TODO: If we name this deterministically, we can check first if it already
-	// exists -- which is a thing that could happen if, on a previous
-	// reconciliation, we succeeded in creating the Promotion, but failed to
-	// update the Environment status.
 	if err := r.client.Create(
 		ctx,
 		&api.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: fmt.Sprintf("%s-", env.Name),
-				Namespace:    env.Namespace,
+				Name:      fmt.Sprintf("%s-to-%s", env.Name, nextState.ID),
+				Namespace: env.Namespace,
 			},
 			Spec: &api.PromotionSpec{
 				Environment: env.Name,
@@ -463,6 +460,10 @@ func (r *reconciler) sync(
 		},
 		&client.CreateOptions{},
 	); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			logger.Debug("Promotion resource already exists")
+			return status, nil
+		}
 		return status, errors.Wrapf(
 			err,
 			"error creating Promotion of Environment %q in namespace %q to state %q",
