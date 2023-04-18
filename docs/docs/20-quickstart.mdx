@@ -1,0 +1,702 @@
+---
+slug: /
+description: Kargo Quickstart
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Quickstart
+
+This guide presents a basic introduction to Kargo. Together, we will:
+
+1. Create a local Kubernetes cluster.
+
+1. Install Kargo's dependencies, including Argo CD.
+
+1. Install Kargo itself with default options.
+
+1. Demonstrate how Kargo can progress changes through multiple environments by
+   interacting with your GitOps repository and Argo CD `Application` resources.
+
+1. Clean up.
+
+## Prerequisites
+
+* [Docker](https://www.docker.com/)
+* [kind](https://kind.sigs.k8s.io/) or [k3d](https://k3d.io/): These
+  instructions were tested with:
+    * kind: v0.17.0
+    * k3s: v5.4.9
+* [Helm](https://helm.sh/docs/): These instructions were tested with v3.11.2.
+
+### Starting a local cluster
+
+We will start our cluster using options that make it convenient to access the
+Argo CD dashboard and three different instances of our demo application on
+different `localhost` ports:
+
+<Tabs groupId="cluster-start">
+<TabItem value="kind" label="kind">
+
+```shell
+kind create cluster \
+  --wait 120s \
+  --config - <<EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: kargo-quickstart
+nodes:
+- extraPortMappings:
+  - containerPort: 30080
+    hostPort: 8080
+  - containerPort: 30081
+    hostPort: 8081
+  - containerPort: 30082
+    hostPort: 8082
+  - containerPort: 30083
+    hostPort: 8083
+EOF
+```
+
+</TabItem>
+<TabItem value="k3d" label="k3d">
+
+```shell
+k3d cluster create kargo-quickstart \
+  --no-lb \
+  --k3s-arg '--disable=traefik@server:0' \
+  -p '8080-8083:30080-30083@servers:0:direct' \
+  --wait
+```
+
+</TabItem>
+</Tabs>
+
+### Installing cert-manager
+
+:::info
+In its default configuration, Kargo uses cert-manager to provision a self-signed
+certificate for use by Kargo's webhook server. In a more advanced installation,
+you may optionally disregard this dependency by providing a certificate yourself
+through any means you prefer.
+:::
+
+```shell
+helm install cert-manager cert-manager \
+  --repo https://charts.jetstack.io \
+  --version 1.11.0 \
+  --namespace cert-manager \
+  --create-namespace \
+  --set installCRDs=true \
+  --wait
+```
+
+### Installing Argo CD
+
+:::info
+Kargo works best when integrated with Argo CD, but we're working on reducing
+this dependency from a required one to a suggested one.
+:::
+
+```shell
+helm install argocd argo-cd \
+  --repo https://argoproj.github.io/argo-helm \
+  --version 5.21.0 \
+  --namespace argocd \
+  --create-namespace \
+  --set 'configs.secret.argocdServerAdminPassword=$2a$10$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
+  --set dex.enabled=false \
+  --set notifications.enabled=false \
+  --set server.extensions.enabled=true \
+  --set server.service.type=NodePort \
+  --set server.service.nodePortHttp=30080 \
+  --wait
+```
+
+The Argo CD dashboard will be accessible at
+[localhost:8080](http://localhost:8080).
+
+The username and password are both `admin`.
+
+## Installing Kargo
+
+```shell
+helm install kargo \
+  oci://ghcr.io/akuity/kargo-charts/kargo \
+  --version 0.1.0-rc.6 \
+  --namespace kargo \
+  --create-namespace \
+  --wait
+```
+
+## Trying it out
+
+### Create a GitOps repository
+
+In this step, we will create a GitOps repo on GitHub to house variations of our
+application manifests for three different environments: `test`, `stage`, and
+`prod`.
+
+Visit https://github.com/akuity/kargo-demo and fork the repository into your own
+GitHub account.
+
+You can explore the repository and see that the `main` branch contains common
+configuration in a `base/` directory as well as environment-specific overlays in
+paths of the form `env/<environment name>/`. [Kustomize](https://kustomize.io/)
+is used as a configuration management tool that combines base configuration with
+environment-specific configuration.
+
+:::note
+This layout is typical of a GitOps repository using Kustomize and is not at all
+Kargo-specific.
+:::
+
+### Create Argo CD Applications
+
+In this step, we will create three Argo CD `Application` resources that deploy
+the same application, with three slightly different configurations, to three
+different namespaces in our local cluster. These three instances of the same
+application will represent `test`, `stage`, and `prod` environments.
+
+To get started, you will require a GitHub [personal access
+token](https://github.com/settings/tokens) with adequate permissions to read
+from and write to the repository you forked in the previous section.
+
+1. Save the location of your GitOps repository, your GitHub handle, and your
+   personal access token in environment variables:
+
+   ```shell
+   export GITOPS_REPO_URL=<your repo URL, starting with https://>
+   export GITHUB_USERNAME=<your github handle>
+   export GITHUB_PAT=<your personal access token>
+   ```
+
+1. Create namespaces for our three environments, a `Secret` containing
+   repository credentials, and Argo CD `Application` resources for each
+   environment:
+
+   ```shell
+   cat <<EOF | kubectl apply -f -
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: kargo-demo-test
+   ---
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: kargo-demo-stage
+   ---
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: kargo-demo-prod
+   ---
+   apiVersion: v1
+   kind: Secret
+   type: Opaque
+   metadata:
+     name: kargo-demo-repo
+     namespace: argocd
+     labels:
+       argocd.argoproj.io/secret-type: repository
+   stringData:
+     type: git
+     project: default
+     url: ${GITOPS_REPO_URL}
+     username: ${GITHUB_USERNAME}
+     password: ${GITHUB_PAT}
+   ---
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: kargo-demo-test
+     namespace: argocd
+     annotations:
+       kargo.akuity.io/authorized-env: kargo-demo:test
+   spec:
+     project: default
+     source:
+       repoURL: ${GITOPS_REPO_URL}
+       targetRevision: placeholder
+       path: env/test
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: kargo-demo-test
+   ---
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: kargo-demo-stage
+     namespace: argocd
+     annotations:
+       kargo.akuity.io/authorized-env: kargo-demo:stage
+   spec:
+     project: default
+     source:
+       repoURL: ${GITOPS_REPO_URL}
+       targetRevision: placeholder
+       path: env/stage
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: kargo-demo-stage
+   ---
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: kargo-demo-prod
+     namespace: argocd
+     annotations:
+       kargo.akuity.io/authorized-env: kargo-demo:prod
+   spec:
+     project: default
+     source:
+       repoURL: ${GITOPS_REPO_URL}
+       targetRevision: placeholder
+       path: env/prod
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: kargo-demo-prod
+   EOF
+   ```
+
+If you visit [your Argo CD dashboard](http://localhost:8080), you will notice
+all three Argo CD `Application`s have not yet synced because they're not
+configured to do so automatically. If you manually sync any one of them, they
+will fail to reach a healthy state because all three `Application`s'
+`targetRevision` fields reference a non-existent `placeholder` branch.
+
+:::info
+Our three environments all existing in a single cluster is for the sake of
+convenience. Because a single Argo CD control plane can manage multiple
+clusters, we could just as easily have spread our environments across multiple
+clusters.
+:::
+
+### Create Kargo PromotionPolicies and Environments
+
+Up to this point, we haven't done anything with Kargo -- in fact everything
+we've done thus far should be familiar to anyone who's already using Argo CD and
+Kustomize.
+
+In this step, we'll create three Kargo `Environment` resources. These can be
+thought of as a layer "above" your Argo CD `Application`s. Their role is to
+describe subscriptions to different materials (like manifests or container
+images), the process for deploying those materials, and the process for
+asserting whether they are properly deployed and healthy. For a simple example,
+such as ours, this means:
+
+* Watching our GitOps repository for updated manifests.
+* Watching the `nginx` image repository for new versions.
+* Automating relevant changes to the GitOps repository and affected Argo CD
+  `Application` resources.
+* Monitoring the health and sync state of Argo CD `Application` resources.
+
+We will also create three `PromotionPolicy` resources that will express
+permission for new materials to be deployed _automatically_ to the
+`kargo-demo-test` and `kargo-demo-stage` environments, and permission for the
+`kubernetes-admin` user to deploy new materials _manually_ to any of the
+environments. In fact, we will create these `PromotionPolicy` resource first:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kargo-demo
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionPolicy
+metadata:
+  name: test
+  namespace: kargo-demo
+environment: test
+authorizedPromoters:
+- subjectType: User
+  name: kubernetes-admin
+enableAutoPromotion: true
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionPolicy
+metadata:
+  name: stage
+  namespace: kargo-demo
+environment: stage
+authorizedPromoters:
+- subjectType: User
+  name: kubernetes-admin
+enableAutoPromotion: true
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionPolicy
+metadata:
+  name: prod
+  namespace: kargo-demo
+environment: prod
+authorizedPromoters:
+- subjectType: User
+  name: kubernetes-admin
+EOF
+```
+
+#### The `test` `Environment`
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Environment
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  subscriptions:
+    repos:
+      git:
+      - repoURL: ${GITOPS_REPO_URL}
+      images:
+      - repoURL: nginx
+        semverConstraint: 1.23.2
+  promotionMechanisms:
+    gitRepoUpdates:
+    - repoURL: ${GITOPS_REPO_URL}
+      kustomize:
+        images:
+        - image: nginx
+          path: base
+    argoCDAppUpdates:
+    - appName: kargo-demo-test
+      appNamespace: argocd
+      sourceUpdates:
+      - repoURL: ${GITOPS_REPO_URL}
+        updateTargetRevision: true
+  healthChecks:
+    argoCDAppChecks:
+    - appName: kargo-demo-test
+      appNamespace: argocd
+EOF
+```
+
+Dissecting the manifest above, we see the `test` `Environment` subscribes
+directly to our GitOps repository and the `nginx` image repository. When a new
+commit is discovered in our GitOps repository or a new, semantically tagged
+version of the `nginx` container image is discovered, the two are combined into
+a new _state_. Because the corresponding `PromotionPolicy` resource permits
+auto-promotion, the discovery of this new state will immediately result in the
+creation of a new `Promotion` resource that will effect the transition of the
+`Environment` to that state.
+
+The actual promotion process involves running `kustomize edit set image` on the
+`base` directory of our GitOps repository and committing those changes, then
+updating the `targetRevision` property of the `kargo-demo-test` Argo CD
+`Application`.
+
+:::note
+Due to an [as-yet-unresolved bug](https://github.com/akuity/kargo/issues/313),
+the `semverConstraint` field in the `test` `Environment` manifest above is
+pinned to a _specific_ semantically tagged image rather than specifying a range
+like `^1.0.0`.
+:::
+
+:::note
+It may seem strange to some that we are updating Kustomize _base_ configuration
+instead of an environment-specific overlay.
+
+In this particular scenario, our method of progressing changes from one
+environment to another involves, updating each `Application`s `targetRevision`
+field.
+
+Progressing changes from directory-to-directory (Kustomize overlays, for
+instance) is another viable strategy, but is not the strategy demonstrated in
+this example.
+:::
+
+After creating the `test` `Environment` resource, we should almost immediately
+see:
+
+1. The `test` `Environment` has been assigned a current state and is healthy:
+
+   ```text
+   kubectl get environment test --namespace kargo-demo
+   ```
+
+  ```text
+   NAME   CURRENT STATE                              HEALTH    AGE
+   test   6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Healthy   30s
+   ```
+
+1. The `test` `Environment` resource's `status` field reflects the one available
+   state, the current state, and the history of all states this `Environment`
+   has been in:
+
+   ```text
+   kubectl get environment test \
+     --namespace kargo-demo \
+     --output jsonpath-as-json={.status}
+   ```
+
+1. A `Promotion` resource was created which was responsible for the `test`
+   `Environment` transitioning into its one available state.
+
+   ```texts
+   kubectl get promotions --namespace kargo-demo
+   ```
+
+   ```text
+   NAME                                               ENVIRONMENT   STATE                                      PHASE       AGE
+   test-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38   test          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   55s
+   ```
+
+1. Your GitOps repository has a new commit.
+
+1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-test`
+   `Application` is synced and healthy. You can also see that its
+   `targetRevision` field has been updated to reference the new commit in your
+   GitOps repository.
+
+#### The `stage` `Environment`
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Environment
+metadata:
+  name: stage
+  namespace: kargo-demo
+spec:
+  subscriptions:
+    upstreamEnvs:
+    - name: test
+  promotionMechanisms:
+    argoCDAppUpdates:
+    - appName: kargo-demo-stage
+      appNamespace: argocd
+      sourceUpdates:
+      - repoURL: ${GITOPS_REPO_URL}
+        updateTargetRevision: true
+  healthChecks:
+    argoCDAppChecks:
+    - appName: kargo-demo-stage
+      appNamespace: argocd
+EOF
+```
+
+Dissecting the manifest above, we see the `stage` `Environment` is quite
+different from the `test` `Environment` in that it does not find new states by
+subscribing directly to repositories, but discovers them by monitoring the
+"upstream" `test` `Environment`. Any healthy state from the `test`
+`Environment`'s `history` field becomes available state for the `stage`
+`Environment`. Because the corresponding `PromotionPolicy` resource permits
+auto-promotion, the discovery of the `test` `Environment`'s current, healthy
+state immediately result in the creation of a new `Promotion` resource that will
+effect the transition of the `Environment` to that state.
+
+The `promotionMechanisms` are also substantially different from those in the
+`test` `Environment`, as they make no commit to the GitOps repository, and
+_only_ update the `targetRevision` property of the `kargo-demo-stage` Argo CD
+`Application`.
+
+After creating the `stage` `Environment` resource, we should almost immediately
+see:
+
+1. The `stage` `Environment` has been assigned a current state and is healthy:
+
+   ```shell
+   kubectl get environment stage --namespace kargo-demo
+   ```
+
+   ```text
+   NAME    CURRENT STATE                              HEALTH    AGE
+   stage   6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Healthy   13s
+   ```
+
+1. The `stage` `Environment` resource's `status` field reflects the one
+   available state, the current state, and the history of all states this
+   `Environment` has been in:
+
+   ```shell
+   kubectl get environment stage \
+     --namespace kargo-demo \
+     --output jsonpath-as-json={.status}
+   ```
+
+1. A `Promotion` resource was created which was responsible for the `stage`
+   `Environment` transitioning into its one available state -- the same state
+   that the `test` `Environment` is already in.
+
+   ```shell
+   kubectl get promotions --namespace kargo-demo
+   ```
+
+   ```shell
+   NAME                                                ENVIRONMENT   STATE                                      PHASE       AGE
+   stage-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38   stage         6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   43s
+   test-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38    test          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   2m40s
+   ```
+
+1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-stage`
+   `Application` is synced and healthy. You can also see that its
+   `targetRevision` field has been updated to reference the same commit as the
+   `kargo-demo-test` `Application`.
+
+#### The `prod` `Environment`:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Environment
+metadata:
+  name: prod
+  namespace: kargo-demo
+spec:
+  subscriptions:
+    upstreamEnvs:
+    - name: stage
+  promotionMechanisms:
+    argoCDAppUpdates:
+    - appName: kargo-demo-prod
+      appNamespace: argocd
+      sourceUpdates:
+      - repoURL: ${GITOPS_REPO_URL}
+        updateTargetRevision: true
+  healthChecks:
+    argoCDAppChecks:
+    - appName: kargo-demo-prod
+      appNamespace: argocd
+EOF
+```
+
+Dissecting the manifest above, we see the `prod` `Environment` is remarkably
+similar to the `stage` `Environment`. It discovers new states by monitoring the
+"upstream" `stage` `Environment`. Any healthy state from the `stage`
+`Environment`'s `history` field becomes available state for the `prod`
+`Environment`.
+
+Because the corresponding `PromotionPolicy` resource does _not_ permits
+auto-promotion, no `Promotion` resource should be automatically created.
+
+After creating the `prod` `Environment` resource, we should almost immediately
+see:
+
+1. The `prod` `Environment` has not yet been assigned a current state:
+
+   ```shell
+   kubectl get environment prod --namespace kargo-demo
+   ```
+
+   ```text
+   NAME   CURRENT STATE   HEALTH   AGE
+   prod                            12s
+   ```
+
+1. The `prod` `Environment` resource's `status` field reflects the one
+   available state, but shows no current state or history:
+
+   ```shell
+   kubectl get environment stage \
+     --namespace kargo-demo \
+     --output jsonpath-as-json={.status}
+   ```
+
+1. No `Promotion` resource was automatically created to transition the `prod`
+   `Environment` into its one available state.
+
+   ```shell
+   kubectl get promotions --namespace kargo-demo
+   ```
+
+   ```shell
+   NAME                                                ENVIRONMENT   STATE                                      PHASE       AGE
+   stage-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38   stage         6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   2m7s
+   test-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38    test          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   4m4s
+   ```
+
+1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-prod`
+   `Application` is _still_ not synced and healthy.
+
+### Trigger a promotion to prod
+
+In this step, we will trigger a promotion to transition the `prod` `Environment`
+into a new state by manually creating a `Promotion` resource.
+
+First, copy the ID of the `stage` `Environment`'s current state and assign it to
+`STATE_ID` environment variable:
+
+```shell
+export STATE_ID=$(kubectl get environment stage -n kargo-demo -o jsonpath={.status.currentState.id})
+```
+
+Then apply the following:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Promotion
+metadata:
+  name: my-first-prod-promotion
+  namespace: kargo-demo
+spec:
+  environment: prod
+  state: ${STATE_ID}
+EOF
+```
+
+After a few moments, we should be able to see:
+
+1. The `Promotion` has succeeded:
+
+   ```shell
+   kubectl get promotions --namespace kargo-demo
+   ```
+
+   ```text
+   NAME                                                ENVIRONMENT   STATE                                      PHASE       AGE
+   my-first-prod-promotion                             prod          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   12s
+   stage-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38   stage         6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   6m14ss
+   test-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38    test          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   8m11s
+   ```
+
+1. The `prod` `Environment` has now been assigned a current state:
+
+   ```shell
+   kubectl get environment prod --namespace kargo-demo
+   ```
+
+   ```text
+   NAME   CURRENT STATE                              HEALTH    AGE
+   prod   6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Healthy   5m20s
+   ```
+
+1. The `prod` `Environment` resource's `status` field reflects the available
+   state, the current state, and the history of all states this `Environment`
+   has been in:
+
+   ```text
+   kubectl get environment prod \
+     --namespace kargo-demo \
+     --output jsonpath-as-json={.status}
+   ```
+
+1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-prod`
+   `Application` is now not synced and healthy.
+
+## Cleaning up
+
+To clean up, we will simply destroy our kind or k3d cluster:
+
+<Tabs groupId="cluster-start">
+<TabItem value="kind" label="kind">
+
+```shell
+kind delete cluster --name kargo-quickstart
+```
+
+</TabItem>
+<TabItem value="k3d" label="k3d">
+
+```shell
+k3d cluster delete kargo-quickstart
+```
+
+</TabItem>
+</Tabs>
