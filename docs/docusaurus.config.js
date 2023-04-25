@@ -64,7 +64,7 @@ const config = {
         title: 'Kargo Docs',
         logo: {
           alt: 'Kargo Documentation',
-          src: 'img/akuity.png',
+          src: 'img/kargo.png',
           href: '/',
           target: '_self',
         },
