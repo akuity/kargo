@@ -294,9 +294,10 @@ such as ours, this means:
 
 We will also create three `PromotionPolicy` resources that will express
 permission for new materials to be deployed _automatically_ to the
-`kargo-demo-test` and `kargo-demo-stage` environments, and permission for the
-`kubernetes-admin` user to deploy new materials _manually_ to any of the
-environments. In fact, we will create these `PromotionPolicy` resource first:
+`kargo-demo-test` and `kargo-demo-stage` environments, and permission for
+members of the `system:masters` group to deploy new materials _manually_ to any
+of the environments. (This should cover both kind and k3d users.) In fact, we
+will create these `PromotionPolicy` resources first:
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -312,8 +313,8 @@ metadata:
   namespace: kargo-demo
 environment: test
 authorizedPromoters:
-- subjectType: User
-  name: kubernetes-admin
+- subjectType: Group
+  name: system:masters
 enableAutoPromotion: true
 ---
 apiVersion: kargo.akuity.io/v1alpha1
@@ -323,8 +324,8 @@ metadata:
   namespace: kargo-demo
 environment: stage
 authorizedPromoters:
-- subjectType: User
-  name: kubernetes-admin
+- subjectType: Group
+  name: system:masters
 enableAutoPromotion: true
 ---
 apiVersion: kargo.akuity.io/v1alpha1
@@ -334,8 +335,8 @@ metadata:
   namespace: kargo-demo
 environment: prod
 authorizedPromoters:
-- subjectType: User
-  name: kubernetes-admin
+- subjectType: Group
+  name: system:masters
 EOF
 ```
 
