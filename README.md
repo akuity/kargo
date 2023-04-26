@@ -12,8 +12,9 @@ by automating the progression of changes from one environment to the next.
 
 ## Getting Started
 
-Read more about Kargo and try it yourself by following our
-[Quickstart](https://docs-kargo-akuity-io.netlify.app).
+Read more about Kargo in our [docs](https://docs-kargo-akuity-io.netlify.app) or
+get hands-on right away with our
+[Quickstart](https://docs-kargo-akuity-io.netlify.app/quickstart).
 
 This documentation is very new, so please open issues against this repository if
 you encounter any difficulties with it.
