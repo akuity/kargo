@@ -12,9 +12,8 @@ by automating the progression of changes from one environment to the next.
 
 ## Getting Started
 
-Read more about Kargo in our [docs](https://docs-kargo-akuity-io.netlify.app) or
-get hands-on right away with our
-[Quickstart](https://docs-kargo-akuity-io.netlify.app/quickstart).
+Read more about Kargo in our [docs](https://kargo.akuity.io) or get hands-on
+right away with our [Quickstart](https://kargo.akuity.io/quickstart).
 
 This documentation is very new, so please open issues against this repository if
 you encounter any difficulties with it.
@@ -24,8 +23,8 @@ you encounter any difficulties with it.
 The Kargo project accepts contributions via GitHub pull requests.
 
 Visit our
-[Kargo Contributor Guide](https://docs-kargo-akuity-io.netlify.app/contributor-guide/)
-for more info on how to get started quickly and easily.
+[Kargo Contributor Guide](https://kargo.akuity.io/contributor-guide/) for more
+info on how to get started quickly and easily.
 
 ## Support & Feedback
 
@@ -35,4 +34,4 @@ To report an issue, request a feature, or ask a question, please open an issue
 ## Code of Conduct
 
 Participation in the Kargo project is governed by the
-[Contributor Covenant Code of Conduct](https://docs-kargo-akuity-io.netlify.app/contributor-guide/code-of-conduct/).
+[Contributor Covenant Code of Conduct](https://kargo.akuity.io/contributor-guide/code-of-conduct/).
