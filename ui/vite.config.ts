@@ -1,8 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import react from '@vitejs/plugin-react';
+import { theme } from 'antd';
 import { defineConfig } from 'vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
+
+import { token } from './src/config/theme';
+
+const { defaultAlgorithm, defaultSeed } = theme;
+
+const mapToken = defaultAlgorithm(defaultSeed);
 
 export const UI_VERSION = process.env.VERSION || 'development';
 
@@ -11,6 +18,14 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: false
+  },
+  css: {
+    preprocessorOptions: {
+      less: {
+        javascriptEnabled: true,
+        modifyVars: { ...mapToken, ...token }
+      }
+    }
   },
   plugins: [tsConfigPaths(), react()],
   server: {

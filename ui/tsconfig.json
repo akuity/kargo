@@ -17,8 +17,8 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@ui/*": ["./src/*"],
-      "@ui-public/*": ["./public/*"],
+      "@*": ["./src/*"],
+      "@kargo-public/*": ["./public/*"],
     }
   },
   "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.tsx"]

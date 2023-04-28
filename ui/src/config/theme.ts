@@ -1,21 +1,16 @@
 import { ThemeConfig } from 'antd/es/config-provider';
+import { MapToken } from 'antd/es/theme/interface';
+
+export const token: Partial<MapToken> = {
+  colorPrimary: 'rgb(29, 50, 82)',
+  fontSizeHeading1: 28,
+  fontSizeHeading2: 24,
+  colorText: '#454545',
+  borderRadius: 8
+};
 
 export const theme: ThemeConfig = {
-  components: {
-    Button: {
-      colorPrimary: '#44505f',
-      colorPrimaryBgHover: '#626f7e',
-      colorPrimaryHover: '#626f7e',
-      colorPrimaryActive: '#626f7e',
-      boxShadow: '0',
-      borderRadius: 100,
-      borderRadiusSM: 100,
-      borderRadiusLG: 100
-    },
-    Switch: {
-      colorPrimary: '#44505f',
-      colorPrimaryHover: '#626f7e',
-      colorPrimaryActive: '#626f7e'
-    }
+  // ...token,
+  token,
   }
 };

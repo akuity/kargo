@@ -22,7 +22,7 @@ module.exports = {
           groups: ['builtin', 'external', ['internal', 'unknown'], 'parent', 'sibling', 'index'],
           pathGroups: [
             {
-              pattern: '@ui/**',
+              pattern: '@**',
               group: 'internal'
             }
           ],

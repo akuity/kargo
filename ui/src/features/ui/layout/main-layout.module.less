@@ -1,0 +1,37 @@
+.wrapper {
+  min-height: 100vh;
+  display: flex;
+}
+
+.sidebar {
+  flex: 0 0 110px;
+  background: linear-gradient(177deg, rgb(29, 50, 82) 0%, rgb(29, 52, 81) 50%, rgb(19, 36, 64) 77%, rgb(10, 23, 49) 100%);
+  color: @colorWhite;
+}
+
+.contentWrapper {
+  position: relative;
+  flex: 1;
+  background-color: rgb(29, 50, 82);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: ~"@{sizeXS}px";
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: @colorBgBase;
+    border-top-left-radius: 20px;
+  }
+}
+
+.content {
+  position: relative;
+  padding: ~"@{sizeXL}px @{sizeXL}px";
+}
+
+.logo {
+  text-align: center;
+  padding: ~"@{sizeXL}px 0";
+}
