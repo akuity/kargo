@@ -18,7 +18,11 @@ docker_build(
     'go.mod',
     'go.sum'
   ],
-  ignore = ['**/*_test.go']
+  ignore = ['**/*_test.go'],
+  build_args = {
+    'GIT_COMMIT': local('git rev-parse HEAD'),
+    'GIT_TREE_STATE': local('if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi')
+  }
 )
 
 k8s_resource(

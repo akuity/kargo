@@ -37,6 +37,8 @@ jobs:
         platforms: linux/amd64,linux/arm64
         build-args: |
           VERSION=${{ github.ref_name }}
+          GIT_COMMIT=${{ github.sha }}
+          GIT_TREE_STATE=clean
         tags: ${{ steps.meta.outputs.tags }}
         push: true
         cache-from: type=gha
