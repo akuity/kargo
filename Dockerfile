@@ -16,7 +16,7 @@ COPY . .
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
       -o bin/kargo \
-      ./cmd \
+      ./cmd/controlplane \
     && bin/kargo version
 
 WORKDIR /kargo/bin
