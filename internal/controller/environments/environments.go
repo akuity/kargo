@@ -31,7 +31,8 @@ import (
 )
 
 const (
-	envsByAppIndexField = "applications"
+	envsByAppIndexField              = "applications"
+	outstandingPromosByEnvIndexField = "environment"
 )
 
 // reconciler reconciles Environment resources.
@@ -41,7 +42,14 @@ type reconciler struct {
 
 	// The following behaviors are overridable for testing purposes:
 
-	// Health checks:
+	// Loop guard
+	hasOutstandingPromotionsFn func(
+		ctx context.Context,
+		envNamespace string,
+		envName string,
+	) (bool, error)
+
+	// Common:
 	getArgoCDAppFn func(
 		ctx context.Context,
 		client client.Client,
@@ -49,6 +57,7 @@ type reconciler struct {
 		name string,
 	) (*argocd.Application, error)
 
+	// Health checks:
 	checkHealthFn func(
 		context.Context,
 		api.EnvironmentState,
@@ -123,22 +132,24 @@ func SetupReconcilerWithManager(
 		ctx,
 		&api.Environment{},
 		envsByAppIndexField,
-		func(obj client.Object) []string {
-			env := obj.(*api.Environment) // nolint: forcetypeassert
-			if env.Spec.HealthChecks == nil {
-				return nil
-			}
-			apps := make([]string, len(env.Spec.HealthChecks.ArgoCDAppChecks))
-			for i, appCheck := range env.Spec.HealthChecks.ArgoCDAppChecks {
-				apps[i] =
-					fmt.Sprintf("%s:%s", appCheck.AppNamespace, appCheck.AppName)
-			}
-			return apps
-		},
+		indexEnvsByApp,
 	); err != nil {
 		return errors.Wrap(
 			err,
 			"error indexing Environments by Argo CD Applications",
+		)
+	}
+
+	// Index Promotions in non-terminal states by Environment
+	if err := mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&api.Promotion{},
+		outstandingPromosByEnvIndexField,
+		indexOutstandingPromotionsByEnvironment,
+	); err != nil {
+		return errors.Wrap(
+			err,
+			"error indexing non-terminal Promotions by Environment",
 		)
 	}
 
@@ -170,6 +181,28 @@ func SetupReconcilerWithManager(
 		Complete(e)
 }
 
+func indexEnvsByApp(obj client.Object) []string {
+	env := obj.(*api.Environment) // nolint: forcetypeassert
+	if env.Spec.HealthChecks == nil {
+		return nil
+	}
+	apps := make([]string, len(env.Spec.HealthChecks.ArgoCDAppChecks))
+	for i, appCheck := range env.Spec.HealthChecks.ArgoCDAppChecks {
+		apps[i] =
+			fmt.Sprintf("%s:%s", appCheck.AppNamespace, appCheck.AppName)
+	}
+	return apps
+}
+
+func indexOutstandingPromotionsByEnvironment(obj client.Object) []string {
+	promo := obj.(*api.Promotion) // nolint: forcetypeassert
+	switch promo.Status.Phase {
+	case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
+		return nil
+	}
+	return []string{promo.Spec.Environment}
+}
+
 func newReconciler(
 	client client.Client,
 	credentialsDB credentials.Database,
@@ -180,6 +213,9 @@ func newReconciler(
 	}
 
 	// The following default behaviors are overridable for testing purposes:
+
+	// Loop guard:
+	r.hasOutstandingPromotionsFn = r.hasOutstandingPromotions
 
 	// Common:
 	r.getArgoCDAppFn = libArgoCD.GetApplication
@@ -307,6 +343,23 @@ func (r *reconciler) sync(
 	status := *env.Status.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
+
+	// Skip the entire reconciliation loop if there are Promotions associate with
+	// this Environment in a non-terminal state. The promotion process and this
+	// reconciliation loop BOTH update Environment status, so this check helps us
+	// to avoid race conditions that may otherwise arise.
+	hasOutstandingPromos, err :=
+		r.hasOutstandingPromotionsFn(ctx, env.Namespace, env.Name)
+	if err != nil {
+		return status, err
+	}
+	if hasOutstandingPromos {
+		logger.Debug(
+			"Environment has outstanding Promotions; skipping this reconciliation " +
+				"loop",
+		)
+		return status, nil
+	}
 
 	// Only perform health checks if we have a current state
 	if status.CurrentState != nil {
@@ -472,6 +525,33 @@ func (r *reconciler) sync(
 	logger.Debug("created Promotion resource")
 
 	return status, nil
+}
+
+func (r *reconciler) hasOutstandingPromotions(
+	ctx context.Context,
+	envNamespace string,
+	envName string,
+) (bool, error) {
+	promos := api.PromotionList{}
+	if err := r.client.List(
+		ctx,
+		&promos,
+		&client.ListOptions{
+			Namespace: envNamespace,
+			FieldSelector: fields.Set(map[string]string{
+				outstandingPromosByEnvIndexField: envName,
+			}).AsSelector(),
+		},
+	); err != nil {
+		return false, errors.Wrapf(
+			err,
+			"error listing outstanding Promotions for Environment %q in "+
+				"namespace %q",
+			envNamespace,
+			envName,
+		)
+	}
+	return len(promos.Items) > 0, nil
 }
 
 func (r *reconciler) getLatestStateFromRepos(
