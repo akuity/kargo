@@ -1,4 +1,4 @@
-package cmd
+package controlplane
 
 import (
 	"encoding/json"
