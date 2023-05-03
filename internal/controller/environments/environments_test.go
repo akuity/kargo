@@ -25,8 +25,13 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 
 	// Assert that all overridable behaviors were initialized to a default:
 
-	// Health checks:
+	// Loop guard:
+	require.NotNil(t, e.hasOutstandingPromotionsFn)
+
+	// Common:
 	require.NotNil(t, e.getArgoCDAppFn)
+
+	// Health checks:
 	require.NotNil(t, e.checkHealthFn)
 
 	// Syncing:
@@ -40,14 +45,121 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestCommitIDFn)
 }
 
+func TestIndexEnvsByApp(t *testing.T) {
+	testCases := []struct {
+		name        string
+		environment *api.Environment
+		assertions  func([]string)
+	}{
+		{
+			name: "environment has no health checks",
+			environment: &api.Environment{
+				Spec: &api.EnvironmentSpec{},
+			},
+			assertions: func(res []string) {
+				require.Nil(t, res)
+			},
+		},
+		{
+			name: "environment has health checks",
+			environment: &api.Environment{
+				Spec: &api.EnvironmentSpec{
+					HealthChecks: &api.HealthChecks{
+						ArgoCDAppChecks: []api.ArgoCDAppCheck{
+							{
+								AppNamespace: "fake-namespace",
+								AppName:      "fake-app",
+							},
+							{
+								AppNamespace: "another-fake-namespace",
+								AppName:      "another-fake-app",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(res []string) {
+				require.Equal(
+					t,
+					[]string{
+						"fake-namespace:fake-app",
+						"another-fake-namespace:another-fake-app",
+					},
+					res,
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			indexEnvsByApp(testCase.environment)
+		})
+	}
+}
+
+func TestIndexOutstandingPromotionsByEnvironment(t *testing.T) {
+	testCases := []struct {
+		name       string
+		promotion  *api.Promotion
+		assertions func([]string)
+	}{
+		{
+			name: "promotion is in terminal phase",
+			promotion: &api.Promotion{
+				Spec: &api.PromotionSpec{
+					Environment: "fake-env",
+				},
+				Status: api.PromotionStatus{
+					Phase: api.PromotionPhaseComplete,
+				},
+			},
+			assertions: func(res []string) {
+				require.Nil(t, res)
+			},
+		},
+		{
+			name: "promotion is in terminal phase",
+			promotion: &api.Promotion{
+				Spec: &api.PromotionSpec{
+					Environment: "fake-env",
+				},
+				Status: api.PromotionStatus{
+					Phase: api.PromotionPhasePending,
+				},
+			},
+			assertions: func(res []string) {
+				require.Equal(t, []string{"fake-env"}, res)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			indexOutstandingPromotionsByEnvironment(testCase.promotion)
+		})
+	}
+}
+
 func TestSync(t *testing.T) {
 	scheme, err := api.SchemeBuilder.Build()
 	require.NoError(t, err)
 
+	noOutstandingPromotionsFn := func(
+		context.Context,
+		string,
+		string,
+	) (bool, error) {
+		return false, nil
+	}
+
 	testCases := []struct {
-		name          string
-		spec          api.EnvironmentSpec
-		initialStatus api.EnvironmentStatus
+		name                       string
+		spec                       api.EnvironmentSpec
+		initialStatus              api.EnvironmentStatus
+		hasOutstandingPromotionsFn func(
+			ctx context.Context,
+			envNamespace string,
+			envName string,
+		) (bool, error)
 		checkHealthFn func(
 			context.Context,
 			api.EnvironmentState,
@@ -66,11 +178,55 @@ func TestSync(t *testing.T) {
 		assertions func(initialStatus, newStatus api.EnvironmentStatus, client client.Client, err error)
 	}{
 		{
+			name: "error checking for outstanding promotions",
+			hasOutstandingPromotionsFn: func(
+				context.Context,
+				string,
+				string,
+			) (bool, error) {
+				return false, errors.New("something went wrong")
+			},
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				_ client.Client,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "outstanding promotions found",
+			hasOutstandingPromotionsFn: func(
+				context.Context,
+				string,
+				string,
+			) (bool, error) {
+				return true, nil
+			},
+			assertions: func(
+				initialStatus api.EnvironmentStatus,
+				newStatus api.EnvironmentStatus,
+				_ client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
 			name: "no subscriptions",
 			spec: api.EnvironmentSpec{
 				Subscriptions: &api.Subscriptions{},
 			},
-			initialStatus: api.EnvironmentStatus{},
+			initialStatus:              api.EnvironmentStatus{},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
@@ -90,6 +246,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestStateFromReposFn: func(
 				context.Context,
 				string,
@@ -117,6 +274,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestStateFromReposFn: func(
 				context.Context,
 				string,
@@ -161,6 +319,23 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
+				CurrentState: &api.EnvironmentState{
+					Commits: []api.GitCommit{
+						{
+							RepoURL: "fake-url",
+							ID:      "fake-commit",
+						},
+					},
+					Images: []api.Image{
+						{
+							RepoURL: "fake-url",
+							Tag:     "fake-tag",
+						},
+					},
+					Health: &api.Health{
+						Status: api.HealthStateHealthy,
+					},
+				},
 				History: []api.EnvironmentState{
 					{
 						Commits: []api.GitCommit{
@@ -181,6 +356,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			checkHealthFn: func(
 				context.Context,
 				api.EnvironmentState,
@@ -234,6 +410,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getAvailableStatesFromUpstreamEnvsFn: func(
 				context.Context,
 				[]api.EnvironmentSubscription,
@@ -265,6 +442,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getAvailableStatesFromUpstreamEnvsFn: func(
 				context.Context,
 				[]api.EnvironmentSubscription,
@@ -301,6 +479,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getAvailableStatesFromUpstreamEnvsFn: func(
 				context.Context,
 				[]api.EnvironmentSubscription,
@@ -335,6 +514,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestStateFromReposFn: func(
 				context.Context,
 				string,
@@ -401,6 +581,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestStateFromReposFn: func(
 				context.Context,
 				string,
@@ -482,6 +663,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestStateFromReposFn: func(
 				context.Context,
 				string,
@@ -556,6 +738,7 @@ func TestSync(t *testing.T) {
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestStateFromReposFn: func(
 				context.Context,
 				string,
@@ -633,10 +816,10 @@ func TestSync(t *testing.T) {
 			Spec:   &testCase.spec,
 			Status: testCase.initialStatus,
 		}
-		require.NoError(t, err)
 		// nolint: lll
 		reconciler := &reconciler{
 			client:                               testCase.client,
+			hasOutstandingPromotionsFn:           testCase.hasOutstandingPromotionsFn,
 			checkHealthFn:                        testCase.checkHealthFn,
 			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
 			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn,
