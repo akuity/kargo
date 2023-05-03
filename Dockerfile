@@ -20,7 +20,7 @@ ARG GIT_TREE_STATE
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
       -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} -X ${VERSION_PACKAGE}.gitTreeState=${GIT_TREE_STATE}" \
       -o bin/kargo \
-      ./cmd \
+      ./cmd/controlplane \
     && bin/kargo version
 
 WORKDIR /kargo/bin
