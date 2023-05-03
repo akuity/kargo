@@ -55,6 +55,8 @@ type Repo interface {
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
 	// in the remote repository.
 	RemoteBranchExists(branch string) (bool, error)
+	// ResetHard performs a hard reset.
+	ResetHard() error
 	// URL returns the remote URL of the repository.
 	URL() string
 	// HomeDir returns an absolute path to the home directory of the system user
@@ -283,6 +285,12 @@ func (r *repo) RemoteBranchExists(branch string) (bool, error) {
 		branch,
 		r.url,
 	)
+}
+
+func (r *repo) ResetHard() error {
+	_, err :=
+		libExec.Exec(r.buildCommand("git", "reset", "--hard"))
+	return errors.Wrap(err, "error resetting branch working tree")
 }
 
 func (r *repo) URL() string {
