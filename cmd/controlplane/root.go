@@ -1,4 +1,4 @@
-package cli
+package main
 
 import (
 	"context"
@@ -19,5 +19,9 @@ var (
 )
 
 func Execute(ctx context.Context) error {
+	rootCmd.AddCommand(newAPICommand())
+	rootCmd.AddCommand(newAPIProxyCommand())
+	rootCmd.AddCommand(newControllerCommand())
+	rootCmd.AddCommand(newVersionCommand())
 	return rootCmd.ExecuteContext(ctx)
 }
