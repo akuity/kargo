@@ -274,13 +274,13 @@ func (w *webhook) validateGitRepoUpdate(
 	if update.Helm != nil {
 		count++
 	}
-	if count != 1 {
+	if count > 1 {
 		return field.ErrorList{
 			field.Invalid(
 				f,
 				update,
 				fmt.Sprintf(
-					"exactly one of %s.bookkeeper, or %s.kustomize, or %s.helm must "+
+					"no more than one of %s.bookkeeper, or %s.kustomize, or %s.helm may "+
 						"be defined",
 					f.String(),
 					f.String(),
