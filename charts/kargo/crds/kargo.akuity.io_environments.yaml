@@ -232,13 +232,6 @@ spec:
                             This is mutually exclusive with the Kustomize and Helm
                             fields.
                           type: object
-                        branch:
-                          description: Branch references a particular branch of the
-                            repository to be updated. This field is optional. Leaving
-                            this unspecified is equivalent to specifying the repository's
-                            default branch, whatever that may happen to be -- typically
-                            "main" or "master".
-                          type: string
                         helm:
                           description: Helm describes how to use Helm to incorporate
                             newly observed materials into the Environment. This is
@@ -359,14 +352,33 @@ spec:
                           required:
                           - images
                           type: object
+                        readBranch:
+                          description: ReadBranch specifies a particular branch of
+                            the repository from which to locate contents that will
+                            be written to the branch specified by the WriteBranch
+                            field. This field is optional. In cases where an EnvironmentState
+                            includes a GitCommit, that commit's ID will supersede
+                            the value of this field. Therefore, in practice, this
+                            field is only used to clarify what branch of a repository
+                            can be treated as a source of manifests or other configuration
+                            when an Environment has no subscription to that repository.
+                          pattern: ^(\w+([-/]\w+)*)?$
+                          type: string
                         repoURL:
                           description: RepoURL is the URL of the repository to update.
                             This is a required field.
                           minLength: 1
                           pattern: ^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$
                           type: string
+                        writeBranch:
+                          description: WriteBranch specifies the particular branch
+                            of the repository to be updated. This is a required field.
+                          minLength: 1
+                          pattern: ^\w+([-/]\w+)*$
+                          type: string
                       required:
                       - repoURL
+                      - writeBranch
                       type: object
                     type: array
                 type: object
@@ -420,10 +432,9 @@ spec:
                           properties:
                             branch:
                               description: Branch references a particular branch of
-                                the repository. This field is optional. Leaving this
-                                unspecified is equivalent to specifying the repository's
-                                default branch, whatever that may happen to be --
-                                typically "main" or "master".
+                                the repository. This is a required field.
+                              minLength: 1
+                              pattern: ^\w+([-/]\w+)*$
                               type: string
                             repoURL:
                               description: URL is the repository's URL. This is a
@@ -432,6 +443,7 @@ spec:
                               pattern: ^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$
                               type: string
                           required:
+                          - branch
                           - repoURL
                           type: object
                         type: array
@@ -575,6 +587,10 @@ spec:
                         description: GitCommit describes a specific commit from a
                           specific Git repository.
                         properties:
+                          branch:
+                            description: Branch denotes the branch of the repository
+                              where this commit was found.
+                            type: string
                           healthCheckCommit:
                             description: HealthCheckCommit is the ID of a specific
                               commit. When specified, assessments of Environment health
@@ -682,6 +698,10 @@ spec:
                       description: GitCommit describes a specific commit from a specific
                         Git repository.
                       properties:
+                        branch:
+                          description: Branch denotes the branch of the repository
+                            where this commit was found.
+                          type: string
                         healthCheckCommit:
                           description: HealthCheckCommit is the ID of a specific commit.
                             When specified, assessments of Environment health will
@@ -798,6 +818,10 @@ spec:
                         description: GitCommit describes a specific commit from a
                           specific Git repository.
                         properties:
+                          branch:
+                            description: Branch denotes the branch of the repository
+                              where this commit was found.
+                            type: string
                           healthCheckCommit:
                             description: HealthCheckCommit is the ID of a specific
                               commit. When specified, assessments of Environment health
