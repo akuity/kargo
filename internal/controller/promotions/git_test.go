@@ -15,8 +15,10 @@ import (
 func TestApplyGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
 		name             string
+		newState         api.EnvironmentState
 		credentialsDB    credentials.Database
 		gitApplyUpdateFn func(
+			string,
 			string,
 			string,
 			*git.Credentials,
@@ -24,6 +26,31 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 		) (string, error)
 		assertions func(inState, outState api.EnvironmentState, err error)
 	}{
+		{
+			name: "invalid update",
+			newState: api.EnvironmentState{
+				Commits: []api.GitCommit{
+					{
+						RepoURL: "fake-url",
+						Branch:  "fake-branch",
+					},
+				},
+			},
+			assertions: func(inState, outState api.EnvironmentState, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"invalid update specified; cannot write to branch",
+				)
+				require.Contains(
+					t,
+					err.Error(),
+					"because it will form a subscription loop",
+				)
+			},
+		},
+
 		{
 			name: "error getting repo credentials",
 			credentialsDB: &credentials.FakeDB{
@@ -63,6 +90,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 			gitApplyUpdateFn: func(
 				string,
 				string,
+				string,
 				*git.Credentials,
 				func(string, string) (string, error),
 			) (string, error) {
@@ -76,6 +104,15 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 
 		{
 			name: "success",
+			newState: api.EnvironmentState{
+				Commits: []api.GitCommit{
+					{
+						RepoURL: "fake-url",
+						// This branch deliberately doesn't match the branch we read from
+						Branch: "another-fake-branch",
+					},
+				},
+			},
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(
 					context.Context,
@@ -89,6 +126,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 			gitApplyUpdateFn: func(
 				string,
 				string,
+				string,
 				*git.Credentials,
 				func(string, string) (string, error),
 			) (string, error) {
@@ -97,11 +135,10 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.NoError(t, err)
 				require.Len(t, outState.Commits, 1)
-				// Check that the commit ID and state IDs changed
-				require.NotEqual(t, inState.Commits[0].ID, outState.Commits[0].ID)
-				require.NotEqual(t, inState.ID, outState.ID)
+				// Check that HealthCheckCommit got set
+				require.NotEmpty(t, outState.Commits[0].HealthCheckCommit)
 				// Everything else should be unchanged
-				outState.Commits[0].ID = inState.Commits[0].ID
+				outState.Commits[0].HealthCheckCommit = ""
 				outState.ID = inState.ID
 				require.Equal(t, inState, outState)
 			},
@@ -113,23 +150,16 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 				credentialsDB:    testCase.credentialsDB,
 				gitApplyUpdateFn: testCase.gitApplyUpdateFn,
 			}
-			newState := api.EnvironmentState{
-				Commits: []api.GitCommit{
-					{
-						RepoURL: "fake-url",
-						ID:      "fake-commit",
-					},
-				},
-			}
 			outState, err := reconciler.applyGitRepoUpdate(
 				context.Background(),
 				"fake-namespace",
-				newState,
+				testCase.newState,
 				api.GitRepoUpdate{
-					RepoURL: "fake-url",
+					RepoURL:     "fake-url",
+					WriteBranch: "fake-branch",
 				},
 			)
-			testCase.assertions(newState, outState, err)
+			testCase.assertions(testCase.newState, outState, err)
 		})
 	}
 }

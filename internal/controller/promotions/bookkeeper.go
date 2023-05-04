@@ -22,30 +22,25 @@ func (r *reconciler) applyBookkeeperUpdate(
 		return newState, nil
 	}
 
-	if update.Branch == "" {
-		return newState, errors.Errorf(
-			"cannot update repo %q using Bookkeeper because no target branch "+
-				"is specified",
-			update.RepoURL,
-		)
-	}
-
-	var commitID string
-	var commitIndex int
-	var commit api.GitCommit
-	for commitIndex, commit = range newState.Commits {
+	var readRef string
+	commitIndex := -1
+	for i, commit := range newState.Commits {
 		if commit.RepoURL == update.RepoURL {
-			commitID = commit.ID
+			if update.WriteBranch == commit.Branch {
+				return newState, errors.Errorf(
+					"invalid update specified; cannot write to branch %q of repo %q "+
+						"because it will form a subscription loop",
+					update.RepoURL,
+					update.WriteBranch,
+				)
+			}
+			commitIndex = i
+			readRef = commit.ID
 			break
 		}
 	}
-	if commitID == "" {
-		return newState, errors.Errorf(
-			"cannot update repo %q using Bookkeeper because the environment does "+
-				"not subscribe to repo %q",
-			update.RepoURL,
-			update.RepoURL,
-		)
+	if readRef == "" {
+		readRef = update.ReadBranch
 	}
 
 	images := make([]string, len(newState.Images))
@@ -77,9 +72,9 @@ func (r *reconciler) applyBookkeeperUpdate(
 	req := bookkeeper.RenderRequest{
 		RepoURL:      update.RepoURL,
 		RepoCreds:    repoCreds,
-		Commit:       commitID,
+		Commit:       readRef,
 		Images:       images,
-		TargetBranch: update.Branch,
+		TargetBranch: update.WriteBranch,
 	}
 	res, err := r.bookkeeperService.RenderManifests(ctx, req)
 	if err != nil {
@@ -91,10 +86,14 @@ func (r *reconciler) applyBookkeeperUpdate(
 	case bookkeeper.ActionTakenPushedDirectly:
 		logger.WithField("commit", res.CommitID).
 			Debug("pushed new commit to repo via Bookkeeper")
-		newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
+		if commitIndex > -1 {
+			newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
+		}
 	case bookkeeper.ActionTakenNone:
 		logger.Debug("Bookkeeper made no changes to repo")
-		newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
+		if commitIndex > -1 {
+			newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
+		}
 	default:
 		// TODO: Not sure yet how to handle PRs.
 	}

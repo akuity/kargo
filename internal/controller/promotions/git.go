@@ -21,6 +21,27 @@ func (r *reconciler) applyGitRepoUpdate(
 
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
+	var readRef string
+	commitIndex := -1
+	for i, commit := range newState.Commits {
+		if commit.RepoURL == update.RepoURL {
+			if update.WriteBranch == commit.Branch {
+				return newState, errors.Errorf(
+					"invalid update specified; cannot write to branch %q of repo %q "+
+						"because it will form a subscription loop",
+					update.RepoURL,
+					update.WriteBranch,
+				)
+			}
+			commitIndex = i
+			readRef = commit.ID
+			break
+		}
+	}
+	if readRef == "" {
+		readRef = update.ReadBranch
+	}
+
 	creds, ok, err :=
 		r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, update.RepoURL)
 	if err != nil {
@@ -42,7 +63,11 @@ func (r *reconciler) applyGitRepoUpdate(
 		logger.Debug("found no credentials for git repo")
 	}
 
-	commitID, err := r.gitApplyUpdateFn(update.RepoURL, update.Branch, repoCreds,
+	commitID, err := r.gitApplyUpdateFn(
+		update.RepoURL,
+		readRef,
+		update.WriteBranch,
+		repoCreds,
 		func(homeDir, workingDir string) (string, error) {
 			if update.Kustomize != nil {
 				if err = r.applyKustomize(
@@ -50,17 +75,10 @@ func (r *reconciler) applyGitRepoUpdate(
 					*update.Kustomize,
 					workingDir,
 				); err != nil {
-					if update.Branch == "" {
-						return "", errors.Wrapf(
-							err,
-							"error updating git repository %q via Kustomize",
-							update.RepoURL,
-						)
-					}
 					return "", errors.Wrapf(
 						err,
 						"error updating branch %q in git repository %q via Kustomize",
-						update.Branch,
+						update.WriteBranch,
 						update.RepoURL,
 					)
 				}
@@ -73,17 +91,10 @@ func (r *reconciler) applyGitRepoUpdate(
 					homeDir,
 					workingDir,
 				); err != nil {
-					if update.Branch == "" {
-						return "", errors.Wrapf(
-							err,
-							"error updating git repository %q via Helm",
-							update.RepoURL,
-						)
-					}
 					return "", errors.Wrapf(
 						err,
 						"error updating branch %q in git repository %q via Helm",
-						update.Branch,
+						update.WriteBranch,
 						update.RepoURL,
 					)
 				}
@@ -97,19 +108,8 @@ func (r *reconciler) applyGitRepoUpdate(
 		return newState, err
 	}
 
-	// Only try to update state if commitID isn't empty. If it's empty, it
-	// indicates no change was committed to the repository and there's nothing to
-	// update here.
-	if commitID != "" {
-		logger.WithField("commit", commitID).Debug("pushed new commit to repo")
-		for i := range newState.Commits {
-			if newState.Commits[i].RepoURL == update.RepoURL {
-				newState.Commits[i].ID = commitID
-			}
-		}
-		newState.UpdateStateID()
-	} else {
-		logger.Debug("no changes pushed to repo")
+	if commitIndex > -1 {
+		newState.Commits[commitIndex].HealthCheckCommit = commitID
 	}
 
 	return newState, nil
