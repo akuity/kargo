@@ -53,6 +53,7 @@ func (r *reconciler) getLatestCommits(
 		latestCommits[i] = api.GitCommit{
 			RepoURL: sub.RepoURL,
 			ID:      commit,
+			Branch:  sub.Branch,
 		}
 	}
 	return latestCommits, nil
