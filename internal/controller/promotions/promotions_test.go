@@ -50,7 +50,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 func TestInitializeQueues(t *testing.T) {
 	scheme, err := api.SchemeBuilder.Build()
 	require.NoError(t, err)
-	reconciler := reconciler{
+	r := reconciler{
 		client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			&api.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
@@ -64,7 +64,7 @@ func TestInitializeQueues(t *testing.T) {
 		).Build(),
 		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
-	err = reconciler.initializeQueues(context.Background())
+	err = r.initializeQueues(context.Background())
 	require.NoError(t, err)
 }
 
@@ -94,7 +94,7 @@ func TestNewPromotionsQueue(t *testing.T) {
 		if object == nil {
 			break
 		}
-		promo := object.(*api.Promotion)
+		promo := object.(*api.Promotion) // nolint: forcetypeassert
 		if lastTime != nil {
 			require.Greater(t, promo.CreationTimestamp.Time, *lastTime)
 		}
@@ -110,7 +110,6 @@ func TestPromotionSync(t *testing.T) {
 		assertions func(
 			api.PromotionStatus,
 			map[types.NamespacedName]runtime.PriorityQueue,
-			error,
 		)
 	}{
 		{
@@ -125,9 +124,7 @@ func TestPromotionSync(t *testing.T) {
 			assertions: func(
 				status api.PromotionStatus,
 				pqs map[types.NamespacedName]runtime.PriorityQueue,
-				err error,
 			) {
-				require.NoError(t, err)
 				require.Equal(
 					t,
 					api.PromotionStatus{
@@ -156,9 +153,7 @@ func TestPromotionSync(t *testing.T) {
 			assertions: func(
 				status api.PromotionStatus,
 				pqs map[types.NamespacedName]runtime.PriorityQueue,
-				err error,
 			) {
-				require.NoError(t, err)
 				require.Equal( // Status should have phase assigned
 					t,
 					api.PromotionStatus{
@@ -190,9 +185,7 @@ func TestPromotionSync(t *testing.T) {
 			assertions: func(
 				status api.PromotionStatus,
 				pqs map[types.NamespacedName]runtime.PriorityQueue,
-				err error,
 			) {
-				require.NoError(t, err)
 				require.Equal( // Status should have phase assigned
 					t,
 					api.PromotionStatus{
@@ -212,14 +205,13 @@ func TestPromotionSync(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := reconciler{
+			r := reconciler{
 				promoQueuesByEnv: testCase.pqs,
 			}
-			status, err := reconciler.sync(context.Background(), testCase.promo)
+			status := r.sync(context.Background(), testCase.promo)
 			testCase.assertions(
 				status,
-				reconciler.promoQueuesByEnv,
-				err,
+				r.promoQueuesByEnv,
 			)
 		})
 	}
@@ -249,7 +241,7 @@ func TestSerializedSync(t *testing.T) {
 	err = pq.Push(promo)
 	require.NoError(t, err)
 
-	reconciler := reconciler{
+	r := reconciler{
 		client: client,
 		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{
 			{Namespace: "fake-namespace", Name: "fake-env"}: pq,
@@ -263,12 +255,12 @@ func TestSerializedSync(t *testing.T) {
 	// should be plenty of time to handle the one Promotion we've given it.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	reconciler.serializedSync(ctx, time.Second)
+	r.serializedSync(ctx, time.Second)
 
 	// When we're done, the queue should be empty and the Promotion should be
 	// complete.
 	require.Equal(t, 0, pq.Depth())
-	promo, err = reconciler.getPromo(
+	promo, err = r.getPromo(
 		ctx,
 		types.NamespacedName{
 			Namespace: "fake-namespace",
@@ -330,10 +322,10 @@ func TestGetPromo(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := reconciler{
+			r := reconciler{
 				client: testCase.client,
 			}
-			promo, err := reconciler.getPromo(
+			promo, err := r.getPromo(
 				context.Background(),
 				types.NamespacedName{
 					Namespace: "fake-namespace",

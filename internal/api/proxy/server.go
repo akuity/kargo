@@ -51,6 +51,8 @@ func (s *server) Serve(ctx context.Context) error {
 		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)),
 	)
 	// TODO: Register services
+	// TODO: Set header timeout to avoid potential Slowloris attack
+	// nolint: gosec
 	srv := &http.Server{
 		Handler: mux,
 	}

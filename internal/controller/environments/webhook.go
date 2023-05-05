@@ -27,7 +27,7 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
-	env := obj.(*api.Environment)
+	env := obj.(*api.Environment) // nolint: forcetypeassert
 	// Note that defaults are applied BEFORE validation, so we do not have the
 	// luxury of assuming certain required fields must be non-nil.
 	if env.Spec != nil {
@@ -65,10 +65,8 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 	return nil
 }
 
-func (w *webhook) ValidateCreate(
-	_ context.Context,
-	obj runtime.Object,
-) error {
+func (w *webhook) ValidateCreate(_ context.Context, obj runtime.Object) error {
+	// nolint: forcetypeassert
 	return w.validateCreateOrUpdate(obj.(*api.Environment))
 }
 
@@ -77,6 +75,7 @@ func (w *webhook) ValidateUpdate(
 	_ runtime.Object,
 	newObj runtime.Object,
 ) error {
+	// nolint: forcetypeassert
 	return w.validateCreateOrUpdate(newObj.(*api.Environment))
 }
 

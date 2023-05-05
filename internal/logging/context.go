@@ -32,7 +32,7 @@ func ContextWithLogger(ctx context.Context, logger *log.Entry) context.Context {
 // returned.
 func LoggerFromContext(ctx context.Context) *log.Entry {
 	if logger := ctx.Value(loggerContextKey{}); logger != nil {
-		return ctx.Value(loggerContextKey{}).(*log.Entry)
+		return ctx.Value(loggerContextKey{}).(*log.Entry) // nolint: forcetypeassert
 	}
 	return globalLogger
 }

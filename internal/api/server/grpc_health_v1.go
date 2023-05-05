@@ -16,6 +16,9 @@ func newGRPCHealthV1Server() grpc_health_v1.HealthServer {
 	return &grpcHealthV1Server{}
 }
 
-func (s *grpcHealthV1Server) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
+func (s *grpcHealthV1Server) Check(
+	ctx context.Context,
+	req *grpc_health_v1.HealthCheckRequest,
+) (*grpc_health_v1.HealthCheckResponse, error) {
 	return handler.NewGRPCHealthCheckV1()(ctx, req)
 }

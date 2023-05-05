@@ -276,10 +276,10 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			allowed: true,
 		},
 	}
-	reconciler := reconciler{}
+	r := reconciler{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := reconciler.authorizeArgoCDAppUpdate(
+			err := r.authorizeArgoCDAppUpdate(
 				v1.ObjectMeta{
 					Name:      "name-yep",
 					Namespace: "ns-yep",
@@ -511,13 +511,13 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := reconciler{
+			r := reconciler{
 				getArgoCDAppFn:            testCase.getArgoCDAppFn,
 				applyArgoCDSourceUpdateFn: testCase.applyArgoCDSourceUpdateFn,
 				patchFn:                   testCase.patchFn,
 			}
 			testCase.assertions(
-				reconciler.applyArgoCDAppUpdate(
+				r.applyArgoCDAppUpdate(
 					context.Background(),
 					v1.ObjectMeta{
 						Name:      "fake-env",

@@ -31,7 +31,7 @@ const (
 	// credentials stored in Kubernetes Secrets by repository type + URL.
 	secretsByRepo = "repo"
 
-	kargoSecretTypeLabel = "kargo.akuity.io/secret-type"
+	kargoSecretTypeLabel = "kargo.akuity.io/secret-type" // nolint: gosec
 )
 
 // Credentials generically represents any type of repository credential.

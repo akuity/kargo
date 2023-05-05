@@ -114,12 +114,12 @@ func TestGetLatestCommits(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := reconciler{
+			r := reconciler{
 				credentialsDB:       testCase.credentialsDB,
 				getLatestCommitIDFn: testCase.getLatestCommitIDFn,
 			}
 			testCase.assertions(
-				reconciler.getLatestCommits(
+				r.getLatestCommits(
 					context.Background(),
 					"fake-namespace",
 					[]api.GitSubscription{

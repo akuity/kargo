@@ -14,8 +14,10 @@ import (
 // test our workarounds.
 
 func TestGetNewestVersionFromTags(t *testing.T) {
-	t.Run("Find the latest version without any constraint", func(t *testing.T) {
-		tagList := newImageTagList([]string{"0.1", "0.5.1", "0.9", "1.0", "1.0.1", "1.1.2", "2.0.3"})
+	t.Run("Find the latest version without any constraint", func(t *testing.T) { // nolint: lll
+		tagList := newImageTagList([]string{
+			"0.1", "0.5.1", "0.9", "1.0", "1.0.1", "1.1.2", "2.0.3",
+		})
 		img := image.NewFromIdentifier("jannfis/test:1.0")
 		vc := image.VersionConstraint{}
 		newTag, err := getNewestVersionFromTags(img, &vc, tagList)
@@ -23,17 +25,22 @@ func TestGetNewestVersionFromTags(t *testing.T) {
 		assert.Equal(t, "2.0.3", newTag)
 	})
 
-	t.Run("Find the latest version with a semver constraint on major", func(t *testing.T) {
-		tagList := newImageTagList([]string{"0.1", "0.5.1", "0.9", "1.0", "1.0.1", "1.1.2", "2.0.3"})
+	t.Run("Find the latest version with a semver constraint on major", func(t *testing.T) { // nolint: lll
+		tagList := newImageTagList([]string{
+			"0.1", "0.5.1", "0.9", "1.0", "1.0.1", "1.1.2", "2.0.3",
+		})
 		img := image.NewFromIdentifier("jannfis/test:1.0")
 		vc := image.VersionConstraint{Constraint: "^1.0"}
 		newTag, err := getNewestVersionFromTags(img, &vc, tagList)
 		require.NoError(t, err)
 		assert.Equal(t, "1.1.2", newTag)
-	})
+	},
+	)
 
-	t.Run("Find the latest version with a semver constraint on patch", func(t *testing.T) {
-		tagList := newImageTagList([]string{"0.1", "0.5.1", "0.9", "1.0", "1.0.1", "1.1.2", "2.0.3"})
+	t.Run("Find the latest version with a semver constraint on patch", func(t *testing.T) { // nolint: lll
+		tagList := newImageTagList([]string{
+			"0.1", "0.5.1", "0.9", "1.0", "1.0.1", "1.1.2", "2.0.3",
+		})
 		img := image.NewFromIdentifier("jannfis/test:1.0")
 		vc := image.VersionConstraint{Constraint: "~1.0"}
 		newTag, err := getNewestVersionFromTags(img, &vc, tagList)
@@ -41,7 +48,7 @@ func TestGetNewestVersionFromTags(t *testing.T) {
 		assert.Equal(t, "1.0.1", newTag)
 	})
 
-	t.Run("Find the latest version with a semver constraint that has no match", func(t *testing.T) {
+	t.Run("Find the latest version with a semver constraint that has no match", func(t *testing.T) { // nolint: lll
 		tagList := newImageTagList([]string{"0.1", "0.5.1", "0.9", "2.0.3"})
 		img := image.NewFromIdentifier("jannfis/test:1.0")
 		vc := image.VersionConstraint{Constraint: "~1.0"}
@@ -50,7 +57,7 @@ func TestGetNewestVersionFromTags(t *testing.T) {
 		require.Empty(t, newTag)
 	})
 
-	t.Run("Find the latest version with a semver constraint that is invalid", func(t *testing.T) {
+	t.Run("Find the latest version with a semver constraint that is invalid", func(t *testing.T) { // nolint: lll
 		tagList := newImageTagList([]string{"0.1", "0.5.1", "0.9", "2.0.3"})
 		img := image.NewFromIdentifier("jannfis/test:1.0")
 		vc := image.VersionConstraint{Constraint: "latest"}
@@ -69,7 +76,9 @@ func TestGetNewestVersionFromTags(t *testing.T) {
 	})
 
 	t.Run("Find the latest version using latest sortmode", func(t *testing.T) {
-		tagList := newImageTagListWithDate([]string{"zz", "bb", "yy", "cc", "yy", "aa", "ll"})
+		tagList := newImageTagListWithDate([]string{
+			"zz", "bb", "yy", "cc", "yy", "aa", "ll",
+		})
 		img := image.NewFromIdentifier("jannfis/test:bb")
 		vc := image.VersionConstraint{Strategy: image.StrategyLatest}
 		newTag, err := getNewestVersionFromTags(img, &vc, tagList)
@@ -77,8 +86,10 @@ func TestGetNewestVersionFromTags(t *testing.T) {
 		assert.Equal(t, "ll", newTag)
 	})
 
-	t.Run("Find the latest version using latest sortmode, invalid tags", func(t *testing.T) {
-		tagList := newImageTagListWithDate([]string{"zz", "bb", "yy", "cc", "yy", "aa", "ll"})
+	t.Run("Find the latest version using latest sortmode, invalid tags", func(t *testing.T) { // nolint: lll
+		tagList := newImageTagListWithDate([]string{
+			"zz", "bb", "yy", "cc", "yy", "aa", "ll",
+		})
 		img := image.NewFromIdentifier("jannfis/test:bb")
 		vc := image.VersionConstraint{Strategy: image.StrategySemVer}
 		newTag, err := getNewestVersionFromTags(img, &vc, tagList)

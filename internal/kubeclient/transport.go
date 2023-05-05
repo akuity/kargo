@@ -20,7 +20,9 @@ func newAuthRoundTripper(rt http.RoundTripper) http.RoundTripper {
 	}
 }
 
-func (rt *authRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+func (rt *authRoundTripper) RoundTrip(
+	req *http.Request,
+) (*http.Response, error) {
 	if v, ok := AuthCredentialFromContext(req.Context()); ok {
 		req.Header.Set("Authorization", v)
 	}

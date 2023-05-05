@@ -211,11 +211,11 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := reconciler{
+			r := reconciler{
 				credentialsDB:     testCase.credentialsDB,
 				bookkeeperService: testCase.bookkeeperService,
 			}
-			newState, err := reconciler.applyBookkeeperUpdate(
+			newState, err := r.applyBookkeeperUpdate(
 				context.Background(),
 				"fake-namespace",
 				testCase.newState,

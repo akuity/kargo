@@ -97,6 +97,7 @@ func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
 ) error {
+	// nolint: forcetypeassert
 	return w.authorizeFn(ctx, obj.(*api.Promotion), "create")
 }
 
@@ -105,14 +106,14 @@ func (w *webhook) ValidateUpdate(
 	oldObj runtime.Object,
 	newObj runtime.Object,
 ) error {
-	promo := newObj.(*api.Promotion)
+	promo := newObj.(*api.Promotion) // nolint: forcetypeassert
 
 	if err := w.authorizeFn(ctx, promo, "update"); err != nil {
 		return err
 	}
 
 	// PromotionSpecs are meant to be immutable
-	if *promo.Spec != *(oldObj.(*api.Promotion).Spec) {
+	if *promo.Spec != *(oldObj.(*api.Promotion).Spec) { // nolint: forcetypeassert
 		return apierrors.NewInvalid(
 			schema.GroupKind{
 				Group: api.GroupVersion.Group,
@@ -137,7 +138,7 @@ func (w *webhook) ValidateDelete(
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	promo := obj.(*api.Promotion)
+	promo := obj.(*api.Promotion) // nolint: forcetypeassert
 
 	// Special logic for delete only. Allow any delete by the Kubernetes namespace
 	// controller. This prevents the webhook from stopping a namespace from being

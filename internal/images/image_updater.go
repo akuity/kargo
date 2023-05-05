@@ -50,8 +50,7 @@ func getNewestVersionFromTags(
 		// TODO: Shall we really ensure a valid semver on the current tag?
 		// This prevents updating from a non-semver tag currently.
 		if img.ImageTag != nil && img.ImageTag.TagName != "" {
-			_, err := semver.NewVersion(img.ImageTag.TagName)
-			if err != nil {
+			if _, err = semver.NewVersion(img.ImageTag.TagName); err != nil {
 				return "", err
 			}
 		}

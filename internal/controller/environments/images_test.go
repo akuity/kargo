@@ -17,7 +17,6 @@ func TestGetLatestImages(t *testing.T) {
 		name           string
 		credentialsDB  credentials.Database
 		getLatestTagFn func(
-			context.Context,
 			string,
 			images.ImageUpdateStrategy,
 			string,
@@ -41,7 +40,6 @@ func TestGetLatestImages(t *testing.T) {
 				},
 			},
 			getLatestTagFn: func(
-				ctx context.Context,
 				repoURL string,
 				updateStrategy images.ImageUpdateStrategy,
 				semverConstraint string,
@@ -76,7 +74,6 @@ func TestGetLatestImages(t *testing.T) {
 				},
 			},
 			getLatestTagFn: func(
-				ctx context.Context,
 				repoURL string,
 				updateStrategy images.ImageUpdateStrategy,
 				semverConstraint string,
@@ -108,12 +105,12 @@ func TestGetLatestImages(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			}
-			reconciler := reconciler{
+			r := reconciler{
 				credentialsDB:  testCase.credentialsDB,
 				getLatestTagFn: testCase.getLatestTagFn,
 			}
 			testCase.assertions(
-				reconciler.getLatestImages(
+				r.getLatestImages(
 					context.Background(),
 					"fake-namespace",
 					testSubs,

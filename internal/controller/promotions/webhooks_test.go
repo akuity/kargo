@@ -119,8 +119,10 @@ func TestValidateUpdate(t *testing.T) {
 func TestValidateDelete(t *testing.T) {
 	testCases := []struct {
 		name                          string
-		admissionRequestFromContextFn func(context.Context) (admission.Request, error)
-		authorizeFn                   func(
+		admissionRequestFromContextFn func(
+			context.Context,
+		) (admission.Request, error)
+		authorizeFn func(
 			context.Context,
 			*api.Promotion,
 			string,
@@ -269,7 +271,7 @@ func TestAuthorize(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
-				policies := objs.(*api.PromotionPolicyList)
+				policies := objs.(*api.PromotionPolicyList) // nolint: forcetypeassert
 				policies.Items = []api.PromotionPolicy{{}, {}}
 				return nil
 			},
@@ -290,7 +292,7 @@ func TestAuthorize(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
-				policies := objs.(*api.PromotionPolicyList)
+				policies := objs.(*api.PromotionPolicyList) // nolint: forcetypeassert
 				policies.Items = []api.PromotionPolicy{{}}
 				return nil
 			},
@@ -315,7 +317,7 @@ func TestAuthorize(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
-				policies := objs.(*api.PromotionPolicyList)
+				policies := objs.(*api.PromotionPolicyList) // nolint: forcetypeassert
 				policies.Items = []api.PromotionPolicy{{}}
 				return nil
 			},
@@ -324,7 +326,12 @@ func TestAuthorize(t *testing.T) {
 			) (admission.Request, error) {
 				return admission.Request{}, nil
 			},
-			isSubjectAuthorizedFn: func(ctx context.Context, pp *api.PromotionPolicy, p *api.Promotion, ui authenticationv1.UserInfo) (bool, error) {
+			isSubjectAuthorizedFn: func(
+				context.Context,
+				*api.PromotionPolicy,
+				*api.Promotion,
+				authenticationv1.UserInfo,
+			) (bool, error) {
 				return false, errors.New("something went wrong")
 			},
 			assertions: func(err error) {
@@ -343,7 +350,7 @@ func TestAuthorize(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
-				policies := objs.(*api.PromotionPolicyList)
+				policies := objs.(*api.PromotionPolicyList) // nolint: forcetypeassert
 				policies.Items = []api.PromotionPolicy{{}}
 				return nil
 			},
@@ -372,7 +379,7 @@ func TestAuthorize(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
-				policies := objs.(*api.PromotionPolicyList)
+				policies := objs.(*api.PromotionPolicyList) // nolint: forcetypeassert
 				policies.Items = []api.PromotionPolicy{{}}
 				return nil
 			},
@@ -650,6 +657,7 @@ func TestGetSubjectRoles(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
+				// nolint: forcetypeassert
 				roleBindings := objs.(*rbacv1.RoleBindingList)
 				roleBindings.Items = []rbacv1.RoleBinding{
 					{
@@ -675,6 +683,7 @@ func TestGetSubjectRoles(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
+				// nolint: forcetypeassert
 				roleBindings := objs.(*rbacv1.RoleBindingList)
 				roleBindings.Items = []rbacv1.RoleBinding{
 					{
@@ -709,6 +718,7 @@ func TestGetSubjectRoles(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
+				// nolint: forcetypeassert
 				roleBindings := objs.(*rbacv1.RoleBindingList)
 				roleBindings.Items = []rbacv1.RoleBinding{
 					{
@@ -742,6 +752,7 @@ func TestGetSubjectRoles(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
+				// nolint: forcetypeassert
 				roleBindings := objs.(*rbacv1.RoleBindingList)
 				roleBindings.Items = []rbacv1.RoleBinding{
 					{
@@ -777,6 +788,7 @@ func TestGetSubjectRoles(t *testing.T) {
 				objs client.ObjectList,
 				_ ...client.ListOption,
 			) error {
+				// nolint: forcetypeassert
 				roleBindings := objs.(*rbacv1.RoleBindingList)
 				roleBindings.Items = []rbacv1.RoleBinding{
 					{
@@ -869,7 +881,7 @@ func TestGetServiceAccountNamespaceAndName(t *testing.T) {
 		},
 		{
 			name:              "subject name represents a service account",
-			username:          "system:serviceaccount:fake-namespace:fake-service-account",
+			username:          "system:serviceaccount:fake-namespace:fake-service-account", // nolint: lll
 			expectedNamespace: "fake-namespace",
 			expectedName:      "fake-service-account",
 		},
