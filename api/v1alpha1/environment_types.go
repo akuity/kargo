@@ -103,13 +103,12 @@ type GitSubscription struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
 	RepoURL string `json:"repoURL"`
-	// Branch references a particular branch of the repository. This field is
-	// optional. Leaving this unspecified is equivalent to specifying the
-	// repository's default branch, whatever that may happen to be -- typically
-	// "main" or "master".
+	// Branch references a particular branch of the repository. This is a required
+	// field.
 	//
-	//+kubebuilder:validation:Optional
-	Branch string `json:"branch,omitempty"`
+	//+kubebuilder:validation:MinLength=1
+	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
+	Branch string `json:"branch"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -228,13 +227,24 @@ type GitRepoUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
 	RepoURL string `json:"repoURL"`
-	// Branch references a particular branch of the repository to be updated. This
-	// field is optional. Leaving this unspecified is equivalent to specifying the
-	// repository's default branch, whatever that may happen to be -- typically
-	// "main" or "master".
+	// ReadBranch specifies a particular branch of the repository from which to
+	// locate contents that will be written to the branch specified by the
+	// WriteBranch field. This field is optional. In cases where an
+	// EnvironmentState includes a GitCommit, that commit's ID will supersede the
+	// value of this field. Therefore, in practice, this field is only used to
+	// clarify what branch of a repository can be treated as a source of manifests
+	// or other configuration when an Environment has no subscription to that
+	// repository.
 	//
 	//+kubebuilder:validation:Optional
-	Branch string `json:"branch,omitempty"`
+	//+kubebuilder:validation:Pattern=`^(\w+([-/]\w+)*)?$`
+	ReadBranch string `json:"readBranch"`
+	// WriteBranch specifies the particular branch of the repository to be
+	// updated. This is a required field.
+	//
+	//+kubebuilder:validation:MinLength=1
+	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
+	WriteBranch string `json:"writeBranch"`
 	// Bookkeeper describes how to use Bookkeeper to incorporate newly observed
 	// materials into the Environment. This is mutually exclusive with the
 	// Kustomize and Helm fields.
@@ -608,6 +618,8 @@ type GitCommit struct {
 	// ID is the ID of a specific commit in the Git repository specified by
 	// RepoURL.
 	ID string `json:"id,omitempty"`
+	// Branch denotes the branch of the repository where this commit was found.
+	Branch string `json:"branch,omitempty"`
 	// HealthCheckCommit is the ID of a specific commit. When specified,
 	// assessments of Environment health will used this value (instead of ID) when
 	// determining if applicable sources of Argo CD Application resources

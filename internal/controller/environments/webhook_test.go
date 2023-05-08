@@ -586,27 +586,6 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 		assertions func(api.GitRepoUpdate, field.ErrorList)
 	}{
 		{
-			name:   "no config management tools specified",
-			update: api.GitRepoUpdate{},
-			assertions: func(update api.GitRepoUpdate, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "gitRepoUpdates[0]",
-							BadValue: update,
-							Detail: "exactly one of gitRepoUpdates[0].bookkeeper, or " +
-								"gitRepoUpdates[0].kustomize, or gitRepoUpdates[0].helm " +
-								"must be defined",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
 			name: "more than one config management tool specified",
 			update: api.GitRepoUpdate{
 				Bookkeeper: &api.BookkeeperPromotionMechanism{},
@@ -621,9 +600,9 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "gitRepoUpdates[0]",
 							BadValue: update,
-							Detail: "exactly one of gitRepoUpdates[0].bookkeeper, or " +
+							Detail: "no more than one of gitRepoUpdates[0].bookkeeper, or " +
 								"gitRepoUpdates[0].kustomize, or gitRepoUpdates[0].helm " +
-								"must be defined",
+								"may be defined",
 						},
 					},
 					errs,
@@ -664,27 +643,6 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 		assertions func(api.GitRepoUpdate, field.ErrorList)
 	}{
 		{
-			name:   "no config management tools specified",
-			update: api.GitRepoUpdate{},
-			assertions: func(update api.GitRepoUpdate, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "gitRepoUpdate",
-							BadValue: update,
-							Detail: "exactly one of gitRepoUpdate.bookkeeper, or " +
-								"gitRepoUpdate.kustomize, or gitRepoUpdate.helm must be " +
-								"defined",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
 			name: "more than one config management tool specified",
 			update: api.GitRepoUpdate{
 				Bookkeeper: &api.BookkeeperPromotionMechanism{},
@@ -699,8 +657,8 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "gitRepoUpdate",
 							BadValue: update,
-							Detail: "exactly one of gitRepoUpdate.bookkeeper, or " +
-								"gitRepoUpdate.kustomize, or gitRepoUpdate.helm must be " +
+							Detail: "no more than one of gitRepoUpdate.bookkeeper, or " +
+								"gitRepoUpdate.kustomize, or gitRepoUpdate.helm may be " +
 								"defined",
 						},
 					},

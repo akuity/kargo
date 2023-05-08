@@ -30,28 +30,31 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 		},
 
 		{
-			name: "target branch is unspecified",
+			name: "invalid update",
+			newState: api.EnvironmentState{
+				Commits: []api.GitCommit{
+					{
+						RepoURL: "fake-url",
+						Branch:  "fake-branch",
+					},
+				},
+			},
 			update: api.GitRepoUpdate{
-				Bookkeeper: &api.BookkeeperPromotionMechanism{},
+				RepoURL:     "fake-url",
+				WriteBranch: "fake-branch",
+				Bookkeeper:  &api.BookkeeperPromotionMechanism{},
 			},
-			assertions: func(_, _ api.EnvironmentState, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "no target branch is specified")
-			},
-		},
-
-		{
-			name: "state doesn't contain any information about the repo",
-			update: api.GitRepoUpdate{
-				Branch:     "env/fake",
-				Bookkeeper: &api.BookkeeperPromotionMechanism{},
-			},
-			assertions: func(_, _ api.EnvironmentState, err error) {
+			assertions: func(inState, outState api.EnvironmentState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
 					err.Error(),
-					"environment does not subscribe to repo",
+					"invalid update specified; cannot write to branch",
+				)
+				require.Contains(
+					t,
+					err.Error(),
+					"because it will form a subscription loop",
 				)
 			},
 		},
@@ -73,9 +76,9 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				},
 			},
 			update: api.GitRepoUpdate{
-				RepoURL:    "fake-git-url",
-				Branch:     "env/fake",
-				Bookkeeper: &api.BookkeeperPromotionMechanism{},
+				RepoURL:     "fake-git-url",
+				WriteBranch: "env/fake",
+				Bookkeeper:  &api.BookkeeperPromotionMechanism{},
 			},
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(
@@ -117,9 +120,9 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				},
 			},
 			update: api.GitRepoUpdate{
-				RepoURL:    "fake-git-url",
-				Branch:     "env/fake",
-				Bookkeeper: &api.BookkeeperPromotionMechanism{},
+				RepoURL:     "fake-git-url",
+				WriteBranch: "env/fake",
+				Bookkeeper:  &api.BookkeeperPromotionMechanism{},
 			},
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(
@@ -168,9 +171,9 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				},
 			},
 			update: api.GitRepoUpdate{
-				RepoURL:    "fake-git-url",
-				Branch:     "env/fake",
-				Bookkeeper: &api.BookkeeperPromotionMechanism{},
+				RepoURL:     "fake-git-url",
+				WriteBranch: "env/fake",
+				Bookkeeper:  &api.BookkeeperPromotionMechanism{},
 			},
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(
