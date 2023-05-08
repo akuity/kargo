@@ -50,8 +50,7 @@ func (s *server) Serve(ctx context.Context) error {
 	case <-ctx.Done():
 		log.Info("Gracefully stopping server...")
 		time.Sleep(s.cfg.GracefulShutdownTimeout)
-		srv.Shutdown(context.Background())
-		return nil
+		return srv.Shutdown(context.Background())
 	case err := <-errCh:
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
