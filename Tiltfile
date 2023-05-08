@@ -40,8 +40,7 @@ k8s_resource(
   workload = 'kargo-api',
   new_name = 'api',
   port_forwards = [
-    '30081:50051',
-    '30082:8080'
+    '30081:8080'
   ],
   labels = ['kargo'],
   objects = [
