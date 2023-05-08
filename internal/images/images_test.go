@@ -1,7 +1,6 @@
 package images
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Masterminds/semver"
@@ -63,7 +62,6 @@ func TestGetLatestTag(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				GetLatestTag(
-					context.Background(),
 					testCase.repoURL,
 					ImageUpdateStrategySemVer,
 					testCase.semverConstraint,

@@ -179,7 +179,10 @@ func createDummyRepoDir(dirCount, fileCount int) (string, error) {
 	}
 	// Add some dummy dirs
 	for i := 0; i < dirCount; i++ {
-		if err = os.Mkdir(filepath.Join(dir, fmt.Sprintf("dir-%d", i)), 0755); err != nil {
+		if err = os.Mkdir(
+			filepath.Join(dir, fmt.Sprintf("dir-%d", i)),
+			0755,
+		); err != nil {
 			return dir, err
 		}
 	}

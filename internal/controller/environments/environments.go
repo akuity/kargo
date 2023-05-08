@@ -89,7 +89,6 @@ type reconciler struct {
 	) ([]api.Image, error)
 
 	getLatestTagFn func(
-		ctx context.Context,
 		repoURL string,
 		updateStrategy images.ImageUpdateStrategy,
 		semverConstraint string,
@@ -153,13 +152,7 @@ func SetupReconcilerWithManager(
 		)
 	}
 
-	e, err := newReconciler(
-		mgr.GetClient(),
-		credentialsDB,
-	)
-	if err != nil {
-		return errors.Wrap(err, "error initializing Environment reconciler")
-	}
+	e := newReconciler(mgr.GetClient(), credentialsDB)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Environment{}).
@@ -206,7 +199,7 @@ func indexOutstandingPromotionsByEnvironment(obj client.Object) []string {
 func newReconciler(
 	client client.Client,
 	credentialsDB credentials.Database,
-) (*reconciler, error) {
+) *reconciler {
 	r := &reconciler{
 		client:        client,
 		credentialsDB: credentialsDB,
@@ -233,7 +226,7 @@ func newReconciler(
 	r.getLatestChartVersionFn = helm.GetLatestChartVersion
 	r.getLatestCommitIDFn = git.GetLatestCommitID
 
-	return r, nil
+	return r
 }
 
 // findEnvsForApp dynamically returns reconciliation requests for all

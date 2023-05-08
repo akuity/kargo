@@ -74,7 +74,8 @@ func ApplyUpdate(
 
 	// Sometimes we don't write to the same branch we read from...
 	if readRef != writeBranch {
-		tempDir, err := os.MkdirTemp("", "")
+		var tempDir string
+		tempDir, err = os.MkdirTemp("", "")
 		if err != nil {
 			return "", errors.Wrap(
 				err,
@@ -94,7 +95,8 @@ func ApplyUpdate(
 			return "", errors.Wrap(err, "error resetting repository working tree")
 		}
 
-		if branchExists, err := repo.RemoteBranchExists(writeBranch); err != nil {
+		var branchExists bool
+		if branchExists, err = repo.RemoteBranchExists(writeBranch); err != nil {
 			return "", errors.Wrapf(
 				err,
 				"error checking for existence of branch %q in remote repo %q",

@@ -105,7 +105,6 @@ type reconciler struct {
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
 // and registers it with the provided Manager.
 func SetupReconcilerWithManager(
-	ctx context.Context,
 	mgr manager.Manager,
 	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
@@ -217,10 +216,7 @@ func (r *reconciler) Reconcile(
 		return result, nil
 	}
 
-	promo.Status, err = r.sync(ctx, promo)
-	if err != nil {
-		logger.Error(err)
-	}
+	promo.Status = r.sync(ctx, promo)
 
 	updateErr := r.client.Status().Update(ctx, promo)
 	if updateErr != nil {
@@ -249,7 +245,8 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 		return errors.Wrap(err, "error listing promotions")
 	}
 	logger := logging.LoggerFromContext(ctx)
-	for _, promo := range promos.Items {
+	for _, p := range promos.Items {
+		promo := p // This is to sidestep implicit memory aliasing in this for loop
 		switch promo.Status.Phase {
 		case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
 			continue
@@ -300,12 +297,12 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 func (r *reconciler) sync(
 	ctx context.Context,
 	promo *api.Promotion,
-) (api.PromotionStatus, error) {
+) api.PromotionStatus {
 	status := *promo.Status.DeepCopy()
 
 	// Only deal with brand new Promotions
 	if promo.Status.Phase != "" {
-		return status, nil
+		return status
 	}
 
 	promo.Status.Phase = api.PromotionPhasePending
@@ -334,7 +331,7 @@ func (r *reconciler) sync(
 			promo.Namespace,
 		)
 
-	return status, nil
+	return status
 }
 
 func (r *reconciler) serializedSync(
@@ -351,7 +348,7 @@ func (r *reconciler) serializedSync(
 		}
 		for _, pq := range r.promoQueuesByEnv {
 			if popped := pq.Pop(); popped != nil {
-				promo := popped.(*api.Promotion)
+				promo := popped.(*api.Promotion) // nolint: forcetypeassert
 
 				logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 					"promotion": promo.Name,

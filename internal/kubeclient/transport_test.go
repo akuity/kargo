@@ -27,9 +27,12 @@ func TestAuthRoundTripper(t *testing.T) {
 	}
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				_, _ = w.Write([]byte(req.Header.Get("Authorization")))
-			}))
+			srv := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					_, err := w.Write([]byte(req.Header.Get("Authorization")))
+					require.NoError(t, err)
+				}),
+			)
 			defer srv.Close()
 
 			hc := http.Client{
@@ -39,6 +42,7 @@ func TestAuthRoundTripper(t *testing.T) {
 			require.NoError(t, err)
 			res, err := hc.Do(req.WithContext(ts.newContext()))
 			require.NoError(t, err)
+			defer res.Body.Close()
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, ts.expected, string(data))

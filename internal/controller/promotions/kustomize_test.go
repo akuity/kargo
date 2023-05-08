@@ -73,11 +73,11 @@ func TestApplyKustomize(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := reconciler{
+			r := reconciler{
 				kustomizeSetImageFn: testCase.kustomizeSetImageFn,
 			}
 			testCase.assertions(
-				reconciler.applyKustomize(
+				r.applyKustomize(
 					testCase.newState,
 					testCase.update,
 					"",

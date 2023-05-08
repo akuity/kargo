@@ -1,7 +1,6 @@
 package images
 
 import (
-	"context"
 	"log"
 
 	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
@@ -28,7 +27,6 @@ func init() {
 }
 
 func GetLatestTag(
-	ctx context.Context,
 	repoURL string,
 	updateStrategy ImageUpdateStrategy,
 	semverConstraint string,

@@ -15,9 +15,9 @@ func GetEnv(key, defaultValue string) string {
 	return value
 }
 
-// MustGetEnv retrieves the value of an environment variable having the specified
-// key. If the value is empty string, a specified default is returned instead.
-// It will panic if the defaultValue is empty too.
+// MustGetEnv retrieves the value of an environment variable having the
+// specified key. If the value is empty string, a specified default is returned
+// instead. It will panic if the defaultValue is empty too.
 func MustGetEnv(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {

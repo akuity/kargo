@@ -42,7 +42,6 @@ func (r *reconciler) getLatestImages(
 		}
 
 		tag, err := r.getLatestTagFn(
-			ctx,
 			sub.RepoURL,
 			images.ImageUpdateStrategy(sub.UpdateStrategy),
 			sub.SemverConstraint,

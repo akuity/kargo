@@ -28,10 +28,12 @@ type APIConfig struct {
 
 func NewAPIConfig() APIConfig {
 	return APIConfig{
-		BaseConfig:              newBaseConfig(),
-		Host:                    os.MustGetEnv("HOST", "0.0.0.0"),
-		Port:                    MustAtoi(os.MustGetEnv("PORT", "50051")),
-		GracefulShutdownTimeout: MustParseDuration(os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s")),
+		BaseConfig: newBaseConfig(),
+		Host:       os.MustGetEnv("HOST", "0.0.0.0"),
+		Port:       MustAtoi(os.MustGetEnv("PORT", "50051")),
+		GracefulShutdownTimeout: MustParseDuration(
+			os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s"),
+		),
 	}
 }
 
@@ -46,11 +48,13 @@ type APIProxyConfig struct {
 
 func NewAPIProxyConfig() APIProxyConfig {
 	return APIProxyConfig{
-		BaseConfig:              newBaseConfig(),
-		Host:                    os.MustGetEnv("HOST", "0.0.0.0"),
-		Port:                    MustAtoi(os.MustGetEnv("PORT", "8080")),
-		APIEndpoint:             os.MustGetEnv("API_ENDPOINT", "localhost:50051"),
-		GracefulShutdownTimeout: MustParseDuration(os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s")),
+		BaseConfig:  newBaseConfig(),
+		Host:        os.MustGetEnv("HOST", "0.0.0.0"),
+		Port:        MustAtoi(os.MustGetEnv("PORT", "8080")),
+		APIEndpoint: os.MustGetEnv("API_ENDPOINT", "localhost:50051"),
+		GracefulShutdownTimeout: MustParseDuration(
+			os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s"),
+		),
 	}
 }
 

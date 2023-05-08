@@ -64,10 +64,10 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "create manager")
 			}
 
-			if err := environments.SetupWebhookWithManager(mgr); err != nil {
+			if err = environments.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "error initializing Environment webhooks")
 			}
-			if err :=
+			if err =
 				promotions.SetupWebhookWithManager(ctx, mgr, config); err != nil {
 				return errors.Wrap(err, "error initializing Environment webhooks")
 			}
@@ -86,7 +86,6 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "setup environment reconciler")
 			}
 			if err := promotions.SetupReconcilerWithManager(
-				ctx,
 				mgr,
 				credentialsDB,
 				bookkeeper.NewService(

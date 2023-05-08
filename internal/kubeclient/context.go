@@ -8,7 +8,10 @@ type authCredentialContextKey struct {
 	// explicitly empty
 }
 
-func ContextWithAuthCredential(ctx context.Context, cred string) context.Context {
+func ContextWithAuthCredential(
+	ctx context.Context,
+	cred string,
+) context.Context {
 	return context.WithValue(ctx, authCredentialContextKey{}, cred)
 }
 

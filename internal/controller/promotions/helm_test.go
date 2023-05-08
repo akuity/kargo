@@ -150,13 +150,13 @@ func TestApplyHelm(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := reconciler{
+			r := reconciler{
 				setStringsInYAMLFileFn:        testCase.setStringsInYAMLFileFn,
 				buildChartDependencyChangesFn: testCase.buildChartDependencyChangesFn,
 				updateChartDependenciesFn:     testCase.updateChartDependenciesFn,
 			}
 			testCase.assertions(
-				reconciler.applyHelm(
+				r.applyHelm(
 					testCase.newState,
 					testCase.update,
 					"",
