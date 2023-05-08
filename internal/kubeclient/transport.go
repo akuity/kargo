@@ -33,6 +33,6 @@ func (rt *authRoundTripper) RoundTrip(
 	return res, err
 }
 
-func (rt *credentialHook) WrappedRoundTripper() http.RoundTripper {
-	return rt.rt
+func (h *credentialHook) WrappedRoundTripper() http.RoundTripper {
+	return h.rt
 }
