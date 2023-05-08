@@ -9,6 +9,7 @@ import { MainLayout } from './features/ui/layout/main-layout';
 import { Projects } from './pages/projects';
 
 import 'antd/dist/reset.css';
+import { Environment } from '@pages/environment';
 
 export const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -17,6 +18,7 @@ export const App = () => (
         <Routes>
           <Route element={<MainLayout />}>
             <Route path={paths.projects} element={<Projects />} />
+            <Route path={paths.environment} element={<Environment />} />
           </Route>
         </Routes>
       </BrowserRouter>
