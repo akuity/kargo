@@ -18,6 +18,9 @@ func GetCredential(ctx context.Context, cfg *rest.Config) (string, error) {
 		return "", err
 	}
 	res, err := rc.Do(req)
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if err != nil {
 		return "", err
 	}

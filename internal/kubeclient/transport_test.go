@@ -41,6 +41,9 @@ func Test_credentialHook(t *testing.T) {
 			}
 			require.NoError(t, err)
 			res, err := hc.Do(req.WithContext(context.TODO()))
+			defer func() {
+				_ = res.Body.Close()
+			}()
 			require.NoError(t, err)
 			defer res.Body.Close()
 			data, err := io.ReadAll(res.Body)
