@@ -40,13 +40,16 @@ func TestUnaryServerLogging(t *testing.T) {
 			srv.EnableHTTP2 = true
 			t.Cleanup(srv.Close)
 
-			client := connect.NewClient[grpc_health_v1.HealthCheckRequest, grpc_health_v1.HealthCheckResponse](
+			client := connect.NewClient[
+				grpc_health_v1.HealthCheckRequest,
+				grpc_health_v1.HealthCheckResponse](
 				srv.Client(),
 				srv.URL+"/grpc.health.v1.Health/Check",
 				connect.WithGRPC(),
 			)
 			_, err := client.CallUnary(context.Background(),
-				connect.NewRequest[grpc_health_v1.HealthCheckRequest](&grpc_health_v1.HealthCheckRequest{}))
+				connect.NewRequest[grpc_health_v1.HealthCheckRequest](
+					&grpc_health_v1.HealthCheckRequest{}))
 			require.NoError(t, err)
 
 			if testSet.logExpected {

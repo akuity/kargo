@@ -14,8 +14,15 @@ func NewHandlerOption(logger *log.Entry) connect.HandlerOption {
 		connect.WithInterceptors(
 			newLogInterceptor(logger, loggingIgnorableMethods),
 		),
-		connect.WithRecover(func(ctx context.Context, spec connect.Spec, header http.Header, r any) error {
-			return connect.NewError(connect.CodeInternal, fmt.Errorf("panic: %v", r))
-		}),
+		connect.WithRecover(
+			func(
+				ctx context.Context,
+				spec connect.Spec,
+				header http.Header,
+				r any,
+			) error {
+				return connect.NewError(
+					connect.CodeInternal, fmt.Errorf("panic: %v", r))
+			}),
 	)
 }

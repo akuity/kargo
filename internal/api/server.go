@@ -37,8 +37,9 @@ func (s *server) Serve(ctx context.Context) error {
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker()))
 
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: h2c.NewHandler(mux, &http2.Server{}),
+		Addr:              addr,
+		Handler:           h2c.NewHandler(mux, &http2.Server{}),
+		ReadHeaderTimeout: time.Minute,
 	}
 
 	errCh := make(chan error)

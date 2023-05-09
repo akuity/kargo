@@ -27,7 +27,10 @@ type logInterceptor struct {
 	ignorableMethods map[string]bool
 }
 
-func newLogInterceptor(logger *log.Entry, ignorableMethods map[string]bool) connect.Interceptor {
+func newLogInterceptor(
+	logger *log.Entry,
+	ignorableMethods map[string]bool,
+) connect.Interceptor {
 	return &logInterceptor{
 		logger:           logger,
 		ignorableMethods: ignorableMethods,
@@ -35,7 +38,10 @@ func newLogInterceptor(logger *log.Entry, ignorableMethods map[string]bool) conn
 }
 
 func (i *logInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
-	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+	return func(
+		ctx context.Context,
+		req connect.AnyRequest,
+	) (connect.AnyResponse, error) {
 		start := time.Now()
 		ctx = i.newLogger(ctx, req.Spec().Procedure, start)
 		if !i.shouldLog(req.Spec().Procedure) {
@@ -59,12 +65,14 @@ func (i *logInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	}
 }
 
-func (i *logInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+func (i *logInterceptor) WrapStreamingClient(
+	next connect.StreamingClientFunc) connect.StreamingClientFunc {
 	// TODO: Support streaming client
 	return next
 }
 
-func (i *logInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+func (i *logInterceptor) WrapStreamingHandler(
+	next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		start := time.Now()
 		ctx = i.newLogger(ctx, conn.Spec().Procedure, start)
@@ -89,7 +97,8 @@ func (i *logInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc)
 	}
 }
 
-func (i *logInterceptor) newLogger(ctx context.Context, procedure string, start time.Time) context.Context {
+func (i *logInterceptor) newLogger(
+	ctx context.Context, procedure string, start time.Time) context.Context {
 	service := path.Dir(procedure)[1:]
 	method := path.Base(procedure)
 	logger := i.logger.WithFields(log.Fields{
