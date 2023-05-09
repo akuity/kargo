@@ -1,0 +1,47 @@
+apiVersion: v1
+items:
+- apiVersion: kargo.akuity.io/v1alpha1
+  kind: Promotion
+  metadata:
+    creationTimestamp: "2023-05-08T20:28:30Z"
+    generation: 1
+    name: test-to-a0a5b9d141689fe65fc4c8b5837b8e8de7599c4a
+    namespace: kargo-demo
+    resourceVersion: "759166"
+    uid: c2137d38-2daa-43aa-a831-7d5de9ad0856
+  spec:
+    environment: test
+    state: a0a5b9d141689fe65fc4c8b5837b8e8de7599c4a
+  status:
+    phase: Completed
+- apiVersion: kargo.akuity.io/v1alpha1
+  kind: Promotion
+  metadata:
+    creationTimestamp: "2023-05-08T20:28:43Z"
+    generation: 1
+    name: test-to-e35e79ce9ab8b2958c8b0f532ee5a42058886289
+    namespace: kargo-demo
+    resourceVersion: "759227"
+    uid: 4ef42d90-4a67-4636-be17-75a5e58e909b
+  spec:
+    environment: test
+    state: e35e79ce9ab8b2958c8b0f532ee5a42058886289
+  status:
+    phase: Completed
+- apiVersion: kargo.akuity.io/v1alpha1
+  kind: Promotion
+  metadata:
+    creationTimestamp: "2023-05-08T20:43:15Z"
+    generation: 1
+    name: stage-to-e35e79ce9ab8b2958c8b0f532ee5a42058886289
+    namespace: kargo-demo
+    resourceVersion: "760025"
+    uid: fd42faf2-3e9a-4463-91f3-fdb39d444c98
+  spec:
+    environment: stage
+    state: e35e79ce9ab8b2958c8b0f532ee5a42058886289
+  status:
+    phase: Completed
+kind: List
+metadata:
+  resourceVersion: ""
