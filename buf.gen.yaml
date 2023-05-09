@@ -5,17 +5,20 @@ managed:
     default: github.com/akuity/kargo/pkg/api/gen
     except:
       - buf.build/googleapis/googleapis
-      - buf.build/grpc-ecosystem/grpc-gateway
 plugins:
-  - plugin: buf.build/grpc-ecosystem/gateway
+  - plugin: buf.build/protocolbuffers/go:v1.30.0
     out: pkg/api/gen
     opt:
       - paths=source_relative
-  - plugin: buf.build/grpc/go
+  - plugin: buf.build/bufbuild/connect-go:v1.7.0
     out: pkg/api/gen
     opt:
       - paths=source_relative
-  - plugin: buf.build/protocolbuffers/go
-    out: pkg/api/gen
+  - plugin: buf.build/bufbuild/es:v1.2.0
+    out: ui/src/gen
     opt:
-      - paths=source_relative
+      - target=ts
+  - plugin: buf.build/bufbuild/connect-query:v0.2.1
+    out: ui/src/gen
+    opt:
+      - target=ts
