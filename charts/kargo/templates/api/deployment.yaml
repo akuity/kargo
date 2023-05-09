@@ -21,25 +21,6 @@ spec:
     spec:
       serviceAccount: {{ include "kargo.api.fullname" . }}
       containers:
-{{- if .Values.api.enableProxy }}
-        - name: api-proxy
-          image: {{ include "kargo.image" . }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/usr/local/bin/kargo", "api-proxy"]
-          env:
-            - name: LOG_LEVEL
-              value: {{ .Values.api.logLevel }}
-          ports:
-            - containerPort: 8080
-              name: api-proxy
-              protocol: TCP
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: api-proxy
-            initialDelaySeconds: 5
-          resources: {{ toYaml .Values.api.resources }}
-{{- end }}
         - name: api
           image: {{ include "kargo.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -52,12 +33,12 @@ spec:
             - name: LOG_LEVEL
               value: {{ .Values.api.logLevel }}
           ports:
-            - containerPort: 50051
-              name: api
+            - name: h2c
+              containerPort: 8080
               protocol: TCP
           readinessProbe:
             exec:
-              command: ["/usr/local/bin/grpc_health_probe", "-addr=:50051"]
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:8080"]
             initialDelaySeconds: 5
 {{- if .Values.kubeconfigSecret }}
           volumeMounts:

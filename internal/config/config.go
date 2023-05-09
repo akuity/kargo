@@ -37,27 +37,6 @@ func NewAPIConfig() APIConfig {
 	}
 }
 
-type APIProxyConfig struct {
-	BaseConfig
-	Host        string
-	Port        int
-	APIEndpoint string
-
-	GracefulShutdownTimeout time.Duration
-}
-
-func NewAPIProxyConfig() APIProxyConfig {
-	return APIProxyConfig{
-		BaseConfig:  newBaseConfig(),
-		Host:        os.MustGetEnv("HOST", "0.0.0.0"),
-		Port:        MustAtoi(os.MustGetEnv("PORT", "8080")),
-		APIEndpoint: os.MustGetEnv("API_ENDPOINT", "localhost:50051"),
-		GracefulShutdownTimeout: MustParseDuration(
-			os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s"),
-		),
-	}
-}
-
 type ControllerConfig struct {
 	BaseConfig
 	ArgoCDNamespace         string
