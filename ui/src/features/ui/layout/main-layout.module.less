@@ -5,7 +5,13 @@
 
 .sidebar {
   flex: 0 0 110px;
-  background: linear-gradient(177deg, rgb(29, 50, 82) 0%, rgb(29, 52, 81) 50%, rgb(19, 36, 64) 77%, rgb(10, 23, 49) 100%);
+  background: linear-gradient(
+    177deg,
+    rgb(29, 50, 82) 0%,
+    rgb(29, 52, 81) 50%,
+    rgb(19, 36, 64) 77%,
+    rgb(10, 23, 49) 100%
+  );
   color: @colorWhite;
 }
 
@@ -17,7 +23,7 @@
   &::before {
     content: '';
     position: absolute;
-    top: ~"@{sizeXS}px";
+    top: ~'@{sizeXS}px';
     right: 0;
     bottom: 0;
     left: 0;
@@ -28,10 +34,19 @@
 
 .content {
   position: relative;
-  padding: ~"@{sizeXL}px @{sizeXL}px";
+  padding: ~'@{sizeXL}px @{sizeXL}px';
 }
 
 .logo {
   text-align: center;
-  padding: ~"@{sizeXL}px 0";
+  padding: ~'@{sizeXL}px 0';
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+}
+
+.icon {
+  width: 50px;
+  margin: 0 auto;
+  margin-bottom: 0.75em;
 }

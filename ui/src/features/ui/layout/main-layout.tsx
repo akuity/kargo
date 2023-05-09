@@ -8,10 +8,13 @@ import { NavItem } from './nav-item/nav-item';
 export const MainLayout = () => (
   <div className={styles.wrapper}>
     <aside className={styles.sidebar}>
-      <div className={styles.logo}>Kargo</div>
+      <div className={styles.logo}>
+        <img src='/kargo-icon.png' alt='Kargo Icon' className={styles.icon} />
+        Kargo
+      </div>
       <nav>
         <NavItem icon={faTableList} path={paths.projects}>
-          Namespaces
+          Projects
         </NavItem>
       </nav>
     </aside>

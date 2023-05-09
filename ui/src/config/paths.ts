@@ -1,4 +1,5 @@
 export const paths = {
   projects: '/',
-  environment: '/environment/:name',
+  environment: '/project/:name/environment/:environmentName',
+  project: '/project/:name'
 };

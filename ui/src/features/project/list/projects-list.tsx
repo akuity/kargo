@@ -3,13 +3,15 @@ import { Input } from 'antd';
 import { ProjectItem } from './project-item/project-item';
 import * as styles from './projects-list.module.less';
 
+const testProjects = ['kargo-demo', 'simple-demo', 'hello-world'];
+
 export const ProjectsList = () => {
   return (
     <>
       <Input placeholder='Search...' size='large' />
       <div className={styles.list}>
-        {['kargo-demo', 'simple-demo', 'hello-world'].map((item) => (
-          <ProjectItem key={item} namespace={item} />
+        {testProjects.map((project) => (
+          <ProjectItem key={project} name={project} />
         ))}
       </div>
     </>
