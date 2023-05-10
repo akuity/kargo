@@ -2,7 +2,6 @@ package kubeclient
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -25,12 +24,9 @@ func Test_credentialHook(t *testing.T) {
 	}
 	for name, testSet := range testSets {
 		t.Run(name, func(t *testing.T) {
-			srv := httptest.NewServer(
-				http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-					_, err := w.Write([]byte(req.Header.Get("Authorization")))
-					require.NoError(t, err)
-				}),
-			)
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+			}))
 			t.Cleanup(srv.Close)
 
 			hc := http.Client{
@@ -46,10 +42,8 @@ func Test_credentialHook(t *testing.T) {
 				_ = res.Body.Close()
 			}()
 			require.NoError(t, err)
-			defer res.Body.Close()
-			data, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-			require.Equal(t, ts.expected, string(data))
+			got := res.Header.Get(xKargoUserCredentialHeader)
+			require.Equal(t, testSet.credential, got)
 		})
 	}
 }

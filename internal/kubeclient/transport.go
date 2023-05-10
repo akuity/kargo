@@ -24,11 +24,11 @@ func newAuthorizationHeaderHook(rt http.RoundTripper) http.RoundTripper {
 	}
 }
 
-func (rt *authRoundTripper) RoundTrip(
-	req *http.Request,
-) (*http.Response, error) {
-	if v, ok := AuthCredentialFromContext(req.Context()); ok {
-		req.Header.Set("Authorization", v)
+func (h *credentialHook) RoundTrip(req *http.Request) (*http.Response, error) {
+	cred := req.Header.Get("Authorization")
+	res, err := h.rt.RoundTrip(req)
+	if res != nil {
+		res.Header.Set(xKargoUserCredentialHeader, cred)
 	}
 	return res, err
 }
