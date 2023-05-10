@@ -101,7 +101,7 @@
         "annotations": {
           "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"kargo.akuity.io/v1alpha1\",\"kind\":\"Environment\",\"metadata\":{\"annotations\":{},\"name\":\"test\",\"namespace\":\"kargo-demo\"},\"spec\":{\"healthChecks\":{\"argoCDAppChecks\":[{\"appName\":\"kargo-demo-test\",\"appNamespace\":\"argocd\"}]},\"promotionMechanisms\":{\"argoCDAppUpdates\":[{\"appName\":\"kargo-demo-test\",\"appNamespace\":\"argocd\",\"sourceUpdates\":[{\"repoURL\":\"https://github.com/rbreeze/kargo-demo\",\"updateTargetRevision\":true}]}],\"gitRepoUpdates\":[{\"kustomize\":{\"images\":[{\"image\":\"nginx\",\"path\":\"base\"}]},\"repoURL\":\"https://github.com/rbreeze/kargo-demo\"}]},\"subscriptions\":{\"repos\":{\"git\":[{\"repoURL\":\"https://github.com/rbreeze/kargo-demo\"}],\"images\":[{\"repoURL\":\"nginx\",\"semverConstraint\":\"1.23.2\"}]}}}}\n"
         },
-        "creationTimestamp": "2023-05-08T20:28:28Z",
+        "creationTimestamp": "2023-05-09T21:45:12Z",
         "generation": 1,
         "name": "test",
         "namespace": "kargo-demo",
@@ -170,7 +170,7 @@
                 "repoURL": "https://github.com/rbreeze/kargo-demo"
               }
             ],
-            "firstSeen": "2023-05-08T20:28:30Z",
+            "firstSeen": "2023-05-09T21:45:14Z",
             "id": "e35e79ce9ab8b2958c8b0f532ee5a42058886289",
             "images": [
               {
@@ -187,7 +187,7 @@
               "repoURL": "https://github.com/rbreeze/kargo-demo"
             }
           ],
-          "firstSeen": "2023-05-08T20:28:30Z",
+          "firstSeen": "2023-05-09T21:45:14Z",
           "health": {
             "status": "Unhealthy",
             "statusReason": "Argo CD Application \"kargo-demo-test\" in namespace \"argocd\" is not synced to revision \"5441cd0a1d4e2cd2c50c078725f5f6c63b2f2a3a\""
@@ -208,7 +208,7 @@
                 "repoURL": "https://github.com/rbreeze/kargo-demo"
               }
             ],
-            "firstSeen": "2023-05-08T20:28:30Z",
+            "firstSeen": "2023-05-09T21:45:14Z",
             "health": {
               "status": "Unhealthy",
               "statusReason": "Argo CD Application \"kargo-demo-test\" in namespace \"argocd\" is not synced to revision \"5441cd0a1d4e2cd2c50c078725f5f6c63b2f2a3a\""
