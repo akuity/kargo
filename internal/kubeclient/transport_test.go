@@ -2,6 +2,7 @@ package kubeclient
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,7 +31,7 @@ func Test_credentialHook(t *testing.T) {
 					require.NoError(t, err)
 				}),
 			)
-			defer srv.Close()
+			t.Cleanup(srv.Close)
 
 			hc := http.Client{
 				Transport: newAuthorizationHeaderHook(http.DefaultTransport),
