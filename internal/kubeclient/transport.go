@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	xKargoUserCredentialHeader = "X-Kargo-User-Credential"
+	xKargoUserCredentialHeader = "X-Kargo-User-Credential" // #nosec G101
 )
 
 var (

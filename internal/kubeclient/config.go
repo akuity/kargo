@@ -11,5 +11,6 @@ var overrides = clientcmd.ConfigOverrides{}
 func NewClientConfig() clientcmd.ClientConfig {
 	rules := clientcmd.NewDefaultClientConfigLoadingRules()
 	rules.DefaultClientConfig = &clientcmd.DefaultClientConfig
-	return clientcmd.NewInteractiveDeferredLoadingClientConfig(rules, &overrides, os.Stdin)
+	return clientcmd.NewInteractiveDeferredLoadingClientConfig(
+		rules, &overrides, os.Stdin)
 }

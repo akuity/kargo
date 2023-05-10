@@ -24,9 +24,10 @@ func Test_credentialHook(t *testing.T) {
 	}
 	for name, testSet := range testSets {
 		t.Run(name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusNoContent)
-			}))
+			srv := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				}))
 			t.Cleanup(srv.Close)
 
 			hc := http.Client{
