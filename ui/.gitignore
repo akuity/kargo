@@ -1,0 +1,8 @@
+.DS_Store
+node_modules
+/build
+/package
+.env
+.env*
+dist
+coverage

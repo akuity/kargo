@@ -1,0 +1,115 @@
+lockfileVersion: 5.4
+
+specifiers:
+  '@bufbuild/connect': 0.8.6
+  '@bufbuild/connect-query': 0.2.1
+  '@bufbuild/protobuf': 1.2.0
+
+dependencies:
+  '@bufbuild/connect': 0.8.6_@bufbuild+protobuf@1.2.0
+  '@bufbuild/connect-query': 0.2.1
+  '@bufbuild/protobuf': 1.2.0
+
+packages:
+
+  /@bufbuild/connect-query/0.2.1:
+    resolution: {integrity: sha512-0YmAjvXzvHxRkSa4lrmd9lcLtPiVYrARkSclCpOLzVTgAvOKNkoJ6T88yEF5zGJST3Sa46t0hePeiQGSL99bPg==}
+    peerDependencies:
+      '@tanstack/react-query': ^4.20.4
+      react: ^18.2.0
+      react-dom: ^18.2.0
+    dependencies:
+      '@bufbuild/connect': 0.8.6_@bufbuild+protobuf@1.2.0
+      '@bufbuild/connect-web': 0.8.6_@bufbuild+protobuf@1.2.0
+      '@bufbuild/protobuf': 1.2.0
+      '@bufbuild/protoc-gen-connect-web': 0.8.6_@bufbuild+connect@0.8.6
+      stable-hash: 0.0.3
+    transitivePeerDependencies:
+      - '@bufbuild/protoc-gen-es'
+      - supports-color
+    dev: false
+
+  /@bufbuild/connect-web/0.8.6_@bufbuild+protobuf@1.2.0:
+    resolution: {integrity: sha512-+ZI7Ercc0X1vlQr1iHa35EymtFjq1x4rByE+ToNyw05mwB7yxk4nw4iUa/Z7PfHYba1dAcgnnrvRDI2K7TBPBQ==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^1.2.0
+    dependencies:
+      '@bufbuild/connect': 0.8.6_@bufbuild+protobuf@1.2.0
+      '@bufbuild/protobuf': 1.2.0
+    dev: false
+
+  /@bufbuild/connect/0.8.6_@bufbuild+protobuf@1.2.0:
+    resolution: {integrity: sha512-z9gW4hcQxCz7w0kjt1JyMp7VEQQdm7CYiZHvNq4vZtMbKOje2DC8kSb62XStHHd3AdoDZq1cb1s11F5TMSwZYw==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^1.2.0
+    dependencies:
+      '@bufbuild/protobuf': 1.2.0
+    dev: false
+
+  /@bufbuild/protobuf/1.2.0:
+    resolution: {integrity: sha512-MBVuQMOBHxgGnZ9XCUIi8WOy5O/T4ma3TduCRhRvndv3UDbG9cHgd8h6nOYSGyBYPEvXf1z9nTwhp8mVIDbq2g==}
+    dev: false
+
+  /@bufbuild/protoc-gen-connect-web/0.8.6_@bufbuild+connect@0.8.6:
+    resolution: {integrity: sha512-BltKOzGONR8uGlGdjgZnMBqudNEcRgF75XcttfyyZJsKPsknivFrMSoSlI6ZUyR+TQ567vJDxKKGO4bukQiBWA==}
+    engines: {node: '>=14'}
+    hasBin: true
+    peerDependencies:
+      '@bufbuild/connect': 0.8.6
+      '@bufbuild/protoc-gen-es': ^1.2.0
+    peerDependenciesMeta:
+      '@bufbuild/connect':
+        optional: true
+      '@bufbuild/protoc-gen-es':
+        optional: true
+    dependencies:
+      '@bufbuild/connect': 0.8.6_@bufbuild+protobuf@1.2.0
+      '@bufbuild/protobuf': 1.2.0
+      '@bufbuild/protoplugin': 1.2.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@bufbuild/protoplugin/1.2.0:
+    resolution: {integrity: sha512-TX0mEk+LdIbpK2xr5RqeUswR8jGZs6uCX6Cq8azADj8hhiUr7Xty8agEOU/zR+J71D4dV5SnyEPYyw0nGJ6dGQ==}
+    dependencies:
+      '@bufbuild/protobuf': 1.2.0
+      '@typescript/vfs': 1.4.0
+      typescript: 4.5.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@typescript/vfs/1.4.0:
+    resolution: {integrity: sha512-Pood7yv5YWMIX+yCHo176OnF8WUlKGImFG7XlsuH14Zb1YN5+dYD3uUtS7lqZtsH7tAveNUi2NzdpQCN0yRbaw==}
+    dependencies:
+      debug: 4.3.4
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /debug/4.3.4:
+    resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
+    engines: {node: '>=6.0'}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+    dependencies:
+      ms: 2.1.2
+    dev: false
+
+  /ms/2.1.2:
+    resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
+    dev: false
+
+  /stable-hash/0.0.3:
+    resolution: {integrity: sha512-c63fvNCQ7ip1wBfPv54MflMA5L6OE5J0p6Fg13IpKft4JAFoNal8+s/jtJ8PibrwqXm4onnbeQsADs8k0NQGUA==}
+    dev: false
+
+  /typescript/4.5.2:
+    resolution: {integrity: sha512-5BlMof9H1yGt0P8/WF+wPNw6GfctgGjXp5hkblpyT+8rkASSmkUKMXrxR0Xg8ThVCi/JnHQiKXeBaEwCeQwMFw==}
+    engines: {node: '>=4.2.0'}
+    hasBin: true
+    dev: false

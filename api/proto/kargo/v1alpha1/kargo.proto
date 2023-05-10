@@ -6,31 +6,8 @@ import "google/api/annotations.proto";
 import "kargo/v1alpha1/types.proto";
 
 service KargoService {
-  rpc ListEnvironments(ListEnvironmentsRequest) returns (ListEnvironmentsResponse) {
-    option (google.api.http) = {
-      get: "/api/kargo/v1alpha1/namespaces/{namespace}/environments"
-    };
-  }
-  rpc GetEnvironment(GetEnvironmentRequest) returns (GetEnvironmentResponse) {
-    option (google.api.http) = {
-      get: "/api/kargo/v1alpha1/namespaces/{namespace}/environments/{name}"
-    };
-  }
-  rpc CreateEnvironment(CreateEnvironmentRequest) returns (CreateEnvironmentResponse) {
-    option (google.api.http) = {
-      post: "/api/kargo/v1alpha1/namespaces/{namespace}/environments"
-    };
-  }
-  rpc UpdateEnvironment(UpdateEnvironmentRequest) returns (UpdateEnvironmentResponse) {
-    option (google.api.http) = {
-      put: "/api/kargo/v1alpha1/namespaces/{namespace}/environments/{name}"
-    };
-  }
-  rpc DeleteEnvironment(DeleteEnvironmentRequest) returns (DeleteEnvironmentResponse) {
-    option (google.api.http) = {
-      delete: "/api/kargo/v1alpha1/namespaces/{namespace}/environments/{name}"
-    };
-  }
+  rpc ListEnvironments(ListEnvironmentsRequest) returns (ListEnvironmentsResponse);
+  rpc GetEnvironment(GetEnvironmentRequest) returns (GetEnvironmentResponse);
 }
 
 message ListEnvironmentsRequest {
@@ -38,7 +15,7 @@ message ListEnvironmentsRequest {
 }
 
 message ListEnvironmentsResponse {
-  repeated akuity.io.kargo.v1alpha1.Environment environment = 1;
+  repeated akuity.io.kargo.v1alpha1.Environment environments = 1;
 }
 
 message GetEnvironmentRequest {
@@ -48,32 +25,4 @@ message GetEnvironmentRequest {
 
 message GetEnvironmentResponse {
   akuity.io.kargo.v1alpha1.Environment environment = 1;
-}
-
-message CreateEnvironmentRequest {
-  string namespace = 1;
-  // TODO: Payload
-}
-
-message CreateEnvironmentResponse {
-  akuity.io.kargo.v1alpha1.Environment environment = 1;
-}
-
-message UpdateEnvironmentRequest {
-  string namespace = 1;
-  string name = 2;
-  // TODO: Payload
-}
-
-message UpdateEnvironmentResponse {
-  akuity.io.kargo.v1alpha1.Environment environment = 1;
-}
-
-message DeleteEnvironmentRequest {
-  string namespace = 1;
-  string name = 2;
-}
-
-message DeleteEnvironmentResponse {
-  /* explicitly empty */
 }
