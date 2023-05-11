@@ -152,17 +152,15 @@ func TestGetLatestCharts(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := reconciler{
+			r := reconciler{
 				credentialsDB:           testCase.credentialsDB,
 				getLatestChartVersionFn: testCase.getLatestChartVersionFn,
 			}
-			testCase.assertions(
-				reconciler.getLatestCharts(
-					context.Background(),
-					"fake-namespace",
-					testSubs,
-				),
-			)
+			testCase.assertions(r.getLatestCharts(
+				context.Background(),
+				"fake-namespace",
+				testSubs,
+			))
 		})
 	}
 }

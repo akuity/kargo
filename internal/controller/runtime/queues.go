@@ -97,7 +97,7 @@ func (p *priorityQueue) Pop() client.Object {
 	if p.internalQueue.Len() == 0 {
 		return nil
 	}
-	return heap.Pop(p.internalQueue).(client.Object)
+	return heap.Pop(p.internalQueue).(client.Object) // nolint: forcetypeassert
 }
 
 func (p *priorityQueue) Depth() int {
@@ -125,7 +125,7 @@ func (i *internalPriorityQueue) Swap(n, m int) {
 }
 
 func (i *internalPriorityQueue) Push(item any) {
-	i.objects = append(i.objects, item.(client.Object))
+	i.objects = append(i.objects, item.(client.Object)) // nolint: forcetypeassert
 }
 
 func (i *internalPriorityQueue) Pop() any {

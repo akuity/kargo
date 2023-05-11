@@ -4,7 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/akuity/kargo/internal/api/server"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -20,7 +20,7 @@ func newAPICommand() *cobra.Command {
 			logger := log.New()
 			logger.SetLevel(cfg.LogLevel)
 			ctx := logging.ContextWithLogger(cmd.Context(), logger.WithFields(nil))
-			srv := server.NewServer(cfg)
+			srv := api.NewServer(cfg)
 			return srv.Serve(ctx)
 		},
 	}

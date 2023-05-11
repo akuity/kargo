@@ -2,7 +2,6 @@ package kubeclient
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,38 +9,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAuthRoundTripper(t *testing.T) {
+func Test_credentialHook(t *testing.T) {
 	testSets := map[string]struct {
-		newContext func() context.Context
+		credential string
 		expected   string
 	}{
-		"context without auth credential": {
-			newContext: context.Background,
+		"empty authorization header": {
+			expected: "",
 		},
-		"context with auth credential": {
-			newContext: func() context.Context {
-				return ContextWithAuthCredential(context.Background(), "Bearer token")
-			},
-			expected: "Bearer token",
+		"non-empty authorization header": {
+			credential: "Bearer token",
+			expected:   "Bearer token",
 		},
 	}
-	for name, ts := range testSets {
+	for name, testSet := range testSets {
 		t.Run(name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				_, _ = w.Write([]byte(req.Header.Get("Authorization")))
-			}))
-			defer srv.Close()
+			srv := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusNoContent)
+				}))
+			t.Cleanup(srv.Close)
 
 			hc := http.Client{
-				Transport: newAuthRoundTripper(http.DefaultTransport),
+				Transport: newAuthorizationHeaderHook(http.DefaultTransport),
 			}
 			req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+			if testSet.credential != "" {
+				req.Header.Set("Authorization", testSet.credential)
+			}
 			require.NoError(t, err)
-			res, err := hc.Do(req.WithContext(ts.newContext()))
+			res, err := hc.Do(req.WithContext(context.TODO()))
+			defer func() {
+				_ = res.Body.Close()
+			}()
 			require.NoError(t, err)
-			data, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-			require.Equal(t, ts.expected, string(data))
+			got := res.Header.Get(xKargoUserCredentialHeader)
+			require.Equal(t, testSet.credential, got)
 		})
 	}
 }

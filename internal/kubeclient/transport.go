@@ -6,27 +6,33 @@ import (
 	netutil "k8s.io/apimachinery/pkg/util/net"
 )
 
-var (
-	_ netutil.RoundTripperWrapper = &authRoundTripper{}
+const (
+	xKargoUserCredentialHeader = "X-Kargo-User-Credential" // #nosec G101
 )
 
-type authRoundTripper struct {
+var (
+	_ netutil.RoundTripperWrapper = &credentialHook{}
+)
+
+type credentialHook struct {
 	rt http.RoundTripper
 }
 
-func newAuthRoundTripper(rt http.RoundTripper) http.RoundTripper {
-	return &authRoundTripper{
+func newAuthorizationHeaderHook(rt http.RoundTripper) http.RoundTripper {
+	return &credentialHook{
 		rt: rt,
 	}
 }
 
-func (rt *authRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	if v, ok := AuthCredentialFromContext(req.Context()); ok {
-		req.Header.Set("Authorization", v)
+func (h *credentialHook) RoundTrip(req *http.Request) (*http.Response, error) {
+	cred := req.Header.Get("Authorization")
+	res, err := h.rt.RoundTrip(req)
+	if res != nil {
+		res.Header.Set(xKargoUserCredentialHeader, cred)
 	}
-	return rt.rt.RoundTrip(req)
+	return res, err
 }
 
-func (rt *authRoundTripper) WrappedRoundTripper() http.RoundTripper {
-	return rt.rt
+func (h *credentialHook) WrappedRoundTripper() http.RoundTripper {
+	return h.rt
 }

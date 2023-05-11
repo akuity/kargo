@@ -1,16 +1,16 @@
-package server
+package api
 
 import (
 	"context"
 	"fmt"
-	"net"
+	"net/http"
 	"time"
 
+	grpchealth "github.com/bufbuild/connect-grpchealth-go"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/health/grpc_health_v1"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
-	"github.com/akuity/kargo/internal/api/server/interceptor"
 	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -32,28 +32,30 @@ func NewServer(cfg config.APIConfig) Server {
 func (s *server) Serve(ctx context.Context) error {
 	log := logging.LoggerFromContext(ctx)
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
-	log.Infof("Server is listening on %q", addr)
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		return errors.Wrapf(err, "listen %s", addr)
+	mux := http.NewServeMux()
+
+	mux.Handle(grpchealth.NewHandler(NewHealthChecker()))
+
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           h2c.NewHandler(mux, &http2.Server{}),
+		ReadHeaderTimeout: time.Minute,
 	}
 
-	srv := grpc.NewServer(
-		interceptor.NewUnaryInterceptor(log),
-		interceptor.NewStreamInterceptor(log),
-	)
-	grpc_health_v1.RegisterHealthServer(srv, newGRPCHealthV1Server())
-
 	errCh := make(chan error)
-	go func() { errCh <- srv.Serve(l) }()
+	go func() { errCh <- srv.ListenAndServe() }()
+
+	log.Infof("Server is listening on %q", addr)
 
 	select {
 	case <-ctx.Done():
 		log.Info("Gracefully stopping server...")
 		time.Sleep(s.cfg.GracefulShutdownTimeout)
-		srv.GracefulStop()
-		return nil
+		return srv.Shutdown(context.Background())
 	case err := <-errCh:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
 		return err
 	}
 }

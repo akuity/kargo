@@ -15,11 +15,10 @@ import (
 )
 
 func TestNewEnvironmentReconciler(t *testing.T) {
-	e, err := newReconciler(
+	e := newReconciler(
 		fake.NewClientBuilder().Build(),
 		&credentials.FakeDB{},
 	)
-	require.NoError(t, err)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
 
@@ -175,7 +174,12 @@ func TestSync(t *testing.T) {
 			[]api.EnvironmentSubscription,
 		) ([]api.EnvironmentState, error)
 		client     client.Client
-		assertions func(initialStatus, newStatus api.EnvironmentStatus, client client.Client, err error)
+		assertions func(
+			initialStatus api.EnvironmentStatus,
+			newStatus api.EnvironmentStatus,
+			client client.Client,
+			err error,
+		)
 	}{
 		{
 			name: "error checking for outstanding promotions",
