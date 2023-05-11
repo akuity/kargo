@@ -72,7 +72,7 @@ func (r *reconciler) applyBookkeeperUpdate(
 	req := bookkeeper.RenderRequest{
 		RepoURL:      update.RepoURL,
 		RepoCreds:    repoCreds,
-		Commit:       readRef,
+		Ref:          readRef,
 		Images:       images,
 		TargetBranch: update.WriteBranch,
 	}

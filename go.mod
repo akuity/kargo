@@ -65,7 +65,7 @@ require k8s.io/apiserver v0.24.2 // indirect
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/akuity/bookkeeper v0.1.0-alpha.2-rc.14
+	github.com/akuity/bookkeeper v0.1.0-alpha.2-rc.15
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
 	github.com/argoproj/argo-cd/v2 v2.6.7
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.3
