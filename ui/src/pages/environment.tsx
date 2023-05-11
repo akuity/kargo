@@ -1,9 +1,15 @@
 import { Environment, GetPromotionPoliciesForEnvironment, PromotionPolicy } from '@client/mock';
 import { HealthStatusIcon } from '@features/ui/health-status-icon/health-status-icon';
-import { faExternalLinkAlt, faToggleOff, faToggleOn } from '@fortawesome/free-solid-svg-icons';
+import {
+  faExternalLinkAlt,
+  faPenClip,
+  faToggleOff,
+  faToggleOn
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQuery } from '@tanstack/react-query';
-import { Typography } from 'antd';
+import { Tooltip } from 'antd';
+import moment from 'moment';
 import { Link, useParams } from 'react-router-dom';
 
 import * as styles from './environment.module.less';
@@ -122,7 +128,8 @@ const Subscriptions = (props: { curProject: string; subscriptions: Subscriptions
                   {image.semverConstraint}
                 </div>
                 <div>
-                  <div className={styles.dataLabel}>Update Strategy</div> {image.updateStrategy}
+                  <div className={styles.dataLabel}>Update Strategy</div>
+                  {image.updateStrategy}
                 </div>
               </div>
             ))}
@@ -139,8 +146,8 @@ const AvailableStates = (props: { environment: Environment }) => {
     <div style={{ marginBottom: '1em' }}>
       <div className={styles.sectionTitle}>Available States</div>
       <div>
-        {(environment?.status?.availableStates || []).map((state: any) => (
-          <div key={state.id}>{JSON.stringify(state)}</div>
+        {(environment?.status?.availableStates || []).map((state: State) => (
+          <AvailableState key={state.id} state={state} />
         ))}
       </div>
     </div>
@@ -151,7 +158,10 @@ const AssociatedPolicies = (props: { policies: PromotionPolicy[] }) => {
   const { policies } = props;
   return (
     <div>
-      <div className={styles.sectionTitle}>Associated Promotion Policies</div>
+      <div className={styles.sectionTitle}>
+        <FontAwesomeIcon icon={faPenClip} className='mr-2' />
+        Associated Promotion Policies
+      </div>
       {(policies || []).map((policy: PromotionPolicy) => (
         <div key={policy.metadata.uid} className={styles.promotionPolicy}>
           <div className={styles.subtitle}>{policy.metadata.name}</div>
@@ -164,27 +174,75 @@ const AssociatedPolicies = (props: { policies: PromotionPolicy[] }) => {
             />
           </div>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '0.5em' }}>
-              Authorized Promoters
+            <div className='mb-3 font-semibold text-base'>Authorized Promoters</div>
+            <div className='flex items-center'>
+              {(policy?.authorizedPromoters || []).map((promoter: any) => (
+                <AuthorizedPromoter {...promoter} key={promoter.name} />
+              ))}
             </div>
-            {(policy?.authorizedPromoters || []).map((promoter: any) => (
-              <div
-                key={promoter.name}
-                style={{ backgroundColor: 'white', padding: '1em', borderRadius: '5px' }}
-              >
-                <div>
-                  <div className={styles.dataLabel}>Name</div>
-                  <Typography.Text code>{promoter.name}</Typography.Text>
-                </div>
-                <div>
-                  <div className={styles.dataLabel}>Subject Type</div>
-                  <Typography.Text code>{promoter.subjectType}</Typography.Text>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       ))}
+    </div>
+  );
+};
+
+const AuthorizedPromoter = (promoter: { name: string; subjectType: string }) => {
+  const { name, subjectType } = promoter;
+  return (
+    <div className='width-auto bg-white rounded p-2'>
+      <div className='font-bold mr-4 text-base mb-2'>{name}</div>
+      <div>
+        <div className='uppercase font-semibold'>{subjectType}</div>
+        <div className='uppercase text-xs font-semibold text-gray-400 mt-1'>SUBJECT TYPE</div>
+      </div>
+    </div>
+  );
+};
+
+interface Commit {
+  id: string;
+  repoURL: string;
+}
+
+interface Image {
+  repoURL: string;
+  tag: string;
+}
+interface State {
+  commits: Commit[];
+  firstSeen: string;
+  id: string;
+  images: Image[];
+}
+
+const AvailableState = (props: { state: State }) => {
+  const { state } = props;
+  return (
+    <div>
+      <div>
+        {(state.commits || []).map((commit: Commit) => (
+          <div key={commit.id}>
+            <div className='mb-2 font-semibold uppercase text-gray-400'>Commit</div>
+            <div className='flex items-center'>
+              <a href={commit.repoURL} target='_blank' className='mr-5'>
+                {commit.repoURL}
+              </a>
+              <Tooltip title={commit.id}>
+                <a
+                  href={`${commit.repoURL}/commit/${commit.id}`}
+                  target='_blank'
+                  className='flex items-center p-2 rounded bg-blue-500 text-white'
+                >
+                  {commit.id.slice(0, 7)}
+                  <FontAwesomeIcon icon={faExternalLinkAlt} style={{ marginLeft: '5px' }} />
+                </a>
+              </Tooltip>
+            </div>
+            <div>Committed at {moment(state.firstSeen).format('HH:mm:ss on MMMM Do YYYY')} </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

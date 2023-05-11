@@ -9,6 +9,7 @@ import { theme } from './config/theme';
 import { MainLayout } from './features/ui/layout/main-layout';
 import { Projects } from './pages/projects';
 
+import './app.less';
 import 'antd/dist/reset.css';
 
 export const App = () => (

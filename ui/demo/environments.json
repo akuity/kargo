@@ -149,12 +149,20 @@
             "git": [
               {
                 "repoURL": "https://github.com/rbreeze/kargo-demo"
+              },
+              {
+                "repoURL": "https://github.com/rbreeze/kargo-demo-2"
               }
             ],
             "images": [
               {
                 "repoURL": "nginx",
                 "semverConstraint": "1.23.2",
+                "updateStrategy": "SemVer"
+              },
+              {
+                "repoURL": "another-image",
+                "semverConstraint": "1.2.3",
                 "updateStrategy": "SemVer"
               }
             ]
