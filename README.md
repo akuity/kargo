@@ -1,6 +1,7 @@
 ![Kargo by Akuity, creators of Argo](kargo-logo.png)
 
 ![CI](https://github.com/akuity/kargo/actions/workflows/ci.yaml/badge.svg)
+[![codecov](https://codecov.io/gh/akuity/kargo/branch/main/graph/badge.svg?token=FGUq4netA6)](https://codecov.io/gh/akuity/kargo)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/c4e62c70-e07d-4ac6-bcf8-d7003c936d19/deploy-status)](https://app.netlify.com/sites/docs-kargo-akuity-io/deploys)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
