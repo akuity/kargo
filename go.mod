@@ -70,7 +70,6 @@ require (
 	github.com/argoproj/argo-cd/v2 v2.6.7
 	github.com/bufbuild/connect-go v1.0.0
 	github.com/bufbuild/connect-grpchealth-go v1.0.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	gopkg.in/yaml.v3 v3.0.1
 	oras.land/oras-go v1.2.2
