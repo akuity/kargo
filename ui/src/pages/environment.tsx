@@ -9,7 +9,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQuery } from '@tanstack/react-query';
 import { Tooltip } from 'antd';
-import moment from 'moment';
+import { format } from 'date-fns';
 import { Link, useParams } from 'react-router-dom';
 
 import * as styles from './environment.module.less';
@@ -239,7 +239,7 @@ const AvailableState = (props: { state: State }) => {
                 </a>
               </Tooltip>
             </div>
-            <div>Committed at {moment(state.firstSeen).format('HH:mm:ss on MMMM Do YYYY')} </div>
+            <div>Committed at {format(new Date(state.firstSeen), "HH:mm:ss 'on' MMM do yyyy")}</div>
           </div>
         ))}
       </div>
