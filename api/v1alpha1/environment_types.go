@@ -660,7 +660,3 @@ type EnvironmentList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Environment `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Environment{}, &EnvironmentList{})
-}

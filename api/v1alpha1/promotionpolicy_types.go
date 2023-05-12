@@ -74,7 +74,3 @@ type PromotionPolicyList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PromotionPolicy `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&PromotionPolicy{}, &PromotionPolicyList{})
-}

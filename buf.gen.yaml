@@ -1,10 +1,6 @@
 version: v1
 managed:
   enabled: true
-  go_package_prefix:
-    default: github.com/akuity/kargo/pkg/api/gen
-    except:
-      - buf.build/googleapis/googleapis
 plugins:
   - plugin: buf.build/protocolbuffers/go:v1.30.0
     out: pkg/api/gen
