@@ -41,7 +41,7 @@ The following command will install Kargo with default configuration:
 ```shell
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
-  --version 0.1.0-rc.7 \
+  --version 0.1.0-rc.8 \
   --namespace kargo \
   --create-namespace \
   --wait
@@ -60,7 +60,7 @@ release candidate.
    ```shell
    helm inspect values \
      oci://ghcr.io/akuity/kargo-charts/kargo \
-     --version 0.1.0-rc.7 > ~/kargo-values.yaml
+     --version 0.1.0-rc.8 > ~/kargo-values.yaml
    ```
 
 1. Edit and save the values.
@@ -75,7 +75,7 @@ release candidate.
    ```shell
    helm install kargo \
      oci://ghcr.io/akuity/kargo-charts/kargo \
-     --version 0.1.0-rc.7 \
+     --version 0.1.0-rc.8 \
      --namespace kargo \
      --create-namespace \
      --values ~/kargo-values.yaml \
