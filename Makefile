@@ -44,7 +44,11 @@ lint-charts:
 
 .PHONY: codegen
 codegen:
-	buf generate
+	go mod vendor
+	./hack/generate-proto.sh
+	buf generate api
+	go mod tidy
+	rm -rf ./vendor
 	controller-gen \
 		rbac:roleName=manager-role \
 		crd \

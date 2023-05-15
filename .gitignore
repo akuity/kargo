@@ -3,3 +3,4 @@
 bin/
 charts/kargo/*.tgz
 coverage.txt
+vendor/

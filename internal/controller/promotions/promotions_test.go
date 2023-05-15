@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -48,8 +49,8 @@ func TestNewPromotionReconciler(t *testing.T) {
 }
 
 func TestInitializeQueues(t *testing.T) {
-	scheme, err := api.SchemeBuilder.Build()
-	require.NoError(t, err)
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
 	r := reconciler{
 		client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			&api.Promotion{
@@ -64,7 +65,7 @@ func TestInitializeQueues(t *testing.T) {
 		).Build(),
 		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
-	err = r.initializeQueues(context.Background())
+	err := r.initializeQueues(context.Background())
 	require.NoError(t, err)
 }
 
@@ -232,13 +233,13 @@ func TestSerializedSync(t *testing.T) {
 		},
 	}
 
-	scheme, err := api.SchemeBuilder.Build()
-	require.NoError(t, err)
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
 	client := fake.NewClientBuilder().
 		WithScheme(scheme).WithObjects(promo).Build()
 
 	pq := newPromotionsQueue()
-	err = pq.Push(promo)
+	err := pq.Push(promo)
 	require.NoError(t, err)
 
 	r := reconciler{
@@ -273,8 +274,8 @@ func TestSerializedSync(t *testing.T) {
 }
 
 func TestGetPromo(t *testing.T) {
-	scheme, err := api.SchemeBuilder.Build()
-	require.NoError(t, err)
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string

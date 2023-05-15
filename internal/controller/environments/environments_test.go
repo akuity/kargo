@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -139,8 +140,8 @@ func TestIndexOutstandingPromotionsByEnvironment(t *testing.T) {
 }
 
 func TestSync(t *testing.T) {
-	scheme, err := api.SchemeBuilder.Build()
-	require.NoError(t, err)
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
 
 	noOutstandingPromotionsFn := func(
 		context.Context,
