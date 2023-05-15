@@ -278,7 +278,7 @@ func (r *repo) RemoteBranchExists(branch string) (bool, error) {
 
 func (r *repo) ResetHard() error {
 	_, err :=
-		libExec.Exec(r.buildCommand("git", "reset", "--hard"))
+		libExec.Exec(r.buildCommand("reset", "--hard"))
 	return errors.Wrap(err, "error resetting branch working tree")
 }
 
