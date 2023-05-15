@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package akuity.io.kargo.service.v1alpha1;
 
-option go_package = "github.com/akuity/kargo/pkg/api/gen/service/v1alpha1;svcv1alpha1";
+option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
 
 import "google/api/annotations.proto";
 import "v1alpha1/generated.proto";
@@ -17,7 +17,7 @@ message ListEnvironmentsRequest {
 }
 
 message ListEnvironmentsResponse {
-  repeated github.com.akuity.kargo.api.v1alpha1.Environment environments = 1;
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Environment environments = 1;
 }
 
 message GetEnvironmentRequest {
@@ -26,5 +26,5 @@ message GetEnvironmentRequest {
 }
 
 message GetEnvironmentResponse {
-  github.com.akuity.kargo.api.v1alpha1.Environment environment = 1;
+  github.com.akuity.kargo.pkg.api.v1alpha1.Environment environment = 1;
 }

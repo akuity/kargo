@@ -7,7 +7,7 @@ package svcv1alpha1connect
 import (
 	context "context"
 	errors "errors"
-	v1alpha1 "github.com/akuity/kargo/pkg/api/gen/service/v1alpha1"
+	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	connect_go "github.com/bufbuild/connect-go"
 	http "net/http"
 	strings "strings"

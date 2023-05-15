@@ -3,11 +3,11 @@ managed:
   enabled: true
 plugins:
   - plugin: buf.build/protocolbuffers/go:v1.30.0
-    out: pkg/api/gen
+    out: pkg/api
     opt:
       - paths=source_relative
   - plugin: buf.build/bufbuild/connect-go:v1.7.0
-    out: pkg/api/gen
+    out: pkg/api
     opt:
       - paths=source_relative
   - plugin: buf.build/bufbuild/es:v1.2.0

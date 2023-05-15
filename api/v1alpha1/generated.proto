@@ -3,7 +3,7 @@
 
 syntax = "proto2";
 
-package github.com.akuity.kargo.api.v1alpha1;
+package github.com.akuity.kargo.pkg.api.v1alpha1;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
@@ -20,7 +20,7 @@ option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.goproto_unrecognized_all) = false;
 option (gogoproto.goproto_enum_prefix_all) = false;
 option (gogoproto.goproto_getters_all) = false;
-option go_package = "github.com/akuity/kargo/api/v1alpha1";
+option go_package = "github.com/akuity/kargo/pkg/api/v1alpha1";
 
 // ArgoCDAppCheck describes a health check to perform on an Argo CD Application
 // resource.
