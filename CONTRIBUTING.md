@@ -1,3 +1,3 @@
 # Kargo contributor guide
 
-See https://docs-kargo-akuity-io.netlify.app/contributor-guide/
+See https://kargo.akuity.io/contributor-guide/
