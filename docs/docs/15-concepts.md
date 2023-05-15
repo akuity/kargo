@@ -118,7 +118,7 @@ spec:
         branch: main
       images:
       - repoURL: nginx
-        semverConstraint: ^1.23.0
+        semverConstraint: ^1.24.0
   # ...
 ```
 
@@ -135,7 +135,7 @@ status:
     id: 51636b9332d5938b9f2d382e9713b54ceb62a323
     images:
     - repoURL: nginx
-      tag: 1.23.2
+      tag: 1.24.0
 ```
 
 ### Promotion mechanisms
@@ -204,7 +204,7 @@ spec:
         branch: main
       images:
       - repoURL: nginx
-        semverConstraint: ^1.23.0
+        semverConstraint: ^1.24.0
   promotionMechanisms:
     gitRepoUpdates:
     - repoURL: https://github.com/example/kargo-demo-gitops.git
@@ -271,7 +271,7 @@ status:
     id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     images:
     - repoURL: nginx
-      tag: 1.23.2
+      tag: 1.24.0
   currentState:
     commits:
     - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
@@ -280,7 +280,7 @@ status:
     id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     images:
     - repoURL: nginx
-      tag: 1.23.2
+      tag: 1.24.0
   history:
     - commits:
       - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
@@ -289,7 +289,7 @@ status:
       id: 404df86560cab5d515e7aa74653e665c1dc96e1c
       images:
       - repoURL: nginx
-        tag: 1.23.2
+        tag: 1.24.0
 ```
 
 Above, we can see that the state currently deployed to the environment is
@@ -324,7 +324,7 @@ spec:
         branch: main
       images:
       - repoURL: nginx
-        semverConstraint: ^1.23.0
+        semverConstraint: ^1.24.0
   promotionMechanisms:
     gitRepoUpdates:
     - repoURL: https://github.com/example/kargo-demo-gitops.git
@@ -365,7 +365,7 @@ status:
     id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     images:
     - repoURL: nginx
-      tag: 1.23.2
+      tag: 1.24.0
   currentState:
     commits:
     - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
@@ -376,7 +376,7 @@ status:
     id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     images:
     - repoURL: nginx
-      tag: 1.23.2
+      tag: 1.24.0
   history:
     - commits:
       - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
@@ -387,7 +387,7 @@ status:
       id: 404df86560cab5d515e7aa74653e665c1dc96e1c
       images:
       - repoURL: nginx
-        tag: 1.23.2
+        tag: 1.24.0
 ```
 
 ## `Promotion` resources

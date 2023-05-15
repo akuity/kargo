@@ -123,7 +123,7 @@ The username and password are both `admin`.
 ```shell
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
-  --version 0.1.0-rc.6 \
+  --version 0.1.0-rc.7 \
   --namespace kargo \
   --create-namespace \
   --wait
@@ -356,7 +356,7 @@ spec:
       - repoURL: ${GITOPS_REPO_URL}
       images:
       - repoURL: nginx
-        semverConstraint: 1.23.2
+        semverConstraint: ^1.24.2
   promotionMechanisms:
     gitRepoUpdates:
     - repoURL: ${GITOPS_REPO_URL}
@@ -390,13 +390,6 @@ The actual promotion process involves running `kustomize edit set image` on the
 `base` directory of our GitOps repository and committing those changes, then
 updating the `targetRevision` property of the `kargo-demo-test` Argo CD
 `Application`.
-
-:::note
-Due to an [as-yet-unresolved bug](https://github.com/akuity/kargo/issues/313),
-the `semverConstraint` field in the `test` `Environment` manifest above is
-pinned to a _specific_ semantically tagged image rather than specifying a range
-like `^1.0.0`.
-:::
 
 :::note
 It may seem strange to some that we are updating Kustomize _base_ configuration

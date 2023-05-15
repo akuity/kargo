@@ -23,10 +23,6 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-    - name: Allow access to private modules
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: Run unit tests
       run: make test-unit
     - name: Upload coverage reports
@@ -47,10 +43,6 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-    - name: Allow access to private modules
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v3
       with:
@@ -69,10 +61,6 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-    - name: Allow access to private modules
-      env:
-        GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      run: git config --global url."https://krancour:${GH_TOKEN}@github.com".insteadOf https://github.com
     - name: Install buf
       run: go install github.com/bufbuild/buf/cmd/buf@v1.15.1
     - name: Install controller-gen
