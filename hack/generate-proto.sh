@@ -5,8 +5,11 @@ set -euxo pipefail
 # shellcheck disable=SC2128
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE}")"/..; pwd)
 
+mkdir -p "${PROJECT_ROOT}/pkg/api"
+ln -s "${PROJECT_ROOT}/api/v1alpha1" "${PROJECT_ROOT}/pkg/api/v1alpha1"
+
 PACKAGES=(
-  github.com/akuity/kargo/api/v1alpha1
+  github.com/akuity/kargo/pkg/api/v1alpha1
 )
 APIMACHINERY_PKGS=(
   +k8s.io/apimachinery/pkg/util/intstr
@@ -25,3 +28,5 @@ go-to-protobuf \
   --only-idl \
   --trim-path-prefix="${PROJECT_ROOT}/github.com/akuity/kargo/" \
   --output-base="${PROJECT_ROOT}"
+
+rm -rf "${PROJECT_ROOT}/pkg/api/v1alpha1"

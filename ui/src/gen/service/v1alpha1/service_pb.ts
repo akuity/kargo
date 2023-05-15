@@ -49,7 +49,7 @@ export class ListEnvironmentsRequest extends Message<ListEnvironmentsRequest> {
  */
 export class ListEnvironmentsResponse extends Message<ListEnvironmentsResponse> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Environment environments = 1;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Environment environments = 1;
    */
   environments: Environment[] = [];
 
@@ -129,7 +129,7 @@ export class GetEnvironmentRequest extends Message<GetEnvironmentRequest> {
  */
 export class GetEnvironmentResponse extends Message<GetEnvironmentResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Environment environment = 1;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Environment environment = 1;
    */
   environment?: Environment;
 
