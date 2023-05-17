@@ -1,0 +1,32 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Environment
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  subscriptions:
+    repos:
+      git:
+        - repoURL: https://github.com/akuity/kargo-test
+          branch: main
+      images:
+        - repoURL: nginx
+          semverConstraint: ^1.24.2
+  promotionMechanisms:
+    gitRepoUpdates:
+      - repoURL: https://github.com/akuity/kargo-test
+        writeBranch: main-deploy
+        kustomize:
+          images:
+            - image: nginx
+              path: base
+    argoCDAppUpdates:
+      - appName: kargo-demo-test
+        appNamespace: argocd
+        sourceUpdates:
+          - repoURL: https://github.com/akuity/kargo-test
+            updateTargetRevision: true
+  healthChecks:
+    argoCDAppChecks:
+      - appName: kargo-demo-test
+        appNamespace: argocd

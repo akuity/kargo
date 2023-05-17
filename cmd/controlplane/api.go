@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -20,7 +21,10 @@ func newAPICommand() *cobra.Command {
 			logger := log.New()
 			logger.SetLevel(cfg.LogLevel)
 			ctx := logging.ContextWithLogger(cmd.Context(), logger.WithFields(nil))
-			srv := api.NewServer(cfg)
+			srv, err := api.NewServer(cfg)
+			if err != nil {
+				return errors.Wrap(err, "new api server")
+			}
 			return srv.Serve(ctx)
 		},
 	}
