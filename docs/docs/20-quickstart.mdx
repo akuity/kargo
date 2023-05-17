@@ -47,13 +47,13 @@ apiVersion: kind.x-k8s.io/v1alpha4
 name: kargo-quickstart
 nodes:
 - extraPortMappings:
-  - containerPort: 30080
+  - containerPort: 30080 # Argo CD dashboard
     hostPort: 8080
-  - containerPort: 30081
+  - containerPort: 30081 # test application
     hostPort: 8081
-  - containerPort: 30082
+  - containerPort: 30082 # stage application
     hostPort: 8082
-  - containerPort: 30083
+  - containerPort: 30083 # prod application
     hostPort: 8083
 EOF
 ```
@@ -107,7 +107,6 @@ helm install argocd argo-cd \
   --set 'configs.secret.argocdServerAdminPassword=$2a$10$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
   --set dex.enabled=false \
   --set notifications.enabled=false \
-  --set server.extensions.enabled=true \
   --set server.service.type=NodePort \
   --set server.service.nodePortHttp=30080 \
   --wait
@@ -116,6 +115,8 @@ helm install argocd argo-cd \
 The Argo CD dashboard will be accessible at
 [localhost:8080](http://localhost:8080).
 
+You can safely ignore cert errors.
+
 The username and password are both `admin`.
 
 ## Installing Kargo
@@ -123,7 +124,7 @@ The username and password are both `admin`.
 ```shell
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
-  --version 0.1.0-rc.8 \
+  --version 0.1.0-rc.9 \
   --namespace kargo \
   --create-namespace \
   --wait
@@ -218,7 +219,7 @@ from and write to the repository you forked in the previous section.
      project: default
      source:
        repoURL: ${GITOPS_REPO_URL}
-       targetRevision: placeholder
+       targetRevision: main
        path: env/test
      destination:
        server: https://kubernetes.default.svc
@@ -235,7 +236,7 @@ from and write to the repository you forked in the previous section.
      project: default
      source:
        repoURL: ${GITOPS_REPO_URL}
-       targetRevision: placeholder
+       targetRevision: main
        path: env/stage
      destination:
        server: https://kubernetes.default.svc
@@ -252,7 +253,7 @@ from and write to the repository you forked in the previous section.
      project: default
      source:
        repoURL: ${GITOPS_REPO_URL}
-       targetRevision: placeholder
+       targetRevision: main
        path: env/prod
      destination:
        server: https://kubernetes.default.svc
@@ -262,9 +263,7 @@ from and write to the repository you forked in the previous section.
 
 If you visit [your Argo CD dashboard](http://localhost:8080), you will notice
 all three Argo CD `Application`s have not yet synced because they're not
-configured to do so automatically. If you manually sync any one of them, they
-will fail to reach a healthy state because all three `Application`s'
-`targetRevision` fields reference a non-existent `placeholder` branch.
+configured to do so automatically.
 
 :::info
 Our three environments all existing in a single cluster is for the sake of
@@ -286,7 +285,6 @@ images), the process for deploying those materials, and the process for
 asserting whether they are properly deployed and healthy. For a simple example,
 such as ours, this means:
 
-* Watching our GitOps repository for updated manifests.
 * Watching the `nginx` image repository for new versions.
 * Automating relevant changes to the GitOps repository and affected Argo CD
   `Application` resources.
@@ -352,24 +350,20 @@ metadata:
 spec:
   subscriptions:
     repos:
-      git:
-      - repoURL: ${GITOPS_REPO_URL}
       images:
       - repoURL: nginx
-        semverConstraint: ^1.24.2
+        semverConstraint: ^1.24.0
   promotionMechanisms:
     gitRepoUpdates:
     - repoURL: ${GITOPS_REPO_URL}
+      writeBranch: main
       kustomize:
         images:
         - image: nginx
-          path: base
+          path: env/test
     argoCDAppUpdates:
     - appName: kargo-demo-test
       appNamespace: argocd
-      sourceUpdates:
-      - repoURL: ${GITOPS_REPO_URL}
-        updateTargetRevision: true
   healthChecks:
     argoCDAppChecks:
     - appName: kargo-demo-test
@@ -378,31 +372,16 @@ EOF
 ```
 
 Dissecting the manifest above, we see the `test` `Environment` subscribes
-directly to our GitOps repository and the `nginx` image repository. When a new
-commit is discovered in our GitOps repository or a new, semantically tagged
-version of the `nginx` container image is discovered, the two are combined into
-a new _state_. Because the corresponding `PromotionPolicy` resource permits
+directly to the `nginx` image repository. When a new, semantically tagged
+version of the `nginx` container image is discovered, Kargo has discovered a new
+_state_. Because the corresponding `PromotionPolicy` resource permits
 auto-promotion, the discovery of this new state will immediately result in the
 creation of a new `Promotion` resource that will effect the transition of the
 `Environment` to that state.
 
 The actual promotion process involves running `kustomize edit set image` on the
-`base` directory of our GitOps repository and committing those changes, then
-updating the `targetRevision` property of the `kargo-demo-test` Argo CD
-`Application`.
-
-:::note
-It may seem strange to some that we are updating Kustomize _base_ configuration
-instead of an environment-specific overlay.
-
-In this particular scenario, our method of progressing changes from one
-environment to another involves, updating each `Application`s `targetRevision`
-field.
-
-Progressing changes from directory-to-directory (Kustomize overlays, for
-instance) is another viable strategy, but is not the strategy demonstrated in
-this example.
-:::
+`env/test` directory of our GitOps repository and committing those changes, then
+forcing the `kargo-demo-test` Argo CD `Application` to refresh and sync.
 
 After creating the `test` `Environment` resource, we should almost immediately
 see:
@@ -415,7 +394,7 @@ see:
 
   ```text
    NAME   CURRENT STATE                              HEALTH    AGE
-   test   6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Healthy   30s
+   test   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   30s
    ```
 
 1. The `test` `Environment` resource's `status` field reflects the one available
@@ -437,15 +416,16 @@ see:
 
    ```text
    NAME                                               ENVIRONMENT   STATE                                      PHASE       AGE
-   test-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38   test          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   55s
+   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test          d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   55s
    ```
 
 1. Your GitOps repository has a new commit.
 
 1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-test`
-   `Application` is synced and healthy. You can also see that its
-   `targetRevision` field has been updated to reference the new commit in your
-   GitOps repository.
+   `Application` is synced and healthy.
+
+   Nginx running in the test environment is visible at
+   [localhost:8081](http://localhost:8081).
 
 #### The `stage` `Environment`
 
@@ -461,12 +441,16 @@ spec:
     upstreamEnvs:
     - name: test
   promotionMechanisms:
+    gitRepoUpdates:
+    - repoURL: ${GITOPS_REPO_URL}
+      writeBranch: main
+      kustomize:
+        images:
+        - image: nginx
+          path: env/stage
     argoCDAppUpdates:
     - appName: kargo-demo-stage
       appNamespace: argocd
-      sourceUpdates:
-      - repoURL: ${GITOPS_REPO_URL}
-        updateTargetRevision: true
   healthChecks:
     argoCDAppChecks:
     - appName: kargo-demo-stage
@@ -474,20 +458,21 @@ spec:
 EOF
 ```
 
-Dissecting the manifest above, we see the `stage` `Environment` is quite
+Dissecting the manifest above, we see the `stage` `Environment` is somewhat
 different from the `test` `Environment` in that it does not find new states by
-subscribing directly to repositories, but discovers them by monitoring the
-"upstream" `test` `Environment`. Any healthy state from the `test`
+subscribing directly to an image repository, but discovers them by monitoring
+the "upstream" `test` `Environment`. Any healthy state from the `test`
 `Environment`'s `history` field becomes available state for the `stage`
 `Environment`. Because the corresponding `PromotionPolicy` resource permits
 auto-promotion, the discovery of the `test` `Environment`'s current, healthy
-state immediately result in the creation of a new `Promotion` resource that will
+state immediately results in the creation of a new `Promotion` resource that will
 effect the transition of the `Environment` to that state.
 
-The `promotionMechanisms` are also substantially different from those in the
-`test` `Environment`, as they make no commit to the GitOps repository, and
-_only_ update the `targetRevision` property of the `kargo-demo-stage` Argo CD
-`Application`.
+The `promotionMechanisms` for the `stage` `Environment` are not substantially
+different from those for the `test` `Environment`. They involve running
+`kustomize edit set image` on the `env/stage` directory of our GitOps repository
+and committing those changes, then forcing the `kargo-demo-stage` Argo CD
+`Application` to refresh and sync.
 
 After creating the `stage` `Environment` resource, we should almost immediately
 see:
@@ -500,7 +485,7 @@ see:
 
    ```text
    NAME    CURRENT STATE                              HEALTH    AGE
-   stage   6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Healthy   13s
+   stage   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   13s
    ```
 
 1. The `stage` `Environment` resource's `status` field reflects the one
@@ -521,16 +506,17 @@ see:
    kubectl get promotions --namespace kargo-demo
    ```
 
-   ```shell
+   ```
    NAME                                                ENVIRONMENT   STATE                                      PHASE       AGE
-   stage-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38   stage         6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   43s
-   test-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38    test          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   2m40s
+   stage-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   stage         d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   43s
+   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    test          d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   2m40s
    ```
 
 1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-stage`
-   `Application` is synced and healthy. You can also see that its
-   `targetRevision` field has been updated to reference the same commit as the
-   `kargo-demo-test` `Application`.
+   `Application` is synced and healthy.
+
+   Nginx running in the stage environment is visible at
+   [localhost:8082](http://localhost:8082).
 
 #### The `prod` `Environment`:
 
@@ -546,12 +532,16 @@ spec:
     upstreamEnvs:
     - name: stage
   promotionMechanisms:
+    gitRepoUpdates:
+    - repoURL: ${GITOPS_REPO_URL}
+      writeBranch: main
+      kustomize:
+        images:
+        - image: nginx
+          path: env/prod
     argoCDAppUpdates:
     - appName: kargo-demo-prod
       appNamespace: argocd
-      sourceUpdates:
-      - repoURL: ${GITOPS_REPO_URL}
-        updateTargetRevision: true
   healthChecks:
     argoCDAppChecks:
     - appName: kargo-demo-prod
@@ -565,8 +555,14 @@ similar to the `stage` `Environment`. It discovers new states by monitoring the
 `Environment`'s `history` field becomes available state for the `prod`
 `Environment`.
 
-Because the corresponding `PromotionPolicy` resource does _not_ permits
-auto-promotion, no `Promotion` resource should be automatically created.
+The `promotionMechanisms` for the `prod` `Environment` also are not
+substantially different from those for either the `test` or `stage`
+`Environment`s. They involve running `kustomize edit set image` on the
+`env/prod` directory of our GitOps repository and committing those changes, then
+forcing the `kargo-demo-prod` Argo CD `Application` to refresh and sync.
+
+Because the corresponding `PromotionPolicy` resource does _not_ permit
+auto-promotion, no `Promotion` resource will be automatically created.
 
 After creating the `prod` `Environment` resource, we should almost immediately
 see:
@@ -586,7 +582,7 @@ see:
    available state, but shows no current state or history:
 
    ```shell
-   kubectl get environment stage \
+   kubectl get environment prod \
      --namespace kargo-demo \
      --output jsonpath-as-json={.status}
    ```
@@ -598,10 +594,10 @@ see:
    kubectl get promotions --namespace kargo-demo
    ```
 
-   ```shell
+   ```
    NAME                                                ENVIRONMENT   STATE                                      PHASE       AGE
-   stage-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38   stage         6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   2m7s
-   test-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38    test          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   4m4s
+   stage-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   stage         d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   2m7s
+   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    test          d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   4m4s
    ```
 
 1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-prod`
@@ -626,7 +622,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Promotion
 metadata:
-  name: my-first-prod-promotion
+  name: prod-to-${STATE_ID}
   namespace: kargo-demo
 spec:
   environment: prod
@@ -644,9 +640,9 @@ After a few moments, we should be able to see:
 
    ```text
    NAME                                                ENVIRONMENT   STATE                                      PHASE       AGE
-   my-first-prod-promotion                             prod          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   12s
-   stage-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38   stage         6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   6m14ss
-   test-to-6cdf3dc80f2eb4de2353b9e823f759b83af4df38    test          6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Completed   8m11s
+   stage-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   stage         d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   6m14ss
+   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    test          d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   8m11s
+   prod-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    prod          d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   12s
    ```
 
 1. The `prod` `Environment` has now been assigned a current state:
@@ -657,7 +653,7 @@ After a few moments, we should be able to see:
 
    ```text
    NAME   CURRENT STATE                              HEALTH    AGE
-   prod   6cdf3dc80f2eb4de2353b9e823f759b83af4df38   Healthy   5m20s
+   prod   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   5m20s
    ```
 
 1. The `prod` `Environment` resource's `status` field reflects the available
@@ -672,6 +668,22 @@ After a few moments, we should be able to see:
 
 1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-prod`
    `Application` is now not synced and healthy.
+
+   Nginx running in the prod environment is visible at
+   [localhost:8083](http://localhost:8083).
+
+## Summary
+
+At this point, if a new semantically tagged version of the `nginx` image should
+be pushed to Docker Hub, it will automatically be discovered and promoted into
+our test environment, followed shortly thereafter by promotion into our stage
+environment. Upon reaching the stage environment, it will become available for
+manual promotion to production.
+
+This has been a "hello world"-level introduction to Kargo, demonstrating only
+the most basic functionality. Much more complex and useful promotion patterns
+are also possible and you are invited to continue exploring the documentation
+to learn more!
 
 ## Cleaning up
 
