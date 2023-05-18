@@ -11,6 +11,8 @@ import (
 
 func NewHandlerOption(logger *log.Entry) connect.HandlerOption {
 	return connect.WithHandlerOptions(
+		connect.WithCodec(newJSONCodec("json")),
+		connect.WithCodec(newJSONCodec("json; charset=utf-8")),
 		connect.WithInterceptors(
 			newLogInterceptor(logger, loggingIgnorableMethods),
 		),
