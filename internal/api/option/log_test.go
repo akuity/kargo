@@ -70,6 +70,6 @@ func TestUnaryServerLogging(t *testing.T) {
 	}
 }
 
-func TestStreamingServerLogging(t *testing.T) {
+func TestStreamingServerLogging(_ *testing.T) {
 	// TODO
 }
