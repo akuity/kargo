@@ -51,15 +51,6 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 			}
 		}
 
-		if env.Spec.HealthChecks != nil {
-			// Default namespace for Argo CD Applications we check health of
-			for i := range env.Spec.HealthChecks.ArgoCDAppChecks {
-				if env.Spec.HealthChecks.ArgoCDAppChecks[i].AppNamespace == "" {
-					env.Spec.HealthChecks.ArgoCDAppChecks[i].AppNamespace = env.Namespace
-				}
-			}
-		}
-
 	}
 
 	return nil

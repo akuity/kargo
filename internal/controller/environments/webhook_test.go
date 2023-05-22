@@ -33,13 +33,6 @@ func TestDefault(t *testing.T) {
 					},
 				},
 			},
-			HealthChecks: &api.HealthChecks{
-				ArgoCDAppChecks: []api.ArgoCDAppCheck{
-					{
-						AppName: "fake-prod-app",
-					},
-				},
-			},
 		},
 	}
 	err := (&webhook{}).Default(context.Background(), e)
@@ -56,12 +49,6 @@ func TestDefault(t *testing.T) {
 		testNamespace,
 		e.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].AppNamespace,
 	)
-	require.Len(t, e.Spec.HealthChecks.ArgoCDAppChecks, 1)
-	require.Equal(
-		t,
-		testNamespace,
-		e.Spec.HealthChecks.ArgoCDAppChecks[0].AppNamespace)
-
 }
 
 func TestValidateSpec(t *testing.T) {
