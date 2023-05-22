@@ -52,7 +52,6 @@ func toEnvironmentProto(e kubev1alpha1.Environment) *v1alpha1.Environment {
 				UpstreamEnvs: upstreamEnvs,
 			},
 			PromotionMechanisms: toPromotionMechanismsProto(*e.Spec.PromotionMechanisms),
-			HealthChecks:        toHealthChecksProto(*e.Spec.HealthChecks),
 		},
 		Status: &v1alpha1.EnvironmentStatus{
 			AvailableStates: availableStates,
@@ -242,23 +241,6 @@ func toArgoCDHelmImageUpdateProto(a kubev1alpha1.ArgoCDHelmImageUpdate) *v1alpha
 		Image: proto.String(a.Image),
 		Key:   proto.String(a.Key),
 		Value: proto.String(string(a.Value)),
-	}
-}
-
-func toHealthChecksProto(h kubev1alpha1.HealthChecks) *v1alpha1.HealthChecks {
-	appChecks := make([]*v1alpha1.ArgoCDAppCheck, len(h.ArgoCDAppChecks))
-	for idx := range h.ArgoCDAppChecks {
-		appChecks[idx] = toArgoCDAppCheckProto(h.ArgoCDAppChecks[idx])
-	}
-	return &v1alpha1.HealthChecks{
-		ArgoCDAppChecks: appChecks,
-	}
-}
-
-func toArgoCDAppCheckProto(a kubev1alpha1.ArgoCDAppCheck) *v1alpha1.ArgoCDAppCheck {
-	return &v1alpha1.ArgoCDAppCheck{
-		AppName:      proto.String(a.AppName),
-		AppNamespace: proto.String(a.AppNamespace),
 	}
 }
 
