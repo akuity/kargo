@@ -64,8 +64,8 @@ func TestIndexEnvsByApp(t *testing.T) {
 			name: "environment has health checks",
 			environment: &api.Environment{
 				Spec: &api.EnvironmentSpec{
-					HealthChecks: &api.HealthChecks{
-						ArgoCDAppChecks: []api.ArgoCDAppCheck{
+					PromotionMechanisms: &api.PromotionMechanisms{
+						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
@@ -163,7 +163,7 @@ func TestSync(t *testing.T) {
 		checkHealthFn func(
 			context.Context,
 			api.EnvironmentState,
-			*api.HealthChecks,
+			[]api.ArgoCDAppUpdate,
 		) api.Health
 		getLatestStateFromReposFn func(
 			context.Context,
@@ -305,7 +305,8 @@ func TestSync(t *testing.T) {
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
-				HealthChecks: &api.HealthChecks{},
+				// TODO: I'm not sure about this change
+				// HealthChecks: &api.HealthChecks{},
 			},
 			initialStatus: api.EnvironmentStatus{
 				AvailableStates: []api.EnvironmentState{
@@ -365,7 +366,7 @@ func TestSync(t *testing.T) {
 			checkHealthFn: func(
 				context.Context,
 				api.EnvironmentState,
-				*api.HealthChecks,
+				[]api.ArgoCDAppUpdate,
 			) api.Health {
 				return api.Health{
 					Status: api.HealthStateHealthy,

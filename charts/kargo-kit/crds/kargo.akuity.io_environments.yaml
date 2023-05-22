@@ -49,36 +49,6 @@ spec:
             description: Spec describes the sources of material used by the Environment
               and how to incorporate newly observed materials into the Environment.
             properties:
-              healthChecks:
-                description: HealthChecks describes how the health of the Environment
-                  can be assessed on an ongoing basis. This is a required field.
-                properties:
-                  argoCDAppChecks:
-                    description: ArgoCDAppChecks specifies Argo CD Application resources
-                      whose sync status and health should be evaluated in assessing
-                      the health of the Environment.
-                    items:
-                      description: ArgoCDAppCheck describes a health check to perform
-                        on an Argo CD Application resource.
-                      properties:
-                        appName:
-                          description: AppName specifies the name of the Argo CD Application
-                            resource.
-                          minLength: 1
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                          type: string
-                        appNamespace:
-                          description: AppNamespace specifies the namespace of the
-                            Argo CD Application resource. If left unspecified, the
-                            namespace of this Application resource is defaulted to
-                            be the same as that of the Environment.
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                          type: string
-                      required:
-                      - appName
-                      type: object
-                    type: array
-                type: object
               promotionMechanisms:
                 description: PromotionMechanisms describes how to incorporate newly
                   observed materials into the Environment. This is a required field.

@@ -11,24 +11,16 @@ import (
 func (r *reconciler) checkHealth(
 	ctx context.Context,
 	currentState api.EnvironmentState,
-	healthChecks *api.HealthChecks,
+	argoCDAppUpdates []api.ArgoCDAppUpdate,
 ) api.Health {
-	if healthChecks == nil {
+	if len(argoCDAppUpdates) == 0 {
 		return api.Health{
 			Status:       api.HealthStateUnknown,
-			StatusReason: "spec.healthChecks is undefined",
+			StatusReason: "no spec.promotionMechanisms.argoCDAppUpdates are defined",
 		}
 	}
 
-	if len(healthChecks.ArgoCDAppChecks) == 0 {
-		return api.Health{
-			Status: api.HealthStateUnknown,
-			StatusReason: "spec.healthChecks contains insufficient instructions " +
-				"to assess Environment health",
-		}
-	}
-
-	for _, check := range healthChecks.ArgoCDAppChecks {
+	for _, check := range argoCDAppUpdates {
 		app, err :=
 			r.getArgoCDAppFn(ctx, r.client, check.AppNamespace, check.AppName)
 		if err != nil {
