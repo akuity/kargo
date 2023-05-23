@@ -29,4 +29,13 @@ go-to-protobuf \
   --trim-path-prefix="${PROJECT_ROOT}/github.com/akuity/kargo/" \
   --output-base="${PROJECT_ROOT}"
 
+# Generate apimachinery types for UI
+paths=()
+for pkg in "${APIMACHINERY_PKGS[@]}"; do
+  pkg="${pkg#+}"
+  paths+=("--path=./vendor/${pkg}")
+done
+
+buf generate --template=ui.buf.gen.yaml "${paths[@]}"
+
 rm -rf "${PROJECT_ROOT}/pkg/api/v1alpha1"
