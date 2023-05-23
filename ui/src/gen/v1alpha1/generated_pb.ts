@@ -10,64 +10,6 @@ import { Message, proto2 } from "@bufbuild/protobuf";
 import { ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
 
 /**
- * ArgoCDAppCheck describes a health check to perform on an Argo CD Application
- * resource.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppCheck
- */
-export class ArgoCDAppCheck extends Message<ArgoCDAppCheck> {
-  /**
-   * AppName specifies the name of the Argo CD Application resource.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string appName = 1;
-   */
-  appName?: string;
-
-  /**
-   * AppNamespace specifies the namespace of the Argo CD Application resource.
-   * If left unspecified, the namespace of this Application resource is
-   * defaulted to be the same as that of the Environment.
-   *
-   * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string appNamespace = 2;
-   */
-  appNamespace?: string;
-
-  constructor(data?: PartialMessage<ArgoCDAppCheck>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppCheck";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "appName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "appNamespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDAppCheck {
-    return new ArgoCDAppCheck().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDAppCheck {
-    return new ArgoCDAppCheck().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDAppCheck {
-    return new ArgoCDAppCheck().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ArgoCDAppCheck | PlainMessage<ArgoCDAppCheck> | undefined, b: ArgoCDAppCheck | PlainMessage<ArgoCDAppCheck> | undefined): boolean {
-    return proto2.util.equals(ArgoCDAppCheck, a, b);
-  }
-}
-
-/**
  * ArgoCDAppUpdate describes updates that should be applied to an Argo CD
  * Application resources to incorporate newly observed materials into an
  * Environment.
@@ -732,14 +674,6 @@ export class EnvironmentSpec extends Message<EnvironmentSpec> {
    */
   promotionMechanisms?: PromotionMechanisms;
 
-  /**
-   * HealthChecks describes how the health of the Environment can be assessed on
-   * an ongoing basis. This is a required field.
-   *
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.HealthChecks healthChecks = 3;
-   */
-  healthChecks?: HealthChecks;
-
   constructor(data?: PartialMessage<EnvironmentSpec>) {
     super();
     proto2.util.initPartial(data, this);
@@ -750,7 +684,6 @@ export class EnvironmentSpec extends Message<EnvironmentSpec> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
-    { no: 3, name: "healthChecks", kind: "message", T: HealthChecks, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnvironmentSpec {
@@ -1287,49 +1220,6 @@ export class Health extends Message<Health> {
 
   static equals(a: Health | PlainMessage<Health> | undefined, b: Health | PlainMessage<Health> | undefined): boolean {
     return proto2.util.equals(Health, a, b);
-  }
-}
-
-/**
- * HealthChecks describes how the health of an Environment can be assessed on an
- * ongoing basis.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.HealthChecks
- */
-export class HealthChecks extends Message<HealthChecks> {
-  /**
-   * ArgoCDAppChecks specifies Argo CD Application resources whose sync status
-   * and health should be evaluated in assessing the health of the Environment.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppCheck argoCDAppChecks = 1;
-   */
-  argoCDAppChecks: ArgoCDAppCheck[] = [];
-
-  constructor(data?: PartialMessage<HealthChecks>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.HealthChecks";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "argoCDAppChecks", kind: "message", T: ArgoCDAppCheck, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): HealthChecks {
-    return new HealthChecks().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): HealthChecks {
-    return new HealthChecks().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): HealthChecks {
-    return new HealthChecks().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: HealthChecks | PlainMessage<HealthChecks> | undefined, b: HealthChecks | PlainMessage<HealthChecks> | undefined): boolean {
-    return proto2.util.equals(HealthChecks, a, b);
   }
 }
 

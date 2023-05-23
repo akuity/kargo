@@ -22,24 +22,6 @@ option (gogoproto.goproto_enum_prefix_all) = false;
 option (gogoproto.goproto_getters_all) = false;
 option go_package = "github.com/akuity/kargo/pkg/api/v1alpha1";
 
-// ArgoCDAppCheck describes a health check to perform on an Argo CD Application
-// resource.
-message ArgoCDAppCheck {
-  // AppName specifies the name of the Argo CD Application resource.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string appName = 1 [(gogoproto.customname) = "AppName", (gogoproto.nullable) = false];
-
-  // AppNamespace specifies the namespace of the Argo CD Application resource.
-  // If left unspecified, the namespace of this Application resource is
-  // defaulted to be the same as that of the Environment.
-  //
-  // +kubebuilder:validation:Optional
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string appNamespace = 2 [(gogoproto.customname) = "AppNamespace", (gogoproto.nullable) = false];
-}
-
 // ArgoCDAppUpdate describes updates that should be applied to an Argo CD
 // Application resources to incorporate newly observed materials into an
 // Environment.
@@ -236,10 +218,6 @@ message EnvironmentSpec {
   //
   // +kubebuilder:validation:Required
   optional PromotionMechanisms promotionMechanisms = 2 [(gogoproto.customname) = "PromotionMechanisms"];
-
-  // HealthChecks describes how the health of the Environment can be assessed on
-  // an ongoing basis. This is a required field.
-  optional HealthChecks healthChecks = 3 [(gogoproto.customname) = "HealthChecks"];
 }
 
 // EnvironmentState is a "bill of materials" describing what was deployed to an
@@ -415,14 +393,6 @@ message Health {
   // is in that state. The value of this field will always be the empty string
   // when an Environment is Healthy.
   optional string statusReason = 2 [(gogoproto.customname) = "StatusReason", (gogoproto.nullable) = false];
-}
-
-// HealthChecks describes how the health of an Environment can be assessed on an
-// ongoing basis.
-message HealthChecks {
-  // ArgoCDAppChecks specifies Argo CD Application resources whose sync status
-  // and health should be evaluated in assessing the health of the Environment.
-  repeated ArgoCDAppCheck argoCDAppChecks = 1 [(gogoproto.customname) = "ArgoCDAppChecks", (gogoproto.nullable) = false];
 }
 
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
