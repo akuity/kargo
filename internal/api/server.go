@@ -76,7 +76,7 @@ func (s *server) Serve(ctx context.Context) error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
 	mux := http.NewServeMux()
 
-	opts := option.NewHandlerOption(log)
+	opts := option.NewHandlerOption(s.cfg, log)
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)

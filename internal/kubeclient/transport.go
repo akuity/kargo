@@ -12,6 +12,7 @@ const (
 
 var (
 	_ netutil.RoundTripperWrapper = &credentialHook{}
+	_ netutil.RoundTripperWrapper = &credentialInjector{}
 )
 
 type credentialHook struct {
@@ -35,4 +36,28 @@ func (h *credentialHook) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func (h *credentialHook) WrappedRoundTripper() http.RoundTripper {
 	return h.rt
+}
+
+type credentialInjector struct {
+	rt http.RoundTripper
+}
+
+func NewCredentialInjector(rt http.RoundTripper) http.RoundTripper {
+	return &credentialInjector{
+		rt: rt,
+	}
+}
+func (i *credentialInjector) RoundTrip(req *http.Request) (*http.Response, error) {
+	cred, ok := GetCredentialFromContext(req.Context())
+	if !ok {
+		return i.rt.RoundTrip(req)
+	}
+
+	newReq := req.Clone(req.Context())
+	newReq.Header.Set("Authorization", cred)
+	return i.rt.RoundTrip(newReq)
+}
+
+func (i *credentialInjector) WrappedRoundTripper() http.RoundTripper {
+	return i.rt
 }
