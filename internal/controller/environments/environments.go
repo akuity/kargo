@@ -61,7 +61,7 @@ type reconciler struct {
 	checkHealthFn func(
 		context.Context,
 		api.EnvironmentState,
-		*api.HealthChecks,
+		[]api.ArgoCDAppUpdate,
 	) api.Health
 
 	// Syncing:
@@ -176,11 +176,12 @@ func SetupReconcilerWithManager(
 
 func indexEnvsByApp(obj client.Object) []string {
 	env := obj.(*api.Environment) // nolint: forcetypeassert
-	if env.Spec.HealthChecks == nil {
+	if env.Spec.PromotionMechanisms == nil ||
+		len(env.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 		return nil
 	}
-	apps := make([]string, len(env.Spec.HealthChecks.ArgoCDAppChecks))
-	for i, appCheck := range env.Spec.HealthChecks.ArgoCDAppChecks {
+	apps := make([]string, len(env.Spec.PromotionMechanisms.ArgoCDAppUpdates))
+	for i, appCheck := range env.Spec.PromotionMechanisms.ArgoCDAppUpdates {
 		apps[i] =
 			fmt.Sprintf("%s:%s", appCheck.AppNamespace, appCheck.AppName)
 	}
@@ -355,8 +356,12 @@ func (r *reconciler) sync(
 	}
 
 	// Only perform health checks if we have a current state
-	if status.CurrentState != nil {
-		health := r.checkHealthFn(ctx, *status.CurrentState, env.Spec.HealthChecks)
+	if status.CurrentState != nil && env.Spec.PromotionMechanisms != nil {
+		health := r.checkHealthFn(
+			ctx,
+			*status.CurrentState,
+			env.Spec.PromotionMechanisms.ArgoCDAppUpdates,
+		)
 		status.CurrentState.Health = &health
 		status.History.Pop()
 		status.History.Push(*status.CurrentState)

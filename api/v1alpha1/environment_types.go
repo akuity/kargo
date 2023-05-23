@@ -69,9 +69,6 @@ type EnvironmentSpec struct {
 	//
 	//+kubebuilder:validation:Required
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms"`
-	// HealthChecks describes how the health of the Environment can be assessed on
-	// an ongoing basis. This is a required field.
-	HealthChecks *HealthChecks `json:"healthChecks,omitempty"`
 }
 
 // Subscriptions describes an Environment's sources of material.
@@ -437,31 +434,6 @@ type ArgoCDHelmImageUpdate struct {
 	// which replaces the value of the specified with just the new tag. This is a
 	// required field.
 	Value ImageUpdateValueType `json:"value"`
-}
-
-// HealthChecks describes how the health of an Environment can be assessed on an
-// ongoing basis.
-type HealthChecks struct {
-	// ArgoCDAppChecks specifies Argo CD Application resources whose sync status
-	// and health should be evaluated in assessing the health of the Environment.
-	ArgoCDAppChecks []ArgoCDAppCheck `json:"argoCDAppChecks,omitempty"`
-}
-
-// ArgoCDAppCheck describes a health check to perform on an Argo CD Application
-// resource.
-type ArgoCDAppCheck struct {
-	// AppName specifies the name of the Argo CD Application resource.
-	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	AppName string `json:"appName"`
-	// AppNamespace specifies the namespace of the Argo CD Application resource.
-	// If left unspecified, the namespace of this Application resource is
-	// defaulted to be the same as that of the Environment.
-	//
-	//+kubebuilder:validation:Optional
-	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	AppNamespace string `json:"appNamespace,omitempty"`
 }
 
 // EnvironmentStatus describes the most recently observed versions of an
