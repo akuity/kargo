@@ -16,11 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/akuity/bookkeeper"
+	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/kustomize"
 	"github.com/akuity/kargo/internal/logging"
@@ -59,7 +59,7 @@ type reconciler struct {
 		repoURL string,
 		readRef string,
 		writeBranch string,
-		creds *git.Credentials,
+		creds *git.RepoCredentials,
 		updateFn func(homeDir, workingDir string) (string, error),
 	) (string, error)
 
@@ -133,7 +133,7 @@ func newReconciler(
 	r.promoteFn = r.promote
 	r.applyPromotionMechanismsFn = r.applyPromotionMechanisms
 	// Promotions via Git:
-	r.gitApplyUpdateFn = git.ApplyUpdate
+	r.gitApplyUpdateFn = gitApplyUpdate
 	// Promotions via Git + Kustomize:
 	r.kustomizeSetImageFn = kustomize.SetImage
 	// Promotions via Git + Helm:
