@@ -8,24 +8,6 @@ import (
 )
 
 func toEnvironmentProto(e kubev1alpha1.Environment) *v1alpha1.Environment {
-	// Spec
-	gitSubscriptions := make([]*v1alpha1.GitSubscription, len(e.Spec.Subscriptions.Repos.Git))
-	for idx := range e.Spec.Subscriptions.Repos.Git {
-		gitSubscriptions[idx] = toGitSubscriptionProto(e.Spec.Subscriptions.Repos.Git[idx])
-	}
-	imageSubscriptions := make([]*v1alpha1.ImageSubscription, len(e.Spec.Subscriptions.Repos.Images))
-	for idx := range e.Spec.Subscriptions.Repos.Images {
-		imageSubscriptions[idx] = toImageSubscriptionProto(e.Spec.Subscriptions.Repos.Images[idx])
-	}
-	chartSubscriptions := make([]*v1alpha1.ChartSubscription, len(e.Spec.Subscriptions.Repos.Charts))
-	for idx := range e.Spec.Subscriptions.Repos.Charts {
-		chartSubscriptions[idx] = toChartSubscriptionProto(e.Spec.Subscriptions.Repos.Charts[idx])
-	}
-	upstreamEnvs := make([]*v1alpha1.EnvironmentSubscription, len(e.Spec.Subscriptions.UpstreamEnvs))
-	for idx := range e.Spec.Subscriptions.UpstreamEnvs {
-		upstreamEnvs[idx] = toEnvironmentSubscriptionProto(e.Spec.Subscriptions.UpstreamEnvs[idx])
-	}
-
 	// Status
 	availableStates := make([]*v1alpha1.EnvironmentState, len(e.Status.AvailableStates))
 	for idx := range e.Status.AvailableStates {
@@ -43,14 +25,7 @@ func toEnvironmentProto(e kubev1alpha1.Environment) *v1alpha1.Environment {
 	return &v1alpha1.Environment{
 		Metadata: &e.ObjectMeta,
 		Spec: &v1alpha1.EnvironmentSpec{
-			Subscriptions: &v1alpha1.Subscriptions{
-				Repos: &v1alpha1.RepoSubscriptions{
-					Git:    gitSubscriptions,
-					Images: imageSubscriptions,
-					Charts: chartSubscriptions,
-				},
-				UpstreamEnvs: upstreamEnvs,
-			},
+			Subscriptions:       toSubscriptionsProto(*e.Spec.Subscriptions),
 			PromotionMechanisms: toPromotionMechanismsProto(*e.Spec.PromotionMechanisms),
 		},
 		Status: &v1alpha1.EnvironmentStatus{
@@ -59,6 +34,35 @@ func toEnvironmentProto(e kubev1alpha1.Environment) *v1alpha1.Environment {
 			History:         history,
 			Error:           proto.String(e.Status.Error),
 		},
+	}
+}
+
+func toSubscriptionsProto(s kubev1alpha1.Subscriptions) *v1alpha1.Subscriptions {
+	var repos *v1alpha1.RepoSubscriptions
+	if s.Repos != nil {
+		repos = &v1alpha1.RepoSubscriptions{
+			Git:    make([]*v1alpha1.GitSubscription, len(s.Repos.Git)),
+			Images: make([]*v1alpha1.ImageSubscription, len(s.Repos.Images)),
+			Charts: make([]*v1alpha1.ChartSubscription, len(s.Repos.Charts)),
+		}
+		for idx := range s.Repos.Git {
+			repos.Git[idx] = toGitSubscriptionProto(s.Repos.Git[idx])
+		}
+		for idx := range s.Repos.Images {
+			repos.Images[idx] = toImageSubscriptionProto(s.Repos.Images[idx])
+		}
+		for idx := range s.Repos.Charts {
+			repos.Charts[idx] = toChartSubscriptionProto(s.Repos.Charts[idx])
+		}
+	}
+
+	upstreamEnvs := make([]*v1alpha1.EnvironmentSubscription, len(s.UpstreamEnvs))
+	for idx := range s.UpstreamEnvs {
+		upstreamEnvs[idx] = toEnvironmentSubscriptionProto(s.UpstreamEnvs[idx])
+	}
+	return &v1alpha1.Subscriptions{
+		Repos:        repos,
+		UpstreamEnvs: upstreamEnvs,
 	}
 }
 
