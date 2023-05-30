@@ -13,7 +13,7 @@ service KargoService {
 }
 
 message ListEnvironmentsRequest {
-  string namespace = 1;
+  string project = 1;
 }
 
 message ListEnvironmentsResponse {
@@ -21,7 +21,7 @@ message ListEnvironmentsResponse {
 }
 
 message GetEnvironmentRequest {
-  string namespace = 1;
+  string project = 1;
   string name = 2;
 }
 

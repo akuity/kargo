@@ -22,16 +22,16 @@ func TestListEnvironmentsV1Alpha1(t *testing.T) {
 		errExpected  bool
 		expectedCode connect.Code
 	}{
-		"empty namespace": {
+		"empty project": {
 			namespace:    "",
 			errExpected:  true,
 			expectedCode: connect.CodeInvalidArgument,
 		},
-		"existing namespace": {
+		"existing project": {
 			namespace: "kargo-demo",
 		},
-		"non-existing namespace": {
-			namespace:    "non-existing-namespace",
+		"non-existing project": {
+			namespace:    "non-existing-project",
 			errExpected:  true,
 			expectedCode: connect.CodeNotFound,
 		},
@@ -65,7 +65,7 @@ func TestListEnvironmentsV1Alpha1(t *testing.T) {
 
 			ctx := context.TODO()
 			req := connect.NewRequest(&svcv1alpha1.ListEnvironmentsRequest{
-				Namespace: ts.namespace,
+				Project: ts.namespace,
 			})
 			res, err := ListEnvironmentsV1Alpha1(kc)(ctx, req)
 			if ts.errExpected {
