@@ -18,35 +18,35 @@ import (
 
 func TestGetEnvironmentV1Alpha1(t *testing.T) {
 	testSets := map[string]struct {
-		namespace    string
+		project      string
 		name         string
 		errExpected  bool
 		expectedCode connect.Code
 	}{
-		"empty namespace": {
-			namespace:    "",
+		"empty project": {
+			project:      "",
 			name:         "",
 			errExpected:  true,
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"empty name": {
-			namespace:    "kargo-demo",
+			project:      "kargo-demo",
 			name:         "",
 			errExpected:  true,
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"existing environment": {
-			namespace: "kargo-demo",
-			name:      "test",
+			project: "kargo-demo",
+			name:    "test",
 		},
-		"non-existing namespace": {
-			namespace:    "kargo-x",
+		"non-existing project": {
+			project:      "kargo-x",
 			name:         "test",
 			errExpected:  true,
 			expectedCode: connect.CodeNotFound,
 		},
 		"non-existing environment": {
-			namespace:    "non-existing-namespace",
+			project:      "non-existing-project",
 			name:         "test",
 			errExpected:  true,
 			expectedCode: connect.CodeNotFound,
@@ -81,8 +81,8 @@ func TestGetEnvironmentV1Alpha1(t *testing.T) {
 			ctx := context.TODO()
 			res, err := GetEnvironmentV1Alpha1(kc)(ctx,
 				connect.NewRequest(&svcv1alpha1.GetEnvironmentRequest{
-					Namespace: ts.namespace,
-					Name:      ts.name,
+					Project: ts.project,
+					Name:    ts.name,
 				}))
 			if ts.errExpected {
 				require.Error(t, err)
@@ -90,7 +90,7 @@ func TestGetEnvironmentV1Alpha1(t *testing.T) {
 				return
 			}
 			require.NotNil(t, res.Msg.GetEnvironment())
-			require.Equal(t, ts.namespace, res.Msg.Environment.Metadata.Namespace)
+			require.Equal(t, ts.project, res.Msg.Environment.Metadata.Namespace)
 			require.Equal(t, ts.name, res.Msg.Environment.Metadata.Name)
 		})
 	}

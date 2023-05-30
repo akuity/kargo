@@ -27,20 +27,20 @@ func ListEnvironmentsV1Alpha1(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.ListEnvironmentsRequest],
 	) (*connect.Response[svcv1alpha1.ListEnvironmentsResponse], error) {
-		if req.Msg.GetNamespace() == "" {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("namespace should not be empty"))
+		if req.Msg.GetProject() == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
 		}
 
-		if err := kc.Get(ctx, client.ObjectKey{Name: req.Msg.GetNamespace()}, &corev1.Namespace{}); err != nil {
+		if err := kc.Get(ctx, client.ObjectKey{Name: req.Msg.GetProject()}, &corev1.Namespace{}); err != nil {
 			if kubeerr.IsNotFound(err) {
 				return nil, connect.NewError(connect.CodeNotFound,
-					fmt.Errorf("namespace %q not found", req.Msg.GetNamespace()))
+					fmt.Errorf("project %q not found", req.Msg.GetProject()))
 			}
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 
 		var list kubev1alpha1.EnvironmentList
-		if err := kc.List(ctx, &list, client.InNamespace(req.Msg.GetNamespace())); err != nil {
+		if err := kc.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 
