@@ -7,9 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/git"
 )
 
 func TestGetLatestCommits(t *testing.T) {
@@ -19,7 +19,7 @@ func TestGetLatestCommits(t *testing.T) {
 		getLatestCommitIDFn func(
 			string,
 			string,
-			*git.Credentials,
+			*git.RepoCredentials,
 		) (string, error)
 		assertions func(commits []api.GitCommit, err error)
 	}{
@@ -63,7 +63,7 @@ func TestGetLatestCommits(t *testing.T) {
 			getLatestCommitIDFn: func(
 				string,
 				string,
-				*git.Credentials,
+				*git.RepoCredentials,
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
@@ -94,7 +94,7 @@ func TestGetLatestCommits(t *testing.T) {
 			getLatestCommitIDFn: func(
 				string,
 				string,
-				*git.Credentials,
+				*git.RepoCredentials,
 			) (string, error) {
 				return "fake-commit", nil
 			},
@@ -128,6 +128,50 @@ func TestGetLatestCommits(t *testing.T) {
 						},
 					},
 				),
+			)
+		})
+	}
+}
+
+func TestGetLatestCommitID(t *testing.T) {
+	testCases := []struct {
+		name       string
+		repoURL    string
+		branch     string
+		assertions func(string, error)
+	}{
+		{
+			name:    "error cloning repo",
+			repoURL: "fake-url", // This should force a failure
+			assertions: func(_ string, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error cloning git repo")
+			},
+		},
+
+		{
+			name:    "error checking out branch",
+			repoURL: "https://github.com/argoproj/argo-cd.git",
+			branch:  "bogus", // This should force a failure
+			assertions: func(_ string, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error checking out branch")
+			},
+		},
+
+		{
+			name:    "success",
+			repoURL: "https://github.com/argoproj/argo-cd.git",
+			assertions: func(commit string, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, commit)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				getLatestCommitID(testCase.repoURL, testCase.branch, nil),
 			)
 		})
 	}
