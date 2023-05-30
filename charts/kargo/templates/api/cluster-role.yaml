@@ -8,6 +8,14 @@ metadata:
     {{- include "kargo.api.labels" . | nindent 4 }}
 rules:
   - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
       - kargo.akuity.io
     resources:
       - environments
