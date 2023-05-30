@@ -2,12 +2,14 @@ package promotions
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 
+	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -51,9 +53,9 @@ func (r *reconciler) applyGitRepoUpdate(
 			update.RepoURL,
 		)
 	}
-	var repoCreds *git.Credentials
+	var repoCreds *git.RepoCredentials
 	if ok {
-		repoCreds = &git.Credentials{
+		repoCreds = &git.RepoCredentials{
 			Username:      creds.Username,
 			Password:      creds.Password,
 			SSHPrivateKey: creds.SSHPrivateKey,
@@ -113,4 +115,164 @@ func (r *reconciler) applyGitRepoUpdate(
 	}
 
 	return newState, nil
+}
+
+func gitApplyUpdate(
+	repoURL string,
+	readRef string,
+	writeBranch string,
+	creds *git.RepoCredentials,
+	updateFn func(homeDir, workingDir string) (string, error),
+) (string, error) {
+	if creds == nil {
+		creds = &git.RepoCredentials{}
+	}
+	repo, err := git.Clone(repoURL, *creds)
+	if err != nil {
+		return "", errors.Wrapf(err, "error cloning git repo %q", repoURL)
+	}
+	defer repo.Close()
+
+	// If readRef is non-empty, check out the specified commit or branch,
+	// otherwise just move using the repository's default branch as the source.
+	if readRef != "" {
+		if err = repo.Checkout(readRef); err != nil {
+			return "", errors.Wrapf(
+				err,
+				"error checking out %q from git repo",
+				readRef,
+			)
+		}
+	}
+
+	commitMsg, err := updateFn(repo.HomeDir(), repo.WorkingDir())
+	if err != nil {
+		return "", err
+	}
+
+	// Sometimes we don't write to the same branch we read from...
+	if readRef != writeBranch {
+		var tempDir string
+		tempDir, err = os.MkdirTemp("", "")
+		if err != nil {
+			return "", errors.Wrap(
+				err,
+				"error creating temp directory for pending changes",
+			)
+		}
+		defer os.RemoveAll(tempDir)
+
+		if err = moveRepoContents(repo.WorkingDir(), tempDir); err != nil {
+			return "", errors.Wrap(
+				err,
+				"error moving repository working tree to temporary location",
+			)
+		}
+
+		if err = repo.ResetHard(); err != nil {
+			return "", errors.Wrap(err, "error resetting repository working tree")
+		}
+
+		var branchExists bool
+		if branchExists, err = repo.RemoteBranchExists(writeBranch); err != nil {
+			return "", errors.Wrapf(
+				err,
+				"error checking for existence of branch %q in remote repo %q",
+				writeBranch,
+				repoURL,
+			)
+		} else if !branchExists {
+			if err = repo.CreateOrphanedBranch(writeBranch); err != nil {
+				return "", errors.Wrapf(
+					err,
+					"error creating branch %q in repo %q",
+					writeBranch,
+					repoURL,
+				)
+			}
+		} else {
+			if err = repo.Checkout(writeBranch); err != nil {
+				return "", errors.Wrapf(
+					err,
+					"error checking out branch %q from git repo %q",
+					writeBranch,
+					repoURL,
+				)
+			}
+		}
+
+		if err = deleteRepoContents(repo.WorkingDir()); err != nil {
+			return "",
+				errors.Wrap(err, "error clearing contents from repository working tree")
+		}
+
+		if err = moveRepoContents(tempDir, repo.WorkingDir()); err != nil {
+			return "", errors.Wrap(
+				err,
+				"error restoring repository working tree from temporary location",
+			)
+		}
+	}
+
+	hasDiffs, err := repo.HasDiffs()
+	if err != nil {
+		return "",
+			errors.Wrapf(err, "error checking for diffs in git repo %q", repoURL)
+	}
+
+	if hasDiffs {
+		if err = repo.AddAllAndCommit(commitMsg); err != nil {
+			return "",
+				errors.Wrapf(err, "error committing updates to git repo %q", repoURL)
+		}
+		if err = repo.Push(); err != nil {
+			return "",
+				errors.Wrapf(err, "error pushing updates to git repo %q", repoURL)
+		}
+	}
+
+	commitID, err := repo.LastCommitID()
+	if err != nil {
+		return "", errors.Wrapf(
+			err,
+			"error getting last commit ID from git repo %q",
+			repoURL,
+		)
+	}
+
+	return commitID, nil
+}
+
+func moveRepoContents(srcDir, destDir string) error {
+	dirEntries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return err
+	}
+	for _, dirEntry := range dirEntries {
+		if dirEntry.Name() == ".git" {
+			continue
+		}
+		srcPath := filepath.Join(srcDir, dirEntry.Name())
+		destPath := filepath.Join(destDir, dirEntry.Name())
+		if err = os.Rename(srcPath, destPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteRepoContents(dir string) error {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, dirEntry := range dirEntries {
+		if dirEntry.Name() == ".git" {
+			continue
+		}
+		if err = os.RemoveAll(filepath.Join(dir, dirEntry.Name())); err != nil {
+			return err
+		}
+	}
+	return nil
 }
