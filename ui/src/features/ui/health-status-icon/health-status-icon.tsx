@@ -5,17 +5,23 @@ import {
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { Health } from '@gen/v1alpha1/generated_pb';
 import { Tooltip } from 'antd';
 import { CSSProperties } from 'react';
 
-export const HealthStatusIcon = (props: { health: HealthStatus; style?: CSSProperties }) => {
+export const HealthStatusIcon = (props: { health: Health; style?: CSSProperties }) => {
   const { health } = props;
+
+  if (!health.status) {
+    return null;
+  }
+
   return (
     <Tooltip title={health?.statusReason}>
       <FontAwesomeIcon
-        icon={iconForHealthStatus(health?.status)}
+        icon={iconForHealthStatus(health.status)}
         style={{
-          color: colorForHealthStatus(health?.status),
+          color: colorForHealthStatus(health.status),
           fontSize: '18px',
           ...props.style
         }}
@@ -23,11 +29,6 @@ export const HealthStatusIcon = (props: { health: HealthStatus; style?: CSSPrope
     </Tooltip>
   );
 };
-
-interface HealthStatus {
-  status: string;
-  statusReason: string;
-}
 
 const iconForHealthStatus = (status: string): IconDefinition => {
   switch (status) {

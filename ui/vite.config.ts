@@ -29,6 +29,13 @@ export default defineConfig({
   },
   plugins: [tsConfigPaths(), react()],
   server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:9999',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    },
     port: 3333
   },
   test: {}

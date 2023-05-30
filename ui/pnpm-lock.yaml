@@ -7,6 +7,9 @@ dependencies:
   '@bufbuild/connect-query':
     specifier: 0.2.1
     version: 0.2.1(@tanstack/react-query@4.29.5)(react-dom@18.2.0)(react@18.2.0)
+  '@bufbuild/connect-web':
+    specifier: ^0.9.0
+    version: 0.9.0(@bufbuild/protobuf@1.2.0)
   '@bufbuild/protobuf':
     specifier: 1.2.0
     version: 1.2.0
@@ -436,8 +439,25 @@ packages:
       '@bufbuild/protobuf': 1.2.0
     dev: false
 
+  /@bufbuild/connect-web@0.9.0(@bufbuild/protobuf@1.2.0):
+    resolution: {integrity: sha512-WyYWjPRWceUc/1d5n8oA1NcCni2ND6qj8iXd1Hqy6qkCyo2n/FUSSe3oQuoXYZ9KCUI+5qexHz46n2jtzmFDiQ==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^1.2.0
+    dependencies:
+      '@bufbuild/connect': 0.9.0(@bufbuild/protobuf@1.2.0)
+      '@bufbuild/protobuf': 1.2.0
+    dev: false
+
   /@bufbuild/connect@0.8.6(@bufbuild/protobuf@1.2.0):
     resolution: {integrity: sha512-z9gW4hcQxCz7w0kjt1JyMp7VEQQdm7CYiZHvNq4vZtMbKOje2DC8kSb62XStHHd3AdoDZq1cb1s11F5TMSwZYw==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^1.2.0
+    dependencies:
+      '@bufbuild/protobuf': 1.2.0
+    dev: false
+
+  /@bufbuild/connect@0.9.0(@bufbuild/protobuf@1.2.0):
+    resolution: {integrity: sha512-UGOapHlbdbXW9Os08plEuR2k3ZwFWni3BnYVSEPITDTjgEqTagbm6lNWurXM53FDPvueSYYTTJF3Rivhp03xbQ==}
     peerDependencies:
       '@bufbuild/protobuf': ^1.2.0
     dependencies:
