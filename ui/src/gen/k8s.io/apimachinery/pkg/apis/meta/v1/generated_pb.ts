@@ -7,6 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
+import { protoInt64 } from "@bufbuild/protobuf";
 import { RawExtension } from "../../../runtime/generated_pb.js";
 
 /**
@@ -2884,6 +2885,28 @@ export class Time extends Message<Time> {
 
   static equals(a: Time | PlainMessage<Time> | undefined, b: Time | PlainMessage<Time> | undefined): boolean {
     return proto2.util.equals(Time, a, b);
+  }
+
+  override fromJson(json: JsonValue, options?: Partial<JsonReadOptions>): this {
+    if (typeof json !== "string") {
+      throw new Error(`cannot decode k8s.io.apimachinery.pkg.apis.meta.v1.Time from JSON: ${proto2.json.debug(json)}`);
+    }
+    const ms = Date.parse(json);
+    this.seconds = protoInt64.parse(ms / 1000);
+    this.nanos = 0;
+    return this;
+  }
+
+  override toJson(options?: Partial<JsonWriteOptions>): JsonValue {
+    const ms = Number(this.seconds) * 1000;
+    if (ms < Date.parse("0001-01-01T00:00:00Z") || ms > Date.parse("9999-12-31T23:59:59Z")) {
+      throw new Error(`cannot encode k8s.io.apimachinery.pkg.apis.meta.v1.Time to JSON: must be from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive`);
+    }
+    return new Date(ms).toISOString().replace(".000Z", "Z");
+  }
+
+  override toDate(): Date {
+    return new Date(Number(this.seconds) * 1000)
   }
 }
 
