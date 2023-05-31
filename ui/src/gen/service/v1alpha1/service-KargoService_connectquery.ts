@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { GetEnvironmentRequest, GetEnvironmentResponse, ListEnvironmentsRequest, ListEnvironmentsResponse } from "./service_pb.js";
+import { GetEnvironmentRequest, GetEnvironmentResponse, ListEnvironmentsRequest, ListEnvironmentsResponse, PromoteEnvironmentRequest, PromoteEnvironmentResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -42,3 +42,20 @@ export const getEnvironment = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).getEnvironment;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.PromoteEnvironment
+ */
+export const promoteEnvironment = createQueryService({
+  service: {
+    methods: {
+      promoteEnvironment: {
+        name: "PromoteEnvironment",
+        kind: MethodKind.Unary,
+        I: PromoteEnvironmentRequest,
+        O: PromoteEnvironmentResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).promoteEnvironment;
