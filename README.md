@@ -5,8 +5,9 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/c4e62c70-e07d-4ac6-bcf8-d7003c936d19/deploy-status)](https://app.netlify.com/sites/docs-kargo-akuity-io/deploys)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
-Kargo helps GitOps practitioners streamline continuous delivery for Kubernetes
-by automating the progression of changes from one environment to the next.
+Kargo is a next-generation continuous delivery and environment orchestration platform for Kubernetes. 
+It builds upon GitOps principles and integrates with existing technologies, like Argo CD, to streamline 
+and automate the progressive rollout of changes across multiple environments.
 
 > ⚠️&nbsp;&nbsp;Kargo is highly experimental at this time and breaking changes
 > should be anticipated between pre-GA minor releases.
@@ -14,10 +15,12 @@ by automating the progression of changes from one environment to the next.
 ## Getting Started
 
 Read more about Kargo in our [docs](https://kargo.akuity.io) or get hands-on
-right away with our [Quickstart](https://kargo.akuity.io/quickstart).
+right away by following our [Quickstart documentation](https://kargo.akuity.io/quickstart) or its video adaptation!
 
 This documentation is very new, so please open issues against this repository if
-you encounter any difficulties with it.
+you encounter any difficulties.
+
+[![Kargo Video Quickstart](https://img.youtube.com/vi/NHXBV40GFHs/0.jpg)](https://youtu.be/NHXBV40GFHs)
 
 ## Contributing
 

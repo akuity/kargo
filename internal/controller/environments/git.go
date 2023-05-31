@@ -5,9 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -28,9 +28,9 @@ func (r *reconciler) getLatestCommits(
 				sub.RepoURL,
 			)
 		}
-		var repoCreds *git.Credentials
+		var repoCreds *git.RepoCredentials
 		if ok {
-			repoCreds = &git.Credentials{
+			repoCreds = &git.RepoCredentials{
 				Username:      creds.Username,
 				Password:      creds.Password,
 				SSHPrivateKey: creds.SSHPrivateKey,
@@ -57,4 +57,42 @@ func (r *reconciler) getLatestCommits(
 		}
 	}
 	return latestCommits, nil
+}
+
+func getLatestCommitID(
+	repoURL string,
+	branch string,
+	creds *git.RepoCredentials,
+) (string, error) {
+	if creds == nil {
+		creds = &git.RepoCredentials{}
+	}
+	repo, err := git.Clone(repoURL, *creds)
+	if err != nil {
+		return "", errors.Wrapf(err, "error cloning git repo %q", repoURL)
+
+	}
+	if branch != "" {
+		if err = repo.Checkout(branch); err != nil {
+			return "", errors.Wrapf(
+				err,
+				"error checking out branch %q from git repo",
+				repoURL,
+			)
+		}
+	}
+	commit, err := repo.LastCommitID()
+	if branch != "" {
+		return commit, errors.Wrapf(
+			err,
+			"error determining last commit ID from branch %q of git repo %q",
+			branch,
+			repoURL,
+		)
+	}
+	return commit, errors.Wrapf(
+		err,
+		"error determining last commit ID from default branch of git repo %q",
+		repoURL,
+	)
 }

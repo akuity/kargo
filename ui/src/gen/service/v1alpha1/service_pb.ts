@@ -12,9 +12,9 @@ import { Environment } from "../../v1alpha1/generated_pb.js";
  */
 export class ListEnvironmentsRequest extends Message<ListEnvironmentsRequest> {
   /**
-   * @generated from field: string namespace = 1;
+   * @generated from field: string project = 1;
    */
-  namespace = "";
+  project = "";
 
   constructor(data?: PartialMessage<ListEnvironmentsRequest>) {
     super();
@@ -24,7 +24,7 @@ export class ListEnvironmentsRequest extends Message<ListEnvironmentsRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListEnvironmentsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListEnvironmentsRequest {
@@ -86,9 +86,9 @@ export class ListEnvironmentsResponse extends Message<ListEnvironmentsResponse> 
  */
 export class GetEnvironmentRequest extends Message<GetEnvironmentRequest> {
   /**
-   * @generated from field: string namespace = 1;
+   * @generated from field: string project = 1;
    */
-  namespace = "";
+  project = "";
 
   /**
    * @generated from field: string name = 2;
@@ -103,7 +103,7 @@ export class GetEnvironmentRequest extends Message<GetEnvironmentRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetEnvironmentRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 

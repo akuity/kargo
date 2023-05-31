@@ -114,8 +114,8 @@ github.com/acomagu/bufpipe v1.0.3 h1:fxAGrHZTgQ9w5QqVItgzwj235/uYZYgbXitB+dLupOk
 github.com/acomagu/bufpipe v1.0.3/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
-github.com/akuity/bookkeeper v0.1.0-alpha.2-rc.15 h1:4WtNj+8YCf2x+qTa1tKQwQWc0Yyc2Mtrh5qjTrY6C4I=
-github.com/akuity/bookkeeper v0.1.0-alpha.2-rc.15/go.mod h1:xQ4JbnSYeb3GCONPjR21BvH7KLveUmwqxfXPqb89MwQ=
+github.com/akuity/bookkeeper v0.1.0-alpha.2-rc.16.0.20230524205937-0fc174228025 h1:+PZhODyTkNXXIXQEBSZcvLxxwXv87vlDo7l8uKUHNAU=
+github.com/akuity/bookkeeper v0.1.0-alpha.2-rc.16.0.20230524205937-0fc174228025/go.mod h1:+7DpI38SdIdsDLj0dALiFIVtltZrUqZEssv4qyjnFYw=
 github.com/alcortesm/tgz v0.0.0-20161220082320-9c5fe88206d7/go.mod h1:6zEj6s6u/ghQa61ZWa/C2Aw3RkjiTBOix7dkqa1VLIs=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
