@@ -118,3 +118,10 @@ func (s *server) GetEnvironment(
 ) (*connect.Response[svcv1alpha1.GetEnvironmentResponse], error) {
 	return handler.GetEnvironmentV1Alpha1(s.kc)(ctx, req)
 }
+
+func (s *server) PromoteEnvironment(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.PromoteEnvironmentRequest],
+) (*connect.Response[svcv1alpha1.PromoteEnvironmentResponse], error) {
+	return handler.PromoteEnvironmentV1Alpha1(s.kc)(ctx, req)
+}

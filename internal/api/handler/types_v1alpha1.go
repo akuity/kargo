@@ -309,3 +309,19 @@ func toHealthProto(h kubev1alpha1.Health) *v1alpha1.Health {
 		StatusReason: proto.String(h.StatusReason),
 	}
 }
+
+func toPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
+	metadata := p.ObjectMeta.DeepCopy()
+	metadata.SetManagedFields(nil)
+	return &v1alpha1.Promotion{
+		Metadata: metadata,
+		Spec: &v1alpha1.PromotionSpec{
+			Environment: proto.String(p.Spec.Environment),
+			State:       proto.String(p.Spec.State),
+		},
+		Status: &v1alpha1.PromotionStatus{
+			Phase: proto.String(string(p.Status.Phase)),
+			Error: proto.String(p.Status.Error),
+		},
+	}
+}
