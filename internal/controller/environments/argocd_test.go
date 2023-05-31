@@ -32,8 +32,9 @@ func TestCheckHealth(t *testing.T) {
 				require.Equal(t,
 					api.Health{
 						Status: api.HealthStateUnknown,
-						StatusReason: "no spec.promotionMechanisms.argoCDAppUpdates " +
-							"are defined",
+						Issues: []string{
+							"no spec.promotionMechanisms.argoCDAppUpdates are defined",
+						},
 					},
 					health,
 				)
@@ -57,12 +58,17 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health api.Health) {
 				require.Equal(t, api.HealthStateUnknown, health.Status)
+				require.Len(t, health.Issues, 1)
 				require.Contains(
 					t,
-					health.StatusReason,
+					health.Issues[0],
 					"error finding Argo CD Application",
 				)
-				require.Contains(t, health.StatusReason, "something went wrong")
+				require.Contains(
+					t,
+					health.Issues[0],
+					"something went wrong",
+				)
 			},
 		},
 
@@ -84,9 +90,10 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health api.Health) {
 				require.Equal(t, api.HealthStateUnknown, health.Status)
+				require.Len(t, health.Issues, 1)
 				require.Contains(
 					t,
-					health.StatusReason,
+					health.Issues[0],
 					"unable to find Argo CD Application",
 				)
 			},
@@ -119,9 +126,10 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health api.Health) {
 				require.Equal(t, api.HealthStateUnknown, health.Status)
+				require.Len(t, health.Issues, 1)
 				require.Contains(
 					t,
-					health.StatusReason,
+					health.Issues[0],
 					"bugs in Argo CD currently prevent a comprehensive assessment of "+
 						"the health of multi-source Application",
 				)
@@ -152,12 +160,9 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health api.Health) {
 				require.Equal(t, api.HealthStateUnhealthy, health.Status)
-				require.Contains(t, health.StatusReason, "has health state")
-				require.Contains(
-					t,
-					health.StatusReason,
-					argoHealth.HealthStatusDegraded,
-				)
+				require.Len(t, health.Issues, 1)
+				require.Contains(t, health.Issues[0], "has health state")
+				require.Contains(t, health.Issues[0], argoHealth.HealthStatusDegraded)
 			},
 		},
 
@@ -191,11 +196,8 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health api.Health) {
 				require.Equal(t, api.HealthStateUnhealthy, health.Status)
-				require.Contains(
-					t,
-					health.StatusReason,
-					"is not synced to revision",
-				)
+				require.Len(t, health.Issues, 1)
+				require.Contains(t, health.Issues[0], "is not synced to revision")
 			},
 		},
 
@@ -240,7 +242,7 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health api.Health) {
 				require.Equal(t, api.HealthStateHealthy, health.Status)
-				require.Empty(t, health.StatusReason)
+				require.Empty(t, health.Issues)
 			},
 		},
 	}
