@@ -22,8 +22,11 @@ func toEnvironmentProto(e kubev1alpha1.Environment) *v1alpha1.Environment {
 		history[idx] = toEnvironmentStateProto(e.Status.History[idx])
 	}
 
+	metadata := e.ObjectMeta.DeepCopy()
+	metadata.SetManagedFields(nil)
+
 	return &v1alpha1.Environment{
-		Metadata: &e.ObjectMeta,
+		Metadata: metadata,
 		Spec: &v1alpha1.EnvironmentSpec{
 			Subscriptions:       toSubscriptionsProto(*e.Spec.Subscriptions),
 			PromotionMechanisms: toPromotionMechanismsProto(*e.Spec.PromotionMechanisms),
