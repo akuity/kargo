@@ -15,10 +15,12 @@ and automate the progressive rollout of changes across multiple environments.
 ## Getting Started
 
 Read more about Kargo in our [docs](https://kargo.akuity.io) or get hands-on
-right away with our [Quickstart](https://kargo.akuity.io/quickstart).
+right away by following our [Quickstart documentation](https://kargo.akuity.io/quickstart) or its video adaptation!
 
 This documentation is very new, so please open issues against this repository if
-you encounter any difficulties with it.
+you encounter any difficulties.
+
+[![Kargo Video Quickstart](https://img.youtube.com/vi/NHXBV40GFHs/0.jpg)](https://youtu.be/NHXBV40GFHs)
 
 ## Contributing
 

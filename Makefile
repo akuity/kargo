@@ -47,6 +47,7 @@ codegen:
 	go mod vendor
 	./hack/generate-proto.sh
 	buf generate api
+	./hack/api/apply-patches.sh
 	go mod tidy
 	rm -rf ./vendor
 	controller-gen \

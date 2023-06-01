@@ -5,6 +5,7 @@ set -euxo pipefail
 # shellcheck disable=SC2128
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE}")"/..; pwd)
 
+rm -rf "${PROJECT_ROOT}/pkg/api"
 mkdir -p "${PROJECT_ROOT}/pkg/api"
 ln -s "${PROJECT_ROOT}/api/v1alpha1" "${PROJECT_ROOT}/pkg/api/v1alpha1"
 
