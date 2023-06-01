@@ -17,7 +17,7 @@ CERT_MANAGER_CHART_VERSION := 1.11.0
 .PHONY: lint
 lint:
 	go mod vendor
-	buf lint
+	buf lint api
 	golangci-lint run
 
 .PHONY: test-unit
