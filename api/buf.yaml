@@ -7,6 +7,8 @@ lint:
     - DEFAULT
   except:
     - PACKAGE_DIRECTORY_MATCH
+  ignore:
+    - v1alpha1/generated.proto
 breaking:
   use:
     - FILE
