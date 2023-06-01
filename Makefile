@@ -15,10 +15,25 @@ CERT_MANAGER_CHART_VERSION := 1.11.0
 ################################################################################
 
 .PHONY: lint
-lint:
+lint: lint-go lint-proto lint-charts
+
+.PHONY: lint-go
+lint-go:
+	golangci-lint run
+
+.PHONY: lint-proto
+lint-proto:
 	go mod vendor
 	buf lint api
-	golangci-lint run
+
+.PHONY: lint-charts
+lint-charts:
+	cd charts/kargo && \
+	helm dep up && \
+	helm lint .
+	cd charts/kargo-kit && \
+	helm dep up && \
+	helm lint .
 
 .PHONY: test-unit
 test-unit:
@@ -29,15 +44,6 @@ test-unit:
 		-coverprofile=coverage.txt \
 		-covermode=atomic \
 		./...
-
-.PHONY: lint-charts
-lint-charts:
-	cd charts/kargo && \
-	helm dep up && \
-	helm lint .
-	cd charts/kargo-kit && \
-	helm dep up && \
-	helm lint .
 
 ################################################################################
 # Code generation: To be run after modifications to API types                  #
