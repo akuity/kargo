@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/config"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func NewHandlerOption(cfg config.APIConfig, logger *log.Entry) connect.HandlerOption {
@@ -24,6 +25,7 @@ func NewHandlerOption(cfg config.APIConfig, logger *log.Entry) connect.HandlerOp
 		connect.WithInterceptors(interceptors...),
 		connect.WithRecover(
 			func(ctx context.Context, spec connect.Spec, header http.Header, r any) error {
+				logging.LoggerFromContext(ctx).Log(log.ErrorLevel, takeStacktrace(defaultStackLength, 3))
 				return connect.NewError(
 					connect.CodeInternal, fmt.Errorf("panic: %v", r))
 			}),
