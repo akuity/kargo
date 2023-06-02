@@ -232,7 +232,7 @@ func (k *kubernetesDatabase) Get(
 
 	// This Secret represents credentials borrowed from Argo CD. We need to look
 	// at its annotations to see if this is authorized by the Secret's owner.
-	// If it's not annotated properly, we'll treat it as if we didn't find it.
+	// If it's not annotated properly, we'll treat it as we didn't find it.
 	allowedProjectsStr, ok := secret.Annotations[authorizedProjectsAnnotationKey]
 	if !ok {
 		return creds, false, nil
