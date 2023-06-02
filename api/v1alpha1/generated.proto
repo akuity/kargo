@@ -389,10 +389,10 @@ message Health {
   // Status describes the health of the Environment.
   optional string status = 1 [(gogoproto.casttype) = "HealthState", (gogoproto.customname) = "Status", (gogoproto.nullable) = false];
 
-  // StatusReason clarifies why an Environment in any state other than Healthy
-  // is in that state. The value of this field will always be the empty string
-  // when an Environment is Healthy.
-  optional string statusReason = 2 [(gogoproto.customname) = "StatusReason", (gogoproto.nullable) = false];
+  // Issues clarifies why an Environment in any state other than Healthy is in
+  // that state. This field will always be the empty when an Environment is
+  // Healthy.
+  repeated string issues = 2 [(gogoproto.customname) = "Issues"];
 }
 
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used

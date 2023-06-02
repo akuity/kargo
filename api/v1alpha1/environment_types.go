@@ -618,10 +618,10 @@ func (g *GitCommit) Equals(rhs *GitCommit) bool {
 type Health struct {
 	// Status describes the health of the Environment.
 	Status HealthState `json:"status,omitempty"`
-	// StatusReason clarifies why an Environment in any state other than Healthy
-	// is in that state. The value of this field will always be the empty string
-	// when an Environment is Healthy.
-	StatusReason string `json:"statusReason,omitempty"`
+	// Issues clarifies why an Environment in any state other than Healthy is in
+	// that state. This field will always be the empty when an Environment is
+	// Healthy.
+	Issues []string `json:"issues,omitempty"`
 }
 
 //+kubebuilder:object:root=true

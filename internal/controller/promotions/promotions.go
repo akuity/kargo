@@ -535,8 +535,8 @@ func (r *reconciler) applyPromotionMechanisms(
 	}
 
 	newState.Health = &api.Health{
-		Status:       api.HealthStateUnknown,
-		StatusReason: "Health has not yet been assessed",
+		Status: api.HealthStateUnknown,
+		Issues: []string{"Health has not yet been assessed"},
 	}
 
 	return newState, nil

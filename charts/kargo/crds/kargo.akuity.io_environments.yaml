@@ -599,14 +599,15 @@ spec:
                         observed health state before transitioning into a different
                         state.
                       properties:
+                        issues:
+                          description: Issues clarifies why an Environment in any
+                            state other than Healthy is in that state. This field
+                            will always be the empty when an Environment is Healthy.
+                          items:
+                            type: string
+                          type: array
                         status:
                           description: Status describes the health of the Environment.
-                          type: string
-                        statusReason:
-                          description: StatusReason clarifies why an Environment in
-                            any state other than Healthy is in that state. The value
-                            of this field will always be the empty string when an
-                            Environment is Healthy.
                           type: string
                       type: object
                     id:
@@ -709,14 +710,15 @@ spec:
                       Environment, this field will denote the last observed health
                       state before transitioning into a different state.
                     properties:
+                      issues:
+                        description: Issues clarifies why an Environment in any state
+                          other than Healthy is in that state. This field will always
+                          be the empty when an Environment is Healthy.
+                        items:
+                          type: string
+                        type: array
                       status:
                         description: Status describes the health of the Environment.
-                        type: string
-                      statusReason:
-                        description: StatusReason clarifies why an Environment in
-                          any state other than Healthy is in that state. The value
-                          of this field will always be the empty string when an Environment
-                          is Healthy.
                         type: string
                     type: object
                   id:
@@ -830,14 +832,15 @@ spec:
                         observed health state before transitioning into a different
                         state.
                       properties:
+                        issues:
+                          description: Issues clarifies why an Environment in any
+                            state other than Healthy is in that state. This field
+                            will always be the empty when an Environment is Healthy.
+                          items:
+                            type: string
+                          type: array
                         status:
                           description: Status describes the health of the Environment.
-                          type: string
-                        statusReason:
-                          description: StatusReason clarifies why an Environment in
-                            any state other than Healthy is in that state. The value
-                            of this field will always be the empty string when an
-                            Environment is Healthy.
                           type: string
                       type: object
                     id:
