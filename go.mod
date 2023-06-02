@@ -65,7 +65,7 @@ require k8s.io/apiserver v0.24.2 // indirect
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/akuity/bookkeeper v0.1.0-alpha.2-rc.16.0.20230524205937-0fc174228025
+	github.com/akuity/bookkeeper v0.1.0-rc.18
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
 	github.com/argoproj/argo-cd/v2 v2.6.7
 	github.com/bufbuild/connect-go v1.7.0
@@ -203,14 +203,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/gogoproto => github.com/akuity/gogoproto v0.0.0-20230530161421-5282e198ab74
-
-	// https://github.com/golang/go/issues/33546#issuecomment-519656923
-	github.com/go-check/check => github.com/go-check/check v0.0.0-20180628173108-788fd7840127
-
-	github.com/golang/protobuf => github.com/golang/protobuf v1.4.2
-	github.com/grpc-ecosystem/grpc-gateway => github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/improbable-eng/grpc-web => github.com/improbable-eng/grpc-web v0.0.0-20181111100011-16092bd1d58a
+	github.com/cosmos/gogoproto => github.com/akuity/gogoproto v0.0.0-20230602122527-94b2622b53cf
 
 	// Avoid CVE-2022-28948
 	gopkg.in/yaml.v3 => gopkg.in/yaml.v3 v3.0.1
