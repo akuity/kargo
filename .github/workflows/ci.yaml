@@ -48,6 +48,37 @@ jobs:
       with:
         version: v1.51.2
 
+  lint-charts:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.20.4-bullseye
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install linter
+        run: |
+          cd /usr/local/bin
+          curl -sSfL https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz \
+          | tar xvz linux-amd64/helm --strip-components=1
+      - name: Run linter
+        run: make lint-charts
+
+  lint-proto:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.20.4-bullseye
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Vendor dependencies
+        run: go mod vendor
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          version: "1.20.0"
+      - uses: bufbuild/buf-lint-action@v1
+        with:
+          input: api
+
   check-codegen:
     runs-on: ubuntu-latest
     container:
@@ -78,23 +109,8 @@ jobs:
     - name: Check nothing has changed
       run: git diff --exit-code -- .
 
-  lint-charts:
-    runs-on: ubuntu-latest
-    container:
-      image: golang:1.20.4-bullseye
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - name: Install linter
-      run: |
-        cd /usr/local/bin
-        curl -sSfL https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz \
-        | tar xvz linux-amd64/helm --strip-components=1
-    - name: Run linter
-      run: make lint-charts
-
   build:
-    needs: [test-unit, lint, check-codegen, lint-charts]
+    needs: [test-unit, lint, lint-charts, lint-proto, check-codegen]
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU
