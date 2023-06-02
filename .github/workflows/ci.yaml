@@ -70,14 +70,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Vendor dependencies
-        run: go mod vendor
-      - uses: bufbuild/buf-setup-action@v1
+      - name: Install linter
+        uses: bufbuild/buf-setup-action@v1
         with:
           version: "1.20.0"
-      - uses: bufbuild/buf-lint-action@v1
-        with:
-          input: api
+      - name: Run linter
+        run: make lint-proto
 
   check-codegen:
     runs-on: ubuntu-latest
