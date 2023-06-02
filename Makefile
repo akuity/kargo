@@ -97,7 +97,7 @@ hack-lint-go: hack-build-dev-tools
 	$(DOCKER_CMD) make lint-go
 
 .PHONY: hack-lint-proto
-hack-lint-proto:
+hack-lint-proto: hack-build-dev-tools
 	$(DOCKER_CMD) make lint-proto
 
 .PHONY: hack-lint-charts
