@@ -13,7 +13,6 @@ service KargoService {
 
 message ListEnvironmentsRequest {
   string project = 1;
-  string testFailure = 2;
 }
 
 message ListEnvironmentsResponse {
