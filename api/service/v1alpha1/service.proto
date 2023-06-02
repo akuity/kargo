@@ -4,7 +4,6 @@ package akuity.io.kargo.service.v1alpha1;
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
 
-import "google/api/annotations.proto";
 import "v1alpha1/generated.proto";
 
 service KargoService {
