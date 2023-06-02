@@ -16,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+const authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
+
 // Type is a string type used to represent a type of Credentials.
 type Type string
 
@@ -189,20 +191,25 @@ func (k *kubernetesDatabase) Get(
 		}
 	}
 
-	if secret == nil {
-		// Check Argo CD's namespace for credentials
-		if secret, err = k.getCredentialsSecret(
-			ctx,
-			k.argoCDNamespace,
-			labels.Set(map[string]string{
-				utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepository,
-			}).AsSelector(),
-			fields.Set(map[string]string{
-				secretsByRepo: credsSecretIndexVal(credType, repoURL),
-			}).AsSelector(),
-		); err != nil {
-			return creds, false, err
-		}
+	if secret != nil {
+		creds.Username = string(secret.Data["username"])
+		creds.Password = string(secret.Data["password"])
+		creds.SSHPrivateKey = string(secret.Data["sshPrivateKey"])
+		return creds, true, nil
+	}
+
+	// Check Argo CD's namespace for credentials
+	if secret, err = k.getCredentialsSecret(
+		ctx,
+		k.argoCDNamespace,
+		labels.Set(map[string]string{
+			utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepository,
+		}).AsSelector(),
+		fields.Set(map[string]string{
+			secretsByRepo: credsSecretIndexVal(credType, repoURL),
+		}).AsSelector(),
+	); err != nil {
+		return creds, false, err
 	}
 
 	if secret == nil {
@@ -219,10 +226,28 @@ func (k *kubernetesDatabase) Get(
 		}
 	}
 
-	creds.Username = string(secret.Data["username"])
-	creds.Password = string(secret.Data["password"])
-	creds.SSHPrivateKey = string(secret.Data["sshPrivateKey"])
-	return creds, true, nil
+	if secret == nil {
+		return creds, false, nil
+	}
+
+	// This Secret represents credentials borrowed from Argo CD. We need to look
+	// at its annotations to see if this is authorized by the Secret's owner.
+	// If it's not annotated properly, we'll treat it as we didn't find it.
+	allowedProjectsStr, ok := secret.Annotations[authorizedProjectsAnnotationKey]
+	if !ok {
+		return creds, false, nil
+	}
+	allowedProjects := strings.Split(allowedProjectsStr, ",")
+	for _, allowedProject := range allowedProjects {
+		if strings.TrimSpace(allowedProject) == namespace {
+			creds.Username = string(secret.Data["username"])
+			creds.Password = string(secret.Data["password"])
+			creds.SSHPrivateKey = string(secret.Data["sshPrivateKey"])
+			return creds, true, nil
+		}
+	}
+
+	return creds, false, nil
 }
 
 func (k *kubernetesDatabase) getCredentialsSecret(

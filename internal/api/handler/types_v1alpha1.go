@@ -305,7 +305,7 @@ func toChartProto(c kubev1alpha1.Chart) *v1alpha1.Chart {
 
 func toHealthProto(h kubev1alpha1.Health) *v1alpha1.Health {
 	return &v1alpha1.Health{
-		Status:       proto.String(string(h.Status)),
-		StatusReason: proto.String(h.StatusReason),
+		Status: proto.String(string(h.Status)),
+		Issues: h.Issues,
 	}
 }

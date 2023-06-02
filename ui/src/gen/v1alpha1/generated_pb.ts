@@ -1186,13 +1186,13 @@ export class Health extends Message<Health> {
   status?: string;
 
   /**
-   * StatusReason clarifies why an Environment in any state other than Healthy
-   * is in that state. The value of this field will always be the empty string
-   * when an Environment is Healthy.
+   * Issues clarifies why an Environment in any state other than Healthy is in
+   * that state. This field will always be the empty when an Environment is
+   * Healthy.
    *
-   * @generated from field: optional string statusReason = 2;
+   * @generated from field: repeated string issues = 2;
    */
-  statusReason?: string;
+  issues: string[] = [];
 
   constructor(data?: PartialMessage<Health>) {
     super();
@@ -1203,7 +1203,7 @@ export class Health extends Message<Health> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Health";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "statusReason", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Health {
