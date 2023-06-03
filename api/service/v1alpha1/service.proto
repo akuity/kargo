@@ -9,6 +9,7 @@ import "v1alpha1/generated.proto";
 service KargoService {
   rpc ListEnvironments(ListEnvironmentsRequest) returns (ListEnvironmentsResponse);
   rpc GetEnvironment(GetEnvironmentRequest) returns (GetEnvironmentResponse);
+  rpc PromoteEnvironment(PromoteEnvironmentRequest) returns (PromoteEnvironmentResponse);
 }
 
 message ListEnvironmentsRequest {
@@ -26,4 +27,14 @@ message GetEnvironmentRequest {
 
 message GetEnvironmentResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Environment environment = 1;
+}
+
+message PromoteEnvironmentRequest {
+  string project = 1;
+  string name = 2;
+  string state = 3;
+}
+
+message PromoteEnvironmentResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
 }
