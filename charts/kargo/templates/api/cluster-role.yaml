@@ -23,4 +23,10 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      - promotions
+    verbs:
+      - create
 {{- end }}

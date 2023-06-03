@@ -7,9 +7,6 @@ import (
 	"github.com/bufbuild/connect-go"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
@@ -18,20 +15,26 @@ import (
 
 func TestListEnvironmentsV1Alpha1(t *testing.T) {
 	testSets := map[string]struct {
-		namespace    string
+		req          *svcv1alpha1.ListEnvironmentsRequest
 		errExpected  bool
 		expectedCode connect.Code
 	}{
 		"empty project": {
-			namespace:    "",
+			req: &svcv1alpha1.ListEnvironmentsRequest{
+				Project: "",
+			},
 			errExpected:  true,
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"existing project": {
-			namespace: "kargo-demo",
+			req: &svcv1alpha1.ListEnvironmentsRequest{
+				Project: "kargo-demo",
+			},
 		},
 		"non-existing project": {
-			namespace:    "non-existing-project",
+			req: &svcv1alpha1.ListEnvironmentsRequest{
+				Project: "non-existing-project",
+			},
 			errExpected:  true,
 			expectedCode: connect.CodeNotFound,
 		},
@@ -40,34 +43,21 @@ func TestListEnvironmentsV1Alpha1(t *testing.T) {
 		ts := ts
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			scheme := k8sruntime.NewScheme()
-			require.NoError(t, corev1.AddToScheme(scheme))
-			require.NoError(t, kubev1alpha1.AddToScheme(scheme))
-
-			rawEnv, err := testData.ReadFile("testdata/environment.yaml")
-			require.NoError(t, err)
-
-			var testEnv kubev1alpha1.Environment
-			require.NoError(t, yaml.Unmarshal(rawEnv, &testEnv))
 
 			kc := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kargo-demo",
-					},
-				}).
+				WithScheme(mustNewScheme()).
+				WithObjects(
+					mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+				).
 				WithLists(&kubev1alpha1.EnvironmentList{
 					Items: []kubev1alpha1.Environment{
-						testEnv,
+						*mustNewObject[kubev1alpha1.Environment]("testdata/environment.yaml"),
 					},
-				}).Build()
+				}).
+				Build()
 
 			ctx := context.TODO()
-			req := connect.NewRequest(&svcv1alpha1.ListEnvironmentsRequest{
-				Project: ts.namespace,
-			})
-			res, err := ListEnvironmentsV1Alpha1(kc)(ctx, req)
+			res, err := ListEnvironmentsV1Alpha1(kc)(ctx, connect.NewRequest(ts.req))
 			if ts.errExpected {
 				require.Error(t, err)
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))

@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-import { Environment } from "../../v1alpha1/generated_pb.js";
+import { Environment, Promotion } from "../../v1alpha1/generated_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ListEnvironmentsRequest
@@ -158,6 +158,92 @@ export class GetEnvironmentResponse extends Message<GetEnvironmentResponse> {
 
   static equals(a: GetEnvironmentResponse | PlainMessage<GetEnvironmentResponse> | undefined, b: GetEnvironmentResponse | PlainMessage<GetEnvironmentResponse> | undefined): boolean {
     return proto3.util.equals(GetEnvironmentResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.PromoteEnvironmentRequest
+ */
+export class PromoteEnvironmentRequest extends Message<PromoteEnvironmentRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string state = 3;
+   */
+  state = "";
+
+  constructor(data?: PartialMessage<PromoteEnvironmentRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.PromoteEnvironmentRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "state", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromoteEnvironmentRequest {
+    return new PromoteEnvironmentRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromoteEnvironmentRequest {
+    return new PromoteEnvironmentRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromoteEnvironmentRequest {
+    return new PromoteEnvironmentRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromoteEnvironmentRequest | PlainMessage<PromoteEnvironmentRequest> | undefined, b: PromoteEnvironmentRequest | PlainMessage<PromoteEnvironmentRequest> | undefined): boolean {
+    return proto3.util.equals(PromoteEnvironmentRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.PromoteEnvironmentResponse
+ */
+export class PromoteEnvironmentResponse extends Message<PromoteEnvironmentResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+   */
+  promotion?: Promotion;
+
+  constructor(data?: PartialMessage<PromoteEnvironmentResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.PromoteEnvironmentResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "promotion", kind: "message", T: Promotion },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromoteEnvironmentResponse {
+    return new PromoteEnvironmentResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromoteEnvironmentResponse {
+    return new PromoteEnvironmentResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromoteEnvironmentResponse {
+    return new PromoteEnvironmentResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromoteEnvironmentResponse | PlainMessage<PromoteEnvironmentResponse> | undefined, b: PromoteEnvironmentResponse | PlainMessage<PromoteEnvironmentResponse> | undefined): boolean {
+    return proto3.util.equals(PromoteEnvironmentResponse, a, b);
   }
 }
 
