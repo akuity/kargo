@@ -26,8 +26,8 @@ make hack-test-unit
 ```
 
 :::info
-If you wish to opt-out of executing the tests within a container, use the
-following instead:
+If you wish to opt-out of executing the tests within a container (for
+performance reasons, perhaps), drop the `hack-` prefix from the target:
 
 ```shell
 make test-unit
@@ -36,45 +36,66 @@ make test-unit
 This will require Go to be installed locally.
 :::
 
-To run lint checks:
+## Running linters
+
+It is also possible to execute a variety of different linters that perform
+static code analysis, detect code hygiene issues, assert adherence to project
+standards, etc. As with unit tests, we've made it easy to execute linters within
+a container that is maximally similar to those used in CI.
+
+To lint Go code only:
+
+```shell
+make hack-lint-go
+```
+
+To lint generated protobuf definitions only:
+
+```shell
+make hack-lint-proto
+```
+
+To lint Helm charts only:
+
+```shell
+make hack-lint-charts
+```
+
+To run _all_ linters with one command:
 
 ```shell
 make hack-lint
 ```
 
 :::info
-If you wish to opt-out of executing the linter within a container, use the
-following instead:
+If you wish to opt-out of executing any or all linters within a container (for
+performance reasons, perhaps), drop the `hack-` prefix from the desired target.
 
-```shell
-make lint
-```
-
-This will require Go and [golangci-lint](https://golangci-lint.run/) to be
-installed locally.
+This will require quite a variety of tools to be installed locally, so we do not
+recommend this if you can avoid it.
 :::
 
 ## Executing code generation
 
 Anytime the contents of the `api/` directory have been modified, a code
-generation process must be manually executed. As with tests, this process is
-easy to execute within a container, which eliminates the need to install various
-tools or specific versions thereof:
+generation process must be manually executed. As with tests and linters, this
+process is easy to execute within a container, which eliminates the need to
+install various tools or specific versions thereof:
 
 ```shell
 make hack-codegen
 ```
 
 :::info
-If you wish to opt-out of executing code-generation within a container, use the
-following instead:
+If you wish to opt-out of executing code-generation within a container (for
+performance reasons, perhaps), drop the `hack-` prefix from the target:
 
 ```shell
 make codegen
 ```
 
-This will require a variety of tools to be installed locally, so we do not
-recommend this.
+This will require quite a variety of tools to be installed locally, so we do not
+recommend this if you can avoid it.
 :::
 
 ## Building the image

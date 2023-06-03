@@ -93,13 +93,21 @@ hack-build-dev-tools:
 hack-lint: hack-build-dev-tools
 	$(DOCKER_CMD) make lint
 
-.PHONY: hack-test-unit
-hack-test-unit: hack-build-dev-tools
-	$(DOCKER_CMD) make test-unit
+.PHONY: hack-lint-go
+hack-lint-go: hack-build-dev-tools
+	$(DOCKER_CMD) make lint-go
+
+.PHONY: hack-lint-proto
+hack-lint-proto: hack-build-dev-tools
+	$(DOCKER_CMD) make lint-proto
 
 .PHONY: hack-lint-charts
 hack-lint-charts: hack-build-dev-tools
 	$(DOCKER_CMD) make lint-charts
+
+.PHONY: hack-test-unit
+hack-test-unit: hack-build-dev-tools
+	$(DOCKER_CMD) make test-unit
 
 .PHONY: hack-codegen
 hack-codegen: hack-build-dev-tools
