@@ -1,7 +1,7 @@
 SHELL ?= /bin/bash
 
 ARGO_CD_CHART_VERSION := 5.21.0
-BUF_LINT_ERROR_FORMAT := text
+BUF_LINT_ERROR_FORMAT ?= text
 CERT_MANAGER_CHART_VERSION := 1.11.0
 
 ################################################################################
