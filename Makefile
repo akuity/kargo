@@ -2,6 +2,7 @@ SHELL ?= /bin/bash
 
 ARGO_CD_CHART_VERSION := 5.21.0
 BUF_LINT_ERROR_FORMAT ?= text
+GO_LINT_ERROR_FORMAT ?= colored-line-number
 CERT_MANAGER_CHART_VERSION := 1.11.0
 
 ################################################################################
@@ -20,7 +21,7 @@ lint: lint-go lint-proto lint-charts
 
 .PHONY: lint-go
 lint-go:
-	golangci-lint run
+	golangci-lint run --out-format=$(GO_LINT_ERROR_FORMAT)
 
 .PHONY: lint-proto
 lint-proto:
