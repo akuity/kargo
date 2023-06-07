@@ -82,6 +82,7 @@ func newControllerCommand() *cobra.Command {
 			if err := environments.SetupReconcilerWithManager(
 				ctx,
 				mgr,
+				mgr,
 				credentialsDB,
 			); err != nil {
 				return errors.Wrap(err, "error setting up Environment reconciler")

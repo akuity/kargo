@@ -16,11 +16,14 @@ import (
 )
 
 func TestNewEnvironmentReconciler(t *testing.T) {
+	client := fake.NewClientBuilder().Build()
 	e := newReconciler(
-		fake.NewClientBuilder().Build(),
+		client,
+		client,
 		&credentials.FakeDB{},
 	)
-	require.NotNil(t, e.client)
+	require.NotNil(t, e.kargoClient)
+	require.NotNil(t, e.argoClient)
 	require.NotNil(t, e.credentialsDB)
 
 	// Assert that all overridable behaviors were initialized to a default:
@@ -174,8 +177,8 @@ func TestSync(t *testing.T) {
 			context.Context,
 			[]api.EnvironmentSubscription,
 		) ([]api.EnvironmentState, error)
-		client     client.Client
-		assertions func(
+		kargoClient client.Client
+		assertions  func(
 			initialStatus api.EnvironmentStatus,
 			newStatus api.EnvironmentStatus,
 			client client.Client,
@@ -541,7 +544,7 @@ func TestSync(t *testing.T) {
 					},
 				}, nil
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			kargoClient: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			assertions: func(
 				initialStatus api.EnvironmentStatus,
 				newStatus api.EnvironmentStatus,
@@ -608,7 +611,7 @@ func TestSync(t *testing.T) {
 					},
 				}, nil
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				&api.PromotionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-policy",
@@ -690,7 +693,7 @@ func TestSync(t *testing.T) {
 					},
 				}, nil
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				&api.PromotionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-policy",
@@ -765,7 +768,7 @@ func TestSync(t *testing.T) {
 					},
 				}, nil
 			},
-			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				&api.PromotionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-policy",
@@ -824,7 +827,7 @@ func TestSync(t *testing.T) {
 		}
 		// nolint: lll
 		reconciler := &reconciler{
-			client:                               testCase.client,
+			kargoClient:                          testCase.kargoClient,
 			hasOutstandingPromotionsFn:           testCase.hasOutstandingPromotionsFn,
 			checkHealthFn:                        testCase.checkHealthFn,
 			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
@@ -835,7 +838,7 @@ func TestSync(t *testing.T) {
 			testCase.assertions(
 				testCase.initialStatus,
 				newStatus,
-				reconciler.client,
+				testCase.kargoClient,
 				err,
 			)
 		})

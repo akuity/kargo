@@ -34,7 +34,8 @@ const (
 
 // reconciler reconciles Environment resources.
 type reconciler struct {
-	client        client.Client
+	kargoClient   client.Client
+	argoClient    client.Client
 	credentialsDB credentials.Database
 
 	// The following behaviors are overridable for testing purposes:
@@ -120,11 +121,12 @@ type reconciler struct {
 // and registers it with the provided Manager.
 func SetupReconcilerWithManager(
 	ctx context.Context,
-	mgr manager.Manager,
+	kargoMgr manager.Manager,
+	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
 ) error {
 	// Index Environments by Argo CD Applications
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.Environment{},
 		envsByAppIndexField,
@@ -137,7 +139,7 @@ func SetupReconcilerWithManager(
 	}
 
 	// Index Promotions in non-terminal states by Environment
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.Promotion{},
 		outstandingPromosByEnvIndexField,
@@ -149,9 +151,7 @@ func SetupReconcilerWithManager(
 		)
 	}
 
-	e := newReconciler(mgr.GetClient(), credentialsDB)
-
-	return ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(kargoMgr).
 		For(&api.Environment{}).
 		WithEventFilter(predicate.Funcs{
 			DeleteFunc: func(event.DeleteEvent) bool {
@@ -160,7 +160,11 @@ func SetupReconcilerWithManager(
 			},
 		}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(e)
+		Complete(newReconciler(
+			kargoMgr.GetClient(),
+			argoMgr.GetClient(),
+			credentialsDB,
+		))
 }
 
 func indexEnvsByApp(obj client.Object) []string {
@@ -187,11 +191,13 @@ func indexOutstandingPromotionsByEnvironment(obj client.Object) []string {
 }
 
 func newReconciler(
-	client client.Client,
+	kargoClient client.Client,
+	argoClient client.Client,
 	credentialsDB credentials.Database,
 ) *reconciler {
 	r := &reconciler{
-		client:        client,
+		kargoClient:   kargoClient,
+		argoClient:    argoClient,
 		credentialsDB: credentialsDB,
 	}
 
@@ -241,7 +247,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Environment")
 
 	// Find the Environment
-	env, err := api.GetEnv(ctx, r.client, req.NamespacedName)
+	env, err := api.GetEnv(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -263,7 +269,7 @@ func (r *reconciler) Reconcile(
 		env.Status.Error = ""
 	}
 
-	updateErr := r.client.Status().Update(ctx, env)
+	updateErr := r.kargoClient.Status().Update(ctx, env)
 	if updateErr != nil {
 		logger.Errorf("error updating Environment status: %s", updateErr)
 	}
@@ -410,7 +416,7 @@ func (r *reconciler) sync(
 	// If we get to here, we've determined that auto-promotion is a possibility.
 	// See if it's actually allowed...
 	policies := api.PromotionPolicyList{}
-	if err := r.client.List(
+	if err := r.kargoClient.List(
 		ctx,
 		&policies,
 		&client.ListOptions{
@@ -446,7 +452,7 @@ func (r *reconciler) sync(
 	logger = logger.WithField("state", nextState.ID)
 	logger.Debug("auto-promotion will proceed")
 
-	if err := r.client.Create(
+	if err := r.kargoClient.Create(
 		ctx,
 		&api.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -483,7 +489,7 @@ func (r *reconciler) hasOutstandingPromotions(
 	envName string,
 ) (bool, error) {
 	promos := api.PromotionList{}
-	if err := r.client.List(
+	if err := r.kargoClient.List(
 		ctx,
 		&promos,
 		&client.ListOptions{
@@ -560,7 +566,7 @@ func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
 	for _, sub := range subs {
 		upstreamEnv, err := api.GetEnv(
 			ctx,
-			r.client,
+			r.kargoClient,
 			types.NamespacedName{
 				Namespace: sub.Namespace,
 				Name:      sub.Name,
