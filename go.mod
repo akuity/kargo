@@ -203,7 +203,7 @@ require (
 )
 
 replace (
-	github.com/cosmos/gogoproto => github.com/akuity/gogoproto v0.0.0-20230602122527-94b2622b53cf
+	github.com/cosmos/gogoproto => github.com/akuity/gogoproto v0.0.0-20230602131644-22fba0aeb992
 
 	// Avoid CVE-2022-28948
 	gopkg.in/yaml.v3 => gopkg.in/yaml.v3 v3.0.1
