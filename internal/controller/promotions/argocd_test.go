@@ -311,7 +311,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 			api.EnvironmentState,
 			api.ArgoCDSourceUpdate,
 		) (argocd.ApplicationSource, error)
-		patchFn func(
+		argoCDAppPatchFn func(
 			context.Context,
 			client.Object,
 			client.Patch,
@@ -490,7 +490,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 			) (argocd.ApplicationSource, error) {
 				return source, nil
 			},
-			patchFn: func(
+			argoCDAppPatchFn: func(
 				context.Context,
 				client.Object,
 				client.Patch,
@@ -514,7 +514,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 			r := reconciler{
 				getArgoCDAppFn:            testCase.getArgoCDAppFn,
 				applyArgoCDSourceUpdateFn: testCase.applyArgoCDSourceUpdateFn,
-				patchFn:                   testCase.patchFn,
+				argoCDAppPatchFn:          testCase.argoCDAppPatchFn,
 			}
 			testCase.assertions(
 				r.applyArgoCDAppUpdate(

@@ -19,12 +19,15 @@ import (
 )
 
 func TestNewPromotionReconciler(t *testing.T) {
+	client := fake.NewClientBuilder().Build()
 	r := newReconciler(
-		fake.NewClientBuilder().Build(),
+		client,
+		client,
 		&credentials.FakeDB{},
 		bookkeeper.NewService(nil),
 	)
-	require.NotNil(t, r.client)
+	require.NotNil(t, r.kargoClient)
+	require.NotNil(t, r.argoClient)
 	require.NotNil(t, r.credentialsDB)
 	require.NotNil(t, r.bookkeeperService)
 	require.NotNil(t, r.promoQueuesByEnv)
@@ -45,14 +48,14 @@ func TestNewPromotionReconciler(t *testing.T) {
 	// Promotions via Argo CD:
 	require.NotNil(t, r.getArgoCDAppFn)
 	require.NotNil(t, r.applyArgoCDSourceUpdateFn)
-	require.NotNil(t, r.patchFn)
+	require.NotNil(t, r.argoCDAppPatchFn)
 }
 
 func TestInitializeQueues(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
 	r := reconciler{
-		client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			&api.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-promotion",
@@ -243,7 +246,7 @@ func TestSerializedSync(t *testing.T) {
 	require.NoError(t, err)
 
 	r := reconciler{
-		client: client,
+		kargoClient: client,
 		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{
 			{Namespace: "fake-namespace", Name: "fake-env"}: pq,
 		},
@@ -324,7 +327,7 @@ func TestGetPromo(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := reconciler{
-				client: testCase.client,
+				kargoClient: testCase.client,
 			}
 			promo, err := r.getPromo(
 				context.Background(),

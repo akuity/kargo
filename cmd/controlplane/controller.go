@@ -89,6 +89,7 @@ func newControllerCommand() *cobra.Command {
 			}
 			if err := promotions.SetupReconcilerWithManager(
 				mgr,
+				mgr,
 				credentialsDB,
 				bookkeeper.NewService(
 					&bookkeeper.ServiceOptions{
