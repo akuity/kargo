@@ -13,6 +13,7 @@ import (
 	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/config"
+	"github.com/akuity/kargo/internal/controller/applications"
 	"github.com/akuity/kargo/internal/controller/environments"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/credentials"
@@ -83,7 +84,7 @@ func newControllerCommand() *cobra.Command {
 				mgr,
 				credentialsDB,
 			); err != nil {
-				return errors.Wrap(err, "setup environment reconciler")
+				return errors.Wrap(err, "error setting up Environment reconciler")
 			}
 			if err := promotions.SetupReconcilerWithManager(
 				mgr,
@@ -94,11 +95,15 @@ func newControllerCommand() *cobra.Command {
 					},
 				),
 			); err != nil {
-				return errors.Wrap(err, "setup promotion reconciler")
+				return errors.Wrap(err, "error setting up Promotions reconciler")
+			}
+			if err :=
+				applications.SetupReconcilerWithManager(mgr, mgr); err != nil {
+				return errors.Wrap(err, "error setting up Applications reconciler")
 			}
 
 			if err := mgr.Start(ctx); err != nil {
-				return errors.Wrap(err, "start controller")
+				return errors.Wrap(err, "error starting controller manager")
 			}
 			return nil
 		},

@@ -15,11 +15,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
@@ -162,15 +159,7 @@ func SetupReconcilerWithManager(
 				return false
 			},
 		}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Watches(
-			&source.Kind{Type: &argocd.Application{}},
-			handler.EnqueueRequestsFromMapFunc(
-				func(obj client.Object) []reconcile.Request {
-					return e.findEnvsForApp(ctx, obj)
-				},
-			),
-		).
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Complete(e)
 }
 
@@ -228,43 +217,6 @@ func newReconciler(
 	r.getLatestCommitIDFn = getLatestCommitID
 
 	return r
-}
-
-// findEnvsForApp dynamically returns reconciliation requests for all
-// Environments related to a given Argo CD Application. This is used to
-// propagate reconciliation requests to Environments whose state should be
-// affected by changes to related Application resources.
-func (r *reconciler) findEnvsForApp(
-	ctx context.Context,
-	app client.Object,
-) []reconcile.Request {
-	envs := &api.EnvironmentList{}
-	if err := r.client.List(
-		ctx,
-		envs,
-		&client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(
-				envsByAppIndexField,
-				fmt.Sprintf("%s:%s", app.GetNamespace(), app.GetName()),
-			),
-		},
-	); err != nil {
-		logging.LoggerFromContext(ctx).WithFields(log.Fields{
-			"namespace":   app.GetNamespace(),
-			"application": app.GetName(),
-		}).Error("error listing Environments associated with Application")
-		return nil
-	}
-	reqs := make([]reconcile.Request, len(envs.Items))
-	for i, env := range envs.Items {
-		reqs[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      env.GetName(),
-				Namespace: env.GetNamespace(),
-			},
-		}
-	}
-	return reqs
 }
 
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
