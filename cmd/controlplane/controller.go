@@ -73,8 +73,12 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "error initializing Environment webhooks")
 			}
 
-			credentialsDB, err :=
-				credentials.NewKubernetesDatabase(ctx, config.ArgoCDNamespace, mgr)
+			credentialsDB, err := credentials.NewKubernetesDatabase(
+				ctx,
+				config.ArgoCDNamespace,
+				mgr,
+				mgr,
+			)
 			if err != nil {
 				return errors.Wrap(err, "error initializing credentials DB")
 			}
