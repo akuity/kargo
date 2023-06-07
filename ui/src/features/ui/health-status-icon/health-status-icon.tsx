@@ -9,15 +9,15 @@ import type { Health } from '@gen/v1alpha1/generated_pb';
 import { Tooltip } from 'antd';
 import { CSSProperties } from 'react';
 
-export const HealthStatusIcon = (props: { health: Health; style?: CSSProperties }) => {
+export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties }) => {
   const { health } = props;
 
-  if (!health.status) {
+  if (!health?.status) {
     return null;
   }
 
   return (
-    <Tooltip title={health?.statusReason}>
+    <Tooltip title={health?.status}>
       <FontAwesomeIcon
         icon={iconForHealthStatus(health.status)}
         style={{

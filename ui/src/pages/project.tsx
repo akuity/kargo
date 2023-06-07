@@ -7,22 +7,23 @@ import { Drawer } from 'antd';
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { EnvironmentPage } from './environment';
+import { EnvironmentDetails } from '../features/environment/environment-details';
+
 import * as styles from './project.module.less';
 
 export const Project = () => {
-  const { name } = useParams();
-  const { data } = useQuery(listEnvironments.useQuery({ namespace: name }, { transport }));
+  const { name, environmentName } = useParams();
+  const { data } = useQuery(listEnvironments.useQuery({ project: name }, { transport }));
 
-  // const { data: environments } = useQuery<Environment[]>(
-  //   ['environments'],
-  //   async () => await GetEnvironments()
-  // );
-  // const environmentsByName = (environments || []).reduce((acc, environment) => {
-  //   acc[environment.metadata.name] = environment;
-  //   return acc;
-  // }, {} as Record<string, Environment>);
-  const [currentEnvironment, setCurrentEnvironment] = React.useState<string | null>(null);
+  const environmentsByName = (data?.environments || []).reduce((acc, environment) => {
+    if (environment.metadata?.name) {
+      acc[environment.metadata?.name] = environment;
+    }
+    return acc;
+  }, {} as Record<string, Environment>);
+  const [currentEnvironment, setCurrentEnvironment] = React.useState<string | null>(
+    environmentName || null
+  );
 
   const navigate = useNavigate();
 
@@ -36,18 +37,16 @@ export const Project = () => {
     navigate(`/project/${name}`);
   };
 
-  return <div>Test</div>;
-
   return (
     <div>
-      {/* <Drawer
+      <Drawer
         open={currentEnvironment !== null}
         onClose={() => closeEnvironment()}
         width={'80%'}
         closable={false}
       >
-        <EnvironmentPage environment={environmentsByName[currentEnvironment || '']} />
-      </Drawer> */}
+        <EnvironmentDetails environment={environmentsByName[currentEnvironment || '']} />
+      </Drawer>
       <h1 className={styles.header}>{name}</h1>
       <h2 className={styles.subHeader}>Environments</h2>
       {(data?.environments || []).map((environment) => (

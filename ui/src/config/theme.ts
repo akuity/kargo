@@ -5,6 +5,9 @@ export const token: Partial<MapToken> = {
   colorPrimary: 'rgb(29, 50, 82)',
   fontSizeHeading1: 28,
   fontSizeHeading2: 24,
+  fontSizeHeading3: 20,
+  fontSizeHeading4: 18,
+  fontSizeHeading5: 14,
   colorText: '#454545',
   borderRadius: 8
 };

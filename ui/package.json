@@ -41,6 +41,7 @@
     "@bufbuild/connect-web": "^0.9.0",
     "@bufbuild/protobuf": "1.2.0",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-brands-svg-icons": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@tanstack/react-query": "^4.29.5",
