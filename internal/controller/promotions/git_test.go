@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -310,4 +311,66 @@ func createDummyRepoDir(dirCount, fileCount int) (string, error) {
 		}
 	}
 	return dir, nil
+}
+
+func TestBuildCommitMessage(t *testing.T) {
+	testCases := []struct {
+		name          string
+		changeSummary []string
+		assertions    func(msg string)
+	}{
+		{
+			// This shouldn't really happen, but we're careful to handle it anyway,
+			// so we might as well test it.
+			name:          "nil change summary",
+			changeSummary: nil,
+			assertions: func(msg string) {
+				require.Equal(t, "Kargo applied some changes", msg)
+			},
+		},
+		{
+			// This shouldn't really happen, but we're careful to handle it anyway,
+			// so we might as well test it.
+			name:          "empty change summary",
+			changeSummary: []string{},
+			assertions: func(msg string) {
+				require.Equal(t, "Kargo applied some changes", msg)
+			},
+		},
+		{
+			name: "change summary contains one item",
+			changeSummary: []string{
+				"fake-change",
+			},
+			assertions: func(msg string) {
+				require.Equal(t, "fake-change", msg)
+			},
+		},
+		{
+			name: "change summary contains multiple items",
+			changeSummary: []string{
+				"fake-change",
+				"another-fake-change",
+			},
+			assertions: func(msg string) {
+				require.Equal(
+					t,
+					[]string{
+						"Kargo applied multiple changes",
+						"",
+						"Including:",
+						"",
+						"  * fake-change",
+						"  * another-fake-change",
+					},
+					strings.Split(msg, "\n"),
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(buildCommitMessage(testCase.changeSummary))
+		})
+	}
 }

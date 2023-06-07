@@ -2,6 +2,7 @@ package promotions
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -71,12 +72,16 @@ func (r *reconciler) applyGitRepoUpdate(
 		update.WriteBranch,
 		repoCreds,
 		func(homeDir, workingDir string) (string, error) {
+			changeSummary := []string{}
+
 			if update.Kustomize != nil {
-				if err = r.applyKustomize(
+				var newChanges []string
+				newChanges, err = r.applyKustomize(
 					newState,
 					*update.Kustomize,
 					workingDir,
-				); err != nil {
+				)
+				if err != nil {
 					return "", errors.Wrapf(
 						err,
 						"error updating branch %q in git repository %q via Kustomize",
@@ -84,15 +89,18 @@ func (r *reconciler) applyGitRepoUpdate(
 						update.RepoURL,
 					)
 				}
+				changeSummary = append(changeSummary, newChanges...)
 			}
 
 			if update.Helm != nil {
-				if err = r.applyHelm(
+				var newChanges []string
+				newChanges, err = r.applyHelm(
 					newState,
 					*update.Helm,
 					homeDir,
 					workingDir,
-				); err != nil {
+				)
+				if err != nil {
 					return "", errors.Wrapf(
 						err,
 						"error updating branch %q in git repository %q via Helm",
@@ -100,10 +108,10 @@ func (r *reconciler) applyGitRepoUpdate(
 						update.RepoURL,
 					)
 				}
+				changeSummary = append(changeSummary, newChanges...)
 			}
 
-			// TODO: This is an awful commit message! Fix it!
-			return "kargo made some changes!", nil
+			return buildCommitMessage(changeSummary), nil
 		},
 	)
 	if err != nil {
@@ -275,4 +283,18 @@ func deleteRepoContents(dir string) error {
 		}
 	}
 	return nil
+}
+
+func buildCommitMessage(changeSummary []string) string {
+	if len(changeSummary) == 0 { // This shouldn't really happen
+		return "Kargo applied some changes"
+	}
+	if len(changeSummary) == 1 {
+		return changeSummary[0]
+	}
+	msg := "Kargo applied multiple changes\n\nIncluding:\n"
+	for _, change := range changeSummary {
+		msg = fmt.Sprintf("%s\n  * %s", msg, change)
+	}
+	return msg
 }
