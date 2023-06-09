@@ -26,7 +26,7 @@ export const EnvironmentDetails = (props: { environment: Environment }) => {
       <Divider style={{ marginTop: '1em' }} />
 
       <div className='flex flex-col gap-8'>
-        <Subscriptions subscriptions={environment?.spec?.subscriptions} />
+        <Subscriptions subscriptions={environment?.spec?.subscriptions} projectName={projectName} />
         <AvailableStates environment={environment} />
       </div>
     </>

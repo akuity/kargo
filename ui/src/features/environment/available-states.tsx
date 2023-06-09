@@ -6,16 +6,19 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { promoteEnvironment } from '@gen/service/v1alpha1/service-KargoService_connectquery';
 import { Environment } from '@gen/v1alpha1/generated_pb';
 import { useMutation } from '@tanstack/react-query';
-import { Button, List, Tooltip, Typography } from 'antd';
+import { Button, Descriptions, List, Tooltip, Typography, message } from 'antd';
 import { format, formatRelative } from 'date-fns';
 import React from 'react';
 
 export const AvailableStates = (props: { environment: Environment }) => {
   const [promotingStateId, setPromotingStateId] = React.useState<string | null>(null);
   const { environment } = props;
-  const { mutate, isLoading: isLoadingPromote } = useMutation(
-    promoteEnvironment.useMutation({ transport })
-  );
+  const { mutate, isLoading: isLoadingPromote } = useMutation({
+    ...promoteEnvironment.useMutation({ transport }),
+    onError: (err) => {
+      message.error(err?.toString());
+    }
+  });
 
   const promote = (id: string) => {
     setPromotingStateId(id);
@@ -52,13 +55,13 @@ export const AvailableStates = (props: { environment: Environment }) => {
                 key={commit.id}
                 avatar={<FontAwesomeIcon icon={faCodeCommit} />}
                 title={
-                  <a
+                  <Typography.Link
                     href={`${commit.repoURL?.replace('.git', '')}/commit/${commit.id}`}
                     target='_blank'
                   >
                     {commit?.id?.slice(0, 7)}
                     <FontAwesomeIcon icon={faExternalLinkAlt} style={{ marginLeft: '5px' }} />
-                  </a>
+                  </Typography.Link>
                 }
                 description={
                   <Tooltip
@@ -73,7 +76,18 @@ export const AvailableStates = (props: { environment: Environment }) => {
               />
             ))}
             {state.commits.length === 0 && (
-              <List.Item.Meta avatar={<FontAwesomeIcon icon={faDocker} />} title='Image' />
+              <List.Item.Meta
+                avatar={<FontAwesomeIcon icon={faDocker} />}
+                title='Image'
+                description={
+                  <Descriptions size='small' column={1}>
+                    <Descriptions.Item label='Repo URL'>
+                      {state.images[0]?.repoURL}
+                    </Descriptions.Item>
+                    <Descriptions.Item label='Tag'>{state.images[0]?.tag}</Descriptions.Item>
+                  </Descriptions>
+                }
+              />
             )}
           </List.Item>
         )}

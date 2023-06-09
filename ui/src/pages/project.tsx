@@ -37,6 +37,12 @@ export const Project = () => {
     navigate(`/project/${name}`);
   };
 
+  React.useEffect(() => {
+    if (environmentName) {
+      openEnvironment(environmentName);
+    }
+  }, [environmentName]);
+
   return (
     <div>
       <Drawer

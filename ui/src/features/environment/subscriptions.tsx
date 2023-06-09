@@ -1,8 +1,13 @@
+import { paths } from '@config/paths';
 import { Subscriptions as SubscriptionsType } from '@gen/v1alpha1/generated_pb';
 import { Descriptions, Space, Typography } from 'antd';
+import { Link, generatePath } from 'react-router-dom';
 
-export const Subscriptions = (props: { subscriptions?: SubscriptionsType }) => {
-  const { subscriptions } = props;
+export const Subscriptions = (props: {
+  subscriptions?: SubscriptionsType;
+  projectName?: string;
+}) => {
+  const { subscriptions, projectName } = props;
 
   if (!subscriptions) {
     return null;
@@ -20,7 +25,16 @@ export const Subscriptions = (props: { subscriptions?: SubscriptionsType }) => {
           <Space direction='vertical' style={{ width: '100%' }}>
             {subscriptions?.upstreamEnvs.map((env) => (
               <Descriptions bordered size='small' key={env.name} column={1}>
-                <Descriptions.Item label='Environment'>{env.name}</Descriptions.Item>
+                <Descriptions.Item label='Environment'>
+                  <Link
+                    to={generatePath(paths.environment, {
+                      name: projectName,
+                      environmentName: env.name
+                    })}
+                  >
+                    {env.name}
+                  </Link>
+                </Descriptions.Item>
                 <Descriptions.Item label='Project'>{env.namespace}</Descriptions.Item>
               </Descriptions>
             ))}

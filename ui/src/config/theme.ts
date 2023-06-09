@@ -2,7 +2,7 @@ import { ThemeConfig } from 'antd/es/config-provider';
 import { MapToken } from 'antd/es/theme/interface';
 
 export const token: Partial<MapToken> = {
-  colorPrimary: 'rgb(29, 50, 82)',
+  colorPrimary: '#30476c',
   fontSizeHeading1: 28,
   fontSizeHeading2: 24,
   fontSizeHeading3: 20,
