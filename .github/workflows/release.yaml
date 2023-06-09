@@ -85,3 +85,7 @@ jobs:
         helm dep up
         helm package . --version ${CHART_VERSION}
         helm push kargo-kit-${CHART_VERSION}.tgz oci://${KARGO_CHARTS_REPO}
+        cd ../argocd-kit
+        helm dep up
+        helm package . --version ${CHART_VERSION}
+        helm push argocd-kit-${CHART_VERSION}.tgz oci://${KARGO_CHARTS_REPO}
