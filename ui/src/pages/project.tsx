@@ -3,7 +3,7 @@ import { HealthStatusIcon } from '@features/ui/health-status-icon/health-status-
 import { listEnvironments } from '@gen/service/v1alpha1/service-KargoService_connectquery';
 import { Environment } from '@gen/v1alpha1/generated_pb';
 import { useQuery } from '@tanstack/react-query';
-import { Drawer } from 'antd';
+import { Drawer, Typography } from 'antd';
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -53,8 +53,10 @@ export const Project = () => {
       >
         <EnvironmentDetails environment={environmentsByName[currentEnvironment || '']} />
       </Drawer>
-      <h1 className={styles.header}>{name}</h1>
-      <h2 className={styles.subHeader}>Environments</h2>
+      <Typography.Title level={1}>{name}</Typography.Title>
+      <Typography.Title level={3} className='!mt-0 !mb-6'>
+        Environments
+      </Typography.Title>
       {(data?.environments || []).map((environment) => (
         <EnvironmentItem
           key={environment.metadata?.name}
@@ -73,14 +75,11 @@ const EnvironmentItem = (props: { environment: Environment; onClick: () => void 
       key={environment.metadata?.name}
       onClick={props.onClick}
       className={styles.environmentItem}
-      style={{ display: 'flex', alignItems: 'center' }}
     >
-      {environment.status?.currentState?.health && (
-        <HealthStatusIcon
-          health={environment.status?.currentState?.health}
-          style={{ marginRight: '8px' }}
-        />
-      )}
+      <HealthStatusIcon
+        health={environment.status?.currentState?.health}
+        style={{ marginRight: '12px' }}
+      />
       {environment.metadata?.name}
     </div>
   );

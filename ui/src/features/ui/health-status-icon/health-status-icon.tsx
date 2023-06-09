@@ -1,4 +1,5 @@
 import {
+  faCircle,
   faHeart,
   faHeartBroken,
   faQuestionCircle,
@@ -12,16 +13,12 @@ import { CSSProperties } from 'react';
 export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties }) => {
   const { health } = props;
 
-  if (!health?.status) {
-    return null;
-  }
-
   return (
     <Tooltip title={health?.status}>
       <FontAwesomeIcon
-        icon={iconForHealthStatus(health.status)}
+        icon={iconForHealthStatus(health?.status)}
         style={{
-          color: colorForHealthStatus(health.status),
+          color: colorForHealthStatus(health?.status),
           fontSize: '18px',
           ...props.style
         }}
@@ -30,7 +27,7 @@ export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties
   );
 };
 
-const iconForHealthStatus = (status: string): IconDefinition => {
+const iconForHealthStatus = (status?: string): IconDefinition => {
   switch (status) {
     case 'Healthy':
       return faHeart;
@@ -39,11 +36,11 @@ const iconForHealthStatus = (status: string): IconDefinition => {
     case 'Unknown':
       return faQuestionCircle;
     default:
-      return faQuestionCircle;
+      return faCircle;
   }
 };
 
-const colorForHealthStatus = (status: string): string => {
+const colorForHealthStatus = (status?: string): string => {
   switch (status) {
     case 'Healthy':
       return '#52c41a';
@@ -52,6 +49,6 @@ const colorForHealthStatus = (status: string): string => {
     case 'Unknown':
       return '#faad14';
     default:
-      return '#faad14';
+      return '#ccc';
   }
 };
