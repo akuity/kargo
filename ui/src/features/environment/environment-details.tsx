@@ -5,8 +5,8 @@ import { Environment } from '@gen/v1alpha1/generated_pb';
 import { Divider, Typography } from 'antd';
 import { useParams } from 'react-router-dom';
 
-export const EnvironmentDetails = (props: { environment: Environment }) => {
-  const { environment } = props;
+export const EnvironmentDetails = (props: { environment: Environment; refetch: () => void }) => {
+  const { environment, refetch } = props;
   const { name: projectName } = useParams();
 
   return (
@@ -27,7 +27,7 @@ export const EnvironmentDetails = (props: { environment: Environment }) => {
 
       <div className='flex flex-col gap-8'>
         <Subscriptions subscriptions={environment?.spec?.subscriptions} projectName={projectName} />
-        <AvailableStates environment={environment} />
+        <AvailableStates environment={environment} onSuccess={refetch} />
       </div>
     </>
   );

@@ -10,13 +10,17 @@ import { Button, Descriptions, List, Tooltip, Typography, message } from 'antd';
 import { format, formatRelative } from 'date-fns';
 import React from 'react';
 
-export const AvailableStates = (props: { environment: Environment }) => {
+export const AvailableStates = (props: { environment: Environment; onSuccess?: () => void }) => {
   const [promotingStateId, setPromotingStateId] = React.useState<string | null>(null);
-  const { environment } = props;
+  const { environment, onSuccess } = props;
   const { mutate, isLoading: isLoadingPromote } = useMutation({
     ...promoteEnvironment.useMutation({ transport }),
     onError: (err) => {
       message.error(err?.toString());
+    },
+    onSuccess: () => {
+      message.success(`The "${environment.metadata?.name}" environment has been promoted.`);
+      onSuccess?.();
     }
   });
 

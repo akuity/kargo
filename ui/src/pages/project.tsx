@@ -13,7 +13,7 @@ import * as styles from './project.module.less';
 
 export const Project = () => {
   const { name, environmentName } = useParams();
-  const { data } = useQuery(listEnvironments.useQuery({ project: name }, { transport }));
+  const { data, refetch } = useQuery(listEnvironments.useQuery({ project: name }, { transport }));
 
   const environmentsByName = (data?.environments || []).reduce((acc, environment) => {
     if (environment.metadata?.name) {
@@ -51,7 +51,10 @@ export const Project = () => {
         width={'80%'}
         closable={false}
       >
-        <EnvironmentDetails environment={environmentsByName[currentEnvironment || '']} />
+        <EnvironmentDetails
+          environment={environmentsByName[currentEnvironment || '']}
+          refetch={refetch}
+        />
       </Drawer>
       <Typography.Title level={1}>{name}</Typography.Title>
       <Typography.Title level={3} className='!mt-0 !mb-6'>
