@@ -42,6 +42,13 @@ func NewAPIConfig() APIConfig {
 	}
 }
 
+func (c APIConfig) RESTConfig() (*rest.Config, error) {
+	if c.LocalMode {
+		return kubeclient.NewClientConfig().ClientConfig()
+	}
+	return rest.InClusterConfig()
+}
+
 type ControllerConfig struct {
 	BaseConfig
 	ArgoCDNamespace         string
