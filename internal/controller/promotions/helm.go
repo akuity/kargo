@@ -16,26 +16,27 @@ func (r *reconciler) applyHelm(
 	update api.HelmPromotionMechanism,
 	homeDir string,
 	repoDir string,
-) error {
+) ([]string, error) {
 	// Image updates
-	changesByFile := buildValuesFilesChanges(newState.Images, update.Images)
+	changesByFile, imageChangeSummary :=
+		buildValuesFilesChanges(newState.Images, update.Images)
 	for file, changes := range changesByFile {
 		if err := r.setStringsInYAMLFileFn(
 			filepath.Join(repoDir, file),
 			changes,
 		); err != nil {
-			return errors.Wrapf(err, "error updating values in file %q", file)
+			return nil, errors.Wrapf(err, "error updating values in file %q", file)
 		}
 	}
 
 	// Chart dependency updates
-	changesByChart, err := r.buildChartDependencyChangesFn(
+	changesByChart, subchartChangeSummary, err := r.buildChartDependencyChangesFn(
 		repoDir,
 		newState.Charts,
 		update.Charts,
 	)
 	if err != nil {
-		return errors.Wrap(
+		return nil, errors.Wrap(
 			err,
 			"error preparing changes to affected Chart.yaml files",
 		)
@@ -44,7 +45,7 @@ func (r *reconciler) applyHelm(
 		chartPath := filepath.Join(repoDir, chart)
 		chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
 		if err := r.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
-			return errors.Wrapf(
+			return nil, errors.Wrapf(
 				err,
 				"error updating dependencies for chart %q",
 				chart,
@@ -52,7 +53,7 @@ func (r *reconciler) applyHelm(
 		}
 		if err :=
 			r.updateChartDependenciesFn(homeDir, chartPath); err != nil {
-			return errors.Wrapf(
+			return nil, errors.Wrapf(
 				err,
 				"error updating dependencies for chart %q",
 				chart,
@@ -60,7 +61,7 @@ func (r *reconciler) applyHelm(
 		}
 	}
 
-	return nil
+	return append(imageChangeSummary, subchartChangeSummary...), nil
 }
 
 // buildValuesFilesChanges takes a list of images and a list of instructions
@@ -70,13 +71,14 @@ func (r *reconciler) applyHelm(
 func buildValuesFilesChanges(
 	images []api.Image,
 	imageUpdates []api.HelmImageUpdate,
-) map[string]map[string]string {
+) (map[string]map[string]string, []string) {
 	tagsByImage := map[string]string{}
 	for _, image := range images {
 		tagsByImage[image.RepoURL] = image.Tag
 	}
 
 	changesByFile := map[string]map[string]string{}
+	changeSummary := []string{}
 	for _, imageUpdate := range imageUpdates {
 		if imageUpdate.Value != api.ImageUpdateValueTypeImage &&
 			imageUpdate.Value != api.ImageUpdateValueTypeTag {
@@ -97,9 +99,18 @@ func buildValuesFilesChanges(
 		} else {
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = tag
 		}
+		changeSummary = append(
+			changeSummary,
+			fmt.Sprintf(
+				"updated %s to use image %s:%s",
+				imageUpdate.ValuesFilePath,
+				imageUpdate.Image,
+				tag,
+			),
+		)
 	}
 
-	return changesByFile
+	return changesByFile, changeSummary
 }
 
 // buildChartDependencyChanges takes a list of charts and a list of instructions
@@ -110,7 +121,7 @@ func buildChartDependencyChanges(
 	repoDir string,
 	charts []api.Chart,
 	chartUpdates []api.HelmChartDependencyUpdate,
-) (map[string]map[string]string, error) {
+) (map[string]map[string]string, []string, error) {
 	// Build a table of charts --> versions
 	versionsByChart := map[string]string{}
 	for _, chart := range charts {
@@ -125,12 +136,14 @@ func buildChartDependencyChanges(
 	}
 
 	// For each chart, build the appropriate changes
-	changesByChart := map[string]map[string]string{}
+	changesByFile := map[string]map[string]string{}
+	changeSummary := []string{}
 	for chartPath := range chartPaths {
 		absChartYAMLPath := filepath.Join(repoDir, chartPath, "Chart.yaml")
 		chartYAMLBytes, err := os.ReadFile(absChartYAMLPath)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error reading file %q", absChartYAMLPath)
+			return nil, nil,
+				errors.Wrapf(err, "error reading file %q", absChartYAMLPath)
 		}
 		chartYAMLObj := &struct {
 			Dependencies []struct {
@@ -139,7 +152,8 @@ func buildChartDependencyChanges(
 			} `json:"dependencies,omitempty"`
 		}{}
 		if err := yaml.Unmarshal(chartYAMLBytes, chartYAMLObj); err != nil {
-			return nil, errors.Wrapf(err, "error unmarshaling %q", absChartYAMLPath)
+			return nil, nil,
+				errors.Wrapf(err, "error unmarshaling %q", absChartYAMLPath)
 		}
 		for i, dependency := range chartYAMLObj.Dependencies {
 			chartKey := fmt.Sprintf("%s:%s", dependency.Repository, dependency.Name)
@@ -148,14 +162,23 @@ func buildChartDependencyChanges(
 				continue
 			}
 			if found {
-				if _, found = changesByChart[chartPath]; !found {
-					changesByChart[chartPath] = map[string]string{}
+				if _, found = changesByFile[chartPath]; !found {
+					changesByFile[chartPath] = map[string]string{}
 				}
 			}
 			versionKey := fmt.Sprintf("dependencies.%d.version", i)
-			changesByChart[chartPath][versionKey] = version
+			changesByFile[chartPath][versionKey] = version
+			changeSummary = append(
+				changeSummary,
+				fmt.Sprintf(
+					"updated %s/Chart.yaml to use subchart %s:%s",
+					chartPath,
+					dependency.Name,
+					version,
+				),
+			)
 		}
 	}
 
-	return changesByChart, nil
+	return changesByFile, changeSummary, nil
 }

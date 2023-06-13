@@ -15,7 +15,7 @@ func TestApplyKustomize(t *testing.T) {
 		newState            api.EnvironmentState
 		update              api.KustomizePromotionMechanism
 		kustomizeSetImageFn func(dir, repo, tag string) error
-		assertions          func(error)
+		assertions          func(changeSummary []string, err error)
 	}{
 		{
 			name: "error setting image",
@@ -38,10 +38,11 @@ func TestApplyKustomize(t *testing.T) {
 			kustomizeSetImageFn: func(string, string, string) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(changeSummary []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error updating image")
 				require.Contains(t, err.Error(), "something went wrong")
+				require.Nil(t, changeSummary)
 			},
 		},
 
@@ -59,15 +60,22 @@ func TestApplyKustomize(t *testing.T) {
 				Images: []api.KustomizeImageUpdate{
 					{
 						Image: "fake-url",
-						Path:  "/fake/path",
+						Path:  "fake/path",
 					},
 				},
 			},
 			kustomizeSetImageFn: func(string, string, string) error {
 				return nil
 			},
-			assertions: func(err error) {
+			assertions: func(changeSummary []string, err error) {
 				require.NoError(t, err)
+				require.Len(t, changeSummary, 1)
+				require.Equal(
+					t,
+					"updated fake/path/kustomization.yaml to use image "+
+						"fake-url:fake-tag",
+					changeSummary[0],
+				)
 			},
 		},
 	}
