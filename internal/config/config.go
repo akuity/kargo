@@ -4,7 +4,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 )
 
