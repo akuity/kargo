@@ -257,7 +257,7 @@ status:
   availableStates:
   - commits:
     - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-      repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
+      repoURL: https://github.com/example/kargo-demo-gitops.git
     firstSeen: "2023-04-21T19:05:36Z"
     id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     images:
@@ -266,7 +266,7 @@ status:
   currentState:
     commits:
     - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-      repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
+      repoURL: https://github.com/example/kargo-demo-gitops.git
     firstSeen: "2023-04-21T19:05:36Z"
     id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     images:
@@ -277,7 +277,7 @@ status:
   history:
   - commits:
     - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-      repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
+      repoURL: https://github.com/example/kargo-demo-gitops.git
     firstSeen: "2023-04-21T19:05:36Z"
     id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     images:
