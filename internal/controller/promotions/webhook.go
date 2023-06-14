@@ -75,7 +75,7 @@ func SetupWebhookWithManager(
 			return []string{policy.Environment}
 		},
 	); err != nil {
-		return errors.Wrap(err, "error indexing Secrets by repo")
+		return errors.Wrap(err, "error indexing PromotionPolicies by Environment")
 	}
 	w := &webhook{
 		client: mgr.GetClient(),
