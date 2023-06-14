@@ -271,10 +271,11 @@ func (w *webhook) authorize(
 			groupResource,
 			promo.Name,
 			errors.Errorf(
-				"PromotionPolicy %q in namespace %q does not permit this subject to "+
+				"PromotionPolicy %q in namespace %q does not permit subject %q to "+
 					"%s Promotions for Environment %q",
 				policy.Name,
 				policy.Namespace,
+				req.UserInfo.Username,
 				action,
 				promo.Spec.Environment,
 			),

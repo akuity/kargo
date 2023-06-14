@@ -369,7 +369,7 @@ func TestAuthorize(t *testing.T) {
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "does not permit this subject to")
+				require.Contains(t, err.Error(), "does not permit subject")
 			},
 		},
 		{
