@@ -37,10 +37,10 @@ rules:
   - kargo.akuity.io
   resources:
   - environments
-  - promotionpolicies
   verbs:
   - get
   - list
+  - patch
   - watch
 - apiGroups:
   - kargo.akuity.io
@@ -48,6 +48,14 @@ rules:
   - promotions
   verbs:
   - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotionpolicies
+  verbs:
   - get
   - list
   - watch
