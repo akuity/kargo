@@ -63,14 +63,12 @@ status:
   # ...
 ```
 
-An `Environment` resource's `spec` field further decomposes into three main
-areas of concern:
+An `Environment` resource's `spec` field further decomposes into two main areas
+of concern:
 
 * Subscriptions
 
 * Promotion mechanisms
-
-* Health checks
 
 The following sections will explore each of these in greater detail.
 
@@ -177,18 +175,27 @@ for:
   field(s) to point at a specific commit in a Git repository or a specific
   version of a Helm chart.
 
+* Forcing a specified Argo CD `Application` to refresh and sync. (This is
+  automatic for any `Application` resource the `Environment` interacts with.)
+
+:::info
+Additionally, interaction with any Argo CD `Application` resources(s) as
+described above implicitly results in periodic evaluation of `Environment`
+health by aggregating the results of sync/health state for all such
+`Application` resources(s).
+:::
+
 In the following example, the `Environment` subscribes to manifests from a Git
 repository _and_ images from an image repository, as in the previous section.
 Our example also now states that transitioning the environment to a new state
 requires:
 
 1. Updating the `https://github.com/example/kargo-demo-gitops.git` repository by
-   running `kustomize edit set image` in the `base` directory.
+   running `kustomize edit set image` in the `env/test` directory and committing
+   those changes to an environment-specific `env/test` branch.
 
-1. Updating the Argo CD `Application` named `kargo-demo-test` in the `argocd`
-   namespace by finding the `source` pointing to
-   `https://github.com/example/kargo-demo-gitops.git` and updating its
-   `targetRevision` field to match the latest commit from that repository.
+1. Forcing the Argo CD `Application` named `kargo-demo-test` in the `argocd`
+   namespace to refresh and sync.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -208,17 +215,14 @@ spec:
   promotionMechanisms:
     gitRepoUpdates:
     - repoURL: https://github.com/example/kargo-demo-gitops.git
-      branch: main
+      writeBranch: env/test
       kustomize:
         images:
         - image: nginx
-          path: base
+          path: env/test
     argoCDAppUpdates:
     - appName: kargo-demo-test
       appNamespace: argocd
-      sourceUpdates:
-      - repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
-        updateTargetRevision: true
 ```
 
 If you commit changes to the Git repository's `main` branch _or_ if a new
@@ -232,26 +236,13 @@ Keep reading. These will be covered in the next section.
 :::
 
 :::info
-You may notice that this example both subscribes to _and_ makes commits to the
-same branch of the same Git repository, and you may also wonder why that doesn't
-create an infinite loop!
-
-The Kargo controller is smart about this. If it makes a commit to a Git
-repository in the course of a promotion, the `Environment`'s `availableStates`
-will be re-evaluated and the applicable state will be update with the new commit
-ID, and its deterministic state ID will be re-calculated. The new commit ID and
-state ID will supersede the old ones and on the controller's next execution of
-the `Environment`'s reconciliation loop, it will recognize the new commit as
-something it has already seen and won't count it as new.
-:::
-
-:::caution
-You must still be careful! It is still possible to create undesired loops if an
-`Environment` makes commits to a Git repository to which one of its "upstream"
-`Environment`s subscribes.
-
-We will soon be documenting several common patterns. Following those patterns
-will help users avoid mistakes of this nature.
+In the example above, you may have noticed the use of an environment-specific
+branch in the Git repository. Since we _subscribe_ to the Git repository's
+`main` branch, we could create an undesired loop in our automation if it also
+_writes_ to that same branch. Combining manifests from `main` with the desired
+images and then writing those changes to `env/test` branch (which the
+corresponding Argo CD `Application` would reference as its `targetRevision`) is
+a strategy to prevent such a loop from ever forming.
 :::
 
 The application of any `Environment` resource's promotion mechanisms transitions
@@ -281,83 +272,9 @@ status:
     images:
     - repoURL: nginx
       tag: 1.24.0
+    health:
+      status: Healthy
   history:
-    - commits:
-      - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-        repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
-      firstSeen: "2023-04-21T19:05:36Z"
-      id: 404df86560cab5d515e7aa74653e665c1dc96e1c
-      images:
-      - repoURL: nginx
-        tag: 1.24.0
-```
-
-Above, we can see that the state currently deployed to the environment is
-recorded in the `currentState` field. The `history` field duplicates this
-information, but as state continues to change over time, each new state will be
-_pushed_ onto the `history` collection, making that field a historic record of
-what's been deployed to the environment.
-
-### Health checks
-
-The last major component of an `Environment` resource's `spec` field is
-`healthChecks`. Put simply, this field instructs the Kargo controller on how it
-may assess the health of an environment.
-
-At present, only one approach is supported: Evaluating the health and sync state
-of associated Argo CD `Application` resources.
-
-If we continue building on our example `test` `Environment`, our manifest will
-grow to resemble this one:
-
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Environment
-metadata:
-  name: test
-  namespace: kargo-demo
-spec:
-  subscriptions:
-    repos:
-      git:
-      - repoURL: https://github.com/example/kargo-demo-gitops.git
-        branch: main
-      images:
-      - repoURL: nginx
-        semverConstraint: ^1.24.0
-  promotionMechanisms:
-    gitRepoUpdates:
-    - repoURL: https://github.com/example/kargo-demo-gitops.git
-      branch: main
-      kustomize:
-        images:
-        - image: nginx
-          path: base
-    argoCDAppUpdates:
-    - appName: kargo-demo-test
-      appNamespace: argocd
-      sourceUpdates:
-      - repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
-        updateTargetRevision: true
-  healthChecks:
-    argoCDAppChecks:
-    - appName: kargo-demo-test
-      appNamespace: argocd
-```
-
-In the example above, the overall health of the `test` `Environment` is
-determined in-part by the health of the `kargo-demo-test` `Application`. If that
-`Application` references any Git repository that our `test` `Environment` also
-subscribes to, validation that the `kargo-demo-test` `Application` is synced to
-the correct commit will also play a role in the evaluation of overall
-`Environment` health.
-
-Taking health checks into account, the `status` field of our `test`
-`Environment` may now resemble this:
-
-```yaml
-status:
-  availableStates:
   - commits:
     - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
       repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
@@ -366,29 +283,15 @@ status:
     images:
     - repoURL: nginx
       tag: 1.24.0
-  currentState:
-    commits:
-    - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-      repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
-    firstSeen: "2023-04-21T19:05:36Z"
     health:
       status: Healthy
-    id: 404df86560cab5d515e7aa74653e665c1dc96e1c
-    images:
-    - repoURL: nginx
-      tag: 1.24.0
-  history:
-    - commits:
-      - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-        repoURL: https://github.com/krancour/kargo-demo-gitops-2.git
-      firstSeen: "2023-04-21T19:05:36Z"
-      health:
-        status: Healthy
-      id: 404df86560cab5d515e7aa74653e665c1dc96e1c
-      images:
-      - repoURL: nginx
-        tag: 1.24.0
 ```
+
+Above, we can see that the state currently deployed to the environment is
+recorded in the `currentState` field. The `history` field duplicates this
+information, but as state continues to change over time, each new state will be
+_pushed_ onto the `history` collection, making that field a historic record of
+what's been deployed to the environment.
 
 ## `Promotion` resources
 
