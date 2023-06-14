@@ -133,7 +133,7 @@ The username and password are both `admin`.
 ```shell
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
-  --version 0.1.0-rc.9 \
+  --version 0.1.0-rc.10 \
   --namespace kargo \
   --create-namespace \
   --wait
@@ -210,6 +210,8 @@ from and write to the repository you forked in the previous section.
      namespace: argocd
      labels:
        argocd.argoproj.io/secret-type: repository
+     annotations:
+       kargo.akuity.io/authorized-projects: kargo-demo
    stringData:
      type: git
      project: default
@@ -373,10 +375,6 @@ spec:
     argoCDAppUpdates:
     - appName: kargo-demo-test
       appNamespace: argocd
-  healthChecks:
-    argoCDAppChecks:
-    - appName: kargo-demo-test
-      appNamespace: argocd
 EOF
 ```
 
@@ -458,10 +456,6 @@ spec:
         - image: nginx
           path: env/stage
     argoCDAppUpdates:
-    - appName: kargo-demo-stage
-      appNamespace: argocd
-  healthChecks:
-    argoCDAppChecks:
     - appName: kargo-demo-stage
       appNamespace: argocd
 EOF
@@ -549,10 +543,6 @@ spec:
         - image: nginx
           path: env/prod
     argoCDAppUpdates:
-    - appName: kargo-demo-prod
-      appNamespace: argocd
-  healthChecks:
-    argoCDAppChecks:
     - appName: kargo-demo-prod
       appNamespace: argocd
 EOF
