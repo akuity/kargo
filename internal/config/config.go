@@ -4,7 +4,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 )
 
@@ -40,6 +42,13 @@ func NewAPIConfig() APIConfig {
 			os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s"),
 		),
 	}
+}
+
+func (c APIConfig) RESTConfig() (*rest.Config, error) {
+	if c.LocalMode {
+		return kubeclient.NewClientConfig().ClientConfig()
+	}
+	return rest.InClusterConfig()
 }
 
 type ControllerConfig struct {
