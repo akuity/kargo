@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -20,7 +20,6 @@ import (
 	"github.com/akuity/kargo/internal/api/handler"
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/config"
-	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -36,29 +35,17 @@ type server struct {
 }
 
 type Server interface {
-	Serve(ctx context.Context) error
+	Serve(ctx context.Context, l net.Listener) error
 }
 
-func NewServer(cfg config.APIConfig) (Server, error) {
-	var rc *rest.Config
-	var err error
-	if cfg.LocalMode {
-		rc, err = kubeclient.NewClientConfig().ClientConfig()
-	} else {
-		rc, err = rest.InClusterConfig()
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "load kubeconfig")
-	}
-
+func NewServer(cfg config.APIConfig, rc *rest.Config) (Server, error) {
 	scheme := runtime.NewScheme()
-	if err = corev1.AddToScheme(scheme); err != nil {
+	if err := corev1.AddToScheme(scheme); err != nil {
 		return nil, errors.Wrap(err, "add core api to scheme")
 	}
-	if err = kubev1alpha1.AddToScheme(scheme); err != nil {
+	if err := kubev1alpha1.AddToScheme(scheme); err != nil {
 		return nil, errors.Wrap(err, "add kargo api to scheme")
 	}
-
 	kc, err := client.New(rc, client.Options{
 		Scheme: scheme,
 	})
@@ -71,9 +58,8 @@ func NewServer(cfg config.APIConfig) (Server, error) {
 	}, nil
 }
 
-func (s *server) Serve(ctx context.Context) error {
+func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	log := logging.LoggerFromContext(ctx)
-	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
 	mux := http.NewServeMux()
 
 	opts := option.NewHandlerOption(s.cfg, log)
@@ -82,15 +68,14 @@ func (s *server) Serve(ctx context.Context) error {
 	mux.Handle(path, svcHandler)
 
 	srv := &http.Server{
-		Addr:              addr,
 		Handler:           h2c.NewHandler(mux, &http2.Server{}),
 		ReadHeaderTimeout: time.Minute,
 	}
 
 	errCh := make(chan error)
-	go func() { errCh <- srv.ListenAndServe() }()
+	go func() { errCh <- srv.Serve(l) }()
 
-	log.Infof("Server is listening on %q", addr)
+	log.Infof("Server is listening on %q", l.Addr().String())
 
 	select {
 	case <-ctx.Done():
