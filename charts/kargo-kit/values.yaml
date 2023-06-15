@@ -2,16 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-rbac:
-  ## Identifies a service account that will be bound to relevant ClusterRoles.
-  apiServiceAccount:
-    name: default
-    namespace: default
-  ## Identifies a service account that will be bound to relevant ClusterRoles.
-  controllerServiceAccount:
-    name: default
-    namespace: default
-
 ## webhooks contains all configuration required for validating and initializing
 ## Kargo Environment and Promotion resources.
 webhooks:

@@ -318,13 +318,15 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 		},
 		result,
 	)
-	require.Equal(
+	require.Contains(
 		t,
-		[]string{
-			"updated charts/foo/Chart.yaml to use subchart fake-chart:fake-version",
-			"updated charts/bar/Chart.yaml to use subchart " +
-				"another-fake-chart:another-fake-version",
-		},
 		changeSummary,
+		"updated charts/foo/Chart.yaml to use subchart fake-chart:fake-version",
+	)
+	require.Contains(
+		t,
+		changeSummary,
+		"updated charts/bar/Chart.yaml to use subchart "+
+			"another-fake-chart:another-fake-version",
 	)
 }

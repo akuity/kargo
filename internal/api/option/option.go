@@ -12,6 +12,16 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+func NewClientOption(skipAuth bool) connect.ClientOption {
+	var interceptors []connect.Interceptor
+	if !skipAuth {
+		interceptors = append(interceptors, newAuthInterceptor())
+	}
+	return connect.WithClientOptions(
+		connect.WithInterceptors(interceptors...),
+	)
+}
+
 func NewHandlerOption(cfg config.APIConfig, logger *log.Entry) connect.HandlerOption {
 	interceptors := []connect.Interceptor{
 		newLogInterceptor(logger, loggingIgnorableMethods),

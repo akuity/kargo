@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kargo-kit.fullname" . }}-api
+  name: {{ include "kargo-kit.fullname" . }}-kargo-api
   labels:
     {{- include "kargo-kit.labels" . | nindent 4 }}
 rules: []
@@ -9,14 +9,13 @@ rules: []
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kargo-kit.fullname" . }}-controller
+  name: {{ include "kargo-kit.fullname" . }}-kargo-controller
   labels:
     {{- include "kargo-kit.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps
   - secrets
   verbs:
   - get
@@ -43,10 +42,10 @@ rules:
   - kargo.akuity.io
   resources:
   - environments
-  - promotionpolicies
   verbs:
   - get
   - list
+  - patch
   - watch
 - apiGroups:
   - kargo.akuity.io
@@ -54,6 +53,14 @@ rules:
   - promotions
   verbs:
   - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotionpolicies
+  verbs:
   - get
   - list
   - watch
