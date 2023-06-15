@@ -61,8 +61,8 @@ func PromoteEnvironmentV1Alpha1(
 				Namespace:    req.Msg.GetProject(),
 				OwnerReferences: []metav1.OwnerReference{
 					{
-						APIVersion:         env.APIVersion,
-						Kind:               env.Kind,
+						APIVersion:         kubev1alpha1.GroupVersion.String(),
+						Kind:               "Environment",
 						Name:               env.Name,
 						UID:                env.UID,
 						BlockOwnerDeletion: pointer.Bool(true),

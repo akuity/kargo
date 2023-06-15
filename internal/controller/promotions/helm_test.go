@@ -24,9 +24,9 @@ func TestApplyHelm(t *testing.T) {
 			string,
 			[]api.Chart,
 			[]api.HelmChartDependencyUpdate,
-		) (map[string]map[string]string, error)
+		) (map[string]map[string]string, []string, error)
 		updateChartDependenciesFn func(homePath, chartPath string) error
-		assertions                func(err error)
+		assertions                func(changeSummary []string, err error)
 	}{
 		{
 			name: "error modifying values.yaml",
@@ -50,7 +50,7 @@ func TestApplyHelm(t *testing.T) {
 			setStringsInYAMLFileFn: func(string, map[string]string) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(_ []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error updating values in file")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -63,10 +63,10 @@ func TestApplyHelm(t *testing.T) {
 				string,
 				[]api.Chart,
 				[]api.HelmChartDependencyUpdate,
-			) (map[string]map[string]string, error) {
-				return nil, errors.New("something went wrong")
+			) (map[string]map[string]string, []string, error) {
+				return nil, nil, errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(_ []string, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -83,17 +83,17 @@ func TestApplyHelm(t *testing.T) {
 				string,
 				[]api.Chart,
 				[]api.HelmChartDependencyUpdate,
-			) (map[string]map[string]string, error) {
+			) (map[string]map[string]string, []string, error) {
 				// We only need to build enough of a change map to make sure we get into
 				// the loop
 				return map[string]map[string]string{
 					"/fake/path/Chart.yaml": {},
-				}, nil
+				}, nil, nil
 			},
 			setStringsInYAMLFileFn: func(string, map[string]string) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(_ []string, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -110,12 +110,12 @@ func TestApplyHelm(t *testing.T) {
 				string,
 				[]api.Chart,
 				[]api.HelmChartDependencyUpdate,
-			) (map[string]map[string]string, error) {
+			) (map[string]map[string]string, []string, error) {
 				return map[string]map[string]string{
 					// We only need to build enough of a change map to make sure we get
 					// into the loop
 					"/fake/path/Chart.yaml": {},
-				}, nil
+				}, nil, nil
 			},
 			setStringsInYAMLFileFn: func(string, map[string]string) error {
 				return nil
@@ -123,7 +123,7 @@ func TestApplyHelm(t *testing.T) {
 			updateChartDependenciesFn: func(string, string) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(_ []string, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -140,10 +140,10 @@ func TestApplyHelm(t *testing.T) {
 				string,
 				[]api.Chart,
 				[]api.HelmChartDependencyUpdate,
-			) (map[string]map[string]string, error) {
-				return nil, nil
+			) (map[string]map[string]string, []string, error) {
+				return nil, nil, nil
 			},
-			assertions: func(err error) {
+			assertions: func(_ []string, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -204,7 +204,7 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 			Value:          "Tag",
 		},
 	}
-	result := buildValuesFilesChanges(images, imageUpdates)
+	result, changeSummary := buildValuesFilesChanges(images, imageUpdates)
 	require.Equal(
 		t,
 		map[string]map[string]string{
@@ -217,6 +217,15 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 			},
 		},
 		result,
+	)
+	require.Equal(
+		t,
+		[]string{
+			"updated fake-values.yaml to use image fake-url:fake-tag",
+			"updated fake-values.yaml to use image another-fake-url:another-fake-tag",
+			"updated another-fake-values.yaml to use image fake-url:fake-tag",
+		},
+		changeSummary,
 	)
 }
 
@@ -294,7 +303,8 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 		// we expect it to be left alone.
 	}
 
-	result, err := buildChartDependencyChanges(testDir, charts, chartUpdates)
+	result, changeSummary, err :=
+		buildChartDependencyChanges(testDir, charts, chartUpdates)
 	require.NoError(t, err)
 	require.Equal(
 		t,
@@ -307,5 +317,16 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 			},
 		},
 		result,
+	)
+	require.Contains(
+		t,
+		changeSummary,
+		"updated charts/foo/Chart.yaml to use subchart fake-chart:fake-version",
+	)
+	require.Contains(
+		t,
+		changeSummary,
+		"updated charts/bar/Chart.yaml to use subchart "+
+			"another-fake-chart:another-fake-version",
 	)
 }

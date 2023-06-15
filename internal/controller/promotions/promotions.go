@@ -71,7 +71,7 @@ type reconciler struct {
 		repoDir string,
 		charts []api.Chart,
 		chartUpdates []api.HelmChartDependencyUpdate,
-	) (map[string]map[string]string, error)
+	) (map[string]map[string]string, []string, error)
 
 	updateChartDependenciesFn func(homePath, chartPath string) error
 
