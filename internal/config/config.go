@@ -51,6 +51,20 @@ func (c APIConfig) RESTConfig() (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
+type CLIConfig struct {
+	BaseConfig
+}
+
+func NewCLIConfig() CLIConfig {
+	return CLIConfig{
+		BaseConfig: newBaseConfig(),
+	}
+}
+
+func (c CLIConfig) RESTConfig() (*rest.Config, error) {
+	return kubeclient.NewClientConfig().ClientConfig()
+}
+
 type ControllerConfig struct {
 	BaseConfig
 	ArgoCDNamespace         string
