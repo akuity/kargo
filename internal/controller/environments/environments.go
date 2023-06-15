@@ -15,11 +15,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
@@ -37,7 +34,8 @@ const (
 
 // reconciler reconciles Environment resources.
 type reconciler struct {
-	client        client.Client
+	kargoClient   client.Client
+	argoClient    client.Client
 	credentialsDB credentials.Database
 
 	// The following behaviors are overridable for testing purposes:
@@ -123,11 +121,12 @@ type reconciler struct {
 // and registers it with the provided Manager.
 func SetupReconcilerWithManager(
 	ctx context.Context,
-	mgr manager.Manager,
+	kargoMgr manager.Manager,
+	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
 ) error {
 	// Index Environments by Argo CD Applications
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.Environment{},
 		envsByAppIndexField,
@@ -140,7 +139,7 @@ func SetupReconcilerWithManager(
 	}
 
 	// Index Promotions in non-terminal states by Environment
-	if err := mgr.GetFieldIndexer().IndexField(
+	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.Promotion{},
 		outstandingPromosByEnvIndexField,
@@ -152,9 +151,7 @@ func SetupReconcilerWithManager(
 		)
 	}
 
-	e := newReconciler(mgr.GetClient(), credentialsDB)
-
-	return ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(kargoMgr).
 		For(&api.Environment{}).
 		WithEventFilter(predicate.Funcs{
 			DeleteFunc: func(event.DeleteEvent) bool {
@@ -162,16 +159,12 @@ func SetupReconcilerWithManager(
 				return false
 			},
 		}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Watches(
-			&source.Kind{Type: &argocd.Application{}},
-			handler.EnqueueRequestsFromMapFunc(
-				func(obj client.Object) []reconcile.Request {
-					return e.findEnvsForApp(ctx, obj)
-				},
-			),
-		).
-		Complete(e)
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
+		Complete(newReconciler(
+			kargoMgr.GetClient(),
+			argoMgr.GetClient(),
+			credentialsDB,
+		))
 }
 
 func indexEnvsByApp(obj client.Object) []string {
@@ -198,11 +191,13 @@ func indexOutstandingPromotionsByEnvironment(obj client.Object) []string {
 }
 
 func newReconciler(
-	client client.Client,
+	kargoClient client.Client,
+	argoClient client.Client,
 	credentialsDB credentials.Database,
 ) *reconciler {
 	r := &reconciler{
-		client:        client,
+		kargoClient:   kargoClient,
+		argoClient:    argoClient,
 		credentialsDB: credentialsDB,
 	}
 
@@ -230,43 +225,6 @@ func newReconciler(
 	return r
 }
 
-// findEnvsForApp dynamically returns reconciliation requests for all
-// Environments related to a given Argo CD Application. This is used to
-// propagate reconciliation requests to Environments whose state should be
-// affected by changes to related Application resources.
-func (r *reconciler) findEnvsForApp(
-	ctx context.Context,
-	app client.Object,
-) []reconcile.Request {
-	envs := &api.EnvironmentList{}
-	if err := r.client.List(
-		ctx,
-		envs,
-		&client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(
-				envsByAppIndexField,
-				fmt.Sprintf("%s:%s", app.GetNamespace(), app.GetName()),
-			),
-		},
-	); err != nil {
-		logging.LoggerFromContext(ctx).WithFields(log.Fields{
-			"namespace":   app.GetNamespace(),
-			"application": app.GetName(),
-		}).Error("error listing Environments associated with Application")
-		return nil
-	}
-	reqs := make([]reconcile.Request, len(envs.Items))
-	for i, env := range envs.Items {
-		reqs[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      env.GetName(),
-				Namespace: env.GetNamespace(),
-			},
-		}
-	}
-	return reqs
-}
-
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *reconciler) Reconcile(
@@ -289,7 +247,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Environment")
 
 	// Find the Environment
-	env, err := api.GetEnv(ctx, r.client, req.NamespacedName)
+	env, err := api.GetEnv(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -311,7 +269,7 @@ func (r *reconciler) Reconcile(
 		env.Status.Error = ""
 	}
 
-	updateErr := r.client.Status().Update(ctx, env)
+	updateErr := r.kargoClient.Status().Update(ctx, env)
 	if updateErr != nil {
 		logger.Errorf("error updating Environment status: %s", updateErr)
 	}
@@ -458,7 +416,7 @@ func (r *reconciler) sync(
 	// If we get to here, we've determined that auto-promotion is a possibility.
 	// See if it's actually allowed...
 	policies := api.PromotionPolicyList{}
-	if err := r.client.List(
+	if err := r.kargoClient.List(
 		ctx,
 		&policies,
 		&client.ListOptions{
@@ -494,7 +452,7 @@ func (r *reconciler) sync(
 	logger = logger.WithField("state", nextState.ID)
 	logger.Debug("auto-promotion will proceed")
 
-	if err := r.client.Create(
+	if err := r.kargoClient.Create(
 		ctx,
 		&api.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -531,7 +489,7 @@ func (r *reconciler) hasOutstandingPromotions(
 	envName string,
 ) (bool, error) {
 	promos := api.PromotionList{}
-	if err := r.client.List(
+	if err := r.kargoClient.List(
 		ctx,
 		&promos,
 		&client.ListOptions{
@@ -608,7 +566,7 @@ func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
 	for _, sub := range subs {
 		upstreamEnv, err := api.GetEnv(
 			ctx,
-			r.client,
+			r.kargoClient,
 			types.NamespacedName{
 				Namespace: sub.Namespace,
 				Name:      sub.Name,

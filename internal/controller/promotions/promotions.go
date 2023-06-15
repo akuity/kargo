@@ -29,7 +29,8 @@ import (
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
-	client            client.Client
+	kargoClient       client.Client
+	argoClient        client.Client
 	credentialsDB     credentials.Database
 	bookkeeperService bookkeeper.Service
 
@@ -94,7 +95,7 @@ type reconciler struct {
 		api.ArgoCDSourceUpdate,
 	) (argocd.ApplicationSource, error)
 
-	patchFn func(
+	argoCDAppPatchFn func(
 		ctx context.Context,
 		obj client.Object,
 		patch client.Patch,
@@ -105,25 +106,31 @@ type reconciler struct {
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
 // and registers it with the provided Manager.
 func SetupReconcilerWithManager(
-	mgr manager.Manager,
+	kargoMgr manager.Manager,
+	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
 ) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(kargoMgr).
 		For(&api.Promotion{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(
-			newReconciler(mgr.GetClient(), credentialsDB, bookkeeperService),
-		)
+		Complete(newReconciler(
+			kargoMgr.GetClient(),
+			argoMgr.GetClient(),
+			credentialsDB,
+			bookkeeperService,
+		))
 }
 
 func newReconciler(
-	client client.Client,
+	kargoClient client.Client,
+	argoClient client.Client,
 	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
 ) *reconciler {
 	r := &reconciler{
-		client:            client,
+		kargoClient:       kargoClient,
+		argoClient:        argoClient,
 		credentialsDB:     credentialsDB,
 		bookkeeperService: bookkeeperService,
 		promoQueuesByEnv:  map[types.NamespacedName]runtime.PriorityQueue{},
@@ -143,7 +150,7 @@ func newReconciler(
 	// Promotions via Argo CD:
 	r.getArgoCDAppFn = libArgoCD.GetApplication
 	r.applyArgoCDSourceUpdateFn = r.applyArgoCDSourceUpdate
-	r.patchFn = client.Patch
+	r.argoCDAppPatchFn = argoClient.Patch
 
 	return r
 }
@@ -218,7 +225,7 @@ func (r *reconciler) Reconcile(
 
 	promo.Status = r.sync(ctx, promo)
 
-	updateErr := r.client.Status().Update(ctx, promo)
+	updateErr := r.kargoClient.Status().Update(ctx, promo)
 	if updateErr != nil {
 		logger.Errorf("error updating Promotion status: %s", updateErr)
 	}
@@ -241,7 +248,7 @@ func (r *reconciler) Reconcile(
 // promoQueuesByEnvMu.
 func (r *reconciler) initializeQueues(ctx context.Context) error {
 	promos := api.PromotionList{}
-	if err := r.client.List(ctx, &promos); err != nil {
+	if err := r.kargoClient.List(ctx, &promos); err != nil {
 		return errors.Wrap(err, "error listing promotions")
 	}
 	logger := logging.LoggerFromContext(ctx)
@@ -252,7 +259,7 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 			continue
 		case "":
 			promo.Status.Phase = api.PromotionPhasePending
-			if err := r.client.Status().Update(ctx, &promo); err != nil {
+			if err := r.kargoClient.Status().Update(ctx, &promo); err != nil {
 				return errors.Wrapf(
 					err,
 					"error updating status of Promotion %q in namespace %q",
@@ -393,7 +400,7 @@ func (r *reconciler) serializedSync(
 					promo.Status.Error = ""
 				}
 
-				if err = r.client.Status().Update(ctx, promo); err != nil {
+				if err = r.kargoClient.Status().Update(ctx, promo); err != nil {
 					logger.Errorf("error updating Promotion status: %s", err)
 				}
 
@@ -415,7 +422,7 @@ func (r *reconciler) promote(
 
 	env, err := api.GetEnv(
 		ctx,
-		r.client,
+		r.kargoClient,
 		types.NamespacedName{
 			Namespace: envNamespace,
 			Name:      envName,
@@ -476,7 +483,7 @@ func (r *reconciler) promote(
 	env.Status.AvailableStates[targetStateIndex] = nextState
 	env.Status.History.Push(nextState)
 
-	err = r.client.Status().Update(ctx, env)
+	err = r.kargoClient.Status().Update(ctx, env)
 	return errors.Wrapf(
 		err,
 		"error updating status of Environment %q in namespace %q",
@@ -550,7 +557,7 @@ func (r *reconciler) getPromo(
 	namespacedName types.NamespacedName,
 ) (*api.Promotion, error) {
 	promo := api.Promotion{}
-	if err := r.client.Get(ctx, namespacedName, &promo); err != nil {
+	if err := r.kargoClient.Get(ctx, namespacedName, &promo); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			logging.LoggerFromContext(ctx).WithFields(log.Fields{
 				"namespace": namespacedName.Namespace,
