@@ -30,7 +30,7 @@ func (r *reconciler) checkHealth(
 
 	for _, check := range argoCDAppUpdates {
 		app, err :=
-			r.getArgoCDAppFn(ctx, r.client, check.AppNamespace, check.AppName)
+			r.getArgoCDAppFn(ctx, r.argoClient, check.AppNamespace, check.AppName)
 		if err != nil {
 			if health.Status != api.HealthStateUnhealthy {
 				health.Status = api.HealthStateUnknown

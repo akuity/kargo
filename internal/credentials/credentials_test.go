@@ -186,12 +186,10 @@ func TestGetCredentialsSecret(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			credsDB := &kubernetesDatabase{
-				client: testCase.clientBuilder.Build(),
-			}
 			testCase.assertions(
-				credsDB.getCredentialsSecret(
+				getCredentialsSecret(
 					context.Background(),
+					testCase.clientBuilder.Build(),
 					"fake-namespace",
 					labels.Everything(),
 					fields.Everything(),
@@ -254,12 +252,10 @@ func TestGetCredentialsTemplateSecret(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			credsDB := &kubernetesDatabase{
-				client: testCase.clientBuilder.Build(),
-			}
 			testCase.assertions(
-				credsDB.getCredentialsTemplateSecret(
+				getCredentialsTemplateSecret(
 					context.Background(),
+					testCase.clientBuilder.Build(),
 					"fake-namespace",
 					labels.Everything(),
 					"fake-url",

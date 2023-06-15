@@ -64,7 +64,8 @@ type Database interface {
 // credentials stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
 	argoCDNamespace string
-	client          client.Client
+	kargoClient     client.Client
+	argoClient      client.Client
 }
 
 // NewKubernetesDatabase initializes and returns an implementation of the
@@ -75,19 +76,33 @@ type kubernetesDatabase struct {
 func NewKubernetesDatabase(
 	ctx context.Context,
 	argoCDNamespace string,
-	mgr manager.Manager,
+	kargoMgr manager.Manager,
+	argoMgr manager.Manager,
 ) (Database, error) {
 	k := &kubernetesDatabase{
 		argoCDNamespace: argoCDNamespace,
-		client:          mgr.GetClient(),
+		kargoClient:     kargoMgr.GetClient(),
+		argoClient:      argoMgr.GetClient(),
 	}
-	err := mgr.GetFieldIndexer().IndexField(
+	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
 		&corev1.Secret{},
 		secretsByRepo,
 		k.index,
-	)
-	return k, errors.Wrap(err, "error indexing Secrets by repo")
+	); err != nil {
+		return k, errors.Wrap(err, "error indexing Secrets by repo")
+	}
+	if argoMgr != kargoMgr {
+		if err := argoMgr.GetFieldIndexer().IndexField(
+			ctx,
+			&corev1.Secret{},
+			secretsByRepo,
+			k.index,
+		); err != nil {
+			return k, errors.Wrap(err, "error indexing Secrets by repo")
+		}
+	}
+	return k, nil
 }
 
 func (k *kubernetesDatabase) index(obj client.Object) []string {
@@ -164,8 +179,9 @@ func (k *kubernetesDatabase) Get(
 	var err error
 
 	// Check namespace for credentials
-	if secret, err = k.getCredentialsSecret(
+	if secret, err = getCredentialsSecret(
 		ctx,
+		k.kargoClient,
 		namespace,
 		labels.Set(map[string]string{
 			kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
@@ -179,8 +195,9 @@ func (k *kubernetesDatabase) Get(
 
 	if secret == nil {
 		// Check namespace for credentials template
-		if secret, err = k.getCredentialsTemplateSecret(
+		if secret, err = getCredentialsTemplateSecret(
 			ctx,
+			k.kargoClient,
 			namespace,
 			labels.Set(map[string]string{
 				kargoSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
@@ -199,8 +216,9 @@ func (k *kubernetesDatabase) Get(
 	}
 
 	// Check Argo CD's namespace for credentials
-	if secret, err = k.getCredentialsSecret(
+	if secret, err = getCredentialsSecret(
 		ctx,
+		k.argoClient,
 		k.argoCDNamespace,
 		labels.Set(map[string]string{
 			utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepository,
@@ -214,8 +232,9 @@ func (k *kubernetesDatabase) Get(
 
 	if secret == nil {
 		// Check Argo CD's namespace for credentials template
-		if secret, err = k.getCredentialsTemplateSecret(
+		if secret, err = getCredentialsTemplateSecret(
 			ctx,
+			k.argoClient,
 			k.argoCDNamespace,
 			labels.Set(map[string]string{
 				utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
@@ -250,14 +269,15 @@ func (k *kubernetesDatabase) Get(
 	return creds, false, nil
 }
 
-func (k *kubernetesDatabase) getCredentialsSecret(
+func getCredentialsSecret(
 	ctx context.Context,
+	kubeClient client.Client,
 	namespace string,
 	labelSelector labels.Selector,
 	fieldSelector fields.Selector,
 ) (*corev1.Secret, error) {
 	secrets := corev1.SecretList{}
-	if err := k.client.List(
+	if err := kubeClient.List(
 		ctx,
 		&secrets,
 		&client.ListOptions{
@@ -276,14 +296,15 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 	return &(secrets.Items[0]), nil
 }
 
-func (k *kubernetesDatabase) getCredentialsTemplateSecret(
+func getCredentialsTemplateSecret(
 	ctx context.Context,
+	kubeClient client.Client,
 	namespace string,
 	labelSelector labels.Selector,
 	repoURL string,
 ) (*corev1.Secret, error) {
 	secrets := corev1.SecretList{}
-	if err := k.client.List(
+	if err := kubeClient.List(
 		ctx,
 		&secrets,
 		&client.ListOptions{

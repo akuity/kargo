@@ -23,7 +23,7 @@ func (r *reconciler) applyArgoCDAppUpdate(
 	update api.ArgoCDAppUpdate,
 ) error {
 	app, err :=
-		r.getArgoCDAppFn(ctx, r.client, update.AppNamespace, update.AppName)
+		r.getArgoCDAppFn(ctx, r.argoClient, update.AppNamespace, update.AppName)
 	if err != nil {
 		return errors.Wrapf(
 			err,
@@ -100,7 +100,12 @@ func (r *reconciler) applyArgoCDAppUpdate(
 			append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
 
-	if err = r.patchFn(ctx, app, patch, &client.PatchOptions{}); err != nil {
+	if err = r.argoCDAppPatchFn(
+		ctx,
+		app,
+		patch,
+		&client.PatchOptions{},
+	); err != nil {
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}
 
