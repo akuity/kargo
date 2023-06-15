@@ -36,6 +36,9 @@ lint-charts:
 	cd charts/kargo-kit && \
 	helm dep up && \
 	helm lint .
+	cd charts/argocd-kit && \
+	helm dep up && \
+	helm lint .
 
 .PHONY: test-unit
 test-unit:
