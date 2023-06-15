@@ -1,17 +1,16 @@
 package main
 
 import (
+	"context"
 	"os"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/cli/option"
 )
 
 func main() {
-	ctx := signals.SetupSignalHandler()
-	if err := Execute(ctx); err != nil {
-		logging.LoggerFromContext(ctx).Error(err)
+	var opt option.Option
+	ctx := context.Background()
+	if err := NewRootCommand(&opt).ExecuteContext(ctx); err != nil {
 		os.Exit(1)
 	}
 }
