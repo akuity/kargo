@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/akuity/kargo/branch/main/graph/badge.svg?token=FGUq4netA6)](https://codecov.io/gh/akuity/kargo)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/c4e62c70-e07d-4ac6-bcf8-d7003c936d19/deploy-status)](https://app.netlify.com/sites/docs-kargo-akuity-io/deploys)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
+[![slack](https://img.shields.io/badge/slack-kargo-brightgreen.svg?logo=slack)](https://akuity-community.slack.com/messages/C05BXBX7695)
 
 Kargo is a next-generation continuous delivery and environment orchestration platform for Kubernetes. 
 It builds upon GitOps principles and integrates with existing technologies, like Argo CD, to streamline 
@@ -34,6 +35,9 @@ info on how to get started quickly and easily.
 
 To report an issue, request a feature, or ask a question, please open an issue
 [here](https://github.com/akuity/kargo/issues).
+
+Please also feel free to join us on our
+[Slack channel](https://akuity-community.slack.com/messages/C05BXBX7695)!
 
 ## Code of Conduct
 
