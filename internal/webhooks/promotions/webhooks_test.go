@@ -602,7 +602,7 @@ func TestIsSubjectAuthorized(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := &webhook{
-				config: config.ControllerConfig{
+				config: config.WebhooksConfig{
 					ServiceAccountNamespace: "kargo",
 					ServiceAccount:          "kargo-controller",
 				},

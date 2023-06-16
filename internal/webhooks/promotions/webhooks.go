@@ -23,7 +23,7 @@ import (
 
 type webhook struct {
 	client client.Client
-	config config.ControllerConfig
+	config config.WebhooksConfig
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -64,7 +64,7 @@ type webhook struct {
 func SetupWebhookWithManager(
 	ctx context.Context,
 	mgr ctrl.Manager,
-	config config.ControllerConfig,
+	config config.WebhooksConfig,
 ) error {
 	if err := mgr.GetFieldIndexer().IndexField(
 		ctx,
