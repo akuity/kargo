@@ -22,5 +22,6 @@ func Execute(ctx context.Context) error {
 	rootCmd.AddCommand(newAPICommand())
 	rootCmd.AddCommand(newControllerCommand())
 	rootCmd.AddCommand(newVersionCommand())
+	rootCmd.AddCommand(newWebhooksServerCommand())
 	return rootCmd.ExecuteContext(ctx)
 }
