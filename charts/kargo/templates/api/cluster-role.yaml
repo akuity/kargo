@@ -20,9 +20,7 @@ rules:
     resources:
       - environments
     verbs:
-      - get
-      - list
-      - watch
+      - "*"
   - apiGroups:
       - kargo.akuity.io
     resources:

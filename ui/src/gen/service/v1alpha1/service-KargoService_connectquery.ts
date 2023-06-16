@@ -5,9 +5,26 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { GetEnvironmentRequest, GetEnvironmentResponse, ListEnvironmentsRequest, ListEnvironmentsResponse, PromoteEnvironmentRequest, PromoteEnvironmentResponse } from "./service_pb.js";
+import { CreateEnvironmentRequest, CreateEnvironmentResponse, DeleteEnvironmentRequest, DeleteEnvironmentResponse, GetEnvironmentRequest, GetEnvironmentResponse, ListEnvironmentsRequest, ListEnvironmentsResponse, PromoteEnvironmentRequest, PromoteEnvironmentResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateEnvironment
+ */
+export const createEnvironment = createQueryService({
+  service: {
+    methods: {
+      createEnvironment: {
+        name: "CreateEnvironment",
+        kind: MethodKind.Unary,
+        I: CreateEnvironmentRequest,
+        O: CreateEnvironmentResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).createEnvironment;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListEnvironments
@@ -42,6 +59,23 @@ export const getEnvironment = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).getEnvironment;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteEnvironment
+ */
+export const deleteEnvironment = createQueryService({
+  service: {
+    methods: {
+      deleteEnvironment: {
+        name: "DeleteEnvironment",
+        kind: MethodKind.Unary,
+        I: DeleteEnvironmentRequest,
+        O: DeleteEnvironmentResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).deleteEnvironment;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.PromoteEnvironment

@@ -90,6 +90,13 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 }
 
+func (s *server) CreateEnvironment(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.CreateEnvironmentRequest],
+) (*connect.Response[svcv1alpha1.CreateEnvironmentResponse], error) {
+	return handler.CreateEnvironmentV1Alpha1(s.kc)(ctx, req)
+}
+
 func (s *server) ListEnvironments(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListEnvironmentsRequest],
@@ -102,6 +109,13 @@ func (s *server) GetEnvironment(
 	req *connect.Request[svcv1alpha1.GetEnvironmentRequest],
 ) (*connect.Response[svcv1alpha1.GetEnvironmentResponse], error) {
 	return handler.GetEnvironmentV1Alpha1(s.kc)(ctx, req)
+}
+
+func (s *server) DeleteEnvironment(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.DeleteEnvironmentRequest],
+) (*connect.Response[svcv1alpha1.DeleteEnvironmentResponse], error) {
+	return handler.DeleteEnvironmentV1Alpha1(s.kc)(ctx, req)
 }
 
 func (s *server) PromoteEnvironment(

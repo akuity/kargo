@@ -7,9 +7,21 @@ option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha
 import "v1alpha1/generated.proto";
 
 service KargoService {
+  rpc CreateEnvironment(CreateEnvironmentRequest) returns (CreateEnvironmentResponse);
   rpc ListEnvironments(ListEnvironmentsRequest) returns (ListEnvironmentsResponse);
   rpc GetEnvironment(GetEnvironmentRequest) returns (GetEnvironmentResponse);
+  rpc DeleteEnvironment(DeleteEnvironmentRequest) returns (DeleteEnvironmentResponse);
   rpc PromoteEnvironment(PromoteEnvironmentRequest) returns (PromoteEnvironmentResponse);
+}
+
+message CreateEnvironmentRequest {
+  string project = 1;
+  string name = 2;
+  github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentSpec spec = 3;
+}
+
+message CreateEnvironmentResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Environment environment = 1;
 }
 
 message ListEnvironmentsRequest {
@@ -27,6 +39,15 @@ message GetEnvironmentRequest {
 
 message GetEnvironmentResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Environment environment = 1;
+}
+
+message DeleteEnvironmentRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteEnvironmentResponse {
+  /* explicitly empty */
 }
 
 message PromoteEnvironmentRequest {
