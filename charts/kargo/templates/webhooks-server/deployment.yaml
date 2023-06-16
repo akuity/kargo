@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kargo.webhooksServer.fullname" . }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.webhooksServer.replicas | default 1 }}
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.webhooksServer.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kargo.selectorLabels" . | nindent 8 }}
+        {{- include "kargo.webhooksServer.labels" . | nindent 8 }}
+    spec:
+      serviceAccount: {{ include "kargo.webhooksServer.fullname" . }}
+      containers:
+      - name: webhooks-server
+        image: {{ include "kargo.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/usr/local/bin/kargo", "webhooks-server"]
+        env:
+        {{- if .Values.kubeconfigSecret }}
+        - name: KUBECONFIG
+          value: /etc/kargo/kubeconfig/kubeconfig.yaml
+        {{- end }}
+        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT
+          value: {{ .Values.webhooksServer.controllerServiceAccount.name | default (include "kargo.controller.fullname" .) }}
+        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE
+          value: {{ .Values.webhooksServer.controllerServiceAccount.namespace | default .Release.Namespace }}
+        - name: LOG_LEVEL
+          value: {{ .Values.webhooksServer.logLevel }}
+        ports:
+        - containerPort: 9443
+          name: webhooks-server
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+        {{- if .Values.kubeconfigSecret }}
+        - mountPath: /etc/kargo/kubeconfig
+          name: kubeconfig
+          readOnly: true
+        {{- end }}
+        resources:
+          {{- toYaml .Values.webhooksServer.resources | nindent 10 }}
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 0644
+          secretName: {{ include "kargo.webhooksServer.fullname" . }}-cert
+      {{- if .Values.kubeconfigSecret }}
+      - name: kubeconfig
+        secret:
+          defaultMode: 0644
+          secretName: {{ .Values.kubeconfigSecret }}
+      {{- end }}
+      {{- with .Values.webhooksServer.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.webhooksServer.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

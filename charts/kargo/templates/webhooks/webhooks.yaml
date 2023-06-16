@@ -1,4 +1,4 @@
-{{- if .Values.controller.webhooks.register }}
+{{- if .Values.webhooks.register }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -7,7 +7,7 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
   annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "kargo.fullname" . }}-webhook-server
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "kargo.webhooksServer.fullname" . }}
 webhooks:
 - name: environment.kargo.akuity.io
   admissionReviewVersions: ["v1"]
@@ -15,7 +15,7 @@ webhooks:
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.fullname" . }}-webhook-server
+      name: {{ include "kargo.webhooksServer.fullname" . }}
       path: /mutate-kargo-akuity-io-v1alpha1-environment
   rules:
   - scope: Namespaced
@@ -33,7 +33,7 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
   annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "kargo.fullname" . }}-webhook-server
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "kargo.webhooksServer.fullname" . }}
 webhooks:
 - name: environment.kargo.akuity.io
   admissionReviewVersions: ["v1"]
@@ -41,7 +41,7 @@ webhooks:
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.fullname" . }}-webhook-server
+      name: {{ include "kargo.webhooksServer.fullname" . }}
       path: /validate-kargo-akuity-io-v1alpha1-environment
   rules:
   - scope: Namespaced
@@ -56,7 +56,7 @@ webhooks:
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.fullname" . }}-webhook-server
+      name: {{ include "kargo.webhooksServer.fullname" . }}
       path: /validate-kargo-akuity-io-v1alpha1-promotion
   rules:
   - scope: Namespaced
