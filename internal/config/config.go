@@ -67,15 +67,25 @@ func (c CLIConfig) RESTConfig() (*rest.Config, error) {
 
 type ControllerConfig struct {
 	BaseConfig
-	ArgoCDNamespace         string
-	ServiceAccount          string
-	ServiceAccountNamespace string
+	ArgoCDNamespace string
 }
 
 func NewControllerConfig() ControllerConfig {
 	return ControllerConfig{
 		BaseConfig:      newBaseConfig(),
 		ArgoCDNamespace: os.MustGetEnv("ARGOCD_NAMESPACE", "argocd"),
+	}
+}
+
+type WebhooksConfig struct {
+	BaseConfig
+	ServiceAccount          string
+	ServiceAccountNamespace string
+}
+
+func NewWebhooksConfig() WebhooksConfig {
+	return WebhooksConfig{
+		BaseConfig: newBaseConfig(),
 		ServiceAccount: os.MustGetEnv(
 			"KARGO_CONTROLLER_SERVICE_ACCOUNT",
 			"",
