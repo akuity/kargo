@@ -48,14 +48,6 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "error getting controller manager")
 			}
 
-			if err = environments.SetupWebhookWithManager(kargoMgr); err != nil {
-				return errors.Wrap(err, "error initializing Environment webhooks")
-			}
-			if err =
-				promotions.SetupWebhookWithManager(ctx, kargoMgr, cfg); err != nil {
-				return errors.Wrap(err, "error initializing Environment webhooks")
-			}
-
 			credentialsDB, err := credentials.NewKubernetesDatabase(
 				ctx,
 				cfg.ArgoCDNamespace,
@@ -146,7 +138,6 @@ func getMgrs() (manager.Manager, manager.Manager, error) {
 		ctrl.Options{
 			Scheme:             kargoMgrScheme,
 			MetricsBindAddress: "0",
-			Port:               9443,
 		},
 	)
 	if err != nil {

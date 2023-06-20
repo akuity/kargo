@@ -1,4 +1,4 @@
-{{- if .Values.controller.webhooks.tls.selfSignedCert }}
+{{- if .Values.webhooksServer.tls.selfSignedCert }}
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
