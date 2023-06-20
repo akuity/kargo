@@ -32,33 +32,18 @@ spec:
         {{- end }}
         - name: ARGOCD_NAMESPACE
           value: {{ .Values.controller.argocdNamespace }}
-        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT
-          value: {{ .Values.controller.webhooks.serviceAccount.name | default (include "kargo.controller.fullname" .) }}
-        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE
-          value: {{ .Values.controller.webhooks.serviceAccount.namespace | default .Release.Namespace }}
         - name: LOG_LEVEL
           value: {{ .Values.controller.logLevel }}
-        ports:
-        - containerPort: 9443
-          name: webhook-server
-          protocol: TCP
-        volumeMounts:
-        - mountPath: /tmp/k8s-webhook-server/serving-certs
-          name: cert
-          readOnly: true
         {{- if .Values.kubeconfigSecret }}
+        volumeMounts:
         - mountPath: /etc/kargo/kubeconfig
           name: kubeconfig
           readOnly: true
         {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
-      volumes:
-      - name: cert
-        secret:
-          defaultMode: 0644
-          secretName: {{ include "kargo.fullname" . }}-webhook-server-cert
       {{- if .Values.kubeconfigSecret }}
+      volumes:
       - name: kubeconfig
         secret:
           defaultMode: 0644

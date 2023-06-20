@@ -45,7 +45,7 @@ const config = {
     [
       path.join(__dirname, "plugins", "gtag", "lib"),
       {
-        trackingID: 'G-9FQ417P33N',
+        trackingID: 'G-0LYKG06H98',
         anonymizeIP: true,
       },
     ],

@@ -68,32 +68,58 @@ controller:
 
   logLevel: INFO
 
-  webhooks:
-    ## Whether to create ValidatingWebhookConfiguration and
-    ## MutatingWebhookConfiguration resources. Since these are installed at a
-    ## cluster scope, there may be circumstances under which one wishes NOT to
-    ## install these. An example would be if Kargo were being hosted in one
-    ## cluster, but managing another cluster. In such a case, the
-    ## ValidatingWebhookConfiguration and MutatingWebhookConfiguration resources
-    ## (as well as CRDs) should be installed into the cluster under management
-    ## using the kargo-kit chart.
-    register: true
-    tls:
-      ## Whether to generate a self-signed certificate for the controller's
-      ## built-in webhook server. If true, cert-manager CRDs MUST be
-      ## pre-installed on this cluster. Kargo will create and use its own
-      ## namespaced issuer. If false, a cert secret named
-      ## <Helm release name>-webhook-server-cert MUST be provided in the same
-      ## namespace as Kargo.
-      selfSignedCert: true
-    serviceAccount: {}
-      ## Namespace and name of the Kubernetes service account used by the Kargo
-      ## controller. These should generally be left undefined, but in the case
-      ## where Kargo is hosted in one cluster, but manages a different cluster,
-      ## these should be set to reflect the details of the services account used
-      ## by the Kargo controller in the cluster it manages.
-      # namespace:
-      # name:
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as
+    # a conscious choice for the user. This also increases chances charts run on
+    # environments with little resources, such as KinD. If you do want to
+    # specify resources, uncomment the following lines, adjust them as
+    # necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []
+
+webhooks:
+  ## Whether to create ValidatingWebhookConfiguration and
+  ## MutatingWebhookConfiguration resources. Since these are installed at a
+  ## cluster scope, there may be circumstances under which one wishes NOT to
+  ## install these. An example would be if Kargo were being hosted in one
+  ## cluster, but managing another cluster. In such a case, the
+  ## ValidatingWebhookConfiguration and MutatingWebhookConfiguration resources
+  ## (as well as CRDs) should be installed into the cluster under management
+  ## using the kargo-kit chart.
+  register: true
+
+webhooksServer:
+
+  ## The number of webhooks server pods. (Default: 1)
+  # replicas: 3
+
+  logLevel: INFO
+
+  tls:
+    ## Whether to generate a self-signed certificate for the controller's
+    ## built-in webhook server. If true, cert-manager CRDs MUST be
+    ## pre-installed on this cluster. Kargo will create and use its own
+    ## namespaced issuer. If false, a cert secret named
+    ## <Helm release name>-webhook-servers-cert MUST be provided in the same
+    ## namespace as Kargo.
+    selfSignedCert: true
+
+  controllerServiceAccount: {}
+    ## Namespace and name of the Kubernetes service account used by the Kargo
+    ## controller. These should generally be left undefined, but in the case
+    ## where Kargo is hosted in one cluster, but manages a different cluster,
+    ## these should be set to reflect the details of the services account used
+    ## by the Kargo controller in the cluster it manages.
+    # namespace:
+    # name:
 
   resources: {}
     # We usually recommend not to specify default resources and to leave this as
