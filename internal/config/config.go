@@ -67,13 +67,18 @@ func (c CLIConfig) RESTConfig() (*rest.Config, error) {
 
 type ControllerConfig struct {
 	BaseConfig
-	ArgoCDNamespace string
+	ArgoCDNamespace                 string
+	ArgoCDPreferInClusterRestConfig bool
 }
 
 func NewControllerConfig() ControllerConfig {
 	return ControllerConfig{
 		BaseConfig:      newBaseConfig(),
 		ArgoCDNamespace: os.MustGetEnv("ARGOCD_NAMESPACE", "argocd"),
+		ArgoCDPreferInClusterRestConfig: os.MustGetEnvAsBool(
+			"ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG",
+			false,
+		),
 	}
 }
 

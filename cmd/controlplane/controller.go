@@ -86,7 +86,8 @@ func newControllerCommand() *cobra.Command {
 
 			var appMgr manager.Manager
 			{
-				restCfg, err := getRestConfig("argo", false)
+				restCfg, err :=
+					getRestConfig("argo", cfg.ArgoCDPreferInClusterRestConfig)
 				if err != nil {
 					return errors.Wrap(
 						err,
