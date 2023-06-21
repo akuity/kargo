@@ -1,3 +1,4 @@
+{{- if .Values.api.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -14,3 +15,4 @@ spec:
   selector:
     {{- include "kargo.selectorLabels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
+{{- end }}

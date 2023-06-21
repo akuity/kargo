@@ -38,6 +38,9 @@ rbac:
 ## All settings for the api component
 api:
 
+  ## Whether the API server is enabled.
+  enabled: true
+
   ## The number of API server pods. (Default: 1)
   # replicas: 3
 
@@ -62,6 +65,9 @@ api:
 
 ## All settings for the controller component
 controller:
+
+  ## Whether the controller is enabled.
+  enabled: true
 
   ## The namespace into which Argo CD is installed.
   argocdNamespace: argocd
@@ -97,6 +103,9 @@ webhooks:
   register: true
 
 webhooksServer:
+
+  ## Whether the webhooks server is enabled.
+  enabled: true
 
   ## The number of webhooks server pods. (Default: 1)
   # replicas: 3
