@@ -1,6 +1,6 @@
 # This file is described here: https://help.github.com/en/articles/about-code-owners
 
-* @alexmt @jessesuen @krancour @rbreeze @devholic @kencochrane
+* @alexmt @devholic @gdsoumya @jessesuen @kencochrane @krancour @rbreeze
 
 # Doc owners
-/docs/ @morey-tech @dhpup
+/docs/ @dhpup @morey-tech
