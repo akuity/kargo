@@ -35,17 +35,6 @@ func (c APIConfig) RESTConfig() (*rest.Config, error) {
 	return config.GetConfig()
 }
 
-type CLIConfig struct {
-}
-
-func NewCLIConfig() CLIConfig {
-	return CLIConfig{}
-}
-
-func (c CLIConfig) RESTConfig() (*rest.Config, error) {
-	return config.GetConfig()
-}
-
 type ControllerConfig struct {
 	ArgoCDNamespace                  string
 	ArgoCDCredentialBorrowingEnabled bool

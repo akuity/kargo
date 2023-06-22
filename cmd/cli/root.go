@@ -7,12 +7,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/akuity/kargo/internal/api"
 	apioption "github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/cli/env"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/config"
+	libConfig "github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
@@ -27,8 +28,8 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 		SilenceUsage:      true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			ctx := buildRootContext(cmd.Context())
-			cfg := config.NewCLIConfig()
-			rc, err := cfg.RESTConfig()
+
+			rc, err := config.GetConfig()
 			if err != nil {
 				return errors.Wrap(err, "load kubeconfig")
 			}
@@ -40,7 +41,7 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 					return errors.Wrap(err, "start local server")
 				}
 				ctx = context.WithValue(ctx, localServerListenerKey{}, l)
-				srv, err := api.NewServer(config.APIConfig{
+				srv, err := api.NewServer(libConfig.APIConfig{
 					LocalMode: true,
 				}, rc)
 				if err != nil {
