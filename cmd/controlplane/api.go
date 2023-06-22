@@ -7,9 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/config"
+	libConfig "github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
@@ -20,8 +21,8 @@ func newAPICommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.NewAPIConfig()
-			rc, err := cfg.RESTConfig()
+			cfg := libConfig.NewAPIConfig()
+			rc, err := config.GetConfig()
 			if err != nil {
 				return errors.Wrap(err, "load kubeconfig")
 			}

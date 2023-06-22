@@ -3,9 +3,6 @@ package config
 import (
 	"time"
 
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-
 	"github.com/akuity/kargo/internal/os"
 )
 
@@ -29,8 +26,4 @@ func NewAPIConfig() APIConfig {
 			os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s"),
 		),
 	}
-}
-
-func (c APIConfig) RESTConfig() (*rest.Config, error) {
-	return config.GetConfig()
 }
