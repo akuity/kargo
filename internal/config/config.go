@@ -34,21 +34,3 @@ func NewAPIConfig() APIConfig {
 func (c APIConfig) RESTConfig() (*rest.Config, error) {
 	return config.GetConfig()
 }
-
-type WebhooksConfig struct {
-	ServiceAccount          string
-	ServiceAccountNamespace string
-}
-
-func NewWebhooksConfig() WebhooksConfig {
-	return WebhooksConfig{
-		ServiceAccount: os.MustGetEnv(
-			"KARGO_CONTROLLER_SERVICE_ACCOUNT",
-			"",
-		),
-		ServiceAccountNamespace: os.MustGetEnv(
-			"KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE",
-			"",
-		),
-	}
-}
