@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
@@ -38,8 +39,6 @@ func newControllerCommand() *cobra.Command {
 				"version": version.Version,
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo Controller")
-
-			cfg := libConfig.NewControllerConfig()
 
 			var kargoMgr manager.Manager
 			{
@@ -84,8 +83,12 @@ func newControllerCommand() *cobra.Command {
 
 			var appMgr manager.Manager
 			{
-				restCfg, err :=
-					getRestConfig("argo", cfg.ArgoCDPreferInClusterRestConfig)
+				restCfg, err := getRestConfig(
+					"argo",
+					libConfig.MustParseBool(
+						os.GetEnv("ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG", "false"),
+					),
+				)
 				if err != nil {
 					return errors.Wrap(
 						err,
@@ -123,12 +126,14 @@ func newControllerCommand() *cobra.Command {
 			}
 
 			argoMgrForCreds := appMgr
-			if !cfg.ArgoCDCredentialBorrowingEnabled {
+			if !libConfig.MustParseBool(
+				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
+			) {
 				argoMgrForCreds = nil
 			}
 			credentialsDB, err := credentials.NewKubernetesDatabase(
 				ctx,
-				cfg.ArgoCDNamespace,
+				os.GetEnv("ARGOCD_NAMESPACE", "argocd"),
 				kargoMgr,
 				argoMgrForCreds,
 			)

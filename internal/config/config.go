@@ -35,26 +35,6 @@ func (c APIConfig) RESTConfig() (*rest.Config, error) {
 	return config.GetConfig()
 }
 
-type ControllerConfig struct {
-	ArgoCDNamespace                  string
-	ArgoCDCredentialBorrowingEnabled bool
-	ArgoCDPreferInClusterRestConfig  bool
-}
-
-func NewControllerConfig() ControllerConfig {
-	return ControllerConfig{
-		ArgoCDNamespace: os.MustGetEnv("ARGOCD_NAMESPACE", "argocd"),
-		ArgoCDCredentialBorrowingEnabled: os.MustGetEnvAsBool(
-			"ARGOCD_ENABLE_CREDENTIAL_BORROWING",
-			false,
-		),
-		ArgoCDPreferInClusterRestConfig: os.MustGetEnvAsBool(
-			"ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG",
-			false,
-		),
-	}
-}
-
 type WebhooksConfig struct {
 	ServiceAccount          string
 	ServiceAccountNamespace string
