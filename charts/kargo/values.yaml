@@ -83,6 +83,9 @@ controller:
     ## cluster on which the Kargo controller will run. This setting can
     ## typically be left alone.
     preferInClusterRestConfig: false
+    ## Specifies whether Kargo may borrow repository credentials (specially
+    ## formatted and specially annotated Secrets) from Argo CD.
+    enableCredentialBorrowing: true
 
   logLevel: INFO
 

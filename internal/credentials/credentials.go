@@ -82,7 +82,9 @@ func NewKubernetesDatabase(
 	k := &kubernetesDatabase{
 		argoCDNamespace: argoCDNamespace,
 		kargoClient:     kargoMgr.GetClient(),
-		argoClient:      argoMgr.GetClient(),
+	}
+	if argoMgr != nil {
+		k.argoClient = argoMgr.GetClient()
 	}
 	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -92,7 +94,7 @@ func NewKubernetesDatabase(
 	); err != nil {
 		return k, errors.Wrap(err, "error indexing Secrets by repo")
 	}
-	if argoMgr != kargoMgr {
+	if argoMgr != nil && argoMgr != kargoMgr {
 		if err := argoMgr.GetFieldIndexer().IndexField(
 			ctx,
 			&corev1.Secret{},
@@ -213,6 +215,11 @@ func (k *kubernetesDatabase) Get(
 		creds.Password = string(secret.Data["password"])
 		creds.SSHPrivateKey = string(secret.Data["sshPrivateKey"])
 		return creds, true, nil
+	}
+
+	if k.argoClient == nil {
+		// We cannot borrow creds from from Argo CD
+		return creds, false, nil
 	}
 
 	// Check Argo CD's namespace for credentials
