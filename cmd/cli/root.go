@@ -7,8 +7,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	apioption "github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/cli/env"
@@ -29,9 +33,27 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			ctx := buildRootContext(cmd.Context())
 
-			rc, err := config.GetConfig()
+			restCfg, err := config.GetConfig()
 			if err != nil {
-				return errors.Wrap(err, "load kubeconfig")
+				return errors.Wrap(err, "error loading REST config")
+			}
+			var kubeClient client.Client
+			{
+				scheme := runtime.NewScheme()
+				if err = corev1.AddToScheme(scheme); err != nil {
+					return errors.Wrap(err, "error adding Kubernetes core API to scheme")
+				}
+				if err = kargoAPI.AddToScheme(scheme); err != nil {
+					return errors.Wrap(err, "error adding Kargo API to scheme")
+				}
+				if kubeClient, err = client.New(
+					restCfg,
+					client.Options{
+						Scheme: scheme,
+					},
+				); err != nil {
+					return errors.Wrap(err, "error initializing Kubernetes client")
+				}
 			}
 
 			opt.ClientOption = apioption.NewClientOption(opt.UseLocalServer)
@@ -41,9 +63,12 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 					return errors.Wrap(err, "start local server")
 				}
 				ctx = context.WithValue(ctx, localServerListenerKey{}, l)
-				srv, err := api.NewServer(libConfig.APIConfig{
-					LocalMode: true,
-				}, rc)
+				srv, err := api.NewServer(
+					kubeClient,
+					libConfig.APIConfig{
+						LocalMode: true,
+					},
+				)
 				if err != nil {
 					return errors.Wrap(err, "new api server")
 				}
@@ -52,7 +77,7 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 				}()
 				opt.ServerURL = fmt.Sprintf("http://%s", l.Addr())
 			} else {
-				cred, err := kubeclient.GetCredential(ctx, rc)
+				cred, err := kubeclient.GetCredential(ctx, restCfg)
 				if err != nil {
 					return errors.Wrap(err, "get credential")
 				}

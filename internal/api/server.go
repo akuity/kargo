@@ -11,12 +11,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/handler"
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/config"
@@ -38,20 +34,7 @@ type Server interface {
 	Serve(ctx context.Context, l net.Listener) error
 }
 
-func NewServer(cfg config.APIConfig, rc *rest.Config) (Server, error) {
-	scheme := runtime.NewScheme()
-	if err := corev1.AddToScheme(scheme); err != nil {
-		return nil, errors.Wrap(err, "add core api to scheme")
-	}
-	if err := kubev1alpha1.AddToScheme(scheme); err != nil {
-		return nil, errors.Wrap(err, "add kargo api to scheme")
-	}
-	kc, err := client.New(rc, client.Options{
-		Scheme: scheme,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "new client")
-	}
+func NewServer(kc client.Client, cfg config.APIConfig) (Server, error) {
 	return &server{
 		cfg: cfg,
 		kc:  kc,
