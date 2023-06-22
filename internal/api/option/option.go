@@ -22,9 +22,9 @@ func NewClientOption(skipAuth bool) connect.ClientOption {
 	)
 }
 
-func NewHandlerOption(cfg config.APIConfig, logger *log.Entry) connect.HandlerOption {
+func NewHandlerOption(ctx context.Context, cfg config.APIConfig) connect.HandlerOption {
 	interceptors := []connect.Interceptor{
-		newLogInterceptor(logger, loggingIgnorableMethods),
+		newLogInterceptor(logging.LoggerFromContext(ctx), loggingIgnorableMethods),
 	}
 	if !cfg.LocalMode {
 		interceptors = append(interceptors, newAuthInterceptor())

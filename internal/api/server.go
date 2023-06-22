@@ -62,7 +62,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	log := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	opts := option.NewHandlerOption(s.cfg, log)
+	opts := option.NewHandlerOption(ctx, s.cfg)
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
