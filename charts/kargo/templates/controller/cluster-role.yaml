@@ -17,15 +17,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - argoproj.io
-  resources:
-  - applications
-  verbs:
-  - get
-  - list
-  - patch
-  - watch
-- apiGroups:
   - kargo.akuity.io
   resources:
   - environments
@@ -58,4 +49,31 @@ rules:
   - promotions/status
   verbs:
   - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kargo.controller.fullname" . }}-argocd
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+    - secrets
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - argoproj.io
+  resources:
+    - applications
+  verbs:
+    - get
+    - list
+    - patch
+    - watch
 {{- end }}
