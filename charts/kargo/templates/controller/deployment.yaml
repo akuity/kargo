@@ -30,9 +30,13 @@ spec:
         {{- if .Values.kubeconfigSecret }}
         - name: KUBECONFIG
           value: /etc/kargo/kubeconfig/kubeconfig.yaml
+        - name: ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG
+          value: {{ quote .Values.controller.argocd.preferInClusterRestConfig }}
         {{- end }}
         - name: ARGOCD_NAMESPACE
-          value: {{ .Values.controller.argocdNamespace }}
+          value: {{ .Values.controller.argocd.namespace }}
+        - name: ARGOCD_ENABLE_CREDENTIAL_BORROWING
+          value: {{ quote .Values.controller.argocd.enableCredentialBorrowing }}
         - name: LOG_LEVEL
           value: {{ .Values.controller.logLevel }}
         {{- if .Values.kubeconfigSecret }}

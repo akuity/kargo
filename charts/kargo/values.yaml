@@ -69,8 +69,23 @@ controller:
   ## Whether the controller is enabled.
   enabled: true
 
-  ## The namespace into which Argo CD is installed.
-  argocdNamespace: argocd
+  ## All settings relating to the Argo CD control plane this controller will
+  ## integrate with.
+  argocd:
+    ## The namespace into which Argo CD is installed.
+    namespace: argocd
+    ## Override for an override -- prefer in-cluster REST configuration for the
+    ## client that will communicate with the Kubernetes API server that hosts
+    ## Argo CD Application resources. This is useful for rare scenarios where
+    ## kubeconfigSecret has been specified for the sake of providing client
+    ## configuration for a REMOTE Kubernetes API server that hosts Kargo
+    ## resources, BUT Argo CD Application resources are hosted on the same
+    ## cluster on which the Kargo controller will run. This setting can
+    ## typically be left alone.
+    preferInClusterRestConfig: false
+    ## Specifies whether Kargo may borrow repository credentials (specially
+    ## formatted and specially annotated Secrets) from Argo CD.
+    enableCredentialBorrowing: true
 
   logLevel: INFO
 

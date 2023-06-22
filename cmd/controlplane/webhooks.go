@@ -32,7 +32,7 @@ func newWebhooksServerCommand() *cobra.Command {
 
 			webhooksCfg := libConfig.NewWebhooksConfig()
 
-			restCfg, _, err := getMgrConfigs()
+			restCfg, err := getRestConfig("kargo", false)
 			if err != nil {
 				return errors.Wrap(err, "error getting REST config")
 			}
