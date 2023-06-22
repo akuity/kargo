@@ -48,11 +48,15 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "error getting controller manager")
 			}
 
+			argoMgrForCreds := argoMgr
+			if !cfg.ArgoCDCredentialBorrowingEnabled {
+				argoMgrForCreds = nil
+			}
 			credentialsDB, err := credentials.NewKubernetesDatabase(
 				ctx,
 				cfg.ArgoCDNamespace,
 				kargoMgr,
-				argoMgr,
+				argoMgrForCreds,
 			)
 			if err != nil {
 				return errors.Wrap(err, "error initializing credentials DB")

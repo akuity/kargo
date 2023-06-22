@@ -32,7 +32,9 @@ spec:
           value: /etc/kargo/kubeconfig/kubeconfig.yaml
         {{- end }}
         - name: ARGOCD_NAMESPACE
-          value: {{ .Values.controller.argocdNamespace }}
+          value: {{ .Values.controller.argocd.namespace }}
+        - name: ARGOCD_ENABLE_CREDENTIAL_BORROWING
+          value: {{ quote .Values.controller.argocd.enableCredentialBorrowing }}
         - name: LOG_LEVEL
           value: {{ .Values.controller.logLevel }}
         {{- if .Values.kubeconfigSecret }}

@@ -67,13 +67,18 @@ func (c CLIConfig) RESTConfig() (*rest.Config, error) {
 
 type ControllerConfig struct {
 	BaseConfig
-	ArgoCDNamespace string
+	ArgoCDNamespace                  string
+	ArgoCDCredentialBorrowingEnabled bool
 }
 
 func NewControllerConfig() ControllerConfig {
 	return ControllerConfig{
 		BaseConfig:      newBaseConfig(),
 		ArgoCDNamespace: os.MustGetEnv("ARGOCD_NAMESPACE", "argocd"),
+		ArgoCDCredentialBorrowingEnabled: os.MustGetEnvAsBool(
+			"ARGOCD_ENABLE_CREDENTIAL_BORROWING",
+			false,
+		),
 	}
 }
 

@@ -69,8 +69,14 @@ controller:
   ## Whether the controller is enabled.
   enabled: true
 
-  ## The namespace into which Argo CD is installed.
-  argocdNamespace: argocd
+  ## All settings relating to the Argo CD control plane this controller will
+  ## integrate with.
+  argocd:
+    ## The namespace into which Argo CD is installed.
+    namespace: argocd
+    ## Specifies whether Kargo may borrow repository credentials (specially
+    ## formatted and specially annotated Secrets) from Argo CD.
+    enableCredentialBorrowing: true
 
   logLevel: INFO
 

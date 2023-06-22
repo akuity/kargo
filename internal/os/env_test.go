@@ -46,3 +46,47 @@ func TestMustGetEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestGetBoolFromEnvVar(t *testing.T) {
+	const testEnvVarName = "ENABLED"
+	testCases := []struct {
+		name       string
+		setup      func()
+		assertions func()
+	}{
+		{
+			name: "env var does not exist",
+			assertions: func() {
+				require.True(t, MustGetEnvAsBool(testEnvVarName, true))
+			},
+		},
+		{
+			name: "env var value not parsable as bool",
+			setup: func() {
+				t.Setenv(testEnvVarName, "not really")
+			},
+			assertions: func() {
+				require.Panics(t, func() {
+					MustGetEnvAsBool(testEnvVarName, false)
+				})
+			},
+		},
+		{
+			name: "env var exists",
+			setup: func() {
+				t.Setenv(testEnvVarName, "true")
+			},
+			assertions: func() {
+				require.True(t, MustGetEnvAsBool(testEnvVarName, false))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.setup != nil {
+				testCase.setup()
+			}
+			testCase.assertions()
+		})
+	}
+}
