@@ -5,8 +5,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 )
 
@@ -45,10 +45,7 @@ func NewAPIConfig() APIConfig {
 }
 
 func (c APIConfig) RESTConfig() (*rest.Config, error) {
-	if c.LocalMode {
-		return kubeclient.NewClientConfig().ClientConfig()
-	}
-	return rest.InClusterConfig()
+	return config.GetConfig()
 }
 
 type CLIConfig struct {
@@ -62,7 +59,7 @@ func NewCLIConfig() CLIConfig {
 }
 
 func (c CLIConfig) RESTConfig() (*rest.Config, error) {
-	return kubeclient.NewClientConfig().ClientConfig()
+	return config.GetConfig()
 }
 
 type ControllerConfig struct {
