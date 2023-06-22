@@ -3,27 +3,17 @@ package config
 import (
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/akuity/kargo/internal/os"
+	"github.com/sirupsen/logrus"
 )
 
-type BaseConfig struct {
-	LogLevel logrus.Level
-}
-
-func newBaseConfig() BaseConfig {
-	return BaseConfig{
-		LogLevel: MustParseLogLevel(os.MustGetEnv("LOG_LEVEL", "INFO")),
-	}
-}
-
 type APIConfig struct {
-	BaseConfig
-	Host string
-	Port int
+	LogLevel logrus.Level
+	Host     string
+	Port     int
 
 	LocalMode bool
 
@@ -32,9 +22,9 @@ type APIConfig struct {
 
 func NewAPIConfig() APIConfig {
 	return APIConfig{
-		BaseConfig: newBaseConfig(),
-		Host:       os.MustGetEnv("HOST", "0.0.0.0"),
-		Port:       MustAtoi(os.MustGetEnv("PORT", "8080")),
+		LogLevel: MustParseLogLevel(os.MustGetEnv("LOG_LEVEL", "INFO")),
+		Host:     os.MustGetEnv("HOST", "0.0.0.0"),
+		Port:     MustAtoi(os.MustGetEnv("PORT", "8080")),
 
 		LocalMode: MustParseBool(os.MustGetEnv("LOCAL_MODE", "false")),
 
@@ -49,12 +39,12 @@ func (c APIConfig) RESTConfig() (*rest.Config, error) {
 }
 
 type CLIConfig struct {
-	BaseConfig
+	LogLevel logrus.Level
 }
 
 func NewCLIConfig() CLIConfig {
 	return CLIConfig{
-		BaseConfig: newBaseConfig(),
+		LogLevel: MustParseLogLevel(os.MustGetEnv("LOG_LEVEL", "INFO")),
 	}
 }
 
@@ -63,7 +53,7 @@ func (c CLIConfig) RESTConfig() (*rest.Config, error) {
 }
 
 type ControllerConfig struct {
-	BaseConfig
+	LogLevel                         logrus.Level
 	ArgoCDNamespace                  string
 	ArgoCDCredentialBorrowingEnabled bool
 	ArgoCDPreferInClusterRestConfig  bool
@@ -71,7 +61,7 @@ type ControllerConfig struct {
 
 func NewControllerConfig() ControllerConfig {
 	return ControllerConfig{
-		BaseConfig:      newBaseConfig(),
+		LogLevel:        MustParseLogLevel(os.MustGetEnv("LOG_LEVEL", "INFO")),
 		ArgoCDNamespace: os.MustGetEnv("ARGOCD_NAMESPACE", "argocd"),
 		ArgoCDCredentialBorrowingEnabled: os.MustGetEnvAsBool(
 			"ARGOCD_ENABLE_CREDENTIAL_BORROWING",
@@ -85,14 +75,14 @@ func NewControllerConfig() ControllerConfig {
 }
 
 type WebhooksConfig struct {
-	BaseConfig
+	LogLevel                logrus.Level
 	ServiceAccount          string
 	ServiceAccountNamespace string
 }
 
 func NewWebhooksConfig() WebhooksConfig {
 	return WebhooksConfig{
-		BaseConfig: newBaseConfig(),
+		LogLevel: MustParseLogLevel(os.MustGetEnv("LOG_LEVEL", "INFO")),
 		ServiceAccount: os.MustGetEnv(
 			"KARGO_CONTROLLER_SERVICE_ACCOUNT",
 			"",
