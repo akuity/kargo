@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -94,43 +93,6 @@ func TestMustParseDuration(t *testing.T) {
 				})
 			} else {
 				require.Equal(t, ts.Expected, MustParseDuration(ts.Input))
-			}
-		})
-	}
-}
-
-func TestMustParseLogLevel(t *testing.T) {
-	t.Parallel()
-	testSets := map[string]struct {
-		Input     string
-		Expected  logrus.Level
-		MustPanic bool
-	}{
-		"lower case": {
-			Input:    "warn",
-			Expected: logrus.WarnLevel,
-		},
-		"upper case": {
-			Input:    "DEBUG",
-			Expected: logrus.DebugLevel,
-		},
-		"mixed case": {
-			Input:    "Info",
-			Expected: logrus.InfoLevel,
-		},
-		"invalid level": {
-			Input:     "Bogus",
-			MustPanic: true,
-		},
-	}
-	for name, ts := range testSets {
-		t.Run(name, func(t *testing.T) {
-			if ts.MustPanic {
-				require.Panics(t, func() {
-					_ = MustParseLogLevel(ts.Input)
-				})
-			} else {
-				require.Equal(t, ts.Expected, MustParseLogLevel(ts.Input))
 			}
 		})
 	}

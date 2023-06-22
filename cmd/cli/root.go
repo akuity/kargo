@@ -41,7 +41,6 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 				}
 				ctx = context.WithValue(ctx, localServerListenerKey{}, l)
 				srv, err := api.NewServer(config.APIConfig{
-					LogLevel:  cfg.LogLevel,
 					LocalMode: true,
 				}, rc)
 				if err != nil {

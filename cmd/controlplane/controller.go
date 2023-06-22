@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/environments"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
@@ -150,7 +151,7 @@ func newControllerCommand() *cobra.Command {
 				credentialsDB,
 				bookkeeper.NewService(
 					&bookkeeper.ServiceOptions{
-						LogLevel: bookkeeper.LogLevel(cfg.LogLevel),
+						LogLevel: bookkeeper.LogLevel(logging.LoggerFromContext(ctx).Level),
 					},
 				),
 			); err != nil {

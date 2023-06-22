@@ -3,8 +3,6 @@ package config
 import (
 	"strconv"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 func MustAtoi(s string) int {
@@ -29,12 +27,4 @@ func MustParseDuration(s string) time.Duration {
 		panic(err)
 	}
 	return d
-}
-
-func MustParseLogLevel(s string) logrus.Level {
-	lvl, err := logrus.ParseLevel(s)
-	if err != nil {
-		panic(err)
-	}
-	return lvl
 }
