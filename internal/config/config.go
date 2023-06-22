@@ -69,6 +69,7 @@ type ControllerConfig struct {
 	BaseConfig
 	ArgoCDNamespace                  string
 	ArgoCDCredentialBorrowingEnabled bool
+	ArgoCDPreferInClusterRestConfig  bool
 }
 
 func NewControllerConfig() ControllerConfig {
@@ -77,6 +78,10 @@ func NewControllerConfig() ControllerConfig {
 		ArgoCDNamespace: os.MustGetEnv("ARGOCD_NAMESPACE", "argocd"),
 		ArgoCDCredentialBorrowingEnabled: os.MustGetEnvAsBool(
 			"ARGOCD_ENABLE_CREDENTIAL_BORROWING",
+			false,
+		),
+		ArgoCDPreferInClusterRestConfig: os.MustGetEnvAsBool(
+			"ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG",
 			false,
 		),
 	}
