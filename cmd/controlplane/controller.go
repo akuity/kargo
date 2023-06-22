@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strings"
 	"sync"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -11,9 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/akuity/bookkeeper"
@@ -200,29 +197,4 @@ func newControllerCommand() *cobra.Command {
 			}
 		},
 	}
-}
-
-func getRestConfig(
-	cfgCtx string,
-	preferInClusterCfg bool,
-) (*rest.Config, error) {
-	var cfg *rest.Config
-	var err error
-	if preferInClusterCfg {
-		if cfg, err = rest.InClusterConfig(); err != nil {
-			return nil, errors.Wrapf(err, "error loading in-cluster rest config")
-		}
-		return cfg, nil
-	}
-	if cfg, err = config.GetConfigWithContext(cfgCtx); err != nil {
-		if strings.Contains(err.Error(), "does not exist") {
-			if cfg, err = config.GetConfig(); err != nil {
-				return nil, errors.Wrapf(err, "error loading default rest config")
-			}
-			return cfg, nil
-		}
-		return nil,
-			errors.Wrapf(err, "error loading rest config for context %q", cfgCtx)
-	}
-	return cfg, nil
 }
