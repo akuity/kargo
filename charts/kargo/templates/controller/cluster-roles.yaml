@@ -59,21 +59,21 @@ metadata:
     {{- include "kargo.controller.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-    - ""
+  - ""
   resources:
-    - configmaps
-    - secrets
+  - configmaps
+  - secrets
   verbs:
-    - get
-    - list
-    - watch
+  - get
+  - list
+  - watch
 - apiGroups:
-    - argoproj.io
+  - argoproj.io
   resources:
-    - applications
+  - applications
   verbs:
-    - get
-    - list
-    - patch
-    - watch
+  - get
+  - list
+  - patch
+  - watch
 {{- end }}

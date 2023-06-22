@@ -27,7 +27,7 @@ roleRef:
   kind: ClusterRole
   name: {{ include "kargo.controller.fullname" . }}-argocd
 subjects:
-  - kind: ServiceAccount
-    namespace: {{ .Release.Namespace }}
-    name: {{ include "kargo.controller.fullname" . }}
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: {{ include "kargo.controller.fullname" . }}
 {{- end }}
