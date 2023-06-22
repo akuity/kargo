@@ -124,7 +124,7 @@ func newControllerCommand() *cobra.Command {
 				}
 			}
 
-			argoMgrForCreds := argoMgr
+			argoMgrForCreds := appMgr
 			if !cfg.ArgoCDCredentialBorrowingEnabled {
 				argoMgrForCreds = nil
 			}
