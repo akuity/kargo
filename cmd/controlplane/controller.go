@@ -216,7 +216,7 @@ func getRestConfig(
 	}
 	if cfg, err = config.GetConfigWithContext(cfgCtx); err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
-			if cfg, err = rest.InClusterConfig(); err != nil {
+			if cfg, err = config.GetConfig(); err != nil {
 				return nil, errors.Wrapf(err, "error loading default rest config")
 			}
 			return cfg, nil
