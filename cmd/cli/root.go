@@ -63,18 +63,11 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 					return errors.Wrap(err, "start local server")
 				}
 				ctx = context.WithValue(ctx, localServerListenerKey{}, l)
-				srv, err := api.NewServer(
-					kubeClient,
-					libConfig.APIConfig{
-						LocalMode: true,
-					},
-				)
+				srv, err := api.NewServer(kubeClient, libConfig.APIConfig{})
 				if err != nil {
 					return errors.Wrap(err, "new api server")
 				}
-				go func() {
-					_ = srv.Serve(ctx, l)
-				}()
+				go srv.Serve(ctx, l, true)
 				opt.ServerURL = fmt.Sprintf("http://%s", l.Addr())
 			} else {
 				cred, err := kubeclient.GetCredential(ctx, restCfg)

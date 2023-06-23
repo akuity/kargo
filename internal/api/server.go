@@ -31,7 +31,7 @@ type server struct {
 }
 
 type Server interface {
-	Serve(ctx context.Context, l net.Listener) error
+	Serve(ctx context.Context, l net.Listener, localMode bool) error
 }
 
 func NewServer(kc client.Client, cfg config.APIConfig) (Server, error) {
@@ -41,11 +41,15 @@ func NewServer(kc client.Client, cfg config.APIConfig) (Server, error) {
 	}, nil
 }
 
-func (s *server) Serve(ctx context.Context, l net.Listener) error {
+func (s *server) Serve(
+	ctx context.Context,
+	l net.Listener,
+	localMode bool,
+) error {
 	log := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	opts := option.NewHandlerOption(ctx, s.cfg)
+	opts := option.NewHandlerOption(ctx, localMode)
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)

@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	libConfig "github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/os"
 )
 
 func newAPICommand() *cobra.Command {
@@ -57,14 +58,19 @@ func newAPICommand() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "new api server")
 			}
-			l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.Host, cfg.Port))
+			l, err := net.Listen(
+				"tcp",
+				fmt.Sprintf(
+					"%s:%s",
+					os.GetEnv("HOST", "0.0.0.0"),
+					os.GetEnv("PORT", "8080"),
+				),
+			)
 			if err != nil {
 				return errors.Wrap(err, "new listener")
 			}
-			defer func() {
-				_ = l.Close()
-			}()
-			return srv.Serve(cmd.Context(), l)
+			defer l.Close()
+			return srv.Serve(cmd.Context(), l, false)
 		},
 	}
 }
