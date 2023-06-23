@@ -15,13 +15,13 @@ import (
 
 	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
-	libConfig "github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/controller/applications"
 	"github.com/akuity/kargo/internal/controller/environments"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
@@ -85,7 +85,7 @@ func newControllerCommand() *cobra.Command {
 			{
 				restCfg, err := getRestConfig(
 					"argo",
-					libConfig.MustParseBool(
+					types.MustParseBool(
 						os.GetEnv("ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG", "false"),
 					),
 				)
@@ -126,7 +126,7 @@ func newControllerCommand() *cobra.Command {
 			}
 
 			argoMgrForCreds := appMgr
-			if !libConfig.MustParseBool(
+			if !types.MustParseBool(
 				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
 			) {
 				argoMgrForCreds = nil

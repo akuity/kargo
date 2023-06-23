@@ -1,8 +1,6 @@
-package config
+package types
 
-import (
-	"strconv"
-)
+import "strconv"
 
 func MustParseBool(s string) bool {
 	b, err := strconv.ParseBool(s)
