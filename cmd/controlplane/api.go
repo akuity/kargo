@@ -51,7 +51,7 @@ func newAPICommand() *cobra.Command {
 				}
 			}
 
-			srv, err := api.NewServer(kubeClient, api.NewServerConfig())
+			srv, err := api.NewServer(kubeClient, api.ServerConfigFromEnv())
 			if err != nil {
 				return errors.Wrap(err, "error creating API server")
 			}

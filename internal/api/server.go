@@ -8,6 +8,7 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	grpchealth "github.com/bufbuild/connect-grpchealth-go"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -15,9 +16,7 @@ import (
 
 	"github.com/akuity/kargo/internal/api/handler"
 	"github.com/akuity/kargo/internal/api/option"
-	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/os"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -27,15 +26,13 @@ var (
 )
 
 type ServerConfig struct {
-	GracefulShutdownTimeout time.Duration
+	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
 }
 
-func NewServerConfig() ServerConfig {
-	return ServerConfig{
-		GracefulShutdownTimeout: config.MustParseDuration(
-			os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s"),
-		),
-	}
+func ServerConfigFromEnv() ServerConfig {
+	cfg := ServerConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
 }
 
 type server struct {

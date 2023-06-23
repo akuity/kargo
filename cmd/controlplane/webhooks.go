@@ -60,7 +60,7 @@ func newWebhooksServerCommand() *cobra.Command {
 			if err = promotions.SetupWebhookWithManager(
 				ctx,
 				mgr,
-				promotions.NewWebhooksConfig(),
+				promotions.WebhookConfigFromEnv(),
 			); err != nil {
 				return errors.Wrap(err, "error initializing Promotion webhooks")
 			}

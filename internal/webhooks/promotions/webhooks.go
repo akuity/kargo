@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -18,25 +19,17 @@ import (
 
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/os"
 )
 
 type WebhookConfig struct {
-	ControllerServiceAccount          string
-	ControllerServiceAccountNamespace string
+	ControllerServiceAccount          string `envconfig:"KARGO_CONTROLLER_SERVICE_ACCOUNT" default:"kargo-controller"`
+	ControllerServiceAccountNamespace string `envconfig:"KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE" default:"kargo"`
 }
 
-func NewWebhooksConfig() WebhookConfig {
-	return WebhookConfig{
-		ControllerServiceAccount: os.MustGetEnv(
-			"KARGO_CONTROLLER_SERVICE_ACCOUNT",
-			"",
-		),
-		ControllerServiceAccountNamespace: os.MustGetEnv(
-			"KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE",
-			"",
-		),
-	}
+func WebhookConfigFromEnv() WebhookConfig {
+	cfg := WebhookConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
 }
 
 type webhook struct {
