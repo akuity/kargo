@@ -66,7 +66,7 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 				if err != nil {
 					return errors.Wrap(err, "new api server")
 				}
-				go srv.Serve(ctx, l, true)
+				go srv.Serve(ctx, l, true) // nolint: errcheck
 				opt.ServerURL = fmt.Sprintf("http://%s", l.Addr())
 			} else {
 				cred, err := kubeclient.GetCredential(ctx, restCfg)
