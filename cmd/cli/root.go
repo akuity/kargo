@@ -17,7 +17,6 @@ import (
 	apioption "github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/cli/env"
 	"github.com/akuity/kargo/internal/cli/option"
-	libConfig "github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
@@ -63,7 +62,7 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 					return errors.Wrap(err, "start local server")
 				}
 				ctx = context.WithValue(ctx, localServerListenerKey{}, l)
-				srv, err := api.NewServer(kubeClient, libConfig.APIConfig{})
+				srv, err := api.NewServer(kubeClient, api.ServerConfig{})
 				if err != nil {
 					return errors.Wrap(err, "new api server")
 				}

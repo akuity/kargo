@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/os"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -25,8 +26,20 @@ var (
 	_ svcv1alpha1connect.KargoServiceHandler = &server{}
 )
 
+type ServerConfig struct {
+	GracefulShutdownTimeout time.Duration
+}
+
+func NewServerConfig() ServerConfig {
+	return ServerConfig{
+		GracefulShutdownTimeout: config.MustParseDuration(
+			os.MustGetEnv("GRACEFUL_SHUTDOWN_TIMEOUT", "30s"),
+		),
+	}
+}
+
 type server struct {
-	cfg config.APIConfig
+	cfg ServerConfig
 	kc  client.Client
 }
 
@@ -34,7 +47,7 @@ type Server interface {
 	Serve(ctx context.Context, l net.Listener, localMode bool) error
 }
 
-func NewServer(kc client.Client, cfg config.APIConfig) (Server, error) {
+func NewServer(kc client.Client, cfg ServerConfig) (Server, error) {
 	return &server{
 		cfg: cfg,
 		kc:  kc,

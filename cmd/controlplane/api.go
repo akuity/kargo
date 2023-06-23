@@ -14,7 +14,6 @@ import (
 
 	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	libConfig "github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 )
@@ -52,11 +51,9 @@ func newAPICommand() *cobra.Command {
 				}
 			}
 
-			cfg := libConfig.NewAPIConfig()
-
-			srv, err := api.NewServer(kubeClient, cfg)
+			srv, err := api.NewServer(kubeClient, api.NewServerConfig())
 			if err != nil {
-				return errors.Wrap(err, "new api server")
+				return errors.Wrap(err, "error creating API server")
 			}
 			l, err := net.Listen(
 				"tcp",
@@ -67,7 +64,7 @@ func newAPICommand() *cobra.Command {
 				),
 			)
 			if err != nil {
-				return errors.Wrap(err, "new listener")
+				return errors.Wrap(err, "error creating listener")
 			}
 			defer l.Close()
 			return srv.Serve(cmd.Context(), l, false)
