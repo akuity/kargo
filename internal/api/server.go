@@ -8,18 +8,14 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	grpchealth "github.com/bufbuild/connect-grpchealth-go"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/handler"
 	"github.com/akuity/kargo/internal/api/option"
-	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/logging"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -29,40 +25,41 @@ var (
 	_ svcv1alpha1connect.KargoServiceHandler = &server{}
 )
 
+type ServerConfig struct {
+	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
+}
+
+func ServerConfigFromEnv() ServerConfig {
+	cfg := ServerConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 type server struct {
-	cfg config.APIConfig
+	cfg ServerConfig
 	kc  client.Client
 }
 
 type Server interface {
-	Serve(ctx context.Context, l net.Listener) error
+	Serve(ctx context.Context, l net.Listener, localMode bool) error
 }
 
-func NewServer(cfg config.APIConfig, rc *rest.Config) (Server, error) {
-	scheme := runtime.NewScheme()
-	if err := corev1.AddToScheme(scheme); err != nil {
-		return nil, errors.Wrap(err, "add core api to scheme")
-	}
-	if err := kubev1alpha1.AddToScheme(scheme); err != nil {
-		return nil, errors.Wrap(err, "add kargo api to scheme")
-	}
-	kc, err := client.New(rc, client.Options{
-		Scheme: scheme,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "new client")
-	}
+func NewServer(kc client.Client, cfg ServerConfig) (Server, error) {
 	return &server{
 		cfg: cfg,
 		kc:  kc,
 	}, nil
 }
 
-func (s *server) Serve(ctx context.Context, l net.Listener) error {
+func (s *server) Serve(
+	ctx context.Context,
+	l net.Listener,
+	localMode bool,
+) error {
 	log := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	opts := option.NewHandlerOption(s.cfg, log)
+	opts := option.NewHandlerOption(ctx, localMode)
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)

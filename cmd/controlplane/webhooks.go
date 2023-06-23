@@ -9,7 +9,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
-	libConfig "github.com/akuity/kargo/internal/config"
 	versionpkg "github.com/akuity/kargo/internal/version"
 	"github.com/akuity/kargo/internal/webhooks/environments"
 	"github.com/akuity/kargo/internal/webhooks/promotions"
@@ -29,8 +28,6 @@ func newWebhooksServerCommand() *cobra.Command {
 				"version": version.Version,
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo Webhooks Server")
-
-			webhooksCfg := libConfig.NewWebhooksConfig()
 
 			restCfg, err := getRestConfig("kargo", false)
 			if err != nil {
@@ -60,8 +57,11 @@ func newWebhooksServerCommand() *cobra.Command {
 			if err = environments.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "error initializing Environment webhooks")
 			}
-			if err =
-				promotions.SetupWebhookWithManager(ctx, mgr, webhooksCfg); err != nil {
+			if err = promotions.SetupWebhookWithManager(
+				ctx,
+				mgr,
+				promotions.WebhookConfigFromEnv(),
+			); err != nil {
 				return errors.Wrap(err, "error initializing Promotion webhooks")
 			}
 

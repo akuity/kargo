@@ -71,6 +71,7 @@ require (
 	github.com/bufbuild/connect-go v1.7.0
 	github.com/bufbuild/connect-grpchealth-go v1.0.0
 	github.com/cosmos/gogoproto v1.4.10
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	gopkg.in/yaml.v3 v3.0.1

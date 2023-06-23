@@ -15,11 +15,13 @@ import (
 
 	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
-	libConfig "github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/controller/applications"
 	"github.com/akuity/kargo/internal/controller/environments"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
@@ -37,8 +39,6 @@ func newControllerCommand() *cobra.Command {
 				"version": version.Version,
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo Controller")
-
-			cfg := libConfig.NewControllerConfig()
 
 			var kargoMgr manager.Manager
 			{
@@ -83,8 +83,12 @@ func newControllerCommand() *cobra.Command {
 
 			var appMgr manager.Manager
 			{
-				restCfg, err :=
-					getRestConfig("argo", cfg.ArgoCDPreferInClusterRestConfig)
+				restCfg, err := getRestConfig(
+					"argo",
+					types.MustParseBool(
+						os.GetEnv("ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG", "false"),
+					),
+				)
 				if err != nil {
 					return errors.Wrap(
 						err,
@@ -122,12 +126,14 @@ func newControllerCommand() *cobra.Command {
 			}
 
 			argoMgrForCreds := appMgr
-			if !cfg.ArgoCDCredentialBorrowingEnabled {
+			if !types.MustParseBool(
+				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
+			) {
 				argoMgrForCreds = nil
 			}
 			credentialsDB, err := credentials.NewKubernetesDatabase(
 				ctx,
-				cfg.ArgoCDNamespace,
+				os.GetEnv("ARGOCD_NAMESPACE", "argocd"),
 				kargoMgr,
 				argoMgrForCreds,
 			)
@@ -150,7 +156,7 @@ func newControllerCommand() *cobra.Command {
 				credentialsDB,
 				bookkeeper.NewService(
 					&bookkeeper.ServiceOptions{
-						LogLevel: bookkeeper.LogLevel(cfg.LogLevel),
+						LogLevel: bookkeeper.LogLevel(logging.LoggerFromContext(ctx).Level),
 					},
 				),
 			); err != nil {
