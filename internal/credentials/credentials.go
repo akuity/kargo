@@ -2,18 +2,14 @@ package credentials
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/argoproj/argo-cd/v2/applicationset/utils"
 	"github.com/argoproj/argo-cd/v2/common"
 	"github.com/argoproj/argo-cd/v2/util/git"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
@@ -28,10 +24,6 @@ const (
 	TypeHelm Type = "helm"
 	// TypeImage represents credentials for an image repository.
 	TypeImage Type = "image"
-
-	// secretsByRepo is the name of the index that credentialsDB uses for indexing
-	// credentials stored in Kubernetes Secrets by repository type + URL.
-	secretsByRepo = "repo"
 
 	kargoSecretTypeLabel = "kargo.akuity.io/secret-type" // nolint: gosec
 )
@@ -74,94 +66,15 @@ type kubernetesDatabase struct {
 // carries out the important task of indexing Credentials stored in Kubernetes
 // Secrets by repository type + URL.
 func NewKubernetesDatabase(
-	ctx context.Context,
 	argoCDNamespace string,
-	kargoMgr manager.Manager,
-	argoMgr manager.Manager,
-) (Database, error) {
-	k := &kubernetesDatabase{
+	kargoClient client.Client,
+	argoClient client.Client,
+) Database {
+	return &kubernetesDatabase{
 		argoCDNamespace: argoCDNamespace,
-		kargoClient:     kargoMgr.GetClient(),
+		kargoClient:     kargoClient,
+		argoClient:      argoClient,
 	}
-	if argoMgr != nil {
-		k.argoClient = argoMgr.GetClient()
-	}
-	if err := kargoMgr.GetFieldIndexer().IndexField(
-		ctx,
-		&corev1.Secret{},
-		secretsByRepo,
-		k.index,
-	); err != nil {
-		return k, errors.Wrap(err, "error indexing Secrets by repo")
-	}
-	if argoMgr != nil && argoMgr != kargoMgr {
-		if err := argoMgr.GetFieldIndexer().IndexField(
-			ctx,
-			&corev1.Secret{},
-			secretsByRepo,
-			k.index,
-		); err != nil {
-			return k, errors.Wrap(err, "error indexing Secrets by repo")
-		}
-	}
-	return k, nil
-}
-
-func (k *kubernetesDatabase) index(obj client.Object) []string {
-	secret := obj.(*corev1.Secret) // nolint: forcetypeassert
-	// Refuse to index this secret if it has no labels or data.
-	if secret.Labels == nil || secret.Data == nil {
-		return nil
-	}
-	if secret.Namespace == k.argoCDNamespace {
-		// If the Secret is in Argo CD's namespace, expect that it should be
-		// labeled like an Argo CD Secret. If it isn't refuse to index this
-		// Secret. We're also not interested in indexing Secrets that represent
-		// credential templates, because we will always have to iterate over
-		// such secrets to find what we're looking for anyway.
-		if secType, ok :=
-			secret.Labels[utils.ArgoCDSecretTypeLabel]; !ok ||
-			secType != common.LabelValueSecretTypeRepository {
-			return nil
-		}
-	} else {
-		// If the Secret is in any other namespace, expect that it should be
-		// labeled like a Kargo Secret. If it isn't refuse to index this Secret.
-		// We're also not interested in indexing Secrets that represent
-		// credential templates, because we will always have to iterate over
-		// such secrets to find what we're looking for anyway.
-		if secType, ok := secret.Labels[kargoSecretTypeLabel]; !ok ||
-			secType != common.LabelValueSecretTypeRepository {
-			return nil
-		}
-	}
-	var credsType Type
-	if credsTypeBytes, ok := secret.Data["type"]; ok {
-		credsType = Type(credsTypeBytes)
-	} else {
-		// If not specified, assume these credentials are for a Git repo.
-		credsType = TypeGit
-	}
-	// Refuse to index this Secret if we don't recognize what type of
-	// repository these credentials are supposed to be for.
-	switch credsType {
-	case TypeGit, TypeHelm, TypeImage:
-	default:
-		return nil
-	}
-	var repoURL string
-	if repoURLBytes, ok := secret.Data["url"]; ok {
-		repoURL = string(repoURLBytes)
-		if credsType == TypeGit {
-			// This is important. We don't want the presence or absence of ".git"
-			// at the end of the URL to affect credential lookups.
-			repoURL = git.NormalizeGitURL(string(repoURLBytes))
-		}
-	} else {
-		// No URL. Refuse to index this Secret.
-		return nil
-	}
-	return []string{credsSecretIndexVal(credsType, repoURL)}
 }
 
 func (k *kubernetesDatabase) Get(
@@ -170,11 +83,6 @@ func (k *kubernetesDatabase) Get(
 	credType Type,
 	repoURL string,
 ) (Credentials, bool, error) {
-	if credType == TypeGit {
-		// This is important. We don't want the presence or absence of ".git" at the
-		// end of the URL to affect credential lookups.
-		repoURL = git.NormalizeGitURL(repoURL)
-	}
 	creds := Credentials{}
 
 	var secret *corev1.Secret
@@ -188,33 +96,32 @@ func (k *kubernetesDatabase) Get(
 		labels.Set(map[string]string{
 			kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
 		}).AsSelector(),
-		fields.Set(map[string]string{
-			secretsByRepo: credsSecretIndexVal(credType, repoURL),
-		}).AsSelector(),
+		credType,
+		repoURL,
+		false, // repoURL is not a prefix
 	); err != nil {
 		return creds, false, err
 	}
 
 	if secret == nil {
 		// Check namespace for credentials template
-		if secret, err = getCredentialsTemplateSecret(
+		if secret, err = getCredentialsSecret(
 			ctx,
 			k.kargoClient,
 			namespace,
 			labels.Set(map[string]string{
 				kargoSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
 			}).AsSelector(),
+			credType,
 			repoURL,
+			true, // repoURL is a prefix
 		); err != nil {
 			return creds, false, err
 		}
 	}
 
 	if secret != nil {
-		creds.Username = string(secret.Data["username"])
-		creds.Password = string(secret.Data["password"])
-		creds.SSHPrivateKey = string(secret.Data["sshPrivateKey"])
-		return creds, true, nil
+		return secretToCreds(secret), true, nil
 	}
 
 	if k.argoClient == nil {
@@ -230,23 +137,25 @@ func (k *kubernetesDatabase) Get(
 		labels.Set(map[string]string{
 			utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepository,
 		}).AsSelector(),
-		fields.Set(map[string]string{
-			secretsByRepo: credsSecretIndexVal(credType, repoURL),
-		}).AsSelector(),
+		credType,
+		repoURL,
+		false, // repoURL is not a prefix
 	); err != nil {
 		return creds, false, err
 	}
 
 	if secret == nil {
 		// Check Argo CD's namespace for credentials template
-		if secret, err = getCredentialsTemplateSecret(
+		if secret, err = getCredentialsSecret(
 			ctx,
 			k.argoClient,
 			k.argoCDNamespace,
 			labels.Set(map[string]string{
 				utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
 			}).AsSelector(),
+			credType,
 			repoURL,
+			true, // repoURL is a prefix
 		); err != nil || secret == nil {
 			return creds, false, err
 		}
@@ -266,10 +175,7 @@ func (k *kubernetesDatabase) Get(
 	allowedProjects := strings.Split(allowedProjectsStr, ",")
 	for _, allowedProject := range allowedProjects {
 		if strings.TrimSpace(allowedProject) == namespace {
-			creds.Username = string(secret.Data["username"])
-			creds.Password = string(secret.Data["password"])
-			creds.SSHPrivateKey = string(secret.Data["sshPrivateKey"])
-			return creds, true, nil
+			return secretToCreds(secret), true, nil
 		}
 	}
 
@@ -281,35 +187,16 @@ func getCredentialsSecret(
 	kubeClient client.Client,
 	namespace string,
 	labelSelector labels.Selector,
-	fieldSelector fields.Selector,
-) (*corev1.Secret, error) {
-	secrets := corev1.SecretList{}
-	if err := kubeClient.List(
-		ctx,
-		&secrets,
-		&client.ListOptions{
-			Namespace:     namespace,
-			LabelSelector: labelSelector,
-			FieldSelector: fieldSelector,
-		},
-	); err != nil {
-		return nil, err
-	}
-	if len(secrets.Items) == 0 {
-		return nil, nil
-	}
-	// We know any secret we find has properly formatted data because that was
-	// a condition for indexing it.
-	return &(secrets.Items[0]), nil
-}
-
-func getCredentialsTemplateSecret(
-	ctx context.Context,
-	kubeClient client.Client,
-	namespace string,
-	labelSelector labels.Selector,
+	credType Type,
 	repoURL string,
+	acceptPrefixMatch bool,
 ) (*corev1.Secret, error) {
+	if credType == TypeGit {
+		// This is important. We don't want the presence or absence of ".git" at the
+		// end of the URL to affect credential lookups.
+		repoURL = git.NormalizeGitURL(repoURL)
+	}
+
 	secrets := corev1.SecretList{}
 	if err := kubeClient.List(
 		ctx,
@@ -326,14 +213,28 @@ func getCredentialsTemplateSecret(
 		if secret.Data == nil {
 			continue
 		}
-		if url, ok := secret.Data["url"]; ok &&
-			strings.HasPrefix(repoURL, string(url)) {
+		if typeBytes, ok := secret.Data["type"]; !ok || Type(typeBytes) != credType {
+			continue
+		}
+		urlBytes, ok := secret.Data["url"]
+		if !ok {
+			continue
+		}
+		url := string(urlBytes)
+		if acceptPrefixMatch && strings.HasPrefix(repoURL, url) {
+			return &secret, nil
+		}
+		if !acceptPrefixMatch && git.NormalizeGitURL(url) == repoURL {
 			return &secret, nil
 		}
 	}
 	return nil, nil
 }
 
-func credsSecretIndexVal(credsType Type, repoURL string) string {
-	return fmt.Sprintf("%s:%s", credsType, repoURL)
+func secretToCreds(secret *corev1.Secret) Credentials {
+	return Credentials{
+		Username:      string(secret.Data["username"]),
+		Password:      string(secret.Data["password"]),
+		SSHPrivateKey: string(secret.Data["sshPrivateKey"]),
+	}
 }
