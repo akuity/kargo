@@ -107,11 +107,19 @@ func newControllerCommand() *cobra.Command {
 							"scheme",
 					)
 				}
+
+				var watchNamespace string // Empty string means all namespaces
+				if types.MustParseBool(
+					os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"),
+				) {
+					watchNamespace = os.GetEnv("ARGOCD_NAMESPACE", "argocd")
+				}
 				if appMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
 						Scheme:             scheme,
 						MetricsBindAddress: "0",
+						Namespace:          watchNamespace,
 					},
 				); err != nil {
 					return errors.Wrap(
