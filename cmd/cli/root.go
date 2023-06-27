@@ -7,12 +7,16 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	apioption "github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/cli/env"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
@@ -27,10 +31,28 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 		SilenceUsage:      true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			ctx := buildRootContext(cmd.Context())
-			cfg := config.NewCLIConfig()
-			rc, err := cfg.RESTConfig()
+
+			restCfg, err := config.GetConfig()
 			if err != nil {
-				return errors.Wrap(err, "load kubeconfig")
+				return errors.Wrap(err, "error loading REST config")
+			}
+			var kubeClient client.Client
+			{
+				scheme := runtime.NewScheme()
+				if err = corev1.AddToScheme(scheme); err != nil {
+					return errors.Wrap(err, "error adding Kubernetes core API to scheme")
+				}
+				if err = kargoAPI.AddToScheme(scheme); err != nil {
+					return errors.Wrap(err, "error adding Kargo API to scheme")
+				}
+				if kubeClient, err = client.New(
+					restCfg,
+					client.Options{
+						Scheme: scheme,
+					},
+				); err != nil {
+					return errors.Wrap(err, "error initializing Kubernetes client")
+				}
 			}
 
 			opt.ClientOption = apioption.NewClientOption(opt.UseLocalServer)
@@ -40,19 +62,14 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 					return errors.Wrap(err, "start local server")
 				}
 				ctx = context.WithValue(ctx, localServerListenerKey{}, l)
-				srv, err := api.NewServer(config.APIConfig{
-					BaseConfig: cfg.BaseConfig,
-					LocalMode:  true,
-				}, rc)
+				srv, err := api.NewServer(kubeClient, api.ServerConfig{})
 				if err != nil {
 					return errors.Wrap(err, "new api server")
 				}
-				go func() {
-					_ = srv.Serve(ctx, l)
-				}()
+				go srv.Serve(ctx, l, true) // nolint: errcheck
 				opt.ServerURL = fmt.Sprintf("http://%s", l.Addr())
 			} else {
-				cred, err := kubeclient.GetCredential(ctx, rc)
+				cred, err := kubeclient.GetCredential(ctx, restCfg)
 				if err != nil {
 					return errors.Wrap(err, "get credential")
 				}

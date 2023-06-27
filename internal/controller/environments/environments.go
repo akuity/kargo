@@ -30,6 +30,7 @@ import (
 const (
 	envsByAppIndexField              = "applications"
 	outstandingPromosByEnvIndexField = "environment"
+	promoPoliciesByEnvIndexField     = "environment"
 )
 
 // reconciler reconciles Environment resources.
@@ -149,6 +150,19 @@ func SetupReconcilerWithManager(
 			err,
 			"error indexing non-terminal Promotions by Environment",
 		)
+	}
+
+	// Index PromotionPolicies by Environment
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&api.PromotionPolicy{},
+		promoPoliciesByEnvIndexField,
+		func(obj client.Object) []string {
+			policy := obj.(*api.PromotionPolicy) // nolint: forcetypeassert
+			return []string{policy.Environment}
+		},
+	); err != nil {
+		return errors.Wrap(err, "error indexing PromotionPolicies by Environment")
 	}
 
 	return ctrl.NewControllerManagedBy(kargoMgr).
@@ -422,7 +436,7 @@ func (r *reconciler) sync(
 		&client.ListOptions{
 			Namespace: env.Namespace,
 			FieldSelector: fields.Set(map[string]string{
-				"environment": env.Name,
+				promoPoliciesByEnvIndexField: env.Name,
 			}).AsSelector(),
 		},
 	); err != nil {

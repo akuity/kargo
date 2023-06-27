@@ -14,7 +14,7 @@ var globalLogger *log.Entry
 
 func init() {
 	globalLogger = log.New().WithFields(nil)
-	level, err := log.ParseLevel(os.GetEnv("LOG_LEVEL", "PANIC"))
+	level, err := log.ParseLevel(os.GetEnv("LOG_LEVEL", "INFO"))
 	if err != nil {
 		panic(err)
 	}

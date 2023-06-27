@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/config"
 )
 
 func TestValidateCreate(t *testing.T) {
@@ -602,9 +601,9 @@ func TestIsSubjectAuthorized(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := &webhook{
-				config: config.ControllerConfig{
-					ServiceAccountNamespace: "kargo",
-					ServiceAccount:          "kargo-controller",
+				config: WebhookConfig{
+					ControllerServiceAccountNamespace: "kargo",
+					ControllerServiceAccount:          "kargo-controller",
 				},
 				getSubjectRolesFn: testCase.getSubjectRolesFn,
 			}

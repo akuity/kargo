@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strings"
 	"sync"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -11,18 +10,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
-	libConfig "github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/controller/applications"
 	"github.com/akuity/kargo/internal/controller/environments"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
@@ -41,59 +41,134 @@ func newControllerCommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo Controller")
 
-			cfg := libConfig.NewControllerConfig()
-
-			kargoMgr, argoMgr, err := getMgrs()
-			if err != nil {
-				return errors.Wrap(err, "error getting controller manager")
+			var kargoMgr manager.Manager
+			{
+				restCfg, err := getRestConfig("kargo", false)
+				if err != nil {
+					return errors.Wrap(
+						err,
+						"error loading REST config for Kargo controller manager",
+					)
+				}
+				scheme := runtime.NewScheme()
+				if err = corev1.AddToScheme(scheme); err != nil {
+					return errors.Wrap(
+						err,
+						"error adding Kubernetes core API to Kargo controller manager "+
+							"scheme",
+					)
+				}
+				if err = rbacv1.AddToScheme(scheme); err != nil {
+					return errors.Wrap(
+						err,
+						"error adding Kubernetes RBAC API to Kargo controller manager "+
+							"scheme",
+					)
+				}
+				if err = api.AddToScheme(scheme); err != nil {
+					return errors.Wrap(
+						err,
+						"error adding Kargo API to Kargo controller manager scheme",
+					)
+				}
+				if kargoMgr, err = ctrl.NewManager(
+					restCfg,
+					ctrl.Options{
+						Scheme:             scheme,
+						MetricsBindAddress: "0",
+					},
+				); err != nil {
+					return errors.Wrap(err, "error initializing Kargo controller manager")
+				}
 			}
 
-			if err = environments.SetupWebhookWithManager(kargoMgr); err != nil {
-				return errors.Wrap(err, "error initializing Environment webhooks")
-			}
-			if err =
-				promotions.SetupWebhookWithManager(ctx, kargoMgr, cfg); err != nil {
-				return errors.Wrap(err, "error initializing Environment webhooks")
+			var appMgr manager.Manager
+			{
+				restCfg, err := getRestConfig(
+					"argo",
+					types.MustParseBool(
+						os.GetEnv("ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG", "false"),
+					),
+				)
+				if err != nil {
+					return errors.Wrap(
+						err,
+						"error loading REST config for Argo CD Application controller "+
+							"manager",
+					)
+				}
+				scheme := runtime.NewScheme()
+				if err = corev1.AddToScheme(scheme); err != nil {
+					return errors.Wrap(
+						err,
+						"error adding Kubernetes core API to Argo CD Application "+
+							"controller manager scheme",
+					)
+				}
+				if err = argocd.AddToScheme(scheme); err != nil {
+					return errors.Wrap(
+						err,
+						"error adding Kargo API to Argo CD Application controller manager "+
+							"scheme",
+					)
+				}
+				if appMgr, err = ctrl.NewManager(
+					restCfg,
+					ctrl.Options{
+						Scheme:             scheme,
+						MetricsBindAddress: "0",
+					},
+				); err != nil {
+					return errors.Wrap(
+						err,
+						"error initializing Argo CD Application controller manager",
+					)
+				}
 			}
 
-			credentialsDB, err := credentials.NewKubernetesDatabase(
-				ctx,
-				cfg.ArgoCDNamespace,
-				kargoMgr,
-				argoMgr,
+			var argoClientForCreds client.Client
+			if types.MustParseBool(
+				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
+			) {
+				argoClientForCreds = appMgr.GetClient()
+			}
+			credentialsDB := credentials.NewKubernetesDatabase(
+				os.GetEnv("ARGOCD_NAMESPACE", "argocd"),
+				kargoMgr.GetClient(),
+				argoClientForCreds,
 			)
-			if err != nil {
-				return errors.Wrap(err, "error initializing credentials DB")
-			}
 
 			if err := environments.SetupReconcilerWithManager(
 				ctx,
 				kargoMgr,
-				argoMgr,
+				appMgr,
 				credentialsDB,
 			); err != nil {
 				return errors.Wrap(err, "error setting up Environments reconciler")
 			}
+
 			if err := promotions.SetupReconcilerWithManager(
 				kargoMgr,
-				argoMgr,
+				appMgr,
 				credentialsDB,
 				bookkeeper.NewService(
 					&bookkeeper.ServiceOptions{
-						LogLevel: bookkeeper.LogLevel(cfg.LogLevel),
+						LogLevel: bookkeeper.LogLevel(logging.LoggerFromContext(ctx).Level),
 					},
 				),
 			); err != nil {
 				return errors.Wrap(err, "error setting up Promotions reconciler")
 			}
+
 			if err :=
-				applications.SetupReconcilerWithManager(kargoMgr, argoMgr); err != nil {
+				applications.SetupReconcilerWithManager(kargoMgr, appMgr); err != nil {
 				return errors.Wrap(err, "error setting up Applications reconciler")
 			}
 
 			var errChan = make(chan error)
 
 			wg := sync.WaitGroup{}
+
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -101,15 +176,14 @@ func newControllerCommand() *cobra.Command {
 					errChan <- errors.Wrap(err, "error starting kargo manager")
 				}
 			}()
-			if argoMgr != kargoMgr {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					if err := argoMgr.Start(ctx); err != nil {
-						errChan <- errors.Wrap(err, "error starting argo manager")
-					}
-				}()
-			}
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := appMgr.Start(ctx); err != nil {
+					errChan <- errors.Wrap(err, "error starting argo manager")
+				}
+			}()
 
 			// Adapt wg to a channel that can be used in a select
 			doneCh := make(chan struct{})
@@ -126,119 +200,4 @@ func newControllerCommand() *cobra.Command {
 			}
 		},
 	}
-}
-
-func getMgrs() (manager.Manager, manager.Manager, error) {
-	kargoMgrCfg, argoMgrCfg, err := getMgrConfigs()
-	if err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-
-	kargoMgrScheme, argoMgrScheme, err := getMgrSchemes(kargoMgrCfg, argoMgrCfg)
-	if err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-
-	kargoMgr, err := ctrl.NewManager(
-		kargoMgrCfg,
-		ctrl.Options{
-			Scheme:             kargoMgrScheme,
-			MetricsBindAddress: "0",
-			Port:               9443,
-		},
-	)
-	if err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-
-	var argoMgr manager.Manager
-	if argoMgrScheme == kargoMgrScheme {
-		argoMgr = kargoMgr
-	} else {
-		argoMgr, err = ctrl.NewManager(
-			argoMgrCfg,
-			ctrl.Options{
-				Scheme:             argoMgrScheme,
-				MetricsBindAddress: "0",
-			},
-		)
-		if err != nil {
-			// TODO: Wrap this
-			return nil, nil, err
-		}
-	}
-
-	return kargoMgr, argoMgr, nil
-}
-
-func getMgrSchemes(kargoMgrCfg, argoMgrCfg *rest.Config) (*runtime.Scheme, *runtime.Scheme, error) {
-	kargoMgrScheme := runtime.NewScheme()
-	var argoMgrScheme *runtime.Scheme
-	if argoMgrCfg == kargoMgrCfg {
-		argoMgrScheme = kargoMgrScheme
-	} else {
-		argoMgrScheme = runtime.NewScheme()
-	}
-
-	// Schemes used by the Kargo controller manager
-	if err := corev1.AddToScheme(kargoMgrScheme); err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-	if err := rbacv1.AddToScheme(kargoMgrScheme); err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-	if err := api.AddToScheme(kargoMgrScheme); err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-
-	// Schemes used by the Argo CD controller manager
-	if err := corev1.AddToScheme(argoMgrScheme); err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-	if err := argocd.AddToScheme(argoMgrScheme); err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-
-	return kargoMgrScheme, argoMgrScheme, nil
-}
-
-func getMgrConfigs() (*rest.Config, *rest.Config, error) {
-	const kargoCtx = "kargo"
-	const argoCtx = "argo"
-
-	mgrCfg, err := config.GetConfig()
-	if err != nil {
-		// TODO: Wrap this
-		return nil, nil, err
-	}
-
-	kargoMgrCfg, err := config.GetConfigWithContext(kargoCtx)
-	if err != nil {
-		if strings.Contains(err.Error(), "does not exist") {
-			kargoMgrCfg = mgrCfg
-		} else {
-			// TODO: Wrap this
-			return nil, nil, err
-		}
-	}
-
-	argoMgrCfg, err := config.GetConfigWithContext(argoCtx)
-	if err != nil {
-		if strings.Contains(err.Error(), "does not exist") {
-			argoMgrCfg = mgrCfg
-		} else {
-			// TODO: Wrap this
-			return nil, nil, err
-		}
-	}
-
-	return kargoMgrCfg, argoMgrCfg, nil
 }

@@ -1,10 +1,11 @@
+{{- if .Values.webhooksServer.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "kargo.fullname" . }}-webhook-server
+  name: {{ include "kargo.webhooksServer.fullname" . }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -13,4 +14,5 @@ spec:
     targetPort: 9443
   selector:
     {{- include "kargo.selectorLabels" . | nindent 4 }}
-    {{- include "kargo.controller.labels" . | nindent 4 }}
+    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+{{- end }}

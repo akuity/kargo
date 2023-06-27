@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -17,13 +18,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/logging"
 )
 
+type WebhookConfig struct {
+	ControllerServiceAccount          string `envconfig:"KARGO_CONTROLLER_SERVICE_ACCOUNT" default:"kargo-controller"`
+	ControllerServiceAccountNamespace string `envconfig:"KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE" default:"kargo"`
+}
+
+func WebhookConfigFromEnv() WebhookConfig {
+	cfg := WebhookConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 type webhook struct {
 	client client.Client
-	config config.ControllerConfig
+	config WebhookConfig
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -64,7 +75,7 @@ type webhook struct {
 func SetupWebhookWithManager(
 	ctx context.Context,
 	mgr ctrl.Manager,
-	config config.ControllerConfig,
+	config WebhookConfig,
 ) error {
 	if err := mgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -297,8 +308,8 @@ func (w *webhook) isSubjectAuthorized(
 
 	// Special logic that always permits operations by Kargo itself
 	if subjectIsServiceAccount &&
-		serviceAccountNamespace == w.config.ServiceAccountNamespace &&
-		serviceAccountName == w.config.ServiceAccount {
+		serviceAccountNamespace == w.config.ControllerServiceAccountNamespace &&
+		serviceAccountName == w.config.ControllerServiceAccount {
 		return true, nil
 	}
 

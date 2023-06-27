@@ -8,7 +8,6 @@ import (
 	"github.com/bufbuild/connect-go"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/akuity/kargo/internal/config"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -22,11 +21,11 @@ func NewClientOption(skipAuth bool) connect.ClientOption {
 	)
 }
 
-func NewHandlerOption(cfg config.APIConfig, logger *log.Entry) connect.HandlerOption {
+func NewHandlerOption(ctx context.Context, localMode bool) connect.HandlerOption {
 	interceptors := []connect.Interceptor{
-		newLogInterceptor(logger, loggingIgnorableMethods),
+		newLogInterceptor(logging.LoggerFromContext(ctx), loggingIgnorableMethods),
 	}
-	if !cfg.LocalMode {
+	if !localMode {
 		interceptors = append(interceptors, newAuthInterceptor())
 	}
 	return connect.WithHandlerOptions(

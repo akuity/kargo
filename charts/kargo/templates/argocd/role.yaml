@@ -1,0 +1,19 @@
+{{- if .Values.controller.argocd.enableCredentialBorrowing }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kargo.controller.fullname" . }}
+  namespace: {{ .Values.controller.argocd.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}

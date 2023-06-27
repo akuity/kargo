@@ -20,7 +20,7 @@ func TestLoggerFromContext(t *testing.T) {
 	// the context.
 	require.NotNil(t, logger)
 	require.IsType(t, &log.Entry{}, logger)
-	require.Equal(t, log.PanicLevel, logger.Logger.Level)
+	require.Equal(t, log.InfoLevel, logger.Logger.Level)
 
 	testLogger := log.New().WithFields(nil)
 	ctx := context.WithValue(context.Background(), loggerContextKey{}, testLogger)

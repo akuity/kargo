@@ -56,12 +56,23 @@ k8s_resource(
   new_name = 'controller',
   labels = ['kargo'],
   objects = [
-    'kargo:mutatingwebhookconfiguration',
-    'kargo:validatingwebhookconfiguration',
     'kargo-controller:clusterrole',
     'kargo-controller:clusterrolebinding',
-    'kargo-controller:serviceaccount',
-    'kargo-webhook-server:certificate'
+    'kargo-controller:serviceaccount'
+  ]
+)
+
+k8s_resource(
+  workload = 'kargo-webhooks-server',
+  new_name = 'webhooks-server',
+  labels = ['kargo'],
+  objects = [
+    'kargo:mutatingwebhookconfiguration',
+    'kargo:validatingwebhookconfiguration',
+    'kargo-webhooks-server:certificate',
+    'kargo-webhooks-server:clusterrole',
+    'kargo-webhooks-server:clusterrolebinding',
+    'kargo-webhooks-server:serviceaccount'
   ]
 )
 
@@ -69,6 +80,7 @@ k8s_resource(
   new_name = 'crds',
   objects = [
     'environments.kargo.akuity.io:customresourcedefinition',
+    'promotionpolicies.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition'
   ],
   labels = ['kargo']

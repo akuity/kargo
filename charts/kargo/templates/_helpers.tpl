@@ -28,6 +28,10 @@ If release name contains chart name it will be used as a full name.
 {{ include "kargo.fullname" . | printf "%s-controller" }}
 {{- end -}}
 
+{{- define "kargo.webhooksServer.fullname" -}}
+{{ include "kargo.fullname" . | printf "%s-webhooks-server" }}
+{{- end -}}
+
 {{/*
 Create image reference as used by resources.
 */}}
@@ -70,6 +74,10 @@ app.kubernetes.io/component: api
 
 {{- define "kargo.controller.labels" -}}
 app.kubernetes.io/component: controller
+{{- end -}}
+
+{{- define "kargo.webhooksServer.labels" -}}
+app.kubernetes.io/component: webhooks-server
 {{- end -}}
 
 {{- define "call-nested" }}

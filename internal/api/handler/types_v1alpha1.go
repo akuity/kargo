@@ -7,6 +7,267 @@ import (
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
+func fromEnvironmentSpecProto(s *v1alpha1.EnvironmentSpec) *kubev1alpha1.EnvironmentSpec {
+	return &kubev1alpha1.EnvironmentSpec{
+		Subscriptions:       fromSubscriptionsProto(s.GetSubscriptions()),
+		PromotionMechanisms: fromPromotionMechanismsProto(s.GetPromotionMechanisms()),
+	}
+}
+
+func fromSubscriptionsProto(s *v1alpha1.Subscriptions) *kubev1alpha1.Subscriptions {
+	if s == nil {
+		return nil
+	}
+	upstreamEnvs := make([]kubev1alpha1.EnvironmentSubscription, len(s.GetUpstreamEnvs()))
+	for idx, env := range s.GetUpstreamEnvs() {
+		upstreamEnvs[idx] = *fromEnvironmentSubscriptionProto(env)
+	}
+	return &kubev1alpha1.Subscriptions{
+		Repos:        fromRepoSubscriptionsProto(s.GetRepos()),
+		UpstreamEnvs: upstreamEnvs,
+	}
+}
+
+func fromRepoSubscriptionsProto(s *v1alpha1.RepoSubscriptions) *kubev1alpha1.RepoSubscriptions {
+	if s == nil {
+		return nil
+	}
+	gitSubscriptions := make([]kubev1alpha1.GitSubscription, len(s.GetGit()))
+	for idx, git := range s.GetGit() {
+		gitSubscriptions[idx] = *fromGitSubscriptionProto(git)
+	}
+	imageSubscriptions := make([]kubev1alpha1.ImageSubscription, len(s.GetImages()))
+	for idx, image := range s.GetImages() {
+		imageSubscriptions[idx] = *fromImageSubscriptionProto(image)
+	}
+	chartSubscriptions := make([]kubev1alpha1.ChartSubscription, len(s.GetCharts()))
+	for idx, chart := range s.GetCharts() {
+		chartSubscriptions[idx] = *fromChartSubscriptionProto(chart)
+	}
+	return &kubev1alpha1.RepoSubscriptions{
+		Git:    gitSubscriptions,
+		Images: imageSubscriptions,
+		Charts: chartSubscriptions,
+	}
+}
+
+func fromGitSubscriptionProto(s *v1alpha1.GitSubscription) *kubev1alpha1.GitSubscription {
+	if s == nil {
+		return nil
+	}
+	return &kubev1alpha1.GitSubscription{
+		RepoURL: s.GetRepoURL(),
+		Branch:  s.GetBranch(),
+	}
+}
+
+func fromImageSubscriptionProto(s *v1alpha1.ImageSubscription) *kubev1alpha1.ImageSubscription {
+	if s == nil {
+		return nil
+	}
+	return &kubev1alpha1.ImageSubscription{
+		RepoURL:          s.GetRepoURL(),
+		UpdateStrategy:   kubev1alpha1.ImageUpdateStrategy(s.GetUpdateStrategy()),
+		SemverConstraint: s.GetSemverConstraint(),
+		AllowTags:        s.GetAllowTags(),
+		IgnoreTags:       s.GetIgnoreTags(),
+		Platform:         s.GetPlatform(),
+	}
+}
+
+func fromChartSubscriptionProto(s *v1alpha1.ChartSubscription) *kubev1alpha1.ChartSubscription {
+	if s == nil {
+		return nil
+	}
+	return &kubev1alpha1.ChartSubscription{
+		RegistryURL:      s.GetRegistryURL(),
+		Name:             s.GetName(),
+		SemverConstraint: s.GetSemverConstraint(),
+	}
+}
+
+func fromPromotionMechanismsProto(m *v1alpha1.PromotionMechanisms) *kubev1alpha1.PromotionMechanisms {
+	if m == nil {
+		return nil
+	}
+	gitUpdates := make([]kubev1alpha1.GitRepoUpdate, len(m.GetGitRepoUpdates()))
+	for idx, git := range m.GetGitRepoUpdates() {
+		gitUpdates[idx] = *fromGitRepoUpdateProto(git)
+	}
+	argoUpdates := make([]kubev1alpha1.ArgoCDAppUpdate, len(m.GetArgoCDAppUpdates()))
+	for idx, argo := range m.GetArgoCDAppUpdates() {
+		argoUpdates[idx] = *fromArgoCDAppUpdatesProto(argo)
+	}
+	return &kubev1alpha1.PromotionMechanisms{
+		GitRepoUpdates:   gitUpdates,
+		ArgoCDAppUpdates: argoUpdates,
+	}
+}
+
+func fromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kubev1alpha1.GitRepoUpdate {
+	if u == nil {
+		return nil
+	}
+	return &kubev1alpha1.GitRepoUpdate{
+		RepoURL:     u.GetRepoURL(),
+		ReadBranch:  u.GetReadBranch(),
+		WriteBranch: u.GetWriteBranch(),
+		Bookkeeper:  fromBookkeeperPromotionMechanismProto(u.GetBookkeeper()),
+		Kustomize:   fromKustomizePromotionMechanismProto(u.GetKustomize()),
+		Helm:        fromHelmPromotionMechanismProto(u.GetHelm()),
+	}
+}
+
+func fromBookkeeperPromotionMechanismProto(
+	m *v1alpha1.BookkeeperPromotionMechanism,
+) *kubev1alpha1.BookkeeperPromotionMechanism {
+	if m == nil {
+		return nil
+	}
+	return &kubev1alpha1.BookkeeperPromotionMechanism{}
+}
+
+func fromKustomizePromotionMechanismProto(
+	m *v1alpha1.KustomizePromotionMechanism,
+) *kubev1alpha1.KustomizePromotionMechanism {
+	if m == nil {
+		return nil
+	}
+	images := make([]kubev1alpha1.KustomizeImageUpdate, len(m.GetImages()))
+	for idx, image := range m.GetImages() {
+		images[idx] = *fromKustomizeImageUpdateProto(image)
+	}
+	return &kubev1alpha1.KustomizePromotionMechanism{
+		Images: images,
+	}
+}
+
+func fromKustomizeImageUpdateProto(u *v1alpha1.KustomizeImageUpdate) *kubev1alpha1.KustomizeImageUpdate {
+	if u == nil {
+		return nil
+	}
+	return &kubev1alpha1.KustomizeImageUpdate{
+		Image: u.GetImage(),
+		Path:  u.GetPath(),
+	}
+}
+
+func fromHelmPromotionMechanismProto(
+	m *v1alpha1.HelmPromotionMechanism,
+) *kubev1alpha1.HelmPromotionMechanism {
+	if m == nil {
+		return nil
+	}
+	images := make([]kubev1alpha1.HelmImageUpdate, len(m.GetImages()))
+	for idx, image := range m.GetImages() {
+		images[idx] = *fromHelmImageUpdateProto(image)
+	}
+	charts := make([]kubev1alpha1.HelmChartDependencyUpdate, len(m.GetCharts()))
+	for idx, chart := range m.GetCharts() {
+		charts[idx] = *fromHelmChartDependencyUpdateProto(chart)
+	}
+	return &kubev1alpha1.HelmPromotionMechanism{
+		Images: images,
+		Charts: charts,
+	}
+}
+
+func fromHelmImageUpdateProto(u *v1alpha1.HelmImageUpdate) *kubev1alpha1.HelmImageUpdate {
+	if u == nil {
+		return nil
+	}
+	return &kubev1alpha1.HelmImageUpdate{
+		Image:          u.GetImage(),
+		ValuesFilePath: u.GetValuesFilePath(),
+		Key:            u.GetKey(),
+		Value:          kubev1alpha1.ImageUpdateValueType(u.GetValue()),
+	}
+}
+
+func fromHelmChartDependencyUpdateProto(
+	u *v1alpha1.HelmChartDependencyUpdate,
+) *kubev1alpha1.HelmChartDependencyUpdate {
+	if u == nil {
+		return nil
+	}
+	return &kubev1alpha1.HelmChartDependencyUpdate{
+		RegistryURL: u.GetRegistryURL(),
+		Name:        u.GetName(),
+		ChartPath:   u.GetChartPath(),
+	}
+}
+
+func fromArgoCDAppUpdatesProto(u *v1alpha1.ArgoCDAppUpdate) *kubev1alpha1.ArgoCDAppUpdate {
+	if u == nil {
+		return nil
+	}
+	sourceUpdates := make([]kubev1alpha1.ArgoCDSourceUpdate, len(u.GetSourceUpdates()))
+	for idx, update := range u.GetSourceUpdates() {
+		sourceUpdates[idx] = *fromArgoCDSourceUpdateProto(update)
+	}
+	return &kubev1alpha1.ArgoCDAppUpdate{
+		AppName:       u.GetAppName(),
+		AppNamespace:  u.GetAppNamespace(),
+		SourceUpdates: sourceUpdates,
+	}
+}
+
+func fromArgoCDSourceUpdateProto(u *v1alpha1.ArgoCDSourceUpdate) *kubev1alpha1.ArgoCDSourceUpdate {
+	if u == nil {
+		return nil
+	}
+	return &kubev1alpha1.ArgoCDSourceUpdate{
+		RepoURL:              u.GetRepoURL(),
+		Chart:                u.GetChart(),
+		UpdateTargetRevision: u.GetUpdateTargetRevision(),
+		Kustomize:            fromArgoCDKustomizeProto(u.GetKustomize()),
+		Helm:                 fromArgoCDHelm(u.GetHelm()),
+	}
+}
+
+func fromArgoCDKustomizeProto(k *v1alpha1.ArgoCDKustomize) *kubev1alpha1.ArgoCDKustomize {
+	if k == nil {
+		return nil
+	}
+	return &kubev1alpha1.ArgoCDKustomize{
+		Images: k.GetImages(),
+	}
+}
+
+func fromArgoCDHelm(h *v1alpha1.ArgoCDHelm) *kubev1alpha1.ArgoCDHelm {
+	if h == nil {
+		return nil
+	}
+	images := make([]kubev1alpha1.ArgoCDHelmImageUpdate, len(h.GetImages()))
+	for idx, image := range h.GetImages() {
+		images[idx] = *fromArgoCDHelmImageUpdateProto(image)
+	}
+	return &kubev1alpha1.ArgoCDHelm{
+		Images: images,
+	}
+}
+
+func fromArgoCDHelmImageUpdateProto(u *v1alpha1.ArgoCDHelmImageUpdate) *kubev1alpha1.ArgoCDHelmImageUpdate {
+	if u == nil {
+		return nil
+	}
+	return &kubev1alpha1.ArgoCDHelmImageUpdate{
+		Image: u.GetImage(),
+		Key:   u.GetKey(),
+		Value: kubev1alpha1.ImageUpdateValueType(u.GetValue()),
+	}
+}
+
+func fromEnvironmentSubscriptionProto(s *v1alpha1.EnvironmentSubscription) *kubev1alpha1.EnvironmentSubscription {
+	if s == nil {
+		return nil
+	}
+	return &kubev1alpha1.EnvironmentSubscription{
+		Name:      s.GetName(),
+		Namespace: s.GetNamespace(),
+	}
+}
+
 func toEnvironmentProto(e kubev1alpha1.Environment) *v1alpha1.Environment {
 	// Status
 	availableStates := make([]*v1alpha1.EnvironmentState, len(e.Status.AvailableStates))
