@@ -27,11 +27,13 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/kargo", "controller"]
         env:
-        {{- if .Values.kubeconfigSecret }}
+        {{- if .Values.kubeconfigSecrets.kargo }}
         - name: KUBECONFIG
-          value: /etc/kargo/kubeconfig/kubeconfig.yaml
-        - name: ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG
-          value: {{ quote .Values.controller.argocd.preferInClusterRestConfig }}
+          value: /etc/kargo/kubeconfigs/kubeconfig.yaml
+        {{- end }}
+        {{- if .Values.kubeconfigSecrets.argocd }}
+        - name: ARGOCD_KUBECONFIG
+          value: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml
         {{- end }}
         - name: ARGOCD_NAMESPACE
           value: {{ .Values.controller.argocd.namespace }}
@@ -39,20 +41,35 @@ spec:
           value: {{ quote .Values.controller.argocd.enableCredentialBorrowing }}
         - name: LOG_LEVEL
           value: {{ .Values.controller.logLevel }}
-        {{- if .Values.kubeconfigSecret }}
+        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         volumeMounts:
-        - mountPath: /etc/kargo/kubeconfig
-          name: kubeconfig
+        - mountPath: /etc/kargo/kubeconfigs
+          name: kubeconfigs
           readOnly: true
         {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
-      {{- if .Values.kubeconfigSecret }}
+      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       volumes:
-      - name: kubeconfig
-        secret:
-          defaultMode: 0644
-          secretName: {{ .Values.kubeconfigSecret }}
+      - name: kubeconfigs
+        projected:
+          sources:
+          {{- if or .Values.kubeconfigSecrets.kargo }}
+          - secret:
+              name: {{ .Values.kubeconfigSecrets.kargo }}
+              items:
+              - key: kubeconfig.yaml
+                path: kubeconfig.yaml
+                mode: 0644
+          {{- end }}
+          {{- if or .Values.kubeconfigSecrets.argocd }}
+          - secret:
+              name: {{ .Values.kubeconfigSecrets.argocd }}
+              items:
+              - key: kubeconfig.yaml
+                path: argocd-kubeconfig.yaml
+                mode: 0644
+          {{- end }}
       {{- end }}
       {{- with .Values.controller.nodeSelector }}
       nodeSelector:

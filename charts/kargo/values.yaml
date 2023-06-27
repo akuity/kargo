@@ -25,15 +25,16 @@ rbac:
   ## in the Kargo-managed cluster.
   installClusterRoleBindings: true
 
-## Optionally point to a Kubernetes Secret in the same namespace as Kargo that
-## contains the full content of a kubeconfig under the key "kubeconfig.yaml".
-## This is a useful method of hosting Kargo in one cluster, but having it manage
-## Environments, Promotions, Argo CD Applications, etc. that live in a second
-## cluster. Note that CRDs, ValidatingWebhookConfigurations, and
-## MutatingWebhookConfigurations will need to be installed manually into the
-## cluster Kargo will be managing. This can be accomplished using the kargo-kit
-## chart.
-# kubeconfigSecret:
+## Optionally point to Kubernetes Secrets containing kubeconfig for a remote
+## Kubernetes cluster hosting Kargo resources and/or a remote Kubernetes cluster
+## hosting Argo CD resources. This is useful for cases where the Kargo
+## controller is running somewhere other than the cluster(s) it is managing. The
+## config for Kargo and Argo CD can be the same, different, or omitted entirely.
+## When omitted, the controller will fall back on in-cluster configuration.
+## In the average case, these settings should be left alone.
+kubeconfigSecrets: {}
+  # kargo:
+  # argocd:
 
 ## All settings for the api component
 api:
@@ -74,15 +75,6 @@ controller:
   argocd:
     ## The namespace into which Argo CD is installed.
     namespace: argocd
-    ## Override for an override -- prefer in-cluster REST configuration for the
-    ## client that will communicate with the Kubernetes API server that hosts
-    ## Argo CD Application resources. This is useful for rare scenarios where
-    ## kubeconfigSecret has been specified for the sake of providing client
-    ## configuration for a REMOTE Kubernetes API server that hosts Kargo
-    ## resources, BUT Argo CD Application resources are hosted on the same
-    ## cluster on which the Kargo controller will run. This setting can
-    ## typically be left alone.
-    preferInClusterRestConfig: false
     ## Specifies whether Kargo may borrow repository credentials (specially
     ## formatted and specially annotated Secrets) from Argo CD.
     enableCredentialBorrowing: true
