@@ -11,6 +11,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/akuity/bookkeeper"
@@ -125,21 +126,17 @@ func newControllerCommand() *cobra.Command {
 				}
 			}
 
-			argoMgrForCreds := appMgr
-			if !types.MustParseBool(
+			var argoClientForCreds client.Client
+			if types.MustParseBool(
 				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
 			) {
-				argoMgrForCreds = nil
+				argoClientForCreds = appMgr.GetClient()
 			}
-			credentialsDB, err := credentials.NewKubernetesDatabase(
-				ctx,
+			credentialsDB := credentials.NewKubernetesDatabase(
 				os.GetEnv("ARGOCD_NAMESPACE", "argocd"),
-				kargoMgr,
-				argoMgrForCreds,
+				kargoMgr.GetClient(),
+				argoClientForCreds,
 			)
-			if err != nil {
-				return errors.Wrap(err, "error initializing credentials DB")
-			}
 
 			if err := environments.SetupReconcilerWithManager(
 				ctx,

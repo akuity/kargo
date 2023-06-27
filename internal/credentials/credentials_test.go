@@ -4,183 +4,117 @@ import (
 	"context"
 	"testing"
 
-	"github.com/argoproj/argo-cd/v2/applicationset/utils"
-	"github.com/argoproj/argo-cd/v2/common"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestIndex(t *testing.T) {
-	testCases := []struct {
-		name           string
-		secret         *corev1.Secret
-		expectedResult []string
-	}{
-		{
-			name: "no labels",
-			secret: &corev1.Secret{
-				Data: make(map[string][]byte),
-			},
-		},
-
-		{
-			name: "no data",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Labels: map[string]string{},
-				},
-			},
-		},
-
-		{
-			name: "secret in Argo CD namespace not labeled",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "argo-cd",
-					Labels:    map[string]string{},
-				},
-				Data: map[string][]byte{},
-			},
-		},
-
-		{
-			name: "secret in Argo CD namespace not labeled as a repo",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "argo-cd",
-					Labels: map[string]string{
-						utils.ArgoCDSecretTypeLabel: "bogus",
-					},
-				},
-				Data: map[string][]byte{},
-			},
-		},
-
-		{
-			name: "secret in other namespace not labeled",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Labels:    map[string]string{},
-				},
-				Data: map[string][]byte{},
-			},
-		},
-
-		{
-			name: "secret in other namespace not labeled as a repo",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Labels: map[string]string{
-						kargoSecretTypeLabel: "bogus",
-					},
-				},
-				Data: map[string][]byte{},
-			},
-		},
-
-		{
-			name: "credentials type is invalid",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Labels: map[string]string{
-						kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
-					},
-				},
-				Data: map[string][]byte{
-					"type": []byte("bogus"),
-				},
-			},
-		},
-
-		{
-			name: "URL is missing",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Labels: map[string]string{
-						kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
-					},
-				},
-				Data: map[string][]byte{},
-			},
-		},
-
-		{
-			name: "URL is missing",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Labels: map[string]string{
-						kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
-					},
-				},
-				Data: map[string][]byte{},
-			},
-			expectedResult: nil,
-		},
-
-		{
-			name: "success",
-			secret: &corev1.Secret{
-				ObjectMeta: v1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Labels: map[string]string{
-						kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
-					},
-				},
-				Data: map[string][]byte{
-					"url": []byte("fake-url"),
-				},
-			},
-			expectedResult: []string{"git:fake-url"},
-		},
-	}
-	credsDB := &kubernetesDatabase{
-		argoCDNamespace: "argo-cd",
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, testCase.expectedResult, credsDB.index(testCase.secret))
-		})
-	}
+func TestNewKubernetesDatabase(t *testing.T) {
+	const testArgoCDNameSpace = "argocd"
+	testClient := fake.NewClientBuilder().Build()
+	d := NewKubernetesDatabase(testArgoCDNameSpace, testClient, testClient)
+	require.NotNil(t, d)
+	k, ok := d.(*kubernetesDatabase)
+	require.True(t, ok)
+	require.Equal(t, testArgoCDNameSpace, k.argoCDNamespace)
+	require.Same(t, testClient, k.kargoClient)
+	require.Same(t, testClient, k.argoClient)
 }
 
 func TestGetCredentialsSecret(t *testing.T) {
+	const testNamespace = "fake-namespace"
+	const testURLPrefix = "https://github.com/example"
+	const testURL = testURLPrefix + "/example.git"
+	const bogusTestURL = "https://github.com/bogus/bogus.git"
+	testClient := fake.NewClientBuilder().WithObjects(
+		&corev1.Secret{ // Should never match because it has no data
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "creds-0",
+				Namespace: testNamespace,
+			},
+		},
+		&corev1.Secret{ // Should never match because its the wrong type of repo
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "creds-1",
+				Namespace: testNamespace,
+			},
+			Data: map[string][]byte{
+				"type": []byte(TypeImage),
+				"url":  []byte(testURL),
+			},
+		},
+		&corev1.Secret{ // Should never match because its missing the url field
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "creds-2",
+				Namespace: testNamespace,
+			},
+			Data: map[string][]byte{
+				"type": []byte(TypeGit),
+			},
+		},
+		&corev1.Secret{ // Should be an exact match
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "creds-3",
+				Namespace: testNamespace,
+			},
+			Data: map[string][]byte{
+				"type": []byte(TypeGit),
+				"url":  []byte(testURL),
+			},
+		},
+		&corev1.Secret{ // Should be a prefix match
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "creds-4",
+				Namespace: testNamespace,
+			},
+			Data: map[string][]byte{
+				"type": []byte(TypeGit),
+				"url":  []byte(testURLPrefix),
+			},
+		},
+	).Build()
 	testCases := []struct {
-		name          string
-		clientBuilder *fake.ClientBuilder
-		assertions    func(*corev1.Secret, error)
+		name              string
+		repoURL           string
+		acceptPrefixMatch bool
+		assertions        func(*corev1.Secret, error)
 	}{
 		{
-			name:          "no secrets found",
-			clientBuilder: fake.NewClientBuilder(),
+			name:              "exact match not found",
+			repoURL:           bogusTestURL,
+			acceptPrefixMatch: false,
 			assertions: func(secret *corev1.Secret, err error) {
 				require.NoError(t, err)
 				require.Nil(t, secret)
 			},
 		},
-
 		{
-			name: "success",
-			clientBuilder: fake.NewClientBuilder().WithObjects(
-				&corev1.Secret{
-					ObjectMeta: v1.ObjectMeta{
-						Name:      "fake-creds",
-						Namespace: "fake-namespace",
-					},
-				},
-			),
+			name:              "exact match found",
+			repoURL:           testURL,
+			acceptPrefixMatch: false,
 			assertions: func(secret *corev1.Secret, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, secret)
-				require.Equal(t, "fake-creds", secret.Name)
+			},
+		},
+		{
+			name:              "prefix match not found",
+			repoURL:           bogusTestURL,
+			acceptPrefixMatch: true,
+			assertions: func(secret *corev1.Secret, err error) {
+				require.NoError(t, err)
+				require.Nil(t, secret)
+			},
+		},
+		{
+			name:              "prefix match found",
+			repoURL:           testURL,
+			acceptPrefixMatch: true,
+			assertions: func(secret *corev1.Secret, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, secret)
 			},
 		},
 	}
@@ -189,78 +123,28 @@ func TestGetCredentialsSecret(t *testing.T) {
 			testCase.assertions(
 				getCredentialsSecret(
 					context.Background(),
-					testCase.clientBuilder.Build(),
-					"fake-namespace",
+					testClient,
+					testNamespace,
 					labels.Everything(),
-					fields.Everything(),
+					TypeGit,
+					testCase.repoURL,
+					testCase.acceptPrefixMatch,
 				),
 			)
 		})
 	}
 }
 
-func TestGetCredentialsTemplateSecret(t *testing.T) {
-	testCases := []struct {
-		name          string
-		clientBuilder *fake.ClientBuilder
-		assertions    func(*corev1.Secret, error)
-	}{
-		{
-			name:          "no secrets found",
-			clientBuilder: fake.NewClientBuilder(),
-			assertions: func(secret *corev1.Secret, err error) {
-				require.NoError(t, err)
-				require.Nil(t, secret)
-			},
-		},
-
-		{
-			name: "success",
-			clientBuilder: fake.NewClientBuilder().WithObjects(
-				&corev1.Secret{
-					ObjectMeta: v1.ObjectMeta{
-						Name:      "wrong-creds-template",
-						Namespace: "fake-namespace",
-					},
-					Data: nil, // No data
-				},
-				&corev1.Secret{
-					ObjectMeta: v1.ObjectMeta{
-						Name:      "another-wrong-creds-template",
-						Namespace: "fake-namespace",
-					},
-					Data: map[string][]byte{
-						"url": []byte("not-a-match"),
-					},
-				},
-				&corev1.Secret{
-					ObjectMeta: v1.ObjectMeta{
-						Name:      "fake-creds-template",
-						Namespace: "fake-namespace",
-					},
-					Data: map[string][]byte{
-						"url": []byte("fake"),
-					},
-				},
-			),
-			assertions: func(secret *corev1.Secret, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, secret)
-				require.Equal(t, "fake-creds-template", secret.Name)
-			},
+func TestSecretToCreds(t *testing.T) {
+	secret := &corev1.Secret{
+		Data: map[string][]byte{
+			"username":      []byte("fake-username"),
+			"password":      []byte("fake-password"),
+			"sshPrivateKey": []byte("fake-ssh-private-key"),
 		},
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				getCredentialsTemplateSecret(
-					context.Background(),
-					testCase.clientBuilder.Build(),
-					"fake-namespace",
-					labels.Everything(),
-					"fake-url",
-				),
-			)
-		})
-	}
+	creds := secretToCreds(secret)
+	require.Equal(t, string(secret.Data["username"]), creds.Username)
+	require.Equal(t, string(secret.Data["password"]), creds.Password)
+	require.Equal(t, string(secret.Data["sshPrivateKey"]), creds.SSHPrivateKey)
 }
