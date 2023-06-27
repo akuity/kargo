@@ -1,16 +1,18 @@
+{{- if .Values.argocd.enableCredentialBorrowing }}
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   name: {{ include "argocd-kit.fullname" . }}-kargo-controller
+  namespace: {{ .Values.argocd.namespace }}
   labels:
     {{- include "argocd-kit.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - argoproj.io
+  - ""
   resources:
-  - applications
+  - secrets
   verbs:
   - get
   - list
-  - patch
   - watch
+{{- end }}
