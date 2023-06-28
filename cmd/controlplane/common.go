@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func getRestConfig(ctx context.Context, path string) (*rest.Config, error) {
