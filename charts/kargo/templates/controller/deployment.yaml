@@ -39,6 +39,8 @@ spec:
           value: {{ .Values.controller.argocd.namespace }}
         - name: ARGOCD_ENABLE_CREDENTIAL_BORROWING
           value: {{ quote .Values.controller.argocd.enableCredentialBorrowing }}
+        - name: ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY
+          value: {{ quote .Values.controller.argocd.watchArgocdNamespaceOnly }}
         - name: LOG_LEVEL
           value: {{ .Values.controller.logLevel }}
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}

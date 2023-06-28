@@ -49,6 +49,7 @@ rules:
   verbs:
   - update
 ---
+{{- if not .Values.controller.argocd.watchArgocdNamespaceOnly }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -66,4 +67,5 @@ rules:
   - list
   - patch
   - watch
+{{- end }}  
 {{- end }}
