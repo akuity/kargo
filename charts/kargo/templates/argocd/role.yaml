@@ -1,4 +1,4 @@
-{{- if .Values.controller.argocd.enableCredentialBorrowing }}
+{{- if or .Values.controller.argocd.watchArgocdNamespaceOnly .Values.controller.argocd.enableCredentialBorrowing }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -8,6 +8,18 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
 rules:
+{{- if or .Values.controller.argocd.watchArgocdNamespaceOnly }}
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+{{- end }}
+{{- if .Values.controller.argocd.enableCredentialBorrowing }}
 - apiGroups:
   - ""
   resources:
@@ -16,4 +28,5 @@ rules:
   - get
   - list
   - watch
+{{- end }}
 {{- end }}
