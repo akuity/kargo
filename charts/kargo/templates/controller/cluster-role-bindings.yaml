@@ -15,6 +15,7 @@ subjects:
   namespace: {{ .Release.Namespace }}
   name: {{ include "kargo.controller.fullname" . }}
 ---
+{{- if not .Values.controller.argocd.watchArgocdNamespaceOnly }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -30,4 +31,5 @@ subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: {{ include "kargo.controller.fullname" . }}
+{{- end }}
 {{- end }}
