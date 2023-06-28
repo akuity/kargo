@@ -43,7 +43,7 @@ func newControllerCommand() *cobra.Command {
 
 			var kargoMgr manager.Manager
 			{
-				restCfg, err := getRestConfig("kargo", false)
+				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,
@@ -84,12 +84,7 @@ func newControllerCommand() *cobra.Command {
 
 			var appMgr manager.Manager
 			{
-				restCfg, err := getRestConfig(
-					"argo",
-					types.MustParseBool(
-						os.GetEnv("ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG", "false"),
-					),
-				)
+				restCfg, err := getRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,
