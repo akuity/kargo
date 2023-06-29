@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	rbacv1 "k8s.io/api/rbac/v1"
+	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -36,8 +36,8 @@ func newWebhooksServerCommand() *cobra.Command {
 			}
 
 			scheme := runtime.NewScheme()
-			if err = rbacv1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "error adding rbacv1 to scheme")
+			if err = authzv1.AddToScheme(scheme); err != nil {
+				return errors.Wrap(err, "error adding authzv1 to scheme")
 			}
 			if err = api.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "error adding Kargo api to scheme")
@@ -58,11 +58,7 @@ func newWebhooksServerCommand() *cobra.Command {
 			if err = environments.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "error initializing Environment webhooks")
 			}
-			if err = promotions.SetupWebhookWithManager(
-				ctx,
-				mgr,
-				promotions.WebhookConfigFromEnv(),
-			); err != nil {
+			if err = promotions.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "error initializing Promotion webhooks")
 			}
 
