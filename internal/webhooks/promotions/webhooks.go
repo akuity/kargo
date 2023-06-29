@@ -150,7 +150,8 @@ func (w *webhook) authorize(
 
 	accessReview := &authzv1.SubjectAccessReview{
 		Spec: authzv1.SubjectAccessReviewSpec{
-			User: req.UserInfo.Username,
+			User:   req.UserInfo.Username,
+			Groups: req.UserInfo.Groups,
 			ResourceAttributes: &authzv1.ResourceAttributes{
 				Group:     api.GroupVersion.Group,
 				Resource:  "environments",
