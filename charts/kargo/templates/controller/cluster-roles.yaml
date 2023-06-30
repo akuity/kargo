@@ -23,6 +23,7 @@ rules:
   - get
   - list
   - patch
+  - promote
   - watch
 - apiGroups:
   - kargo.akuity.io

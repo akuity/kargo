@@ -2,14 +2,10 @@ package promotions
 
 import (
 	"context"
-	"strings"
 
-	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
-	authenticationv1 "k8s.io/api/authentication/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
+	authzv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -21,20 +17,8 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-type WebhookConfig struct {
-	ControllerServiceAccount          string `envconfig:"KARGO_CONTROLLER_SERVICE_ACCOUNT" default:"kargo-controller"`
-	ControllerServiceAccountNamespace string `envconfig:"KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE" default:"kargo"`
-}
-
-func WebhookConfigFromEnv() WebhookConfig {
-	cfg := WebhookConfig{}
-	envconfig.MustProcess("", &cfg)
-	return cfg
-}
-
 type webhook struct {
 	client client.Client
-	config WebhookConfig
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -44,60 +28,22 @@ type webhook struct {
 		action string,
 	) error
 
-	listPoliciesFn func(
-		context.Context,
-		client.ObjectList,
-		...client.ListOption,
-	) error
-
 	admissionRequestFromContextFn func(context.Context) (admission.Request, error)
 
-	isSubjectAuthorizedFn func(
+	createSubjectAccessReviewFn func(
 		context.Context,
-		*api.PromotionPolicy,
-		*api.Promotion,
-		authenticationv1.UserInfo,
-	) (bool, error)
-
-	getSubjectRolesFn func(
-		ctx context.Context,
-		subjectInfo authenticationv1.UserInfo,
-		namespace string,
-	) (map[string]struct{}, error)
-
-	listRoleBindingsFn func(
-		context.Context,
-		client.ObjectList,
-		...client.ListOption,
+		client.Object,
+		...client.CreateOption,
 	) error
 }
 
-func SetupWebhookWithManager(
-	ctx context.Context,
-	mgr ctrl.Manager,
-	config WebhookConfig,
-) error {
-	if err := mgr.GetFieldIndexer().IndexField(
-		ctx,
-		&api.PromotionPolicy{},
-		"environment",
-		func(obj client.Object) []string {
-			policy := obj.(*api.PromotionPolicy) // nolint: forcetypeassert
-			return []string{policy.Environment}
-		},
-	); err != nil {
-		return errors.Wrap(err, "error indexing PromotionPolicies by Environment")
-	}
+func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := &webhook{
 		client: mgr.GetClient(),
-		config: config,
 	}
 	w.authorizeFn = w.authorize
-	w.listPoliciesFn = w.client.List
 	w.admissionRequestFromContextFn = admission.RequestFromContext
-	w.isSubjectAuthorizedFn = w.isSubjectAuthorized
-	w.getSubjectRolesFn = w.getSubjectRoles
-	w.listRoleBindingsFn = w.client.List
+	w.createSubjectAccessReviewFn = w.client.Create
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&api.Promotion{}).
 		WithValidator(w).
@@ -169,12 +115,7 @@ func (w *webhook) ValidateDelete(
 			),
 		)
 	}
-	serviceAccountNamespace, serviceAccountName :=
-		getServiceAccountNamespaceAndName(req.UserInfo.Username)
-	subjectIsServiceAccount := serviceAccountName != ""
-	if subjectIsServiceAccount &&
-		serviceAccountNamespace == "kube-system" &&
-		serviceAccountName == "namespace-controller" {
+	if req.UserInfo.Username == "system:serviceaccount:kube-system:namespace-controller" {
 		return nil
 	}
 
@@ -193,64 +134,6 @@ func (w *webhook) authorize(
 		Resource: "Promotion",
 	}
 
-	policies := api.PromotionPolicyList{}
-	if err := w.listPoliciesFn(
-		ctx,
-		&policies,
-		&client.ListOptions{
-			Namespace: promo.Namespace,
-			FieldSelector: fields.Set(map[string]string{
-				"environment": promo.Spec.Environment,
-			}).AsSelector(),
-		},
-	); err != nil {
-		logger.Error(err)
-		return apierrors.NewForbidden(
-			groupResource,
-			promo.Name,
-			errors.Errorf(
-				"error listing PromotionPolicies associated with "+
-					"Environment %q in namespace %q; refusing to %s Promotion",
-				promo.Spec.Environment,
-				promo.Namespace,
-				action,
-			),
-		)
-	}
-
-	// TODO: Make the behavior for this case configurable?
-	if len(policies.Items) == 0 {
-		return apierrors.NewForbidden(
-			groupResource,
-			promo.Name,
-			errors.Errorf(
-				"no PromotionPolicy associated with "+
-					"Environment %q in namespace %q; refusing to %s Promotion",
-				promo.Spec.Environment,
-				promo.Namespace,
-				action,
-			),
-		)
-	}
-
-	if len(policies.Items) > 1 {
-		return apierrors.NewForbidden(
-			groupResource,
-			promo.Name,
-			errors.Errorf(
-				"found multiple PromotionPolicies associated with "+
-					"Environment %q in namespace %q; refusing to %s Promotion",
-				promo.Spec.Environment,
-				promo.Namespace,
-				action,
-			),
-		)
-	}
-
-	// If we get to here, there's just one PromotionPolicy...
-
-	policy := &policies.Items[0]
-
 	req, err := w.admissionRequestFromContextFn(ctx)
 	if err != nil {
 		logger.Error(err)
@@ -265,27 +148,37 @@ func (w *webhook) authorize(
 		)
 	}
 
-	authorized, err := w.isSubjectAuthorizedFn(ctx, policy, promo, req.UserInfo)
-	if err != nil {
+	accessReview := &authzv1.SubjectAccessReview{
+		Spec: authzv1.SubjectAccessReviewSpec{
+			User:   req.UserInfo.Username,
+			Groups: req.UserInfo.Groups,
+			ResourceAttributes: &authzv1.ResourceAttributes{
+				Group:     api.GroupVersion.Group,
+				Resource:  "environments",
+				Name:      promo.Spec.Environment,
+				Verb:      "promote",
+				Namespace: promo.Namespace,
+			},
+		},
+	}
+	if err := w.createSubjectAccessReviewFn(ctx, accessReview); err != nil {
 		logger.Error(err)
 		return apierrors.NewForbidden(
 			groupResource,
 			promo.Name,
 			errors.Errorf(
-				"error evaluating subject authorities; refusing to %s Promotion",
+				"error creating SubjectAccessReview; refusing to %s Promotion",
 				action,
 			),
 		)
 	}
-	if !authorized {
+
+	if !accessReview.Status.Allowed {
 		return apierrors.NewForbidden(
 			groupResource,
 			promo.Name,
 			errors.Errorf(
-				"PromotionPolicy %q in namespace %q does not permit subject %q to "+
-					"%s Promotions for Environment %q",
-				policy.Name,
-				policy.Namespace,
+				"subject %q is not permitted to %s Promotions for Environment %q",
 				req.UserInfo.Username,
 				action,
 				promo.Spec.Environment,
@@ -294,127 +187,4 @@ func (w *webhook) authorize(
 	}
 
 	return nil
-}
-
-func (w *webhook) isSubjectAuthorized(
-	ctx context.Context,
-	policy *api.PromotionPolicy,
-	promo *api.Promotion,
-	subjectInfo authenticationv1.UserInfo,
-) (bool, error) {
-	serviceAccountNamespace, serviceAccountName :=
-		getServiceAccountNamespaceAndName(subjectInfo.Username)
-	subjectIsServiceAccount := serviceAccountName != ""
-
-	// Special logic that always permits operations by Kargo itself
-	if subjectIsServiceAccount &&
-		serviceAccountNamespace == w.config.ControllerServiceAccountNamespace &&
-		serviceAccountName == w.config.ControllerServiceAccount {
-		return true, nil
-	}
-
-	subjectRoles, err := w.getSubjectRolesFn(ctx, subjectInfo, promo.Namespace)
-	if err != nil {
-		return false, errors.Wrap(err, "error retrieving subject Roles")
-	}
-
-	for _, authorizedPromoter := range policy.AuthorizedPromoters {
-		switch authorizedPromoter.SubjectType {
-		case api.AuthorizedPromoterSubjectTypeUser:
-			if !subjectIsServiceAccount &&
-				subjectInfo.Username == authorizedPromoter.Name {
-				return true, nil
-			}
-		case api.AuthorizedPromoterSubjectTypeServiceAccount:
-			if subjectIsServiceAccount &&
-				serviceAccountName == authorizedPromoter.Name {
-				return true, nil
-			}
-		case api.AuthorizedPromoterSubjectTypeGroup:
-			if subjectHasGroup(subjectInfo, authorizedPromoter.Name) {
-				return true, nil
-			}
-		case api.AuthorizedPromoterSubjectTypeRole:
-			if _, hasRole := subjectRoles[authorizedPromoter.Name]; hasRole {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
-}
-
-func (w *webhook) getSubjectRoles(
-	ctx context.Context,
-	subjectInfo authenticationv1.UserInfo,
-	namespace string,
-) (map[string]struct{}, error) {
-	serviceAccountNamespace, serviceAccountName :=
-		getServiceAccountNamespaceAndName(subjectInfo.Username)
-	subjectIsServiceAccount := serviceAccountName != ""
-
-	roleBindings := rbacv1.RoleBindingList{}
-	if err := w.listRoleBindingsFn(
-		ctx,
-		&roleBindings,
-		&client.ListOptions{
-			Namespace: namespace,
-		},
-	); err != nil {
-		return nil,
-			errors.Wrapf(err, "error listing RoleBindings in namespace %q", namespace)
-	}
-
-	subjectRoles := map[string]struct{}{}
-subjectRolesLoop:
-	for _, roleBinding := range roleBindings.Items {
-		if roleBinding.RoleRef.Kind != "Role" { // Uninterested in ClusterRoles
-			continue
-		}
-		for _, subject := range roleBinding.Subjects {
-			switch subject.Kind {
-			case "User":
-				if !subjectIsServiceAccount && subjectInfo.Username == subject.Name {
-					subjectRoles[roleBinding.RoleRef.Name] = struct{}{}
-					continue subjectRolesLoop
-				}
-			case "ServiceAccount":
-				if subjectIsServiceAccount &&
-					serviceAccountNamespace == subject.Namespace &&
-					serviceAccountName == subject.Name {
-					subjectRoles[roleBinding.RoleRef.Name] = struct{}{}
-					continue subjectRolesLoop
-				}
-			case "Group":
-				if subjectHasGroup(subjectInfo, subject.Name) {
-					subjectRoles[roleBinding.RoleRef.Name] = struct{}{}
-					continue subjectRolesLoop
-				}
-			}
-		}
-	}
-
-	return subjectRoles, nil
-}
-
-func subjectHasGroup(subjectInfo authenticationv1.UserInfo, group string) bool {
-	for _, subjectGroup := range subjectInfo.Groups {
-		if subjectGroup == group {
-			return true
-		}
-	}
-	return false
-}
-
-func getServiceAccountNamespaceAndName(username string) (string, string) {
-	// Usernames for service accounts conform to:
-	//   system:serviceaccount:<namespace>:<name>
-	if !strings.HasPrefix(username, "system:serviceaccount") {
-		return "", ""
-	}
-	parts := strings.Split(username, ":")
-	if len(parts) != 4 {
-		return "", ""
-	}
-	return parts[2], parts[3]
 }

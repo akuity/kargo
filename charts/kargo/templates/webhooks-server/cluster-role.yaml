@@ -8,19 +8,9 @@ metadata:
     {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - rbac.authorization.k8s.io
+  - authorization.k8s.io
   resources:
-  - rolebindings
+  - subjectaccessreviews
   verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - kargo.akuity.io
-  resources:
-  - promotionpolicies
-  verbs:
-  - get
-  - list
-  - watch
+  - create
 {{- end }}

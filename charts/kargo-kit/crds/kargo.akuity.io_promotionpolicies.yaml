@@ -34,35 +34,6 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
-          authorizedPromoters:
-            description: AuthorizedPromoters enumerates subjects (such as users, groups,
-              ServiceAccounts, or RBAC Roles) that are authorized to create Promotions
-              for the Environment referenced by the Environment field.
-            items:
-              description: AuthorizedPromoter identifies a single subject that is
-                authorized to create Promotion resources referencing a particular
-                Environment.
-              properties:
-                name:
-                  description: Name is the name of a subject authorized to create
-                    Promotion resources referencing a particular Environment. This
-                    could be a username, group name, ServiceAccount name, or Role
-                    name.
-                  type: string
-                subjectType:
-                  description: SubjectType identifies the type of subject being authorized
-                    to create Promotion resources referencing a particular Environment.
-                  enum:
-                  - Group
-                  - Role
-                  - ServiceAccount
-                  - User
-                  type: string
-              required:
-              - name
-              - subjectType
-              type: object
-            type: array
           enableAutoPromotion:
             description: 'EnableAutoPromotion indicates whether new EnvironmentStates
               can automatically be promoted into the Environment referenced by the

@@ -326,63 +326,6 @@ export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
 }
 
 /**
- * AuthorizedPromoter identifies a single subject that is authorized to create
- * Promotion resources referencing a particular Environment.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.AuthorizedPromoter
- */
-export class AuthorizedPromoter extends Message<AuthorizedPromoter> {
-  /**
-   * SubjectType identifies the type of subject being authorized to create
-   * Promotion resources referencing a particular Environment.
-   *
-   * +kubebuilder:validation:Required
-   *
-   * @generated from field: optional string subjectType = 1;
-   */
-  subjectType?: string;
-
-  /**
-   * Name is the name of a subject authorized to create Promotion
-   * resources referencing a particular Environment. This could be a username,
-   * group name, ServiceAccount name, or Role name.
-   *
-   * +kubebuilder:validation:Required
-   *
-   * @generated from field: optional string name = 2;
-   */
-  name?: string;
-
-  constructor(data?: PartialMessage<AuthorizedPromoter>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.AuthorizedPromoter";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "subjectType", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuthorizedPromoter {
-    return new AuthorizedPromoter().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AuthorizedPromoter {
-    return new AuthorizedPromoter().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AuthorizedPromoter {
-    return new AuthorizedPromoter().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: AuthorizedPromoter | PlainMessage<AuthorizedPromoter> | undefined, b: AuthorizedPromoter | PlainMessage<AuthorizedPromoter> | undefined): boolean {
-    return proto2.util.equals(AuthorizedPromoter, a, b);
-  }
-}
-
-/**
  * BookkeeperPromotionMechanism describes how to use Bookkeeper to incorporate
  * newly observed materials into an Environment.
  *
@@ -1880,15 +1823,6 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   environment?: string;
 
   /**
-   * AuthorizedPromoters enumerates subjects (such as users, groups,
-   * ServiceAccounts, or RBAC Roles) that are authorized to create Promotions
-   * for the Environment referenced by the Environment field.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.AuthorizedPromoter authorizedPromoters = 3;
-   */
-  authorizedPromoters: AuthorizedPromoter[] = [];
-
-  /**
    * EnableAutoPromotion indicates whether new EnvironmentStates can
    * automatically be promoted into the Environment referenced by the
    * Environment field. Note: There are other conditions also required for an
@@ -1900,7 +1834,7 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
    * upstream Environments. This allows users to define Environments that are
    * automatically updated as soon as new materials are detected.
    *
-   * @generated from field: optional bool enableAutoPromotion = 4;
+   * @generated from field: optional bool enableAutoPromotion = 3;
    */
   enableAutoPromotion?: boolean;
 
@@ -1914,8 +1848,7 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 2, name: "environment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "authorizedPromoters", kind: "message", T: AuthorizedPromoter, repeated: true },
-    { no: 4, name: "enableAutoPromotion", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 3, name: "enableAutoPromotion", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionPolicy {
