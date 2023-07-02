@@ -123,23 +123,6 @@ message ArgoCDSourceUpdate {
   optional ArgoCDHelm helm = 5 [(gogoproto.customname) = "Helm"];
 }
 
-// AuthorizedPromoter identifies a single subject that is authorized to create
-// Promotion resources referencing a particular Environment.
-message AuthorizedPromoter {
-  // SubjectType identifies the type of subject being authorized to create
-  // Promotion resources referencing a particular Environment.
-  //
-  // +kubebuilder:validation:Required
-  optional string subjectType = 1 [(gogoproto.casttype) = "AuthorizedPromoterSubjectType", (gogoproto.customname) = "SubjectType", (gogoproto.nullable) = false];
-
-  // Name is the name of a subject authorized to create Promotion
-  // resources referencing a particular Environment. This could be a username,
-  // group name, ServiceAccount name, or Role name.
-  //
-  // +kubebuilder:validation:Required
-  optional string name = 2 [(gogoproto.customname) = "Name", (gogoproto.nullable) = false];
-}
-
 // BookkeeperPromotionMechanism describes how to use Bookkeeper to incorporate
 // newly observed materials into an Environment.
 message BookkeeperPromotionMechanism {
@@ -608,11 +591,6 @@ message PromotionPolicy {
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
   optional string environment = 2 [(gogoproto.customname) = "Environment", (gogoproto.nullable) = false];
 
-  // AuthorizedPromoters enumerates subjects (such as users, groups,
-  // ServiceAccounts, or RBAC Roles) that are authorized to create Promotions
-  // for the Environment referenced by the Environment field.
-  repeated AuthorizedPromoter authorizedPromoters = 3 [(gogoproto.customname) = "AuthorizedPromoters", (gogoproto.nullable) = false];
-
   // EnableAutoPromotion indicates whether new EnvironmentStates can
   // automatically be promoted into the Environment referenced by the
   // Environment field. Note: There are other conditions also required for an
@@ -623,7 +601,7 @@ message PromotionPolicy {
   // true for Environments that subscribe to repositories instead of other,
   // upstream Environments. This allows users to define Environments that are
   // automatically updated as soon as new materials are detected.
-  optional bool enableAutoPromotion = 4 [(gogoproto.customname) = "EnableAutoPromotion", (gogoproto.nullable) = false];
+  optional bool enableAutoPromotion = 3 [(gogoproto.customname) = "EnableAutoPromotion", (gogoproto.nullable) = false];
 }
 
 // PromotionPolicyList contains a list of PromotionPolicies

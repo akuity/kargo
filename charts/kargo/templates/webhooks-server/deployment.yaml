@@ -31,10 +31,6 @@ spec:
         - name: KUBECONFIG
           value: /etc/kargo/kubeconfigs/kubeconfig.yaml
         {{- end }}
-        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT
-          value: {{ .Values.webhooksServer.controllerServiceAccount.name | default (include "kargo.controller.fullname" .) }}
-        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE
-          value: {{ .Values.webhooksServer.controllerServiceAccount.namespace | default .Release.Namespace }}
         - name: LOG_LEVEL
           value: {{ .Values.webhooksServer.logLevel }}
         ports:
