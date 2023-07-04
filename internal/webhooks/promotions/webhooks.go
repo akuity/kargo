@@ -93,33 +93,8 @@ func (w *webhook) ValidateDelete(
 	ctx context.Context,
 	obj runtime.Object,
 ) error {
-	logger := logging.LoggerFromContext(ctx)
-
-	promo := obj.(*api.Promotion) // nolint: forcetypeassert
-
-	// Special logic for delete only. Allow any delete by the Kubernetes namespace
-	// controller. This prevents the webhook from stopping a namespace from being
-	// cleaned up.
-	req, err := w.admissionRequestFromContextFn(ctx)
-	if err != nil {
-		logger.Error(err)
-		return apierrors.NewForbidden(
-			schema.GroupResource{
-				Group:    api.GroupVersion.Group,
-				Resource: "Promotion",
-			},
-			promo.Name,
-			errors.New(
-				"error retrieving admission request from context; refusing to "+
-					"delete Promotion",
-			),
-		)
-	}
-	if req.UserInfo.Username == "system:serviceaccount:kube-system:namespace-controller" {
-		return nil
-	}
-
-	return w.authorizeFn(ctx, promo, "delete")
+	// nolint: forcetypeassert
+	return w.authorizeFn(ctx, obj.(*api.Promotion), "delete")
 }
 
 func (w *webhook) authorize(
