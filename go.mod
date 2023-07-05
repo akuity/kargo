@@ -197,7 +197,7 @@ require (
 	k8s.io/component-base v0.25.0 // indirect
 	k8s.io/component-helpers v0.24.2 // indirect
 	k8s.io/kube-aggregator v0.24.2 // indirect
-	k8s.io/kubernetes v1.24.14 // indirect
+	k8s.io/kubernetes v1.24.15 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/kustomize/api v0.11.4 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.6 // indirect
