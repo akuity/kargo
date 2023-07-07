@@ -4,9 +4,10 @@ import (
 	"context"
 
 	"github.com/bufbuild/connect-go"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -23,21 +24,17 @@ func ListProjectsV1Alpha1(
 		req *connect.Request[svcv1alpha1.ListProjectsRequest],
 	) (*connect.Response[svcv1alpha1.ListProjectsResponse], error) {
 
-		// Only list projects which contain an Environment
-		var list kubev1alpha1.EnvironmentList
-		if err := kc.List(ctx, &list); err != nil {
+		// Only list namespaces which are labeled as Kargo projects
+		selector := labels.Set{"kargo.akuity.io": "true"}.AsSelector()
+		nsList := &corev1.NamespaceList{}
+		if err := kc.List(ctx, nsList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 
-		var projectMap = make(map[string]bool)
 		var projects []*svcv1alpha1.Project
-		for _, env := range list.Items {
-			if _, ok := projectMap[env.Namespace]; ok {
-				continue
-			}
-			projectMap[env.Namespace] = true
+		for _, ns := range nsList.Items {
 			projects = append(projects, &svcv1alpha1.Project{
-				Name: env.Namespace,
+				Name: ns.Name,
 			})
 		}
 

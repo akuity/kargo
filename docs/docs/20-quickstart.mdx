@@ -181,7 +181,7 @@ from and write to the repository you forked in the previous section.
    export GITHUB_PAT=<your personal access token>
    ```
 
-1. Create namespaces for our three environments, a `Secret` containing
+1. Create Projects for our three environments (a Kargo Project is a Kubernetes Namespace indicated by the `kargo.akuity.io/project` label), a `Secret` containing
    repository credentials, and Argo CD `Application` resources for each
    environment:
 
@@ -191,16 +191,22 @@ from and write to the repository you forked in the previous section.
    kind: Namespace
    metadata:
      name: kargo-demo-test
+     labels:
+      kargo.akuity.io/project: "true"
    ---
    apiVersion: v1
    kind: Namespace
    metadata:
      name: kargo-demo-stage
+     labels:
+      kargo.akuity.io/project: "true"
    ---
    apiVersion: v1
    kind: Namespace
    metadata:
      name: kargo-demo-prod
+     labels:
+      kargo.akuity.io/project: "true"
    ---
    apiVersion: v1
    kind: Secret
@@ -314,6 +320,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: kargo-demo
+  labels:
+    kargo.akuity.io/project: "true"
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: PromotionPolicy
