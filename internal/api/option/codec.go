@@ -6,7 +6,9 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/cosmos/gogoproto/jsonpb"
-	"github.com/cosmos/gogoproto/proto"
+	gogoproto "github.com/cosmos/gogoproto/proto"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -14,9 +16,10 @@ var (
 )
 
 type jsonCodec struct {
-	name string
-	m    *jsonpb.Marshaler
-	u    *jsonpb.Unmarshaler
+	name            string
+	m               *jsonpb.Marshaler
+	gogoUnmarshaler *jsonpb.Unmarshaler
+	unmarshaler     *protojson.UnmarshalOptions
 }
 
 func newJSONCodec(name string) connect.Codec {
@@ -25,7 +28,8 @@ func newJSONCodec(name string) connect.Codec {
 		m: &jsonpb.Marshaler{
 			EmitDefaults: true,
 		},
-		u: &jsonpb.Unmarshaler{},
+		gogoUnmarshaler: &jsonpb.Unmarshaler{},
+		unmarshaler:     &protojson.UnmarshalOptions{},
 	}
 }
 
@@ -34,7 +38,7 @@ func (c *jsonCodec) Name() string {
 }
 
 func (c *jsonCodec) Marshal(msg any) ([]byte, error) {
-	m, ok := msg.(proto.Message)
+	m, ok := msg.(gogoproto.Message)
 	if !ok {
 		return nil, errNotProto(msg)
 	}
@@ -44,11 +48,18 @@ func (c *jsonCodec) Marshal(msg any) ([]byte, error) {
 }
 
 func (c *jsonCodec) Unmarshal(data []byte, msg any) error {
-	m, ok := msg.(proto.Message)
+	gpm, ok := msg.(gogoproto.Message)
 	if !ok {
 		return errNotProto(msg)
 	}
-	return c.u.Unmarshal(bytes.NewReader(data), m)
+	if err := c.gogoUnmarshaler.Unmarshal(bytes.NewReader(data), gpm); err == nil {
+		return nil
+	}
+	pm, ok := msg.(proto.Message)
+	if !ok {
+		return errNotProto(msg)
+	}
+	return c.unmarshaler.Unmarshal(data, pm)
 }
 
 func errNotProto(msg any) error {

@@ -14,18 +14,18 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type CreateStageV1Alpha1Func func(
+type UpdateStageV1Alpha1Func func(
 	context.Context,
-	*connect.Request[svcv1alpha1.CreateStageRequest],
-) (*connect.Response[svcv1alpha1.CreateStageResponse], error)
+	*connect.Request[svcv1alpha1.UpdateStageRequest],
+) (*connect.Response[svcv1alpha1.UpdateStageResponse], error)
 
-func CreateStageV1Alpha1(
+func UpdateStageV1Alpha1(
 	kc client.Client,
-) CreateStageV1Alpha1Func {
+) UpdateStageV1Alpha1Func {
 	return func(
 		ctx context.Context,
-		req *connect.Request[svcv1alpha1.CreateStageRequest],
-	) (*connect.Response[svcv1alpha1.CreateStageResponse], error) {
+		req *connect.Request[svcv1alpha1.UpdateStageRequest],
+	) (*connect.Response[svcv1alpha1.UpdateStageResponse], error) {
 		var stage kubev1alpha1.Stage
 		switch {
 		case req.Msg.GetYaml() != "":
@@ -49,13 +49,18 @@ func CreateStageV1Alpha1(
 		default:
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("environment should not be empty"))
 		}
-		if err := kc.Create(ctx, &stage); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
-				return nil, connect.NewError(connect.CodeAlreadyExists, err)
+
+		var existingStage kubev1alpha1.Stage
+		if err := kc.Get(ctx, client.ObjectKeyFromObject(&stage), &existingStage); err != nil {
+			if kubeerr.IsNotFound(err) {
+				return nil, connect.NewError(connect.CodeNotFound, err)
 			}
+		}
+		stage.SetResourceVersion(existingStage.GetResourceVersion())
+		if err := kc.Update(ctx, &stage); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		return connect.NewResponse(&svcv1alpha1.CreateStageResponse{
+		return connect.NewResponse(&svcv1alpha1.UpdateStageResponse{
 			Stage: toStageProto(stage),
 		}), nil
 	}
