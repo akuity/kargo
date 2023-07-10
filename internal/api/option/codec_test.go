@@ -19,7 +19,7 @@ func TestJsonCodec_MetaV1Time(t *testing.T) {
 
 	firstSeen := metav1.NewTime(in)
 	codec := newJSONCodec("json")
-	data, err := codec.Marshal(&v1alpha1.EnvironmentState{
+	data, err := codec.Marshal(&v1alpha1.StageState{
 		FirstSeen: &firstSeen,
 	})
 	require.NoError(t, err)

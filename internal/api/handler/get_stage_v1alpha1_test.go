@@ -13,27 +13,46 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func TestListEnvironmentsV1Alpha1(t *testing.T) {
+func TestGetStageV1Alpha1(t *testing.T) {
 	testSets := map[string]struct {
-		req          *svcv1alpha1.ListEnvironmentsRequest
+		req          *svcv1alpha1.GetStageRequest
 		errExpected  bool
 		expectedCode connect.Code
 	}{
 		"empty project": {
-			req: &svcv1alpha1.ListEnvironmentsRequest{
+			req: &svcv1alpha1.GetStageRequest{
 				Project: "",
+				Name:    "",
 			},
 			errExpected:  true,
 			expectedCode: connect.CodeInvalidArgument,
 		},
-		"existing project": {
-			req: &svcv1alpha1.ListEnvironmentsRequest{
+		"empty name": {
+			req: &svcv1alpha1.GetStageRequest{
 				Project: "kargo-demo",
+				Name:    "",
+			},
+			errExpected:  true,
+			expectedCode: connect.CodeInvalidArgument,
+		},
+		"existing Stage": {
+			req: &svcv1alpha1.GetStageRequest{
+				Project: "kargo-demo",
+				Name:    "test",
 			},
 		},
 		"non-existing project": {
-			req: &svcv1alpha1.ListEnvironmentsRequest{
+			req: &svcv1alpha1.GetStageRequest{
+				Project: "kargo-x",
+				Name:    "test",
+			},
+			errExpected:  true,
+			expectedCode: connect.CodeNotFound,
+		},
+		"non-existing Stage": {
+			req: &svcv1alpha1.GetStageRequest{
 				Project: "non-existing-project",
+				Name:    "test",
 			},
 			errExpected:  true,
 			expectedCode: connect.CodeNotFound,
@@ -48,22 +67,20 @@ func TestListEnvironmentsV1Alpha1(t *testing.T) {
 				WithScheme(mustNewScheme()).
 				WithObjects(
 					mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+					mustNewObject[kubev1alpha1.Stage]("testdata/stage.yaml"),
 				).
-				WithLists(&kubev1alpha1.EnvironmentList{
-					Items: []kubev1alpha1.Environment{
-						*mustNewObject[kubev1alpha1.Environment]("testdata/environment.yaml"),
-					},
-				}).
 				Build()
 
 			ctx := context.TODO()
-			res, err := ListEnvironmentsV1Alpha1(kc)(ctx, connect.NewRequest(ts.req))
+			res, err := GetStageV1Alpha1(kc)(ctx, connect.NewRequest(ts.req))
 			if ts.errExpected {
 				require.Error(t, err)
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))
 				return
 			}
-			require.Len(t, res.Msg.GetEnvironments(), 1)
+			require.NotNil(t, res.Msg.GetStage())
+			require.Equal(t, ts.req.GetProject(), res.Msg.Stage.Metadata.Namespace)
+			require.Equal(t, ts.req.GetName(), res.Msg.Stage.Metadata.Name)
 		})
 	}
 }
