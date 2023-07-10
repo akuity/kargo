@@ -17,8 +17,8 @@ import (
 	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/applications"
-	"github.com/akuity/kargo/internal/controller/environments"
 	"github.com/akuity/kargo/internal/controller/promotions"
+	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
@@ -141,13 +141,13 @@ func newControllerCommand() *cobra.Command {
 				argoClientForCreds,
 			)
 
-			if err := environments.SetupReconcilerWithManager(
+			if err := stages.SetupReconcilerWithManager(
 				ctx,
 				kargoMgr,
 				appMgr,
 				credentialsDB,
 			); err != nil {
-				return errors.Wrap(err, "error setting up Environments reconciler")
+				return errors.Wrap(err, "error setting up Stages reconciler")
 			}
 
 			if err := promotions.SetupReconcilerWithManager(

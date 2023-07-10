@@ -1,4 +1,4 @@
-package environments
+package stages
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-func TestNewEnvironmentReconciler(t *testing.T) {
+func TestNewStageReconciler(t *testing.T) {
 	client := fake.NewClientBuilder().Build()
 	e := newReconciler(
 		client,
@@ -39,7 +39,7 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 
 	// Syncing:
 	require.NotNil(t, e.getLatestStateFromReposFn)
-	require.NotNil(t, e.getAvailableStatesFromUpstreamEnvsFn)
+	require.NotNil(t, e.getAvailableStatesFromUpstreamStagesFn)
 	require.NotNil(t, e.getLatestCommitsFn)
 	require.NotNil(t, e.getLatestImagesFn)
 	require.NotNil(t, e.getLatestTagFn)
@@ -48,25 +48,25 @@ func TestNewEnvironmentReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestCommitIDFn)
 }
 
-func TestIndexEnvsByApp(t *testing.T) {
+func TestIndexStagesByApp(t *testing.T) {
 	testCases := []struct {
-		name        string
-		environment *api.Environment
-		assertions  func([]string)
+		name       string
+		stage      *api.Stage
+		assertions func([]string)
 	}{
 		{
-			name: "environment has no health checks",
-			environment: &api.Environment{
-				Spec: &api.EnvironmentSpec{},
+			name: "stage has no health checks",
+			stage: &api.Stage{
+				Spec: &api.StageSpec{},
 			},
 			assertions: func(res []string) {
 				require.Nil(t, res)
 			},
 		},
 		{
-			name: "environment has health checks",
-			environment: &api.Environment{
-				Spec: &api.EnvironmentSpec{
+			name: "stage has health checks",
+			stage: &api.Stage{
+				Spec: &api.StageSpec{
 					PromotionMechanisms: &api.PromotionMechanisms{
 						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
 							{
@@ -95,12 +95,12 @@ func TestIndexEnvsByApp(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			indexEnvsByApp(testCase.environment)
+			indexStagesByApp(testCase.stage)
 		})
 	}
 }
 
-func TestIndexOutstandingPromotionsByEnvironment(t *testing.T) {
+func TestIndexOutstandingPromotionsByStage(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promotion  *api.Promotion
@@ -110,7 +110,7 @@ func TestIndexOutstandingPromotionsByEnvironment(t *testing.T) {
 			name: "promotion is in terminal phase",
 			promotion: &api.Promotion{
 				Spec: &api.PromotionSpec{
-					Environment: "fake-env",
+					Stage: "fake-stage",
 				},
 				Status: api.PromotionStatus{
 					Phase: api.PromotionPhaseComplete,
@@ -124,20 +124,20 @@ func TestIndexOutstandingPromotionsByEnvironment(t *testing.T) {
 			name: "promotion is in terminal phase",
 			promotion: &api.Promotion{
 				Spec: &api.PromotionSpec{
-					Environment: "fake-env",
+					Stage: "fake-stage",
 				},
 				Status: api.PromotionStatus{
 					Phase: api.PromotionPhasePending,
 				},
 			},
 			assertions: func(res []string) {
-				require.Equal(t, []string{"fake-env"}, res)
+				require.Equal(t, []string{"fake-stage"}, res)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			indexOutstandingPromotionsByEnvironment(testCase.promotion)
+			indexOutstandingPromotionsByStage(testCase.promotion)
 		})
 	}
 }
@@ -156,31 +156,31 @@ func TestSync(t *testing.T) {
 
 	testCases := []struct {
 		name                       string
-		spec                       api.EnvironmentSpec
-		initialStatus              api.EnvironmentStatus
+		spec                       api.StageSpec
+		initialStatus              api.StageStatus
 		hasOutstandingPromotionsFn func(
 			ctx context.Context,
-			envNamespace string,
-			envName string,
+			stageNamespace string,
+			stageName string,
 		) (bool, error)
 		checkHealthFn func(
 			context.Context,
-			api.EnvironmentState,
+			api.StageState,
 			[]api.ArgoCDAppUpdate,
 		) api.Health
 		getLatestStateFromReposFn func(
 			context.Context,
 			string,
 			api.RepoSubscriptions,
-		) (*api.EnvironmentState, error)
-		getAvailableStatesFromUpstreamEnvsFn func(
+		) (*api.StageState, error)
+		getAvailableStatesFromUpstreamStagesFn func(
 			context.Context,
-			[]api.EnvironmentSubscription,
-		) ([]api.EnvironmentState, error)
+			[]api.StageSubscription,
+		) ([]api.StageState, error)
 		kargoClient client.Client
 		assertions  func(
-			initialStatus api.EnvironmentStatus,
-			newStatus api.EnvironmentStatus,
+			initialStatus api.StageStatus,
+			newStatus api.StageStatus,
 			client client.Client,
 			err error,
 		)
@@ -195,8 +195,8 @@ func TestSync(t *testing.T) {
 				return false, errors.New("something went wrong")
 			},
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -217,8 +217,8 @@ func TestSync(t *testing.T) {
 				return true, nil
 			},
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -230,14 +230,14 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no subscriptions",
-			spec: api.EnvironmentSpec{
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{},
 			},
-			initialStatus:              api.EnvironmentStatus{},
+			initialStatus:              api.StageStatus{},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -249,7 +249,7 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "error getting latest state from repos",
-			spec: api.EnvironmentSpec{
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
@@ -259,12 +259,12 @@ func TestSync(t *testing.T) {
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.EnvironmentState, error) {
+			) (*api.StageState, error) {
 				return nil, errors.New("something went wrong")
 			},
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -277,7 +277,7 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no latest state from repos",
-			spec: api.EnvironmentSpec{
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
@@ -287,12 +287,12 @@ func TestSync(t *testing.T) {
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.EnvironmentState, error) {
+			) (*api.StageState, error) {
 				return nil, nil
 			},
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -304,15 +304,15 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "latest state from repos isn't new",
-			spec: api.EnvironmentSpec{
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 				// TODO: I'm not sure about this change
 				// HealthChecks: &api.HealthChecks{},
 			},
-			initialStatus: api.EnvironmentStatus{
-				AvailableStates: []api.EnvironmentState{
+			initialStatus: api.StageStatus{
+				AvailableStates: []api.StageState{
 					{
 						Commits: []api.GitCommit{
 							{
@@ -328,7 +328,7 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
-				CurrentState: &api.EnvironmentState{
+				CurrentState: &api.StageState{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -345,7 +345,7 @@ func TestSync(t *testing.T) {
 						Status: api.HealthStateHealthy,
 					},
 				},
-				History: []api.EnvironmentState{
+				History: []api.StageState{
 					{
 						Commits: []api.GitCommit{
 							{
@@ -368,7 +368,7 @@ func TestSync(t *testing.T) {
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			checkHealthFn: func(
 				context.Context,
-				api.EnvironmentState,
+				api.StageState,
 				[]api.ArgoCDAppUpdate,
 			) api.Health {
 				return api.Health{
@@ -379,8 +379,8 @@ func TestSync(t *testing.T) {
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.EnvironmentState, error) {
-				return &api.EnvironmentState{
+			) (*api.StageState, error) {
+				return &api.StageState{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -396,8 +396,8 @@ func TestSync(t *testing.T) {
 				}, nil
 			},
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -408,10 +408,10 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "error getting available states from upstream envs",
-			spec: api.EnvironmentSpec{
+			name: "error getting available states from upstream Stages",
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
-					UpstreamEnvs: []api.EnvironmentSubscription{
+					UpstreamStages: []api.StageSubscription{
 						{
 							Name:      "fake-name",
 							Namespace: "fake-namespace",
@@ -420,15 +420,15 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getAvailableStatesFromUpstreamEnvsFn: func(
+			getAvailableStatesFromUpstreamStagesFn: func(
 				context.Context,
-				[]api.EnvironmentSubscription,
-			) ([]api.EnvironmentState, error) {
+				[]api.StageSubscription,
+			) ([]api.StageState, error) {
 				return nil, errors.New("something went wrong")
 			},
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -440,10 +440,10 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "no latest state from upstream envs",
-			spec: api.EnvironmentSpec{
+			name: "no latest state from upstream Stages",
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
-					UpstreamEnvs: []api.EnvironmentSubscription{
+					UpstreamStages: []api.StageSubscription{
 						{
 							Name:      "fake-name",
 							Namespace: "fake-namespace",
@@ -452,15 +452,15 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getAvailableStatesFromUpstreamEnvsFn: func(
+			getAvailableStatesFromUpstreamStagesFn: func(
 				context.Context,
-				[]api.EnvironmentSubscription,
-			) ([]api.EnvironmentState, error) {
+				[]api.StageSubscription,
+			) ([]api.StageState, error) {
 				return nil, nil
 			},
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -471,11 +471,11 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "multiple upstream envs",
-			spec: api.EnvironmentSpec{
+			name: "multiple upstream Stages",
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
-					UpstreamEnvs: []api.EnvironmentSubscription{
-						// Subscribing to multiple upstream environments should block
+					UpstreamStages: []api.StageSubscription{
+						// Subscribing to multiple upstream Stages should block
 						// auto-promotion
 						{
 							Name:      "fake-name",
@@ -489,18 +489,18 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getAvailableStatesFromUpstreamEnvsFn: func(
+			getAvailableStatesFromUpstreamStagesFn: func(
 				context.Context,
-				[]api.EnvironmentSubscription,
-			) ([]api.EnvironmentState, error) {
-				return []api.EnvironmentState{
+				[]api.StageSubscription,
+			) ([]api.StageState, error) {
+				return []api.StageState{
 					{},
 					{},
 				}, nil
 			},
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -508,7 +508,7 @@ func TestSync(t *testing.T) {
 				// Status should have updated AvailableStates and otherwise be unchanged
 				require.Equal(
 					t,
-					api.EnvironmentStateStack{{}, {}},
+					api.StageStateStack{{}, {}},
 					newStatus.AvailableStates,
 				)
 				newStatus.AvailableStates = initialStatus.AvailableStates
@@ -518,7 +518,7 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no promotion policy found",
-			spec: api.EnvironmentSpec{
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
@@ -528,8 +528,8 @@ func TestSync(t *testing.T) {
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.EnvironmentState, error) {
-				return &api.EnvironmentState{
+			) (*api.StageState, error) {
+				return &api.StageState{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -546,8 +546,8 @@ func TestSync(t *testing.T) {
 			},
 			kargoClient: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				client client.Client,
 				err error,
 			) {
@@ -555,7 +555,7 @@ func TestSync(t *testing.T) {
 				// Status should have updated AvailableStates and otherwise be unchanged
 				require.Equal(
 					t,
-					api.EnvironmentStateStack{
+					api.StageStateStack{
 						{
 							Commits: []api.GitCommit{
 								{
@@ -585,7 +585,7 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "multiple promotion policies found",
-			spec: api.EnvironmentSpec{
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
@@ -595,8 +595,8 @@ func TestSync(t *testing.T) {
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.EnvironmentState, error) {
-				return &api.EnvironmentState{
+			) (*api.StageState, error) {
+				return &api.StageState{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -617,19 +617,19 @@ func TestSync(t *testing.T) {
 						Name:      "fake-policy",
 						Namespace: "fake-namespace",
 					},
-					Environment: "fake-environment",
+					Stage: "fake-stage",
 				},
 				&api.PromotionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "another-fake-policy",
 						Namespace: "fake-namespace",
 					},
-					Environment: "fake-environment",
+					Stage: "fake-stage",
 				},
 			).Build(),
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				client client.Client,
 				err error,
 			) {
@@ -637,7 +637,7 @@ func TestSync(t *testing.T) {
 				// Status should have updated AvailableStates and otherwise be unchanged
 				require.Equal(
 					t,
-					api.EnvironmentStateStack{
+					api.StageStateStack{
 						{
 							Commits: []api.GitCommit{
 								{
@@ -667,7 +667,7 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "auto-promotion not enabled",
-			spec: api.EnvironmentSpec{
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
@@ -677,8 +677,8 @@ func TestSync(t *testing.T) {
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.EnvironmentState, error) {
-				return &api.EnvironmentState{
+			) (*api.StageState, error) {
+				return &api.StageState{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -699,12 +699,12 @@ func TestSync(t *testing.T) {
 						Name:      "fake-policy",
 						Namespace: "fake-namespace",
 					},
-					Environment: "fake-environment",
+					Stage: "fake-stage",
 				},
 			).Build(),
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				client client.Client,
 				err error,
 			) {
@@ -712,7 +712,7 @@ func TestSync(t *testing.T) {
 				// Status should have updated AvailableStates and otherwise be unchanged
 				require.Equal(
 					t,
-					api.EnvironmentStateStack{
+					api.StageStateStack{
 						{
 							Commits: []api.GitCommit{
 								{
@@ -742,7 +742,7 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "auto-promotion enabled",
-			spec: api.EnvironmentSpec{
+			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
@@ -752,8 +752,8 @@ func TestSync(t *testing.T) {
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.EnvironmentState, error) {
-				return &api.EnvironmentState{
+			) (*api.StageState, error) {
+				return &api.StageState{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -774,13 +774,13 @@ func TestSync(t *testing.T) {
 						Name:      "fake-policy",
 						Namespace: "fake-namespace",
 					},
-					Environment:         "fake-environment",
+					Stage:               "fake-stage",
 					EnableAutoPromotion: true,
 				},
 			).Build(),
 			assertions: func(
-				initialStatus api.EnvironmentStatus,
-				newStatus api.EnvironmentStatus,
+				initialStatus api.StageStatus,
+				newStatus api.StageStatus,
 				client client.Client,
 				err error,
 			) {
@@ -788,7 +788,7 @@ func TestSync(t *testing.T) {
 				// Status should have updated AvailableStates and otherwise be unchanged
 				require.Equal(
 					t,
-					api.EnvironmentStateStack{
+					api.StageStateStack{
 						{
 							Commits: []api.GitCommit{
 								{
@@ -817,9 +817,9 @@ func TestSync(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		testEnv := &api.Environment{
+		testStage := &api.Stage{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-environment",
+				Name:      "fake-stage",
 				Namespace: "fake-namespace",
 			},
 			Spec:   &testCase.spec,
@@ -827,14 +827,14 @@ func TestSync(t *testing.T) {
 		}
 		// nolint: lll
 		reconciler := &reconciler{
-			kargoClient:                          testCase.kargoClient,
-			hasOutstandingPromotionsFn:           testCase.hasOutstandingPromotionsFn,
-			checkHealthFn:                        testCase.checkHealthFn,
-			getLatestStateFromReposFn:            testCase.getLatestStateFromReposFn,
-			getAvailableStatesFromUpstreamEnvsFn: testCase.getAvailableStatesFromUpstreamEnvsFn,
+			kargoClient:                            testCase.kargoClient,
+			hasOutstandingPromotionsFn:             testCase.hasOutstandingPromotionsFn,
+			checkHealthFn:                          testCase.checkHealthFn,
+			getLatestStateFromReposFn:              testCase.getLatestStateFromReposFn,
+			getAvailableStatesFromUpstreamStagesFn: testCase.getAvailableStatesFromUpstreamStagesFn,
 		}
 		t.Run(testCase.name, func(t *testing.T) {
-			newStatus, err := reconciler.sync(context.Background(), testEnv)
+			newStatus, err := reconciler.sync(context.Background(), testStage)
 			testCase.assertions(
 				testCase.initialStatus,
 				newStatus,
@@ -863,7 +863,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			string,
 			[]api.ChartSubscription,
 		) ([]api.Chart, error)
-		assertions func(*api.EnvironmentState, error)
+		assertions func(*api.StageState, error)
 	}{
 		{
 			name: "error getting latest git commit",
@@ -874,7 +874,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			) ([]api.GitCommit, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(state *api.EnvironmentState, err error) {
+			assertions: func(state *api.StageState, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error syncing git repo subscription")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -897,7 +897,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			) ([]api.Image, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(state *api.EnvironmentState, err error) {
+			assertions: func(state *api.StageState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -931,7 +931,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			) ([]api.Chart, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(state *api.EnvironmentState, err error) {
+			assertions: func(state *api.StageState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -981,7 +981,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 					},
 				}, nil
 			},
-			assertions: func(state *api.EnvironmentState, err error) {
+			assertions: func(state *api.StageState, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, state)
 				require.NotEmpty(t, state.ID)
@@ -991,7 +991,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 				state.FirstSeen = nil
 				require.Equal(
 					t,
-					&api.EnvironmentState{
+					&api.StageState{
 						Commits: []api.GitCommit{
 							{
 								RepoURL: "fake-url",

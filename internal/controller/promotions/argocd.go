@@ -14,12 +14,12 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-const authorizedEnvAnnotationKey = "kargo.akuity.io/authorized-env"
+const authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
 
 func (r *reconciler) applyArgoCDAppUpdate(
 	ctx context.Context,
-	envMeta metav1.ObjectMeta,
-	newState api.EnvironmentState,
+	stageMeta metav1.ObjectMeta,
+	newState api.StageState,
 	update api.ArgoCDAppUpdate,
 ) error {
 	app, err :=
@@ -41,7 +41,7 @@ func (r *reconciler) applyArgoCDAppUpdate(
 	}
 
 	// Make sure this is allowed!
-	if err = r.authorizeArgoCDAppUpdate(envMeta, app); err != nil {
+	if err = r.authorizeArgoCDAppUpdate(stageMeta, app); err != nil {
 		return err
 	}
 
@@ -116,37 +116,37 @@ func (r *reconciler) applyArgoCDAppUpdate(
 }
 
 func (r *reconciler) authorizeArgoCDAppUpdate(
-	envMeta metav1.ObjectMeta,
+	stageMeta metav1.ObjectMeta,
 	app *argocd.Application,
 ) error {
 	permErr := errors.Errorf(
 		"Argo CD Application %q in namespace %q does not permit mutation by "+
-			"Kargo Environment %s in namespace %s",
+			"Kargo Stage %s in namespace %s",
 		app.Name,
 		app.Namespace,
-		envMeta.Name,
-		envMeta.Namespace,
+		stageMeta.Name,
+		stageMeta.Namespace,
 	)
 	if app.Annotations == nil {
 		return permErr
 	}
-	allowedEnv, ok := app.Annotations[authorizedEnvAnnotationKey]
+	allowedStage, ok := app.Annotations[authorizedStageAnnotationKey]
 	if !ok {
 		return permErr
 	}
-	tokens := strings.SplitN(allowedEnv, ":", 2)
+	tokens := strings.SplitN(allowedStage, ":", 2)
 	if len(tokens) != 2 {
 		return errors.Errorf(
 			"unable to parse value of annotation %q (%q) on Argo CD Application "+
 				"%q in namespace %q",
-			authorizedEnvAnnotationKey,
-			allowedEnv,
+			authorizedStageAnnotationKey,
+			allowedStage,
 			app.Name,
 			app.Namespace,
 		)
 	}
 	allowedNamespace, allowedName := tokens[0], tokens[1]
-	if envMeta.Namespace != allowedNamespace || envMeta.Name != allowedName {
+	if stageMeta.Namespace != allowedNamespace || stageMeta.Name != allowedName {
 		return permErr
 	}
 	return nil
@@ -154,7 +154,7 @@ func (r *reconciler) authorizeArgoCDAppUpdate(
 
 func (r *reconciler) applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
-	newState api.EnvironmentState,
+	newState api.StageState,
 	update api.ArgoCDSourceUpdate,
 ) (argocd.ApplicationSource, error) {
 	if source.RepoURL != update.RepoURL || source.Chart != update.Chart {

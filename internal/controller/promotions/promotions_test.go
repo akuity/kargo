@@ -30,7 +30,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	require.NotNil(t, r.argoClient)
 	require.NotNil(t, r.credentialsDB)
 	require.NotNil(t, r.bookkeeperService)
-	require.NotNil(t, r.promoQueuesByEnv)
+	require.NotNil(t, r.promoQueuesByStage)
 
 	// Assert that all overridable behaviors were initialized to a default:
 
@@ -62,11 +62,11 @@ func TestInitializeQueues(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Spec: &api.PromotionSpec{
-					Environment: "fake-environment",
+					Stage: "fake-stage",
 				},
 			},
 		).Build(),
-		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{},
+		promoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
 	err := r.initializeQueues(context.Background())
 	require.NoError(t, err)
@@ -148,11 +148,11 @@ func TestPromotionSync(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Spec: &api.PromotionSpec{
-					Environment: "fake-env",
+					Stage: "fake-stage",
 				},
 			},
 			pqs: map[types.NamespacedName]runtime.PriorityQueue{
-				{Namespace: "fake-namespace", Name: "fake-env"}: newPromotionsQueue(),
+				{Namespace: "fake-namespace", Name: "fake-stage"}: newPromotionsQueue(),
 			},
 			assertions: func(
 				status api.PromotionStatus,
@@ -167,7 +167,7 @@ func TestPromotionSync(t *testing.T) {
 				)
 				pq, ok := pqs[types.NamespacedName{
 					Namespace: "fake-namespace",
-					Name:      "fake-env",
+					Name:      "fake-stage",
 				}]
 				require.True(t, ok)
 				require.Equal(t, 1, pq.Depth())
@@ -182,7 +182,7 @@ func TestPromotionSync(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Spec: &api.PromotionSpec{
-					Environment: "fake-env",
+					Stage: "fake-stage",
 				},
 			},
 			pqs: map[types.NamespacedName]runtime.PriorityQueue{},
@@ -199,7 +199,7 @@ func TestPromotionSync(t *testing.T) {
 				)
 				pq, ok := pqs[types.NamespacedName{
 					Namespace: "fake-namespace",
-					Name:      "fake-env",
+					Name:      "fake-stage",
 				}]
 				require.True(t, ok)
 				require.Equal(t, 1, pq.Depth())
@@ -210,12 +210,12 @@ func TestPromotionSync(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := reconciler{
-				promoQueuesByEnv: testCase.pqs,
+				promoQueuesByStage: testCase.pqs,
 			}
 			status := r.sync(context.Background(), testCase.promo)
 			testCase.assertions(
 				status,
-				r.promoQueuesByEnv,
+				r.promoQueuesByStage,
 			)
 		})
 	}
@@ -228,8 +228,8 @@ func TestSerializedSync(t *testing.T) {
 			Namespace: "fake-namespace",
 		},
 		Spec: &api.PromotionSpec{
-			Environment: "fake-env",
-			State:       "fake-state",
+			Stage: "fake-stage",
+			State: "fake-state",
 		},
 		Status: api.PromotionStatus{
 			Phase: api.PromotionPhasePending,
@@ -247,8 +247,8 @@ func TestSerializedSync(t *testing.T) {
 
 	r := reconciler{
 		kargoClient: client,
-		promoQueuesByEnv: map[types.NamespacedName]runtime.PriorityQueue{
-			{Namespace: "fake-namespace", Name: "fake-env"}: pq,
+		promoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{
+			{Namespace: "fake-namespace", Name: "fake-stage"}: pq,
 		},
 		promoteFn: func(context.Context, string, string, string) error {
 			return nil
@@ -303,8 +303,8 @@ func TestGetPromo(t *testing.T) {
 						Namespace: "fake-namespace",
 					},
 					Spec: &api.PromotionSpec{
-						Environment: "fake-environment",
-						State:       "fake-state",
+						Stage: "fake-stage",
+						State: "fake-state",
 					},
 				},
 			).Build(),
@@ -315,8 +315,8 @@ func TestGetPromo(t *testing.T) {
 				require.Equal(
 					t,
 					&api.PromotionSpec{
-						Environment: "fake-environment",
-						State:       "fake-state",
+						Stage: "fake-stage",
+						State: "fake-state",
 					},
 					promo.Spec,
 				)

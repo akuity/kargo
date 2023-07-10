@@ -15,15 +15,15 @@ import (
 func TestApplyBookkeeperUpdate(t *testing.T) {
 	testCases := []struct {
 		name              string
-		newState          api.EnvironmentState
+		newState          api.StageState
 		update            api.GitRepoUpdate
 		credentialsDB     credentials.Database
 		bookkeeperService bookkeeper.Service
-		assertions        func(inState, outState api.EnvironmentState, err error)
+		assertions        func(inState, outState api.StageState, err error)
 	}{
 		{
 			name: "update doesn't actually use Bookkeeper",
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(inState, outState api.StageState, err error) {
 				require.NoError(t, err)
 				require.Equal(t, inState, outState)
 			},
@@ -31,7 +31,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 
 		{
 			name: "invalid update",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -44,7 +44,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 				WriteBranch: "fake-branch",
 				Bookkeeper:  &api.BookkeeperPromotionMechanism{},
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(inState, outState api.StageState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -61,7 +61,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 
 		{
 			name: "error getting Git repo credentials",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-git-url",
@@ -77,7 +77,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 			},
 			update: api.GitRepoUpdate{
 				RepoURL:     "fake-git-url",
-				WriteBranch: "env/fake",
+				WriteBranch: "stage/fake",
 				Bookkeeper:  &api.BookkeeperPromotionMechanism{},
 			},
 			credentialsDB: &credentials.FakeDB{
@@ -91,7 +91,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 						errors.New("something went wrong")
 				},
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(inState, outState api.StageState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -105,7 +105,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 
 		{
 			name: "error rendering manifests",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-git-url",
@@ -121,7 +121,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 			},
 			update: api.GitRepoUpdate{
 				RepoURL:     "fake-git-url",
-				WriteBranch: "env/fake",
+				WriteBranch: "stage/fake",
 				Bookkeeper:  &api.BookkeeperPromotionMechanism{},
 			},
 			credentialsDB: &credentials.FakeDB{
@@ -142,7 +142,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 					return bookkeeper.RenderResponse{}, errors.New("something went wrong")
 				},
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(inState, outState api.StageState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -156,7 +156,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 
 		{
 			name: "success",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-git-url",
@@ -172,7 +172,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 			},
 			update: api.GitRepoUpdate{
 				RepoURL:     "fake-git-url",
-				WriteBranch: "env/fake",
+				WriteBranch: "stage/fake",
 				Bookkeeper:  &api.BookkeeperPromotionMechanism{},
 			},
 			credentialsDB: &credentials.FakeDB{
@@ -196,7 +196,7 @@ func TestApplyBookkeeperUpdate(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(inState, outState api.StageState, err error) {
 				require.NoError(t, err)
 				require.Len(t, outState.Commits, 1)
 				require.Equal(
