@@ -33,7 +33,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   verbs:
   - get
   - list
@@ -59,7 +59,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments/status
+  - stages/status
   - promotions/status
   verbs:
   - update
@@ -87,7 +87,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   - promotions
   - promotionpolicies
   verbs:
@@ -101,7 +101,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   verbs:
   - promote
 ---
@@ -115,7 +115,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   verbs:
   - create
   - delete
@@ -156,7 +156,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   - promotionpolicies
   verbs:
   - get
@@ -165,6 +165,6 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   verbs:
   - promote
