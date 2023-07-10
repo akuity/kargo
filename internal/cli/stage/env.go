@@ -1,4 +1,4 @@
-package env
+package stage
 
 import (
 	"github.com/spf13/cobra"
@@ -8,9 +8,8 @@ import (
 
 func NewCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "environment",
-		Aliases: []string{"env"},
-		Short:   "Manage environments",
+		Use:   "stage",
+		Short: "Manage stages",
 	}
 	cmd.AddCommand(newPromoteCommand(opt))
 	return cmd
