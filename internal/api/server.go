@@ -121,3 +121,10 @@ func (s *server) PromoteEnvironment(
 ) (*connect.Response[svcv1alpha1.PromoteEnvironmentResponse], error) {
 	return handler.PromoteEnvironmentV1Alpha1(s.kc)(ctx, req)
 }
+
+func (s *server) ListProjects(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.ListProjectsRequest],
+) (*connect.Response[svcv1alpha1.ListProjectsResponse], error) {
+	return handler.ListProjectsV1Alpha1(s.kc)(ctx, req)
+}

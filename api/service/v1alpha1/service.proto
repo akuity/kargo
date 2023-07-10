@@ -12,6 +12,7 @@ service KargoService {
   rpc GetEnvironment(GetEnvironmentRequest) returns (GetEnvironmentResponse);
   rpc DeleteEnvironment(DeleteEnvironmentRequest) returns (DeleteEnvironmentResponse);
   rpc PromoteEnvironment(PromoteEnvironmentRequest) returns (PromoteEnvironmentResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
 }
 
 message CreateEnvironmentRequest {
@@ -58,4 +59,16 @@ message PromoteEnvironmentRequest {
 
 message PromoteEnvironmentResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+}
+
+message ListProjectsRequest {
+  /* explicitly empty */
+}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+}
+
+message Project {
+  string name = 1;
 }
