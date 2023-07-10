@@ -417,13 +417,13 @@ message KustomizePromotionMechanism {
   repeated KustomizeImageUpdate images = 1 [(gogoproto.customname) = "Images", (gogoproto.nullable) = false];
 }
 
-// Promotion represents a request to transition a particular Environment into a
+// Promotion represents a request to transition a particular Stage into a
 // particular state.
 message Promotion {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
-  // Spec describes the desired transition of a specific Environment into a
-  // specific EnvironmentState.
+  // Spec describes the desired transition of a specific Stage into a specific
+  // StageState.
   //
   // +kubebuilder:validation:Required
   optional PromotionSpec spec = 2 [(gogoproto.customname) = "Spec"];
@@ -456,33 +456,28 @@ message PromotionMechanisms {
   repeated ArgoCDAppUpdate argoCDAppUpdates = 2 [(gogoproto.customname) = "ArgoCDAppUpdates", (gogoproto.nullable) = false];
 }
 
-// PromotionPolicy provides fine-grained access control beyond what Kubernetes
-// RBAC is capable of. A PromotionPolicy names an Environment and enumerates
-// subjects (such as users, groups, ServiceAccounts, or RBAC Roles) that are
-// authorized to create Promotions for that Environment. It is through
-// PromotionPolicies that multiple users may be permitted to create Promotion
-// resources in a given namespace, but creation of Promotion resources for
-// specific Environments may be restricted.
+// PromotionPolicy specifies whether a given Stage is eligible for
+// auto-promotion to newly discovered StageStates.
 message PromotionPolicy {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
-  // Environment references an Environment in the same namespace as this
-  // PromotionPolicy to which this PromotionPolicy applies.
+  // Stage references a Stage in the same namespace as this PromotionPolicy to
+  // which this PromotionPolicy applies.
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string environment = 2 [(gogoproto.customname) = "Environment", (gogoproto.nullable) = false];
+  optional string stage = 2 [(gogoproto.customname) = "Stage", (gogoproto.nullable) = false];
 
-  // EnableAutoPromotion indicates whether new EnvironmentStates can
-  // automatically be promoted into the Environment referenced by the
-  // Environment field. Note: There are other conditions also required for an
-  // auto-promotion to occur. Specifically, there must be a single source of new
-  // EnvironmentStates, so regardless of the value of this field, an
-  // auto-promotion could never occur for an Environment subscribed to MULTIPLE
-  // upstream environments. This field defaults to false, but is commonly set to
-  // true for Environments that subscribe to repositories instead of other,
-  // upstream Environments. This allows users to define Environments that are
-  // automatically updated as soon as new materials are detected.
+  // EnableAutoPromotion indicates whether new StageStates can automatically be
+  // promoted into the Stage referenced by the Stage field. Note: There are
+  // other conditions also required for an auto-promotion to occur.
+  // Specifically, there must be a single source of new StageStates, so
+  // regardless of the value of this field, an auto-promotion could never occur
+  // for a Stage subscribed to MULTIPLE upstream Stages. This field defaults to
+  // false, but is commonly set to true for Stages that subscribe to
+  // repositories instead of other, upstream Stages. This allows users to define
+  // Stages that are automatically updated as soon as new materials are
+  // detected.
   optional bool enableAutoPromotion = 3 [(gogoproto.customname) = "EnableAutoPromotion", (gogoproto.nullable) = false];
 }
 
@@ -493,23 +488,22 @@ message PromotionPolicyList {
   repeated PromotionPolicy items = 2 [(gogoproto.customname) = "Items", (gogoproto.nullable) = false];
 }
 
-// PromotionSpec describes the desired transition of a specific Environment into
-// a specific EnvironmentState.
+// PromotionSpec describes the desired transition of a specific Stage into a
+// specific StageState.
 message PromotionSpec {
-  // Environment specifies the name of the Environment to which this Promotion
-  // applies. The Environment referenced by this field MUST be in the same
+  // Stage specifies the name of the Stage to which this Promotion
+  // applies. The Stage referenced by this field MUST be in the same
   // namespace as the Promotion.
   //
   // TODO: Use a webhook to make this immutable
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string environment = 1 [(gogoproto.customname) = "Environment", (gogoproto.nullable) = false];
+  optional string stage = 1 [(gogoproto.customname) = "Stage", (gogoproto.nullable) = false];
 
-  // State specifies the specific EnvironmentState into which the Environment
-  // referenced by the Environment field should be transitioned. The State MUST
-  // be among the Environment's Status.AvailableStates or the Promotion will
-  // ultimately fail.
+  // State specifies the specific StageState into which the Stage referenced by
+  // the Stage field should be transitioned. The State MUST be among the Stage's
+  // Status.AvailableStates or the Promotion will ultimately fail.
   //
   // TODO: Use a webhook to make this immutable
   //

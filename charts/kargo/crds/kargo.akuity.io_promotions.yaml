@@ -19,8 +19,8 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.environment
-      name: Environment
+    - jsonPath: .spec.stage
+      name: Stage
       type: string
     - jsonPath: .spec.state
       name: State
@@ -34,7 +34,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Promotion represents a request to transition a particular Environment
+        description: Promotion represents a request to transition a particular Stage
           into a particular state.
         properties:
           apiVersion:
@@ -50,27 +50,26 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec describes the desired transition of a specific Environment
-              into a specific EnvironmentState.
+            description: Spec describes the desired transition of a specific Stage
+              into a specific StageState.
             properties:
-              environment:
-                description: "Environment specifies the name of the Environment to
-                  which this Promotion applies. The Environment referenced by this
-                  field MUST be in the same namespace as the Promotion. \n TODO: Use
-                  a webhook to make this immutable"
+              stage:
+                description: "Stage specifies the name of the Stage to which this
+                  Promotion applies. The Stage referenced by this field MUST be in
+                  the same namespace as the Promotion. \n TODO: Use a webhook to make
+                  this immutable"
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
               state:
-                description: "State specifies the specific EnvironmentState into which
-                  the Environment referenced by the Environment field should be transitioned.
-                  The State MUST be among the Environment's Status.AvailableStates
-                  or the Promotion will ultimately fail. \n TODO: Use a webhook to
-                  make this immutable"
+                description: "State specifies the specific StageState into which the
+                  Stage referenced by the Stage field should be transitioned. The
+                  State MUST be among the Stage's Status.AvailableStates or the Promotion
+                  will ultimately fail. \n TODO: Use a webhook to make this immutable"
                 minLength: 1
                 type: string
             required:
-            - environment
+            - stage
             - state
             type: object
           status:

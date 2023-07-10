@@ -11,8 +11,7 @@ import { ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta
 
 /**
  * ArgoCDAppUpdate describes updates that should be applied to an Argo CD
- * Application resources to incorporate newly observed materials into an
- * Environment.
+ * Application resources to incorporate newly observed materials into a Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
  */
@@ -31,7 +30,9 @@ export class ArgoCDAppUpdate extends Message<ArgoCDAppUpdate> {
   /**
    * AppNamespace specifies the namespace of an Argo CD Application resource to
    * be updated. If left unspecified, the namespace of this Application resource
-   * is defaulted to that of the Environment.
+   * is defaulted to that of the Stage.
+   *
+   * TODO: This should default to Argo CD's namespace instead.
    *
    * +kubebuilder:validation:Optional
    * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -80,7 +81,7 @@ export class ArgoCDAppUpdate extends Message<ArgoCDAppUpdate> {
 
 /**
  * ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
- * attributes to incorporate newly observed materials into an Environment.
+ * attributes to incorporate newly observed materials into a Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelm
  */
@@ -192,8 +193,8 @@ export class ArgoCDHelmImageUpdate extends Message<ArgoCDHelmImageUpdate> {
 
 /**
  * ArgoCDKustomize describes updates to an Argo CD Application source's
- * Kustomize-specific attributes to incorporate newly observed materials into an
- * Environment.
+ * Kustomize-specific attributes to incorporate newly observed materials into a
+ * Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomize
  */
@@ -327,7 +328,7 @@ export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
 
 /**
  * BookkeeperPromotionMechanism describes how to use Bookkeeper to incorporate
- * newly observed materials into an Environment.
+ * newly observed materials into a Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.BookkeeperPromotionMechanism
  */
@@ -487,401 +488,6 @@ export class ChartSubscription extends Message<ChartSubscription> {
 }
 
 /**
- * Environment is the Kargo API's main type.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Environment
- */
-export class Environment extends Message<Environment> {
-  /**
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
-   */
-  metadata?: ObjectMeta;
-
-  /**
-   * Spec describes the sources of material used by the Environment and how
-   * to incorporate newly observed materials into the Environment.
-   *
-   * +kubebuilder:validation:Required
-   *
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentSpec spec = 2;
-   */
-  spec?: EnvironmentSpec;
-
-  /**
-   * Status describes the most recently observed versions of this Environment's
-   * sources of material as well as the environment's current and recent states.
-   *
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentStatus status = 3;
-   */
-  status?: EnvironmentStatus;
-
-  constructor(data?: PartialMessage<Environment>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Environment";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
-    { no: 2, name: "spec", kind: "message", T: EnvironmentSpec, opt: true },
-    { no: 3, name: "status", kind: "message", T: EnvironmentStatus, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Environment {
-    return new Environment().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Environment {
-    return new Environment().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Environment {
-    return new Environment().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Environment | PlainMessage<Environment> | undefined, b: Environment | PlainMessage<Environment> | undefined): boolean {
-    return proto2.util.equals(Environment, a, b);
-  }
-}
-
-/**
- * EnvironmentList is a list of Environment resources.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentList
- */
-export class EnvironmentList extends Message<EnvironmentList> {
-  /**
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
-   */
-  metadata?: ListMeta;
-
-  /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Environment items = 2;
-   */
-  items: Environment[] = [];
-
-  constructor(data?: PartialMessage<EnvironmentList>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentList";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
-    { no: 2, name: "items", kind: "message", T: Environment, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnvironmentList {
-    return new EnvironmentList().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnvironmentList {
-    return new EnvironmentList().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnvironmentList {
-    return new EnvironmentList().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: EnvironmentList | PlainMessage<EnvironmentList> | undefined, b: EnvironmentList | PlainMessage<EnvironmentList> | undefined): boolean {
-    return proto2.util.equals(EnvironmentList, a, b);
-  }
-}
-
-/**
- * EnvironmentSpec describes the sources of material used by an Environment and
- * how to incorporate newly observed materials into the Environment.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentSpec
- */
-export class EnvironmentSpec extends Message<EnvironmentSpec> {
-  /**
-   * Subscriptions describes the Environment's sources of material. This is a
-   * required field.
-   *
-   * +kubebuilder:validation:Required
-   *
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions subscriptions = 1;
-   */
-  subscriptions?: Subscriptions;
-
-  /**
-   * PromotionMechanisms describes how to incorporate newly observed materials
-   * into the Environment. This is a required field.
-   *
-   * +kubebuilder:validation:Required
-   *
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms promotionMechanisms = 2;
-   */
-  promotionMechanisms?: PromotionMechanisms;
-
-  constructor(data?: PartialMessage<EnvironmentSpec>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentSpec";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
-    { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnvironmentSpec {
-    return new EnvironmentSpec().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnvironmentSpec {
-    return new EnvironmentSpec().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnvironmentSpec {
-    return new EnvironmentSpec().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: EnvironmentSpec | PlainMessage<EnvironmentSpec> | undefined, b: EnvironmentSpec | PlainMessage<EnvironmentSpec> | undefined): boolean {
-    return proto2.util.equals(EnvironmentSpec, a, b);
-  }
-}
-
-/**
- * EnvironmentState is a "bill of materials" describing what was deployed to an
- * Environment.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentState
- */
-export class EnvironmentState extends Message<EnvironmentState> {
-  /**
-   * ID is a unique, system-assigned identifier for this state.
-   *
-   * @generated from field: optional string id = 1;
-   */
-  id?: string;
-
-  /**
-   * FirstSeen represents the date/time when this EnvironmentState first entered
-   * the system. This is useful and important information because it enables the
-   * controller to block auto-promotion of EnvironmentStates that are older than
-   * an Environment's current state, which is a case that can arise if an
-   * Environment has ROLLED BACK to an older state whilst a downstream
-   * Environment is already on to a newer state.
-   *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time firstSeen = 2;
-   */
-  firstSeen?: Time;
-
-  /**
-   * Provenance describes the proximate source of this EnvironmentState. i.e.
-   * Did it come directly from upstream repositories? Or an upstream
-   * environment.
-   *
-   * @generated from field: optional string provenance = 3;
-   */
-  provenance?: string;
-
-  /**
-   * Commits describes specific Git repository commits that were used in this
-   * state.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit commits = 4;
-   */
-  commits: GitCommit[] = [];
-
-  /**
-   * Images describes container images and versions thereof that were used
-   * in this state.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Image images = 5;
-   */
-  images: Image[] = [];
-
-  /**
-   * Charts describes Helm charts that were used in this state.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Chart charts = 6;
-   */
-  charts: Chart[] = [];
-
-  /**
-   * Health is the state's last observed health. If this state is the
-   * Environment's current state, this will be continuously re-assessed and
-   * updated. If this state is a past state of the Environment, this field will
-   * denote the last observed health state before transitioning into a different
-   * state.
-   *
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Health health = 7;
-   */
-  health?: Health;
-
-  constructor(data?: PartialMessage<EnvironmentState>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentState";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "firstSeen", kind: "message", T: Time, opt: true },
-    { no: 3, name: "provenance", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "commits", kind: "message", T: GitCommit, repeated: true },
-    { no: 5, name: "images", kind: "message", T: Image, repeated: true },
-    { no: 6, name: "charts", kind: "message", T: Chart, repeated: true },
-    { no: 7, name: "health", kind: "message", T: Health, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnvironmentState {
-    return new EnvironmentState().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnvironmentState {
-    return new EnvironmentState().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnvironmentState {
-    return new EnvironmentState().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: EnvironmentState | PlainMessage<EnvironmentState> | undefined, b: EnvironmentState | PlainMessage<EnvironmentState> | undefined): boolean {
-    return proto2.util.equals(EnvironmentState, a, b);
-  }
-}
-
-/**
- * EnvironmentStatus describes the most recently observed versions of an
- * Environment's sources of material as well as its current and recent states.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentStatus
- */
-export class EnvironmentStatus extends Message<EnvironmentStatus> {
-  /**
-   * AvailableStates is a stack of available Environment states, where each
-   * state is essentially a "bill of materials" describing what can be
-   * automatically or manually deployed to the Environment.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentState availableStates = 1;
-   */
-  availableStates: EnvironmentState[] = [];
-
-  /**
-   * CurrentState is the Environment's current state -- a "bill of materials"
-   * describing what is currently deployed to the Environment.
-   *
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentState currentState = 2;
-   */
-  currentState?: EnvironmentState;
-
-  /**
-   * History is a stack of recent Environment states, where each state is
-   * essentially a "bill of materials" describing what was deployed to the
-   * Environment. By default, the last ten states are stored.
-   *
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentState history = 3;
-   */
-  history: EnvironmentState[] = [];
-
-  /**
-   * Error describes any errors that are preventing the Environment controller
-   * from assessing Environment health, polling repositories or upstream
-   * environments to discover new states, or promoting the environment to a new
-   * state.
-   *
-   * @generated from field: optional string error = 4;
-   */
-  error?: string;
-
-  constructor(data?: PartialMessage<EnvironmentStatus>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentStatus";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "availableStates", kind: "message", T: EnvironmentState, repeated: true },
-    { no: 2, name: "currentState", kind: "message", T: EnvironmentState, opt: true },
-    { no: 3, name: "history", kind: "message", T: EnvironmentState, repeated: true },
-    { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnvironmentStatus {
-    return new EnvironmentStatus().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnvironmentStatus {
-    return new EnvironmentStatus().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnvironmentStatus {
-    return new EnvironmentStatus().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: EnvironmentStatus | PlainMessage<EnvironmentStatus> | undefined, b: EnvironmentStatus | PlainMessage<EnvironmentStatus> | undefined): boolean {
-    return proto2.util.equals(EnvironmentStatus, a, b);
-  }
-}
-
-/**
- * EnvironmentSubscription defines a subscription to states from another
- * Environment.
- *
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentSubscription
- */
-export class EnvironmentSubscription extends Message<EnvironmentSubscription> {
-  /**
-   * Name specifies the name of an Environment.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string name = 1;
-   */
-  name?: string;
-
-  /**
-   * Namespace specifies the namespace of the Environment. If left unspecified,
-   * the namespace of the upstream repository will be defaulted to that of this
-   * Environment.
-   *
-   * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string namespace = 2;
-   */
-  namespace?: string;
-
-  constructor(data?: PartialMessage<EnvironmentSubscription>) {
-    super();
-    proto2.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto2 = proto2;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentSubscription";
-  static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EnvironmentSubscription {
-    return new EnvironmentSubscription().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EnvironmentSubscription {
-    return new EnvironmentSubscription().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EnvironmentSubscription {
-    return new EnvironmentSubscription().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: EnvironmentSubscription | PlainMessage<EnvironmentSubscription> | undefined, b: EnvironmentSubscription | PlainMessage<EnvironmentSubscription> | undefined): boolean {
-    return proto2.util.equals(EnvironmentSubscription, a, b);
-  }
-}
-
-/**
  * GitCommit describes a specific commit from a specific Git repository.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
@@ -911,12 +517,12 @@ export class GitCommit extends Message<GitCommit> {
 
   /**
    * HealthCheckCommit is the ID of a specific commit. When specified,
-   * assessments of Environment health will used this value (instead of ID) when
+   * assessments of Stage health will used this value (instead of ID) when
    * determining if applicable sources of Argo CD Application resources
-   * associated with the environment are or are not synced to this commit. Note
-   * that there are cases (as in that of Bookkeeper being utilized as a
-   * promotion mechanism) wherein the value of this field may differ from the
-   * commit ID found in the ID field.
+   * associated with the Stage are or are not synced to this commit. Note that
+   * there are cases (as in that of Bookkeeper being utilized as a promotion
+   * mechanism) wherein the value of this field may differ from the commit ID
+   * found in the ID field.
    *
    * @generated from field: optional string healthCheckCommit = 4;
    */
@@ -956,7 +562,7 @@ export class GitCommit extends Message<GitCommit> {
 /**
  * GitRepoUpdate describes updates that should be applied to a Git repository
  * (using various configuration management tools) to incorporate newly observed
- * materials into an Environment.
+ * materials into a Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate
  */
@@ -974,11 +580,11 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
   /**
    * ReadBranch specifies a particular branch of the repository from which to
    * locate contents that will be written to the branch specified by the
-   * WriteBranch field. This field is optional. In cases where an
-   * EnvironmentState includes a GitCommit, that commit's ID will supersede the
+   * WriteBranch field. This field is optional. In cases where a
+   * StageStage includes a GitCommit, that commit's ID will supersede the
    * value of this field. Therefore, in practice, this field is only used to
    * clarify what branch of a repository can be treated as a source of manifests
-   * or other configuration when an Environment has no subscription to that
+   * or other configuration when a Stage has no subscription to that
    * repository.
    *
    * +kubebuilder:validation:Optional
@@ -1001,8 +607,8 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
 
   /**
    * Bookkeeper describes how to use Bookkeeper to incorporate newly observed
-   * materials into the Environment. This is mutually exclusive with the
-   * Kustomize and Helm fields.
+   * materials into the Stage. This is mutually exclusive with the Kustomize and
+   * Helm fields.
    *
    * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.BookkeeperPromotionMechanism bookkeeper = 4;
    */
@@ -1010,8 +616,8 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
 
   /**
    * Kustomize describes how to use Kustomize to incorporate newly observed
-   * materials into the Environment. This is mutually exclusive with the
-   * Bookkeeper and Helm fields.
+   * materials into the Stage. This is mutually exclusive with the Bookkeeper
+   * and Helm fields.
    *
    * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism kustomize = 5;
    */
@@ -1019,8 +625,8 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
 
   /**
    * Helm describes how to use Helm to incorporate newly observed materials into
-   * the Environment. This is mutually exclusive with the Bookkeeper and
-   * Kustomize fields.
+   * the Stage. This is mutually exclusive with the Bookkeeper and Kustomize
+   * fields.
    *
    * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism helm = 6;
    */
@@ -1116,22 +722,21 @@ export class GitSubscription extends Message<GitSubscription> {
 }
 
 /**
- * Health describes the health of an Environment.
+ * Health describes the health of a Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Health
  */
 export class Health extends Message<Health> {
   /**
-   * Status describes the health of the Environment.
+   * Status describes the health of the Stage.
    *
    * @generated from field: optional string status = 1;
    */
   status?: string;
 
   /**
-   * Issues clarifies why an Environment in any state other than Healthy is in
-   * that state. This field will always be the empty when an Environment is
-   * Healthy.
+   * Issues clarifies why a Stage in any state other than Healthy is in that
+   * state. This field will always be the empty when a Stage is Healthy.
    *
    * @generated from field: repeated string issues = 2;
    */
@@ -1315,7 +920,7 @@ export class HelmImageUpdate extends Message<HelmImageUpdate> {
 
 /**
  * HelmPromotionMechanism describes how to use Helm to incorporate newly
- * observed materials into an Environment.
+ * observed materials into a Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism
  */
@@ -1590,7 +1195,7 @@ export class KustomizeImageUpdate extends Message<KustomizeImageUpdate> {
 
 /**
  * KustomizePromotionMechanism describes how to use Kustomize to incorporate
- * newly observed materials into an Environment.
+ * newly observed materials into a Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism
  */
@@ -1634,7 +1239,7 @@ export class KustomizePromotionMechanism extends Message<KustomizePromotionMecha
 }
 
 /**
- * Promotion represents a request to transition a particular Environment into a
+ * Promotion represents a request to transition a particular Stage into a
  * particular state.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
@@ -1646,8 +1251,8 @@ export class Promotion extends Message<Promotion> {
   metadata?: ObjectMeta;
 
   /**
-   * Spec describes the desired transition of a specific Environment into a
-   * specific EnvironmentState.
+   * Spec describes the desired transition of a specific Stage into a specific
+   * StageState.
    *
    * +kubebuilder:validation:Required
    *
@@ -1740,14 +1345,14 @@ export class PromotionList extends Message<PromotionList> {
 
 /**
  * PromotionMechanisms describes how to incorporate newly observed materials
- * into an Environment.
+ * into a Stage.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms
  */
 export class PromotionMechanisms extends Message<PromotionMechanisms> {
   /**
    * GitRepoUpdates describes updates that should be applied to Git repositories
-   * to incorporate newly observed materials into the Environment. This field is
+   * to incorporate newly observed materials into the Stage. This field is
    * optional, as such actions are not required in all cases.
    *
    * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate gitRepoUpdates = 1;
@@ -1757,9 +1362,9 @@ export class PromotionMechanisms extends Message<PromotionMechanisms> {
   /**
    * ArgoCDAppUpdates describes updates that should be applied to Argo CD
    * Application resources to incorporate newly observed materials into the
-   * Environment. This field is optional, as such actions are not required in
-   * all cases. Note that all updates specified by the GitRepoUpdates field, if
-   * any, are applied BEFORE these.
+   * Stage. This field is optional, as such actions are not required in all
+   * cases. Note that all updates specified by the GitRepoUpdates field, if any,
+   * are applied BEFORE these.
    *
    * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate argoCDAppUpdates = 2;
    */
@@ -1795,13 +1400,8 @@ export class PromotionMechanisms extends Message<PromotionMechanisms> {
 }
 
 /**
- * PromotionPolicy provides fine-grained access control beyond what Kubernetes
- * RBAC is capable of. A PromotionPolicy names an Environment and enumerates
- * subjects (such as users, groups, ServiceAccounts, or RBAC Roles) that are
- * authorized to create Promotions for that Environment. It is through
- * PromotionPolicies that multiple users may be permitted to create Promotion
- * resources in a given namespace, but creation of Promotion resources for
- * specific Environments may be restricted.
+ * PromotionPolicy specifies whether a given Stage is eligible for
+ * auto-promotion to newly discovered StageStates.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
  */
@@ -1812,27 +1412,27 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   metadata?: ObjectMeta;
 
   /**
-   * Environment references an Environment in the same namespace as this
-   * PromotionPolicy to which this PromotionPolicy applies.
+   * Stage references a Stage in the same namespace as this PromotionPolicy to
+   * which this PromotionPolicy applies.
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
    *
-   * @generated from field: optional string environment = 2;
+   * @generated from field: optional string stage = 2;
    */
-  environment?: string;
+  stage?: string;
 
   /**
-   * EnableAutoPromotion indicates whether new EnvironmentStates can
-   * automatically be promoted into the Environment referenced by the
-   * Environment field. Note: There are other conditions also required for an
-   * auto-promotion to occur. Specifically, there must be a single source of new
-   * EnvironmentStates, so regardless of the value of this field, an
-   * auto-promotion could never occur for an Environment subscribed to MULTIPLE
-   * upstream environments. This field defaults to false, but is commonly set to
-   * true for Environments that subscribe to repositories instead of other,
-   * upstream Environments. This allows users to define Environments that are
-   * automatically updated as soon as new materials are detected.
+   * EnableAutoPromotion indicates whether new StageStates can automatically be
+   * promoted into the Stage referenced by the Stage field. Note: There are
+   * other conditions also required for an auto-promotion to occur.
+   * Specifically, there must be a single source of new StageStates, so
+   * regardless of the value of this field, an auto-promotion could never occur
+   * for a Stage subscribed to MULTIPLE upstream Stages. This field defaults to
+   * false, but is commonly set to true for Stages that subscribe to
+   * repositories instead of other, upstream Stages. This allows users to define
+   * Stages that are automatically updated as soon as new materials are
+   * detected.
    *
    * @generated from field: optional bool enableAutoPromotion = 3;
    */
@@ -1847,7 +1447,7 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
-    { no: 2, name: "environment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "enableAutoPromotion", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
@@ -1914,15 +1514,15 @@ export class PromotionPolicyList extends Message<PromotionPolicyList> {
 }
 
 /**
- * PromotionSpec describes the desired transition of a specific Environment into
- * a specific EnvironmentState.
+ * PromotionSpec describes the desired transition of a specific Stage into a
+ * specific StageState.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec
  */
 export class PromotionSpec extends Message<PromotionSpec> {
   /**
-   * Environment specifies the name of the Environment to which this Promotion
-   * applies. The Environment referenced by this field MUST be in the same
+   * Stage specifies the name of the Stage to which this Promotion
+   * applies. The Stage referenced by this field MUST be in the same
    * namespace as the Promotion.
    *
    * TODO: Use a webhook to make this immutable
@@ -1930,15 +1530,14 @@ export class PromotionSpec extends Message<PromotionSpec> {
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
    *
-   * @generated from field: optional string environment = 1;
+   * @generated from field: optional string stage = 1;
    */
-  environment?: string;
+  stage?: string;
 
   /**
-   * State specifies the specific EnvironmentState into which the Environment
-   * referenced by the Environment field should be transitioned. The State MUST
-   * be among the Environment's Status.AvailableStates or the Promotion will
-   * ultimately fail.
+   * State specifies the specific StageState into which the Stage referenced by
+   * the Stage field should be transitioned. The State MUST be among the Stage's
+   * Status.AvailableStates or the Promotion will ultimately fail.
    *
    * TODO: Use a webhook to make this immutable
    *
@@ -1956,7 +1555,7 @@ export class PromotionSpec extends Message<PromotionSpec> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "environment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "state", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
@@ -2030,7 +1629,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
 }
 
 /**
- * RepoSubscriptions describes various sorts of repositories an Environment uses
+ * RepoSubscriptions describes various sorts of repositories a Stage uses
  * as sources of material.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscriptions
@@ -2088,27 +1687,421 @@ export class RepoSubscriptions extends Message<RepoSubscriptions> {
 }
 
 /**
- * Subscriptions describes an Environment's sources of material.
+ * Stage is the Kargo API's main type.
+ *
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+ */
+export class Stage extends Message<Stage> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * Spec describes the sources of material used by the Stage and how
+   * to incorporate newly observed materials into the Stage.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 2;
+   */
+  spec?: StageSpec;
+
+  /**
+   * Status describes the most recently observed versions of this Stage's
+   * sources of material as well as the Stage's current and recent states.
+   *
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus status = 3;
+   */
+  status?: StageStatus;
+
+  constructor(data?: PartialMessage<Stage>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Stage";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 2, name: "spec", kind: "message", T: StageSpec, opt: true },
+    { no: 3, name: "status", kind: "message", T: StageStatus, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Stage {
+    return new Stage().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Stage {
+    return new Stage().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Stage {
+    return new Stage().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Stage | PlainMessage<Stage> | undefined, b: Stage | PlainMessage<Stage> | undefined): boolean {
+    return proto2.util.equals(Stage, a, b);
+  }
+}
+
+/**
+ * StageList is a list of Stage resources.
+ *
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.StageList
+ */
+export class StageList extends Message<StageList> {
+  /**
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+   */
+  metadata?: ListMeta;
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Stage items = 2;
+   */
+  items: Stage[] = [];
+
+  constructor(data?: PartialMessage<StageList>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageList";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "metadata", kind: "message", T: ListMeta, opt: true },
+    { no: 2, name: "items", kind: "message", T: Stage, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageList {
+    return new StageList().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageList {
+    return new StageList().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageList {
+    return new StageList().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StageList | PlainMessage<StageList> | undefined, b: StageList | PlainMessage<StageList> | undefined): boolean {
+    return proto2.util.equals(StageList, a, b);
+  }
+}
+
+/**
+ * StageSpec describes the sources of material used by a Stage and how to
+ * incorporate newly observed materials into the Stage.
+ *
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
+ */
+export class StageSpec extends Message<StageSpec> {
+  /**
+   * Subscriptions describes the Stage's sources of material. This is a
+   * required field.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions subscriptions = 1;
+   */
+  subscriptions?: Subscriptions;
+
+  /**
+   * PromotionMechanisms describes how to incorporate newly observed materials
+   * into the Stage. This is a required field.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms promotionMechanisms = 2;
+   */
+  promotionMechanisms?: PromotionMechanisms;
+
+  constructor(data?: PartialMessage<StageSpec>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
+    { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSpec {
+    return new StageSpec().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageSpec {
+    return new StageSpec().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageSpec {
+    return new StageSpec().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StageSpec | PlainMessage<StageSpec> | undefined, b: StageSpec | PlainMessage<StageSpec> | undefined): boolean {
+    return proto2.util.equals(StageSpec, a, b);
+  }
+}
+
+/**
+ * StageState is a "bill of materials" describing what is, was, or can be
+ * deployed to a Stage.
+ *
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.StageState
+ */
+export class StageState extends Message<StageState> {
+  /**
+   * ID is a unique, system-assigned identifier for this state.
+   *
+   * @generated from field: optional string id = 1;
+   */
+  id?: string;
+
+  /**
+   * FirstSeen represents the date/time when this StageStage first entered the
+   * system. This is useful and important information because it enables the
+   * controller to block auto-promotion of StageStates that are older than a
+   * Stages's current state, which is a case that can arise if a Stage has
+   * ROLLED BACK to an older state whilst a downstream Stage is already on to a
+   * newer state.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time firstSeen = 2;
+   */
+  firstSeen?: Time;
+
+  /**
+   * Provenance describes the proximate source of this StageState. i.e. Did it
+   * come directly from upstream repositories? Or an upstream Stage.
+   *
+   * @generated from field: optional string provenance = 3;
+   */
+  provenance?: string;
+
+  /**
+   * Commits describes specific Git repository commits that were used in this
+   * state.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit commits = 4;
+   */
+  commits: GitCommit[] = [];
+
+  /**
+   * Images describes container images and versions thereof that were used
+   * in this state.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Image images = 5;
+   */
+  images: Image[] = [];
+
+  /**
+   * Charts describes Helm charts that were used in this state.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Chart charts = 6;
+   */
+  charts: Chart[] = [];
+
+  /**
+   * Health is the StageState's last observed health. If this state is the
+   * Stage's current state, this will be continuously re-assessed and
+   * updated. If this StageState is a past state of the Stage, this field will
+   * denote the last observed health state before transitioning into a different
+   * state.
+   *
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Health health = 7;
+   */
+  health?: Health;
+
+  constructor(data?: PartialMessage<StageState>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageState";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "firstSeen", kind: "message", T: Time, opt: true },
+    { no: 3, name: "provenance", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "commits", kind: "message", T: GitCommit, repeated: true },
+    { no: 5, name: "images", kind: "message", T: Image, repeated: true },
+    { no: 6, name: "charts", kind: "message", T: Chart, repeated: true },
+    { no: 7, name: "health", kind: "message", T: Health, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageState {
+    return new StageState().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageState {
+    return new StageState().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageState {
+    return new StageState().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StageState | PlainMessage<StageState> | undefined, b: StageState | PlainMessage<StageState> | undefined): boolean {
+    return proto2.util.equals(StageState, a, b);
+  }
+}
+
+/**
+ * StageStatus describes the most recently observed versions of a Stage's
+ * sources of material as well as its current and recent states.
+ *
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
+ */
+export class StageStatus extends Message<StageStatus> {
+  /**
+   * AvailableStates is a stack of available StageStates, where each state is
+   * essentially a "bill of materials" describing what can be automatically or
+   * manually deployed to the Stage.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageState availableStates = 1;
+   */
+  availableStates: StageState[] = [];
+
+  /**
+   * CurrentState is the Stage's current state -- a "bill of materials"
+   * describing what is currently deployed to the Stage.
+   *
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.StageState currentState = 2;
+   */
+  currentState?: StageState;
+
+  /**
+   * History is a stack of recent StageStates, where each state is
+   * essentially a "bill of materials" describing what was deployed to the
+   * Stage. By default, the last ten states are stored.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageState history = 3;
+   */
+  history: StageState[] = [];
+
+  /**
+   * Error describes any errors that are preventing the Stage controller
+   * from assessing Stage health or from polling repositories or upstream
+   * Stages to discover new StageStates.
+   *
+   * @generated from field: optional string error = 4;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<StageStatus>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "availableStates", kind: "message", T: StageState, repeated: true },
+    { no: 2, name: "currentState", kind: "message", T: StageState, opt: true },
+    { no: 3, name: "history", kind: "message", T: StageState, repeated: true },
+    { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageStatus {
+    return new StageStatus().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageStatus {
+    return new StageStatus().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageStatus {
+    return new StageStatus().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StageStatus | PlainMessage<StageStatus> | undefined, b: StageStatus | PlainMessage<StageStatus> | undefined): boolean {
+    return proto2.util.equals(StageStatus, a, b);
+  }
+}
+
+/**
+ * StageSubscription defines a subscription to states from another Stage.
+ *
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription
+ */
+export class StageSubscription extends Message<StageSubscription> {
+  /**
+   * Name specifies the name of a Stage.
+   *
+   * +kubebuilder:validation:MinLength=1
+   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * Namespace specifies the namespace of the Stage. If left unspecified,
+   * the namespace of the upstream repository will be defaulted to that of this
+   * Stage.
+   *
+   * TODO: This field needs to go away because we've really leaned into using
+   * namespaces as project boundaries.
+   *
+   * +kubebuilder:validation:Optional
+   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+   *
+   * @generated from field: optional string namespace = 2;
+   */
+  namespace?: string;
+
+  constructor(data?: PartialMessage<StageSubscription>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSubscription {
+    return new StageSubscription().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageSubscription {
+    return new StageSubscription().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageSubscription {
+    return new StageSubscription().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StageSubscription | PlainMessage<StageSubscription> | undefined, b: StageSubscription | PlainMessage<StageSubscription> | undefined): boolean {
+    return proto2.util.equals(StageSubscription, a, b);
+  }
+}
+
+/**
+ * Subscriptions describes a Stage's sources of material.
  *
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions
  */
 export class Subscriptions extends Message<Subscriptions> {
   /**
-   * Repos describes various sorts of repositories an Environment uses as
-   * sources of material. This field is mutually exclusive with the UpstreamEnvs
-   * field.
+   * Repos describes various sorts of repositories a Stage uses as sources of
+   * material. This field is mutually exclusive with the UpstreamStages field.
    *
    * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscriptions repos = 1;
    */
   repos?: RepoSubscriptions;
 
   /**
-   * UpstreamEnvs identifies other environments as potential sources of material
-   * for the Environment. This field is mutually exclusive with the Repos field.
+   * UpstreamStages identifies other Stages as potential sources of material
+   * for this Stage. This field is mutually exclusive with the Repos field.
    *
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentSubscription upstreamEnvs = 2;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription upstreamStages = 2;
    */
-  upstreamEnvs: EnvironmentSubscription[] = [];
+  upstreamStages: StageSubscription[] = [];
 
   constructor(data?: PartialMessage<Subscriptions>) {
     super();
@@ -2119,7 +2112,7 @@ export class Subscriptions extends Message<Subscriptions> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "repos", kind: "message", T: RepoSubscriptions, opt: true },
-    { no: 2, name: "upstreamEnvs", kind: "message", T: EnvironmentSubscription, repeated: true },
+    { no: 2, name: "upstreamStages", kind: "message", T: StageSubscription, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscriptions {
