@@ -57,8 +57,8 @@ func TestValidateUpdate(t *testing.T) {
 						Namespace: "fake-namespace",
 					},
 					Spec: &api.PromotionSpec{
-						Environment: "fake-environment",
-						State:       "fake-state",
+						Stage: "fake-stage",
+						State: "fake-state",
 					},
 				}
 				newPromo := oldPromo.DeepCopy()
@@ -84,8 +84,8 @@ func TestValidateUpdate(t *testing.T) {
 						Namespace: "fake-namespace",
 					},
 					Spec: &api.PromotionSpec{
-						Environment: "fake-environment",
-						State:       "fake-state",
+						Stage: "fake-stage",
+						State: "fake-state",
 					},
 				}
 				newPromo := oldPromo.DeepCopy()
@@ -222,7 +222,7 @@ func TestAuthorize(t *testing.T) {
 							Namespace: "fake-namespace",
 						},
 						Spec: &api.PromotionSpec{
-							Environment: "fake-environment",
+							Stage: "fake-stage",
 						},
 					},
 					"create",
