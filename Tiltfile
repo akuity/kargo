@@ -58,7 +58,11 @@ k8s_resource(
   objects = [
     'kargo-controller:clusterrole',
     'kargo-controller:clusterrolebinding',
-    'kargo-controller:serviceaccount'
+    'kargo-controller:role',
+    'kargo-controller:rolebinding',
+    'kargo-controller:serviceaccount',
+    'kargo-controller-argocd:clusterrole',
+    'kargo-controller-argocd:clusterrolebinding'
   ]
 )
 
