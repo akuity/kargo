@@ -34,26 +34,26 @@ type reconciler struct {
 	credentialsDB     credentials.Database
 	bookkeeperService bookkeeper.Service
 
-	promoQueuesByEnv   map[types.NamespacedName]runtime.PriorityQueue
-	promoQueuesByEnvMu sync.Mutex
-	initializeOnce     sync.Once
+	promoQueuesByStage   map[types.NamespacedName]runtime.PriorityQueue
+	promoQueuesByStageMu sync.Mutex
+	initializeOnce       sync.Once
 
 	// The following behaviors are overridable for testing purposes:
 
 	// Promotions (general):
 	promoteFn func(
 		ctx context.Context,
-		envName string,
-		envNamespace string,
+		stageName string,
+		stageNamespace string,
 		stateID string,
 	) error
 
 	applyPromotionMechanismsFn func(
 		ctx context.Context,
-		envMeta metav1.ObjectMeta,
+		stageMeta metav1.ObjectMeta,
 		promoMechanisms api.PromotionMechanisms,
-		newState api.EnvironmentState,
-	) (api.EnvironmentState, error)
+		newState api.StageState,
+	) (api.StageState, error)
 
 	// Promotions via Git:
 	gitApplyUpdateFn func(
@@ -91,7 +91,7 @@ type reconciler struct {
 
 	applyArgoCDSourceUpdateFn func(
 		argocd.ApplicationSource,
-		api.EnvironmentState,
+		api.StageState,
 		api.ArgoCDSourceUpdate,
 	) (argocd.ApplicationSource, error)
 
@@ -129,11 +129,11 @@ func newReconciler(
 	bookkeeperService bookkeeper.Service,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient:       kargoClient,
-		argoClient:        argoClient,
-		credentialsDB:     credentialsDB,
-		bookkeeperService: bookkeeperService,
-		promoQueuesByEnv:  map[types.NamespacedName]runtime.PriorityQueue{},
+		kargoClient:        kargoClient,
+		argoClient:         argoClient,
+		credentialsDB:      credentialsDB,
+		bookkeeperService:  bookkeeperService,
+		promoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
 
 	// Promotions (general):
@@ -175,8 +175,8 @@ func (r *reconciler) Reconcile(
 	// We count all of Reconcile() as a critical section of code to ensure we
 	// don't start reconciling a second Promotion before lazy initialization
 	// completes upon reconciliation of the FIRST promotion.
-	r.promoQueuesByEnvMu.Lock()
-	defer r.promoQueuesByEnvMu.Unlock()
+	r.promoQueuesByStageMu.Lock()
+	defer r.promoQueuesByStageMu.Unlock()
 
 	result := ctrl.Result{
 		// Note: If there is a failure, controller runtime ignores this and uses
@@ -194,7 +194,7 @@ func (r *reconciler) Reconcile(
 	r.initializeOnce.Do(func() {
 		if err = r.initializeQueues(ctx); err == nil {
 			logger.Debug(
-				"initialized Environment-specific Promotion queues from list of " +
+				"initialized Stage-specific Promotion queues from list of " +
 					"existing Promotions",
 			)
 		}
@@ -245,7 +245,7 @@ func (r *reconciler) Reconcile(
 // initializeQueues lists all Promotions and adds them to relevant priority
 // queues. This is intended to be invoked ONCE and the caller MUST ensure that.
 // It is also assumed that the caller has already obtained a lock on
-// promoQueuesByEnvMu.
+// promoQueuesByStageMu.
 func (r *reconciler) initializeQueues(ctx context.Context) error {
 	promos := api.PromotionList{}
 	if err := r.kargoClient.List(ctx, &promos); err != nil {
@@ -268,39 +268,39 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 				)
 			}
 		}
-		env := types.NamespacedName{
+		stage := types.NamespacedName{
 			Namespace: promo.Namespace,
-			Name:      promo.Spec.Environment,
+			Name:      promo.Spec.Stage,
 		}
-		pq, ok := r.promoQueuesByEnv[env]
+		pq, ok := r.promoQueuesByStage[stage]
 		if !ok {
 			pq = newPromotionsQueue()
-			r.promoQueuesByEnv[env] = pq
+			r.promoQueuesByStage[stage] = pq
 		}
 		// The only error that can occur here happens when you push a nil and we
 		// know we're not doing that.
 		pq.Push(&promo) // nolint: errcheck
 		logger.WithFields(log.Fields{
-			"promotion":   promo.Name,
-			"namespace":   promo.Namespace,
-			"environment": promo.Spec.Environment,
-			"phase":       promo.Status.Phase,
-		}).Debug("pushed Promotion onto Environment-specific Promotion queue")
+			"promotion": promo.Name,
+			"namespace": promo.Namespace,
+			"stage":     promo.Spec.Stage,
+			"phase":     promo.Status.Phase,
+		}).Debug("pushed Promotion onto Stage-specific Promotion queue")
 	}
 	if logger.Logger.IsLevelEnabled(log.DebugLevel) {
-		for env, pq := range r.promoQueuesByEnv {
+		for stage, pq := range r.promoQueuesByStage {
 			logger.WithFields(log.Fields{
-				"environment": env.Name,
-				"namespace":   env.Namespace,
-				"depth":       pq.Depth(),
-			}).Debug("Environment-specific Promotion queue initialized")
+				"stage":     stage.Name,
+				"namespace": stage.Namespace,
+				"depth":     pq.Depth(),
+			}).Debug("Stage-specific Promotion queue initialized")
 		}
 	}
 	return nil
 }
 
-// sync enqueues Promotion requests to an Environment-specific priority queue.
-// This functions assumes the caller has obtained a lock on promoQueuesByEnvMu.
+// sync enqueues Promotion requests to a Stage-specific priority queue. This
+// functions assumes the caller has obtained a lock on promoQueuesByStageMu.
 func (r *reconciler) sync(
 	ctx context.Context,
 	promo *api.Promotion,
@@ -314,15 +314,15 @@ func (r *reconciler) sync(
 
 	promo.Status.Phase = api.PromotionPhasePending
 
-	env := types.NamespacedName{
+	stage := types.NamespacedName{
 		Namespace: promo.Namespace,
-		Name:      promo.Spec.Environment,
+		Name:      promo.Spec.Stage,
 	}
 
-	pq, ok := r.promoQueuesByEnv[env]
+	pq, ok := r.promoQueuesByStage[stage]
 	if !ok {
 		pq = newPromotionsQueue()
-		r.promoQueuesByEnv[env] = pq
+		r.promoQueuesByStage[stage] = pq
 	}
 
 	status.Phase = api.PromotionPhasePending
@@ -332,9 +332,9 @@ func (r *reconciler) sync(
 	pq.Push(promo) // nolint: errcheck
 
 	logging.LoggerFromContext(ctx).WithField("depth", pq.Depth()).
-		Infof("pushed Promotion %q to Queue for Environment %q in namespace %q ",
+		Infof("pushed Promotion %q to Queue for Stage %q in namespace %q ",
 			promo.Name,
-			promo.Spec.Environment,
+			promo.Spec.Stage,
 			promo.Namespace,
 		)
 
@@ -353,7 +353,7 @@ func (r *reconciler) serializedSync(
 		case <-ctx.Done():
 			return
 		}
-		for _, pq := range r.promoQueuesByEnv {
+		for _, pq := range r.promoQueuesByStage {
 			if popped := pq.Pop(); popped != nil {
 				promo := popped.(*api.Promotion) // nolint: forcetypeassert
 
@@ -379,8 +379,8 @@ func (r *reconciler) serializedSync(
 				}
 
 				logger = logger.WithFields(log.Fields{
-					"environment": promo.Spec.Environment,
-					"state":       promo.Spec.State,
+					"stage": promo.Spec.Stage,
+					"state": promo.Spec.State,
 				})
 				logger.Debug("executing Promotion")
 
@@ -388,7 +388,7 @@ func (r *reconciler) serializedSync(
 
 				if err = r.promoteFn(
 					promoCtx,
-					promo.Spec.Environment,
+					promo.Spec.Stage,
 					promo.Namespace,
 					promo.Spec.State,
 				); err != nil {
@@ -414,46 +414,46 @@ func (r *reconciler) serializedSync(
 
 func (r *reconciler) promote(
 	ctx context.Context,
-	envName string,
-	envNamespace string,
+	stageName string,
+	stageNamespace string,
 	stateID string,
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	env, err := api.GetEnv(
+	stage, err := api.GetStage(
 		ctx,
 		r.kargoClient,
 		types.NamespacedName{
-			Namespace: envNamespace,
-			Name:      envName,
+			Namespace: stageNamespace,
+			Name:      stageName,
 		},
 	)
 	if err != nil {
 		return errors.Wrapf(
 			err,
-			"error finding Environment %q in namespace %q",
-			envName,
-			envNamespace,
+			"error finding Stage %q in namespace %q",
+			stageName,
+			stageNamespace,
 		)
 	}
-	if env == nil {
+	if stage == nil {
 		return errors.Errorf(
-			"could not find Environment %q in namespace %q",
-			envName,
-			envNamespace,
+			"could not find Stage %q in namespace %q",
+			stageName,
+			stageNamespace,
 		)
 	}
-	logger.Debug("found associated Environment")
+	logger.Debug("found associated Stage")
 
 	if currentState, ok :=
-		env.Status.History.Top(); ok && currentState.ID == stateID {
-		logger.Debug("Environment is already in desired state")
+		stage.Status.History.Top(); ok && currentState.ID == stateID {
+		logger.Debug("Stage is already in desired state")
 		return nil
 	}
 
 	var targetStateIndex int
-	var targetState *api.EnvironmentState
-	for i, availableState := range env.Status.AvailableStates {
+	var targetState *api.StageState
+	for i, availableState := range stage.Status.AvailableStates {
 		if availableState.ID == stateID {
 			targetStateIndex = i
 			targetState = availableState.DeepCopy()
@@ -462,43 +462,43 @@ func (r *reconciler) promote(
 	}
 	if targetState == nil {
 		return errors.Errorf(
-			"target state %q not found among available states of Environment %q "+
+			"target state %q not found among available states of Stage %q "+
 				"in namespace %q",
 			stateID,
-			envName,
-			envNamespace,
+			stageName,
+			stageNamespace,
 		)
 	}
 
 	nextState, err := r.applyPromotionMechanismsFn(
 		ctx,
-		env.ObjectMeta,
-		*env.Spec.PromotionMechanisms,
+		stage.ObjectMeta,
+		*stage.Spec.PromotionMechanisms,
 		*targetState,
 	)
 	if err != nil {
 		return err
 	}
-	env.Status.CurrentState = &nextState
-	env.Status.AvailableStates[targetStateIndex] = nextState
-	env.Status.History.Push(nextState)
+	stage.Status.CurrentState = &nextState
+	stage.Status.AvailableStates[targetStateIndex] = nextState
+	stage.Status.History.Push(nextState)
 
-	err = r.kargoClient.Status().Update(ctx, env)
+	err = r.kargoClient.Status().Update(ctx, stage)
 	return errors.Wrapf(
 		err,
-		"error updating status of Environment %q in namespace %q",
-		envName,
-		envNamespace,
+		"error updating status of Stage %q in namespace %q",
+		stageName,
+		stageNamespace,
 	)
 }
 
 // TODO: This function could use some tests
 func (r *reconciler) applyPromotionMechanisms(
 	ctx context.Context,
-	envMeta metav1.ObjectMeta,
+	stageMeta metav1.ObjectMeta,
 	promoMechanisms api.PromotionMechanisms,
-	newState api.EnvironmentState,
-) (api.EnvironmentState, error) {
+	newState api.StageState,
+) (api.StageState, error) {
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing promotion mechanisms")
 	var err error
@@ -506,7 +506,7 @@ func (r *reconciler) applyPromotionMechanisms(
 		if gitRepoUpdate.Bookkeeper != nil {
 			if newState, err = r.applyBookkeeperUpdate(
 				ctx,
-				envMeta.Namespace,
+				stageMeta.Namespace,
 				newState,
 				gitRepoUpdate,
 			); err != nil {
@@ -515,7 +515,7 @@ func (r *reconciler) applyPromotionMechanisms(
 		} else {
 			if newState, err = r.applyGitRepoUpdate(
 				ctx,
-				envMeta.Namespace,
+				stageMeta.Namespace,
 				newState,
 				gitRepoUpdate,
 			); err != nil {
@@ -530,7 +530,7 @@ func (r *reconciler) applyPromotionMechanisms(
 	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
 		if err = r.applyArgoCDAppUpdate(
 			ctx,
-			envMeta,
+			stageMeta,
 			newState,
 			argoCDAppUpdate,
 		); err != nil {

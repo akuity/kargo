@@ -87,37 +87,44 @@ func (s *server) Serve(
 	}
 }
 
-func (s *server) CreateEnvironment(
+func (s *server) CreateStage(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.CreateEnvironmentRequest],
-) (*connect.Response[svcv1alpha1.CreateEnvironmentResponse], error) {
-	return handler.CreateEnvironmentV1Alpha1(s.kc)(ctx, req)
+	req *connect.Request[svcv1alpha1.CreateStageRequest],
+) (*connect.Response[svcv1alpha1.CreateStageResponse], error) {
+	return handler.CreateStageV1Alpha1(s.kc)(ctx, req)
 }
 
-func (s *server) ListEnvironments(
+func (s *server) ListStages(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListEnvironmentsRequest],
-) (*connect.Response[svcv1alpha1.ListEnvironmentsResponse], error) {
-	return handler.ListEnvironmentsV1Alpha1(s.kc)(ctx, req)
+	req *connect.Request[svcv1alpha1.ListStagesRequest],
+) (*connect.Response[svcv1alpha1.ListStagesResponse], error) {
+	return handler.ListStagesV1Alpha1(s.kc)(ctx, req)
 }
 
-func (s *server) GetEnvironment(
+func (s *server) GetStage(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.GetEnvironmentRequest],
-) (*connect.Response[svcv1alpha1.GetEnvironmentResponse], error) {
-	return handler.GetEnvironmentV1Alpha1(s.kc)(ctx, req)
+	req *connect.Request[svcv1alpha1.GetStageRequest],
+) (*connect.Response[svcv1alpha1.GetStageResponse], error) {
+	return handler.GetStageV1Alpha1(s.kc)(ctx, req)
 }
 
-func (s *server) DeleteEnvironment(
+func (s *server) DeleteStage(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.DeleteEnvironmentRequest],
-) (*connect.Response[svcv1alpha1.DeleteEnvironmentResponse], error) {
-	return handler.DeleteEnvironmentV1Alpha1(s.kc)(ctx, req)
+	req *connect.Request[svcv1alpha1.DeleteStageRequest],
+) (*connect.Response[svcv1alpha1.DeleteStageResponse], error) {
+	return handler.DeleteStageV1Alpha1(s.kc)(ctx, req)
 }
 
-func (s *server) PromoteEnvironment(
+func (s *server) PromoteStage(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.PromoteEnvironmentRequest],
-) (*connect.Response[svcv1alpha1.PromoteEnvironmentResponse], error) {
-	return handler.PromoteEnvironmentV1Alpha1(s.kc)(ctx, req)
+	req *connect.Request[svcv1alpha1.PromoteStageRequest],
+) (*connect.Response[svcv1alpha1.PromoteStageResponse], error) {
+	return handler.PromoteStageV1Alpha1(s.kc)(ctx, req)
+}
+
+func (s *server) ListProjects(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.ListProjectsRequest],
+) (*connect.Response[svcv1alpha1.ListProjectsResponse], error) {
+	return handler.ListProjectsV1Alpha1(s.kc)(ctx, req)
 }

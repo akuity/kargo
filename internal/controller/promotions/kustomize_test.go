@@ -12,14 +12,14 @@ import (
 func TestApplyKustomize(t *testing.T) {
 	testCases := []struct {
 		name                string
-		newState            api.EnvironmentState
+		newState            api.StageState
 		update              api.KustomizePromotionMechanism
 		kustomizeSetImageFn func(dir, repo, tag string) error
 		assertions          func(changeSummary []string, err error)
 	}{
 		{
 			name: "error setting image",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-url",
@@ -48,7 +48,7 @@ func TestApplyKustomize(t *testing.T) {
 
 		{
 			name: "success",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-url",

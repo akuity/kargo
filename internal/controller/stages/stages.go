@@ -1,4 +1,4 @@
-package environments
+package stages
 
 import (
 	"context"
@@ -28,12 +28,12 @@ import (
 )
 
 const (
-	envsByAppIndexField              = "applications"
-	outstandingPromosByEnvIndexField = "environment"
-	promoPoliciesByEnvIndexField     = "environment"
+	stagesByAppIndexField              = "applications"
+	outstandingPromosByStageIndexField = "stage"
+	promoPoliciesByStageIndexField     = "stage"
 )
 
-// reconciler reconciles Environment resources.
+// reconciler reconciles Stage resources.
 type reconciler struct {
 	kargoClient   client.Client
 	argoClient    client.Client
@@ -44,8 +44,8 @@ type reconciler struct {
 	// Loop guard
 	hasOutstandingPromotionsFn func(
 		ctx context.Context,
-		envNamespace string,
-		envName string,
+		stageNamespace string,
+		stageName string,
 	) (bool, error)
 
 	// Common:
@@ -59,7 +59,7 @@ type reconciler struct {
 	// Health checks:
 	checkHealthFn func(
 		context.Context,
-		api.EnvironmentState,
+		api.StageState,
 		[]api.ArgoCDAppUpdate,
 	) api.Health
 
@@ -68,12 +68,12 @@ type reconciler struct {
 		ctx context.Context,
 		namespace string,
 		subs api.RepoSubscriptions,
-	) (*api.EnvironmentState, error)
+	) (*api.StageState, error)
 
-	getAvailableStatesFromUpstreamEnvsFn func(
+	getAvailableStatesFromUpstreamStagesFn func(
 		context.Context,
-		[]api.EnvironmentSubscription,
-	) ([]api.EnvironmentState, error)
+		[]api.StageSubscription,
+	) ([]api.StageState, error)
 
 	getLatestCommitsFn func(
 		ctx context.Context,
@@ -118,55 +118,55 @@ type reconciler struct {
 	) (string, error)
 }
 
-// SetupReconcilerWithManager initializes a reconciler for Environment resources
-// and registers it with the provided Manager.
+// SetupReconcilerWithManager initializes a reconciler for Stage resources and
+// registers it with the provided Manager.
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
 ) error {
-	// Index Environments by Argo CD Applications
+	// Index Stages by Argo CD Applications
 	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
-		&api.Environment{},
-		envsByAppIndexField,
-		indexEnvsByApp,
+		&api.Stage{},
+		stagesByAppIndexField,
+		indexStagesByApp,
 	); err != nil {
 		return errors.Wrap(
 			err,
-			"error indexing Environments by Argo CD Applications",
+			"error indexing Stages by Argo CD Applications",
 		)
 	}
 
-	// Index Promotions in non-terminal states by Environment
+	// Index Promotions in non-terminal states by Stage
 	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.Promotion{},
-		outstandingPromosByEnvIndexField,
-		indexOutstandingPromotionsByEnvironment,
+		outstandingPromosByStageIndexField,
+		indexOutstandingPromotionsByStage,
 	); err != nil {
 		return errors.Wrap(
 			err,
-			"error indexing non-terminal Promotions by Environment",
+			"error indexing non-terminal Promotions by Stage",
 		)
 	}
 
-	// Index PromotionPolicies by Environment
+	// Index PromotionPolicies by Stage
 	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.PromotionPolicy{},
-		promoPoliciesByEnvIndexField,
+		promoPoliciesByStageIndexField,
 		func(obj client.Object) []string {
 			policy := obj.(*api.PromotionPolicy) // nolint: forcetypeassert
-			return []string{policy.Environment}
+			return []string{policy.Stage}
 		},
 	); err != nil {
-		return errors.Wrap(err, "error indexing PromotionPolicies by Environment")
+		return errors.Wrap(err, "error indexing PromotionPolicies by Stage")
 	}
 
 	return ctrl.NewControllerManagedBy(kargoMgr).
-		For(&api.Environment{}).
+		For(&api.Stage{}).
 		WithEventFilter(predicate.Funcs{
 			DeleteFunc: func(event.DeleteEvent) bool {
 				// We're not interested in any deletes
@@ -181,27 +181,27 @@ func SetupReconcilerWithManager(
 		))
 }
 
-func indexEnvsByApp(obj client.Object) []string {
-	env := obj.(*api.Environment) // nolint: forcetypeassert
-	if env.Spec.PromotionMechanisms == nil ||
-		len(env.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
+func indexStagesByApp(obj client.Object) []string {
+	stage := obj.(*api.Stage) // nolint: forcetypeassert
+	if stage.Spec.PromotionMechanisms == nil ||
+		len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 		return nil
 	}
-	apps := make([]string, len(env.Spec.PromotionMechanisms.ArgoCDAppUpdates))
-	for i, appCheck := range env.Spec.PromotionMechanisms.ArgoCDAppUpdates {
+	apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
+	for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
 		apps[i] =
 			fmt.Sprintf("%s:%s", appCheck.AppNamespace, appCheck.AppName)
 	}
 	return apps
 }
 
-func indexOutstandingPromotionsByEnvironment(obj client.Object) []string {
+func indexOutstandingPromotionsByStage(obj client.Object) []string {
 	promo := obj.(*api.Promotion) // nolint: forcetypeassert
 	switch promo.Status.Phase {
 	case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
 		return nil
 	}
-	return []string{promo.Spec.Environment}
+	return []string{promo.Spec.Stage}
 }
 
 func newReconciler(
@@ -228,7 +228,7 @@ func newReconciler(
 
 	// Syncing:
 	r.getLatestStateFromReposFn = r.getLatestStateFromRepos
-	r.getAvailableStatesFromUpstreamEnvsFn = r.getAvailableStatesFromUpstreamEnvs
+	r.getAvailableStatesFromUpstreamStagesFn = r.getAvailableStatesFromUpstreamStages
 	r.getLatestCommitsFn = r.getLatestCommits
 	r.getLatestImagesFn = r.getLatestImages
 	r.getLatestTagFn = images.GetLatestTag
@@ -254,38 +254,38 @@ func (r *reconciler) Reconcile(
 	}
 
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"namespace":   req.NamespacedName.Namespace,
-		"environment": req.NamespacedName.Name,
+		"namespace": req.NamespacedName.Namespace,
+		"stage":     req.NamespacedName.Name,
 	})
 	ctx = logging.ContextWithLogger(ctx, logger)
-	logger.Debug("reconciling Environment")
+	logger.Debug("reconciling Stage")
 
-	// Find the Environment
-	env, err := api.GetEnv(ctx, r.kargoClient, req.NamespacedName)
+	// Find the Stage
+	stage, err := api.GetStage(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
-	if env == nil {
-		// Ignore if not found. This can happen if the Environment was deleted after
-		// the current reconciliation request was issued.
+	if stage == nil {
+		// Ignore if not found. This can happen if the Stage was deleted after the
+		// current reconciliation request was issued.
 		result.RequeueAfter = 0 // Do not requeue
 		return result, nil
 	}
-	logger.Debug("found Environment")
+	logger.Debug("found Stage")
 
-	env.Status, err = r.sync(ctx, env)
+	stage.Status, err = r.sync(ctx, stage)
 	if err != nil {
-		env.Status.Error = err.Error()
-		logger.Errorf("error syncing Environment: %s", env.Status.Error)
+		stage.Status.Error = err.Error()
+		logger.Errorf("error syncing Stage: %s", stage.Status.Error)
 	} else {
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
-		env.Status.Error = ""
+		stage.Status.Error = ""
 	}
 
-	updateErr := r.kargoClient.Status().Update(ctx, env)
+	updateErr := r.kargoClient.Status().Update(ctx, stage)
 	if updateErr != nil {
-		logger.Errorf("error updating Environment status: %s", updateErr)
+		logger.Errorf("error updating Stage status: %s", updateErr)
 	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
@@ -295,7 +295,7 @@ func (r *reconciler) Reconcile(
 		err = updateErr
 	}
 
-	logger.Debug("done reconciling Environment")
+	logger.Debug("done reconciling Stage")
 
 	// Controller runtime automatically gives us a progressive backoff if err is
 	// not nil
@@ -304,49 +304,48 @@ func (r *reconciler) Reconcile(
 
 func (r *reconciler) sync(
 	ctx context.Context,
-	env *api.Environment,
-) (api.EnvironmentStatus, error) {
-	status := *env.Status.DeepCopy()
+	stage *api.Stage,
+) (api.StageStatus, error) {
+	status := *stage.Status.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
 
 	// Skip the entire reconciliation loop if there are Promotions associate with
-	// this Environment in a non-terminal state. The promotion process and this
-	// reconciliation loop BOTH update Environment status, so this check helps us
+	// this Stage in a non-terminal state. The promotion process and this
+	// reconciliation loop BOTH update Stage status, so this check helps us
 	// to avoid race conditions that may otherwise arise.
 	hasOutstandingPromos, err :=
-		r.hasOutstandingPromotionsFn(ctx, env.Namespace, env.Name)
+		r.hasOutstandingPromotionsFn(ctx, stage.Namespace, stage.Name)
 	if err != nil {
 		return status, err
 	}
 	if hasOutstandingPromos {
 		logger.Debug(
-			"Environment has outstanding Promotions; skipping this reconciliation " +
-				"loop",
+			"Stage has outstanding Promotions; skipping this reconciliation loop",
 		)
 		return status, nil
 	}
 
 	// Only perform health checks if we have a current state
-	if status.CurrentState != nil && env.Spec.PromotionMechanisms != nil {
+	if status.CurrentState != nil && stage.Spec.PromotionMechanisms != nil {
 		health := r.checkHealthFn(
 			ctx,
 			*status.CurrentState,
-			env.Spec.PromotionMechanisms.ArgoCDAppUpdates,
+			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		)
 		status.CurrentState.Health = &health
 		status.History.Pop()
 		status.History.Push(*status.CurrentState)
 	} else {
-		logger.Debug("Environment has no current state; skipping health checks")
+		logger.Debug("Stage has no current state; skipping health checks")
 	}
 
-	if env.Spec.Subscriptions.Repos != nil {
+	if stage.Spec.Subscriptions.Repos != nil {
 
 		latestState, err := r.getLatestStateFromReposFn(
 			ctx,
-			env.Namespace,
-			*env.Spec.Subscriptions.Repos,
+			stage.Namespace,
+			*stage.Spec.Subscriptions.Repos,
 		)
 		if err != nil {
 			return status, err
@@ -370,34 +369,34 @@ func (r *reconciler) sync(
 		status.AvailableStates.Push(*latestState)
 		logger.Debug("latest state is new; added to available states")
 
-	} else if len(env.Spec.Subscriptions.UpstreamEnvs) > 0 {
+	} else if len(stage.Spec.Subscriptions.UpstreamStages) > 0 {
 
 		// Grab the latest known state before we overwrite status.AvailableStates
-		var latestKnownState *api.EnvironmentState
+		var latestKnownState *api.StageState
 		if lks, ok := status.AvailableStates.Top(); ok {
 			latestKnownState = &lks
 		}
 
-		// This returns de-duped, healthy states only from all upstream envs. There
-		// could be up to ten per upstream environment. This is more than the usual
+		// This returns de-duped, healthy states only from all upstream Stages.
+		// There could be up to ten per upstream Stage. This is more than the usual
 		// quantity we permit in status.AvailableStates, but we'll allow it.
 		var err error
-		if status.AvailableStates, err = r.getAvailableStatesFromUpstreamEnvsFn(
+		if status.AvailableStates, err = r.getAvailableStatesFromUpstreamStagesFn(
 			ctx,
-			env.Spec.Subscriptions.UpstreamEnvs,
+			stage.Spec.Subscriptions.UpstreamStages,
 		); err != nil {
 			return status, err
 		}
 
 		if status.AvailableStates.Empty() {
-			logger.Debug("got no available states from upstream Environments")
+			logger.Debug("got no available states from upstream Stages")
 			return status, nil
 		}
-		logger.Debug("got available states from upstream Environments")
+		logger.Debug("got available states from upstream Stages")
 
-		if len(env.Spec.Subscriptions.UpstreamEnvs) > 1 {
+		if len(stage.Spec.Subscriptions.UpstreamStages) > 1 {
 			logger.Debug(
-				"auto-promotion cannot proceed due to multiple upstream Environments",
+				"auto-promotion cannot proceed due to multiple upstream Stages",
 			)
 			return status, nil
 		}
@@ -434,9 +433,9 @@ func (r *reconciler) sync(
 		ctx,
 		&policies,
 		&client.ListOptions{
-			Namespace: env.Namespace,
+			Namespace: stage.Namespace,
 			FieldSelector: fields.Set(map[string]string{
-				promoPoliciesByEnvIndexField: env.Name,
+				promoPoliciesByStageIndexField: stage.Name,
 			}).AsSelector(),
 		},
 	); err != nil {
@@ -451,7 +450,7 @@ func (r *reconciler) sync(
 	}
 	if len(policies.Items) > 1 {
 		logger.Debug("found multiple PromotionPolicies associated with " +
-			"Environment; auto-promotion will not proceed",
+			"Stage; auto-promotion will not proceed",
 		)
 		return status, nil
 	}
@@ -470,12 +469,12 @@ func (r *reconciler) sync(
 		ctx,
 		&api.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-to-%s", env.Name, nextState.ID),
-				Namespace: env.Namespace,
+				Name:      fmt.Sprintf("%s-to-%s", stage.Name, nextState.ID),
+				Namespace: stage.Namespace,
 			},
 			Spec: &api.PromotionSpec{
-				Environment: env.Name,
-				State:       nextState.ID,
+				Stage: stage.Name,
+				State: nextState.ID,
 			},
 		},
 		&client.CreateOptions{},
@@ -486,9 +485,9 @@ func (r *reconciler) sync(
 		}
 		return status, errors.Wrapf(
 			err,
-			"error creating Promotion of Environment %q in namespace %q to state %q",
-			env.Name,
-			env.Namespace,
+			"error creating Promotion of Stage %q in namespace %q to state %q",
+			stage.Name,
+			stage.Namespace,
 			nextState.ID,
 		)
 	}
@@ -499,26 +498,26 @@ func (r *reconciler) sync(
 
 func (r *reconciler) hasOutstandingPromotions(
 	ctx context.Context,
-	envNamespace string,
-	envName string,
+	stageNamespace string,
+	stageName string,
 ) (bool, error) {
 	promos := api.PromotionList{}
 	if err := r.kargoClient.List(
 		ctx,
 		&promos,
 		&client.ListOptions{
-			Namespace: envNamespace,
+			Namespace: stageNamespace,
 			FieldSelector: fields.Set(map[string]string{
-				outstandingPromosByEnvIndexField: envName,
+				outstandingPromosByStageIndexField: stageName,
 			}).AsSelector(),
 		},
 	); err != nil {
 		return false, errors.Wrapf(
 			err,
-			"error listing outstanding Promotions for Environment %q in "+
+			"error listing outstanding Promotions for Stage %q in "+
 				"namespace %q",
-			envNamespace,
-			envName,
+			stageNamespace,
+			stageName,
 		)
 	}
 	return len(promos.Items) > 0, nil
@@ -528,7 +527,7 @@ func (r *reconciler) getLatestStateFromRepos(
 	ctx context.Context,
 	namespace string,
 	repoSubs api.RepoSubscriptions,
-) (*api.EnvironmentState, error) {
+) (*api.StageState, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	latestCommits, err := r.getLatestCommitsFn(ctx, namespace, repoSubs.Git)
@@ -556,7 +555,7 @@ func (r *reconciler) getLatestStateFromRepos(
 	}
 
 	now := metav1.Now()
-	state := &api.EnvironmentState{
+	state := &api.StageState{
 		FirstSeen: &now,
 		Commits:   latestCommits,
 		Images:    latestImages,
@@ -567,18 +566,18 @@ func (r *reconciler) getLatestStateFromRepos(
 }
 
 // TODO: Test this
-func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
+func (r *reconciler) getAvailableStatesFromUpstreamStages(
 	ctx context.Context,
-	subs []api.EnvironmentSubscription,
-) ([]api.EnvironmentState, error) {
+	subs []api.StageSubscription,
+) ([]api.StageState, error) {
 	if len(subs) == 0 {
 		return nil, nil
 	}
 
-	availableStates := []api.EnvironmentState{}
+	availableStates := []api.StageState{}
 	stateSet := map[string]struct{}{} // We'll use this to de-dupe
 	for _, sub := range subs {
-		upstreamEnv, err := api.GetEnv(
+		upstreamStage, err := api.GetStage(
 			ctx,
 			r.kargoClient,
 			types.NamespacedName{
@@ -589,22 +588,22 @@ func (r *reconciler) getAvailableStatesFromUpstreamEnvs(
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error finding upstream environment %q in namespace %q",
+				"error finding upstream Stage %q in namespace %q",
 				sub.Name,
 				sub.Namespace,
 			)
 		}
-		if upstreamEnv == nil {
+		if upstreamStage == nil {
 			return nil, errors.Errorf(
-				"found no upstream environment %q in namespace %q",
+				"found no upstream Stage %q in namespace %q",
 				sub.Name,
 				sub.Namespace,
 			)
 		}
-		for _, state := range upstreamEnv.Status.History {
+		for _, state := range upstreamStage.Status.History {
 			if _, ok := stateSet[state.ID]; !ok &&
 				state.Health != nil && state.Health.Status == api.HealthStateHealthy {
-				state.Provenance = upstreamEnv.Name
+				state.Provenance = upstreamStage.Name
 				for i := range state.Commits {
 					state.Commits[i].HealthCheckCommit = ""
 				}

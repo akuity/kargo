@@ -1,4 +1,4 @@
-package environments
+package stages
 
 import (
 	"context"
@@ -20,33 +20,33 @@ type webhook struct{}
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := &webhook{}
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&api.Environment{}).
+		For(&api.Stage{}).
 		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
 }
 
 func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
-	env := obj.(*api.Environment) // nolint: forcetypeassert
+	stage := obj.(*api.Stage) // nolint: forcetypeassert
 	// Note that defaults are applied BEFORE validation, so we do not have the
 	// luxury of assuming certain required fields must be non-nil.
-	if env.Spec != nil {
+	if stage.Spec != nil {
 
-		if env.Spec.Subscriptions != nil {
-			// Default namespace for Environments we subscribe to
-			for i := range env.Spec.Subscriptions.UpstreamEnvs {
-				if env.Spec.Subscriptions.UpstreamEnvs[i].Namespace == "" {
-					env.Spec.Subscriptions.UpstreamEnvs[i].Namespace = env.Namespace
+		if stage.Spec.Subscriptions != nil {
+			// Default namespace for Stages we subscribe to
+			for i := range stage.Spec.Subscriptions.UpstreamStages {
+				if stage.Spec.Subscriptions.UpstreamStages[i].Namespace == "" {
+					stage.Spec.Subscriptions.UpstreamStages[i].Namespace = stage.Namespace
 				}
 			}
 		}
 
-		if env.Spec.PromotionMechanisms != nil {
+		if stage.Spec.PromotionMechanisms != nil {
 			// Default namespace for Argo CD Applications we update
-			for i := range env.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-				if env.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace == "" {
-					env.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace =
-						env.Namespace
+			for i := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
+				if stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace == "" {
+					stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace =
+						stage.Namespace
 				}
 			}
 		}
@@ -58,7 +58,7 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 
 func (w *webhook) ValidateCreate(_ context.Context, obj runtime.Object) error {
 	// nolint: forcetypeassert
-	return w.validateCreateOrUpdate(obj.(*api.Environment))
+	return w.validateCreateOrUpdate(obj.(*api.Stage))
 }
 
 func (w *webhook) ValidateUpdate(
@@ -67,7 +67,7 @@ func (w *webhook) ValidateUpdate(
 	newObj runtime.Object,
 ) error {
 	// nolint: forcetypeassert
-	return w.validateCreateOrUpdate(newObj.(*api.Environment))
+	return w.validateCreateOrUpdate(newObj.(*api.Stage))
 }
 
 func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
@@ -75,12 +75,12 @@ func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
 	return nil
 }
 
-func (w *webhook) validateCreateOrUpdate(e *api.Environment) error {
+func (w *webhook) validateCreateOrUpdate(e *api.Stage) error {
 	if errs := w.validateSpec(field.NewPath("spec"), e.Spec); len(errs) > 0 {
 		return apierrors.NewInvalid(
 			schema.GroupKind{
 				Group: api.GroupVersion.Group,
-				Kind:  "Environment",
+				Kind:  "Stage",
 			},
 			e.Name,
 			errs,
@@ -91,7 +91,7 @@ func (w *webhook) validateCreateOrUpdate(e *api.Environment) error {
 
 func (w *webhook) validateSpec(
 	f *field.Path,
-	spec *api.EnvironmentSpec,
+	spec *api.StageSpec,
 ) field.ErrorList {
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
@@ -112,15 +112,15 @@ func (w *webhook) validateSubs(
 	if subs == nil { // nil subs is caught by declarative validations
 		return nil
 	}
-	// Can subscribe to repos XOR upstream Environments
-	if (subs.Repos == nil && len(subs.UpstreamEnvs) == 0) ||
-		(subs.Repos != nil && len(subs.UpstreamEnvs) > 0) {
+	// Can subscribe to repos XOR upstream Stages
+	if (subs.Repos == nil && len(subs.UpstreamStages) == 0) ||
+		(subs.Repos != nil && len(subs.UpstreamStages) > 0) {
 		return field.ErrorList{
 			field.Invalid(
 				f,
 				subs,
 				fmt.Sprintf(
-					"exactly one of %s.repos or %s.upstreamEnvs must be defined",
+					"exactly one of %s.repos or %s.upstreamStages must be defined",
 					f.String(),
 					f.String(),
 				),

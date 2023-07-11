@@ -1,4 +1,4 @@
-package env
+package stage
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "promote",
 		Args:    cobra.ExactArgs(2),
-		Example: "kargo environment promote (PROJECT) (NAME) [(--state=)state-id]",
+		Example: "kargo stage promote (PROJECT) (NAME) [(--state=)state-id]",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -43,13 +43,13 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 			}
 
 			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, opt.ServerURL, opt.ClientOption)
-			res, err := client.PromoteEnvironment(ctx, connect.NewRequest(&v1alpha1.PromoteEnvironmentRequest{
+			res, err := client.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
 				Project: project,
 				Name:    name,
 				State:   state,
 			}))
 			if err != nil {
-				return errors.Wrap(err, "promote environment")
+				return errors.Wrap(err, "promote stage")
 			}
 			// TODO: Replace with console writer
 			fmt.Printf("Promotion Created: %q", res.Msg.GetPromotion().GetMetadata().GetName())

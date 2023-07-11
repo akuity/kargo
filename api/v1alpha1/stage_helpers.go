@@ -8,25 +8,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetEnv returns a pointer to the Environment resource specified by the
+// GetStage returns a pointer to the Stage resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
 // instead.
-func GetEnv(
+func GetStage(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*Environment, error) {
-	env := Environment{}
-	if err := c.Get(ctx, namespacedName, &env); err != nil {
+) (*Stage, error) {
+	stage := Stage{}
+	if err := c.Get(ctx, namespacedName, &stage); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
 		}
 		return nil, errors.Wrapf(
 			err,
-			"error getting Environment %q in namespace %q",
+			"error getting Stage %q in namespace %q",
 			namespacedName.Name,
 			namespacedName.Namespace,
 		)
 	}
-	return &env, nil
+	return &stage, nil
 }

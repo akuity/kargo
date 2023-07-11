@@ -19,7 +19,7 @@ import (
 func TestApplyGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
 		name             string
-		newState         api.EnvironmentState
+		newState         api.StageState
 		credentialsDB    credentials.Database
 		gitApplyUpdateFn func(
 			string,
@@ -28,11 +28,11 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 			*git.RepoCredentials,
 			func(homeDir, workingDir string) (string, error),
 		) (string, error)
-		assertions func(inState, outState api.EnvironmentState, err error)
+		assertions func(inState, outState api.StageState, err error)
 	}{
 		{
 			name: "invalid update",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -40,7 +40,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(inState, outState api.StageState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -68,7 +68,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 						errors.New("something went wrong")
 				},
 			},
-			assertions: func(_, _ api.EnvironmentState, err error) {
+			assertions: func(_, _ api.StageState, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -100,7 +100,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
-			assertions: func(_, _ api.EnvironmentState, err error) {
+			assertions: func(_, _ api.StageState, err error) {
 				require.Error(t, err)
 				require.Equal(t, err.Error(), "something went wrong")
 			},
@@ -108,7 +108,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 
 		{
 			name: "success",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -136,7 +136,7 @@ func TestApplyGitRepoUpdate(t *testing.T) {
 			) (string, error) {
 				return "new-fake-commit", nil
 			},
-			assertions: func(inState, outState api.EnvironmentState, err error) {
+			assertions: func(inState, outState api.StageState, err error) {
 				require.NoError(t, err)
 				require.Len(t, outState.Commits, 1)
 				// Check that HealthCheckCommit got set

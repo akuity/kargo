@@ -1,5 +1,5 @@
 apiVersion: kargo.akuity.io/v1alpha1
-kind: Environment
+kind: Stage
 metadata:
   name: test
   namespace: kargo-demo

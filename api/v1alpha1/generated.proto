@@ -23,8 +23,7 @@ option (gogoproto.goproto_getters_all) = false;
 option go_package = "github.com/akuity/kargo/pkg/api/v1alpha1";
 
 // ArgoCDAppUpdate describes updates that should be applied to an Argo CD
-// Application resources to incorporate newly observed materials into an
-// Environment.
+// Application resources to incorporate newly observed materials into a Stage.
 message ArgoCDAppUpdate {
   // AppName specifies the name of an Argo CD Application resource to be
   // updated.
@@ -35,7 +34,9 @@ message ArgoCDAppUpdate {
 
   // AppNamespace specifies the namespace of an Argo CD Application resource to
   // be updated. If left unspecified, the namespace of this Application resource
-  // is defaulted to that of the Environment.
+  // is defaulted to that of the Stage.
+  //
+  // TODO: This should default to Argo CD's namespace instead.
   //
   // +kubebuilder:validation:Optional
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -47,7 +48,7 @@ message ArgoCDAppUpdate {
 }
 
 // ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
-// attributes to incorporate newly observed materials into an Environment.
+// attributes to incorporate newly observed materials into a Stage.
 message ArgoCDHelm {
   // Images describes how specific image versions can be incorporated into an
   // Argo CD Application's Helm parameters.
@@ -79,8 +80,8 @@ message ArgoCDHelmImageUpdate {
 }
 
 // ArgoCDKustomize describes updates to an Argo CD Application source's
-// Kustomize-specific attributes to incorporate newly observed materials into an
-// Environment.
+// Kustomize-specific attributes to incorporate newly observed materials into a
+// Stage.
 message ArgoCDKustomize {
   // Images describes how specific image versions can be incorporated into an
   // Argo CD Application's Kustomize parameters.
@@ -124,7 +125,7 @@ message ArgoCDSourceUpdate {
 }
 
 // BookkeeperPromotionMechanism describes how to use Bookkeeper to incorporate
-// newly observed materials into an Environment.
+// newly observed materials into a Stage.
 message BookkeeperPromotionMechanism {
 }
 
@@ -165,124 +166,6 @@ message ChartSubscription {
   optional string semverConstraint = 3 [(gogoproto.customname) = "SemverConstraint", (gogoproto.nullable) = false];
 }
 
-// Environment is the Kargo API's main type.
-message Environment {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
-
-  // Spec describes the sources of material used by the Environment and how
-  // to incorporate newly observed materials into the Environment.
-  //
-  // +kubebuilder:validation:Required
-  optional EnvironmentSpec spec = 2 [(gogoproto.customname) = "Spec"];
-
-  // Status describes the most recently observed versions of this Environment's
-  // sources of material as well as the environment's current and recent states.
-  optional EnvironmentStatus status = 3 [(gogoproto.customname) = "Status", (gogoproto.nullable) = false];
-}
-
-// EnvironmentList is a list of Environment resources.
-message EnvironmentList {
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1 [(gogoproto.customname) = "ListMeta", (gogoproto.nullable) = false];
-
-  repeated Environment items = 2 [(gogoproto.customname) = "Items", (gogoproto.nullable) = false];
-}
-
-// EnvironmentSpec describes the sources of material used by an Environment and
-// how to incorporate newly observed materials into the Environment.
-message EnvironmentSpec {
-  // Subscriptions describes the Environment's sources of material. This is a
-  // required field.
-  //
-  // +kubebuilder:validation:Required
-  optional Subscriptions subscriptions = 1 [(gogoproto.customname) = "Subscriptions"];
-
-  // PromotionMechanisms describes how to incorporate newly observed materials
-  // into the Environment. This is a required field.
-  //
-  // +kubebuilder:validation:Required
-  optional PromotionMechanisms promotionMechanisms = 2 [(gogoproto.customname) = "PromotionMechanisms"];
-}
-
-// EnvironmentState is a "bill of materials" describing what was deployed to an
-// Environment.
-message EnvironmentState {
-  // ID is a unique, system-assigned identifier for this state.
-  optional string id = 1 [(gogoproto.customname) = "ID", (gogoproto.nullable) = false];
-
-  // FirstSeen represents the date/time when this EnvironmentState first entered
-  // the system. This is useful and important information because it enables the
-  // controller to block auto-promotion of EnvironmentStates that are older than
-  // an Environment's current state, which is a case that can arise if an
-  // Environment has ROLLED BACK to an older state whilst a downstream
-  // Environment is already on to a newer state.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time firstSeen = 2 [(gogoproto.customname) = "FirstSeen"];
-
-  // Provenance describes the proximate source of this EnvironmentState. i.e.
-  // Did it come directly from upstream repositories? Or an upstream
-  // environment.
-  optional string provenance = 3 [(gogoproto.customname) = "Provenance", (gogoproto.nullable) = false];
-
-  // Commits describes specific Git repository commits that were used in this
-  // state.
-  repeated GitCommit commits = 4 [(gogoproto.customname) = "Commits", (gogoproto.nullable) = false];
-
-  // Images describes container images and versions thereof that were used
-  // in this state.
-  repeated Image images = 5 [(gogoproto.customname) = "Images", (gogoproto.nullable) = false];
-
-  // Charts describes Helm charts that were used in this state.
-  repeated Chart charts = 6 [(gogoproto.customname) = "Charts", (gogoproto.nullable) = false];
-
-  // Health is the state's last observed health. If this state is the
-  // Environment's current state, this will be continuously re-assessed and
-  // updated. If this state is a past state of the Environment, this field will
-  // denote the last observed health state before transitioning into a different
-  // state.
-  optional Health health = 7 [(gogoproto.customname) = "Health"];
-}
-
-// EnvironmentStatus describes the most recently observed versions of an
-// Environment's sources of material as well as its current and recent states.
-message EnvironmentStatus {
-  // AvailableStates is a stack of available Environment states, where each
-  // state is essentially a "bill of materials" describing what can be
-  // automatically or manually deployed to the Environment.
-  repeated EnvironmentState availableStates = 1 [(gogoproto.customname) = "AvailableStates", (gogoproto.nullable) = false];
-
-  // CurrentState is the Environment's current state -- a "bill of materials"
-  // describing what is currently deployed to the Environment.
-  optional EnvironmentState currentState = 2 [(gogoproto.customname) = "CurrentState"];
-
-  // History is a stack of recent Environment states, where each state is
-  // essentially a "bill of materials" describing what was deployed to the
-  // Environment. By default, the last ten states are stored.
-  repeated EnvironmentState history = 3 [(gogoproto.customname) = "History", (gogoproto.nullable) = false];
-
-  // Error describes any errors that are preventing the Environment controller
-  // from assessing Environment health, polling repositories or upstream
-  // environments to discover new states, or promoting the environment to a new
-  // state.
-  optional string error = 4 [(gogoproto.customname) = "Error", (gogoproto.nullable) = false];
-}
-
-// EnvironmentSubscription defines a subscription to states from another
-// Environment.
-message EnvironmentSubscription {
-  // Name specifies the name of an Environment.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string name = 1 [(gogoproto.customname) = "Name", (gogoproto.nullable) = false];
-
-  // Namespace specifies the namespace of the Environment. If left unspecified,
-  // the namespace of the upstream repository will be defaulted to that of this
-  // Environment.
-  //
-  // +kubebuilder:validation:Optional
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string namespace = 2 [(gogoproto.customname) = "Namespace", (gogoproto.nullable) = false];
-}
-
 // GitCommit describes a specific commit from a specific Git repository.
 message GitCommit {
   // RepoURL is the URL of a Git repository.
@@ -296,18 +179,18 @@ message GitCommit {
   optional string branch = 3 [(gogoproto.customname) = "Branch", (gogoproto.nullable) = false];
 
   // HealthCheckCommit is the ID of a specific commit. When specified,
-  // assessments of Environment health will used this value (instead of ID) when
+  // assessments of Stage health will used this value (instead of ID) when
   // determining if applicable sources of Argo CD Application resources
-  // associated with the environment are or are not synced to this commit. Note
-  // that there are cases (as in that of Bookkeeper being utilized as a
-  // promotion mechanism) wherein the value of this field may differ from the
-  // commit ID found in the ID field.
+  // associated with the Stage are or are not synced to this commit. Note that
+  // there are cases (as in that of Bookkeeper being utilized as a promotion
+  // mechanism) wherein the value of this field may differ from the commit ID
+  // found in the ID field.
   optional string healthCheckCommit = 4 [(gogoproto.customname) = "HealthCheckCommit", (gogoproto.nullable) = false];
 }
 
 // GitRepoUpdate describes updates that should be applied to a Git repository
 // (using various configuration management tools) to incorporate newly observed
-// materials into an Environment.
+// materials into a Stage.
 message GitRepoUpdate {
   // RepoURL is the URL of the repository to update. This is a required field.
   //
@@ -317,11 +200,11 @@ message GitRepoUpdate {
 
   // ReadBranch specifies a particular branch of the repository from which to
   // locate contents that will be written to the branch specified by the
-  // WriteBranch field. This field is optional. In cases where an
-  // EnvironmentState includes a GitCommit, that commit's ID will supersede the
+  // WriteBranch field. This field is optional. In cases where a
+  // StageStage includes a GitCommit, that commit's ID will supersede the
   // value of this field. Therefore, in practice, this field is only used to
   // clarify what branch of a repository can be treated as a source of manifests
-  // or other configuration when an Environment has no subscription to that
+  // or other configuration when a Stage has no subscription to that
   // repository.
   //
   // +kubebuilder:validation:Optional
@@ -336,18 +219,18 @@ message GitRepoUpdate {
   optional string writeBranch = 3 [(gogoproto.customname) = "WriteBranch", (gogoproto.nullable) = false];
 
   // Bookkeeper describes how to use Bookkeeper to incorporate newly observed
-  // materials into the Environment. This is mutually exclusive with the
-  // Kustomize and Helm fields.
+  // materials into the Stage. This is mutually exclusive with the Kustomize and
+  // Helm fields.
   optional BookkeeperPromotionMechanism bookkeeper = 4 [(gogoproto.customname) = "Bookkeeper"];
 
   // Kustomize describes how to use Kustomize to incorporate newly observed
-  // materials into the Environment. This is mutually exclusive with the
-  // Bookkeeper and Helm fields.
+  // materials into the Stage. This is mutually exclusive with the Bookkeeper
+  // and Helm fields.
   optional KustomizePromotionMechanism kustomize = 5 [(gogoproto.customname) = "Kustomize"];
 
   // Helm describes how to use Helm to incorporate newly observed materials into
-  // the Environment. This is mutually exclusive with the Bookkeeper and
-  // Kustomize fields.
+  // the Stage. This is mutually exclusive with the Bookkeeper and Kustomize
+  // fields.
   optional HelmPromotionMechanism helm = 6 [(gogoproto.customname) = "Helm"];
 }
 
@@ -367,14 +250,13 @@ message GitSubscription {
   optional string branch = 2 [(gogoproto.customname) = "Branch", (gogoproto.nullable) = false];
 }
 
-// Health describes the health of an Environment.
+// Health describes the health of a Stage.
 message Health {
-  // Status describes the health of the Environment.
+  // Status describes the health of the Stage.
   optional string status = 1 [(gogoproto.casttype) = "HealthState", (gogoproto.customname) = "Status", (gogoproto.nullable) = false];
 
-  // Issues clarifies why an Environment in any state other than Healthy is in
-  // that state. This field will always be the empty when an Environment is
-  // Healthy.
+  // Issues clarifies why a Stage in any state other than Healthy is in that
+  // state. This field will always be the empty when a Stage is Healthy.
   repeated string issues = 2 [(gogoproto.customname) = "Issues"];
 }
 
@@ -431,7 +313,7 @@ message HelmImageUpdate {
 }
 
 // HelmPromotionMechanism describes how to use Helm to incorporate newly
-// observed materials into an Environment.
+// observed materials into a Stage.
 message HelmPromotionMechanism {
   // Images describes how specific image versions can be incorporated into Helm
   // values files.
@@ -526,7 +408,7 @@ message KustomizeImageUpdate {
 }
 
 // KustomizePromotionMechanism describes how to use Kustomize to incorporate
-// newly observed materials into an Environment.
+// newly observed materials into a Stage.
 message KustomizePromotionMechanism {
   // Images describes images for which `kustomize edit set image` should be
   // executed and the paths in which those commands should be executed.
@@ -535,13 +417,13 @@ message KustomizePromotionMechanism {
   repeated KustomizeImageUpdate images = 1 [(gogoproto.customname) = "Images", (gogoproto.nullable) = false];
 }
 
-// Promotion represents a request to transition a particular Environment into a
+// Promotion represents a request to transition a particular Stage into a
 // particular state.
 message Promotion {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
-  // Spec describes the desired transition of a specific Environment into a
-  // specific EnvironmentState.
+  // Spec describes the desired transition of a specific Stage into a specific
+  // StageState.
   //
   // +kubebuilder:validation:Required
   optional PromotionSpec spec = 2 [(gogoproto.customname) = "Spec"];
@@ -559,48 +441,43 @@ message PromotionList {
 }
 
 // PromotionMechanisms describes how to incorporate newly observed materials
-// into an Environment.
+// into a Stage.
 message PromotionMechanisms {
   // GitRepoUpdates describes updates that should be applied to Git repositories
-  // to incorporate newly observed materials into the Environment. This field is
+  // to incorporate newly observed materials into the Stage. This field is
   // optional, as such actions are not required in all cases.
   repeated GitRepoUpdate gitRepoUpdates = 1 [(gogoproto.customname) = "GitRepoUpdates", (gogoproto.nullable) = false];
 
   // ArgoCDAppUpdates describes updates that should be applied to Argo CD
   // Application resources to incorporate newly observed materials into the
-  // Environment. This field is optional, as such actions are not required in
-  // all cases. Note that all updates specified by the GitRepoUpdates field, if
-  // any, are applied BEFORE these.
+  // Stage. This field is optional, as such actions are not required in all
+  // cases. Note that all updates specified by the GitRepoUpdates field, if any,
+  // are applied BEFORE these.
   repeated ArgoCDAppUpdate argoCDAppUpdates = 2 [(gogoproto.customname) = "ArgoCDAppUpdates", (gogoproto.nullable) = false];
 }
 
-// PromotionPolicy provides fine-grained access control beyond what Kubernetes
-// RBAC is capable of. A PromotionPolicy names an Environment and enumerates
-// subjects (such as users, groups, ServiceAccounts, or RBAC Roles) that are
-// authorized to create Promotions for that Environment. It is through
-// PromotionPolicies that multiple users may be permitted to create Promotion
-// resources in a given namespace, but creation of Promotion resources for
-// specific Environments may be restricted.
+// PromotionPolicy specifies whether a given Stage is eligible for
+// auto-promotion to newly discovered StageStates.
 message PromotionPolicy {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
-  // Environment references an Environment in the same namespace as this
-  // PromotionPolicy to which this PromotionPolicy applies.
+  // Stage references a Stage in the same namespace as this PromotionPolicy to
+  // which this PromotionPolicy applies.
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string environment = 2 [(gogoproto.customname) = "Environment", (gogoproto.nullable) = false];
+  optional string stage = 2 [(gogoproto.customname) = "Stage", (gogoproto.nullable) = false];
 
-  // EnableAutoPromotion indicates whether new EnvironmentStates can
-  // automatically be promoted into the Environment referenced by the
-  // Environment field. Note: There are other conditions also required for an
-  // auto-promotion to occur. Specifically, there must be a single source of new
-  // EnvironmentStates, so regardless of the value of this field, an
-  // auto-promotion could never occur for an Environment subscribed to MULTIPLE
-  // upstream environments. This field defaults to false, but is commonly set to
-  // true for Environments that subscribe to repositories instead of other,
-  // upstream Environments. This allows users to define Environments that are
-  // automatically updated as soon as new materials are detected.
+  // EnableAutoPromotion indicates whether new StageStates can automatically be
+  // promoted into the Stage referenced by the Stage field. Note: There are
+  // other conditions also required for an auto-promotion to occur.
+  // Specifically, there must be a single source of new StageStates, so
+  // regardless of the value of this field, an auto-promotion could never occur
+  // for a Stage subscribed to MULTIPLE upstream Stages. This field defaults to
+  // false, but is commonly set to true for Stages that subscribe to
+  // repositories instead of other, upstream Stages. This allows users to define
+  // Stages that are automatically updated as soon as new materials are
+  // detected.
   optional bool enableAutoPromotion = 3 [(gogoproto.customname) = "EnableAutoPromotion", (gogoproto.nullable) = false];
 }
 
@@ -611,23 +488,22 @@ message PromotionPolicyList {
   repeated PromotionPolicy items = 2 [(gogoproto.customname) = "Items", (gogoproto.nullable) = false];
 }
 
-// PromotionSpec describes the desired transition of a specific Environment into
-// a specific EnvironmentState.
+// PromotionSpec describes the desired transition of a specific Stage into a
+// specific StageState.
 message PromotionSpec {
-  // Environment specifies the name of the Environment to which this Promotion
-  // applies. The Environment referenced by this field MUST be in the same
+  // Stage specifies the name of the Stage to which this Promotion
+  // applies. The Stage referenced by this field MUST be in the same
   // namespace as the Promotion.
   //
   // TODO: Use a webhook to make this immutable
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string environment = 1 [(gogoproto.customname) = "Environment", (gogoproto.nullable) = false];
+  optional string stage = 1 [(gogoproto.customname) = "Stage", (gogoproto.nullable) = false];
 
-  // State specifies the specific EnvironmentState into which the Environment
-  // referenced by the Environment field should be transitioned. The State MUST
-  // be among the Environment's Status.AvailableStates or the Promotion will
-  // ultimately fail.
+  // State specifies the specific StageState into which the Stage referenced by
+  // the Stage field should be transitioned. The State MUST be among the Stage's
+  // Status.AvailableStates or the Promotion will ultimately fail.
   //
   // TODO: Use a webhook to make this immutable
   //
@@ -647,7 +523,7 @@ message PromotionStatus {
   optional string error = 2 [(gogoproto.customname) = "Error", (gogoproto.nullable) = false];
 }
 
-// RepoSubscriptions describes various sorts of repositories an Environment uses
+// RepoSubscriptions describes various sorts of repositories a Stage uses
 // as sources of material.
 message RepoSubscriptions {
   // Git describes subscriptions to Git repositories.
@@ -660,15 +536,132 @@ message RepoSubscriptions {
   repeated ChartSubscription charts = 3 [(gogoproto.customname) = "Charts", (gogoproto.nullable) = false];
 }
 
-// Subscriptions describes an Environment's sources of material.
+// Stage is the Kargo API's main type.
+message Stage {
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
+
+  // Spec describes the sources of material used by the Stage and how
+  // to incorporate newly observed materials into the Stage.
+  //
+  // +kubebuilder:validation:Required
+  optional StageSpec spec = 2 [(gogoproto.customname) = "Spec"];
+
+  // Status describes the most recently observed versions of this Stage's
+  // sources of material as well as the Stage's current and recent states.
+  optional StageStatus status = 3 [(gogoproto.customname) = "Status", (gogoproto.nullable) = false];
+}
+
+// StageList is a list of Stage resources.
+message StageList {
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1 [(gogoproto.customname) = "ListMeta", (gogoproto.nullable) = false];
+
+  repeated Stage items = 2 [(gogoproto.customname) = "Items", (gogoproto.nullable) = false];
+}
+
+// StageSpec describes the sources of material used by a Stage and how to
+// incorporate newly observed materials into the Stage.
+message StageSpec {
+  // Subscriptions describes the Stage's sources of material. This is a
+  // required field.
+  //
+  // +kubebuilder:validation:Required
+  optional Subscriptions subscriptions = 1 [(gogoproto.customname) = "Subscriptions"];
+
+  // PromotionMechanisms describes how to incorporate newly observed materials
+  // into the Stage. This is a required field.
+  //
+  // +kubebuilder:validation:Required
+  optional PromotionMechanisms promotionMechanisms = 2 [(gogoproto.customname) = "PromotionMechanisms"];
+}
+
+// StageState is a "bill of materials" describing what is, was, or can be
+// deployed to a Stage.
+message StageState {
+  // ID is a unique, system-assigned identifier for this state.
+  optional string id = 1 [(gogoproto.customname) = "ID", (gogoproto.nullable) = false];
+
+  // FirstSeen represents the date/time when this StageStage first entered the
+  // system. This is useful and important information because it enables the
+  // controller to block auto-promotion of StageStates that are older than a
+  // Stages's current state, which is a case that can arise if a Stage has
+  // ROLLED BACK to an older state whilst a downstream Stage is already on to a
+  // newer state.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time firstSeen = 2 [(gogoproto.customname) = "FirstSeen"];
+
+  // Provenance describes the proximate source of this StageState. i.e. Did it
+  // come directly from upstream repositories? Or an upstream Stage.
+  optional string provenance = 3 [(gogoproto.customname) = "Provenance", (gogoproto.nullable) = false];
+
+  // Commits describes specific Git repository commits that were used in this
+  // state.
+  repeated GitCommit commits = 4 [(gogoproto.customname) = "Commits", (gogoproto.nullable) = false];
+
+  // Images describes container images and versions thereof that were used
+  // in this state.
+  repeated Image images = 5 [(gogoproto.customname) = "Images", (gogoproto.nullable) = false];
+
+  // Charts describes Helm charts that were used in this state.
+  repeated Chart charts = 6 [(gogoproto.customname) = "Charts", (gogoproto.nullable) = false];
+
+  // Health is the StageState's last observed health. If this state is the
+  // Stage's current state, this will be continuously re-assessed and
+  // updated. If this StageState is a past state of the Stage, this field will
+  // denote the last observed health state before transitioning into a different
+  // state.
+  optional Health health = 7 [(gogoproto.customname) = "Health"];
+}
+
+// StageStatus describes the most recently observed versions of a Stage's
+// sources of material as well as its current and recent states.
+message StageStatus {
+  // AvailableStates is a stack of available StageStates, where each state is
+  // essentially a "bill of materials" describing what can be automatically or
+  // manually deployed to the Stage.
+  repeated StageState availableStates = 1 [(gogoproto.customname) = "AvailableStates", (gogoproto.nullable) = false];
+
+  // CurrentState is the Stage's current state -- a "bill of materials"
+  // describing what is currently deployed to the Stage.
+  optional StageState currentState = 2 [(gogoproto.customname) = "CurrentState"];
+
+  // History is a stack of recent StageStates, where each state is
+  // essentially a "bill of materials" describing what was deployed to the
+  // Stage. By default, the last ten states are stored.
+  repeated StageState history = 3 [(gogoproto.customname) = "History", (gogoproto.nullable) = false];
+
+  // Error describes any errors that are preventing the Stage controller
+  // from assessing Stage health or from polling repositories or upstream
+  // Stages to discover new StageStates.
+  optional string error = 4 [(gogoproto.customname) = "Error", (gogoproto.nullable) = false];
+}
+
+// StageSubscription defines a subscription to states from another Stage.
+message StageSubscription {
+  // Name specifies the name of a Stage.
+  //
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string name = 1 [(gogoproto.customname) = "Name", (gogoproto.nullable) = false];
+
+  // Namespace specifies the namespace of the Stage. If left unspecified,
+  // the namespace of the upstream repository will be defaulted to that of this
+  // Stage.
+  //
+  // TODO: This field needs to go away because we've really leaned into using
+  // namespaces as project boundaries.
+  //
+  // +kubebuilder:validation:Optional
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string namespace = 2 [(gogoproto.customname) = "Namespace", (gogoproto.nullable) = false];
+}
+
+// Subscriptions describes a Stage's sources of material.
 message Subscriptions {
-  // Repos describes various sorts of repositories an Environment uses as
-  // sources of material. This field is mutually exclusive with the UpstreamEnvs
-  // field.
+  // Repos describes various sorts of repositories a Stage uses as sources of
+  // material. This field is mutually exclusive with the UpstreamStages field.
   optional RepoSubscriptions repos = 1 [(gogoproto.customname) = "Repos"];
 
-  // UpstreamEnvs identifies other environments as potential sources of material
-  // for the Environment. This field is mutually exclusive with the Repos field.
-  repeated EnvironmentSubscription upstreamEnvs = 2 [(gogoproto.customname) = "UpstreamEnvs", (gogoproto.nullable) = false];
+  // UpstreamStages identifies other Stages as potential sources of material
+  // for this Stage. This field is mutually exclusive with the Repos field.
+  repeated StageSubscription upstreamStages = 2 [(gogoproto.customname) = "UpstreamStages", (gogoproto.nullable) = false];
 }
 

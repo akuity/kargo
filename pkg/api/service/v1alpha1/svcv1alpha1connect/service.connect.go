@@ -33,30 +33,32 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// KargoServiceCreateEnvironmentProcedure is the fully-qualified name of the KargoService's
-	// CreateEnvironment RPC.
-	KargoServiceCreateEnvironmentProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateEnvironment"
-	// KargoServiceListEnvironmentsProcedure is the fully-qualified name of the KargoService's
-	// ListEnvironments RPC.
-	KargoServiceListEnvironmentsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListEnvironments"
-	// KargoServiceGetEnvironmentProcedure is the fully-qualified name of the KargoService's
-	// GetEnvironment RPC.
-	KargoServiceGetEnvironmentProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetEnvironment"
-	// KargoServiceDeleteEnvironmentProcedure is the fully-qualified name of the KargoService's
-	// DeleteEnvironment RPC.
-	KargoServiceDeleteEnvironmentProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteEnvironment"
-	// KargoServicePromoteEnvironmentProcedure is the fully-qualified name of the KargoService's
-	// PromoteEnvironment RPC.
-	KargoServicePromoteEnvironmentProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/PromoteEnvironment"
+	// KargoServiceCreateStageProcedure is the fully-qualified name of the KargoService's CreateStage
+	// RPC.
+	KargoServiceCreateStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateStage"
+	// KargoServiceListStagesProcedure is the fully-qualified name of the KargoService's ListStages RPC.
+	KargoServiceListStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListStages"
+	// KargoServiceGetStageProcedure is the fully-qualified name of the KargoService's GetStage RPC.
+	KargoServiceGetStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetStage"
+	// KargoServiceDeleteStageProcedure is the fully-qualified name of the KargoService's DeleteStage
+	// RPC.
+	KargoServiceDeleteStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteStage"
+	// KargoServicePromoteStageProcedure is the fully-qualified name of the KargoService's PromoteStage
+	// RPC.
+	KargoServicePromoteStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/PromoteStage"
+	// KargoServiceListProjectsProcedure is the fully-qualified name of the KargoService's ListProjects
+	// RPC.
+	KargoServiceListProjectsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjects"
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
 type KargoServiceClient interface {
-	CreateEnvironment(context.Context, *connect_go.Request[v1alpha1.CreateEnvironmentRequest]) (*connect_go.Response[v1alpha1.CreateEnvironmentResponse], error)
-	ListEnvironments(context.Context, *connect_go.Request[v1alpha1.ListEnvironmentsRequest]) (*connect_go.Response[v1alpha1.ListEnvironmentsResponse], error)
-	GetEnvironment(context.Context, *connect_go.Request[v1alpha1.GetEnvironmentRequest]) (*connect_go.Response[v1alpha1.GetEnvironmentResponse], error)
-	DeleteEnvironment(context.Context, *connect_go.Request[v1alpha1.DeleteEnvironmentRequest]) (*connect_go.Response[v1alpha1.DeleteEnvironmentResponse], error)
-	PromoteEnvironment(context.Context, *connect_go.Request[v1alpha1.PromoteEnvironmentRequest]) (*connect_go.Response[v1alpha1.PromoteEnvironmentResponse], error)
+	CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error)
+	ListStages(context.Context, *connect_go.Request[v1alpha1.ListStagesRequest]) (*connect_go.Response[v1alpha1.ListStagesResponse], error)
+	GetStage(context.Context, *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error)
+	DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error)
+	PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error)
+	ListProjects(context.Context, *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error)
 }
 
 // NewKargoServiceClient constructs a client for the akuity.io.kargo.service.v1alpha1.KargoService
@@ -69,29 +71,34 @@ type KargoServiceClient interface {
 func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) KargoServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &kargoServiceClient{
-		createEnvironment: connect_go.NewClient[v1alpha1.CreateEnvironmentRequest, v1alpha1.CreateEnvironmentResponse](
+		createStage: connect_go.NewClient[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse](
 			httpClient,
-			baseURL+KargoServiceCreateEnvironmentProcedure,
+			baseURL+KargoServiceCreateStageProcedure,
 			opts...,
 		),
-		listEnvironments: connect_go.NewClient[v1alpha1.ListEnvironmentsRequest, v1alpha1.ListEnvironmentsResponse](
+		listStages: connect_go.NewClient[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse](
 			httpClient,
-			baseURL+KargoServiceListEnvironmentsProcedure,
+			baseURL+KargoServiceListStagesProcedure,
 			opts...,
 		),
-		getEnvironment: connect_go.NewClient[v1alpha1.GetEnvironmentRequest, v1alpha1.GetEnvironmentResponse](
+		getStage: connect_go.NewClient[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse](
 			httpClient,
-			baseURL+KargoServiceGetEnvironmentProcedure,
+			baseURL+KargoServiceGetStageProcedure,
 			opts...,
 		),
-		deleteEnvironment: connect_go.NewClient[v1alpha1.DeleteEnvironmentRequest, v1alpha1.DeleteEnvironmentResponse](
+		deleteStage: connect_go.NewClient[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse](
 			httpClient,
-			baseURL+KargoServiceDeleteEnvironmentProcedure,
+			baseURL+KargoServiceDeleteStageProcedure,
 			opts...,
 		),
-		promoteEnvironment: connect_go.NewClient[v1alpha1.PromoteEnvironmentRequest, v1alpha1.PromoteEnvironmentResponse](
+		promoteStage: connect_go.NewClient[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse](
 			httpClient,
-			baseURL+KargoServicePromoteEnvironmentProcedure,
+			baseURL+KargoServicePromoteStageProcedure,
+			opts...,
+		),
+		listProjects: connect_go.NewClient[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse](
+			httpClient,
+			baseURL+KargoServiceListProjectsProcedure,
 			opts...,
 		),
 	}
@@ -99,46 +106,53 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 
 // kargoServiceClient implements KargoServiceClient.
 type kargoServiceClient struct {
-	createEnvironment  *connect_go.Client[v1alpha1.CreateEnvironmentRequest, v1alpha1.CreateEnvironmentResponse]
-	listEnvironments   *connect_go.Client[v1alpha1.ListEnvironmentsRequest, v1alpha1.ListEnvironmentsResponse]
-	getEnvironment     *connect_go.Client[v1alpha1.GetEnvironmentRequest, v1alpha1.GetEnvironmentResponse]
-	deleteEnvironment  *connect_go.Client[v1alpha1.DeleteEnvironmentRequest, v1alpha1.DeleteEnvironmentResponse]
-	promoteEnvironment *connect_go.Client[v1alpha1.PromoteEnvironmentRequest, v1alpha1.PromoteEnvironmentResponse]
+	createStage  *connect_go.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
+	listStages   *connect_go.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
+	getStage     *connect_go.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
+	deleteStage  *connect_go.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
+	promoteStage *connect_go.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
+	listProjects *connect_go.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
 }
 
-// CreateEnvironment calls akuity.io.kargo.service.v1alpha1.KargoService.CreateEnvironment.
-func (c *kargoServiceClient) CreateEnvironment(ctx context.Context, req *connect_go.Request[v1alpha1.CreateEnvironmentRequest]) (*connect_go.Response[v1alpha1.CreateEnvironmentResponse], error) {
-	return c.createEnvironment.CallUnary(ctx, req)
+// CreateStage calls akuity.io.kargo.service.v1alpha1.KargoService.CreateStage.
+func (c *kargoServiceClient) CreateStage(ctx context.Context, req *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error) {
+	return c.createStage.CallUnary(ctx, req)
 }
 
-// ListEnvironments calls akuity.io.kargo.service.v1alpha1.KargoService.ListEnvironments.
-func (c *kargoServiceClient) ListEnvironments(ctx context.Context, req *connect_go.Request[v1alpha1.ListEnvironmentsRequest]) (*connect_go.Response[v1alpha1.ListEnvironmentsResponse], error) {
-	return c.listEnvironments.CallUnary(ctx, req)
+// ListStages calls akuity.io.kargo.service.v1alpha1.KargoService.ListStages.
+func (c *kargoServiceClient) ListStages(ctx context.Context, req *connect_go.Request[v1alpha1.ListStagesRequest]) (*connect_go.Response[v1alpha1.ListStagesResponse], error) {
+	return c.listStages.CallUnary(ctx, req)
 }
 
-// GetEnvironment calls akuity.io.kargo.service.v1alpha1.KargoService.GetEnvironment.
-func (c *kargoServiceClient) GetEnvironment(ctx context.Context, req *connect_go.Request[v1alpha1.GetEnvironmentRequest]) (*connect_go.Response[v1alpha1.GetEnvironmentResponse], error) {
-	return c.getEnvironment.CallUnary(ctx, req)
+// GetStage calls akuity.io.kargo.service.v1alpha1.KargoService.GetStage.
+func (c *kargoServiceClient) GetStage(ctx context.Context, req *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error) {
+	return c.getStage.CallUnary(ctx, req)
 }
 
-// DeleteEnvironment calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteEnvironment.
-func (c *kargoServiceClient) DeleteEnvironment(ctx context.Context, req *connect_go.Request[v1alpha1.DeleteEnvironmentRequest]) (*connect_go.Response[v1alpha1.DeleteEnvironmentResponse], error) {
-	return c.deleteEnvironment.CallUnary(ctx, req)
+// DeleteStage calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage.
+func (c *kargoServiceClient) DeleteStage(ctx context.Context, req *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error) {
+	return c.deleteStage.CallUnary(ctx, req)
 }
 
-// PromoteEnvironment calls akuity.io.kargo.service.v1alpha1.KargoService.PromoteEnvironment.
-func (c *kargoServiceClient) PromoteEnvironment(ctx context.Context, req *connect_go.Request[v1alpha1.PromoteEnvironmentRequest]) (*connect_go.Response[v1alpha1.PromoteEnvironmentResponse], error) {
-	return c.promoteEnvironment.CallUnary(ctx, req)
+// PromoteStage calls akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage.
+func (c *kargoServiceClient) PromoteStage(ctx context.Context, req *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error) {
+	return c.promoteStage.CallUnary(ctx, req)
+}
+
+// ListProjects calls akuity.io.kargo.service.v1alpha1.KargoService.ListProjects.
+func (c *kargoServiceClient) ListProjects(ctx context.Context, req *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error) {
+	return c.listProjects.CallUnary(ctx, req)
 }
 
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
 // service.
 type KargoServiceHandler interface {
-	CreateEnvironment(context.Context, *connect_go.Request[v1alpha1.CreateEnvironmentRequest]) (*connect_go.Response[v1alpha1.CreateEnvironmentResponse], error)
-	ListEnvironments(context.Context, *connect_go.Request[v1alpha1.ListEnvironmentsRequest]) (*connect_go.Response[v1alpha1.ListEnvironmentsResponse], error)
-	GetEnvironment(context.Context, *connect_go.Request[v1alpha1.GetEnvironmentRequest]) (*connect_go.Response[v1alpha1.GetEnvironmentResponse], error)
-	DeleteEnvironment(context.Context, *connect_go.Request[v1alpha1.DeleteEnvironmentRequest]) (*connect_go.Response[v1alpha1.DeleteEnvironmentResponse], error)
-	PromoteEnvironment(context.Context, *connect_go.Request[v1alpha1.PromoteEnvironmentRequest]) (*connect_go.Response[v1alpha1.PromoteEnvironmentResponse], error)
+	CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error)
+	ListStages(context.Context, *connect_go.Request[v1alpha1.ListStagesRequest]) (*connect_go.Response[v1alpha1.ListStagesResponse], error)
+	GetStage(context.Context, *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error)
+	DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error)
+	PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error)
+	ListProjects(context.Context, *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error)
 }
 
 // NewKargoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -148,29 +162,34 @@ type KargoServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
 	mux := http.NewServeMux()
-	mux.Handle(KargoServiceCreateEnvironmentProcedure, connect_go.NewUnaryHandler(
-		KargoServiceCreateEnvironmentProcedure,
-		svc.CreateEnvironment,
+	mux.Handle(KargoServiceCreateStageProcedure, connect_go.NewUnaryHandler(
+		KargoServiceCreateStageProcedure,
+		svc.CreateStage,
 		opts...,
 	))
-	mux.Handle(KargoServiceListEnvironmentsProcedure, connect_go.NewUnaryHandler(
-		KargoServiceListEnvironmentsProcedure,
-		svc.ListEnvironments,
+	mux.Handle(KargoServiceListStagesProcedure, connect_go.NewUnaryHandler(
+		KargoServiceListStagesProcedure,
+		svc.ListStages,
 		opts...,
 	))
-	mux.Handle(KargoServiceGetEnvironmentProcedure, connect_go.NewUnaryHandler(
-		KargoServiceGetEnvironmentProcedure,
-		svc.GetEnvironment,
+	mux.Handle(KargoServiceGetStageProcedure, connect_go.NewUnaryHandler(
+		KargoServiceGetStageProcedure,
+		svc.GetStage,
 		opts...,
 	))
-	mux.Handle(KargoServiceDeleteEnvironmentProcedure, connect_go.NewUnaryHandler(
-		KargoServiceDeleteEnvironmentProcedure,
-		svc.DeleteEnvironment,
+	mux.Handle(KargoServiceDeleteStageProcedure, connect_go.NewUnaryHandler(
+		KargoServiceDeleteStageProcedure,
+		svc.DeleteStage,
 		opts...,
 	))
-	mux.Handle(KargoServicePromoteEnvironmentProcedure, connect_go.NewUnaryHandler(
-		KargoServicePromoteEnvironmentProcedure,
-		svc.PromoteEnvironment,
+	mux.Handle(KargoServicePromoteStageProcedure, connect_go.NewUnaryHandler(
+		KargoServicePromoteStageProcedure,
+		svc.PromoteStage,
+		opts...,
+	))
+	mux.Handle(KargoServiceListProjectsProcedure, connect_go.NewUnaryHandler(
+		KargoServiceListProjectsProcedure,
+		svc.ListProjects,
 		opts...,
 	))
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", mux
@@ -179,22 +198,26 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect_go.HandlerO
 // UnimplementedKargoServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedKargoServiceHandler struct{}
 
-func (UnimplementedKargoServiceHandler) CreateEnvironment(context.Context, *connect_go.Request[v1alpha1.CreateEnvironmentRequest]) (*connect_go.Response[v1alpha1.CreateEnvironmentResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateEnvironment is not implemented"))
+func (UnimplementedKargoServiceHandler) CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateStage is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) ListEnvironments(context.Context, *connect_go.Request[v1alpha1.ListEnvironmentsRequest]) (*connect_go.Response[v1alpha1.ListEnvironmentsResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListEnvironments is not implemented"))
+func (UnimplementedKargoServiceHandler) ListStages(context.Context, *connect_go.Request[v1alpha1.ListStagesRequest]) (*connect_go.Response[v1alpha1.ListStagesResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListStages is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) GetEnvironment(context.Context, *connect_go.Request[v1alpha1.GetEnvironmentRequest]) (*connect_go.Response[v1alpha1.GetEnvironmentResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetEnvironment is not implemented"))
+func (UnimplementedKargoServiceHandler) GetStage(context.Context, *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetStage is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) DeleteEnvironment(context.Context, *connect_go.Request[v1alpha1.DeleteEnvironmentRequest]) (*connect_go.Response[v1alpha1.DeleteEnvironmentResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteEnvironment is not implemented"))
+func (UnimplementedKargoServiceHandler) DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) PromoteEnvironment(context.Context, *connect_go.Request[v1alpha1.PromoteEnvironmentRequest]) (*connect_go.Response[v1alpha1.PromoteEnvironmentResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.PromoteEnvironment is not implemented"))
+func (UnimplementedKargoServiceHandler) PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListProjects(context.Context, *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListProjects is not implemented"))
 }

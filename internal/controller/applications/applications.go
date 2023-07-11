@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	envsByAppIndexField         = "applications"
+	stagesByAppIndexField       = "applications"
 	forceReconcileAnnotationKey = "kargo.akuity.io/force-reconcile"
 )
 
@@ -55,14 +55,14 @@ func (r *reconciler) Reconcile(
 	})
 	logger.Debug("reconciling Argo CD Application")
 
-	// Find all Environments associated with this Application
-	envs := &api.EnvironmentList{}
+	// Find all Stages associated with this Application
+	stages := &api.StageList{}
 	if err := r.client.List(
 		ctx,
-		envs,
+		stages,
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
-				envsByAppIndexField,
+				stagesByAppIndexField,
 				fmt.Sprintf(
 					"%s:%s",
 					req.NamespacedName.Namespace,
@@ -73,30 +73,30 @@ func (r *reconciler) Reconcile(
 	); err != nil {
 		return result, errors.Wrapf(
 			err,
-			"error listing Environments for Application %q in namespace %q",
+			"error listing Stages for Application %q in namespace %q",
 			req.NamespacedName.Name,
 			req.NamespacedName.Namespace,
 		)
 	}
 
-	// Force associated Environments to reconcile by patching an annotation
-	for _, e := range envs.Items {
-		env := e // This is to sidestep implicit memory aliasing in this for loop
-		patch := client.MergeFrom(env.DeepCopy())
-		env.Annotations[forceReconcileAnnotationKey] = uuid.NewV4().String()
-		if err := r.client.Patch(ctx, &env, patch); err != nil {
+	// Force associated Stages to reconcile by patching an annotation
+	for _, e := range stages.Items {
+		stage := e // This is to sidestep implicit memory aliasing in this for loop
+		patch := client.MergeFrom(stage.DeepCopy())
+		stage.Annotations[forceReconcileAnnotationKey] = uuid.NewV4().String()
+		if err := r.client.Patch(ctx, &stage, patch); err != nil {
 			logger.Error(err)
 			return result, errors.Wrapf(
 				err,
-				"error patching Environment %q in namespace %q",
-				env.Name,
-				env.Namespace,
+				"error patching Stage %q in namespace %q",
+				stage.Name,
+				stage.Namespace,
 			)
 		}
 		logger.WithFields(log.Fields{
-			"environmentNamespace": env.Namespace,
-			"environment":          env.Name,
-		}).Debug("successfully patched Environment to force reconciliation")
+			"stageNamespace": stage.Namespace,
+			"stage":          stage.Name,
+		}).Debug("successfully patched Stage to force reconciliation")
 	}
 
 	return result, nil

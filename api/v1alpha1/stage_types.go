@@ -35,54 +35,52 @@ const (
 	HealthStateUnknown   HealthState = "Unknown"
 )
 
-//+kubebuilder:resource:shortName={env,envs}
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name=Current State,type=string,JSONPath=`.status.currentState.id`
 //+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.currentState.health.status`
 //+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
-// Environment is the Kargo API's main type.
-type Environment struct {
+// Stage is the Kargo API's main type.
+type Stage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Spec describes the sources of material used by the Environment and how
-	// to incorporate newly observed materials into the Environment.
+	// Spec describes the sources of material used by the Stage and how
+	// to incorporate newly observed materials into the Stage.
 	//
 	//+kubebuilder:validation:Required
-	Spec *EnvironmentSpec `json:"spec"`
-	// Status describes the most recently observed versions of this Environment's
-	// sources of material as well as the environment's current and recent states.
-	Status EnvironmentStatus `json:"status,omitempty"`
+	Spec *StageSpec `json:"spec"`
+	// Status describes the most recently observed versions of this Stage's
+	// sources of material as well as the Stage's current and recent states.
+	Status StageStatus `json:"status,omitempty"`
 }
 
-// EnvironmentSpec describes the sources of material used by an Environment and
-// how to incorporate newly observed materials into the Environment.
-type EnvironmentSpec struct {
-	// Subscriptions describes the Environment's sources of material. This is a
+// StageSpec describes the sources of material used by a Stage and how to
+// incorporate newly observed materials into the Stage.
+type StageSpec struct {
+	// Subscriptions describes the Stage's sources of material. This is a
 	// required field.
 	//
 	//+kubebuilder:validation:Required
 	Subscriptions *Subscriptions `json:"subscriptions"`
 	// PromotionMechanisms describes how to incorporate newly observed materials
-	// into the Environment. This is a required field.
+	// into the Stage. This is a required field.
 	//
 	//+kubebuilder:validation:Required
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms"`
 }
 
-// Subscriptions describes an Environment's sources of material.
+// Subscriptions describes a Stage's sources of material.
 type Subscriptions struct {
-	// Repos describes various sorts of repositories an Environment uses as
-	// sources of material. This field is mutually exclusive with the UpstreamEnvs
-	// field.
+	// Repos describes various sorts of repositories a Stage uses as sources of
+	// material. This field is mutually exclusive with the UpstreamStages field.
 	Repos *RepoSubscriptions `json:"repos,omitempty"`
-	// UpstreamEnvs identifies other environments as potential sources of material
-	// for the Environment. This field is mutually exclusive with the Repos field.
-	UpstreamEnvs []EnvironmentSubscription `json:"upstreamEnvs,omitempty"`
+	// UpstreamStages identifies other Stages as potential sources of material
+	// for this Stage. This field is mutually exclusive with the Repos field.
+	UpstreamStages []StageSubscription `json:"upstreamStages,omitempty"`
 }
 
-// RepoSubscriptions describes various sorts of repositories an Environment uses
+// RepoSubscriptions describes various sorts of repositories a Stage uses
 // as sources of material.
 type RepoSubscriptions struct {
 	// Git describes subscriptions to Git repositories.
@@ -183,17 +181,19 @@ type ChartSubscription struct {
 	SemverConstraint string `json:"semverConstraint,omitempty"`
 }
 
-// EnvironmentSubscription defines a subscription to states from another
-// Environment.
-type EnvironmentSubscription struct {
-	// Name specifies the name of an Environment.
+// StageSubscription defines a subscription to states from another Stage.
+type StageSubscription struct {
+	// Name specifies the name of a Stage.
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Name string `json:"name"`
-	// Namespace specifies the namespace of the Environment. If left unspecified,
+	// Namespace specifies the namespace of the Stage. If left unspecified,
 	// the namespace of the upstream repository will be defaulted to that of this
-	// Environment.
+	// Stage.
+	//
+	// TODO: This field needs to go away because we've really leaned into using
+	// namespaces as project boundaries.
 	//
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -201,23 +201,23 @@ type EnvironmentSubscription struct {
 }
 
 // PromotionMechanisms describes how to incorporate newly observed materials
-// into an Environment.
+// into a Stage.
 type PromotionMechanisms struct {
 	// GitRepoUpdates describes updates that should be applied to Git repositories
-	// to incorporate newly observed materials into the Environment. This field is
+	// to incorporate newly observed materials into the Stage. This field is
 	// optional, as such actions are not required in all cases.
 	GitRepoUpdates []GitRepoUpdate `json:"gitRepoUpdates,omitempty"`
 	// ArgoCDAppUpdates describes updates that should be applied to Argo CD
 	// Application resources to incorporate newly observed materials into the
-	// Environment. This field is optional, as such actions are not required in
-	// all cases. Note that all updates specified by the GitRepoUpdates field, if
-	// any, are applied BEFORE these.
+	// Stage. This field is optional, as such actions are not required in all
+	// cases. Note that all updates specified by the GitRepoUpdates field, if any,
+	// are applied BEFORE these.
 	ArgoCDAppUpdates []ArgoCDAppUpdate `json:"argoCDAppUpdates,omitempty"`
 }
 
 // GitRepoUpdate describes updates that should be applied to a Git repository
 // (using various configuration management tools) to incorporate newly observed
-// materials into an Environment.
+// materials into a Stage.
 type GitRepoUpdate struct {
 	// RepoURL is the URL of the repository to update. This is a required field.
 	//
@@ -226,11 +226,11 @@ type GitRepoUpdate struct {
 	RepoURL string `json:"repoURL"`
 	// ReadBranch specifies a particular branch of the repository from which to
 	// locate contents that will be written to the branch specified by the
-	// WriteBranch field. This field is optional. In cases where an
-	// EnvironmentState includes a GitCommit, that commit's ID will supersede the
+	// WriteBranch field. This field is optional. In cases where a
+	// StageStage includes a GitCommit, that commit's ID will supersede the
 	// value of this field. Therefore, in practice, this field is only used to
 	// clarify what branch of a repository can be treated as a source of manifests
-	// or other configuration when an Environment has no subscription to that
+	// or other configuration when a Stage has no subscription to that
 	// repository.
 	//
 	//+kubebuilder:validation:Optional
@@ -243,25 +243,25 @@ type GitRepoUpdate struct {
 	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	WriteBranch string `json:"writeBranch"`
 	// Bookkeeper describes how to use Bookkeeper to incorporate newly observed
-	// materials into the Environment. This is mutually exclusive with the
-	// Kustomize and Helm fields.
+	// materials into the Stage. This is mutually exclusive with the Kustomize and
+	// Helm fields.
 	Bookkeeper *BookkeeperPromotionMechanism `json:"bookkeeper,omitempty"`
 	// Kustomize describes how to use Kustomize to incorporate newly observed
-	// materials into the Environment. This is mutually exclusive with the
-	// Bookkeeper and Helm fields.
+	// materials into the Stage. This is mutually exclusive with the Bookkeeper
+	// and Helm fields.
 	Kustomize *KustomizePromotionMechanism `json:"kustomize,omitempty"`
 	// Helm describes how to use Helm to incorporate newly observed materials into
-	// the Environment. This is mutually exclusive with the Bookkeeper and
-	// Kustomize fields.
+	// the Stage. This is mutually exclusive with the Bookkeeper and Kustomize
+	// fields.
 	Helm *HelmPromotionMechanism `json:"helm,omitempty"`
 }
 
 // BookkeeperPromotionMechanism describes how to use Bookkeeper to incorporate
-// newly observed materials into an Environment.
+// newly observed materials into a Stage.
 type BookkeeperPromotionMechanism struct{}
 
 // KustomizePromotionMechanism describes how to use Kustomize to incorporate
-// newly observed materials into an Environment.
+// newly observed materials into a Stage.
 type KustomizePromotionMechanism struct {
 	// Images describes images for which `kustomize edit set image` should be
 	// executed and the paths in which those commands should be executed.
@@ -286,7 +286,7 @@ type KustomizeImageUpdate struct {
 }
 
 // HelmPromotionMechanism describes how to use Helm to incorporate newly
-// observed materials into an Environment.
+// observed materials into a Stage.
 type HelmPromotionMechanism struct {
 	// Images describes how specific image versions can be incorporated into Helm
 	// values files.
@@ -344,8 +344,7 @@ type HelmChartDependencyUpdate struct {
 }
 
 // ArgoCDAppUpdate describes updates that should be applied to an Argo CD
-// Application resources to incorporate newly observed materials into an
-// Environment.
+// Application resources to incorporate newly observed materials into a Stage.
 type ArgoCDAppUpdate struct {
 	// AppName specifies the name of an Argo CD Application resource to be
 	// updated.
@@ -355,7 +354,9 @@ type ArgoCDAppUpdate struct {
 	AppName string `json:"appName"`
 	// AppNamespace specifies the namespace of an Argo CD Application resource to
 	// be updated. If left unspecified, the namespace of this Application resource
-	// is defaulted to that of the Environment.
+	// is defaulted to that of the Stage.
+	//
+	// TODO: This should default to Argo CD's namespace instead.
 	//
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -396,8 +397,8 @@ type ArgoCDSourceUpdate struct {
 }
 
 // ArgoCDKustomize describes updates to an Argo CD Application source's
-// Kustomize-specific attributes to incorporate newly observed materials into an
-// Environment.
+// Kustomize-specific attributes to incorporate newly observed materials into a
+// Stage.
 type ArgoCDKustomize struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Kustomize parameters.
@@ -407,7 +408,7 @@ type ArgoCDKustomize struct {
 }
 
 // ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
-// attributes to incorporate newly observed materials into an Environment.
+// attributes to incorporate newly observed materials into a Stage.
 type ArgoCDHelm struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Helm parameters.
@@ -436,42 +437,40 @@ type ArgoCDHelmImageUpdate struct {
 	Value ImageUpdateValueType `json:"value"`
 }
 
-// EnvironmentStatus describes the most recently observed versions of an
-// Environment's sources of material as well as its current and recent states.
-type EnvironmentStatus struct {
-	// AvailableStates is a stack of available Environment states, where each
-	// state is essentially a "bill of materials" describing what can be
-	// automatically or manually deployed to the Environment.
-	AvailableStates EnvironmentStateStack `json:"availableStates,omitempty"`
-	// CurrentState is the Environment's current state -- a "bill of materials"
-	// describing what is currently deployed to the Environment.
-	CurrentState *EnvironmentState `json:"currentState,omitempty"`
-	// History is a stack of recent Environment states, where each state is
+// StageStatus describes the most recently observed versions of a Stage's
+// sources of material as well as its current and recent states.
+type StageStatus struct {
+	// AvailableStates is a stack of available StageStates, where each state is
+	// essentially a "bill of materials" describing what can be automatically or
+	// manually deployed to the Stage.
+	AvailableStates StageStateStack `json:"availableStates,omitempty"`
+	// CurrentState is the Stage's current state -- a "bill of materials"
+	// describing what is currently deployed to the Stage.
+	CurrentState *StageState `json:"currentState,omitempty"`
+	// History is a stack of recent StageStates, where each state is
 	// essentially a "bill of materials" describing what was deployed to the
-	// Environment. By default, the last ten states are stored.
-	History EnvironmentStateStack `json:"history,omitempty"`
-	// Error describes any errors that are preventing the Environment controller
-	// from assessing Environment health, polling repositories or upstream
-	// environments to discover new states, or promoting the environment to a new
-	// state.
+	// Stage. By default, the last ten states are stored.
+	History StageStateStack `json:"history,omitempty"`
+	// Error describes any errors that are preventing the Stage controller
+	// from assessing Stage health or from polling repositories or upstream
+	// Stages to discover new StageStates.
 	Error string `json:"error,omitempty"`
 }
 
-// EnvironmentState is a "bill of materials" describing what was deployed to an
-// Environment.
-type EnvironmentState struct {
+// StageState is a "bill of materials" describing what is, was, or can be
+// deployed to a Stage.
+type StageState struct {
 	// ID is a unique, system-assigned identifier for this state.
 	ID string `json:"id,omitempty"`
-	// FirstSeen represents the date/time when this EnvironmentState first entered
-	// the system. This is useful and important information because it enables the
-	// controller to block auto-promotion of EnvironmentStates that are older than
-	// an Environment's current state, which is a case that can arise if an
-	// Environment has ROLLED BACK to an older state whilst a downstream
-	// Environment is already on to a newer state.
+	// FirstSeen represents the date/time when this StageStage first entered the
+	// system. This is useful and important information because it enables the
+	// controller to block auto-promotion of StageStates that are older than a
+	// Stages's current state, which is a case that can arise if a Stage has
+	// ROLLED BACK to an older state whilst a downstream Stage is already on to a
+	// newer state.
 	FirstSeen *metav1.Time `json:"firstSeen,omitempty"`
-	// Provenance describes the proximate source of this EnvironmentState. i.e.
-	// Did it come directly from upstream repositories? Or an upstream
-	// environment.
+	// Provenance describes the proximate source of this StageState. i.e. Did it
+	// come directly from upstream repositories? Or an upstream Stage.
 	Provenance string `json:"provenance,omitempty"`
 	// Commits describes specific Git repository commits that were used in this
 	// state.
@@ -481,15 +480,15 @@ type EnvironmentState struct {
 	Images []Image `json:"images,omitempty"`
 	// Charts describes Helm charts that were used in this state.
 	Charts []Chart `json:"charts,omitempty"`
-	// Health is the state's last observed health. If this state is the
-	// Environment's current state, this will be continuously re-assessed and
-	// updated. If this state is a past state of the Environment, this field will
+	// Health is the StageState's last observed health. If this state is the
+	// Stage's current state, this will be continuously re-assessed and
+	// updated. If this StageState is a past state of the Stage, this field will
 	// denote the last observed health state before transitioning into a different
 	// state.
 	Health *Health `json:"health,omitempty"`
 }
 
-func (e *EnvironmentState) UpdateStateID() {
+func (e *StageState) UpdateStateID() {
 	materials := []string{}
 	for _, commit := range e.Commits {
 		materials = append(
@@ -516,20 +515,20 @@ func (e *EnvironmentState) UpdateStateID() {
 	)
 }
 
-type EnvironmentStateStack []EnvironmentState
+type StageStateStack []StageState
 
-// Empty returns a bool indicating whether or not the EnvironmentStateStack is
-// empty. nil counts as empty.
-func (e EnvironmentStateStack) Empty() bool {
+// Empty returns a bool indicating whether or not the StageStateStack is empty.
+// nil counts as empty.
+func (e StageStateStack) Empty() bool {
 	return len(e) == 0
 }
 
-// Pop removes and returns the leading element from EnvironmentStateStack. If
-// the EnvironmentStateStack is empty, the EnvironmentStack is not modified and
-// a empty EnvironmentState is returned instead. A boolean is also returned
-// indicating whether the returned EnvironmentState came from the top of the
-// stack (true) or is a zero value for that type (false).
-func (e *EnvironmentStateStack) Pop() (EnvironmentState, bool) {
+// Pop removes and returns the leading element from a StageStateStack. If the
+// StageStateStack is empty, the StageStack is not modified and a empty
+// StageState is returned instead. A boolean is also returned indicating whether
+// the returned StageState came from the top of the stack (true) or is a zero
+// value for that type (false).
+func (e *StageStateStack) Pop() (StageState, bool) {
 	item, ok := e.Top()
 	if ok {
 		*e = (*e)[1:]
@@ -537,26 +536,26 @@ func (e *EnvironmentStateStack) Pop() (EnvironmentState, bool) {
 	return item, ok
 }
 
-// Top returns the leading element from EnvironmentStateStack without modifying
-// the EnvironmentStateStack. If the EnvironmentStateStack is empty, an empty
-// EnvironmentState is returned instead. A boolean is also returned indicating
-// whether the returned EnvironmentState came from the top of the stack (true)
-// or is a zero value for that type (false).
-func (e EnvironmentStateStack) Top() (EnvironmentState, bool) {
+// Top returns the leading element from a StageStateStack without modifying the
+// StageStateStack. If the StageStateStack is empty, an empty StageState is
+// returned instead. A boolean is also returned indicating whether the returned
+// StageState came from the top of the stack (true) or is a zero value for that
+// type (false).
+func (e StageStateStack) Top() (StageState, bool) {
 	if e.Empty() {
-		return EnvironmentState{}, false
+		return StageState{}, false
 	}
 	item := *e[0].DeepCopy()
 	return item, true
 }
 
-// Push pushes one or more EnvironmentStates onto the EnvironmentStateStack. The
-// order of the new elements at the top of the stack will be equal to the order
-// in which they were passed to this function. i.e. The first new element passed
-// will be the element at the top of the stack. If resulting modification grow
-// the depth of the stack beyond 10 elements, the stack is truncated at the
-// bottom. i.e. Modified to contain only the top 10 elements.
-func (e *EnvironmentStateStack) Push(states ...EnvironmentState) {
+// Push pushes one or more StageStates onto the StageStateStack. The order of
+// the new elements at the top of the stack will be equal to the order in which
+// they were passed to this function. i.e. The first new element passed will be
+// the element at the top of the stack. If resulting modification grow the depth
+// of the stack beyond 10 elements, the stack is truncated at the bottom. i.e.
+// Modified to contain only the top 10 elements.
+func (e *StageStateStack) Push(states ...StageState) {
 	*e = append(states, *e...)
 	const max = 10
 	if len(*e) > max {
@@ -593,12 +592,12 @@ type GitCommit struct {
 	// Branch denotes the branch of the repository where this commit was found.
 	Branch string `json:"branch,omitempty"`
 	// HealthCheckCommit is the ID of a specific commit. When specified,
-	// assessments of Environment health will used this value (instead of ID) when
+	// assessments of Stage health will used this value (instead of ID) when
 	// determining if applicable sources of Argo CD Application resources
-	// associated with the environment are or are not synced to this commit. Note
-	// that there are cases (as in that of Bookkeeper being utilized as a
-	// promotion mechanism) wherein the value of this field may differ from the
-	// commit ID found in the ID field.
+	// associated with the Stage are or are not synced to this commit. Note that
+	// there are cases (as in that of Bookkeeper being utilized as a promotion
+	// mechanism) wherein the value of this field may differ from the commit ID
+	// found in the ID field.
 	HealthCheckCommit string `json:"healthCheckCommit,omitempty"`
 }
 
@@ -614,21 +613,20 @@ func (g *GitCommit) Equals(rhs *GitCommit) bool {
 	return g.RepoURL == rhs.RepoURL && g.ID == rhs.ID
 }
 
-// Health describes the health of an Environment.
+// Health describes the health of a Stage.
 type Health struct {
-	// Status describes the health of the Environment.
+	// Status describes the health of the Stage.
 	Status HealthState `json:"status,omitempty"`
-	// Issues clarifies why an Environment in any state other than Healthy is in
-	// that state. This field will always be the empty when an Environment is
-	// Healthy.
+	// Issues clarifies why a Stage in any state other than Healthy is in that
+	// state. This field will always be the empty when a Stage is Healthy.
 	Issues []string `json:"issues,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// EnvironmentList is a list of Environment resources.
-type EnvironmentList struct {
+// StageList is a list of Stage resources.
+type StageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Environment `json:"items"`
+	Items           []Stage `json:"items"`
 }

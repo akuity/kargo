@@ -13,18 +13,18 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type DeleteEnvironmentV1Alpha1Func func(
+type DeleteStageV1Alpha1Func func(
 	context.Context,
-	*connect.Request[svcv1alpha1.DeleteEnvironmentRequest],
-) (*connect.Response[svcv1alpha1.DeleteEnvironmentResponse], error)
+	*connect.Request[svcv1alpha1.DeleteStageRequest],
+) (*connect.Response[svcv1alpha1.DeleteStageResponse], error)
 
-func DeleteEnvironmentV1Alpha1(
+func DeleteStageV1Alpha1(
 	kc client.Client,
-) DeleteEnvironmentV1Alpha1Func {
+) DeleteStageV1Alpha1Func {
 	return func(
 		ctx context.Context,
-		req *connect.Request[svcv1alpha1.DeleteEnvironmentRequest],
-	) (*connect.Response[svcv1alpha1.DeleteEnvironmentResponse], error) {
+		req *connect.Request[svcv1alpha1.DeleteStageRequest],
+	) (*connect.Response[svcv1alpha1.DeleteStageResponse], error) {
 		if req.Msg.GetProject() == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
 		}
@@ -32,21 +32,21 @@ func DeleteEnvironmentV1Alpha1(
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
 		}
 
-		var env kubev1alpha1.Environment
+		var stage kubev1alpha1.Stage
 		key := client.ObjectKey{
 			Namespace: req.Msg.GetProject(),
 			Name:      req.Msg.GetName(),
 		}
-		if err := kc.Get(ctx, key, &env); err != nil {
+		if err := kc.Get(ctx, key, &stage); err != nil {
 			if kubeerr.IsNotFound(err) {
 				return nil, connect.NewError(connect.CodeNotFound,
-					fmt.Errorf("environment %q not found", key.String()))
+					fmt.Errorf("stage %q not found", key.String()))
 			}
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		if err := kc.Delete(ctx, &env); err != nil && !kubeerr.IsNotFound(err) {
+		if err := kc.Delete(ctx, &stage); err != nil && !kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		return connect.NewResponse(&svcv1alpha1.DeleteEnvironmentResponse{}), nil
+		return connect.NewResponse(&svcv1alpha1.DeleteStageResponse{}), nil
 	}
 }

@@ -15,9 +15,9 @@ import (
 func (r *reconciler) applyBookkeeperUpdate(
 	ctx context.Context,
 	namespace string,
-	newState api.EnvironmentState,
+	newState api.StageState,
 	update api.GitRepoUpdate,
-) (api.EnvironmentState, error) {
+) (api.StageState, error) {
 	if update.Bookkeeper == nil {
 		return newState, nil
 	}

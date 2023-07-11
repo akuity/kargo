@@ -129,8 +129,8 @@ func (w *webhook) authorize(
 			Groups: req.UserInfo.Groups,
 			ResourceAttributes: &authzv1.ResourceAttributes{
 				Group:     api.GroupVersion.Group,
-				Resource:  "environments",
-				Name:      promo.Spec.Environment,
+				Resource:  "stages",
+				Name:      promo.Spec.Stage,
 				Verb:      "promote",
 				Namespace: promo.Namespace,
 			},
@@ -153,10 +153,10 @@ func (w *webhook) authorize(
 			groupResource,
 			promo.Name,
 			errors.Errorf(
-				"subject %q is not permitted to %s Promotions for Environment %q",
+				"subject %q is not permitted to %s Promotions for Stage %q",
 				req.UserInfo.Username,
 				action,
-				promo.Spec.Environment,
+				promo.Spec.Stage,
 			),
 		)
 	}

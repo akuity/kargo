@@ -18,7 +18,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   verbs:
   - get
   - list
@@ -45,7 +45,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments/status
+  - stages/status
   - promotions/status
   verbs:
   - update

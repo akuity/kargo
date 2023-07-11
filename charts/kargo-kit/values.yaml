@@ -3,11 +3,11 @@
 # Declare variables to be passed into your templates.
 
 ## webhooks contains all configuration required for validating and initializing
-## Kargo Environment and Promotion resources.
+## Kargo Stage and Promotion resources.
 webhooks:
 
   ## server is the address of the webhook server used to validate and initialize
-  ## Kargo Environment and Promotion resources. It MUST use HTTPS and should not
+  ## Kargo Stage and Promotion resources. It MUST use HTTPS and should not
   ## include any path information.
   server: https://kargo-webhooks.example.com
   
