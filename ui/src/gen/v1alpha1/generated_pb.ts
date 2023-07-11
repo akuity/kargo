@@ -850,7 +850,7 @@ export class HelmImageUpdate extends Message<HelmImageUpdate> {
    * Image specifies a container image (without tag). This is a required field.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
+   * +kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
    *
    * @generated from field: optional string image = 1;
    */
@@ -1031,7 +1031,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
    * value in this field MUST NOT include an image tag. This field is required.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
+   * +kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
    *
    * @generated from field: optional string repoURL = 1;
    */
