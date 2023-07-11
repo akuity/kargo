@@ -12,25 +12,23 @@ import (
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
-type GetEnvironmentV1Alpha1Func func(
+type ListStagesV1Alpha1Func func(
 	context.Context,
-	*connect.Request[svcv1alpha1.GetEnvironmentRequest],
-) (*connect.Response[svcv1alpha1.GetEnvironmentResponse], error)
+	*connect.Request[svcv1alpha1.ListStagesRequest],
+) (*connect.Response[svcv1alpha1.ListStagesResponse], error)
 
-func GetEnvironmentV1Alpha1(
+func ListStagesV1Alpha1(
 	kc client.Client,
-) GetEnvironmentV1Alpha1Func {
+) ListStagesV1Alpha1Func {
 	return func(
 		ctx context.Context,
-		req *connect.Request[svcv1alpha1.GetEnvironmentRequest],
-	) (*connect.Response[svcv1alpha1.GetEnvironmentResponse], error) {
+		req *connect.Request[svcv1alpha1.ListStagesRequest],
+	) (*connect.Response[svcv1alpha1.ListStagesResponse], error) {
 		if req.Msg.GetProject() == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
-		}
-		if req.Msg.GetName() == "" {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
 		}
 
 		if err := kc.Get(ctx, client.ObjectKey{Name: req.Msg.GetProject()}, &corev1.Namespace{}); err != nil {
@@ -41,18 +39,17 @@ func GetEnvironmentV1Alpha1(
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 
-		var env kubev1alpha1.Environment
-		if err := kc.Get(ctx, client.ObjectKey{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetName(),
-		}, &env); err != nil {
-			if kubeerr.IsNotFound(err) {
-				return nil, connect.NewError(connect.CodeNotFound, err)
-			}
+		var list kubev1alpha1.StageList
+		if err := kc.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		return connect.NewResponse(&svcv1alpha1.GetEnvironmentResponse{
-			Environment: toEnvironmentProto(env),
+
+		stages := make([]*v1alpha1.Stage, len(list.Items))
+		for idx := range list.Items {
+			stages[idx] = toStageProto(list.Items[idx])
+		}
+		return connect.NewResponse(&svcv1alpha1.ListStagesResponse{
+			Stages: stages,
 		}), nil
 	}
 }

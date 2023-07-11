@@ -11,8 +11,8 @@ import (
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
-	"github.com/akuity/kargo/internal/webhooks/environments"
 	"github.com/akuity/kargo/internal/webhooks/promotions"
+	"github.com/akuity/kargo/internal/webhooks/stages"
 )
 
 func newWebhooksServerCommand() *cobra.Command {
@@ -55,8 +55,8 @@ func newWebhooksServerCommand() *cobra.Command {
 				return errors.Wrap(err, "error creating webhooks manager")
 			}
 
-			if err = environments.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "error initializing Environment webhooks")
+			if err = stages.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "error initializing Stage webhooks")
 			}
 			if err = promotions.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "error initializing Promotion webhooks")

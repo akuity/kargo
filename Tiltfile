@@ -83,7 +83,7 @@ k8s_resource(
 k8s_resource(
   new_name = 'crds',
   objects = [
-    'environments.kargo.akuity.io:customresourcedefinition',
+    'stages.kargo.akuity.io:customresourcedefinition',
     'promotionpolicies.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition'
   ],

@@ -1,4 +1,4 @@
-package environments
+package stages
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 func TestCheckHealth(t *testing.T) {
 	testCases := []struct {
 		name             string
-		state            api.EnvironmentState
+		state            api.StageState
 		argoCDAppUpdates []api.ArgoCDAppUpdate
 		getArgoCDAppFn   func(
 			context.Context,
@@ -203,7 +203,7 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App healthy and synced",
-			state: api.EnvironmentState{
+			state: api.StageState{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-url",

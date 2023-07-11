@@ -1,4 +1,4 @@
-package environments
+package stages
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 func (r *reconciler) checkHealth(
 	ctx context.Context,
-	currentState api.EnvironmentState,
+	currentState api.StageState,
 	argoCDAppUpdates []api.ArgoCDAppUpdate,
 ) api.Health {
 	if len(argoCDAppUpdates) == 0 {

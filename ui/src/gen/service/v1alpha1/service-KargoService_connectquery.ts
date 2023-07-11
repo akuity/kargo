@@ -5,94 +5,94 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { CreateEnvironmentRequest, CreateEnvironmentResponse, DeleteEnvironmentRequest, DeleteEnvironmentResponse, GetEnvironmentRequest, GetEnvironmentResponse, ListEnvironmentsRequest, ListEnvironmentsResponse, ListProjectsRequest, ListProjectsResponse, PromoteEnvironmentRequest, PromoteEnvironmentResponse } from "./service_pb.js";
+import { CreateStageRequest, CreateStageResponse, DeleteStageRequest, DeleteStageResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateEnvironment
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateStage
  */
-export const createEnvironment = createQueryService({
+export const createStage = createQueryService({
   service: {
     methods: {
-      createEnvironment: {
-        name: "CreateEnvironment",
+      createStage: {
+        name: "CreateStage",
         kind: MethodKind.Unary,
-        I: CreateEnvironmentRequest,
-        O: CreateEnvironmentResponse,
+        I: CreateStageRequest,
+        O: CreateStageResponse,
       },
     },
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
-}).createEnvironment;
+}).createStage;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListEnvironments
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListStages
  */
-export const listEnvironments = createQueryService({
+export const listStages = createQueryService({
   service: {
     methods: {
-      listEnvironments: {
-        name: "ListEnvironments",
+      listStages: {
+        name: "ListStages",
         kind: MethodKind.Unary,
-        I: ListEnvironmentsRequest,
-        O: ListEnvironmentsResponse,
+        I: ListStagesRequest,
+        O: ListStagesResponse,
       },
     },
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
-}).listEnvironments;
+}).listStages;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetEnvironment
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetStage
  */
-export const getEnvironment = createQueryService({
+export const getStage = createQueryService({
   service: {
     methods: {
-      getEnvironment: {
-        name: "GetEnvironment",
+      getStage: {
+        name: "GetStage",
         kind: MethodKind.Unary,
-        I: GetEnvironmentRequest,
-        O: GetEnvironmentResponse,
+        I: GetStageRequest,
+        O: GetStageResponse,
       },
     },
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
-}).getEnvironment;
+}).getStage;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteEnvironment
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage
  */
-export const deleteEnvironment = createQueryService({
+export const deleteStage = createQueryService({
   service: {
     methods: {
-      deleteEnvironment: {
-        name: "DeleteEnvironment",
+      deleteStage: {
+        name: "DeleteStage",
         kind: MethodKind.Unary,
-        I: DeleteEnvironmentRequest,
-        O: DeleteEnvironmentResponse,
+        I: DeleteStageRequest,
+        O: DeleteStageResponse,
       },
     },
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
-}).deleteEnvironment;
+}).deleteStage;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.PromoteEnvironment
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage
  */
-export const promoteEnvironment = createQueryService({
+export const promoteStage = createQueryService({
   service: {
     methods: {
-      promoteEnvironment: {
-        name: "PromoteEnvironment",
+      promoteStage: {
+        name: "PromoteStage",
         kind: MethodKind.Unary,
-        I: PromoteEnvironmentRequest,
-        O: PromoteEnvironmentResponse,
+        I: PromoteStageRequest,
+        O: PromoteStageResponse,
       },
     },
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
-}).promoteEnvironment;
+}).promoteStage;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjects

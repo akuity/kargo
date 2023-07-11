@@ -76,10 +76,10 @@ controller:
     ## The namespace into which Argo CD is installed.
     namespace: argocd
     ## Specifies whether the reconciler that watches Argo CD Applications for
-    ## the sake of forcing related Environments to reconcile should only watch
-    ## Argo CD Application resources residing in Argo CD's own namespace. Note:
-    ## Older versions of Argo CD only supported Argo CD Application resources in
-    ## Argo CD's own namespace, but newer versions support Argo CD Application
+    ## the sake of forcing related Stages to reconcile should only watch Argo CD
+    ## Application resources residing in Argo CD's own namespace. Note: Older
+    ## versions of Argo CD only supported Argo CD Application resources in Argo
+    ## CD's own namespace, but newer versions support Argo CD Application
     ## resources in any namespace. This should usually be left as false.
     watchArgocdNamespaceOnly: false
     ## Specifies whether Kargo may borrow repository credentials (specially

@@ -1,4 +1,4 @@
-package environments
+package stages
 
 import (
 	"context"
@@ -13,16 +13,16 @@ import (
 
 func TestDefault(t *testing.T) {
 	const testNamespace = "fake-namespace"
-	e := &api.Environment{
+	e := &api.Stage{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      "fake-stage-env",
+			Name:      "fake-uat-stage",
 			Namespace: testNamespace,
 		},
-		Spec: &api.EnvironmentSpec{
+		Spec: &api.StageSpec{
 			Subscriptions: &api.Subscriptions{
-				UpstreamEnvs: []api.EnvironmentSubscription{
+				UpstreamStages: []api.StageSubscription{
 					{
-						Name: "fake-test-env",
+						Name: "fake-test-stage",
 					},
 				},
 			},
@@ -37,11 +37,11 @@ func TestDefault(t *testing.T) {
 	}
 	err := (&webhook{}).Default(context.Background(), e)
 	require.NoError(t, err)
-	require.Len(t, e.Spec.Subscriptions.UpstreamEnvs, 1)
+	require.Len(t, e.Spec.Subscriptions.UpstreamStages, 1)
 	require.Equal(
 		t,
 		testNamespace,
-		e.Spec.Subscriptions.UpstreamEnvs[0].Namespace,
+		e.Spec.Subscriptions.UpstreamStages[0].Namespace,
 	)
 	require.Len(t, e.Spec.PromotionMechanisms.ArgoCDAppUpdates, 1)
 	require.Equal(
@@ -54,30 +54,30 @@ func TestDefault(t *testing.T) {
 func TestValidateSpec(t *testing.T) {
 	testCases := []struct {
 		name       string
-		spec       *api.EnvironmentSpec
-		assertions func(*api.EnvironmentSpec, field.ErrorList)
+		spec       *api.StageSpec
+		assertions func(*api.StageSpec, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *api.EnvironmentSpec, errs field.ErrorList) {
+			assertions: func(_ *api.StageSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 
 		{
 			name: "invalid",
-			spec: &api.EnvironmentSpec{
+			spec: &api.StageSpec{
 				// Has two conflicting types of subs...
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
-					UpstreamEnvs: []api.EnvironmentSubscription{
+					UpstreamStages: []api.StageSubscription{
 						{},
 					},
 				},
 				// Doesn't actually define any mechanisms...
 				PromotionMechanisms: &api.PromotionMechanisms{},
 			},
-			assertions: func(spec *api.EnvironmentSpec, errs field.ErrorList) {
+			assertions: func(spec *api.StageSpec, errs field.ErrorList) {
 				// We really want to see that all underlying errors have been bubbled up
 				// to this level and been aggregated.
 				require.Equal(
@@ -88,7 +88,7 @@ func TestValidateSpec(t *testing.T) {
 							Field:    "spec.subscriptions",
 							BadValue: spec.Subscriptions,
 							Detail: "exactly one of spec.subscriptions.repos or " +
-								"spec.subscriptions.upstreamEnvs must be defined",
+								"spec.subscriptions.upstreamStages must be defined",
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
@@ -106,12 +106,12 @@ func TestValidateSpec(t *testing.T) {
 
 		{
 			name: "valid",
-			spec: &api.EnvironmentSpec{
+			spec: &api.StageSpec{
 				// Nil subs and promo mechanisms are caught by declarative validation,
 				// so for the purposes of this test, leaving those completely undefined
 				// should surface no errors.
 			},
-			assertions: func(_ *api.EnvironmentSpec, errs field.ErrorList) {
+			assertions: func(_ *api.StageSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -155,7 +155,7 @@ func TestValidateSubs(t *testing.T) {
 							Field:    "subscriptions",
 							BadValue: subs,
 							Detail: "exactly one of subscriptions.repos or " +
-								"subscriptions.upstreamEnvs must be defined",
+								"subscriptions.upstreamStages must be defined",
 						},
 					},
 					errs,
@@ -164,10 +164,10 @@ func TestValidateSubs(t *testing.T) {
 		},
 
 		{
-			name: "has repo subs and env subs", // Should be "one of"
+			name: "has repo subs and Stage subs", // Should be "one of"
 			subs: &api.Subscriptions{
 				Repos: &api.RepoSubscriptions{},
-				UpstreamEnvs: []api.EnvironmentSubscription{
+				UpstreamStages: []api.StageSubscription{
 					{},
 				},
 			},
@@ -180,7 +180,7 @@ func TestValidateSubs(t *testing.T) {
 							Field:    "subscriptions",
 							BadValue: subs,
 							Detail: "exactly one of subscriptions.repos or " +
-								"subscriptions.upstreamEnvs must be defined",
+								"subscriptions.upstreamStages must be defined",
 						},
 					},
 					errs,

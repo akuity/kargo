@@ -75,8 +75,8 @@ func TestGitCommitEquals(t *testing.T) {
 	}
 }
 
-func TestEnvironmentStateUpdateID(t *testing.T) {
-	state := EnvironmentState{
+func TestStageStateUpdateID(t *testing.T) {
+	state := StageState{
 		Commits: []GitCommit{
 			{
 				RepoURL: "fake-git-repo",
@@ -110,10 +110,10 @@ func TestEnvironmentStateUpdateID(t *testing.T) {
 	require.NotEqual(t, result, state.ID)
 }
 
-func TestEnvironmentStateStackEmpty(t *testing.T) {
+func TestStageStateStackEmpty(t *testing.T) {
 	testCases := []struct {
 		name           string
-		stack          EnvironmentStateStack
+		stack          StageStateStack
 		expectedResult bool
 	}{
 		{
@@ -123,12 +123,12 @@ func TestEnvironmentStateStackEmpty(t *testing.T) {
 		},
 		{
 			name:           "stack is empty",
-			stack:          EnvironmentStateStack{},
+			stack:          StageStateStack{},
 			expectedResult: true,
 		},
 		{
 			name:           "stack has items",
-			stack:          EnvironmentStateStack{{ID: "foo"}},
+			stack:          StageStateStack{{ID: "foo"}},
 			expectedResult: false,
 		},
 	}
@@ -139,33 +139,33 @@ func TestEnvironmentStateStackEmpty(t *testing.T) {
 	}
 }
 
-func TestEnvironmentStateStackPop(t *testing.T) {
+func TestStageStateStackPop(t *testing.T) {
 	testCases := []struct {
 		name          string
-		stack         EnvironmentStateStack
-		expectedStack EnvironmentStateStack
-		expectedState EnvironmentState
+		stack         StageStateStack
+		expectedStack StageStateStack
+		expectedState StageState
 		expectedOK    bool
 	}{
 		{
 			name:          "stack is nil",
 			stack:         nil,
 			expectedStack: nil,
-			expectedState: EnvironmentState{},
+			expectedState: StageState{},
 			expectedOK:    false,
 		},
 		{
 			name:          "stack is empty",
-			stack:         EnvironmentStateStack{},
-			expectedStack: EnvironmentStateStack{},
-			expectedState: EnvironmentState{},
+			stack:         StageStateStack{},
+			expectedStack: StageStateStack{},
+			expectedState: StageState{},
 			expectedOK:    false,
 		},
 		{
 			name:          "stack has items",
-			stack:         EnvironmentStateStack{{ID: "foo"}, {ID: "bar"}},
-			expectedStack: EnvironmentStateStack{{ID: "bar"}},
-			expectedState: EnvironmentState{ID: "foo"},
+			stack:         StageStateStack{{ID: "foo"}, {ID: "bar"}},
+			expectedStack: StageStateStack{{ID: "bar"}},
+			expectedState: StageState{ID: "foo"},
 			expectedOK:    true,
 		},
 	}
@@ -179,29 +179,29 @@ func TestEnvironmentStateStackPop(t *testing.T) {
 	}
 }
 
-func TestEnvironmentStateStackTop(t *testing.T) {
+func TestStageStateStackTop(t *testing.T) {
 	testCases := []struct {
 		name          string
-		stack         EnvironmentStateStack
-		expectedState EnvironmentState
+		stack         StageStateStack
+		expectedState StageState
 		expectedOK    bool
 	}{
 		{
 			name:          "stack is nil",
 			stack:         nil,
-			expectedState: EnvironmentState{},
+			expectedState: StageState{},
 			expectedOK:    false,
 		},
 		{
 			name:          "stack is empty",
-			stack:         EnvironmentStateStack{},
-			expectedState: EnvironmentState{},
+			stack:         StageStateStack{},
+			expectedState: StageState{},
 			expectedOK:    false,
 		},
 		{
 			name:          "stack has items",
-			stack:         EnvironmentStateStack{{ID: "foo"}, {ID: "bar"}},
-			expectedState: EnvironmentState{ID: "foo"},
+			stack:         StageStateStack{{ID: "foo"}, {ID: "bar"}},
+			expectedState: StageState{ID: "foo"},
 			expectedOK:    true,
 		},
 	}
@@ -216,32 +216,32 @@ func TestEnvironmentStateStackTop(t *testing.T) {
 	}
 }
 
-func TestEnvironmentStateStackPush(t *testing.T) {
+func TestStageStateStackPush(t *testing.T) {
 	testCases := []struct {
 		name          string
-		stack         EnvironmentStateStack
-		newStates     []EnvironmentState
-		expectedStack EnvironmentStateStack
+		stack         StageStateStack
+		newStates     []StageState
+		expectedStack StageStateStack
 	}{
 		{
 			name:          "initial stack is nil",
 			stack:         nil,
-			newStates:     []EnvironmentState{{ID: "foo"}, {ID: "bar"}},
-			expectedStack: EnvironmentStateStack{{ID: "foo"}, {ID: "bar"}},
+			newStates:     []StageState{{ID: "foo"}, {ID: "bar"}},
+			expectedStack: StageStateStack{{ID: "foo"}, {ID: "bar"}},
 		},
 		{
 			name:          "initial stack is not nil",
-			stack:         EnvironmentStateStack{{ID: "foo"}},
-			newStates:     []EnvironmentState{{ID: "bar"}},
-			expectedStack: EnvironmentStateStack{{ID: "bar"}, {ID: "foo"}},
+			stack:         StageStateStack{{ID: "foo"}},
+			newStates:     []StageState{{ID: "bar"}},
+			expectedStack: StageStateStack{{ID: "bar"}, {ID: "foo"}},
 		},
 		{
 			name: "initial stack is full",
-			stack: EnvironmentStateStack{
+			stack: StageStateStack{
 				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
-			newStates: []EnvironmentState{{ID: "foo"}},
-			expectedStack: EnvironmentStateStack{
+			newStates: []StageState{{ID: "foo"}},
+			expectedStack: StageStateStack{
 				{ID: "foo"}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
 		},

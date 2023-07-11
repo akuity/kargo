@@ -16,18 +16,18 @@ const (
 //+kubebuilder:resource:shortName={promo,promos}
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name=Environment,type=string,JSONPath=`.spec.environment`
+//+kubebuilder:printcolumn:name=Stage,type=string,JSONPath=`.spec.stage`
 //+kubebuilder:printcolumn:name=State,type=string,JSONPath=`.spec.state`
 //+kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
-// Promotion represents a request to transition a particular Environment into a
+// Promotion represents a request to transition a particular Stage into a
 // particular state.
 type Promotion struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Spec describes the desired transition of a specific Environment into a
-	// specific EnvironmentState.
+	// Spec describes the desired transition of a specific Stage into a specific
+	// StageState.
 	//
 	//+kubebuilder:validation:Required
 	Spec *PromotionSpec `json:"spec"`
@@ -36,22 +36,21 @@ type Promotion struct {
 	Status PromotionStatus `json:"status,omitempty"`
 }
 
-// PromotionSpec describes the desired transition of a specific Environment into
-// a specific EnvironmentState.
+// PromotionSpec describes the desired transition of a specific Stage into a
+// specific StageState.
 type PromotionSpec struct {
-	// Environment specifies the name of the Environment to which this Promotion
-	// applies. The Environment referenced by this field MUST be in the same
+	// Stage specifies the name of the Stage to which this Promotion
+	// applies. The Stage referenced by this field MUST be in the same
 	// namespace as the Promotion.
 	//
 	// TODO: Use a webhook to make this immutable
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Environment string `json:"environment"`
-	// State specifies the specific EnvironmentState into which the Environment
-	// referenced by the Environment field should be transitioned. The State MUST
-	// be among the Environment's Status.AvailableStates or the Promotion will
-	// ultimately fail.
+	Stage string `json:"stage"`
+	// State specifies the specific StageState into which the Stage referenced by
+	// the Stage field should be transitioned. The State MUST be among the Stage's
+	// Status.AvailableStates or the Promotion will ultimately fail.
 	//
 	// TODO: Use a webhook to make this immutable
 	//

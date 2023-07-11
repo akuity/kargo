@@ -10,7 +10,7 @@ import (
 )
 
 func (r *reconciler) applyKustomize(
-	newState api.EnvironmentState,
+	newState api.StageState,
 	update api.KustomizePromotionMechanism,
 	repoDir string,
 ) ([]string, error) {
