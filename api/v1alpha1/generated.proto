@@ -289,7 +289,7 @@ message HelmImageUpdate {
   // Image specifies a container image (without tag). This is a required field.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
+  // +kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
   optional string image = 1 [(gogoproto.customname) = "Image", (gogoproto.nullable) = false];
 
   // ValuesFilePath specifies a path to the Helm values file that is to be
@@ -340,7 +340,7 @@ message ImageSubscription {
   // value in this field MUST NOT include an image tag. This field is required.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
+  // +kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
   optional string repoURL = 1 [(gogoproto.customname) = "RepoURL", (gogoproto.nullable) = false];
 
   // UpdateStrategy specifies the rules for how to identify the newest version
