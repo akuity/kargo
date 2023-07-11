@@ -6,37 +6,44 @@ Description: What is Kargo?
 
 # What is Kargo?
 
-Kargo is a next-generation continuous delivery (CD) platform for Kubernetes. It
-builds upon established practices (like [GitOps](https://opengitops.dev/)) and
-existing technology (like [Argo CD](https://argoproj.github.io/cd/)) to
-streamline, or even automate, the progressive rollout of changes across multiple
-environments.
+Kargo is a next-generation continuous delivery and application lifecycle
+orchestration platform for Kubernetes. It builds upon
+[GitOps](https://opengitops.dev/) principles and integrates with existing
+technologies, like [Argo CD](https://argoproj.github.io/cd/), to streamline and
+automate the progressive rollout of changes across the many stages of an
+application's lifecycle.
 
 :::caution
-Kargo is still in its early stages and undergoing heavy development, so we
-discourage anyone from using it in production environments at this time, but all
-are invited to [join us in improving Kargo](https://github.com/akuity/kargo).
+Kargo is still undergoing heavy development and is not yet ready for production,
+but all are invited to
+[join us in improving Kargo](https://github.com/akuity/kargo) to help it get
+there.
+
+In the meantime, breaking changes should be anticipated between pre-GA minor
+releases.
 :::
 
 ## Tell me more!
 
-At [Akuity](https://akuity.io/), we've heard one consistent thing from our
-customers -- they want a sensible and mostly automated means of progressing
+At [Akuity](https://akuity.io/), we've heard one consistent thing from GitOps
+practitioners -- they want a sensible and mostly automated means of progressing
 changes through a series of environments.
 
-* Have you ever wanted your "test" or "dev" environment to update automatically
+Have you ever:
+
+* Wanted applications instances in a "test" environment to update automatically
   as new images or Kubernetes manifests become available?
 
-* Have you ever wanted your "integration" or "stage" environment to update
-  automatically as soon as new images or Kubernetes manifests have proven
-  themselves stable in "test" or "dev?"
+* Wanted applications instances in a "UAT" environment to update automatically
+  after new images or Kubernetes manifests have proven themselves stable in a
+  "test" environment?
 
-* Have you ever wanted to _promote_ images and Kubernetes manifests from your
-  "stage" environment to your "prod" environment with just a few clicks or
-  keystrokes?
+* Wanted to _promote_ images and Kubernetes manifests from an application
+  instance in your "UAT" environment to an application instance in your
+  "prod" environment with just a few clicks or keystrokes?
 
-* Have you struggled to automate these sort of workflows? Have you leaned on
-  platforms like GitHub Actions and Jenkins to facilitate that automation and
+* Struggled to automate these sort of workflows? Have you over-leveraged
+  CI platforms like GitHub Actions and Jenkins to facilitate that automation and
   found they weren't designed with these use cases in mind?
 
 If you've answered "yes" to any of these questions, Kargo might be right for
@@ -44,13 +51,11 @@ you.
 
 ## Our goal
 
-Kargo's goal is to provide an intuitive and flexible layer "above" your GitOps
-repositories and platforms, wherein you can describe the relationships between
-environments, sources of materials (such as container images or Kubernetes
-manifests), _how_ to apply those materials to each environment (typically by
-interacting with repositories, configuration management tools, and Argo CD), and
-the conditions under which new materials may progress from one logical
-environment to the next.
+Kargo's goal is to provide an intuitive and flexible layer "above" your existing
+GitOps tooling, wherein you can describe the relationships between various
+application instances deployed to different environments as well as procedures
+for progressing changes (such as new container images or updated Kubernetes
+manifests), from one application instance's source of truth to the next.
 
 ## Next steps
 
