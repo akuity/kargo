@@ -47,6 +47,10 @@ func (c *jsonCodec) Marshal(msg any) ([]byte, error) {
 	return b.Bytes(), err
 }
 
+// Unmarshal unmarshals the data into protobuf message. Since Kubernetes code-gen uses gogoproto,
+// which is based on gogoproto, Unmarshal will first try to unmarshal the data using gogoproto.
+// However, it doesn't support some types, such as oneOf, so if it fails, it will try to unmarshal
+// using standard protobuf as fallback.
 func (c *jsonCodec) Unmarshal(data []byte, msg any) error {
 	gpm, ok := msg.(gogoproto.Message)
 	if !ok {
