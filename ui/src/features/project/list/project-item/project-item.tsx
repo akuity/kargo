@@ -1,5 +1,6 @@
-import { paths } from '@config/paths';
 import { Link, generatePath } from 'react-router-dom';
+
+import { paths } from '@ui/config/paths';
 
 import * as styles from './project-item.module.less';
 

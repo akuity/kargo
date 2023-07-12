@@ -1,7 +1,8 @@
-import { paths } from '@config/paths';
-import { Subscriptions as SubscriptionsType } from '@gen/v1alpha1/generated_pb';
 import { Descriptions, Space, Typography } from 'antd';
 import { Link, generatePath } from 'react-router-dom';
+
+import { paths } from '@ui/config/paths';
+import { Subscriptions as SubscriptionsType } from '@ui/gen/v1alpha1/generated_pb';
 
 export const Subscriptions = (props: {
   subscriptions?: SubscriptionsType;

@@ -1,7 +1,8 @@
-import { Project } from '@pages/project';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+
+import { Project } from '@ui/pages/project';
 
 import { paths } from './config/paths';
 import { queryClient } from './config/query-client';

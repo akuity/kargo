@@ -1,6 +1,7 @@
-import { paths } from '@config/paths';
 import { faTableList } from '@fortawesome/free-solid-svg-icons';
 import { Outlet } from 'react-router-dom';
+
+import { paths } from '@ui/config/paths';
 
 import * as styles from './main-layout.module.less';
 import { NavItem } from './nav-item/nav-item';

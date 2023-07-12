@@ -1,12 +1,13 @@
-import { paths } from '@config/paths';
-import { transport } from '@config/transport';
-import { HealthStatusIcon } from '@features/ui/health-status-icon/health-status-icon';
-import { listStages } from '@gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@gen/v1alpha1/generated_pb';
 import { useQuery } from '@tanstack/react-query';
 import { Drawer, Typography } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
+
+import { paths } from '@ui/config/paths';
+import { transport } from '@ui/config/transport';
+import { HealthStatusIcon } from '@ui/features/ui/health-status-icon/health-status-icon';
+import { listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { StageDetails } from '../features/stage/stage-details';
 

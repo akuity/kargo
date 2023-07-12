@@ -1,14 +1,15 @@
-import { transport } from '@config/transport';
-import { ButtonIcon } from '@features/ui';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import { faArrowTurnUp, faCodeCommit, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { promoteStage } from '@gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@gen/v1alpha1/generated_pb';
 import { useMutation } from '@tanstack/react-query';
 import { Button, Descriptions, List, Tooltip, Typography, message } from 'antd';
 import { format, formatRelative } from 'date-fns';
 import React from 'react';
+
+import { transport } from '@ui/config/transport';
+import { ButtonIcon } from '@ui/features/ui';
+import { promoteStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void }) => {
   const [promotingStateId, setPromotingStateId] = React.useState<string | null>(null);

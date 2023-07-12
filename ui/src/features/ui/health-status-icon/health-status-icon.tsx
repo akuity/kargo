@@ -6,9 +6,10 @@ import {
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { Health } from '@gen/v1alpha1/generated_pb';
 import { Tooltip } from 'antd';
 import { CSSProperties } from 'react';
+
+import type { Health } from '@ui/gen/v1alpha1/generated_pb';
 
 export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties }) => {
   const { health } = props;

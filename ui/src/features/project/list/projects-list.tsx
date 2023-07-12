@@ -1,6 +1,7 @@
-import { transport } from '@config/transport';
-import { listProjects } from '@gen/service/v1alpha1/service-KargoService_connectquery';
 import { useQuery } from '@tanstack/react-query';
+
+import { transport } from '@ui/config/transport';
+import { listProjects } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { ProjectItem } from './project-item/project-item';
 import * as styles from './projects-list.module.less';

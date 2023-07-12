@@ -1,9 +1,10 @@
-import { AvailableStates } from '@features/stage/available-states';
-import { Subscriptions } from '@features/stage/subscriptions';
-import { HealthStatusIcon } from '@features/ui/health-status-icon/health-status-icon';
-import { Stage } from '@gen/v1alpha1/generated_pb';
 import { Divider, Typography } from 'antd';
 import { useParams } from 'react-router-dom';
+
+import { AvailableStates } from '@ui/features/stage/available-states';
+import { Subscriptions } from '@ui/features/stage/subscriptions';
+import { HealthStatusIcon } from '@ui/features/ui/health-status-icon/health-status-icon';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export const StageDetails = (props: { stage: Stage; refetch: () => void }) => {
   const { stage, refetch } = props;
