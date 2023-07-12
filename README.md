@@ -6,17 +6,26 @@
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 [![slack](https://img.shields.io/badge/slack-kargo-brightgreen.svg?logo=slack)](https://akuity-community.slack.com/messages/C05BXBX7695)
 
-Kargo is a next-generation continuous delivery and environment orchestration platform for Kubernetes. 
-It builds upon GitOps principles and integrates with existing technologies, like Argo CD, to streamline 
-and automate the progressive rollout of changes across multiple environments.
+Kargo is a next-generation continuous delivery and application lifecycle
+orchestration platform for Kubernetes. It builds upon
+[GitOps](https://opengitops.dev/) principles and integrates with existing
+technologies, like [Argo CD](https://argoproj.github.io/cd/), to streamline and
+automate the progressive rollout of changes across the many stages of an
+application's lifecycle.
 
-> ⚠️&nbsp;&nbsp;Kargo is highly experimental at this time and breaking changes
-> should be anticipated between pre-GA minor releases.
+> ⚠️&nbsp;&nbsp;Kargo is still undergoing heavy development and is not yet ready
+> for production, but all are invited to join us in improving Kargo to help
+> it get there.
+>
+> In the meantime, breaking changes should be anticipated between pre-GA minor
+> releases.
 
 ## Getting Started
 
 Read more about Kargo in our [docs](https://kargo.akuity.io) or get hands-on
-right away by following our [Quickstart documentation](https://kargo.akuity.io/quickstart) or its video adaptation!
+right away by following our 
+[Quickstart documentation](https://kargo.akuity.io/quickstart) or its video
+adaptation!
 
 This documentation is very new, so please open issues against this repository if
 you encounter any difficulties.
