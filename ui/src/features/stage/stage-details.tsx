@@ -1,9 +1,9 @@
 import { Divider, Typography } from 'antd';
 import { useParams } from 'react-router-dom';
 
+import { HealthStatusIcon } from '@ui/features/common/health-status-icon/health-status-icon';
 import { AvailableStates } from '@ui/features/stage/available-states';
 import { Subscriptions } from '@ui/features/stage/subscriptions';
-import { HealthStatusIcon } from '@ui/features/ui/health-status-icon/health-status-icon';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export const StageDetails = (props: { stage: Stage; refetch: () => void }) => {

@@ -4,8 +4,7 @@ import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { transport } from '@ui/config/transport';
-import { HealthStatusIcon } from '@ui/features/ui/health-status-icon/health-status-icon';
+import { HealthStatusIcon } from '@ui/features/common/health-status-icon/health-status-icon';
 import { listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
@@ -15,7 +14,7 @@ import * as styles from './project.module.less';
 
 export const Project = () => {
   const { name, stageName } = useParams();
-  const { data, refetch } = useQuery(listStages.useQuery({ project: name }, { transport }));
+  const { data, refetch } = useQuery(listStages.useQuery({ project: name }));
 
   const stagesByName = (data?.stages || []).reduce((acc, stage) => {
     if (stage.metadata?.name) {
