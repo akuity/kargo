@@ -50,6 +50,9 @@ func CreateStageV1Alpha1(
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("environment should not be empty"))
 		}
 		if err := kc.Create(ctx, &stage); err != nil {
+			if kubeerr.IsNotFound(err) {
+				return nil, connect.NewError(connect.CodeNotFound, errors.Errorf("project %q not found", stage.GetNamespace()))
+			}
 			if kubeerr.IsAlreadyExists(err) {
 				return nil, connect.NewError(connect.CodeAlreadyExists, err)
 			}
