@@ -20,7 +20,7 @@ export const App = () => (
           <Route element={<MainLayout />}>
             <Route path={paths.projects} element={<Projects />} />
             <Route path={paths.project} element={<Project />} />
-            <Route path={paths.environment} element={<Project />} />
+            <Route path={paths.stage} element={<Project />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,89 +1,81 @@
+import { paths } from '@config/paths';
 import { transport } from '@config/transport';
 import { HealthStatusIcon } from '@features/ui/health-status-icon/health-status-icon';
-import { listEnvironments } from '@gen/service/v1alpha1/service-KargoService_connectquery';
-import { Environment } from '@gen/v1alpha1/generated_pb';
+import { listStages } from '@gen/service/v1alpha1/service-KargoService_connectquery';
+import { Stage } from '@gen/v1alpha1/generated_pb';
 import { useQuery } from '@tanstack/react-query';
 import { Drawer, Typography } from 'antd';
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
-import { EnvironmentDetails } from '../features/environment/environment-details';
+import { StageDetails } from '../features/stage/stage-details';
 
 import * as styles from './project.module.less';
 
 export const Project = () => {
-  const { name, environmentName } = useParams();
-  const { data, refetch } = useQuery(listEnvironments.useQuery({ project: name }, { transport }));
+  const { name, stageName } = useParams();
+  const { data, refetch } = useQuery(listStages.useQuery({ project: name }, { transport }));
 
-  const environmentsByName = (data?.environments || []).reduce((acc, environment) => {
-    if (environment.metadata?.name) {
-      acc[environment.metadata?.name] = environment;
+  const stagesByName = (data?.stages || []).reduce((acc, stage) => {
+    if (stage.metadata?.name) {
+      acc[stage.metadata?.name] = stage;
     }
     return acc;
-  }, {} as Record<string, Environment>);
-  const [currentEnvironment, setCurrentEnvironment] = React.useState<string | null>(
-    environmentName || null
-  );
+  }, {} as Record<string, Stage>);
+  const [currentStage, setCurrentStage] = React.useState<string | null>(stageName || null);
 
   const navigate = useNavigate();
 
-  const openEnvironment = (environmentName: string) => {
-    setCurrentEnvironment(environmentName);
-    navigate(`/project/${name}/environment/${environmentName}`);
+  const openStage = (stageName: string) => {
+    setCurrentStage(stageName);
+    navigate(generatePath(paths.stage, { name, stageName }));
   };
 
-  const closeEnvironment = () => {
-    setCurrentEnvironment(null);
-    navigate(`/project/${name}`);
+  const closeStage = () => {
+    setCurrentStage(null);
+    navigate(generatePath(paths.project, { name }));
   };
 
   React.useEffect(() => {
-    if (environmentName) {
-      openEnvironment(environmentName);
+    if (stageName) {
+      openStage(stageName);
     }
-  }, [environmentName]);
+  }, [stageName]);
 
   return (
     <div>
       <Drawer
-        open={currentEnvironment !== null}
-        onClose={() => closeEnvironment()}
+        open={currentStage !== null}
+        onClose={() => closeStage()}
         width={'80%'}
         closable={false}
       >
-        <EnvironmentDetails
-          environment={environmentsByName[currentEnvironment || '']}
-          refetch={refetch}
-        />
+        <StageDetails stage={stagesByName[currentStage || '']} refetch={refetch} />
       </Drawer>
       <Typography.Title level={1}>{name}</Typography.Title>
       <Typography.Title level={3} className='!mt-0 !mb-6'>
-        Environments
+        Stages
       </Typography.Title>
-      {(data?.environments || []).map((environment) => (
-        <EnvironmentItem
-          key={environment.metadata?.name}
-          environment={environment}
-          onClick={() => environment?.metadata?.name && openEnvironment(environment.metadata.name)}
+      {(data?.stages || []).map((stage) => (
+        <StageItem
+          key={stage.metadata?.name}
+          stage={stage}
+          onClick={() => stage?.metadata?.name && openStage(stage.metadata.name)}
         />
       ))}
     </div>
   );
 };
 
-const EnvironmentItem = (props: { environment: Environment; onClick: () => void }) => {
-  const { environment } = props;
+const StageItem = (props: { stage: Stage; onClick: () => void }) => {
+  const { stage } = props;
   return (
-    <div
-      key={environment.metadata?.name}
-      onClick={props.onClick}
-      className={styles.environmentItem}
-    >
+    <div key={stage.metadata?.name} onClick={props.onClick} className={styles.item}>
       <HealthStatusIcon
-        health={environment.status?.currentState?.health}
+        health={stage.status?.currentState?.health}
         style={{ marginRight: '12px' }}
       />
-      {environment.metadata?.name}
+      {stage.metadata?.name}
     </div>
   );
 };

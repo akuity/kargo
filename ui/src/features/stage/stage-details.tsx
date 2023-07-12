@@ -1,12 +1,12 @@
-import { AvailableStates } from '@features/environment/available-states';
-import { Subscriptions } from '@features/environment/subscriptions';
+import { AvailableStates } from '@features/stage/available-states';
+import { Subscriptions } from '@features/stage/subscriptions';
 import { HealthStatusIcon } from '@features/ui/health-status-icon/health-status-icon';
-import { Environment } from '@gen/v1alpha1/generated_pb';
+import { Stage } from '@gen/v1alpha1/generated_pb';
 import { Divider, Typography } from 'antd';
 import { useParams } from 'react-router-dom';
 
-export const EnvironmentDetails = (props: { environment: Environment; refetch: () => void }) => {
-  const { environment, refetch } = props;
+export const StageDetails = (props: { stage: Stage; refetch: () => void }) => {
+  const { stage, refetch } = props;
   const { name: projectName } = useParams();
 
   return (
@@ -14,11 +14,11 @@ export const EnvironmentDetails = (props: { environment: Environment; refetch: (
       <div className='flex items-center justify-between'>
         <div className='flex gap-1 items-center'>
           <HealthStatusIcon
-            health={environment?.status?.currentState?.health}
+            health={stage?.status?.currentState?.health}
             style={{ marginRight: '10px', marginTop: '5px' }}
           />
           <Typography.Title level={1} style={{ margin: 0 }}>
-            {environment?.metadata?.name}
+            {stage?.metadata?.name}
           </Typography.Title>
         </div>
         <Typography.Text type='secondary'>{projectName}</Typography.Text>
@@ -26,8 +26,8 @@ export const EnvironmentDetails = (props: { environment: Environment; refetch: (
       <Divider style={{ marginTop: '1em' }} />
 
       <div className='flex flex-col gap-8'>
-        <Subscriptions subscriptions={environment?.spec?.subscriptions} projectName={projectName} />
-        <AvailableStates environment={environment} onSuccess={refetch} />
+        <Subscriptions subscriptions={stage?.spec?.subscriptions} projectName={projectName} />
+        <AvailableStates stage={stage} onSuccess={refetch} />
       </div>
     </>
   );

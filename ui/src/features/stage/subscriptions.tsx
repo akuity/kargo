@@ -17,25 +17,25 @@ export const Subscriptions = (props: {
     <div>
       <Typography.Title level={3}>Subscriptions</Typography.Title>
 
-      {subscriptions.upstreamEnvs.length > 0 && (
+      {subscriptions.upstreamStages.length > 0 && (
         <>
           <Typography.Title level={5} style={{ marginTop: '.8em' }}>
-            Upstream Environments
+            Upstream Stages
           </Typography.Title>
           <Space direction='vertical' style={{ width: '100%' }}>
-            {subscriptions?.upstreamEnvs.map((env) => (
-              <Descriptions bordered size='small' key={env.name} column={1}>
-                <Descriptions.Item label='Environment'>
+            {subscriptions?.upstreamStages.map((stage) => (
+              <Descriptions bordered size='small' key={stage.name} column={1}>
+                <Descriptions.Item label='Stage'>
                   <Link
-                    to={generatePath(paths.environment, {
+                    to={generatePath(paths.stage, {
                       name: projectName,
-                      environmentName: env.name
+                      stageName: stage.name
                     })}
                   >
-                    {env.name}
+                    {stage.name}
                   </Link>
                 </Descriptions.Item>
-                <Descriptions.Item label='Project'>{env.namespace}</Descriptions.Item>
+                <Descriptions.Item label='Project'>{stage.namespace}</Descriptions.Item>
               </Descriptions>
             ))}
           </Space>

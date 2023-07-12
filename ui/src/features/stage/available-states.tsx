@@ -3,23 +3,23 @@ import { ButtonIcon } from '@features/ui';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import { faArrowTurnUp, faCodeCommit, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { promoteEnvironment } from '@gen/service/v1alpha1/service-KargoService_connectquery';
-import { Environment } from '@gen/v1alpha1/generated_pb';
+import { promoteStage } from '@gen/service/v1alpha1/service-KargoService_connectquery';
+import { Stage } from '@gen/v1alpha1/generated_pb';
 import { useMutation } from '@tanstack/react-query';
 import { Button, Descriptions, List, Tooltip, Typography, message } from 'antd';
 import { format, formatRelative } from 'date-fns';
 import React from 'react';
 
-export const AvailableStates = (props: { environment: Environment; onSuccess?: () => void }) => {
+export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void }) => {
   const [promotingStateId, setPromotingStateId] = React.useState<string | null>(null);
-  const { environment, onSuccess } = props;
+  const { stage, onSuccess } = props;
   const { mutate, isLoading: isLoadingPromote } = useMutation({
-    ...promoteEnvironment.useMutation({ transport }),
+    ...promoteStage.useMutation({ transport }),
     onError: (err) => {
       message.error(err?.toString());
     },
     onSuccess: () => {
-      message.success(`The "${environment.metadata?.name}" environment has been promoted.`);
+      message.success(`The "${stage.metadata?.name}" stage has been promoted.`);
       onSuccess?.();
     }
   });
@@ -27,8 +27,8 @@ export const AvailableStates = (props: { environment: Environment; onSuccess?: (
   const promote = (id: string) => {
     setPromotingStateId(id);
     mutate({
-      name: environment.metadata?.name,
-      project: environment.metadata?.namespace,
+      name: stage.metadata?.name,
+      project: stage.metadata?.namespace,
       state: id
     });
   };
@@ -38,7 +38,7 @@ export const AvailableStates = (props: { environment: Environment; onSuccess?: (
       <Typography.Title level={3}>Available States</Typography.Title>
       <List
         itemLayout='horizontal'
-        dataSource={environment?.status?.availableStates || []}
+        dataSource={stage?.status?.availableStates || []}
         renderItem={(state) => (
           <List.Item
             actions={[
@@ -47,7 +47,7 @@ export const AvailableStates = (props: { environment: Environment; onSuccess?: (
                 type='primary'
                 icon={<ButtonIcon icon={faArrowTurnUp} size='1x' />}
                 onClick={() => state.id && promote(state.id)}
-                disabled={environment.status?.currentState?.id === state.id}
+                disabled={stage.status?.currentState?.id === state.id}
                 loading={isLoadingPromote && promotingStateId === state.id}
               >
                 Promote
