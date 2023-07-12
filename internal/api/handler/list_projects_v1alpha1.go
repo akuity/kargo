@@ -25,7 +25,7 @@ func ListProjectsV1Alpha1(
 	) (*connect.Response[svcv1alpha1.ListProjectsResponse], error) {
 
 		// Only list namespaces which are labeled as Kargo projects
-		selector := labels.Set{"kargo.akuity.io": "true"}.AsSelector()
+		selector := labels.Set{"kargo.akuity.io/project": "true"}.AsSelector()
 		nsList := &corev1.NamespaceList{}
 		if err := kc.List(ctx, nsList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
