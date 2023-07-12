@@ -992,7 +992,7 @@ type HelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
+	// +kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
 	Image *string `protobuf:"bytes,1,opt,name=image" json:"image,omitempty"`
 	// ValuesFilePath specifies a path to the Helm values file that is to be
 	// updated. This is a required field.
@@ -1202,7 +1202,7 @@ type ImageSubscription struct {
 	// value in this field MUST NOT include an image tag. This field is required.
 	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^(([\w\d\.]+)(:[\d]+)?/)?[a-z0-9]+(/[a-z0-9]+)*$`
+	// +kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
 	RepoURL *string `protobuf:"bytes,1,opt,name=repoURL" json:"repoURL,omitempty"`
 	// UpdateStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
