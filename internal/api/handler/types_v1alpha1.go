@@ -263,8 +263,7 @@ func fromStageSubscriptionProto(s *v1alpha1.StageSubscription) *kubev1alpha1.Sta
 		return nil
 	}
 	return &kubev1alpha1.StageSubscription{
-		Name:      s.GetName(),
-		Namespace: s.GetNamespace(),
+		Name: s.GetName(),
 	}
 }
 
@@ -358,8 +357,7 @@ func toChartSubscriptionProto(c kubev1alpha1.ChartSubscription) *v1alpha1.ChartS
 
 func toStageSubscriptionProto(e kubev1alpha1.StageSubscription) *v1alpha1.StageSubscription {
 	return &v1alpha1.StageSubscription{
-		Name:      proto.String(e.Name),
-		Namespace: proto.String(e.Namespace),
+		Name: proto.String(e.Name),
 	}
 }
 

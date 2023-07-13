@@ -188,16 +188,6 @@ type StageSubscription struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Name string `json:"name"`
-	// Namespace specifies the namespace of the Stage. If left unspecified,
-	// the namespace of the upstream repository will be defaulted to that of this
-	// Stage.
-	//
-	// TODO: This field needs to go away because we've really leaned into using
-	// namespaces as project boundaries.
-	//
-	//+kubebuilder:validation:Optional
-	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Namespace string `json:"namespace,omitempty"`
 }
 
 // PromotionMechanisms describes how to incorporate newly observed materials
