@@ -1779,16 +1779,12 @@ type PromotionSpec struct {
 	// applies. The Stage referenced by this field MUST be in the same
 	// namespace as the Promotion.
 	//
-	// TODO: Use a webhook to make this immutable
-	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Stage *string `protobuf:"bytes,1,opt,name=stage" json:"stage,omitempty"`
 	// State specifies the specific StageState into which the Stage referenced by
 	// the Stage field should be transitioned. The State MUST be among the Stage's
 	// Status.AvailableStates or the Promotion will ultimately fail.
-	//
-	// TODO: Use a webhook to make this immutable
 	//
 	// +kubebuilder:validation:MinLength=1
 	State *string `protobuf:"bytes,2,opt,name=state" json:"state,omitempty"`
