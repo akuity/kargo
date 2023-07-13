@@ -4,7 +4,7 @@ description: Managing credentials
 
 # Managing credentials
 
-To manage the progression of changes from environment to environment, Kargo will
+To manage the progression of changes from stage to stage, Kargo will
 often require read/write permissions on private GitOps repositories and
 read-only permissions on private container image and/or Helm chart repositories.
 
@@ -33,11 +33,11 @@ stringData:
 
 The `name` of such a secret is inconsequential and may follow any convention
 preferred by the user. The `namespace` of such a secret MUST match the namespace
-of the Kargo `Environment` resources that will use it.
+of the Kargo `Stage` resources that will use it.
 
 :::info
 Kargo uses Kubernetes namespaces to demarcate project boundaries, so related
-`Environment` resources always share a namespace.
+`Stage` resources always share a namespace.
 :::
 
 The label key `kargo.akuity.io/secret-type` and its value, one of `repository`
@@ -100,7 +100,7 @@ Argo CD credentials to be specially annotated to indicate Kargo projects
 will refuse to borrow credentials from Argo CD. This annotation takes the form
 `kargo.akuity.io/authorized-projects:<projects>` where `<projects>` is a
 comma-separated list of Kargo projects (Kubernetes namespaces containing related
-`Environment` resources).
+`Stage` resources).
 
 Similarly to when retrieving credentials directly from a Kargo project's own
 namespace, when borrowing credentials from Argo CD (if permitted) Kargo gives
@@ -110,18 +110,18 @@ precedence to `Secret` resources labeled
 
 Altogether, the order of precedence for credentials is:
 
-1. Secrets in the same namespace as the `Environment` resource that are also
+1. Secrets in the same namespace as the `Stage` resource that are also
    labeled `kargo.akuity.io/secret-type: repository`.
 
-1. Secrets in the same namespace as the `Environment` resource that are also
+1. Secrets in the same namespace as the `Stage` resource that are also
    labeled `kargo.akuity.io/secret-type: repo-creds`.
 
 1. Secrets in Argo CD's namespace that are also labeled
    `argocd.argoproj.io/secret-type: repository` and whose
    `kargo.akuity.io/authorized-projects` annotation contains the namespace of
-   the `Environment` resource.
+   the `Stage` resource.
 
 1. Secrets in Argo CD's namespace that are also labeled
    `argocd.argoproj.io/secret-type: repo-creds` and whose
    `kargo.akuity.io/authorized-projects` annotation contains the namespace of
-   the `Environment` resource.
+   the `Stage` resource.
