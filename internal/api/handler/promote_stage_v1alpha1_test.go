@@ -72,7 +72,7 @@ func TestPromoteStageV1Alpha1(t *testing.T) {
 				}).
 				Build()
 
-			ctx := context.TODO()
+			ctx := context.Background()
 			res, err := PromoteStageV1Alpha1(kc)(ctx, connect.NewRequest(ts.req))
 			if ts.errExpected {
 				require.Error(t, err)
