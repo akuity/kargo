@@ -8,7 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,13 +54,6 @@ func newControllerCommand() *cobra.Command {
 					return errors.Wrap(
 						err,
 						"error adding Kubernetes core API to Kargo controller manager "+
-							"scheme",
-					)
-				}
-				if err = rbacv1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(
-						err,
-						"error adding Kubernetes RBAC API to Kargo controller manager "+
 							"scheme",
 					)
 				}
