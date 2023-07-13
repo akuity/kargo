@@ -76,7 +76,9 @@ k8s_resource(
     'kargo-webhooks-server:certificate',
     'kargo-webhooks-server:clusterrole',
     'kargo-webhooks-server:clusterrolebinding',
-    'kargo-webhooks-server:serviceaccount'
+    'kargo-webhooks-server:serviceaccount',
+    'kargo-webhooks-server-ns-controller:clusterrole',
+    'kargo-webhooks-server-ns-controller:clusterrolebinding'
   ]
 )
 
