@@ -22,6 +22,7 @@ issue:
     - prefix: area
       list:
         # generic areas
+        - bug
         - chore
         - devx
         - docs
@@ -30,12 +31,13 @@ issue:
         - security
         - tech-debt
         - test
-        - usability
-        # kargo specific areas
-        - environment
+        - ux
+        # kargo component areas
+        - api
+        - charts
         - cli
-        - git
-        - promotion
+        - controller
         - ui
+        - webhooks
       multiple: true
       needs: true
