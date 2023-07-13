@@ -405,11 +405,6 @@
                       "minLength": 1,
                       "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
                       "type": "string"
-                    },
-                    "namespace": {
-                      "description": "Namespace specifies the namespace of the Stage. If left unspecified, the namespace of the upstream repository will be defaulted to that of this Stage. \n TODO: This field needs to go away because we've really leaned into using namespaces as project boundaries.",
-                      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                      "type": "string"
                     }
                   },
                   "required": [
