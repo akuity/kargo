@@ -25,15 +25,16 @@ rbac:
   ## in the Kargo-managed cluster.
   installClusterRoleBindings: true
 
-## Optionally point to a Kubernetes Secret in the same namespace as Kargo that
-## contains the full content of a kubeconfig under the key "kubeconfig.yaml".
-## This is a useful method of hosting Kargo in one cluster, but having it manage
-## Environments, Promotions, Argo CD Applications, etc. that live in a second
-## cluster. Note that CRDs, ValidatingWebhookConfigurations, and
-## MutatingWebhookConfigurations will need to be installed manually into the
-## cluster Kargo will be managing. This can be accomplished using the kargo-kit
-## chart.
-# kubeconfigSecret:
+## Optionally point to Kubernetes Secrets containing kubeconfig for a remote
+## Kubernetes cluster hosting Kargo resources and/or a remote Kubernetes cluster
+## hosting Argo CD resources. This is useful for cases where the Kargo
+## controller is running somewhere other than the cluster(s) it is managing. The
+## config for Kargo and Argo CD can be the same, different, or omitted entirely.
+## When omitted, the controller will fall back on in-cluster configuration.
+## In the average case, these settings should be left alone.
+kubeconfigSecrets: {}
+  # kargo:
+  # argocd:
 
 ## All settings for the api component
 api:
@@ -74,15 +75,13 @@ controller:
   argocd:
     ## The namespace into which Argo CD is installed.
     namespace: argocd
-    ## Override for an override -- prefer in-cluster REST configuration for the
-    ## client that will communicate with the Kubernetes API server that hosts
-    ## Argo CD Application resources. This is useful for rare scenarios where
-    ## kubeconfigSecret has been specified for the sake of providing client
-    ## configuration for a REMOTE Kubernetes API server that hosts Kargo
-    ## resources, BUT Argo CD Application resources are hosted on the same
-    ## cluster on which the Kargo controller will run. This setting can
-    ## typically be left alone.
-    preferInClusterRestConfig: false
+    ## Specifies whether the reconciler that watches Argo CD Applications for
+    ## the sake of forcing related Stages to reconcile should only watch Argo CD
+    ## Application resources residing in Argo CD's own namespace. Note: Older
+    ## versions of Argo CD only supported Argo CD Application resources in Argo
+    ## CD's own namespace, but newer versions support Argo CD Application
+    ## resources in any namespace. This should usually be left as false.
+    watchArgocdNamespaceOnly: false
     ## Specifies whether Kargo may borrow repository credentials (specially
     ## formatted and specially annotated Secrets) from Argo CD.
     enableCredentialBorrowing: true
@@ -135,15 +134,6 @@ webhooksServer:
     ## <Helm release name>-webhook-servers-cert MUST be provided in the same
     ## namespace as Kargo.
     selfSignedCert: true
-
-  controllerServiceAccount: {}
-    ## Namespace and name of the Kubernetes service account used by the Kargo
-    ## controller. These should generally be left undefined, but in the case
-    ## where Kargo is hosted in one cluster, but manages a different cluster,
-    ## these should be set to reflect the details of the services account used
-    ## by the Kargo controller in the cluster it manages.
-    # namespace:
-    # name:
 
   resources: {}
     # We usually recommend not to specify default resources and to leave this as

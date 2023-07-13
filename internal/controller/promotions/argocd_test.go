@@ -17,7 +17,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		source     argocd.ApplicationSource
-		newState   api.EnvironmentState
+		newState   api.StageState
 		update     api.ArgoCDSourceUpdate
 		assertions func(
 			originalSource argocd.ApplicationSource,
@@ -49,7 +49,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -81,7 +81,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				RepoURL: "fake-url",
 				Chart:   "fake-chart",
 			},
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Charts: []api.Chart{
 					{
 						RegistryURL: "fake-url",
@@ -114,7 +114,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-image-url",
@@ -162,7 +162,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-image-url",
@@ -249,7 +249,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			app: &argocd.Application{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						authorizedEnvAnnotationKey: "bogus",
+						authorizedStageAnnotationKey: "bogus",
 					},
 				},
 			},
@@ -259,7 +259,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			app: &argocd.Application{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						authorizedEnvAnnotationKey: "ns-nope:name-nope",
+						authorizedStageAnnotationKey: "ns-nope:name-nope",
 					},
 				},
 			},
@@ -269,7 +269,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			app: &argocd.Application{
 				ObjectMeta: v1.ObjectMeta{
 					Annotations: map[string]string{
-						authorizedEnvAnnotationKey: "ns-yep:name-yep",
+						authorizedStageAnnotationKey: "ns-yep:name-yep",
 					},
 				},
 			},
@@ -298,7 +298,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 func TestApplyArgoCDAppUpdate(t *testing.T) {
 	testCases := []struct {
 		name           string
-		newState       api.EnvironmentState
+		newState       api.StageState
 		update         api.ArgoCDAppUpdate
 		getArgoCDAppFn func(
 			context.Context,
@@ -308,7 +308,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 		) (*argocd.Application, error)
 		applyArgoCDSourceUpdateFn func(
 			argocd.ApplicationSource,
-			api.EnvironmentState,
+			api.StageState,
 			api.ArgoCDSourceUpdate,
 		) (argocd.ApplicationSource, error)
 		argoCDAppPatchFn func(
@@ -360,7 +360,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				string,
 				string,
 			) (*argocd.Application, error) {
-				// This is not annotated properly to allow the Environment to mutate it
+				// This is not annotated properly to allow the Stage to mutate it
 				return &argocd.Application{}, nil
 			},
 			assertions: func(err error) {
@@ -368,7 +368,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"does not permit mutation by Kargo Environment",
+					"does not permit mutation by Kargo Stage",
 				)
 			},
 		},
@@ -389,7 +389,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				return &argocd.Application{
 					ObjectMeta: v1.ObjectMeta{
 						Annotations: map[string]string{
-							authorizedEnvAnnotationKey: "fake-namespace:fake-env",
+							authorizedStageAnnotationKey: "fake-namespace:fake-stage",
 						},
 					},
 					Spec: argocd.ApplicationSpec{
@@ -399,7 +399,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 			},
 			applyArgoCDSourceUpdateFn: func(
 				source argocd.ApplicationSource,
-				_ api.EnvironmentState,
+				_ api.StageState,
 				_ api.ArgoCDSourceUpdate,
 			) (argocd.ApplicationSource, error) {
 				return source, errors.New("something went wrong")
@@ -431,7 +431,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				return &argocd.Application{
 					ObjectMeta: v1.ObjectMeta{
 						Annotations: map[string]string{
-							authorizedEnvAnnotationKey: "fake-namespace:fake-env",
+							authorizedStageAnnotationKey: "fake-namespace:fake-stage",
 						},
 					},
 					Spec: argocd.ApplicationSpec{
@@ -443,7 +443,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 			},
 			applyArgoCDSourceUpdateFn: func(
 				source argocd.ApplicationSource,
-				_ api.EnvironmentState,
+				_ api.StageState,
 				_ api.ArgoCDSourceUpdate,
 			) (argocd.ApplicationSource, error) {
 				return source, errors.New("something went wrong")
@@ -475,7 +475,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				return &argocd.Application{
 					ObjectMeta: v1.ObjectMeta{
 						Annotations: map[string]string{
-							authorizedEnvAnnotationKey: "fake-namespace:fake-env",
+							authorizedStageAnnotationKey: "fake-namespace:fake-stage",
 						},
 					},
 					Spec: argocd.ApplicationSpec{
@@ -485,7 +485,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 			},
 			applyArgoCDSourceUpdateFn: func(
 				source argocd.ApplicationSource,
-				_ api.EnvironmentState,
+				_ api.StageState,
 				_ api.ArgoCDSourceUpdate,
 			) (argocd.ApplicationSource, error) {
 				return source, nil
@@ -520,7 +520,7 @@ func TestApplyArgoCDAppUpdate(t *testing.T) {
 				r.applyArgoCDAppUpdate(
 					context.Background(),
 					v1.ObjectMeta{
-						Name:      "fake-env",
+						Name:      "fake-stage",
 						Namespace: "fake-namespace",
 					},
 					testCase.newState,

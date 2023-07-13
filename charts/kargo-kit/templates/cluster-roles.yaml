@@ -22,14 +22,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - rolebindings
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - argoproj.io
   resources:
   - applications
@@ -41,7 +33,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   verbs:
   - get
   - list
@@ -67,7 +59,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments/status
+  - stages/status
   - promotions/status
   verbs:
   - update
@@ -80,9 +72,22 @@ metadata:
     {{- include "kargo-kit.labels" . | nindent 4 }}
 rules:
 - apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   - promotions
   - promotionpolicies
   verbs:
@@ -93,6 +98,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -104,7 +115,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   verbs:
   - create
   - delete
@@ -145,9 +156,15 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   - promotionpolicies
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote

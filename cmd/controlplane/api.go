@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
@@ -25,9 +24,11 @@ func newAPICommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
 			var kubeClient client.Client
 			{
-				restCfg, err := config.GetConfig()
+				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(err, "error loading REST config")
 				}
@@ -67,7 +68,7 @@ func newAPICommand() *cobra.Command {
 				return errors.Wrap(err, "error creating listener")
 			}
 			defer l.Close()
-			return srv.Serve(cmd.Context(), l, false)
+			return srv.Serve(ctx, l, false)
 		},
 	}
 }

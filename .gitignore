@@ -4,3 +4,4 @@ bin/
 charts/kargo/*.tgz
 coverage.txt
 vendor/
+.DS_Store

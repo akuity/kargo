@@ -18,11 +18,12 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments
+  - stages
   verbs:
   - get
   - list
   - patch
+  - promote
   - watch
 - apiGroups:
   - kargo.akuity.io
@@ -44,11 +45,12 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - environments/status
+  - stages/status
   - promotions/status
   verbs:
   - update
 ---
+{{- if not .Values.controller.argocd.watchArgocdNamespaceOnly }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -58,14 +60,6 @@ metadata:
     {{- include "kargo.controller.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - argoproj.io
   resources:
   - applications
@@ -74,4 +68,5 @@ rules:
   - list
   - patch
   - watch
+{{- end }}  
 {{- end }}

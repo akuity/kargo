@@ -12,7 +12,7 @@ import (
 )
 
 func (r *reconciler) applyHelm(
-	newState api.EnvironmentState,
+	newState api.StageState,
 	update api.HelmPromotionMechanism,
 	homeDir string,
 	repoDir string,

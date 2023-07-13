@@ -7,8 +7,8 @@ import (
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
-func fromEnvironmentSpecProto(s *v1alpha1.EnvironmentSpec) *kubev1alpha1.EnvironmentSpec {
-	return &kubev1alpha1.EnvironmentSpec{
+func fromStageSpecProto(s *v1alpha1.StageSpec) *kubev1alpha1.StageSpec {
+	return &kubev1alpha1.StageSpec{
 		Subscriptions:       fromSubscriptionsProto(s.GetSubscriptions()),
 		PromotionMechanisms: fromPromotionMechanismsProto(s.GetPromotionMechanisms()),
 	}
@@ -18,13 +18,13 @@ func fromSubscriptionsProto(s *v1alpha1.Subscriptions) *kubev1alpha1.Subscriptio
 	if s == nil {
 		return nil
 	}
-	upstreamEnvs := make([]kubev1alpha1.EnvironmentSubscription, len(s.GetUpstreamEnvs()))
-	for idx, env := range s.GetUpstreamEnvs() {
-		upstreamEnvs[idx] = *fromEnvironmentSubscriptionProto(env)
+	upstreamStages := make([]kubev1alpha1.StageSubscription, len(s.GetUpstreamStages()))
+	for idx, stage := range s.GetUpstreamStages() {
+		upstreamStages[idx] = *fromStageSubscriptionProto(stage)
 	}
 	return &kubev1alpha1.Subscriptions{
-		Repos:        fromRepoSubscriptionsProto(s.GetRepos()),
-		UpstreamEnvs: upstreamEnvs,
+		Repos:          fromRepoSubscriptionsProto(s.GetRepos()),
+		UpstreamStages: upstreamStages,
 	}
 }
 
@@ -258,41 +258,41 @@ func fromArgoCDHelmImageUpdateProto(u *v1alpha1.ArgoCDHelmImageUpdate) *kubev1al
 	}
 }
 
-func fromEnvironmentSubscriptionProto(s *v1alpha1.EnvironmentSubscription) *kubev1alpha1.EnvironmentSubscription {
+func fromStageSubscriptionProto(s *v1alpha1.StageSubscription) *kubev1alpha1.StageSubscription {
 	if s == nil {
 		return nil
 	}
-	return &kubev1alpha1.EnvironmentSubscription{
+	return &kubev1alpha1.StageSubscription{
 		Name:      s.GetName(),
 		Namespace: s.GetNamespace(),
 	}
 }
 
-func toEnvironmentProto(e kubev1alpha1.Environment) *v1alpha1.Environment {
+func toStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
 	// Status
-	availableStates := make([]*v1alpha1.EnvironmentState, len(e.Status.AvailableStates))
+	availableStates := make([]*v1alpha1.StageState, len(e.Status.AvailableStates))
 	for idx := range e.Status.AvailableStates {
-		availableStates[idx] = toEnvironmentStateProto(e.Status.AvailableStates[idx])
+		availableStates[idx] = toStageStateProto(e.Status.AvailableStates[idx])
 	}
-	var currentState *v1alpha1.EnvironmentState
+	var currentState *v1alpha1.StageState
 	if e.Status.CurrentState != nil {
-		currentState = toEnvironmentStateProto(*e.Status.CurrentState)
+		currentState = toStageStateProto(*e.Status.CurrentState)
 	}
-	history := make([]*v1alpha1.EnvironmentState, len(e.Status.History))
+	history := make([]*v1alpha1.StageState, len(e.Status.History))
 	for idx := range e.Status.History {
-		history[idx] = toEnvironmentStateProto(e.Status.History[idx])
+		history[idx] = toStageStateProto(e.Status.History[idx])
 	}
 
 	metadata := e.ObjectMeta.DeepCopy()
 	metadata.SetManagedFields(nil)
 
-	return &v1alpha1.Environment{
+	return &v1alpha1.Stage{
 		Metadata: metadata,
-		Spec: &v1alpha1.EnvironmentSpec{
+		Spec: &v1alpha1.StageSpec{
 			Subscriptions:       toSubscriptionsProto(*e.Spec.Subscriptions),
 			PromotionMechanisms: toPromotionMechanismsProto(*e.Spec.PromotionMechanisms),
 		},
-		Status: &v1alpha1.EnvironmentStatus{
+		Status: &v1alpha1.StageStatus{
 			AvailableStates: availableStates,
 			CurrentState:    currentState,
 			History:         history,
@@ -320,13 +320,13 @@ func toSubscriptionsProto(s kubev1alpha1.Subscriptions) *v1alpha1.Subscriptions 
 		}
 	}
 
-	upstreamEnvs := make([]*v1alpha1.EnvironmentSubscription, len(s.UpstreamEnvs))
-	for idx := range s.UpstreamEnvs {
-		upstreamEnvs[idx] = toEnvironmentSubscriptionProto(s.UpstreamEnvs[idx])
+	upstreamStages := make([]*v1alpha1.StageSubscription, len(s.UpstreamStages))
+	for idx := range s.UpstreamStages {
+		upstreamStages[idx] = toStageSubscriptionProto(s.UpstreamStages[idx])
 	}
 	return &v1alpha1.Subscriptions{
-		Repos:        repos,
-		UpstreamEnvs: upstreamEnvs,
+		Repos:          repos,
+		UpstreamStages: upstreamStages,
 	}
 }
 
@@ -356,8 +356,8 @@ func toChartSubscriptionProto(c kubev1alpha1.ChartSubscription) *v1alpha1.ChartS
 	}
 }
 
-func toEnvironmentSubscriptionProto(e kubev1alpha1.EnvironmentSubscription) *v1alpha1.EnvironmentSubscription {
-	return &v1alpha1.EnvironmentSubscription{
+func toStageSubscriptionProto(e kubev1alpha1.StageSubscription) *v1alpha1.StageSubscription {
+	return &v1alpha1.StageSubscription{
 		Name:      proto.String(e.Name),
 		Namespace: proto.String(e.Namespace),
 	}
@@ -512,7 +512,7 @@ func toArgoCDHelmImageUpdateProto(a kubev1alpha1.ArgoCDHelmImageUpdate) *v1alpha
 	}
 }
 
-func toEnvironmentStateProto(e kubev1alpha1.EnvironmentState) *v1alpha1.EnvironmentState {
+func toStageStateProto(e kubev1alpha1.StageState) *v1alpha1.StageState {
 	commits := make([]*v1alpha1.GitCommit, len(e.Commits))
 	for idx := range e.Commits {
 		commits[idx] = toGitCommitProto(e.Commits[idx])
@@ -529,7 +529,7 @@ func toEnvironmentStateProto(e kubev1alpha1.EnvironmentState) *v1alpha1.Environm
 	if e.Health != nil {
 		health = toHealthProto(*e.Health)
 	}
-	return &v1alpha1.EnvironmentState{
+	return &v1alpha1.StageState{
 		Id:         proto.String(e.ID),
 		FirstSeen:  e.FirstSeen,
 		Provenance: proto.String(e.Provenance),
@@ -577,8 +577,8 @@ func toPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
 	return &v1alpha1.Promotion{
 		Metadata: metadata,
 		Spec: &v1alpha1.PromotionSpec{
-			Environment: proto.String(p.Spec.Environment),
-			State:       proto.String(p.Spec.State),
+			Stage: proto.String(p.Spec.Stage),
+			State: proto.String(p.Spec.State),
 		},
 		Status: &v1alpha1.PromotionStatus{
 			Phase: proto.String(string(p.Status.Phase)),

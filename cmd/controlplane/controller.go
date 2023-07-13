@@ -17,8 +17,8 @@ import (
 	"github.com/akuity/bookkeeper"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/applications"
-	"github.com/akuity/kargo/internal/controller/environments"
 	"github.com/akuity/kargo/internal/controller/promotions"
+	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
@@ -43,7 +43,7 @@ func newControllerCommand() *cobra.Command {
 
 			var kargoMgr manager.Manager
 			{
-				restCfg, err := getRestConfig("kargo", false)
+				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,
@@ -84,12 +84,7 @@ func newControllerCommand() *cobra.Command {
 
 			var appMgr manager.Manager
 			{
-				restCfg, err := getRestConfig(
-					"argo",
-					types.MustParseBool(
-						os.GetEnv("ARGOCD_PREFER_IN_CLUSTER_REST_CONFIG", "false"),
-					),
-				)
+				restCfg, err := getRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,
@@ -112,11 +107,19 @@ func newControllerCommand() *cobra.Command {
 							"scheme",
 					)
 				}
+
+				var watchNamespace string // Empty string means all namespaces
+				if types.MustParseBool(
+					os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"),
+				) {
+					watchNamespace = os.GetEnv("ARGOCD_NAMESPACE", "argocd")
+				}
 				if appMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
 						Scheme:             scheme,
 						MetricsBindAddress: "0",
+						Namespace:          watchNamespace,
 					},
 				); err != nil {
 					return errors.Wrap(
@@ -138,13 +141,13 @@ func newControllerCommand() *cobra.Command {
 				argoClientForCreds,
 			)
 
-			if err := environments.SetupReconcilerWithManager(
+			if err := stages.SetupReconcilerWithManager(
 				ctx,
 				kargoMgr,
 				appMgr,
 				credentialsDB,
 			); err != nil {
-				return errors.Wrap(err, "error setting up Environments reconciler")
+				return errors.Wrap(err, "error setting up Stages reconciler")
 			}
 
 			if err := promotions.SetupReconcilerWithManager(

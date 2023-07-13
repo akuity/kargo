@@ -14,7 +14,7 @@ import (
 func TestApplyHelm(t *testing.T) {
 	testCases := []struct {
 		name                   string
-		newState               api.EnvironmentState
+		newState               api.StageState
 		update                 api.HelmPromotionMechanism
 		setStringsInYAMLFileFn func(
 			string,
@@ -30,7 +30,7 @@ func TestApplyHelm(t *testing.T) {
 	}{
 		{
 			name: "error modifying values.yaml",
-			newState: api.EnvironmentState{
+			newState: api.StageState{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-url",

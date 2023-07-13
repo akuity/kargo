@@ -58,7 +58,11 @@ k8s_resource(
   objects = [
     'kargo-controller:clusterrole',
     'kargo-controller:clusterrolebinding',
-    'kargo-controller:serviceaccount'
+    'kargo-controller:role',
+    'kargo-controller:rolebinding',
+    'kargo-controller:serviceaccount',
+    'kargo-controller-argocd:clusterrole',
+    'kargo-controller-argocd:clusterrolebinding'
   ]
 )
 
@@ -79,7 +83,7 @@ k8s_resource(
 k8s_resource(
   new_name = 'crds',
   objects = [
-    'environments.kargo.akuity.io:customresourcedefinition',
+    'stages.kargo.akuity.io:customresourcedefinition',
     'promotionpolicies.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition'
   ],

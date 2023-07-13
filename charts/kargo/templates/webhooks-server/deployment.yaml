@@ -27,14 +27,10 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/kargo", "webhooks-server"]
         env:
-        {{- if .Values.kubeconfigSecret }}
+        {{- if .Values.kubeconfigSecrets.kargo }}
         - name: KUBECONFIG
-          value: /etc/kargo/kubeconfig/kubeconfig.yaml
+          value: /etc/kargo/kubeconfigs/kubeconfig.yaml
         {{- end }}
-        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT
-          value: {{ .Values.webhooksServer.controllerServiceAccount.name | default (include "kargo.controller.fullname" .) }}
-        - name: KARGO_CONTROLLER_SERVICE_ACCOUNT_NAMESPACE
-          value: {{ .Values.webhooksServer.controllerServiceAccount.namespace | default .Release.Namespace }}
         - name: LOG_LEVEL
           value: {{ .Values.webhooksServer.logLevel }}
         ports:
@@ -45,9 +41,9 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
-        {{- if .Values.kubeconfigSecret }}
-        - mountPath: /etc/kargo/kubeconfig
-          name: kubeconfig
+        {{- if .Values.kubeconfigSecrets.kargo }}
+        - mountPath: /etc/kargo/kubeconfigs
+          name: kubeconfigs
           readOnly: true
         {{- end }}
         resources:
@@ -57,11 +53,11 @@ spec:
         secret:
           defaultMode: 0644
           secretName: {{ include "kargo.webhooksServer.fullname" . }}-cert
-      {{- if .Values.kubeconfigSecret }}
-      - name: kubeconfig
+      {{- if .Values.kubeconfigSecrets.kargo }}
+      - name: kubeconfigs
         secret:
           defaultMode: 0644
-          secretName: {{ .Values.kubeconfigSecret }}
+          secretName: {{ .Values.kubeconfigSecrets.kargo }}
       {{- end }}
       {{- with .Values.webhooksServer.nodeSelector }}
       nodeSelector:

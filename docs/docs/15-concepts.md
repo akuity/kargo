@@ -5,55 +5,82 @@ description: Concepts
 
 This section covers important Kargo concepts.
 
-## What is an environment?
+## What is a stage?
 
-_And what is an `Environment`?_
+_And what is a `Stage`?_
 
-In general, the word "environment" is poorly defined and severely overloaded. To
-some, an "environment" may be a particular Kubernetes cluster or namespace
-therein hosting a number of applications. To others, an "environment" could be a
-particular instance of one application -- or multiple applications deployed as a
-single unit. It could be an entire failure domain.
+At [Akuity](https://akuity.io/), we've heard one consistent thing from GitOps
+practitioners -- they want a sensible and mostly automated means of progressing
+changes through a series of environments. In this context, we understand
+"environments" to be a shorthand for the _sources of truth_ for various
+application instances that each exist for a specific purpose and may posses
+different qualities of service.
 
-Kargo is un-opinionated and unconcerned with what "environment" means to you.
-However _you_ define "environment," Kargo's `Environment` custom resource type
-helps you describe _how_ changes to Kubernetes manifests, new versions of
-Docker images, or even new versions of Helm charts can be rolled out in a
-controlled and progressive fashion from one "environment" to the next. The
-transitions from environment-to-environment can be automated or manually
-triggered, as called for by your use cases or preferences.
+GitOps creates an implicit abstraction between an application instance's source
+of truth and its deployment, so this "environment" shorthand makes sense to
+consummate GitOps practitioners who are not-so-directly concerned with _where_
+each application instance is deployed and more concerned with simply maintaining
+the _source of truth_ for each application instance. When a GitOps practitioner
+talks about "updating production," they're more likely talking about updating
+the _source of truth_ for an application instance _deployed to_ the production
+environment -- and they trust that a platform such as Argo CD will take
+responsibility for reconciling that source of truth with the corresponding
+deployment.
+
+We've also noticed that those less familiar with GitOps are less likely to be
+aware of this shorthand and are apt to interpret "environment" in more literal
+terms. "Test" or "production" may be thought of as _locations_ -- particular
+clusters, VPCs, or failure domains, for instance, each hosting many
+applications.
+
+To eliminate confusion, Kargo avoids the term "environment" altogether in favor
+of something more precise: _stage_. The important feature of a stage is that its
+name ("test" or "prod," for instance) denotes an application instance's
+_purpose_ and not its _location_.
+
+Kargo's `Stage` custom resource type helps you describe an application's stages:
+
+* Where can new materials (such as container images, Kubernetes manifests, or
+  Helm charts) be discovered? Directly from their repositories? Indirectly from
+  another, "upstream" `Stage`?
+
+* How can newly discovered materials be incorporated into an application
+  instance's source of truth?
+
+The progression of new materials from stage-to-stage can be fully automated or
+manually triggered, as called for by your use cases or preferences.
 
 :::info
 As a matter of convention, throughout this documentation, we are careful to use
-`Environment` (capitalized and monospaced) when we're referring specifically to
-that custom resource type and "environment" (with or without quotes) when
-referring to the considerably more vague concept.
+`Stage` (capitalized and monospaced) when we're referring specifically to that
+custom resource type and "stage" in standard typeface when referring to the
+concept.
 :::
 
-## `Environment` resources
+## `Stage` resources
 
-Like many Kubernetes resource types, an `Environment` resource is decomposed
+Like many Kubernetes resource types, the `Stage` resource type is decomposed
 into three main sections:
 
 * `metadata` that describes the resource's identifying information, such as
-  names, namespace, labels, etc.
+  name, namespace, labels, etc.
 
   :::info
-  It is a suggested practice to co-locate related `Environment` resources in
-  a single, dedicated namespace. In our examples, we group our `Environment`
-  resources together in a `kargo-demo` namespace.
+  Related `Stage` resources should be grouped together in a single, dedicated
+  namespace. In our examples, we group all of our `Stage` resources together in
+  a `kargo-demo` namespace.
   :::
 
 * `spec` that encapsulates the user-defined particulars of each resource.
 
 * `status` that encapsulates resource state.
 
-At this highest level, a manifest describing an `Environment` resource may
-appear as follows:
+At this highest level, a manifest describing a `Stage` resource may appear as
+follows:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
-kind: Environment
+kind: Stage
 metadata:
   name: test
   namespace: kargo-demo
@@ -63,8 +90,8 @@ status:
   # ...
 ```
 
-An `Environment` resource's `spec` field further decomposes into two main areas
-of concern:
+A `Stage` resource's `spec` field further decomposes into two main areas of
+concern:
 
 * Subscriptions
 
@@ -74,9 +101,8 @@ The following sections will explore each of these in greater detail.
 
 ### Subscriptions
 
-The `spec.subscriptions` field is used to describe the sources from which an
-`Environment` obtains *materials*. Materials include any combination of the
-following:
+The `spec.subscriptions` field is used to describe the sources from which a
+`Stage` obtains *materials*. Materials include any combination of the following:
 
 * Manifests from a Git repository. These can be plain YAML or rendered with the
   assistance of configuration management tools like
@@ -86,25 +112,25 @@ following:
 
 * Helm charts from a chart repository.
 
-Alternatively, instead of subscribing directly to repositories, an `Environment`
-may subscribe to another, "upstream" `Environment`.
+Alternatively, instead of subscribing directly to repositories, a `Stage` may
+subscribe to another, "upstream" `Stage`.
 
-For each `Environment`, the Kargo controller will periodically check all
-subscriptions for the latest available materials. A single set of materials is
-known, internally, as a *state*. The controller produces a canonical
-representation of each state and uses that to calculate a SHA1 hash which
-becomes the state's ID. Because state IDs are calculated deterministically from
-the underlying materials, each state ID is also a fingerprint of sorts. This ID
-is compared to those in a stack of known, *available states* stored in the
-`Environment` resource's `status` field. If a state is new, it is pushed onto
-the stack and becomes *available.*
+For each `Stage`, the Kargo controller will periodically check all subscriptions
+for the latest available materials. A single set of materials is known,
+internally, as a *state*. The controller produces a canonical representation of
+each state and uses that to calculate a SHA1 hash which becomes the state's ID.
+Because state IDs are calculated deterministically from the underlying
+materials, each state ID is also a fingerprint of sorts. This ID is compared to
+those in a stack of known, *available states* stored in the `Stage` resource's
+`status` field. If a state is new, it is pushed onto the stack and becomes
+*available.*
 
-In the following example, the `Environment` subscribes to manifests from a Git
+In the following example, the `Stage` subscribes to manifests from a Git
 repository _and_ images from an image repository:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
-kind: Environment
+kind: Stage
 metadata:
   name: test
   namespace: kargo-demo
@@ -112,7 +138,7 @@ spec:
   subscriptions:
     repos:
       git:
-      - repoURL: https://github.com/example/kargo-demo-gitops.git
+      - repoURL: https://github.com/example/kargo-demo.git
         branch: main
       images:
       - repoURL: nginx
@@ -120,17 +146,17 @@ spec:
   # ...
 ```
 
-This is how the `test` `Environment` resource's `status` field may appear after
+This is how the `test` `Stage` resource's `status` field may appear after
 polling the two repositories to which it subscribes:
 
 ```yaml
 status:
   availableStates:
-  - commits:
-    - id: dd8dc6a021d9d6c42e937f8b8f221a838342ec2a
-      repoURL: https://github.com/example/kargo-demo-gitops.git
+  - id: 51636b9332d5938b9f2d382e9713b54ceb62a323
     firstSeen: "2023-04-21T18:34:56Z"
-    id: 51636b9332d5938b9f2d382e9713b54ceb62a323
+    commits:
+    - id: dd8dc6a021d9d6c42e937f8b8f221a838342ec2a
+      repoURL: https://github.com/example/kargo-demo.git
     images:
     - repoURL: nginx
       tag: 1.24.0
@@ -138,14 +164,15 @@ status:
 
 ### Promotion mechanisms
 
-The `spec.promotionMechanisms` field is used to describe how to transition an
-environment into a new state.
+The `spec.promotionMechanisms` field is used to describe how to transition a
+stage into a new state.
 
 There are two general methods of accomplishing this:
 
-* Committing changes to a Git repository.
+* Committing changes to a GitOps repository.
 
-* Making changes to an Argo CD `Application` resource.
+* Making changes to an Argo CD `Application` resource. (Often, the only change
+  is to force a sync and refresh of the `Application`.)
 
 These two approaches are, in many cases, used in conjunction with one another.
 The Kargo controller always applies Git-based promotion mechanisms first _then_
@@ -176,30 +203,30 @@ for:
   version of a Helm chart.
 
 * Forcing a specified Argo CD `Application` to refresh and sync. (This is
-  automatic for any `Application` resource the `Environment` interacts with.)
+  automatic for any `Application` resource a `Stage` interacts with.)
 
 :::info
 Additionally, interaction with any Argo CD `Application` resources(s) as
-described above implicitly results in periodic evaluation of `Environment`
-health by aggregating the results of sync/health state for all such
-`Application` resources(s).
+described above implicitly results in periodic evaluation of `Stage` health by
+aggregating the results of sync/health state for all such `Application`
+resources(s).
 :::
 
-In the following example, the `Environment` subscribes to manifests from a Git
+In the following example, the `Stage` subscribes to manifests from a Git
 repository _and_ images from an image repository, as in the previous section.
-Our example also now states that transitioning the environment to a new state
+Our example also now states that transitioning the stage to a new state
 requires:
 
-1. Updating the `https://github.com/example/kargo-demo-gitops.git` repository by
-   running `kustomize edit set image` in the `env/test` directory and committing
-   those changes to an environment-specific `env/test` branch.
+1. Updating the `https://github.com/example/kargo-demo.git` repository by
+   running `kustomize edit set image` in the `stages/test` directory and
+   committing those changes to a stage-specific `stages/test` branch.
 
 1. Forcing the Argo CD `Application` named `kargo-demo-test` in the `argocd`
    namespace to refresh and sync.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
-kind: Environment
+kind: Stage
 metadata:
   name: test
   namespace: kargo-demo
@@ -207,79 +234,78 @@ spec:
   subscriptions:
     repos:
       git:
-      - repoURL: https://github.com/example/kargo-demo-gitops.git
+      - repoURL: https://github.com/example/kargo-demo.git
         branch: main
       images:
       - repoURL: nginx
         semverConstraint: ^1.24.0
   promotionMechanisms:
     gitRepoUpdates:
-    - repoURL: https://github.com/example/kargo-demo-gitops.git
-      writeBranch: env/test
+    - repoURL: https://github.com/example/kargo-demo.git
+      writeBranch: stages/test
       kustomize:
         images:
         - image: nginx
-          path: env/test
+          path: stages/test
     argoCDAppUpdates:
     - appName: kargo-demo-test
       appNamespace: argocd
 ```
 
 If you commit changes to the Git repository's `main` branch _or_ if a new
-version of the Nginx image were published to Docker Hub, these mechanisms
-provide the recipe for transitioning those changes into our test environment.
+version of the `nginx` image were published to Docker Hub, these mechanisms
+provide the recipe for applying those changes to our test stage.
 
 :::note
-Promotion mechanisms describe _how_ to transition an `Environment` into a new
-state, but they say nothing of _which_ state or _when_ to make the transition.
-Keep reading. These will be covered in the next section.
+Promotion mechanisms describe _how_ to transition a `Stage` into a new state,
+but they say nothing of _which_ state or _when_ to make the transition. Keep
+reading. These will be covered in the next section.
 :::
 
 :::info
-In the example above, you may have noticed the use of an environment-specific
+In the example above, you may have noticed the use of a stage-specific
 branch in the Git repository. Since we _subscribe_ to the Git repository's
 `main` branch, we could create an undesired loop in our automation if it also
 _writes_ to that same branch. Combining manifests from `main` with the desired
-images and then writing those changes to `env/test` branch (which the
+images and then writing those changes to the `stages/test` branch (which the
 corresponding Argo CD `Application` would reference as its `targetRevision`) is
 a strategy to prevent such a loop from ever forming.
 :::
 
-The application of any `Environment` resource's promotion mechanisms transitions
-the `Environment` into a new state and updates the `Environment`'s `status`
-field accordingly.
+The application of any `Stage` resource's promotion mechanisms transitions the
+`Stage` into a new state and updates the `Stage`'s `status` field accordingly.
 
-Continuing with our example, our `test` `Environment`'s `status` may appear as
-follows after its first promotion:
+Continuing with our example, our `test` `Stage`'s `status` may appear as follows
+after its first promotion:
 
 ```yaml
 status:
   availableStates:
-  - commits:
-    - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-      repoURL: https://github.com/example/kargo-demo-gitops.git
+  - id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     firstSeen: "2023-04-21T19:05:36Z"
-    id: 404df86560cab5d515e7aa74653e665c1dc96e1c
+    commits:
+    - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
+      repoURL: https://github.com/example/kargo-demo.git
     images:
     - repoURL: nginx
       tag: 1.24.0
   currentState:
+    id: 404df86560cab5d515e7aa74653e665c1dc96e1c
+    firstSeen: "2023-04-21T19:05:36Z"
     commits:
     - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-      repoURL: https://github.com/example/kargo-demo-gitops.git
-    firstSeen: "2023-04-21T19:05:36Z"
-    id: 404df86560cab5d515e7aa74653e665c1dc96e1c
+      repoURL: https://github.com/example/kargo-demo.git
     images:
     - repoURL: nginx
       tag: 1.24.0
     health:
       status: Healthy
   history:
-  - commits:
-    - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
-      repoURL: https://github.com/example/kargo-demo-gitops.git
+  - id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     firstSeen: "2023-04-21T19:05:36Z"
-    id: 404df86560cab5d515e7aa74653e665c1dc96e1c
+    commits:
+    - id: 02d153f75e5c042d576c713be52b57e1db8ddc97
+      repoURL: https://github.com/example/kargo-demo.git
     images:
     - repoURL: nginx
       tag: 1.24.0
@@ -287,20 +313,20 @@ status:
       status: Healthy
 ```
 
-Above, we can see that the state currently deployed to the environment is
+Above, we can see that the state currently deployed to the stage is
 recorded in the `currentState` field. The `history` field duplicates this
 information, but as state continues to change over time, each new state will be
 _pushed_ onto the `history` collection, making that field a historic record of
-what's been deployed to the environment.
+what's been deployed to the stage.
 
 ## `Promotion` resources
 
 In the previous section, we discussed _how_ promotion mechanisms transition
-`Environment`s from one state to another, but we have not yet discussed what
-actually triggers that process.
+stages from one state to another, but we have not yet discussed what actually
+triggers that process.
 
-Kargo `Promotion` resources are used as _requests_ to transition an
-`Environment` from its current state to any of its available states.
+Kargo `Promotion` resources are used as _requests_ to transition a `Stage` from
+its current state to any of its available states.
 
 `Promotion` resources may be created either automatically or manually, depending
 on policies (covered in the next section).
@@ -315,38 +341,150 @@ metadata:
   name: test-to-404df86560cab5d515e7aa74653e665c1dc96e1c
   namespace: kargo-demo
 spec:
-  environment: test
+  stage: test
   state: 404df86560cab5d515e7aa74653e665c1dc96e1c
 ```
 
 `Promotion` resources are simple. Their `spec.environment` and `spec.state`
-fields specify an `Environment` by name and one of its available states, into
-which that `Environment` should be transitioned.
+fields specify a `Stage` by name and one of its available states, into which
+that `Stage` should be transitioned.
 
 :::info
-While the name in a `Promotion`'s `metadata.name` field is inconsequential (only
-the `spec` matters), it is recommended that they be named using the following
-pattern: `<environment>-to-<state>`.
-
-This is the same naming convention that the Kargo controller itself will observe
-in cases where it does create `Promotion` resources automatically.
+The name in a `Promotion`'s `metadata.name` field is inconsequential. Only
+the `spec` matters.
 :::
 
 When the state transition specified by a `Promotion` has concluded -- whether
-successfully or unsuccessfully -- the `Promotion`'s `state` field is updated
+successfully or unsuccessfully -- the `Promotion`'s `status` field is updated
 to reflect the outcome.
 
-_So, who can create `Promotion` resources? And when does Kargo cerate them
+_So, who can create `Promotion` resources? And when does Kargo create them
 automatically?_
 
-## `PromotionPolicy` resources
+## Creating `Promotion`s manually
 
-`PromotionPolicy` resources describe who may create `Promotion` resources for
-each `Environment`s. They also specify whether the Kargo controller may
-automatically create a `Promotion` resource when the `Environment`
-reconciliation loop discovers a new available state.
+As with all resource types in Kubernetes, permissions to perform various actions
+on `Promotion` resources, including creating new ones, are governed by
+[RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
 
-For example:
+Kubernetes RBAC, alone, cannot address one particular concern, however. Often,
+it is necessary to grant a user permission to create `Promotion` resources for
+some particular `Stage`s but not for others. To address this, Kargo utilizes an
+admission control webhook that conducts access reviews to determine if a user
+creating a `Promotion` resource has the virtual `promote` verb for the `Stage`
+referenced by the `Promotion` resource.
+
+:::info
+[This blog post](https://blog.aquasec.com/kubernetes-verbs) is an excellent
+primer on virtual verbs in Kubernetes RBAC.
+:::
+
+The pre-defined `kargo-promoter` `ClusterRole` grants the ability to create,
+read, update, delete, and list `Promotion` resources and also grants the virtual
+`promote` ability for all `Stages`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-promoter
+  labels:
+    # ...
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- # ...
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote
+```
+
+To grant a fictional user `alice` the ability to create `Promotion`s for all
+`Stage`s in a given namespace, such as `kargo-demo`, a `RoleBinding` (_not_ a
+`ClusterRoleBinding`) such as the following may be created:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alice-promoter
+  namespace: kargo-demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kargo-promoter
+subjects:
+- kind: User
+  name: alice
+```
+
+Suppose, however, that a fictional user `bob` should be permitted to create
+`Promotion` resources that reference the `UAT` `Stage`, but not any other.
+The following `Role` and `RoleBinding` would address that need:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: uat-promoter
+  namespace: kargo-demo
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  resourceNames:
+  - uat
+  verbs:
+  - promote
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bob-uat-promoter
+  namespace: kargo-demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: uat-promoter
+subjects:
+- kind: User
+  name: bob
+```
+
+## Auto-promotions
+
+At times, it may be desirable for Kargo itself to create a new `Promotion`
+resource to automatically transition a `Stage` into a newly discovered state.
+
+Enabling this requires the creation of a `PromotionPolicy` resource. The
+following example demonstrates how a `test` `Stage` can take advantage of
+auto-promotions:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -354,69 +492,19 @@ kind: PromotionPolicy
 metadata:
   name: test
   namespace: kargo-demo
-environment: test
-authorizedPromoters:
-- subjectType: User
-  name: kubernetes-admin
+stage: test
 enableAutoPromotion: true
 ```
 
-The above example indicates that authenticated users of the Kubernetes cluster
-identified by username `kubernetes-admin` may create `Promotion` resources
-referencing the `test` `Environment`. It also specifies that auto-promotion is
-enabled -- meaning that the Kargo controller will automatically create a
-`Promotion` resource to transition the `test` `Environment` into any newly
-discovered state.
-
-:::note
-Authorized promoters do not need to be identified by username. There is also
-support for identifying authorized `ServiceAccount`s, and human users and 
-`ServiceAccount`s alike can both be authorized indirectly through bindings to
-a specific role or membership in s specific group.
-:::
-
 :::info
-_What about Kubernetes RBAC?_
+Why isn't `enableAutoPromotion` a field on the `Stage` resource type itself?
 
-Kubernetes RBAC works for Kargo resource types, of course, however, Kubernetes
-RBAC is only sophisticated enough to establish who may or may not create
-`Promotion` resources (or `Promotion` resources in a particular namespace).
+It is entirely plausible that the users with permission to define a `Stage`
+aren't intended to have the authority to execute promotions _to_ that `Stage`.
+If `enableAutoPromotion` were a field on the `Stage` resource type, then users
+with permission to create and update `Stage`s could enable auto-promotion to
+effect a promotion they themselves could not otherwise have performed manually.
 
-With Kargo, it is likely that a single Kubernetes namespace may contain multiple
-`Environment` resources. It is also likely that not all such resources are
-treated with equal degrees of rigor. For instance, it may be permissible for any
-developer on one's team to manually promote to a `test` or `stage` environment,
-however, authority to promote to `prod` might be vested only in the team lead.
-
-`PromotionPolicy` resources, therefore, permit someone such as a team lead to,
-for instance, opt-in to auto-promotions for the `test` `Environment` and permit
-any developer to promote manually to the `stage` `Environment` while reserving
-the power to promote to the `prod` `Environment` for themselves.
-:::
-
-:::note
-To be effective, the ability to create, edit, and delete `PromotionPolicy`
-resources should be restricted to the same set of users who are authorized to
-promote to production. Doing this precludes the possibility of a users _not_
-authorized to promote to some environment(s) from creating or editing
-`PromotionPolicy` resources in a manner that elevates their own privileges.
-:::
-
-:::info
-When installed to your Kubernetes cluster via its official Helm chart, Kargo
-includes three `ClusterRoleBinding` resources:
-
-* `kargo-admin`: Can list, create, read, update, and delete all Kargo resource
-  types.
-
-* `kargo-developer`: Can list, create, read, update, and delete Kargo
-  `Environment` resources. Can list and read `Promotion` and `PromotionPolicy`
-  resources.
-
-* `kargo-promoter`: Can list, create, read, update, and delete Kargo `Promotion`
-  resources. Can list and read `Environment` and `PromotionPolicy` resources.
-
-It is recommended that applicable users, `ServiceAccount`s, groups, etc. be
-bound to these `ClusterRoles` on a namespace-by-namespace basis. (Kubernetes
-does permit namespace-scoped `RoleBinding`s to non-namespaced `ClusterRoles`).
+By utilizing a separate `PromotionPolicy` resource to enable auto-promotion for
+a given `Stage`, this would-be method of privilege escalation is eliminated.
 :::

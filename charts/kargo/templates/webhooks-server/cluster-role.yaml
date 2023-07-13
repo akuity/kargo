@@ -8,19 +8,29 @@ metadata:
     {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - rbac.authorization.k8s.io
+  - authorization.k8s.io
   resources:
-  - rolebindings
+  - subjectaccessreviews
   verbs:
-  - get
-  - list
-  - watch
+  - create
+---
+# This cluster role is custom for the namespace controller. The namespace
+# controller will not actually be able to carry our promotions because it lacks
+# permission to create Promotion resources, but having the custom promote verb
+# on Stages allows it to delete Promotion resources associated with any Stage
+# when a namespace is deleted. Without this, the webhook would prevent that.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kargo.webhooksServer.fullname" . }}-ns-controller
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - promotionpolicies
+  - stages
   verbs:
-  - get
-  - list
-  - watch
+  - promote
 {{- end }}

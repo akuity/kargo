@@ -5,12 +5,12 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-import { Environment, EnvironmentSpec, Promotion } from "../../v1alpha1/generated_pb.js";
+import { Promotion, Stage, StageSpec } from "../../v1alpha1/generated_pb.js";
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.CreateEnvironmentRequest
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateStageRequest
  */
-export class CreateEnvironmentRequest extends Message<CreateEnvironmentRequest> {
+export class CreateStageRequest extends Message<CreateStageRequest> {
   /**
    * @generated from field: string project = 1;
    */
@@ -22,235 +22,155 @@ export class CreateEnvironmentRequest extends Message<CreateEnvironmentRequest> 
   name = "";
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.EnvironmentSpec spec = 3;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 3;
    */
-  spec?: EnvironmentSpec;
+  spec?: StageSpec;
 
-  constructor(data?: PartialMessage<CreateEnvironmentRequest>) {
+  constructor(data?: PartialMessage<CreateStageRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateEnvironmentRequest";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateStageRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "spec", kind: "message", T: EnvironmentSpec },
+    { no: 3, name: "spec", kind: "message", T: StageSpec },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEnvironmentRequest {
-    return new CreateEnvironmentRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateStageRequest {
+    return new CreateStageRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateEnvironmentRequest {
-    return new CreateEnvironmentRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateStageRequest {
+    return new CreateStageRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateEnvironmentRequest {
-    return new CreateEnvironmentRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateStageRequest {
+    return new CreateStageRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateEnvironmentRequest | PlainMessage<CreateEnvironmentRequest> | undefined, b: CreateEnvironmentRequest | PlainMessage<CreateEnvironmentRequest> | undefined): boolean {
-    return proto3.util.equals(CreateEnvironmentRequest, a, b);
+  static equals(a: CreateStageRequest | PlainMessage<CreateStageRequest> | undefined, b: CreateStageRequest | PlainMessage<CreateStageRequest> | undefined): boolean {
+    return proto3.util.equals(CreateStageRequest, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.CreateEnvironmentResponse
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateStageResponse
  */
-export class CreateEnvironmentResponse extends Message<CreateEnvironmentResponse> {
+export class CreateStageResponse extends Message<CreateStageResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Environment environment = 1;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
    */
-  environment?: Environment;
+  stage?: Stage;
 
-  constructor(data?: PartialMessage<CreateEnvironmentResponse>) {
+  constructor(data?: PartialMessage<CreateStageResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateEnvironmentResponse";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateStageResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "environment", kind: "message", T: Environment },
+    { no: 1, name: "stage", kind: "message", T: Stage },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEnvironmentResponse {
-    return new CreateEnvironmentResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateStageResponse {
+    return new CreateStageResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateEnvironmentResponse {
-    return new CreateEnvironmentResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateStageResponse {
+    return new CreateStageResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateEnvironmentResponse {
-    return new CreateEnvironmentResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateStageResponse {
+    return new CreateStageResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateEnvironmentResponse | PlainMessage<CreateEnvironmentResponse> | undefined, b: CreateEnvironmentResponse | PlainMessage<CreateEnvironmentResponse> | undefined): boolean {
-    return proto3.util.equals(CreateEnvironmentResponse, a, b);
+  static equals(a: CreateStageResponse | PlainMessage<CreateStageResponse> | undefined, b: CreateStageResponse | PlainMessage<CreateStageResponse> | undefined): boolean {
+    return proto3.util.equals(CreateStageResponse, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.ListEnvironmentsRequest
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListStagesRequest
  */
-export class ListEnvironmentsRequest extends Message<ListEnvironmentsRequest> {
+export class ListStagesRequest extends Message<ListStagesRequest> {
   /**
    * @generated from field: string project = 1;
    */
   project = "";
 
-  constructor(data?: PartialMessage<ListEnvironmentsRequest>) {
+  constructor(data?: PartialMessage<ListStagesRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListEnvironmentsRequest";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListStagesRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListEnvironmentsRequest {
-    return new ListEnvironmentsRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListStagesRequest {
+    return new ListStagesRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListEnvironmentsRequest {
-    return new ListEnvironmentsRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListStagesRequest {
+    return new ListStagesRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListEnvironmentsRequest {
-    return new ListEnvironmentsRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListStagesRequest {
+    return new ListStagesRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListEnvironmentsRequest | PlainMessage<ListEnvironmentsRequest> | undefined, b: ListEnvironmentsRequest | PlainMessage<ListEnvironmentsRequest> | undefined): boolean {
-    return proto3.util.equals(ListEnvironmentsRequest, a, b);
+  static equals(a: ListStagesRequest | PlainMessage<ListStagesRequest> | undefined, b: ListStagesRequest | PlainMessage<ListStagesRequest> | undefined): boolean {
+    return proto3.util.equals(ListStagesRequest, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.ListEnvironmentsResponse
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListStagesResponse
  */
-export class ListEnvironmentsResponse extends Message<ListEnvironmentsResponse> {
+export class ListStagesResponse extends Message<ListStagesResponse> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Environment environments = 1;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Stage stages = 1;
    */
-  environments: Environment[] = [];
+  stages: Stage[] = [];
 
-  constructor(data?: PartialMessage<ListEnvironmentsResponse>) {
+  constructor(data?: PartialMessage<ListStagesResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListEnvironmentsResponse";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListStagesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "environments", kind: "message", T: Environment, repeated: true },
+    { no: 1, name: "stages", kind: "message", T: Stage, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListEnvironmentsResponse {
-    return new ListEnvironmentsResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListStagesResponse {
+    return new ListStagesResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListEnvironmentsResponse {
-    return new ListEnvironmentsResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListStagesResponse {
+    return new ListStagesResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListEnvironmentsResponse {
-    return new ListEnvironmentsResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListStagesResponse {
+    return new ListStagesResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListEnvironmentsResponse | PlainMessage<ListEnvironmentsResponse> | undefined, b: ListEnvironmentsResponse | PlainMessage<ListEnvironmentsResponse> | undefined): boolean {
-    return proto3.util.equals(ListEnvironmentsResponse, a, b);
+  static equals(a: ListStagesResponse | PlainMessage<ListStagesResponse> | undefined, b: ListStagesResponse | PlainMessage<ListStagesResponse> | undefined): boolean {
+    return proto3.util.equals(ListStagesResponse, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.GetEnvironmentRequest
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetStageRequest
  */
-export class GetEnvironmentRequest extends Message<GetEnvironmentRequest> {
-  /**
-   * @generated from field: string project = 1;
-   */
-  project = "";
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  constructor(data?: PartialMessage<GetEnvironmentRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetEnvironmentRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEnvironmentRequest {
-    return new GetEnvironmentRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEnvironmentRequest {
-    return new GetEnvironmentRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEnvironmentRequest {
-    return new GetEnvironmentRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetEnvironmentRequest | PlainMessage<GetEnvironmentRequest> | undefined, b: GetEnvironmentRequest | PlainMessage<GetEnvironmentRequest> | undefined): boolean {
-    return proto3.util.equals(GetEnvironmentRequest, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.GetEnvironmentResponse
- */
-export class GetEnvironmentResponse extends Message<GetEnvironmentResponse> {
-  /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Environment environment = 1;
-   */
-  environment?: Environment;
-
-  constructor(data?: PartialMessage<GetEnvironmentResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetEnvironmentResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "environment", kind: "message", T: Environment },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEnvironmentResponse {
-    return new GetEnvironmentResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEnvironmentResponse {
-    return new GetEnvironmentResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEnvironmentResponse {
-    return new GetEnvironmentResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetEnvironmentResponse | PlainMessage<GetEnvironmentResponse> | undefined, b: GetEnvironmentResponse | PlainMessage<GetEnvironmentResponse> | undefined): boolean {
-    return proto3.util.equals(GetEnvironmentResponse, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.DeleteEnvironmentRequest
- */
-export class DeleteEnvironmentRequest extends Message<DeleteEnvironmentRequest> {
+export class GetStageRequest extends Message<GetStageRequest> {
   /**
    * @generated from field: string project = 1;
    */
@@ -261,72 +181,152 @@ export class DeleteEnvironmentRequest extends Message<DeleteEnvironmentRequest> 
    */
   name = "";
 
-  constructor(data?: PartialMessage<DeleteEnvironmentRequest>) {
+  constructor(data?: PartialMessage<GetStageRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteEnvironmentRequest";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetStageRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteEnvironmentRequest {
-    return new DeleteEnvironmentRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetStageRequest {
+    return new GetStageRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteEnvironmentRequest {
-    return new DeleteEnvironmentRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetStageRequest {
+    return new GetStageRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteEnvironmentRequest {
-    return new DeleteEnvironmentRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetStageRequest {
+    return new GetStageRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteEnvironmentRequest | PlainMessage<DeleteEnvironmentRequest> | undefined, b: DeleteEnvironmentRequest | PlainMessage<DeleteEnvironmentRequest> | undefined): boolean {
-    return proto3.util.equals(DeleteEnvironmentRequest, a, b);
+  static equals(a: GetStageRequest | PlainMessage<GetStageRequest> | undefined, b: GetStageRequest | PlainMessage<GetStageRequest> | undefined): boolean {
+    return proto3.util.equals(GetStageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetStageResponse
+ */
+export class GetStageResponse extends Message<GetStageResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+   */
+  stage?: Stage;
+
+  constructor(data?: PartialMessage<GetStageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetStageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "stage", kind: "message", T: Stage },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetStageResponse {
+    return new GetStageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetStageResponse {
+    return new GetStageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetStageResponse {
+    return new GetStageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetStageResponse | PlainMessage<GetStageResponse> | undefined, b: GetStageResponse | PlainMessage<GetStageResponse> | undefined): boolean {
+    return proto3.util.equals(GetStageResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteStageRequest
+ */
+export class DeleteStageRequest extends Message<DeleteStageRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteStageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteStageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteStageRequest {
+    return new DeleteStageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteStageRequest {
+    return new DeleteStageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteStageRequest {
+    return new DeleteStageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteStageRequest | PlainMessage<DeleteStageRequest> | undefined, b: DeleteStageRequest | PlainMessage<DeleteStageRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteStageRequest, a, b);
   }
 }
 
 /**
  * explicitly empty 
  *
- * @generated from message akuity.io.kargo.service.v1alpha1.DeleteEnvironmentResponse
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteStageResponse
  */
-export class DeleteEnvironmentResponse extends Message<DeleteEnvironmentResponse> {
-  constructor(data?: PartialMessage<DeleteEnvironmentResponse>) {
+export class DeleteStageResponse extends Message<DeleteStageResponse> {
+  constructor(data?: PartialMessage<DeleteStageResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteEnvironmentResponse";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteStageResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteEnvironmentResponse {
-    return new DeleteEnvironmentResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteStageResponse {
+    return new DeleteStageResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteEnvironmentResponse {
-    return new DeleteEnvironmentResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteStageResponse {
+    return new DeleteStageResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteEnvironmentResponse {
-    return new DeleteEnvironmentResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteStageResponse {
+    return new DeleteStageResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteEnvironmentResponse | PlainMessage<DeleteEnvironmentResponse> | undefined, b: DeleteEnvironmentResponse | PlainMessage<DeleteEnvironmentResponse> | undefined): boolean {
-    return proto3.util.equals(DeleteEnvironmentResponse, a, b);
+  static equals(a: DeleteStageResponse | PlainMessage<DeleteStageResponse> | undefined, b: DeleteStageResponse | PlainMessage<DeleteStageResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteStageResponse, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.PromoteEnvironmentRequest
+ * @generated from message akuity.io.kargo.service.v1alpha1.PromoteStageRequest
  */
-export class PromoteEnvironmentRequest extends Message<PromoteEnvironmentRequest> {
+export class PromoteStageRequest extends Message<PromoteStageRequest> {
   /**
    * @generated from field: string project = 1;
    */
@@ -342,70 +342,177 @@ export class PromoteEnvironmentRequest extends Message<PromoteEnvironmentRequest
    */
   state = "";
 
-  constructor(data?: PartialMessage<PromoteEnvironmentRequest>) {
+  constructor(data?: PartialMessage<PromoteStageRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.PromoteEnvironmentRequest";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.PromoteStageRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "state", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromoteEnvironmentRequest {
-    return new PromoteEnvironmentRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromoteStageRequest {
+    return new PromoteStageRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromoteEnvironmentRequest {
-    return new PromoteEnvironmentRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromoteStageRequest {
+    return new PromoteStageRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromoteEnvironmentRequest {
-    return new PromoteEnvironmentRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromoteStageRequest {
+    return new PromoteStageRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: PromoteEnvironmentRequest | PlainMessage<PromoteEnvironmentRequest> | undefined, b: PromoteEnvironmentRequest | PlainMessage<PromoteEnvironmentRequest> | undefined): boolean {
-    return proto3.util.equals(PromoteEnvironmentRequest, a, b);
+  static equals(a: PromoteStageRequest | PlainMessage<PromoteStageRequest> | undefined, b: PromoteStageRequest | PlainMessage<PromoteStageRequest> | undefined): boolean {
+    return proto3.util.equals(PromoteStageRequest, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.PromoteEnvironmentResponse
+ * @generated from message akuity.io.kargo.service.v1alpha1.PromoteStageResponse
  */
-export class PromoteEnvironmentResponse extends Message<PromoteEnvironmentResponse> {
+export class PromoteStageResponse extends Message<PromoteStageResponse> {
   /**
    * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
    */
   promotion?: Promotion;
 
-  constructor(data?: PartialMessage<PromoteEnvironmentResponse>) {
+  constructor(data?: PartialMessage<PromoteStageResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.PromoteEnvironmentResponse";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.PromoteStageResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "promotion", kind: "message", T: Promotion },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromoteEnvironmentResponse {
-    return new PromoteEnvironmentResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromoteStageResponse {
+    return new PromoteStageResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromoteEnvironmentResponse {
-    return new PromoteEnvironmentResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromoteStageResponse {
+    return new PromoteStageResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromoteEnvironmentResponse {
-    return new PromoteEnvironmentResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromoteStageResponse {
+    return new PromoteStageResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: PromoteEnvironmentResponse | PlainMessage<PromoteEnvironmentResponse> | undefined, b: PromoteEnvironmentResponse | PlainMessage<PromoteEnvironmentResponse> | undefined): boolean {
-    return proto3.util.equals(PromoteEnvironmentResponse, a, b);
+  static equals(a: PromoteStageResponse | PlainMessage<PromoteStageResponse> | undefined, b: PromoteStageResponse | PlainMessage<PromoteStageResponse> | undefined): boolean {
+    return proto3.util.equals(PromoteStageResponse, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListProjectsRequest
+ */
+export class ListProjectsRequest extends Message<ListProjectsRequest> {
+  constructor(data?: PartialMessage<ListProjectsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListProjectsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListProjectsRequest {
+    return new ListProjectsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListProjectsRequest {
+    return new ListProjectsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListProjectsRequest {
+    return new ListProjectsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListProjectsRequest | PlainMessage<ListProjectsRequest> | undefined, b: ListProjectsRequest | PlainMessage<ListProjectsRequest> | undefined): boolean {
+    return proto3.util.equals(ListProjectsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListProjectsResponse
+ */
+export class ListProjectsResponse extends Message<ListProjectsResponse> {
+  /**
+   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.Project projects = 1;
+   */
+  projects: Project[] = [];
+
+  constructor(data?: PartialMessage<ListProjectsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListProjectsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "projects", kind: "message", T: Project, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListProjectsResponse {
+    return new ListProjectsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListProjectsResponse {
+    return new ListProjectsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListProjectsResponse {
+    return new ListProjectsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListProjectsResponse | PlainMessage<ListProjectsResponse> | undefined, b: ListProjectsResponse | PlainMessage<ListProjectsResponse> | undefined): boolean {
+    return proto3.util.equals(ListProjectsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.Project
+ */
+export class Project extends Message<Project> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<Project>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.Project";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Project {
+    return new Project().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Project {
+    return new Project().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Project {
+    return new Project().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Project | PlainMessage<Project> | undefined, b: Project | PlainMessage<Project> | undefined): boolean {
+    return proto3.util.equals(Project, a, b);
   }
 }
 

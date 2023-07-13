@@ -4,14 +4,15 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	rbacv1 "k8s.io/api/rbac/v1"
+	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
-	"github.com/akuity/kargo/internal/webhooks/environments"
 	"github.com/akuity/kargo/internal/webhooks/promotions"
+	"github.com/akuity/kargo/internal/webhooks/stages"
 )
 
 func newWebhooksServerCommand() *cobra.Command {
@@ -29,14 +30,14 @@ func newWebhooksServerCommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo Webhooks Server")
 
-			restCfg, err := getRestConfig("kargo", false)
+			restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 			if err != nil {
 				return errors.Wrap(err, "error getting REST config")
 			}
 
 			scheme := runtime.NewScheme()
-			if err = rbacv1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "error adding rbacv1 to scheme")
+			if err = authzv1.AddToScheme(scheme); err != nil {
+				return errors.Wrap(err, "error adding authzv1 to scheme")
 			}
 			if err = api.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "error adding Kargo api to scheme")
@@ -54,14 +55,10 @@ func newWebhooksServerCommand() *cobra.Command {
 				return errors.Wrap(err, "error creating webhooks manager")
 			}
 
-			if err = environments.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "error initializing Environment webhooks")
+			if err = stages.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "error initializing Stage webhooks")
 			}
-			if err = promotions.SetupWebhookWithManager(
-				ctx,
-				mgr,
-				promotions.WebhookConfigFromEnv(),
-			); err != nil {
+			if err = promotions.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "error initializing Promotion webhooks")
 			}
 
