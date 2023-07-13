@@ -18,7 +18,7 @@
     "baseUrl": ".",
     "paths": {
       "@ui/*": ["./src/*"],
-      "@kargo-public/*": ["./public/*"],
+      "@kargo-public/*": ["./public/*"]
     }
   },
   "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.tsx"]
