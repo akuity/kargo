@@ -2037,21 +2037,6 @@ export class StageSubscription extends Message<StageSubscription> {
    */
   name?: string;
 
-  /**
-   * Namespace specifies the namespace of the Stage. If left unspecified,
-   * the namespace of the upstream repository will be defaulted to that of this
-   * Stage.
-   *
-   * TODO: This field needs to go away because we've really leaned into using
-   * namespaces as project boundaries.
-   *
-   * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string namespace = 2;
-   */
-  namespace?: string;
-
   constructor(data?: PartialMessage<StageSubscription>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2061,7 +2046,6 @@ export class StageSubscription extends Message<StageSubscription> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSubscription {
