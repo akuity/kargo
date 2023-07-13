@@ -71,8 +71,9 @@ type reconciler struct {
 	) (*api.StageState, error)
 
 	getAvailableStatesFromUpstreamStagesFn func(
-		context.Context,
-		[]api.StageSubscription,
+		ctx context.Context,
+		namespace string,
+		subs []api.StageSubscription,
 	) ([]api.StageState, error)
 
 	getLatestCommitsFn func(
@@ -383,6 +384,7 @@ func (r *reconciler) sync(
 		var err error
 		if status.AvailableStates, err = r.getAvailableStatesFromUpstreamStagesFn(
 			ctx,
+			stage.Namespace,
 			stage.Spec.Subscriptions.UpstreamStages,
 		); err != nil {
 			return status, err
@@ -568,6 +570,7 @@ func (r *reconciler) getLatestStateFromRepos(
 // TODO: Test this
 func (r *reconciler) getAvailableStatesFromUpstreamStages(
 	ctx context.Context,
+	namespace string,
 	subs []api.StageSubscription,
 ) ([]api.StageState, error) {
 	if len(subs) == 0 {
@@ -581,7 +584,7 @@ func (r *reconciler) getAvailableStatesFromUpstreamStages(
 			ctx,
 			r.kargoClient,
 			types.NamespacedName{
-				Namespace: sub.Namespace,
+				Namespace: namespace,
 				Name:      sub.Name,
 			},
 		)
@@ -590,14 +593,14 @@ func (r *reconciler) getAvailableStatesFromUpstreamStages(
 				err,
 				"error finding upstream Stage %q in namespace %q",
 				sub.Name,
-				sub.Namespace,
+				namespace,
 			)
 		}
 		if upstreamStage == nil {
 			return nil, errors.Errorf(
 				"found no upstream Stage %q in namespace %q",
 				sub.Name,
-				sub.Namespace,
+				namespace,
 			)
 		}
 		for _, state := range upstreamStage.Status.History {

@@ -96,12 +96,10 @@ func TestGetChartVersionsFromClassicRegistry(t *testing.T) {
 }
 
 func TestGetChartVersionsFromOCIRegistry(t *testing.T) {
-	// TODO: I (krancour) don't readily know the particulars of how to mock
-	// out an OCI registry for testing purposes. For expediency, this test
-	// case uses a publicly available registry that I know to contain several
-	// versions of a chart.
+	// Instead of mocking out an OCI registry, it's more expedient to use Kargo's
+	// own chart repo on ghcr.io to test this.
 	const testRegistryURL = "oci://ghcr.io"
-	const testChart = "brigadecore/brigade"
+	const testChart = "akuity/kargo-charts/kargo"
 	versions, err := getChartVersionsFromOCIRegistry(
 		context.Background(),
 		testRegistryURL,
