@@ -1525,8 +1525,6 @@ export class PromotionSpec extends Message<PromotionSpec> {
    * applies. The Stage referenced by this field MUST be in the same
    * namespace as the Promotion.
    *
-   * TODO: Use a webhook to make this immutable
-   *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
    *
@@ -1538,8 +1536,6 @@ export class PromotionSpec extends Message<PromotionSpec> {
    * State specifies the specific StageState into which the Stage referenced by
    * the Stage field should be transitioned. The State MUST be among the Stage's
    * Status.AvailableStates or the Promotion will ultimately fail.
-   *
-   * TODO: Use a webhook to make this immutable
    *
    * +kubebuilder:validation:MinLength=1
    *
@@ -2037,21 +2033,6 @@ export class StageSubscription extends Message<StageSubscription> {
    */
   name?: string;
 
-  /**
-   * Namespace specifies the namespace of the Stage. If left unspecified,
-   * the namespace of the upstream repository will be defaulted to that of this
-   * Stage.
-   *
-   * TODO: This field needs to go away because we've really leaned into using
-   * namespaces as project boundaries.
-   *
-   * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   *
-   * @generated from field: optional string namespace = 2;
-   */
-  namespace?: string;
-
   constructor(data?: PartialMessage<StageSubscription>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2061,7 +2042,6 @@ export class StageSubscription extends Message<StageSubscription> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSubscription {

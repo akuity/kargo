@@ -32,15 +32,6 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 	// luxury of assuming certain required fields must be non-nil.
 	if stage.Spec != nil {
 
-		if stage.Spec.Subscriptions != nil {
-			// Default namespace for Stages we subscribe to
-			for i := range stage.Spec.Subscriptions.UpstreamStages {
-				if stage.Spec.Subscriptions.UpstreamStages[i].Namespace == "" {
-					stage.Spec.Subscriptions.UpstreamStages[i].Namespace = stage.Namespace
-				}
-			}
-		}
-
 		if stage.Spec.PromotionMechanisms != nil {
 			// Default namespace for Argo CD Applications we update
 			for i := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
