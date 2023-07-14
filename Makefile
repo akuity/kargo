@@ -72,7 +72,8 @@ codegen:
 	cp -R charts/kargo/crds charts/kargo-kit/crds
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
-		paths=./... \
+		paths=./...
+	pnpm --dir=ui run generate:schema
 
 ################################################################################
 # Hack: Targets to help you hack                                               #

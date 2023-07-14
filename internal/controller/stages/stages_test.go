@@ -174,8 +174,9 @@ func TestSync(t *testing.T) {
 			api.RepoSubscriptions,
 		) (*api.StageState, error)
 		getAvailableStatesFromUpstreamStagesFn func(
-			context.Context,
-			[]api.StageSubscription,
+			ctx context.Context,
+			namespace string,
+			subs []api.StageSubscription,
 		) ([]api.StageState, error)
 		kargoClient client.Client
 		assertions  func(
@@ -413,8 +414,7 @@ func TestSync(t *testing.T) {
 				Subscriptions: &api.Subscriptions{
 					UpstreamStages: []api.StageSubscription{
 						{
-							Name:      "fake-name",
-							Namespace: "fake-namespace",
+							Name: "fake-name",
 						},
 					},
 				},
@@ -422,6 +422,7 @@ func TestSync(t *testing.T) {
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getAvailableStatesFromUpstreamStagesFn: func(
 				context.Context,
+				string,
 				[]api.StageSubscription,
 			) ([]api.StageState, error) {
 				return nil, errors.New("something went wrong")
@@ -445,8 +446,7 @@ func TestSync(t *testing.T) {
 				Subscriptions: &api.Subscriptions{
 					UpstreamStages: []api.StageSubscription{
 						{
-							Name:      "fake-name",
-							Namespace: "fake-namespace",
+							Name: "fake-name",
 						},
 					},
 				},
@@ -454,6 +454,7 @@ func TestSync(t *testing.T) {
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getAvailableStatesFromUpstreamStagesFn: func(
 				context.Context,
+				string,
 				[]api.StageSubscription,
 			) ([]api.StageState, error) {
 				return nil, nil
@@ -478,12 +479,10 @@ func TestSync(t *testing.T) {
 						// Subscribing to multiple upstream Stages should block
 						// auto-promotion
 						{
-							Name:      "fake-name",
-							Namespace: "fake-namespace",
+							Name: "fake-name",
 						},
 						{
-							Name:      "another-fake-name",
-							Namespace: "another-fake-namespace",
+							Name: "another-fake-name",
 						},
 					},
 				},
@@ -491,6 +490,7 @@ func TestSync(t *testing.T) {
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getAvailableStatesFromUpstreamStagesFn: func(
 				context.Context,
+				string,
 				[]api.StageSubscription,
 			) ([]api.StageState, error) {
 				return []api.StageState{

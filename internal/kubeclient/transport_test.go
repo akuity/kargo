@@ -41,7 +41,7 @@ func Test_credentialHook(t *testing.T) {
 			if ts.credential != "" {
 				req.Header.Set("Authorization", ts.credential)
 			}
-			res, err := hc.Do(req.WithContext(context.TODO()))
+			res, err := hc.Do(req.WithContext(context.Background()))
 			defer func() {
 				_ = res.Body.Close()
 			}()

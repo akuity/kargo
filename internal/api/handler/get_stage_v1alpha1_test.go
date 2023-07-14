@@ -71,8 +71,8 @@ func TestGetStageV1Alpha1(t *testing.T) {
 				).
 				Build()
 
-			ctx := context.TODO()
-			res, err := GetStageV1Alpha1(kc)(ctx, connect.NewRequest(ts.req))
+			res, err :=
+				GetStageV1Alpha1(kc)(context.Background(), connect.NewRequest(ts.req))
 			if ts.errExpected {
 				require.Error(t, err)
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))

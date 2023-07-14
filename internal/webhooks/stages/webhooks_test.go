@@ -38,11 +38,6 @@ func TestDefault(t *testing.T) {
 	err := (&webhook{}).Default(context.Background(), e)
 	require.NoError(t, err)
 	require.Len(t, e.Spec.Subscriptions.UpstreamStages, 1)
-	require.Equal(
-		t,
-		testNamespace,
-		e.Spec.Subscriptions.UpstreamStages[0].Namespace,
-	)
 	require.Len(t, e.Spec.PromotionMechanisms.ArgoCDAppUpdates, 1)
 	require.Equal(
 		t,
