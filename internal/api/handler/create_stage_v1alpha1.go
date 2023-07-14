@@ -59,7 +59,8 @@ func CreateStageV1Alpha1(
 			return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "failed to get project"))
 		}
 		if ns.GetLabels()["kargo.akuity.io/project"] != "true" {
-			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.Errorf("namespace %q is not a project", stage.GetNamespace()))
+			return nil, connect.NewError(connect.CodeFailedPrecondition,
+				errors.Errorf("namespace %q is not a project", stage.GetNamespace()))
 		}
 
 		if err := kc.Create(ctx, &stage); err != nil {
