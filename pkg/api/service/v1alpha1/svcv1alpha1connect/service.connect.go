@@ -40,6 +40,9 @@ const (
 	KargoServiceListStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListStages"
 	// KargoServiceGetStageProcedure is the fully-qualified name of the KargoService's GetStage RPC.
 	KargoServiceGetStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetStage"
+	// KargoServiceUpdateStageProcedure is the fully-qualified name of the KargoService's UpdateStage
+	// RPC.
+	KargoServiceUpdateStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateStage"
 	// KargoServiceDeleteStageProcedure is the fully-qualified name of the KargoService's DeleteStage
 	// RPC.
 	KargoServiceDeleteStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteStage"
@@ -56,6 +59,7 @@ type KargoServiceClient interface {
 	CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect_go.Request[v1alpha1.ListStagesRequest]) (*connect_go.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error)
+	UpdateStage(context.Context, *connect_go.Request[v1alpha1.UpdateStageRequest]) (*connect_go.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error)
 	ListProjects(context.Context, *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error)
@@ -86,6 +90,11 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 			baseURL+KargoServiceGetStageProcedure,
 			opts...,
 		),
+		updateStage: connect_go.NewClient[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse](
+			httpClient,
+			baseURL+KargoServiceUpdateStageProcedure,
+			opts...,
+		),
 		deleteStage: connect_go.NewClient[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteStageProcedure,
@@ -109,6 +118,7 @@ type kargoServiceClient struct {
 	createStage  *connect_go.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
 	listStages   *connect_go.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
 	getStage     *connect_go.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
+	updateStage  *connect_go.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
 	deleteStage  *connect_go.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
 	promoteStage *connect_go.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
 	listProjects *connect_go.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
@@ -127,6 +137,11 @@ func (c *kargoServiceClient) ListStages(ctx context.Context, req *connect_go.Req
 // GetStage calls akuity.io.kargo.service.v1alpha1.KargoService.GetStage.
 func (c *kargoServiceClient) GetStage(ctx context.Context, req *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error) {
 	return c.getStage.CallUnary(ctx, req)
+}
+
+// UpdateStage calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage.
+func (c *kargoServiceClient) UpdateStage(ctx context.Context, req *connect_go.Request[v1alpha1.UpdateStageRequest]) (*connect_go.Response[v1alpha1.UpdateStageResponse], error) {
+	return c.updateStage.CallUnary(ctx, req)
 }
 
 // DeleteStage calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage.
@@ -150,6 +165,7 @@ type KargoServiceHandler interface {
 	CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect_go.Request[v1alpha1.ListStagesRequest]) (*connect_go.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error)
+	UpdateStage(context.Context, *connect_go.Request[v1alpha1.UpdateStageRequest]) (*connect_go.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error)
 	ListProjects(context.Context, *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error)
@@ -175,6 +191,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect_go.HandlerO
 	mux.Handle(KargoServiceGetStageProcedure, connect_go.NewUnaryHandler(
 		KargoServiceGetStageProcedure,
 		svc.GetStage,
+		opts...,
+	))
+	mux.Handle(KargoServiceUpdateStageProcedure, connect_go.NewUnaryHandler(
+		KargoServiceUpdateStageProcedure,
+		svc.UpdateStage,
 		opts...,
 	))
 	mux.Handle(KargoServiceDeleteStageProcedure, connect_go.NewUnaryHandler(
@@ -208,6 +229,10 @@ func (UnimplementedKargoServiceHandler) ListStages(context.Context, *connect_go.
 
 func (UnimplementedKargoServiceHandler) GetStage(context.Context, *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetStage is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) UpdateStage(context.Context, *connect_go.Request[v1alpha1.UpdateStageRequest]) (*connect_go.Response[v1alpha1.UpdateStageResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error) {

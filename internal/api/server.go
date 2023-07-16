@@ -108,6 +108,13 @@ func (s *server) GetStage(
 	return handler.GetStageV1Alpha1(s.kc)(ctx, req)
 }
 
+func (s *server) UpdateStage(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.UpdateStageRequest],
+) (*connect.Response[svcv1alpha1.UpdateStageResponse], error) {
+	return handler.UpdateStageV1Alpha1(s.kc)(ctx, req)
+}
+
 func (s *server) DeleteStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteStageRequest],

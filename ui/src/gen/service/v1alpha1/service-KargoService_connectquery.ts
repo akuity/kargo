@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { CreateStageRequest, CreateStageResponse, DeleteStageRequest, DeleteStageResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse } from "./service_pb.js";
+import { CreateStageRequest, CreateStageResponse, DeleteStageRequest, DeleteStageResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -59,6 +59,23 @@ export const getStage = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).getStage;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage
+ */
+export const updateStage = createQueryService({
+  service: {
+    methods: {
+      updateStage: {
+        name: "UpdateStage",
+        kind: MethodKind.Unary,
+        I: UpdateStageRequest,
+        O: UpdateStageResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).updateStage;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage

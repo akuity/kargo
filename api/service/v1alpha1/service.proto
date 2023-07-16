@@ -10,15 +10,23 @@ service KargoService {
   rpc CreateStage(CreateStageRequest) returns (CreateStageResponse);
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
+  rpc UpdateStage(UpdateStageRequest) returns (UpdateStageResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
 }
 
-message CreateStageRequest {
+message TypedStageSpec {
   string project = 1;
   string name = 2;
   github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 3;
+}
+
+message CreateStageRequest {
+  oneof stage {
+    TypedStageSpec typed = 1;
+    string yaml = 2;
+  }
 }
 
 message CreateStageResponse {
@@ -39,6 +47,17 @@ message GetStageRequest {
 }
 
 message GetStageResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+}
+
+message UpdateStageRequest {
+  oneof stage {
+    TypedStageSpec typed = 1;
+    string yaml = 2;
+  }
+}
+
+message UpdateStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
 }
 
