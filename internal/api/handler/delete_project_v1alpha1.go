@@ -28,7 +28,7 @@ func DeleteProjectV1Alpha1(
 	) (*connect.Response[svcv1alpha1.DeleteProjectResponse], error) {
 		name := strings.TrimSpace(req.Msg.GetName())
 		if name == "" {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should be empty"))
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
 		}
 
 		var ns corev1.Namespace
@@ -40,7 +40,7 @@ func DeleteProjectV1Alpha1(
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 
-		if ns.GetLabels()[v1alpha1.LabelProject] != "true" {
+		if ns.GetLabels()[v1alpha1.LabelProjectKey] != "true" {
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				errors.Errorf("namespace %q is not a project", ns.GetName()))
 		}
