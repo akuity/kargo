@@ -49,6 +49,8 @@ func newControllerCommand() *cobra.Command {
 						"error loading REST config for Kargo controller manager",
 					)
 				}
+				restCfg.ContentType = runtime.ContentTypeJSON
+
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
 					return errors.Wrap(
@@ -84,6 +86,8 @@ func newControllerCommand() *cobra.Command {
 							"manager",
 					)
 				}
+				restCfg.ContentType = runtime.ContentTypeJSON
+
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
 					return errors.Wrap(
