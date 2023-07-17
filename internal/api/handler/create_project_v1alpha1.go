@@ -38,7 +38,7 @@ func CreateProjectV1Alpha1(
 				return nil, connect.NewError(connect.CodeInternal,
 					errors.Wrap(err, "get existing namespace"))
 			}
-			if existingNs.GetLabels()[v1alpha1.LabelProjectKey] == "true" {
+			if existingNs.GetLabels()[v1alpha1.LabelProjectKey] == v1alpha1.LabelTrueValue {
 				return nil, connect.NewError(connect.CodeAlreadyExists,
 					errors.Errorf("project %q already exists", name))
 			}
@@ -49,7 +49,7 @@ func CreateProjectV1Alpha1(
 		ns := corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					v1alpha1.LabelProjectKey: "true",
+					v1alpha1.LabelProjectKey: v1alpha1.LabelTrueValue,
 				},
 				Name: name,
 			},

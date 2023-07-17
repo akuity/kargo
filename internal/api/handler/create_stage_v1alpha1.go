@@ -58,7 +58,7 @@ func CreateStageV1Alpha1(
 			}
 			return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "failed to get project"))
 		}
-		if ns.GetLabels()[v1alpha1.LabelProjectKey] != "true" {
+		if ns.GetLabels()[v1alpha1.LabelProjectKey] != v1alpha1.LabelTrueValue {
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				errors.Errorf("namespace %q is not a project", stage.GetNamespace()))
 		}
