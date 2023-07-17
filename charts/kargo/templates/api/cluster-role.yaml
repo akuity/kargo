@@ -12,9 +12,11 @@ rules:
     resources:
       - namespaces
     verbs:
+      - create
       - get
       - list
       - watch
+      - delete
   - apiGroups:
       - kargo.akuity.io
     resources:

@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -27,7 +27,7 @@ func CreateStageV1Alpha1(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.CreateStageRequest],
 	) (*connect.Response[svcv1alpha1.CreateStageResponse], error) {
-		var stage kubev1alpha1.Stage
+		var stage v1alpha1.Stage
 		switch {
 		case req.Msg.GetYaml() != "":
 			if err := yaml.Unmarshal([]byte(req.Msg.GetYaml()), &stage); err != nil {
@@ -40,7 +40,7 @@ func CreateStageV1Alpha1(
 			if req.Msg.GetTyped().GetName() == "" {
 				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
 			}
-			stage = kubev1alpha1.Stage{
+			stage = v1alpha1.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: req.Msg.GetTyped().GetProject(),
 					Name:      req.Msg.GetTyped().GetName(),
@@ -58,7 +58,7 @@ func CreateStageV1Alpha1(
 			}
 			return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "failed to get project"))
 		}
-		if ns.GetLabels()["kargo.akuity.io/project"] != "true" {
+		if ns.GetLabels()[v1alpha1.LabelProjectKey] != v1alpha1.LabelTrueValue {
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				errors.Errorf("namespace %q is not a project", stage.GetNamespace()))
 		}

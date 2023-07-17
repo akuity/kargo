@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { CreateStageRequest, CreateStageResponse, DeleteStageRequest, DeleteStageResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
+import { CreateProjectRequest, CreateProjectResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteStageRequest, DeleteStageResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -112,6 +112,23 @@ export const promoteStage = createQueryService({
 }).promoteStage;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateProject
+ */
+export const createProject = createQueryService({
+  service: {
+    methods: {
+      createProject: {
+        name: "CreateProject",
+        kind: MethodKind.Unary,
+        I: CreateProjectRequest,
+        O: CreateProjectResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).createProject;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjects
  */
 export const listProjects = createQueryService({
@@ -127,3 +144,20 @@ export const listProjects = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).listProjects;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject
+ */
+export const deleteProject = createQueryService({
+  service: {
+    methods: {
+      deleteProject: {
+        name: "DeleteProject",
+        kind: MethodKind.Unary,
+        I: DeleteProjectRequest,
+        O: DeleteProjectResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).deleteProject;

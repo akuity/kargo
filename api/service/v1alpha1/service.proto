@@ -13,7 +13,10 @@ service KargoService {
   rpc UpdateStage(UpdateStageRequest) returns (UpdateStageResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
+
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
 }
 
 message TypedStageSpec {
@@ -80,6 +83,18 @@ message PromoteStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
 }
 
+message Project {
+  string name = 1;
+}
+
+message CreateProjectRequest {
+  string name = 1;
+}
+
+message CreateProjectResponse {
+  string name = 1;
+}
+
 message ListProjectsRequest {
   /* explicitly empty */
 }
@@ -88,6 +103,10 @@ message ListProjectsResponse {
   repeated Project projects = 1;
 }
 
-message Project {
+message DeleteProjectRequest {
   string name = 1;
+}
+
+message DeleteProjectResponse {
+  /* explicitly empty */
 }

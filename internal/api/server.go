@@ -129,9 +129,23 @@ func (s *server) PromoteStage(
 	return handler.PromoteStageV1Alpha1(s.kc)(ctx, req)
 }
 
+func (s *server) CreateProject(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.CreateProjectRequest],
+) (*connect.Response[svcv1alpha1.CreateProjectResponse], error) {
+	return handler.CreateProjectV1Alpha1(s.kc)(ctx, req)
+}
+
 func (s *server) ListProjects(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListProjectsRequest],
 ) (*connect.Response[svcv1alpha1.ListProjectsResponse], error) {
 	return handler.ListProjectsV1Alpha1(s.kc)(ctx, req)
+}
+
+func (s *server) DeleteProject(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.DeleteProjectRequest],
+) (*connect.Response[svcv1alpha1.DeleteProjectResponse], error) {
+	return handler.DeleteProjectV1Alpha1(s.kc)(ctx, req)
 }
