@@ -35,10 +35,16 @@ func newControllerCommand() *cobra.Command {
 			ctx := cmd.Context()
 
 			version := versionpkg.GetVersion()
-			log.WithFields(log.Fields{
+			shardName := os.GetEnv("SHARD_NAME", "")
+
+			startupLogEntry := log.WithFields(log.Fields{
 				"version": version.Version,
 				"commit":  version.GitCommit,
-			}).Info("Starting Kargo Controller")
+			})
+			if shardName != "" {
+				startupLogEntry = startupLogEntry.WithField("shard", shardName)
+			}
+			startupLogEntry.Info("Starting Kargo Controller")
 
 			var kargoMgr manager.Manager
 			{
@@ -142,6 +148,7 @@ func newControllerCommand() *cobra.Command {
 				kargoMgr,
 				appMgr,
 				credentialsDB,
+				shardName,
 			); err != nil {
 				return errors.Wrap(err, "error setting up Stages reconciler")
 			}
@@ -155,12 +162,17 @@ func newControllerCommand() *cobra.Command {
 						LogLevel: bookkeeper.LogLevel(logging.LoggerFromContext(ctx).Level),
 					},
 				),
+				shardName,
 			); err != nil {
 				return errors.Wrap(err, "error setting up Promotions reconciler")
 			}
 
-			if err :=
-				applications.SetupReconcilerWithManager(kargoMgr, appMgr); err != nil {
+			if err := applications.SetupReconcilerWithManager(
+				ctx,
+				kargoMgr,
+				appMgr,
+				shardName,
+			); err != nil {
 				return errors.Wrap(err, "error setting up Applications reconciler")
 			}
 
