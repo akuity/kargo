@@ -49,9 +49,15 @@ const (
 	// KargoServicePromoteStageProcedure is the fully-qualified name of the KargoService's PromoteStage
 	// RPC.
 	KargoServicePromoteStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/PromoteStage"
+	// KargoServiceCreateProjectProcedure is the fully-qualified name of the KargoService's
+	// CreateProject RPC.
+	KargoServiceCreateProjectProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateProject"
 	// KargoServiceListProjectsProcedure is the fully-qualified name of the KargoService's ListProjects
 	// RPC.
 	KargoServiceListProjectsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjects"
+	// KargoServiceDeleteProjectProcedure is the fully-qualified name of the KargoService's
+	// DeleteProject RPC.
+	KargoServiceDeleteProjectProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteProject"
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
@@ -62,7 +68,9 @@ type KargoServiceClient interface {
 	UpdateStage(context.Context, *connect_go.Request[v1alpha1.UpdateStageRequest]) (*connect_go.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error)
+	CreateProject(context.Context, *connect_go.Request[v1alpha1.CreateProjectRequest]) (*connect_go.Response[v1alpha1.CreateProjectResponse], error)
 	ListProjects(context.Context, *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error)
+	DeleteProject(context.Context, *connect_go.Request[v1alpha1.DeleteProjectRequest]) (*connect_go.Response[v1alpha1.DeleteProjectResponse], error)
 }
 
 // NewKargoServiceClient constructs a client for the akuity.io.kargo.service.v1alpha1.KargoService
@@ -105,9 +113,19 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 			baseURL+KargoServicePromoteStageProcedure,
 			opts...,
 		),
+		createProject: connect_go.NewClient[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse](
+			httpClient,
+			baseURL+KargoServiceCreateProjectProcedure,
+			opts...,
+		),
 		listProjects: connect_go.NewClient[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse](
 			httpClient,
 			baseURL+KargoServiceListProjectsProcedure,
+			opts...,
+		),
+		deleteProject: connect_go.NewClient[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteProjectProcedure,
 			opts...,
 		),
 	}
@@ -115,13 +133,15 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 
 // kargoServiceClient implements KargoServiceClient.
 type kargoServiceClient struct {
-	createStage  *connect_go.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
-	listStages   *connect_go.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
-	getStage     *connect_go.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
-	updateStage  *connect_go.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
-	deleteStage  *connect_go.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
-	promoteStage *connect_go.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
-	listProjects *connect_go.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
+	createStage   *connect_go.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
+	listStages    *connect_go.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
+	getStage      *connect_go.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
+	updateStage   *connect_go.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
+	deleteStage   *connect_go.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
+	promoteStage  *connect_go.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
+	createProject *connect_go.Client[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse]
+	listProjects  *connect_go.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
+	deleteProject *connect_go.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
 }
 
 // CreateStage calls akuity.io.kargo.service.v1alpha1.KargoService.CreateStage.
@@ -154,9 +174,19 @@ func (c *kargoServiceClient) PromoteStage(ctx context.Context, req *connect_go.R
 	return c.promoteStage.CallUnary(ctx, req)
 }
 
+// CreateProject calls akuity.io.kargo.service.v1alpha1.KargoService.CreateProject.
+func (c *kargoServiceClient) CreateProject(ctx context.Context, req *connect_go.Request[v1alpha1.CreateProjectRequest]) (*connect_go.Response[v1alpha1.CreateProjectResponse], error) {
+	return c.createProject.CallUnary(ctx, req)
+}
+
 // ListProjects calls akuity.io.kargo.service.v1alpha1.KargoService.ListProjects.
 func (c *kargoServiceClient) ListProjects(ctx context.Context, req *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error) {
 	return c.listProjects.CallUnary(ctx, req)
+}
+
+// DeleteProject calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject.
+func (c *kargoServiceClient) DeleteProject(ctx context.Context, req *connect_go.Request[v1alpha1.DeleteProjectRequest]) (*connect_go.Response[v1alpha1.DeleteProjectResponse], error) {
+	return c.deleteProject.CallUnary(ctx, req)
 }
 
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
@@ -168,7 +198,9 @@ type KargoServiceHandler interface {
 	UpdateStage(context.Context, *connect_go.Request[v1alpha1.UpdateStageRequest]) (*connect_go.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error)
+	CreateProject(context.Context, *connect_go.Request[v1alpha1.CreateProjectRequest]) (*connect_go.Response[v1alpha1.CreateProjectResponse], error)
 	ListProjects(context.Context, *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error)
+	DeleteProject(context.Context, *connect_go.Request[v1alpha1.DeleteProjectRequest]) (*connect_go.Response[v1alpha1.DeleteProjectResponse], error)
 }
 
 // NewKargoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -208,9 +240,19 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect_go.HandlerO
 		svc.PromoteStage,
 		opts...,
 	))
+	mux.Handle(KargoServiceCreateProjectProcedure, connect_go.NewUnaryHandler(
+		KargoServiceCreateProjectProcedure,
+		svc.CreateProject,
+		opts...,
+	))
 	mux.Handle(KargoServiceListProjectsProcedure, connect_go.NewUnaryHandler(
 		KargoServiceListProjectsProcedure,
 		svc.ListProjects,
+		opts...,
+	))
+	mux.Handle(KargoServiceDeleteProjectProcedure, connect_go.NewUnaryHandler(
+		KargoServiceDeleteProjectProcedure,
+		svc.DeleteProject,
 		opts...,
 	))
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", mux
@@ -243,6 +285,14 @@ func (UnimplementedKargoServiceHandler) PromoteStage(context.Context, *connect_g
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage is not implemented"))
 }
 
+func (UnimplementedKargoServiceHandler) CreateProject(context.Context, *connect_go.Request[v1alpha1.CreateProjectRequest]) (*connect_go.Response[v1alpha1.CreateProjectResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateProject is not implemented"))
+}
+
 func (UnimplementedKargoServiceHandler) ListProjects(context.Context, *connect_go.Request[v1alpha1.ListProjectsRequest]) (*connect_go.Response[v1alpha1.ListProjectsResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListProjects is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteProject(context.Context, *connect_go.Request[v1alpha1.DeleteProjectRequest]) (*connect_go.Response[v1alpha1.DeleteProjectResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject is not implemented"))
 }
