@@ -75,6 +75,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	gopkg.in/yaml.v3 v3.0.1
+	k8s.io/cli-runtime v0.24.2
 	oras.land/oras-go v1.2.2
 )
 
@@ -193,7 +194,6 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	k8s.io/cli-runtime v0.24.2 // indirect
 	k8s.io/component-base v0.25.0 // indirect
 	k8s.io/component-helpers v0.24.2 // indirect
 	k8s.io/kube-aggregator v0.24.2 // indirect
