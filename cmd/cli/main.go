@@ -13,11 +13,11 @@ func main() {
 	ctx := context.Background()
 	cmd, err := NewRootCommand(&opt)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, err.Error())
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, err.Error())
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 }
