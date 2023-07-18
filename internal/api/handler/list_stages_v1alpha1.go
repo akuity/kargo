@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
@@ -46,7 +47,7 @@ func ListStagesV1Alpha1(
 
 		stages := make([]*v1alpha1.Stage, len(list.Items))
 		for idx := range list.Items {
-			stages[idx] = toStageProto(list.Items[idx])
+			stages[idx] = typesv1alpha1.ToStageProto(list.Items[idx])
 		}
 		return connect.NewResponse(&svcv1alpha1.ListStagesResponse{
 			Stages: stages,

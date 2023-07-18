@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -24,7 +26,7 @@ type localServerListenerKey struct {
 	// explicitly empty
 }
 
-func NewRootCommand(opt *option.Option) *cobra.Command {
+func NewRootCommand(opt *option.Option) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:               "kargo",
 		DisableAutoGenTag: true,
@@ -89,12 +91,22 @@ func NewRootCommand(opt *option.Option) *cobra.Command {
 		},
 	}
 
+	opt.IOStreams = &genericclioptions.IOStreams{
+		In:     cmd.InOrStdin(),
+		Out:    os.Stdout,
+		ErrOut: os.Stderr,
+	}
+	scheme, err := option.NewScheme()
+	if err != nil {
+		return nil, err
+	}
+	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
 	option.ServerURL(&opt.ServerURL)(cmd.PersistentFlags())
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
 	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand())
-	return cmd
+	return cmd, nil
 }
 
 func buildRootContext(ctx context.Context) context.Context {

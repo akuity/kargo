@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -44,7 +45,7 @@ func UpdateStageV1Alpha1(
 					Namespace: req.Msg.GetTyped().GetProject(),
 					Name:      req.Msg.GetTyped().GetName(),
 				},
-				Spec: fromStageSpecProto(req.Msg.GetTyped().GetSpec()),
+				Spec: typesv1alpha1.FromStageSpecProto(req.Msg.GetTyped().GetSpec()),
 			}
 		default:
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("environment should not be empty"))
@@ -61,7 +62,7 @@ func UpdateStageV1Alpha1(
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 		return connect.NewResponse(&svcv1alpha1.UpdateStageResponse{
-			Stage: toStageProto(stage),
+			Stage: typesv1alpha1.ToStageProto(stage),
 		}), nil
 	}
 }
