@@ -1,4 +1,4 @@
-import { FlowAnalysisGraph, FlowGraphEdgeData, LabelStyle } from '@ant-design/graphs';
+import { FlowAnalysisGraph, FlowGraphEdgeData, IGraph, LabelStyle } from '@ant-design/graphs';
 import { useQuery } from '@tanstack/react-query';
 import { Empty } from 'antd';
 import React from 'react';
@@ -12,6 +12,7 @@ export const ProjectDetails = () => {
   const { name } = useParams();
   const navigate = useNavigate();
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
+  const graphRef = React.useRef<IGraph | undefined>();
 
   const nodes = React.useMemo(
     () =>
@@ -59,6 +60,11 @@ export const ProjectDetails = () => {
       }, []) || [],
     [data]
   );
+
+  React.useEffect(() => {
+    // Hacky way to recenter graph after adding a new stage
+    setTimeout(() => graphRef.current?.fitCenter?.(), 0);
+  }, [nodes, edges]);
 
   if (isLoading) return <LoadingState />;
 
@@ -119,6 +125,7 @@ export const ProjectDetails = () => {
         }}
         toolbarCfg={{ show: true }}
         onReady={(graph) => {
+          graphRef.current = graph;
           graph.on('node:click', (evt) => {
             evt.item?._cfg?.id &&
               navigate(generatePath(paths.stage, { name, stageName: evt.item?._cfg?.id }));

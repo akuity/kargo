@@ -3,6 +3,7 @@
 import react from '@vitejs/plugin-react';
 import { theme } from 'antd';
 import { defineConfig } from 'vite';
+import monacoEditorPlugin from 'vite-plugin-monaco-editor';
 import tsConfigPaths from 'vite-tsconfig-paths';
 
 import { token } from './src/config/theme';
@@ -27,7 +28,18 @@ export default defineConfig({
       }
     }
   },
-  plugins: [tsConfigPaths(), react()],
+  plugins: [
+    tsConfigPaths(),
+    react(),
+    monacoEditorPlugin({
+      customWorkers: [
+        {
+          label: 'yaml',
+          entry: 'monaco-yaml/yaml.worker'
+        }
+      ]
+    })
+  ],
   server: {
     proxy: {
       '/api': {

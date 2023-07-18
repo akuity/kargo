@@ -1,46 +1,77 @@
-import { useQuery } from '@tanstack/react-query';
-import { Divider, Drawer, Empty, Typography } from 'antd';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button, Divider, Drawer, Empty, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status-icon/health-status-icon';
 import { AvailableStates } from '@ui/features/stage/available-states';
 import { Subscriptions } from '@ui/features/stage/subscriptions';
-import { getStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import {
+  deleteStage,
+  getStage,
+  listStages
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
-import { LoadingState } from '../common';
+import { ButtonIcon, LoadingState } from '../common';
+import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
 
 export const StageDetails = () => {
   const { name: projectName, stageName } = useParams();
+  const confirm = useConfirmModal();
   const navigate = useNavigate();
 
   const { data, isLoading, refetch } = useQuery({
     ...getStage.useQuery({ project: projectName, name: stageName }),
     enabled: !!stageName
   });
+  const queryClient = useQueryClient();
+
+  const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
+
+  const { mutate, isLoading: isLoadingDelete } = useMutation({
+    ...deleteStage.useMutation(),
+    onSuccess: () => queryClient.invalidateQueries(listStages.getQueryKey({ project: projectName }))
+  });
+
+  const onDelete = () => {
+    confirm({
+      onOk: () => {
+        mutate({ name: data?.stage?.metadata?.name, project: projectName });
+        onClose();
+      },
+      title: 'Are you sure you want to delete Stage?'
+    });
+  };
 
   return (
-    <Drawer
-      open={!!stageName}
-      onClose={() => navigate(generatePath(paths.project, { name: projectName }))}
-      width={'80%'}
-      closable={false}
-    >
+    <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
       {isLoading && <LoadingState />}
       {!isLoading && !data?.stage && <Empty description='Stage not found' />}
       {data?.stage && (
         <>
           <div className='flex items-center justify-between'>
-            <div className='flex gap-1 items-center'>
+            <div className='flex gap-1 items-start'>
               <HealthStatusIcon
                 health={data.stage.status?.currentState?.health}
-                style={{ marginRight: '10px', marginTop: '5px' }}
+                style={{ marginRight: '10px', marginTop: '10px' }}
               />
-              <Typography.Title level={1} style={{ margin: 0 }}>
-                {data.stage.metadata?.name}
-              </Typography.Title>
+              <div>
+                <Typography.Title level={1} style={{ margin: 0 }}>
+                  {data.stage.metadata?.name}
+                </Typography.Title>
+                <Typography.Text type='secondary'>{projectName}</Typography.Text>
+              </div>
             </div>
-            <Typography.Text type='secondary'>{projectName}</Typography.Text>
+            <Button
+              danger
+              type='text'
+              icon={<ButtonIcon icon={faTrash} size='1x' />}
+              onClick={onDelete}
+              loading={isLoadingDelete}
+            >
+              Delete
+            </Button>
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
