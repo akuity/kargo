@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -29,10 +30,48 @@ type reconciler struct {
 
 // SetupReconcilerWithManager initializes a reconciler for Argo CD Application
 // resources and registers it with the provided Manager.
-func SetupReconcilerWithManager(kargoMgr, argoMgr manager.Manager) error {
+func SetupReconcilerWithManager(
+	ctx context.Context,
+	kargoMgr manager.Manager,
+	argoMgr manager.Manager,
+	shardName string,
+) error {
+	// Index Stages by Argo CD Applications
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&api.Stage{},
+		stagesByAppIndexField,
+		indexStagesByApp(shardName),
+	); err != nil {
+		return errors.Wrap(
+			err,
+			"error indexing Stages by Argo CD Applications",
+		)
+	}
+
 	return ctrl.NewControllerManagedBy(argoMgr).
 		For(&argocd.Application{}).
 		Complete(newReconciler(kargoMgr.GetClient()))
+}
+
+func indexStagesByApp(shardName string) func(client.Object) []string {
+	return func(obj client.Object) []string {
+		if shardName != "" &&
+			obj.GetLabels()[controller.ShardLabelKey] != shardName {
+			return nil
+		}
+		stage := obj.(*api.Stage) // nolint: forcetypeassert
+		if stage.Spec.PromotionMechanisms == nil ||
+			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
+			return nil
+		}
+		apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
+		for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
+			apps[i] =
+				fmt.Sprintf("%s:%s", appCheck.AppNamespace, appCheck.AppName)
+		}
+		return apps
+	}
 }
 
 func newReconciler(client client.Client) *reconciler {

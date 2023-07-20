@@ -27,6 +27,10 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/kargo", "controller"]
         env:
+        {{- if .Values.controller.shardName }}
+        - name: SHARD_NAME
+          value: {{ .Values.controller.shardName }}
+        {{- end }}
         {{- if .Values.kubeconfigSecrets.kargo }}
         - name: KUBECONFIG
           value: /etc/kargo/kubeconfigs/kubeconfig.yaml
