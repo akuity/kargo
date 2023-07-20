@@ -1,0 +1,40 @@
+{{- if .Values.garbageCollector.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "kargo.garbageCollector.fullname" . }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+spec:
+  schedule: {{ quote .Values.garbageCollector.schedule }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ include "kargo.garbageCollector.fullname" . }}
+          containers:
+          - name: garbage-collector
+            image: {{ include "kargo.image" . }}
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            command: ["/usr/local/bin/kargo", "garbage-collector"]
+            env:
+            - name: NUM_WORKERS
+              value: {{ quote .Values.garbageCollector.workers }}
+            - name: MAX_RETAINED_PROMOTIONS
+              value: {{ quote .Values.garbageCollector.maxRetainedPromotions }}
+            - name: LOG_LEVEL
+              value: {{ .Values.garbageCollector.logLevel }}
+            resources:
+              {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
+          restartPolicy: Never
+          concurrencyPolicy: Forbid
+          {{- with .Values.garbageCollector.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.garbageCollector.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
