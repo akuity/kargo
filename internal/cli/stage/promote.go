@@ -8,7 +8,9 @@ import (
 	"github.com/bufbuild/connect-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/utils/pointer"
 
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -51,11 +53,21 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "promote stage")
 			}
-			// TODO: Replace with console writer
-			fmt.Printf("Promotion Created: %q", res.Msg.GetPromotion().GetMetadata().GetName())
+			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
+				_, _ = fmt.Fprintf(opt.IOStreams.Out,
+					"Promotion Created: %q", res.Msg.GetPromotion().GetMetadata().GetName())
+				return nil
+			}
+			printer, err := opt.PrintFlags.ToPrinter()
+			if err != nil {
+				return errors.Wrap(err, "new printer")
+			}
+			promo := typesv1alpha1.FromPromotionProto(res.Msg.GetPromotion())
+			_ = printer.PrintObj(promo, opt.IOStreams.Out)
 			return nil
 		},
 	}
+	opt.PrintFlags.AddFlags(cmd)
 	option.State(&flag.State)(cmd.Flags())
 	return cmd
 }

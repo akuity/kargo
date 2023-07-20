@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -78,7 +79,7 @@ func PromoteStageV1Alpha1(
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 		return connect.NewResponse(&svcv1alpha1.PromoteStageResponse{
-			Promotion: toPromotionProto(*promotion),
+			Promotion: typesv1alpha1.ToPromotionProto(*promotion),
 		}), nil
 	}
 }
