@@ -48,58 +48,6 @@ func TestNewStageReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestCommitIDFn)
 }
 
-func TestIndexStagesByApp(t *testing.T) {
-	testCases := []struct {
-		name       string
-		stage      *api.Stage
-		assertions func([]string)
-	}{
-		{
-			name: "stage has no health checks",
-			stage: &api.Stage{
-				Spec: &api.StageSpec{},
-			},
-			assertions: func(res []string) {
-				require.Nil(t, res)
-			},
-		},
-		{
-			name: "stage has health checks",
-			stage: &api.Stage{
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
-							{
-								AppNamespace: "fake-namespace",
-								AppName:      "fake-app",
-							},
-							{
-								AppNamespace: "another-fake-namespace",
-								AppName:      "another-fake-app",
-							},
-						},
-					},
-				},
-			},
-			assertions: func(res []string) {
-				require.Equal(
-					t,
-					[]string{
-						"fake-namespace:fake-app",
-						"another-fake-namespace:another-fake-app",
-					},
-					res,
-				)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			indexStagesByApp(testCase.stage)
-		})
-	}
-}
-
 func TestIndexOutstandingPromotionsByStage(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -121,7 +69,7 @@ func TestIndexOutstandingPromotionsByStage(t *testing.T) {
 			},
 		},
 		{
-			name: "promotion is in terminal phase",
+			name: "promotion is in non-terminal phase",
 			promotion: &api.Promotion{
 				Spec: &api.PromotionSpec{
 					Stage: "fake-stage",

@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,7 @@ import (
 	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
@@ -110,16 +112,36 @@ func SetupReconcilerWithManager(
 	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
 	bookkeeperService bookkeeper.Service,
+	shardName string,
 ) error {
-	return ctrl.NewControllerManagedBy(kargoMgr).
+	ctrlBuilder := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&api.Promotion{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(newReconciler(
+		WithEventFilter(predicate.GenerationChangedPredicate{})
+
+	if shardName != "" {
+		shardPredicate, err := predicate.LabelSelectorPredicate(
+			*metav1.SetAsLabelSelector(
+				labels.Set(
+					map[string]string{
+						controller.ShardLabelKey: shardName,
+					},
+				),
+			),
+		)
+		if err != nil {
+			return errors.Wrap(err, "error creating shard selector predicate")
+		}
+		ctrlBuilder = ctrlBuilder.WithEventFilter(shardPredicate)
+	}
+
+	return ctrlBuilder.Complete(
+		newReconciler(
 			kargoMgr.GetClient(),
 			argoMgr.GetClient(),
 			credentialsDB,
 			bookkeeperService,
-		))
+		),
+	)
 }
 
 func newReconciler(

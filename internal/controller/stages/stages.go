@@ -11,6 +11,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,7 @@ import (
 	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/images"
@@ -28,7 +30,6 @@ import (
 )
 
 const (
-	stagesByAppIndexField              = "applications"
 	outstandingPromosByStageIndexField = "stage"
 	promoPoliciesByStageIndexField     = "stage"
 )
@@ -126,20 +127,8 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
+	shardName string,
 ) error {
-	// Index Stages by Argo CD Applications
-	if err := kargoMgr.GetFieldIndexer().IndexField(
-		ctx,
-		&api.Stage{},
-		stagesByAppIndexField,
-		indexStagesByApp,
-	); err != nil {
-		return errors.Wrap(
-			err,
-			"error indexing Stages by Argo CD Applications",
-		)
-	}
-
 	// Index Promotions in non-terminal states by Stage
 	if err := kargoMgr.GetFieldIndexer().IndexField(
 		ctx,
@@ -166,34 +155,46 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "error indexing PromotionPolicies by Stage")
 	}
 
-	return ctrl.NewControllerManagedBy(kargoMgr).
+	ctrlBuilder := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&api.Stage{}).
-		WithEventFilter(predicate.Funcs{
-			DeleteFunc: func(event.DeleteEvent) bool {
-				// We're not interested in any deletes
-				return false
+		WithEventFilter(
+			predicate.Funcs{
+				DeleteFunc: func(event.DeleteEvent) bool {
+					// We're not interested in any deletes
+					return false
+				},
 			},
-		}).
-		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(newReconciler(
+		).
+		WithEventFilter(
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
+			),
+		)
+
+	if shardName != "" {
+		shardPredicate, err := predicate.LabelSelectorPredicate(
+			*metav1.SetAsLabelSelector(
+				labels.Set(
+					map[string]string{
+						controller.ShardLabelKey: shardName,
+					},
+				),
+			),
+		)
+		if err != nil {
+			return errors.Wrap(err, "error creating shard selector predicate")
+		}
+		ctrlBuilder = ctrlBuilder.WithEventFilter(shardPredicate)
+	}
+
+	return ctrlBuilder.Complete(
+		newReconciler(
 			kargoMgr.GetClient(),
 			argoMgr.GetClient(),
 			credentialsDB,
-		))
-}
-
-func indexStagesByApp(obj client.Object) []string {
-	stage := obj.(*api.Stage) // nolint: forcetypeassert
-	if stage.Spec.PromotionMechanisms == nil ||
-		len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
-		return nil
-	}
-	apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
-	for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-		apps[i] =
-			fmt.Sprintf("%s:%s", appCheck.AppNamespace, appCheck.AppName)
-	}
-	return apps
+		),
+	)
 }
 
 func indexOutstandingPromotionsByStage(obj client.Object) []string {
@@ -467,20 +468,25 @@ func (r *reconciler) sync(
 	logger = logger.WithField("state", nextState.ID)
 	logger.Debug("auto-promotion will proceed")
 
-	if err := r.kargoClient.Create(
-		ctx,
-		&api.Promotion{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-to-%s", stage.Name, nextState.ID),
-				Namespace: stage.Namespace,
-			},
-			Spec: &api.PromotionSpec{
-				Stage: stage.Name,
-				State: nextState.ID,
-			},
+	promo := &api.Promotion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-to-%s", stage.Name, nextState.ID),
+			Namespace: stage.Namespace,
 		},
-		&client.CreateOptions{},
-	); err != nil {
+		Spec: &api.PromotionSpec{
+			Stage: stage.Name,
+			State: nextState.ID,
+		},
+	}
+
+	if stage.Labels != nil && stage.Labels[controller.ShardLabelKey] != "" {
+		promo.ObjectMeta.Labels = map[string]string{
+			controller.ShardLabelKey: stage.Labels[controller.ShardLabelKey],
+		}
+	}
+
+	if err :=
+		r.kargoClient.Create(ctx, promo, &client.CreateOptions{}); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			logger.Debug("Promotion resource already exists")
 			return status, nil

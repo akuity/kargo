@@ -70,6 +70,11 @@ controller:
   ## Whether the controller is enabled.
   enabled: true
 
+  ## Set a shard name if, and only if, you are running multiple controllers
+  ## backed by a single underlying control plane. This is advanced configuration
+  ## and in nearly all cases should be left undefined.
+  # shardName:
+
   ## All settings relating to the Argo CD control plane this controller will
   ## integrate with.
   argocd:
