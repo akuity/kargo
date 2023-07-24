@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bufbuild/connect-go"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,7 +35,8 @@ func ListProjectsV1Alpha1(
 		var projects []*svcv1alpha1.Project
 		for _, ns := range nsList.Items {
 			projects = append(projects, &svcv1alpha1.Project{
-				Name: ns.Name,
+				Name:       ns.Name,
+				CreateTime: timestamppb.New(ns.CreationTimestamp.Time),
 			})
 		}
 
