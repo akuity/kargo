@@ -156,3 +156,37 @@ webhooksServer:
   nodeSelector: {}
 
   tolerations: []
+
+garbageCollector:
+
+  ## Whether the garbage collector is enabled.
+  enabled: true
+
+  ## When to run the garbage collector.
+  schedule: "0 * * * *"
+  ## The number of concurrent workers to run. Tuning this too low will result in
+  ## slow garbage collection. Tuning this too high will result in too many API
+  ## calls and may result in throttling.
+  workers: 3
+  ## The maximum number of Promotions in terminal phases PER PROJECT that may be
+  ## spared by the garbage collector.
+  maxRetainedPromotions: 20
+
+  logLevel: INFO
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as
+    # a conscious choice for the user. This also increases chances charts run on
+    # environments with little resources, such as KinD. If you do want to
+    # specify resources, uncomment the following lines, adjust them as
+    # necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  nodeSelector: {}
+
+  tolerations: []

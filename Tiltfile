@@ -67,6 +67,17 @@ k8s_resource(
 )
 
 k8s_resource(
+  workload = 'kargo-garbage-collector',
+  new_name = 'garbage-collector',
+  labels = ['kargo'],
+  objects = [
+    'kargo-garbage-collector:clusterrole',
+    'kargo-garbage-collector:clusterrolebinding',
+    'kargo-garbage-collector:serviceaccount'
+  ]
+)
+
+k8s_resource(
   workload = 'kargo-webhooks-server',
   new_name = 'webhooks-server',
   labels = ['kargo'],

@@ -28,6 +28,10 @@ If release name contains chart name it will be used as a full name.
 {{ include "kargo.fullname" . | printf "%s-controller" }}
 {{- end -}}
 
+{{- define "kargo.garbageCollector.fullname" -}}
+{{ include "kargo.fullname" . | printf "%s-garbage-collector" }}
+{{- end -}}
+
 {{- define "kargo.webhooksServer.fullname" -}}
 {{ include "kargo.fullname" . | printf "%s-webhooks-server" }}
 {{- end -}}
@@ -74,6 +78,10 @@ app.kubernetes.io/component: api
 
 {{- define "kargo.controller.labels" -}}
 app.kubernetes.io/component: controller
+{{- end -}}
+
+{{- define "kargo.garbageCollector.labels" -}}
+app.kubernetes.io/component: garbage-collector
 {{- end -}}
 
 {{- define "kargo.webhooksServer.labels" -}}
