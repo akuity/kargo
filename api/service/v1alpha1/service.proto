@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package akuity.io.kargo.service.v1alpha1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
 
 import "v1alpha1/generated.proto";
@@ -85,6 +87,7 @@ message PromoteStageResponse {
 
 message Project {
   string name = 1;
+  google.protobuf.Timestamp create_time = 2;
 }
 
 message CreateProjectRequest {
@@ -92,7 +95,7 @@ message CreateProjectRequest {
 }
 
 message CreateProjectResponse {
-  string name = 1;
+  Project project = 1;
 }
 
 message ListProjectsRequest {

@@ -8,7 +8,11 @@ import (
 	"github.com/bufbuild/connect-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
 
+	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -34,9 +38,22 @@ func newCreateCommand(opt *option.Option) *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "create project")
 			}
-			_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Created: %q", res.Msg.GetName())
-			return nil
+			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
+				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Created: %q", res.Msg.GetProject().GetName())
+				return nil
+			}
+			var project unstructured.Unstructured
+			project.SetAPIVersion(kubev1alpha1.GroupVersion.String())
+			project.SetKind("Project")
+			project.SetCreationTimestamp(metav1.NewTime(res.Msg.GetProject().GetCreateTime().AsTime()))
+			project.SetName(project.GetName())
+			printer, err := opt.PrintFlags.ToPrinter()
+			if err != nil {
+				return errors.Wrap(err, "new printer")
+			}
+			return printer.PrintObj(&project, opt.IOStreams.Out)
 		},
 	}
+	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }

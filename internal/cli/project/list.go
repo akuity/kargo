@@ -38,6 +38,7 @@ func newListCommand(opt *option.Option) *cobra.Command {
 				item := &unstructured.Unstructured{}
 				item.SetAPIVersion(kubev1alpha1.GroupVersion.String())
 				item.SetKind("Project")
+				item.SetCreationTimestamp(metav1.NewTime(project.GetCreateTime().AsTime()))
 				item.SetName(project.GetName())
 				list.Items = append(list.Items, *item)
 			}
@@ -49,8 +50,7 @@ func newListCommand(opt *option.Option) *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "new printer")
 			}
-			err = printer.PrintObj(list, opt.IOStreams.Out)
-			return err
+			return printer.PrintObj(list, opt.IOStreams.Out)
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
