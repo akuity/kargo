@@ -51,8 +51,7 @@ func newCreateCommand(opt *option.Option) *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "new printer")
 			}
-			err = printer.PrintObj(&project, opt.IOStreams.Out)
-			return nil
+			return printer.PrintObj(&project, opt.IOStreams.Out)
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
