@@ -6,6 +6,7 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,7 +59,10 @@ func CreateProjectV1Alpha1(
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 		return connect.NewResponse(&svcv1alpha1.CreateProjectResponse{
-			Name: ns.Name,
+			Project: &svcv1alpha1.Project{
+				Name:       ns.Name,
+				CreateTime: timestamppb.New(ns.CreationTimestamp.Time),
+			},
 		}), nil
 	}
 }
