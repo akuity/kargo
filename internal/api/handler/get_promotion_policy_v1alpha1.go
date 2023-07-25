@@ -13,19 +13,19 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type GetStageV1Alpha1Func func(
+type GetPromotionPolicyV1Alpha1Func func(
 	context.Context,
-	*connect.Request[svcv1alpha1.GetStageRequest],
-) (*connect.Response[svcv1alpha1.GetStageResponse], error)
+	*connect.Request[svcv1alpha1.GetPromotionPolicyRequest],
+) (*connect.Response[svcv1alpha1.GetPromotionPolicyResponse], error)
 
-func GetStageV1Alpha1(
+func GetPromotionPolicyV1Alpha1(
 	kc client.Client,
-) GetStageV1Alpha1Func {
+) GetPromotionPolicyV1Alpha1Func {
 	validateProjectExistence := newProjectExistenceValidator(kc)
 	return func(
 		ctx context.Context,
-		req *connect.Request[svcv1alpha1.GetStageRequest],
-	) (*connect.Response[svcv1alpha1.GetStageResponse], error) {
+		req *connect.Request[svcv1alpha1.GetPromotionPolicyRequest],
+	) (*connect.Response[svcv1alpha1.GetPromotionPolicyResponse], error) {
 		if req.Msg.GetProject() == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
 		}
@@ -36,18 +36,18 @@ func GetStageV1Alpha1(
 			return nil, err
 		}
 
-		var stage kubev1alpha1.Stage
+		var policy kubev1alpha1.PromotionPolicy
 		if err := kc.Get(ctx, client.ObjectKey{
 			Namespace: req.Msg.GetProject(),
 			Name:      req.Msg.GetName(),
-		}, &stage); err != nil {
+		}, &policy); err != nil {
 			if kubeerr.IsNotFound(err) {
 				return nil, connect.NewError(connect.CodeNotFound, err)
 			}
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		return connect.NewResponse(&svcv1alpha1.GetStageResponse{
-			Stage: typesv1alpha1.ToStageProto(stage),
+		return connect.NewResponse(&svcv1alpha1.GetPromotionPolicyResponse{
+			PromotionPolicy: typesv1alpha1.ToPromotionPolicyProto(policy),
 		}), nil
 	}
 }

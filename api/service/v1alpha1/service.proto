@@ -16,6 +16,12 @@ service KargoService {
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
 
+  rpc CreatePromotionPolicy(CreatePromotionPolicyRequest) returns (CreatePromotionPolicyResponse);
+  rpc ListPromotionPolicies(ListPromotionPoliciesRequest) returns (ListPromotionPoliciesResponse);
+  rpc GetPromotionPolicy(GetPromotionPolicyRequest) returns (GetPromotionPolicyResponse);
+  rpc UpdatePromotionPolicy(UpdatePromotionPolicyRequest) returns (UpdatePromotionPolicyResponse);
+  rpc DeletePromotionPolicy(DeletePromotionPolicyRequest) returns (DeletePromotionPolicyResponse);
+
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
@@ -83,6 +89,61 @@ message PromoteStageRequest {
 
 message PromoteStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+}
+
+message TypedPromotionPolicySpec {
+  string project = 1;
+  string name = 2;
+  string stage = 3;
+  bool enable_auto_promotion = 4;
+}
+
+message CreatePromotionPolicyRequest {
+  oneof promotion_policy {
+    TypedPromotionPolicySpec typed = 1;
+    string yaml = 2;
+  }
+}
+
+message CreatePromotionPolicyResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy promotion_policy = 1;
+}
+
+message ListPromotionPoliciesRequest {
+  string project = 1;
+}
+
+message ListPromotionPoliciesResponse {
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy promotion_policies = 1;
+}
+
+message GetPromotionPolicyRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message GetPromotionPolicyResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy promotion_policy = 1;
+}
+
+message UpdatePromotionPolicyRequest {
+  oneof promotion_policy {
+    TypedPromotionPolicySpec typed = 1;
+    string yaml = 2;
+  }
+}
+
+message UpdatePromotionPolicyResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy promotion_policy = 1;
+}
+
+message DeletePromotionPolicyRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeletePromotionPolicyResponse {
+  /* explicitly empty */
 }
 
 message Project {

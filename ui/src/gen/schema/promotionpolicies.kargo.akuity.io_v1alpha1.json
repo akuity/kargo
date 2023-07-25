@@ -19,7 +19,7 @@
         "type": "object"
       },
       "stage": {
-        "description": "Stage references a Stage in the same namespace as this PromotionPolicy to which this PromotionPolicy applies.",
+        "description": "Stage references a Stage in the same project as this PromotionPolicy to which this PromotionPolicy applies.",
         "minLength": 1,
         "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
         "type": "string"

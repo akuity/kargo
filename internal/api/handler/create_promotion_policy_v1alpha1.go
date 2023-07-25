@@ -15,23 +15,23 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type CreateStageV1Alpha1Func func(
+type CreatePromotionPolicyV1Alpha1Func func(
 	context.Context,
-	*connect.Request[svcv1alpha1.CreateStageRequest],
-) (*connect.Response[svcv1alpha1.CreateStageResponse], error)
+	*connect.Request[svcv1alpha1.CreatePromotionPolicyRequest],
+) (*connect.Response[svcv1alpha1.CreatePromotionPolicyResponse], error)
 
-func CreateStageV1Alpha1(
+func CreatePromotionPolicyV1Alpha1(
 	kc client.Client,
-) CreateStageV1Alpha1Func {
+) CreatePromotionPolicyV1Alpha1Func {
 	validateCreation := newCreationValidator(kc)
 	return func(
 		ctx context.Context,
-		req *connect.Request[svcv1alpha1.CreateStageRequest],
-	) (*connect.Response[svcv1alpha1.CreateStageResponse], error) {
-		var stage v1alpha1.Stage
+		req *connect.Request[svcv1alpha1.CreatePromotionPolicyRequest],
+	) (*connect.Response[svcv1alpha1.CreatePromotionPolicyResponse], error) {
+		var policy v1alpha1.PromotionPolicy
 		switch {
 		case req.Msg.GetYaml() != "":
-			if err := yaml.Unmarshal([]byte(req.Msg.GetYaml()), &stage); err != nil {
+			if err := yaml.Unmarshal([]byte(req.Msg.GetYaml()), &policy); err != nil {
 				return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid yaml"))
 			}
 		case req.Msg.GetTyped() != nil:
@@ -41,28 +41,29 @@ func CreateStageV1Alpha1(
 			if req.Msg.GetTyped().GetName() == "" {
 				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
 			}
-			stage = v1alpha1.Stage{
+			policy = v1alpha1.PromotionPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: req.Msg.GetTyped().GetProject(),
 					Name:      req.Msg.GetTyped().GetName(),
 				},
-				Spec: typesv1alpha1.FromStageSpecProto(req.Msg.GetTyped().GetSpec()),
+				Stage:               req.Msg.GetTyped().GetStage(),
+				EnableAutoPromotion: req.Msg.GetTyped().GetEnableAutoPromotion(),
 			}
 		default:
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("promotion_policy should not be empty"))
 		}
 
-		if err := validateCreation(ctx, &stage); err != nil {
+		if err := validateCreation(ctx, &policy); err != nil {
 			return nil, err
 		}
-		if err := kc.Create(ctx, &stage); err != nil {
+		if err := kc.Create(ctx, &policy); err != nil {
 			if kubeerr.IsAlreadyExists(err) {
 				return nil, connect.NewError(connect.CodeAlreadyExists, err)
 			}
-			return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "create stage"))
+			return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "create promotion policy"))
 		}
-		return connect.NewResponse(&svcv1alpha1.CreateStageResponse{
-			Stage: typesv1alpha1.ToStageProto(stage),
+		return connect.NewResponse(&svcv1alpha1.CreatePromotionPolicyResponse{
+			PromotionPolicy: typesv1alpha1.ToPromotionPolicyProto(policy),
 		}), nil
 	}
 }

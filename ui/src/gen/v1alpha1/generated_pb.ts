@@ -1412,7 +1412,7 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   metadata?: ObjectMeta;
 
   /**
-   * Stage references a Stage in the same namespace as this PromotionPolicy to
+   * Stage references a Stage in the same project as this PromotionPolicy to
    * which this PromotionPolicy applies.
    *
    * +kubebuilder:validation:MinLength=1
