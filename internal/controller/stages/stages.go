@@ -11,7 +11,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -155,45 +154,37 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "error indexing PromotionPolicies by Stage")
 	}
 
-	ctrlBuilder := ctrl.NewControllerManagedBy(kargoMgr).
-		For(&api.Stage{}).
-		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					// We're not interested in any deletes
-					return false
-				},
-			},
-		).
-		WithEventFilter(
-			predicate.Or(
-				predicate.GenerationChangedPredicate{},
-				predicate.AnnotationChangedPredicate{},
-			),
-		)
-
-	if shardName != "" {
-		shardPredicate, err := predicate.LabelSelectorPredicate(
-			*metav1.SetAsLabelSelector(
-				labels.Set(
-					map[string]string{
-						controller.ShardLabelKey: shardName,
-					},
-				),
-			),
-		)
-		if err != nil {
-			return errors.Wrap(err, "error creating shard selector predicate")
-		}
-		ctrlBuilder = ctrlBuilder.WithEventFilter(shardPredicate)
+	shardPredicate, err := controller.GetShardPredicate(shardName)
+	if err != nil {
+		return errors.Wrap(err, "error creating shard predicate")
 	}
 
-	return ctrlBuilder.Complete(
-		newReconciler(
-			kargoMgr.GetClient(),
-			argoMgr.GetClient(),
-			credentialsDB,
-		),
+	return errors.Wrap(
+		ctrl.NewControllerManagedBy(kargoMgr).
+			For(&api.Stage{}).
+			WithEventFilter(
+				predicate.Funcs{
+					DeleteFunc: func(event.DeleteEvent) bool {
+						// We're not interested in any deletes
+						return false
+					},
+				},
+			).
+			WithEventFilter(
+				predicate.Or(
+					predicate.GenerationChangedPredicate{},
+					predicate.AnnotationChangedPredicate{},
+				),
+			).
+			WithEventFilter(shardPredicate).
+			Complete(
+				newReconciler(
+					kargoMgr.GetClient(),
+					argoMgr.GetClient(),
+					credentialsDB,
+				),
+			),
+		"error registering Stage reconciler",
 	)
 }
 

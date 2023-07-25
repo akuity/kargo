@@ -11,29 +11,20 @@ import (
 )
 
 func TestIndexStagesByApp(t *testing.T) {
+	const testShardName = "test-shard"
 	testCases := []struct {
-		name            string
-		controllerShard string
-		stage           *api.Stage
-		assertions      func([]string)
+		name                string
+		controllerShardName string
+		stage               *api.Stage
+		assertions          func([]string)
 	}{
 		{
-			name: "stage has no health checks",
-			stage: &api.Stage{
-				Spec: &api.StageSpec{},
-			},
-			assertions: func(res []string) {
-				require.Nil(t, res)
-			},
-		},
-
-		{
-			name:            "stage has health checks, but belongs to another shard",
-			controllerShard: "foo",
+			name:                "Stage belongs to another shard",
+			controllerShardName: testShardName,
 			stage: &api.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						controller.ShardLabelKey: "bar",
+						controller.ShardLabelKey: "another-shard",
 					},
 				},
 				Spec: &api.StageSpec{
@@ -53,18 +44,20 @@ func TestIndexStagesByApp(t *testing.T) {
 		},
 
 		{
-			name: "stage has health checks",
+			name:                "Stage belongs to this shard",
+			controllerShardName: testShardName,
 			stage: &api.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						controller.ShardLabelKey: testShardName,
+					},
+				},
 				Spec: &api.StageSpec{
 					PromotionMechanisms: &api.PromotionMechanisms{
 						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
-							},
-							{
-								AppNamespace: "another-fake-namespace",
-								AppName:      "another-fake-app",
 							},
 						},
 					},
@@ -75,7 +68,52 @@ func TestIndexStagesByApp(t *testing.T) {
 					t,
 					[]string{
 						"fake-namespace:fake-app",
-						"another-fake-namespace:another-fake-app",
+					},
+					res,
+				)
+			},
+		},
+
+		{
+			name:                "Stage is unlabeled and this is not the default controller",
+			controllerShardName: testShardName,
+			stage: &api.Stage{
+				Spec: &api.StageSpec{
+					PromotionMechanisms: &api.PromotionMechanisms{
+						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+							{
+								AppNamespace: "fake-namespace",
+								AppName:      "fake-app",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(res []string) {
+				require.Nil(t, res)
+			},
+		},
+
+		{
+			name:                "Stage is unlabeled and this is the default controller",
+			controllerShardName: "",
+			stage: &api.Stage{
+				Spec: &api.StageSpec{
+					PromotionMechanisms: &api.PromotionMechanisms{
+						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+							{
+								AppNamespace: "fake-namespace",
+								AppName:      "fake-app",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(res []string) {
+				require.Equal(
+					t,
+					[]string{
+						"fake-namespace:fake-app",
 					},
 					res,
 				)
@@ -84,7 +122,7 @@ func TestIndexStagesByApp(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			indexStagesByApp(testCase.controllerShard)(testCase.stage)
+			indexStagesByApp(testCase.controllerShardName)(testCase.stage)
 		})
 	}
 }
