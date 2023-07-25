@@ -70,9 +70,16 @@ controller:
   ## Whether the controller is enabled.
   enabled: true
 
-  ## Set a shard name if, and only if, you are running multiple controllers
-  ## backed by a single underlying control plane. This is advanced configuration
-  ## and in nearly all cases should be left undefined.
+  ## Set a shard name only if you are running multiple controllers backed by a
+  ## single underlying control plane. Setting a shard name will cause this
+  ## controller to operate ONLY on resources with a matching shard name.
+  ## Leaving the shard name undefined will designate this controller as the
+  ## default controller that is responsible exclusively for resources that
+  ## are NOT assigned to a specific shard. Leaving this undefined is the correct
+  ## choice when you are not using sharding at all. It is also the correct
+  ## setting if you are using sharding and want to designate a controller as the
+  ## default for handling resources not assigned to a specific shard. In most
+  ## cases, this setting should simply be left alone.
   # shardName:
 
   ## All settings relating to the Argo CD control plane this controller will
