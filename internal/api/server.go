@@ -15,8 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api/handler"
+	"github.com/akuity/kargo/internal/api/oidc"
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/types"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -26,12 +29,17 @@ var (
 )
 
 type ServerConfig struct {
+	OIDCConfig              *oidc.Config
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
 }
 
 func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg)
+	if types.MustParseBool(os.GetEnv("OIDC_ENABLED", "false")) {
+		oidcCfg := oidc.ConfigFromEnv()
+		cfg.OIDCConfig = &oidcCfg
+	}
 	return cfg
 }
 
@@ -85,6 +93,21 @@ func (s *server) Serve(
 		}
 		return err
 	}
+}
+
+func (s *server) GetPublicConfig(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.GetPublicConfigRequest],
+) (*connect.Response[svcv1alpha1.GetPublicConfigResponse], error) {
+	cfg := &svcv1alpha1.GetPublicConfigResponse{}
+	if s.cfg.OIDCConfig != nil {
+		cfg.OidcConfig = &svcv1alpha1.OIDCConfig{
+			IssuerUrl: s.cfg.OIDCConfig.IssuerURL,
+			ClientId:  s.cfg.OIDCConfig.ClientID,
+			Scopes:    s.cfg.OIDCConfig.Scopes,
+		}
+	}
+	return handler.GetPublicConfigV1Alpha1(cfg)(ctx, req)
 }
 
 func (s *server) CreateStage(

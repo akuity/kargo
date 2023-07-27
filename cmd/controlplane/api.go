@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
+	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
 func newAPICommand() *cobra.Command {
@@ -25,6 +27,12 @@ func newAPICommand() *cobra.Command {
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			version := versionpkg.GetVersion()
+			log.WithFields(log.Fields{
+				"version": version.Version,
+				"commit":  version.GitCommit,
+			}).Info("Starting Kargo API Server")
 
 			var kubeClient client.Client
 			{
@@ -52,7 +60,16 @@ func newAPICommand() *cobra.Command {
 				}
 			}
 
-			srv, err := api.NewServer(kubeClient, api.ServerConfigFromEnv())
+			cfg := api.ServerConfigFromEnv()
+
+			if cfg.OIDCConfig != nil {
+				log.WithFields(log.Fields{
+					"issuerURL": cfg.OIDCConfig.IssuerURL,
+					"clientID":  cfg.OIDCConfig.ClientID,
+				}).Info("SSO via OpenID Connect is enabled")
+			}
+
+			srv, err := api.NewServer(kubeClient, cfg)
 			if err != nil {
 				return errors.Wrap(err, "error creating API server")
 			}
