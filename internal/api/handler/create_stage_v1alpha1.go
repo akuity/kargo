@@ -23,7 +23,7 @@ type CreateStageV1Alpha1Func func(
 func CreateStageV1Alpha1(
 	kc client.Client,
 ) CreateStageV1Alpha1Func {
-	validateCreation := newCreationValidator(kc)
+	validateProject := newProjectValidator(kc)
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.CreateStageRequest],
@@ -52,7 +52,7 @@ func CreateStageV1Alpha1(
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
 		}
 
-		if err := validateCreation(ctx, &stage); err != nil {
+		if err := validateProject(ctx, stage.GetNamespace()); err != nil {
 			return nil, err
 		}
 		if err := kc.Create(ctx, &stage); err != nil {

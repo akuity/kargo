@@ -23,6 +23,7 @@ type UpdateStageV1Alpha1Func func(
 func UpdateStageV1Alpha1(
 	kc client.Client,
 ) UpdateStageV1Alpha1Func {
+	validateProject := newProjectValidator(kc)
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.UpdateStageRequest],
@@ -51,6 +52,9 @@ func UpdateStageV1Alpha1(
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
 		}
 
+		if err := validateProject(ctx, stage.GetNamespace()); err != nil {
+			return nil, err
+		}
 		var existingStage kubev1alpha1.Stage
 		if err := kc.Get(ctx, client.ObjectKeyFromObject(&stage), &existingStage); err != nil {
 			if kubeerr.IsNotFound(err) {

@@ -21,6 +21,7 @@ type DeleteStageV1Alpha1Func func(
 func DeleteStageV1Alpha1(
 	kc client.Client,
 ) DeleteStageV1Alpha1Func {
+	validateProject := newProjectValidator(kc)
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.DeleteStageRequest],
@@ -30,6 +31,9 @@ func DeleteStageV1Alpha1(
 		}
 		if req.Msg.GetName() == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
+		}
+		if err := validateProject(ctx, req.Msg.GetProject()); err != nil {
+			return nil, err
 		}
 
 		var stage kubev1alpha1.Stage

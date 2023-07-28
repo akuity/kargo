@@ -23,7 +23,7 @@ type CreatePromotionPolicyV1Alpha1Func func(
 func CreatePromotionPolicyV1Alpha1(
 	kc client.Client,
 ) CreatePromotionPolicyV1Alpha1Func {
-	validateCreation := newCreationValidator(kc)
+	validateProject := newProjectValidator(kc)
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.CreatePromotionPolicyRequest],
@@ -53,7 +53,7 @@ func CreatePromotionPolicyV1Alpha1(
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("promotion_policy should not be empty"))
 		}
 
-		if err := validateCreation(ctx, &policy); err != nil {
+		if err := validateProject(ctx, policy.GetNamespace()); err != nil {
 			return nil, err
 		}
 		if err := kc.Create(ctx, &policy); err != nil {

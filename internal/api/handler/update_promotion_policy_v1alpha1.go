@@ -23,6 +23,7 @@ type UpdatePromotionPolicyV1Alpha1Func func(
 func UpdatePromotionPolicyV1Alpha1(
 	kc client.Client,
 ) UpdatePromotionPolicyV1Alpha1Func {
+	validateProject := newProjectValidator(kc)
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.UpdatePromotionPolicyRequest],
@@ -52,6 +53,9 @@ func UpdatePromotionPolicyV1Alpha1(
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("promotion_policy should not be empty"))
 		}
 
+		if err := validateProject(ctx, policy.GetNamespace()); err != nil {
+			return nil, err
+		}
 		var existingPolicy kubev1alpha1.PromotionPolicy
 		if err := kc.Get(ctx, client.ObjectKeyFromObject(&policy), &existingPolicy); err != nil {
 			if kubeerr.IsNotFound(err) {

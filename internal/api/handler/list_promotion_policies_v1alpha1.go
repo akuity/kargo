@@ -21,7 +21,7 @@ type ListPromotionPoliciesV1Alpha1Func func(
 func ListPromotionPoliciesV1Alpha1(
 	kc client.Client,
 ) ListPromotionPoliciesV1Alpha1Func {
-	validateProjectExistence := newProjectExistenceValidator(kc)
+	validateProject := newProjectValidator(kc)
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.ListPromotionPoliciesRequest],
@@ -29,7 +29,7 @@ func ListPromotionPoliciesV1Alpha1(
 		if req.Msg.GetProject() == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
 		}
-		if err := validateProjectExistence(ctx, req.Msg.GetProject()); err != nil {
+		if err := validateProject(ctx, req.Msg.GetProject()); err != nil {
 			return nil, err
 		}
 
