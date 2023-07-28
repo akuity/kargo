@@ -29,8 +29,6 @@ func NewHandlerOption(ctx context.Context, localMode bool) connect.HandlerOption
 		interceptors = append(interceptors, newAuthInterceptor())
 	}
 	return connect.WithHandlerOptions(
-		connect.WithCodec(newJSONCodec("json")),
-		connect.WithCodec(newJSONCodec("json; charset=utf-8")),
 		connect.WithInterceptors(interceptors...),
 		connect.WithRecover(
 			func(ctx context.Context, spec connect.Spec, header http.Header, r any) error {
