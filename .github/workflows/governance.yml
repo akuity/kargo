@@ -13,3 +13,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: BirthdayResearch/oss-governance-bot@v3
+        with:
+          config-path: .github/governance.yml

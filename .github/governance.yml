@@ -7,7 +7,9 @@ issue:
       list:
         - feat
         - bug
-      multiple: false
+        - refactor
+        - enhancement
+      multiple: true
       needs: true
 
     - prefix: priority
@@ -22,16 +24,18 @@ issue:
     - prefix: area
       list:
         # generic areas
-        - bug
         - chore
+        - planning
         - devx
-        - docs
+        - documentation
         - perf
         - regression
         - security
         - tech-debt
         - test
         - ux
+        - ci-process
+        - release-process
         # kargo component areas
         - api
         - charts

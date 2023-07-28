@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -114,33 +113,26 @@ func SetupReconcilerWithManager(
 	bookkeeperService bookkeeper.Service,
 	shardName string,
 ) error {
-	ctrlBuilder := ctrl.NewControllerManagedBy(kargoMgr).
-		For(&api.Promotion{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{})
 
-	if shardName != "" {
-		shardPredicate, err := predicate.LabelSelectorPredicate(
-			*metav1.SetAsLabelSelector(
-				labels.Set(
-					map[string]string{
-						controller.ShardLabelKey: shardName,
-					},
-				),
-			),
-		)
-		if err != nil {
-			return errors.Wrap(err, "error creating shard selector predicate")
-		}
-		ctrlBuilder = ctrlBuilder.WithEventFilter(shardPredicate)
+	shardPredicate, err := controller.GetShardPredicate(shardName)
+	if err != nil {
+		return errors.Wrap(err, "error creating shard selector predicate")
 	}
 
-	return ctrlBuilder.Complete(
-		newReconciler(
-			kargoMgr.GetClient(),
-			argoMgr.GetClient(),
-			credentialsDB,
-			bookkeeperService,
-		),
+	return errors.Wrap(
+		ctrl.NewControllerManagedBy(kargoMgr).
+			For(&api.Promotion{}).
+			WithEventFilter(predicate.GenerationChangedPredicate{}).
+			WithEventFilter(shardPredicate).
+			Complete(
+				newReconciler(
+					kargoMgr.GetClient(),
+					argoMgr.GetClient(),
+					credentialsDB,
+					bookkeeperService,
+				),
+			),
+		"error registering Promotion reconciler",
 	)
 }
 
