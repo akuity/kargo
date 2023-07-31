@@ -17,6 +17,7 @@ import (
 	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	apioption "github.com/akuity/kargo/internal/api/option"
+	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/project"
 	"github.com/akuity/kargo/internal/cli/stage"
@@ -105,6 +106,7 @@ func NewRootCommand(opt *option.Option) (*cobra.Command, error) {
 	option.ServerURL(&opt.ServerURL)(cmd.PersistentFlags())
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
+	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(project.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand())
