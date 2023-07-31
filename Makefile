@@ -25,7 +25,6 @@ lint-go:
 
 .PHONY: lint-proto
 lint-proto:
-	go mod vendor
 	buf lint api --error-format=$(BUF_LINT_ERROR_FORMAT)
 
 .PHONY: lint-charts
@@ -56,12 +55,7 @@ test-unit:
 
 .PHONY: codegen
 codegen:
-	go mod vendor
-	./hack/generate-proto.sh
 	buf generate api
-	./hack/api/apply-patches.sh
-	go mod tidy
-	rm -rf ./vendor
 	controller-gen \
 		rbac:roleName=manager-role \
 		crd \

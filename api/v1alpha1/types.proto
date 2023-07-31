@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+package github.com.akuity.kargo.pkg.api.v1alpha1;
+
+import "google/protobuf/timestamp.proto";
+import "metav1/types.proto";
+
+option go_package = "github.com/akuity/kargo/pkg/api/v1alpha1";
+
+message ArgoCDAppUpdate {
+  string app_name = 1;
+  optional string app_namespace = 2;
+  repeated ArgoCDSourceUpdate source_updates = 3;
+}
+
+message ArgoCDHelm {
+  repeated ArgoCDHelmImageUpdate images = 1;
+}
+
+message ArgoCDHelmImageUpdate {
+  string image = 1;
+  string key = 2;
+  string value = 3;
+}
+
+message ArgoCDKustomize {
+  repeated string images = 1;
+}
+
+message ArgoCDSourceUpdate {
+  string repo_url = 1;
+  optional string chart = 2;
+  optional bool update_target_revision = 3;
+  optional ArgoCDKustomize kustomize = 4;
+  optional ArgoCDHelm helm = 5;
+}
+
+message BookkeeperPromotionMechanism {
+}
+
+message Chart {
+  string registry_url = 1;
+  string name = 2;
+  string version = 3;
+}
+
+message ChartSubscription {
+  string registry_url = 1;
+  optional string name = 2;
+  optional string semver_constraint = 3;
+}
+
+message GitCommit {
+  string repo_url = 1;
+  string id = 2;
+  string branch = 3;
+  optional string health_check_commit = 4;
+}
+
+message GitRepoUpdate {
+  string repo_url = 1;
+  optional string read_branch = 2;
+  string write_branch = 3;
+  optional BookkeeperPromotionMechanism bookkeeper = 4;
+  optional KustomizePromotionMechanism kustomize = 5;
+  optional HelmPromotionMechanism helm = 6;
+}
+
+message GitSubscription {
+  string repo_url = 1;
+  string branch = 2;
+}
+
+message Health {
+  optional string status = 1;
+  repeated string issues = 2;
+}
+
+message HelmChartDependencyUpdate {
+  string registry_url = 1;
+  string name = 2;
+  string chart_path = 3;
+}
+
+message HelmImageUpdate {
+  string image = 1;
+  string values_file_path = 2;
+  string key = 3;
+  string value = 4;
+}
+
+message HelmPromotionMechanism {
+  repeated HelmImageUpdate images = 1;
+  repeated HelmChartDependencyUpdate charts = 2;
+}
+
+message Image {
+  string repo_url = 1;
+  string tag = 2;
+}
+
+message ImageSubscription {
+  string repo_url = 1;
+  string update_strategy = 2;
+  optional string semver_constraint = 3;
+  optional string allow_tags = 4;
+  repeated string ignore_tags = 5;
+  optional string platform = 6;
+}
+
+message KustomizeImageUpdate {
+  string image = 1;
+  string path = 2;
+}
+
+message KustomizePromotionMechanism {
+  repeated KustomizeImageUpdate images = 1;
+}
+
+message Promotion {
+  optional github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
+  PromotionSpec spec = 2;
+  PromotionStatus status = 3;
+}
+
+message PromotionList {
+  optional github.com.akuity.kargo.pkg.api.metav1.ListMeta metadata = 1;
+  repeated Promotion items = 2;
+}
+
+message PromotionMechanisms {
+  repeated GitRepoUpdate git_repo_updates = 1;
+  repeated ArgoCDAppUpdate argocd_app_updates = 2;
+}
+
+message PromotionPolicy {
+  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
+  string stage = 2;
+  bool enable_auto_promotion = 3;
+}
+
+message PromotionPolicyList {
+  github.com.akuity.kargo.pkg.api.metav1.ListMeta metadata = 1;
+  repeated PromotionPolicy items = 2;
+}
+
+message PromotionSpec {
+  string stage = 1;
+  string state = 2;
+}
+
+message PromotionStatus {
+  string phase = 1;
+  string error = 2;
+}
+
+message RepoSubscriptions {
+  repeated GitSubscription git = 1;
+  repeated ImageSubscription images = 2;
+  repeated ChartSubscription charts = 3;
+}
+
+message Stage {
+  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
+  StageSpec spec = 2;
+  StageStatus status = 3;
+}
+
+message StageList {
+  github.com.akuity.kargo.pkg.api.metav1.ListMeta metadata = 1;
+  repeated Stage items = 2;
+}
+
+message StageSpec {
+  Subscriptions subscriptions = 1;
+  PromotionMechanisms promotion_mechanisms = 2;
+}
+
+message StageState {
+  string id = 1;
+  optional google.protobuf.Timestamp first_seen = 2;
+  optional string provenance = 3;
+  repeated GitCommit commits = 4;
+  repeated Image images = 5;
+  repeated Chart charts = 6;
+  optional Health health = 7;
+}
+
+message StageStatus {
+  repeated StageState available_states = 1;
+  optional StageState current_state = 2;
+  repeated StageState history = 3;
+  string error = 4;
+}
+
+message StageSubscription {
+  string name = 1;
+}
+
+message Subscriptions {
+  optional RepoSubscriptions repos = 1;
+  repeated StageSubscription upstream_stages = 2;
+}

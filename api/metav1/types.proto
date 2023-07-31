@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package github.com.akuity.kargo.pkg.api.metav1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/akuity/kargo/pkg/api/metav1";
+
+message FieldsV1 {
+  optional bytes raw = 1;
+}
+
+message OwnerReference {
+  optional string api_version = 5;
+  optional string kind = 1;
+  optional string name = 3;
+  optional string uid = 4;
+  optional bool controller = 6;
+  optional bool block_owner_deletion = 7;
+}
+
+message ManagedFieldsEntry {
+  optional string manager = 1;
+  optional string operation = 2;
+  optional string api_version = 3;
+  optional google.protobuf.Timestamp time = 4;
+  optional string fields_type = 6;
+  optional FieldsV1 fields_v1 = 7;
+  optional string subresource = 8;
+}
+
+message ObjectMeta {
+  optional string name = 1;
+  optional string generate_name = 2;
+  optional string namespace = 3;
+  optional string self_link = 4;
+  optional string uid = 5;
+  optional string resource_version = 6;
+  optional int64 generation = 7;
+  optional google.protobuf.Timestamp creation_timestamp = 8;
+  optional google.protobuf.Timestamp deletion_timestamp = 9;
+  optional int64 deletion_grace_period_seconds = 10;
+  map<string, string> labels = 11;
+  map<string, string> annotations = 12;
+  repeated OwnerReference owner_references = 13;
+  repeated string finalizers = 14;
+  repeated ManagedFieldsEntry managed_fields = 17;
+}
+
+message ListMeta {
+  optional string self_link = 1;
+  optional string resource_version = 2;
+  optional string continue = 3;
+  optional int64 remaining_item_count = 4;
+}

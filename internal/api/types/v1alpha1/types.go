@@ -2,9 +2,11 @@ package v1alpha1
 
 import (
 	"google.golang.org/protobuf/proto"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
+	kubemetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	typesmetav1 "github.com/akuity/kargo/internal/api/types/metav1"
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
@@ -57,7 +59,7 @@ func FromGitSubscriptionProto(s *v1alpha1.GitSubscription) *kubev1alpha1.GitSubs
 		return nil
 	}
 	return &kubev1alpha1.GitSubscription{
-		RepoURL: s.GetRepoURL(),
+		RepoURL: s.GetRepoUrl(),
 		Branch:  s.GetBranch(),
 	}
 }
@@ -67,7 +69,7 @@ func FromImageSubscriptionProto(s *v1alpha1.ImageSubscription) *kubev1alpha1.Ima
 		return nil
 	}
 	return &kubev1alpha1.ImageSubscription{
-		RepoURL:          s.GetRepoURL(),
+		RepoURL:          s.GetRepoUrl(),
 		UpdateStrategy:   kubev1alpha1.ImageUpdateStrategy(s.GetUpdateStrategy()),
 		SemverConstraint: s.GetSemverConstraint(),
 		AllowTags:        s.GetAllowTags(),
@@ -81,7 +83,7 @@ func FromChartSubscriptionProto(s *v1alpha1.ChartSubscription) *kubev1alpha1.Cha
 		return nil
 	}
 	return &kubev1alpha1.ChartSubscription{
-		RegistryURL:      s.GetRegistryURL(),
+		RegistryURL:      s.GetRegistryUrl(),
 		Name:             s.GetName(),
 		SemverConstraint: s.GetSemverConstraint(),
 	}
@@ -95,8 +97,8 @@ func FromPromotionMechanismsProto(m *v1alpha1.PromotionMechanisms) *kubev1alpha1
 	for idx, git := range m.GetGitRepoUpdates() {
 		gitUpdates[idx] = *FromGitRepoUpdateProto(git)
 	}
-	argoUpdates := make([]kubev1alpha1.ArgoCDAppUpdate, len(m.GetArgoCDAppUpdates()))
-	for idx, argo := range m.GetArgoCDAppUpdates() {
+	argoUpdates := make([]kubev1alpha1.ArgoCDAppUpdate, len(m.GetArgocdAppUpdates()))
+	for idx, argo := range m.GetArgocdAppUpdates() {
 		argoUpdates[idx] = *FromArgoCDAppUpdatesProto(argo)
 	}
 	return &kubev1alpha1.PromotionMechanisms{
@@ -110,7 +112,7 @@ func FromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kubev1alpha1.GitRepoUpda
 		return nil
 	}
 	return &kubev1alpha1.GitRepoUpdate{
-		RepoURL:     u.GetRepoURL(),
+		RepoURL:     u.GetRepoUrl(),
 		ReadBranch:  u.GetReadBranch(),
 		WriteBranch: u.GetWriteBranch(),
 		Bookkeeper:  FromBookkeeperPromotionMechanismProto(u.GetBookkeeper()),
@@ -192,7 +194,7 @@ func FromHelmChartDependencyUpdateProto(
 		return nil
 	}
 	return &kubev1alpha1.HelmChartDependencyUpdate{
-		RegistryURL: u.GetRegistryURL(),
+		RegistryURL: u.GetRegistryUrl(),
 		Name:        u.GetName(),
 		ChartPath:   u.GetChartPath(),
 	}
@@ -218,7 +220,7 @@ func FromArgoCDSourceUpdateProto(u *v1alpha1.ArgoCDSourceUpdate) *kubev1alpha1.A
 		return nil
 	}
 	return &kubev1alpha1.ArgoCDSourceUpdate{
-		RepoURL:              u.GetRepoURL(),
+		RepoURL:              u.GetRepoUrl(),
 		Chart:                u.GetChart(),
 		UpdateTargetRevision: u.GetUpdateTargetRevision(),
 		Kustomize:            FromArgoCDKustomizeProto(u.GetKustomize()),
@@ -276,12 +278,12 @@ func FromPromotionProto(p *v1alpha1.Promotion) *kubev1alpha1.Promotion {
 	if p.GetStatus() != nil {
 		status = *FromPromotionStatusProto(p.GetStatus())
 	}
-	var objectMeta metav1.ObjectMeta
+	var objectMeta kubemetav1.ObjectMeta
 	if p.GetMetadata() != nil {
-		objectMeta = *p.GetMetadata()
+		objectMeta = *typesmetav1.FromObjectMetaProto(p.GetMetadata())
 	}
 	return &kubev1alpha1.Promotion{
-		TypeMeta: metav1.TypeMeta{
+		TypeMeta: kubemetav1.TypeMeta{
 			APIVersion: kubev1alpha1.GroupVersion.String(),
 			Kind:       "Promotion",
 		},
@@ -330,7 +332,7 @@ func ToStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
 	metadata.SetManagedFields(nil)
 
 	return &v1alpha1.Stage{
-		Metadata: metadata,
+		Metadata: typesmetav1.ToObjectMetaProto(*metadata),
 		Spec: &v1alpha1.StageSpec{
 			Subscriptions:       ToSubscriptionsProto(*e.Spec.Subscriptions),
 			PromotionMechanisms: ToPromotionMechanismsProto(*e.Spec.PromotionMechanisms),
@@ -339,7 +341,7 @@ func ToStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
 			AvailableStates: availableStates,
 			CurrentState:    currentState,
 			History:         history,
-			Error:           proto.String(e.Status.Error),
+			Error:           e.Status.Error,
 		},
 	}
 }
@@ -375,15 +377,15 @@ func ToSubscriptionsProto(s kubev1alpha1.Subscriptions) *v1alpha1.Subscriptions 
 
 func ToGitSubscriptionProto(g kubev1alpha1.GitSubscription) *v1alpha1.GitSubscription {
 	return &v1alpha1.GitSubscription{
-		RepoURL: proto.String(g.RepoURL),
-		Branch:  proto.String(g.Branch),
+		RepoUrl: g.RepoURL,
+		Branch:  g.Branch,
 	}
 }
 
 func ToImageSubscriptionProto(i kubev1alpha1.ImageSubscription) *v1alpha1.ImageSubscription {
 	return &v1alpha1.ImageSubscription{
-		RepoURL:          proto.String(i.RepoURL),
-		UpdateStrategy:   proto.String(string(i.UpdateStrategy)),
+		RepoUrl:          i.RepoURL,
+		UpdateStrategy:   string(i.UpdateStrategy),
 		SemverConstraint: proto.String(i.SemverConstraint),
 		AllowTags:        proto.String(i.AllowTags),
 		IgnoreTags:       i.IgnoreTags,
@@ -393,7 +395,7 @@ func ToImageSubscriptionProto(i kubev1alpha1.ImageSubscription) *v1alpha1.ImageS
 
 func ToChartSubscriptionProto(c kubev1alpha1.ChartSubscription) *v1alpha1.ChartSubscription {
 	return &v1alpha1.ChartSubscription{
-		RegistryURL:      proto.String(c.RegistryURL),
+		RegistryUrl:      c.RegistryURL,
 		Name:             proto.String(c.Name),
 		SemverConstraint: proto.String(c.SemverConstraint),
 	}
@@ -401,7 +403,7 @@ func ToChartSubscriptionProto(c kubev1alpha1.ChartSubscription) *v1alpha1.ChartS
 
 func ToStageSubscriptionProto(e kubev1alpha1.StageSubscription) *v1alpha1.StageSubscription {
 	return &v1alpha1.StageSubscription{
-		Name: proto.String(e.Name),
+		Name: e.Name,
 	}
 }
 
@@ -416,7 +418,7 @@ func ToPromotionMechanismsProto(p kubev1alpha1.PromotionMechanisms) *v1alpha1.Pr
 	}
 	return &v1alpha1.PromotionMechanisms{
 		GitRepoUpdates:   gitRepoUpdates,
-		ArgoCDAppUpdates: argoCDAppUpdates,
+		ArgocdAppUpdates: argoCDAppUpdates,
 	}
 }
 
@@ -434,9 +436,9 @@ func ToGitRepoUpdateProto(g kubev1alpha1.GitRepoUpdate) *v1alpha1.GitRepoUpdate 
 		helm = ToHelmPromotionMechanismProto(*g.Helm)
 	}
 	return &v1alpha1.GitRepoUpdate{
-		RepoURL:     proto.String(g.RepoURL),
+		RepoUrl:     g.RepoURL,
 		ReadBranch:  proto.String(g.ReadBranch),
-		WriteBranch: proto.String(g.WriteBranch),
+		WriteBranch: g.WriteBranch,
 		Bookkeeper:  bookkeeper,
 		Kustomize:   kustomize,
 		Helm:        helm,
@@ -463,8 +465,8 @@ func ToKustomizePromotionMechanismProto(
 
 func ToKustomizeImageUpdateProto(k kubev1alpha1.KustomizeImageUpdate) *v1alpha1.KustomizeImageUpdate {
 	return &v1alpha1.KustomizeImageUpdate{
-		Image: proto.String(k.Image),
-		Path:  proto.String(k.Path),
+		Image: k.Image,
+		Path:  k.Path,
 	}
 }
 
@@ -485,18 +487,18 @@ func ToHelmPromotionMechanismProto(h kubev1alpha1.HelmPromotionMechanism) *v1alp
 
 func ToHelmImageUpdateProto(h kubev1alpha1.HelmImageUpdate) *v1alpha1.HelmImageUpdate {
 	return &v1alpha1.HelmImageUpdate{
-		Image:          proto.String(h.Image),
-		ValuesFilePath: proto.String(h.ValuesFilePath),
-		Key:            proto.String(h.Key),
-		Value:          proto.String(string(h.Value)),
+		Image:          h.Image,
+		ValuesFilePath: h.ValuesFilePath,
+		Key:            h.Key,
+		Value:          string(h.Value),
 	}
 }
 
 func ToHelmChartDependencyUpdateProto(h kubev1alpha1.HelmChartDependencyUpdate) *v1alpha1.HelmChartDependencyUpdate {
 	return &v1alpha1.HelmChartDependencyUpdate{
-		RegistryURL: proto.String(h.RegistryURL),
-		Name:        proto.String(h.Name),
-		ChartPath:   proto.String(h.ChartPath),
+		RegistryUrl: h.RegistryURL,
+		Name:        h.Name,
+		ChartPath:   h.ChartPath,
 	}
 }
 
@@ -506,7 +508,7 @@ func ToArgoCDAppUpdateProto(h kubev1alpha1.ArgoCDAppUpdate) *v1alpha1.ArgoCDAppU
 		sourceUpdates[idx] = ToArgoCDSourceUpdateProto(h.SourceUpdates[idx])
 	}
 	return &v1alpha1.ArgoCDAppUpdate{
-		AppName:       proto.String(h.AppName),
+		AppName:       h.AppName,
 		AppNamespace:  proto.String(h.AppNamespace),
 		SourceUpdates: sourceUpdates,
 	}
@@ -522,7 +524,7 @@ func ToArgoCDSourceUpdateProto(a kubev1alpha1.ArgoCDSourceUpdate) *v1alpha1.Argo
 		helm = ToArgoCDHelmProto(*a.Helm)
 	}
 	return &v1alpha1.ArgoCDSourceUpdate{
-		RepoURL:              proto.String(a.RepoURL),
+		RepoUrl:              a.RepoURL,
 		Chart:                proto.String(a.Chart),
 		UpdateTargetRevision: proto.Bool(a.UpdateTargetRevision),
 		Kustomize:            kustomize,
@@ -548,13 +550,17 @@ func ToArgoCDHelmProto(a kubev1alpha1.ArgoCDHelm) *v1alpha1.ArgoCDHelm {
 
 func ToArgoCDHelmImageUpdateProto(a kubev1alpha1.ArgoCDHelmImageUpdate) *v1alpha1.ArgoCDHelmImageUpdate {
 	return &v1alpha1.ArgoCDHelmImageUpdate{
-		Image: proto.String(a.Image),
-		Key:   proto.String(a.Key),
-		Value: proto.String(string(a.Value)),
+		Image: a.Image,
+		Key:   a.Key,
+		Value: string(a.Value),
 	}
 }
 
 func ToStageStateProto(e kubev1alpha1.StageState) *v1alpha1.StageState {
+	var firstSeen *timestamppb.Timestamp
+	if e.FirstSeen != nil {
+		firstSeen = timestamppb.New(e.FirstSeen.Time)
+	}
 	commits := make([]*v1alpha1.GitCommit, len(e.Commits))
 	for idx := range e.Commits {
 		commits[idx] = ToGitCommitProto(e.Commits[idx])
@@ -572,8 +578,8 @@ func ToStageStateProto(e kubev1alpha1.StageState) *v1alpha1.StageState {
 		health = ToHealthProto(*e.Health)
 	}
 	return &v1alpha1.StageState{
-		Id:         proto.String(e.ID),
-		FirstSeen:  e.FirstSeen,
+		Id:         e.ID,
+		FirstSeen:  firstSeen,
 		Provenance: proto.String(e.Provenance),
 		Commits:    commits,
 		Images:     images,
@@ -584,25 +590,25 @@ func ToStageStateProto(e kubev1alpha1.StageState) *v1alpha1.StageState {
 
 func ToGitCommitProto(g kubev1alpha1.GitCommit) *v1alpha1.GitCommit {
 	return &v1alpha1.GitCommit{
-		RepoURL:           proto.String(g.RepoURL),
-		Id:                proto.String(g.ID),
-		Branch:            proto.String(g.Branch),
+		RepoUrl:           g.RepoURL,
+		Id:                g.ID,
+		Branch:            g.Branch,
 		HealthCheckCommit: proto.String(g.HealthCheckCommit),
 	}
 }
 
 func ToImageProto(i kubev1alpha1.Image) *v1alpha1.Image {
 	return &v1alpha1.Image{
-		RepoURL: proto.String(i.RepoURL),
-		Tag:     proto.String(i.Tag),
+		RepoUrl: i.RepoURL,
+		Tag:     i.Tag,
 	}
 }
 
 func ToChartProto(c kubev1alpha1.Chart) *v1alpha1.Chart {
 	return &v1alpha1.Chart{
-		RegistryURL: proto.String(c.RegistryURL),
-		Name:        proto.String(c.Name),
-		Version:     proto.String(c.Version),
+		RegistryUrl: c.RegistryURL,
+		Name:        c.Name,
+		Version:     c.Version,
 	}
 }
 
@@ -616,15 +622,16 @@ func ToHealthProto(h kubev1alpha1.Health) *v1alpha1.Health {
 func ToPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
 	metadata := p.ObjectMeta.DeepCopy()
 	metadata.SetManagedFields(nil)
+
 	return &v1alpha1.Promotion{
-		Metadata: metadata,
+		Metadata: typesmetav1.ToObjectMetaProto(*metadata),
 		Spec: &v1alpha1.PromotionSpec{
-			Stage: proto.String(p.Spec.Stage),
-			State: proto.String(p.Spec.State),
+			Stage: p.Spec.Stage,
+			State: p.Spec.State,
 		},
 		Status: &v1alpha1.PromotionStatus{
-			Phase: proto.String(string(p.Status.Phase)),
-			Error: proto.String(p.Status.Error),
+			Phase: string(p.Status.Phase),
+			Error: p.Status.Error,
 		},
 	}
 }
@@ -632,9 +639,10 @@ func ToPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
 func ToPromotionPolicyProto(p kubev1alpha1.PromotionPolicy) *v1alpha1.PromotionPolicy {
 	metadata := p.ObjectMeta.DeepCopy()
 	metadata.SetManagedFields(nil)
+
 	return &v1alpha1.PromotionPolicy{
-		Metadata:            metadata,
-		Stage:               proto.String(p.Stage),
-		EnableAutoPromotion: proto.Bool(p.EnableAutoPromotion),
+		Metadata:            typesmetav1.ToObjectMetaProto(*metadata),
+		Stage:               p.Stage,
+		EnableAutoPromotion: p.EnableAutoPromotion,
 	}
 }

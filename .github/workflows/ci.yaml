@@ -110,10 +110,6 @@ jobs:
       run: go install github.com/bufbuild/buf/cmd/buf@v1.15.1
     - name: Install controller-gen
       run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3
-    - name: Install go-to-protobuf
-      run: |
-        go install k8s.io/code-generator/cmd/go-to-protobuf@v0.27.1
-        go install k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo@v0.27.1
     - name: Run Codegen
       run: make codegen
     - name: Git stuff
