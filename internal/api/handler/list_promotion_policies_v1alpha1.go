@@ -13,19 +13,19 @@ import (
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
-type ListStagesV1Alpha1Func func(
+type ListPromotionPoliciesV1Alpha1Func func(
 	context.Context,
-	*connect.Request[svcv1alpha1.ListStagesRequest],
-) (*connect.Response[svcv1alpha1.ListStagesResponse], error)
+	*connect.Request[svcv1alpha1.ListPromotionPoliciesRequest],
+) (*connect.Response[svcv1alpha1.ListPromotionPoliciesResponse], error)
 
-func ListStagesV1Alpha1(
+func ListPromotionPoliciesV1Alpha1(
 	kc client.Client,
-) ListStagesV1Alpha1Func {
+) ListPromotionPoliciesV1Alpha1Func {
 	validateProject := newProjectValidator(kc)
 	return func(
 		ctx context.Context,
-		req *connect.Request[svcv1alpha1.ListStagesRequest],
-	) (*connect.Response[svcv1alpha1.ListStagesResponse], error) {
+		req *connect.Request[svcv1alpha1.ListPromotionPoliciesRequest],
+	) (*connect.Response[svcv1alpha1.ListPromotionPoliciesResponse], error) {
 		if req.Msg.GetProject() == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
 		}
@@ -33,17 +33,16 @@ func ListStagesV1Alpha1(
 			return nil, err
 		}
 
-		var list kubev1alpha1.StageList
+		var list kubev1alpha1.PromotionPolicyList
 		if err := kc.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-
-		stages := make([]*v1alpha1.Stage, len(list.Items))
-		for idx := range list.Items {
-			stages[idx] = typesv1alpha1.ToStageProto(list.Items[idx])
+		policies := make([]*v1alpha1.PromotionPolicy, len(list.Items))
+		for idx, policy := range list.Items {
+			policies[idx] = typesv1alpha1.ToPromotionPolicyProto(policy)
 		}
-		return connect.NewResponse(&svcv1alpha1.ListStagesResponse{
-			Stages: stages,
+		return connect.NewResponse(&svcv1alpha1.ListPromotionPoliciesResponse{
+			PromotionPolicies: policies,
 		}), nil
 	}
 }

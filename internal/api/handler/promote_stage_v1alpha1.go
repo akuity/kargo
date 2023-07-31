@@ -24,12 +24,19 @@ type PromoteStageV1Alpha1Func func(
 func PromoteStageV1Alpha1(
 	kc client.Client,
 ) PromoteStageV1Alpha1Func {
+	validateProject := newProjectValidator(kc)
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.PromoteStageRequest],
 	) (*connect.Response[svcv1alpha1.PromoteStageResponse], error) {
+		if req.Msg.GetProject() == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
+		}
 		if req.Msg.GetState() == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("state should not be empty"))
+		}
+		if err := validateProject(ctx, req.Msg.GetProject()); err != nil {
+			return nil, err
 		}
 
 		var stage kubev1alpha1.Stage

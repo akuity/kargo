@@ -129,6 +129,41 @@ func (s *server) PromoteStage(
 	return handler.PromoteStageV1Alpha1(s.kc)(ctx, req)
 }
 
+func (s *server) CreatePromotionPolicy(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.CreatePromotionPolicyRequest],
+) (*connect.Response[svcv1alpha1.CreatePromotionPolicyResponse], error) {
+	return handler.CreatePromotionPolicyV1Alpha1(s.kc)(ctx, req)
+}
+
+func (s *server) ListPromotionPolicies(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.ListPromotionPoliciesRequest],
+) (*connect.Response[svcv1alpha1.ListPromotionPoliciesResponse], error) {
+	return handler.ListPromotionPoliciesV1Alpha1(s.kc)(ctx, req)
+}
+
+func (s *server) GetPromotionPolicy(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.GetPromotionPolicyRequest],
+) (*connect.Response[svcv1alpha1.GetPromotionPolicyResponse], error) {
+	return handler.GetPromotionPolicyV1Alpha1(s.kc)(ctx, req)
+}
+
+func (s *server) UpdatePromotionPolicy(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.UpdatePromotionPolicyRequest],
+) (*connect.Response[svcv1alpha1.UpdatePromotionPolicyResponse], error) {
+	return handler.UpdatePromotionPolicyV1Alpha1(s.kc)(ctx, req)
+}
+
+func (s *server) DeletePromotionPolicy(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.DeletePromotionPolicyRequest],
+) (*connect.Response[svcv1alpha1.DeletePromotionPolicyResponse], error) {
+	return handler.DeletePromotionPolicyV1Alpha1(s.kc)(ctx, req)
+}
+
 func (s *server) CreateProject(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreateProjectRequest],

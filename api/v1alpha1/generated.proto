@@ -461,7 +461,7 @@ message PromotionMechanisms {
 message PromotionPolicy {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1 [(gogoproto.customname) = "ObjectMeta", (gogoproto.nullable) = false];
 
-  // Stage references a Stage in the same namespace as this PromotionPolicy to
+  // Stage references a Stage in the same project as this PromotionPolicy to
   // which this PromotionPolicy applies.
   //
   // +kubebuilder:validation:MinLength=1

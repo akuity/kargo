@@ -12,7 +12,7 @@ import (
 type PromotionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Stage references a Stage in the same namespace as this PromotionPolicy to
+	// Stage references a Stage in the same project as this PromotionPolicy to
 	// which this PromotionPolicy applies.
 	//
 	//+kubebuilder:validation:MinLength=1

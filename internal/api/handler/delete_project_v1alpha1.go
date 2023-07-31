@@ -39,7 +39,6 @@ func DeleteProjectV1Alpha1(
 			}
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-
 		if ns.GetLabels()[v1alpha1.LabelProjectKey] != v1alpha1.LabelTrueValue {
 			return nil, connect.NewError(connect.CodeFailedPrecondition,
 				errors.Errorf("namespace %q is not a project", ns.GetName()))

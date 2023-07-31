@@ -628,3 +628,13 @@ func ToPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
 		},
 	}
 }
+
+func ToPromotionPolicyProto(p kubev1alpha1.PromotionPolicy) *v1alpha1.PromotionPolicy {
+	metadata := p.ObjectMeta.DeepCopy()
+	metadata.SetManagedFields(nil)
+	return &v1alpha1.PromotionPolicy{
+		Metadata:            metadata,
+		Stage:               proto.String(p.Stage),
+		EnableAutoPromotion: proto.Bool(p.EnableAutoPromotion),
+	}
+}

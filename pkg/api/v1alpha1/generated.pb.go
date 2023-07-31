@@ -1640,7 +1640,7 @@ type PromotionPolicy struct {
 	unknownFields protoimpl.UnknownFields
 
 	Metadata *v1.ObjectMeta `protobuf:"bytes,1,opt,name=metadata" json:"metadata,omitempty"`
-	// Stage references a Stage in the same namespace as this PromotionPolicy to
+	// Stage references a Stage in the same project as this PromotionPolicy to
 	// which this PromotionPolicy applies.
 	//
 	// +kubebuilder:validation:MinLength=1
