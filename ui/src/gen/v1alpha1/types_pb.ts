@@ -184,9 +184,9 @@ export class ArgoCDKustomize extends Message<ArgoCDKustomize> {
  */
 export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
   /**
-   * @generated from field: string repoURL = 1;
+   * @generated from field: string repo_url = 1;
    */
-  repoURL = "";
+  repoUrl = "";
 
   /**
    * @generated from field: optional string chart = 2;
@@ -216,7 +216,7 @@ export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "chart", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "update_target_revision", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "kustomize", kind: "message", T: ArgoCDKustomize, opt: true },

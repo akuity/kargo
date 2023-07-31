@@ -11,7 +11,7 @@ message FieldsV1 {
 }
 
 message OwnerReference {
-  optional string apiVersion = 5;
+  optional string api_version = 5;
   optional string kind = 1;
   optional string name = 3;
   optional string uid = 4;
@@ -22,10 +22,10 @@ message OwnerReference {
 message ManagedFieldsEntry {
   optional string manager = 1;
   optional string operation = 2;
-  optional string apiVersion = 3;
+  optional string api_version = 3;
   optional google.protobuf.Timestamp time = 4;
-  optional string fieldsType = 6;
-  optional FieldsV1 fieldsV1 = 7;
+  optional string fields_type = 6;
+  optional FieldsV1 fields_v1 = 7;
   optional string subresource = 8;
 }
 
@@ -37,7 +37,7 @@ message ObjectMeta {
   optional string uid = 5;
   optional string resource_version = 6;
   optional int64 generation = 7;
-  optional google.protobuf.Timestamp creationTimestamp = 8;
+  optional google.protobuf.Timestamp creation_timestamp = 8;
   optional google.protobuf.Timestamp deletion_timestamp = 9;
   optional int64 deletion_grace_period_seconds = 10;
   map<string, string> labels = 11;

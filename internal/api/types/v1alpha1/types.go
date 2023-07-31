@@ -220,7 +220,7 @@ func FromArgoCDSourceUpdateProto(u *v1alpha1.ArgoCDSourceUpdate) *kubev1alpha1.A
 		return nil
 	}
 	return &kubev1alpha1.ArgoCDSourceUpdate{
-		RepoURL:              u.GetRepoURL(),
+		RepoURL:              u.GetRepoUrl(),
 		Chart:                u.GetChart(),
 		UpdateTargetRevision: u.GetUpdateTargetRevision(),
 		Kustomize:            FromArgoCDKustomizeProto(u.GetKustomize()),
@@ -524,7 +524,7 @@ func ToArgoCDSourceUpdateProto(a kubev1alpha1.ArgoCDSourceUpdate) *v1alpha1.Argo
 		helm = ToArgoCDHelmProto(*a.Helm)
 	}
 	return &v1alpha1.ArgoCDSourceUpdate{
-		RepoURL:              a.RepoURL,
+		RepoUrl:              a.RepoURL,
 		Chart:                proto.String(a.Chart),
 		UpdateTargetRevision: proto.Bool(a.UpdateTargetRevision),
 		Kustomize:            kustomize,
@@ -639,9 +639,10 @@ func ToPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
 func ToPromotionPolicyProto(p kubev1alpha1.PromotionPolicy) *v1alpha1.PromotionPolicy {
 	metadata := p.ObjectMeta.DeepCopy()
 	metadata.SetManagedFields(nil)
+
 	return &v1alpha1.PromotionPolicy{
-		Metadata:            metadata,
-		Stage:               proto.String(p.Stage),
-		EnableAutoPromotion: proto.Bool(p.EnableAutoPromotion),
+		Metadata:            typesmetav1.ToObjectMetaProto(*metadata),
+		Stage:               p.Stage,
+		EnableAutoPromotion: p.EnableAutoPromotion,
 	}
 }

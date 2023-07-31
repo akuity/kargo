@@ -28,7 +28,7 @@ message ArgoCDKustomize {
 }
 
 message ArgoCDSourceUpdate {
-  string repoURL = 1;
+  string repo_url = 1;
   optional string chart = 2;
   optional bool update_target_revision = 3;
   optional ArgoCDKustomize kustomize = 4;

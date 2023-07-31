@@ -48,7 +48,7 @@ export class FieldsV1 extends Message<FieldsV1> {
  */
 export class OwnerReference extends Message<OwnerReference> {
   /**
-   * @generated from field: optional string apiVersion = 5;
+   * @generated from field: optional string api_version = 5;
    */
   apiVersion?: string;
 
@@ -85,7 +85,7 @@ export class OwnerReference extends Message<OwnerReference> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.metav1.OwnerReference";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 5, name: "apiVersion", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "api_version", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "uid", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -125,7 +125,7 @@ export class ManagedFieldsEntry extends Message<ManagedFieldsEntry> {
   operation?: string;
 
   /**
-   * @generated from field: optional string apiVersion = 3;
+   * @generated from field: optional string api_version = 3;
    */
   apiVersion?: string;
 
@@ -135,12 +135,12 @@ export class ManagedFieldsEntry extends Message<ManagedFieldsEntry> {
   time?: Timestamp;
 
   /**
-   * @generated from field: optional string fieldsType = 6;
+   * @generated from field: optional string fields_type = 6;
    */
   fieldsType?: string;
 
   /**
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.metav1.FieldsV1 fieldsV1 = 7;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.metav1.FieldsV1 fields_v1 = 7;
    */
   fieldsV1?: FieldsV1;
 
@@ -159,10 +159,10 @@ export class ManagedFieldsEntry extends Message<ManagedFieldsEntry> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "manager", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "operation", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "apiVersion", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "api_version", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "time", kind: "message", T: Timestamp, opt: true },
-    { no: 6, name: "fieldsType", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "fieldsV1", kind: "message", T: FieldsV1, opt: true },
+    { no: 6, name: "fields_type", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "fields_v1", kind: "message", T: FieldsV1, opt: true },
     { no: 8, name: "subresource", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
@@ -223,7 +223,7 @@ export class ObjectMeta extends Message<ObjectMeta> {
   generation?: bigint;
 
   /**
-   * @generated from field: optional google.protobuf.Timestamp creationTimestamp = 8;
+   * @generated from field: optional google.protobuf.Timestamp creation_timestamp = 8;
    */
   creationTimestamp?: Timestamp;
 
@@ -277,7 +277,7 @@ export class ObjectMeta extends Message<ObjectMeta> {
     { no: 5, name: "uid", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "resource_version", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "generation", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
-    { no: 8, name: "creationTimestamp", kind: "message", T: Timestamp, opt: true },
+    { no: 8, name: "creation_timestamp", kind: "message", T: Timestamp, opt: true },
     { no: 9, name: "deletion_timestamp", kind: "message", T: Timestamp, opt: true },
     { no: 10, name: "deletion_grace_period_seconds", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 11, name: "labels", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
