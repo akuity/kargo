@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Promotion, PromotionPolicy, Stage, StageSpec } from "../../v1alpha1/generated_pb.js";
+import { Promotion, PromotionPolicy, Stage, StageSpec } from "../../v1alpha1/types_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.TypedStageSpec

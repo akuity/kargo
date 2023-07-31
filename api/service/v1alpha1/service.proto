@@ -6,7 +6,7 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
 
-import "v1alpha1/generated.proto";
+import "v1alpha1/types.proto";
 
 service KargoService {
   rpc CreateStage(CreateStageRequest) returns (CreateStageResponse);

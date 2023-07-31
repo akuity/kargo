@@ -5,13 +5,10 @@ ARG TARGETARCH
 ARG BUF_VERSION=v1.15.1
 ARG CONTROLLER_GEN_VERSION=v0.11.3
 ARG GOLANGCI_LINT_VERSION=1.51.2
-ARG GO_TO_PROTOBUF_VERSION=v0.27.1
 ARG HELM_VERSION=v3.10.0
 
 RUN go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
     && go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} \
-    && go install k8s.io/code-generator/cmd/go-to-protobuf@${GO_TO_PROTOBUF_VERSION} \
-    && go install k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo@${GO_TO_PROTOBUF_VERSION} \
     && cd /usr/local/bin \
     && curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}.tar.gz \
         | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}/golangci-lint --strip-components=1 \
