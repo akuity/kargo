@@ -31,6 +31,7 @@ var (
 
 type ServerConfig struct {
 	OIDCConfig              *oidc.Config
+	AdminConfig             *handler.AdminConfig
 	DexProxyConfig          *dex.ProxyConfig
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
 }
@@ -38,6 +39,10 @@ type ServerConfig struct {
 func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg)
+	if types.MustParseBool(os.GetEnv("ADMIN_ACCOUNT_ENABLED", "false")) {
+		adminCfg := handler.AdminConfigFromEnv()
+		cfg.AdminConfig = &adminCfg
+	}
 	if types.MustParseBool(os.GetEnv("OIDC_ENABLED", "false")) {
 		oidcCfg := oidc.ConfigFromEnv()
 		cfg.OIDCConfig = &oidcCfg
@@ -114,6 +119,9 @@ func (s *server) GetPublicConfig(
 	req *connect.Request[svcv1alpha1.GetPublicConfigRequest],
 ) (*connect.Response[svcv1alpha1.GetPublicConfigResponse], error) {
 	cfg := &svcv1alpha1.GetPublicConfigResponse{}
+	if s.cfg.AdminConfig != nil {
+		cfg.AdminAccountEnabled = true
+	}
 	if s.cfg.OIDCConfig != nil {
 		cfg.OidcConfig = &svcv1alpha1.OIDCConfig{
 			IssuerUrl: s.cfg.OIDCConfig.IssuerURL,
@@ -122,6 +130,13 @@ func (s *server) GetPublicConfig(
 		}
 	}
 	return handler.GetPublicConfigV1Alpha1(cfg)(ctx, req)
+}
+
+func (s *server) AdminLogin(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.AdminLoginRequest],
+) (*connect.Response[svcv1alpha1.AdminLoginResponse], error) {
+	return handler.AdminLoginV1Alpha1(s.cfg.AdminConfig)(ctx, req)
 }
 
 func (s *server) CreateStage(
