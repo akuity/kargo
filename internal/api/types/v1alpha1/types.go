@@ -18,12 +18,12 @@ func FromStageProto(s *v1alpha1.Stage) *kubev1alpha1.Stage {
 	if s.GetStatus() != nil {
 		status = *FromStageStatusProto(s.GetStatus())
 	}
-	var objectMeta metav1.ObjectMeta
+	var objectMeta kubemetav1.ObjectMeta
 	if s.GetMetadata() != nil {
-		objectMeta = *s.GetMetadata()
+		objectMeta = *typesmetav1.FromObjectMetaProto(s.GetMetadata())
 	}
 	return &kubev1alpha1.Stage{
-		TypeMeta: metav1.TypeMeta{
+		TypeMeta: kubemetav1.TypeMeta{
 			APIVersion: kubev1alpha1.GroupVersion.String(),
 			Kind:       "Stage",
 		},
@@ -64,6 +64,11 @@ func FromStageStateProto(s *v1alpha1.StageState) *kubev1alpha1.StageState {
 	if s == nil {
 		return nil
 	}
+	var firstSeen *kubemetav1.Time
+	if s.GetFirstSeen() != nil {
+		fs := kubemetav1.NewTime(s.GetFirstSeen().AsTime())
+		firstSeen = &fs
+	}
 	commits := make([]kubev1alpha1.GitCommit, len(s.GetCommits()))
 	for idx, commit := range s.GetCommits() {
 		commits[idx] = *FromGitCommitProto(commit)
@@ -78,7 +83,7 @@ func FromStageStateProto(s *v1alpha1.StageState) *kubev1alpha1.StageState {
 	}
 	return &kubev1alpha1.StageState{
 		ID:         s.GetId(),
-		FirstSeen:  s.GetFirstSeen(),
+		FirstSeen:  firstSeen,
 		Provenance: s.GetProvenance(),
 		Commits:    commits,
 		Images:     images,
@@ -92,7 +97,7 @@ func FromGitCommitProto(g *v1alpha1.GitCommit) *kubev1alpha1.GitCommit {
 		return nil
 	}
 	return &kubev1alpha1.GitCommit{
-		RepoURL:           g.GetRepoURL(),
+		RepoURL:           g.GetRepoUrl(),
 		ID:                g.GetId(),
 		Branch:            g.GetBranch(),
 		HealthCheckCommit: g.GetHealthCheckCommit(),
@@ -104,7 +109,7 @@ func FromImageProto(i *v1alpha1.Image) *kubev1alpha1.Image {
 		return nil
 	}
 	return &kubev1alpha1.Image{
-		RepoURL: i.GetRepoURL(),
+		RepoURL: i.GetRepoUrl(),
 		Tag:     i.GetTag(),
 	}
 }
@@ -114,7 +119,7 @@ func FromChartProto(c *v1alpha1.Chart) *kubev1alpha1.Chart {
 		return nil
 	}
 	return &kubev1alpha1.Chart{
-		RegistryURL: c.GetRegistryURL(),
+		RegistryURL: c.GetRegistryUrl(),
 		Name:        c.GetName(),
 		Version:     c.GetVersion(),
 	}
