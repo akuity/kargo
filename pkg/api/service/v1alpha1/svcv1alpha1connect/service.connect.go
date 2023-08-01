@@ -36,6 +36,8 @@ const (
 	// KargoServiceGetPublicConfigProcedure is the fully-qualified name of the KargoService's
 	// GetPublicConfig RPC.
 	KargoServiceGetPublicConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetPublicConfig"
+	// KargoServiceAdminLoginProcedure is the fully-qualified name of the KargoService's AdminLogin RPC.
+	KargoServiceAdminLoginProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/AdminLogin"
 	// KargoServiceCreateStageProcedure is the fully-qualified name of the KargoService's CreateStage
 	// RPC.
 	KargoServiceCreateStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateStage"
@@ -81,6 +83,7 @@ const (
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
 type KargoServiceClient interface {
 	GetPublicConfig(context.Context, *connect_go.Request[v1alpha1.GetPublicConfigRequest]) (*connect_go.Response[v1alpha1.GetPublicConfigResponse], error)
+	AdminLogin(context.Context, *connect_go.Request[v1alpha1.AdminLoginRequest]) (*connect_go.Response[v1alpha1.AdminLoginResponse], error)
 	CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect_go.Request[v1alpha1.ListStagesRequest]) (*connect_go.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error)
@@ -110,6 +113,11 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 		getPublicConfig: connect_go.NewClient[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse](
 			httpClient,
 			baseURL+KargoServiceGetPublicConfigProcedure,
+			opts...,
+		),
+		adminLogin: connect_go.NewClient[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse](
+			httpClient,
+			baseURL+KargoServiceAdminLoginProcedure,
 			opts...,
 		),
 		createStage: connect_go.NewClient[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse](
@@ -188,6 +196,7 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 // kargoServiceClient implements KargoServiceClient.
 type kargoServiceClient struct {
 	getPublicConfig       *connect_go.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
+	adminLogin            *connect_go.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
 	createStage           *connect_go.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
 	listStages            *connect_go.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
 	getStage              *connect_go.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
@@ -207,6 +216,11 @@ type kargoServiceClient struct {
 // GetPublicConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig.
 func (c *kargoServiceClient) GetPublicConfig(ctx context.Context, req *connect_go.Request[v1alpha1.GetPublicConfigRequest]) (*connect_go.Response[v1alpha1.GetPublicConfigResponse], error) {
 	return c.getPublicConfig.CallUnary(ctx, req)
+}
+
+// AdminLogin calls akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin.
+func (c *kargoServiceClient) AdminLogin(ctx context.Context, req *connect_go.Request[v1alpha1.AdminLoginRequest]) (*connect_go.Response[v1alpha1.AdminLoginResponse], error) {
+	return c.adminLogin.CallUnary(ctx, req)
 }
 
 // CreateStage calls akuity.io.kargo.service.v1alpha1.KargoService.CreateStage.
@@ -283,6 +297,7 @@ func (c *kargoServiceClient) DeleteProject(ctx context.Context, req *connect_go.
 // service.
 type KargoServiceHandler interface {
 	GetPublicConfig(context.Context, *connect_go.Request[v1alpha1.GetPublicConfigRequest]) (*connect_go.Response[v1alpha1.GetPublicConfigResponse], error)
+	AdminLogin(context.Context, *connect_go.Request[v1alpha1.AdminLoginRequest]) (*connect_go.Response[v1alpha1.AdminLoginResponse], error)
 	CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect_go.Request[v1alpha1.ListStagesRequest]) (*connect_go.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect_go.Request[v1alpha1.GetStageRequest]) (*connect_go.Response[v1alpha1.GetStageResponse], error)
@@ -309,6 +324,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect_go.HandlerO
 	mux.Handle(KargoServiceGetPublicConfigProcedure, connect_go.NewUnaryHandler(
 		KargoServiceGetPublicConfigProcedure,
 		svc.GetPublicConfig,
+		opts...,
+	))
+	mux.Handle(KargoServiceAdminLoginProcedure, connect_go.NewUnaryHandler(
+		KargoServiceAdminLoginProcedure,
+		svc.AdminLogin,
 		opts...,
 	))
 	mux.Handle(KargoServiceCreateStageProcedure, connect_go.NewUnaryHandler(
@@ -389,6 +409,10 @@ type UnimplementedKargoServiceHandler struct{}
 
 func (UnimplementedKargoServiceHandler) GetPublicConfig(context.Context, *connect_go.Request[v1alpha1.GetPublicConfigRequest]) (*connect_go.Response[v1alpha1.GetPublicConfigResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) AdminLogin(context.Context, *connect_go.Request[v1alpha1.AdminLoginRequest]) (*connect_go.Response[v1alpha1.AdminLoginResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error) {
