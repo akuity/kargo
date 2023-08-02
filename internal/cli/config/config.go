@@ -1,0 +1,103 @@
+package config
+
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/adrg/xdg"
+	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
+)
+
+var xdgConfigPath string
+
+func init() {
+	var err error
+	if xdgConfigPath, err =
+		xdg.ConfigFile(filepath.Join("kargo", "config")); err != nil {
+		panic(errors.Wrap(err, "error determining XDG config path"))
+	}
+}
+
+// CLIConfig represents CLI configuration.
+type CLIConfig struct {
+	// APIAddress is the address of the Kargo API server.
+	APIAddress string `json:"apiAddress,omitempty"`
+	// BearerToken is used to authenticate with the Kargo API server. This could
+	// be any of the following:
+	//   1. An identity token issued by an OIDC identity provider
+	//   2. An identity token issued by the Kargo API server itself
+	//   3. An opaque token for the Kubernetes API server that the Kargo API
+	//      server will communicate with
+	// This token will be sent in the Authorization header of all requests to the
+	// Kargo API server. The Kargo API server will ascertain which of the three
+	// cases above applies and will act accordingly.
+	BearerToken string `json:"bearerToken,omitempty"`
+	// RefreshToken, if set, is used to refresh the Token, which must, in such a
+	// case, have been issued by an OIDC identity provider.
+	RefreshToken string `json:"refreshToken,omitempty"`
+}
+
+// LoadCLIConfig loads Kargo CLI configuration from a file in the Kargo home
+// directory.
+func LoadCLIConfig() (CLIConfig, bool, error) {
+	return loadCLIConfig(xdgConfigPath)
+}
+
+func loadCLIConfig(configPath string) (CLIConfig, bool, error) {
+	cfg := CLIConfig{}
+	_, err := os.Stat(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cfg, false, nil
+		}
+		return cfg, false, err
+	}
+	configBytes, err := os.ReadFile(configPath)
+	if err != nil {
+		return cfg, false, errors.Wrapf(
+			err,
+			"error reading configuration file at %s",
+			configPath,
+		)
+	}
+	if err := yaml.Unmarshal(configBytes, &cfg); err != nil {
+		return cfg, false, errors.Wrapf(
+			err,
+			"error parsing configuration file at %s",
+			configPath,
+		)
+	}
+	return cfg, true, nil
+}
+
+// SaveCLIConfig saves Kargo CLI configuration to a file in the Kargo home
+// directory.
+func SaveCLIConfig(config CLIConfig) error {
+	return saveCLIConfig(config, xdgConfigPath)
+}
+
+func saveCLIConfig(config CLIConfig, configPath string) error {
+	configBytes, err := yaml.Marshal(config)
+	if err != nil {
+		return errors.Wrap(err, "error marshaling config")
+	}
+	if err :=
+		os.WriteFile(configPath, configBytes, 0600); err != nil {
+		return errors.Wrapf(err, "error writing to %s", configPath)
+	}
+	return nil
+}
+
+// DeleteCLIConfig deletes the Kargo CLI configuration file from the Kargo home
+// directory.
+func DeleteCLIConfig() error {
+	return deleteCLIConfig(xdgConfigPath)
+}
+
+func deleteCLIConfig(configPath string) error {
+	if err := os.RemoveAll(configPath); err != nil {
+		return errors.Wrap(err, "error deleting configuration")
+	}
+	return nil
+}
