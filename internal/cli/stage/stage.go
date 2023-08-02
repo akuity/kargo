@@ -11,6 +11,8 @@ func NewCommand(opt *option.Option) *cobra.Command {
 		Use:   "stage",
 		Short: "Manage stages",
 	}
+	cmd.AddCommand(newDeleteCommand(opt))
+	cmd.AddCommand(newListCommand(opt))
 	cmd.AddCommand(newPromoteCommand(opt))
 	return cmd
 }
