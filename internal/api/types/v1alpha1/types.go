@@ -10,10 +10,128 @@ import (
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
+func FromStageProto(s *v1alpha1.Stage) *kubev1alpha1.Stage {
+	if s == nil {
+		return nil
+	}
+	var status kubev1alpha1.StageStatus
+	if s.GetStatus() != nil {
+		status = *FromStageStatusProto(s.GetStatus())
+	}
+	var objectMeta kubemetav1.ObjectMeta
+	if s.GetMetadata() != nil {
+		objectMeta = *typesmetav1.FromObjectMetaProto(s.GetMetadata())
+	}
+	return &kubev1alpha1.Stage{
+		TypeMeta: kubemetav1.TypeMeta{
+			APIVersion: kubev1alpha1.GroupVersion.String(),
+			Kind:       "Stage",
+		},
+		ObjectMeta: objectMeta,
+		Spec:       FromStageSpecProto(s.GetSpec()),
+		Status:     status,
+	}
+}
+
 func FromStageSpecProto(s *v1alpha1.StageSpec) *kubev1alpha1.StageSpec {
 	return &kubev1alpha1.StageSpec{
 		Subscriptions:       FromSubscriptionsProto(s.GetSubscriptions()),
 		PromotionMechanisms: FromPromotionMechanismsProto(s.GetPromotionMechanisms()),
+	}
+}
+
+func FromStageStatusProto(s *v1alpha1.StageStatus) *kubev1alpha1.StageStatus {
+	if s == nil {
+		return nil
+	}
+	availableStates := make(kubev1alpha1.StageStateStack, len(s.GetAvailableStates()))
+	for idx, state := range s.GetAvailableStates() {
+		availableStates[idx] = *FromStageStateProto(state)
+	}
+	history := make(kubev1alpha1.StageStateStack, len(s.GetHistory()))
+	for idx, state := range s.GetHistory() {
+		history[idx] = *FromStageStateProto(state)
+	}
+	return &kubev1alpha1.StageStatus{
+		AvailableStates: availableStates,
+		CurrentState:    FromStageStateProto(s.GetCurrentState()),
+		History:         history,
+		Error:           s.GetError(),
+	}
+}
+
+func FromStageStateProto(s *v1alpha1.StageState) *kubev1alpha1.StageState {
+	if s == nil {
+		return nil
+	}
+	var firstSeen *kubemetav1.Time
+	if s.GetFirstSeen() != nil {
+		fs := kubemetav1.NewTime(s.GetFirstSeen().AsTime())
+		firstSeen = &fs
+	}
+	commits := make([]kubev1alpha1.GitCommit, len(s.GetCommits()))
+	for idx, commit := range s.GetCommits() {
+		commits[idx] = *FromGitCommitProto(commit)
+	}
+	images := make([]kubev1alpha1.Image, len(s.GetImages()))
+	for idx, image := range s.GetImages() {
+		images[idx] = *FromImageProto(image)
+	}
+	charts := make([]kubev1alpha1.Chart, len(s.GetCharts()))
+	for idx, chart := range s.GetCharts() {
+		charts[idx] = *FromChartProto(chart)
+	}
+	return &kubev1alpha1.StageState{
+		ID:         s.GetId(),
+		FirstSeen:  firstSeen,
+		Provenance: s.GetProvenance(),
+		Commits:    commits,
+		Images:     images,
+		Charts:     charts,
+		Health:     FromHealthProto(s.GetHealth()),
+	}
+}
+
+func FromGitCommitProto(g *v1alpha1.GitCommit) *kubev1alpha1.GitCommit {
+	if g == nil {
+		return nil
+	}
+	return &kubev1alpha1.GitCommit{
+		RepoURL:           g.GetRepoUrl(),
+		ID:                g.GetId(),
+		Branch:            g.GetBranch(),
+		HealthCheckCommit: g.GetHealthCheckCommit(),
+	}
+}
+
+func FromImageProto(i *v1alpha1.Image) *kubev1alpha1.Image {
+	if i == nil {
+		return nil
+	}
+	return &kubev1alpha1.Image{
+		RepoURL: i.GetRepoUrl(),
+		Tag:     i.GetTag(),
+	}
+}
+
+func FromChartProto(c *v1alpha1.Chart) *kubev1alpha1.Chart {
+	if c == nil {
+		return nil
+	}
+	return &kubev1alpha1.Chart{
+		RegistryURL: c.GetRegistryUrl(),
+		Name:        c.GetName(),
+		Version:     c.GetVersion(),
+	}
+}
+
+func FromHealthProto(h *v1alpha1.Health) *kubev1alpha1.Health {
+	if h == nil {
+		return nil
+	}
+	return &kubev1alpha1.Health{
+		Status: kubev1alpha1.HealthState(h.GetStatus()),
+		Issues: h.GetIssues(),
 	}
 }
 

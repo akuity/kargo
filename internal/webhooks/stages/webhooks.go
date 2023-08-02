@@ -6,19 +6,34 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
+	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/validation"
 )
 
-type webhook struct{}
+var (
+	stageGroupKind = schema.GroupKind{
+		Group: api.GroupVersion.Group,
+		Kind:  "Stage",
+	}
+)
+
+type webhook struct {
+	client client.Client
+}
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := &webhook{}
+	w := &webhook{
+		client: mgr.GetClient(),
+	}
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&api.Stage{}).
 		WithDefaulter(w).
@@ -47,35 +62,50 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 	return nil
 }
 
-func (w *webhook) ValidateCreate(_ context.Context, obj runtime.Object) error {
-	// nolint: forcetypeassert
-	return w.validateCreateOrUpdate(obj.(*api.Stage))
+func (w *webhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	stage := obj.(*api.Stage) // nolint: forcetypeassert
+	if err := w.validateProject(ctx, stage); err != nil {
+		return err
+	}
+	return w.validateCreateOrUpdate(stage)
 }
 
 func (w *webhook) ValidateUpdate(
-	_ context.Context,
+	ctx context.Context,
 	_ runtime.Object,
 	newObj runtime.Object,
 ) error {
-	// nolint: forcetypeassert
-	return w.validateCreateOrUpdate(newObj.(*api.Stage))
+	stage := newObj.(*api.Stage) // nolint: forcetypeassert
+	if err := w.validateProject(ctx, stage); err != nil {
+		return err
+	}
+	return w.validateCreateOrUpdate(stage)
 }
 
-func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
-	// Nothing to validate upon delete
+func (w *webhook) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	stage := obj.(*api.Stage) // nolint: forcetypeassert
+	return w.validateProject(ctx, stage)
+}
+
+func (w *webhook) validateProject(ctx context.Context, stage *api.Stage) error {
+	if err := validation.ValidateProject(ctx, w.client, stage.GetNamespace()); err != nil {
+		if errors.Is(err, validation.ErrProjectNotFound) {
+			return apierrors.NewNotFound(schema.GroupResource{
+				Group:    corev1.SchemeGroupVersion.Group,
+				Resource: "Namespace",
+			}, stage.GetNamespace())
+		}
+		if fErr, ok := err.(*field.Error); ok {
+			return apierrors.NewInvalid(stageGroupKind, stage.GetName(), field.ErrorList{fErr})
+		}
+		return apierrors.NewInternalError(err)
+	}
 	return nil
 }
 
 func (w *webhook) validateCreateOrUpdate(e *api.Stage) error {
 	if errs := w.validateSpec(field.NewPath("spec"), e.Spec); len(errs) > 0 {
-		return apierrors.NewInvalid(
-			schema.GroupKind{
-				Group: api.GroupVersion.Group,
-				Kind:  "Stage",
-			},
-			e.Name,
-			errs,
-		)
+		return apierrors.NewInvalid(stageGroupKind, e.Name, errs)
 	}
 	return nil
 }

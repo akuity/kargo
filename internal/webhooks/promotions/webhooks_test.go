@@ -19,6 +19,9 @@ func TestValidateCreate(t *testing.T) {
 		authorizeFn: func(context.Context, *api.Promotion, string) error {
 			return nil // Always authorize
 		},
+		validateProjectFn: func(context.Context, *api.Promotion) error {
+			return nil // Skip validation
+		},
 	}
 	require.NoError(t, w.ValidateCreate(context.Background(), &api.Promotion{}))
 }
@@ -103,6 +106,9 @@ func TestValidateUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := &webhook{
 				authorizeFn: testCase.authorizeFn,
+				validateProjectFn: func(context.Context, *api.Promotion) error {
+					return nil // Skip validation
+				},
 			}
 			oldPromo, newPromo := testCase.setup()
 			testCase.assertions(
@@ -116,6 +122,9 @@ func TestValidateDelete(t *testing.T) {
 	w := &webhook{
 		authorizeFn: func(context.Context, *api.Promotion, string) error {
 			return nil // Always authorize
+		},
+		validateProjectFn: func(context.Context, *api.Promotion) error {
+			return nil // Skip validation
 		},
 	}
 	require.NoError(t, w.ValidateDelete(context.Background(), &api.Promotion{}))
