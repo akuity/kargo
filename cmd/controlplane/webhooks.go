@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	authzv1 "k8s.io/api/authorization/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -36,11 +37,14 @@ func newWebhooksServerCommand() *cobra.Command {
 			}
 
 			scheme := runtime.NewScheme()
+			if err = corev1.AddToScheme(scheme); err != nil {
+				return errors.Wrap(err, "add corev1 to scheme")
+			}
 			if err = authzv1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "error adding authzv1 to scheme")
+				return errors.Wrap(err, "add authzv1 to scheme")
 			}
 			if err = api.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "error adding Kargo api to scheme")
+				return errors.Wrap(err, "add kargo api to scheme")
 			}
 
 			mgr, err := ctrl.NewManager(
