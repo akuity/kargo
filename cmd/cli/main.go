@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
+
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
 func main() {
-	var opt option.Option
 	ctx := context.Background()
-	cmd, err := NewRootCommand(&opt)
+	cmd, err := NewRootCommand(&option.Option{})
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		_, _ = fmt.Fprintln(os.Stderr, errors.Wrap(err, "new root command"))
 		os.Exit(1)
 	}
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 }
