@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,7 +21,8 @@ func TestExec(t *testing.T) {
 			cmd: exec.Command("expr", "100", "/", "0"),
 			assertions: func(res []byte, err error) {
 				require.Error(t, err)
-				exitErr, ok := err.(*ExitError)
+				var exitErr *ExitError
+				ok := errors.As(err, &exitErr)
 				require.True(t, ok)
 				// Path to expr will be different on Mac and Linux
 				require.True(t, strings.HasSuffix(exitErr.Command, "expr 100 / 0"))
