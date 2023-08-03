@@ -12,6 +12,21 @@ import (
 var xdgConfigPath string
 
 func init() {
+	// If the XDG_CONFIG_HOME env var isn't set, we want to set it ourselves
+	// because we disagree with both Go and the xdg package's interpretation of
+	// what the default config home directory should be on non-*nix systems.
+	configHome := os.Getenv("XDG_CONFIG_HOME")
+	if configHome == "" {
+		userHome, err := os.UserHomeDir()
+		if err != nil {
+			panic(errors.Wrap(err, "error determining user home directory"))
+		}
+		// This is what the spec says the default should be.
+		//
+		// See https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+		os.Setenv("XDG_CONFIG_HOME", filepath.Join(userHome, ".config"))
+		xdg.Reload()
+	}
 	var err error
 	if xdgConfigPath, err =
 		xdg.ConfigFile(filepath.Join("kargo", "config")); err != nil {

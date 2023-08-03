@@ -22,6 +22,7 @@ import (
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	libConfig "github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -76,11 +77,13 @@ func NewCommand() *cobra.Command {
 				)
 			}
 
+			serverAddress := args[0]
+			var bearerToken, refreshToken string
 			if useAdmin {
 				fmt.Print(
 					"\nWARNING: This command initiates authentication as the Kargo " +
-						"admin user, but the resulting ID token is not yet stored or " +
-						"used for any purpose.\n\n",
+						"admin user, but the resulting ID token is not yet used for " +
+						"actual communication with the Kargo API server.\n\n",
 				)
 
 				var password string
@@ -100,30 +103,49 @@ func NewCommand() *cobra.Command {
 					}
 				}
 
-				return adminLogin(ctx, args[0], password)
+				bearerToken, err = adminLogin(ctx, serverAddress, password)
+				if err != nil {
+					return err
+				}
 			} else if useKubeconfig {
 				fmt.Print(
 					"\nWARNING: This command obtains a token from the local Kubernetes " +
-						"configuration's current context, but that token is not yet " +
-						"stored or used for any purpose.\n\n",
+						"configuration's current context, but that token is not yet used " +
+						"for actual communication with the Kargo API server.\n\n",
 				)
 
-				return kubeconfigLogin(ctx)
+				bearerToken, err = kubeconfigLogin(ctx)
+				if err != nil {
+					return err
+				}
+			} else {
+				fmt.Print(
+					"\nWARNING: This command initiates authentication using the " +
+						"specified server's configured OpenID Connect identity provider, " +
+						"but the resulting ID token is not yet used for actual " +
+						"communication with the Kargo API server.\n\n",
+				)
+
+				var callbackPort int
+				callbackPort, err = cmd.Flags().GetInt(flagPort)
+				if err != nil {
+					return err
+				}
+
+				if bearerToken, refreshToken, err =
+					ssoLogin(ctx, serverAddress, callbackPort); err != nil {
+					return err
+				}
 			}
 
-			fmt.Print(
-				"\nWARNING: This command initiates authentication using the " +
-					"specified server's configured OpenID Connect identity provider, " +
-					"but the resulting ID token is not yet stored or used for any " +
-					"purpose.\n\n",
+			err = libConfig.SaveCLIConfig(
+				libConfig.CLIConfig{
+					APIAddress:   serverAddress,
+					BearerToken:  bearerToken,
+					RefreshToken: refreshToken,
+				},
 			)
-
-			callbackPort, err := cmd.Flags().GetInt(flagPort)
-			if err != nil {
-				return err
-			}
-
-			return ssoLogin(ctx, args[0], callbackPort)
+			return errors.Wrap(err, "error persisting configuration")
 		},
 	}
 	cmd.Flags().BoolP(
@@ -164,7 +186,11 @@ func NewCommand() *cobra.Command {
 	return cmd
 }
 
-func adminLogin(ctx context.Context, serverAddress, password string) error {
+func adminLogin(
+	ctx context.Context,
+	serverAddress string,
+	password string,
+) (string, error) {
 	client := svcv1alpha1connect.NewKargoServiceClient(
 		http.DefaultClient,
 		serverAddress,
@@ -175,14 +201,14 @@ func adminLogin(ctx context.Context, serverAddress, password string) error {
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
 	if err != nil {
-		return errors.Wrap(
+		return "", errors.Wrap(
 			err,
 			"error retrieving public configuration from server",
 		)
 	}
 
 	if !cfgRes.Msg.AdminAccountEnabled {
-		return errors.New("server does not support admin user login")
+		return "", errors.New("server does not support admin user login")
 	}
 
 	loginRes, err := client.AdminLogin(
@@ -192,44 +218,34 @@ func adminLogin(ctx context.Context, serverAddress, password string) error {
 		}),
 	)
 	if err != nil {
-		return errors.Wrap(err, "error logging in as admin user")
+		return "", errors.Wrap(err, "error logging in as admin user")
 	}
 
-	idToken := loginRes.Msg.IdToken
-
-	// TODO: Do something more meaningful with the ID token
-	fmt.Printf("ID token: %s\n", idToken)
-
-	return nil
+	return loginRes.Msg.IdToken, nil
 }
 
 // kubeconfigLogin gleans a bearer token from the local kubeconfig's current
 // context.
-func kubeconfigLogin(ctx context.Context) error {
+func kubeconfigLogin(ctx context.Context) (string, error) {
 	restCfg, err := config.GetConfig()
 	if err != nil {
-		return errors.Wrap(err, "error loading kubeconfig")
+		return "", errors.Wrap(err, "error loading kubeconfig")
 	}
 	bearerToken, err := kubeclient.GetCredential(ctx, restCfg)
-	if err != nil {
-		return errors.Wrap(err, "error retrieving bearer token from kubeconfig")
-	}
-
-	// TODO: Do something more meaningful with the bearer token
-	fmt.Printf("Bearer token: %s\n", bearerToken)
-
-	return nil
+	return bearerToken,
+		errors.Wrap(err, "error retrieving bearer token from kubeconfig")
 }
 
 // ssoLogin performs a login using OpenID Connect. It first retrieves
 // non-sensitive configuration from the Kargo API server, then uses that
 // configuration to perform an authorization code flow with PKCE with the
-// identity provider specified by the API server.
+// identity provider specified by the API server. Upon success, it returns
+// the ID token and refresh token.
 func ssoLogin(
 	ctx context.Context,
 	serverAddress string,
 	callbackPort int,
-) error {
+) (string, string, error) {
 	client := svcv1alpha1connect.NewKargoServiceClient(
 		http.DefaultClient,
 		serverAddress,
@@ -240,28 +256,28 @@ func ssoLogin(
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
 	if err != nil {
-		return errors.Wrap(
+		return "", "", errors.Wrap(
 			err,
 			"error retrieving public configuration from server",
 		)
 	}
 
 	if res.Msg.OidcConfig == nil {
-		return errors.New("server does not support OpenID Connect")
+		return "", "", errors.New("server does not support OpenID Connect")
 	}
 
 	scopes := res.Msg.OidcConfig.Scopes
 
 	provider, err := oidc.NewProvider(ctx, res.Msg.OidcConfig.IssuerUrl)
 	if err != nil {
-		return errors.Wrap(err, "error initializing OIDC provider")
+		return "", "", errors.Wrap(err, "error initializing OIDC provider")
 	}
 
 	providerClaims := struct {
 		ScopesSupported []string `json:"scopes_supported"`
 	}{}
 	if err = provider.Claims(&providerClaims); err != nil {
-		return errors.Wrap(err, "error retrieving provider claims")
+		return "", "", errors.Wrap(err, "error retrieving provider claims")
 	}
 	const offlineAccessScope = "offline_access"
 	// If the provider supports the "offline_access" scope, request it so that
@@ -275,7 +291,7 @@ func ssoLogin(
 		fmt.Sprintf("localhost:%d", callbackPort),
 	)
 	if err != nil {
-		return errors.Wrap(err, "error creating callback listener")
+		return "", "", errors.Wrap(err, "error creating callback listener")
 	}
 
 	cfg := oauth2.Config{
@@ -295,7 +311,7 @@ func ssoLogin(
 	// See: https://www.rfc-editor.org/rfc/rfc6749#section-10.10
 	state, err := randString(24)
 	if err != nil {
-		return errors.Wrap(err, "error generating state")
+		return "", "", errors.Wrap(err, "error generating state")
 	}
 
 	codeCh := make(chan string)
@@ -304,7 +320,7 @@ func ssoLogin(
 
 	codeVerifier, codeChallenge, err := createPCKEVerifierAndChallenge()
 	if err != nil {
-		return errors.Wrap(
+		return "", "", errors.Wrap(
 			err,
 			"error creating PCKE code verifier and code challenge",
 		)
@@ -316,20 +332,20 @@ func ssoLogin(
 	)
 
 	if err = browser.Open(url); err != nil {
-		return errors.Wrap(err, "error opening system default browser")
+		return "", "", errors.Wrap(err, "error opening system default browser")
 	}
 
 	var code string
 	select {
 	case code = <-codeCh:
 	case err = <-errCh:
-		return errors.Wrap(err, "error in callback handler")
+		return "", "", errors.Wrap(err, "error in callback handler")
 	case <-time.After(5 * time.Minute):
-		return errors.New(
+		return "", "", errors.New(
 			"timed out waiting for user to complete authentication",
 		)
 	case <-ctx.Done():
-		return ctx.Err()
+		return "", "", ctx.Err()
 	}
 
 	token, err := cfg.Exchange(
@@ -338,18 +354,15 @@ func ssoLogin(
 		oauth2.SetAuthURLParam("code_verifier", codeVerifier),
 	)
 	if err != nil {
-		return errors.Wrap(err, "error exchanging auth code for token")
+		return "", "", errors.Wrap(err, "error exchanging auth code for token")
 	}
 
 	idToken, ok := token.Extra("id_token").(string)
 	if !ok {
-		return errors.New("no id_token in token response")
+		return "", "", errors.New("no id_token in token response")
 	}
 
-	// TODO: Do something more meaningful with these tokens
-	fmt.Printf("ID token: %s\n\nRefresh token: %s\n", idToken, token.RefreshToken)
-
-	return nil
+	return idToken, token.RefreshToken, nil
 }
 
 // receiveAuthCode runs a web server that serves the callback endpoint for
