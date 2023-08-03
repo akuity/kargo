@@ -16,6 +16,14 @@ rules:
     - list
     - watch
 - apiGroups:
+    - kargo.akuity.io
+  resources:
+    - promotionpolicies
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
   - authorization.k8s.io
   resources:
   - subjectaccessreviews

@@ -12,8 +12,9 @@ import (
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
-	"github.com/akuity/kargo/internal/webhooks/promotions"
-	"github.com/akuity/kargo/internal/webhooks/stages"
+	"github.com/akuity/kargo/internal/webhook/promotion"
+	"github.com/akuity/kargo/internal/webhook/promotionpolicy"
+	"github.com/akuity/kargo/internal/webhook/stage"
 )
 
 func newWebhooksServerCommand() *cobra.Command {
@@ -56,19 +57,22 @@ func newWebhooksServerCommand() *cobra.Command {
 				},
 			)
 			if err != nil {
-				return errors.Wrap(err, "error creating webhooks manager")
+				return errors.Wrap(err, "new manager")
 			}
 
-			if err = stages.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "error initializing Stage webhooks")
+			if err = stage.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "setup Stage webhook")
 			}
-			if err = promotions.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "error initializing Promotion webhooks")
+			if err = promotion.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "setup Promotion webhook")
+			}
+			if err = promotionpolicy.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "setup PromotionPolicy webhook")
 			}
 
 			return errors.Wrap(
 				mgr.Start(ctx),
-				"error starting Kargo webhooks manager",
+				"start Kargo webhook manager",
 			)
 		},
 	}

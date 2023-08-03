@@ -1,4 +1,4 @@
-package stages
+package stage
 
 import (
 	"context"
@@ -8,26 +8,26 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestDefault(t *testing.T) {
 	const testNamespace = "fake-namespace"
-	e := &api.Stage{
+	e := &v1alpha1.Stage{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "fake-uat-stage",
 			Namespace: testNamespace,
 		},
-		Spec: &api.StageSpec{
-			Subscriptions: &api.Subscriptions{
-				UpstreamStages: []api.StageSubscription{
+		Spec: &v1alpha1.StageSpec{
+			Subscriptions: &v1alpha1.Subscriptions{
+				UpstreamStages: []v1alpha1.StageSubscription{
 					{
 						Name: "fake-test-stage",
 					},
 				},
 			},
-			PromotionMechanisms: &api.PromotionMechanisms{
-				ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+			PromotionMechanisms: &v1alpha1.PromotionMechanisms{
+				ArgoCDAppUpdates: []v1alpha1.ArgoCDAppUpdate{
 					{
 						AppName: "fake-prod-app",
 					},
@@ -49,30 +49,30 @@ func TestDefault(t *testing.T) {
 func TestValidateSpec(t *testing.T) {
 	testCases := []struct {
 		name       string
-		spec       *api.StageSpec
-		assertions func(*api.StageSpec, field.ErrorList)
+		spec       *v1alpha1.StageSpec
+		assertions func(*v1alpha1.StageSpec, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *api.StageSpec, errs field.ErrorList) {
+			assertions: func(_ *v1alpha1.StageSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 
 		{
 			name: "invalid",
-			spec: &api.StageSpec{
+			spec: &v1alpha1.StageSpec{
 				// Has two conflicting types of subs...
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
-					UpstreamStages: []api.StageSubscription{
+				Subscriptions: &v1alpha1.Subscriptions{
+					Repos: &v1alpha1.RepoSubscriptions{},
+					UpstreamStages: []v1alpha1.StageSubscription{
 						{},
 					},
 				},
 				// Doesn't actually define any mechanisms...
-				PromotionMechanisms: &api.PromotionMechanisms{},
+				PromotionMechanisms: &v1alpha1.PromotionMechanisms{},
 			},
-			assertions: func(spec *api.StageSpec, errs field.ErrorList) {
+			assertions: func(spec *v1alpha1.StageSpec, errs field.ErrorList) {
 				// We really want to see that all underlying errors have been bubbled up
 				// to this level and been aggregated.
 				require.Equal(
@@ -101,12 +101,12 @@ func TestValidateSpec(t *testing.T) {
 
 		{
 			name: "valid",
-			spec: &api.StageSpec{
+			spec: &v1alpha1.StageSpec{
 				// Nil subs and promo mechanisms are caught by declarative validation,
 				// so for the purposes of this test, leaving those completely undefined
 				// should surface no errors.
 			},
-			assertions: func(_ *api.StageSpec, errs field.ErrorList) {
+			assertions: func(_ *v1alpha1.StageSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -128,20 +128,20 @@ func TestValidateSpec(t *testing.T) {
 func TestValidateSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
-		subs       *api.Subscriptions
-		assertions func(*api.Subscriptions, field.ErrorList)
+		subs       *v1alpha1.Subscriptions
+		assertions func(*v1alpha1.Subscriptions, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *api.Subscriptions, errs field.ErrorList) {
+			assertions: func(_ *v1alpha1.Subscriptions, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 
 		{
 			name: "no subscriptions",
-			subs: &api.Subscriptions{},
-			assertions: func(subs *api.Subscriptions, errs field.ErrorList) {
+			subs: &v1alpha1.Subscriptions{},
+			assertions: func(subs *v1alpha1.Subscriptions, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -160,13 +160,13 @@ func TestValidateSubs(t *testing.T) {
 
 		{
 			name: "has repo subs and Stage subs", // Should be "one of"
-			subs: &api.Subscriptions{
-				Repos: &api.RepoSubscriptions{},
-				UpstreamStages: []api.StageSubscription{
+			subs: &v1alpha1.Subscriptions{
+				Repos: &v1alpha1.RepoSubscriptions{},
+				UpstreamStages: []v1alpha1.StageSubscription{
 					{},
 				},
 			},
-			assertions: func(subs *api.Subscriptions, errs field.ErrorList) {
+			assertions: func(subs *v1alpha1.Subscriptions, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -200,20 +200,20 @@ func TestValidateSubs(t *testing.T) {
 func TestValidateRepoSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
-		subs       *api.RepoSubscriptions
-		assertions func(*api.RepoSubscriptions, field.ErrorList)
+		subs       *v1alpha1.RepoSubscriptions
+		assertions func(*v1alpha1.RepoSubscriptions, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *api.RepoSubscriptions, errs field.ErrorList) {
+			assertions: func(_ *v1alpha1.RepoSubscriptions, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 
 		{
 			name: "no subscriptions",
-			subs: &api.RepoSubscriptions{}, // Has no subs
-			assertions: func(subs *api.RepoSubscriptions, errs field.ErrorList) {
+			subs: &v1alpha1.RepoSubscriptions{}, // Has no subs
+			assertions: func(subs *v1alpha1.RepoSubscriptions, errs field.ErrorList) {
 				require.Len(t, errs, 1)
 				require.Equal(
 					t,
@@ -231,20 +231,20 @@ func TestValidateRepoSubs(t *testing.T) {
 
 		{
 			name: "invalid subscriptions",
-			subs: &api.RepoSubscriptions{
-				Images: []api.ImageSubscription{
+			subs: &v1alpha1.RepoSubscriptions{
+				Images: []v1alpha1.ImageSubscription{
 					{
 						SemverConstraint: "bogus",
 						Platform:         "bogus",
 					},
 				},
-				Charts: []api.ChartSubscription{
+				Charts: []v1alpha1.ChartSubscription{
 					{
 						SemverConstraint: "bogus",
 					},
 				},
 			},
-			assertions: func(subs *api.RepoSubscriptions, errs field.ErrorList) {
+			assertions: func(subs *v1alpha1.RepoSubscriptions, errs field.ErrorList) {
 				require.Len(t, errs, 3)
 				require.Equal(
 					t,
@@ -272,12 +272,12 @@ func TestValidateRepoSubs(t *testing.T) {
 
 		{
 			name: "valid",
-			subs: &api.RepoSubscriptions{
-				Images: []api.ImageSubscription{
+			subs: &v1alpha1.RepoSubscriptions{
+				Images: []v1alpha1.ImageSubscription{
 					{},
 				},
 			},
-			assertions: func(subs *api.RepoSubscriptions, errs field.ErrorList) {
+			assertions: func(subs *v1alpha1.RepoSubscriptions, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -296,12 +296,12 @@ func TestValidateRepoSubs(t *testing.T) {
 func TestValidateImageSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        api.ImageSubscription
+		sub        v1alpha1.ImageSubscription
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub: api.ImageSubscription{
+			sub: v1alpha1.ImageSubscription{
 				SemverConstraint: "bogus",
 				Platform:         "bogus",
 			},
@@ -338,7 +338,7 @@ func TestValidateImageSubs(t *testing.T) {
 			testCase.assertions(
 				w.validateImageSubs(
 					field.NewPath("images"),
-					[]api.ImageSubscription{
+					[]v1alpha1.ImageSubscription{
 						testCase.sub,
 					},
 				),
@@ -350,12 +350,12 @@ func TestValidateImageSubs(t *testing.T) {
 func TestValidateImageSub(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        api.ImageSubscription
+		sub        v1alpha1.ImageSubscription
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub: api.ImageSubscription{
+			sub: v1alpha1.ImageSubscription{
 				SemverConstraint: "bogus",
 				Platform:         "bogus",
 			},
@@ -402,12 +402,12 @@ func TestValidateImageSub(t *testing.T) {
 func TestValidateChartSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        api.ChartSubscription
+		sub        v1alpha1.ChartSubscription
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub: api.ChartSubscription{
+			sub: v1alpha1.ChartSubscription{
 				SemverConstraint: "bogus",
 			},
 			assertions: func(errs field.ErrorList) {
@@ -427,7 +427,7 @@ func TestValidateChartSubs(t *testing.T) {
 
 		{
 			name: "valid",
-			sub:  api.ChartSubscription{},
+			sub:  v1alpha1.ChartSubscription{},
 			assertions: func(errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
@@ -439,7 +439,7 @@ func TestValidateChartSubs(t *testing.T) {
 			testCase.assertions(
 				w.validateChartSubs(
 					field.NewPath("charts"),
-					[]api.ChartSubscription{
+					[]v1alpha1.ChartSubscription{
 						testCase.sub,
 					},
 				),
@@ -451,12 +451,12 @@ func TestValidateChartSubs(t *testing.T) {
 func TestValidateChartSub(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        api.ChartSubscription
+		sub        v1alpha1.ChartSubscription
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub: api.ChartSubscription{
+			sub: v1alpha1.ChartSubscription{
 				SemverConstraint: "bogus",
 			},
 			assertions: func(errs field.ErrorList) {
@@ -476,7 +476,7 @@ func TestValidateChartSub(t *testing.T) {
 
 		{
 			name: "valid",
-			sub:  api.ChartSubscription{},
+			sub:  v1alpha1.ChartSubscription{},
 			assertions: func(errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
@@ -498,12 +498,12 @@ func TestValidateChartSub(t *testing.T) {
 func TestValidatePromotionMechanisms(t *testing.T) {
 	testCases := []struct {
 		name       string
-		promoMechs *api.PromotionMechanisms
-		assertions func(*api.PromotionMechanisms, field.ErrorList)
+		promoMechs *v1alpha1.PromotionMechanisms
+		assertions func(*v1alpha1.PromotionMechanisms, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *api.PromotionMechanisms, errs field.ErrorList) {
+			assertions: func(_ *v1alpha1.PromotionMechanisms, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -511,9 +511,9 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 		{
 			name: "invalid",
 			// Does not define any mechanisms
-			promoMechs: &api.PromotionMechanisms{},
+			promoMechs: &v1alpha1.PromotionMechanisms{},
 			assertions: func(
-				promoMechs *api.PromotionMechanisms,
+				promoMechs *v1alpha1.PromotionMechanisms,
 				errs field.ErrorList,
 			) {
 				require.NotNil(t, errs)
@@ -535,14 +535,14 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 
 		{
 			name: "valid",
-			promoMechs: &api.PromotionMechanisms{
-				GitRepoUpdates: []api.GitRepoUpdate{
+			promoMechs: &v1alpha1.PromotionMechanisms{
+				GitRepoUpdates: []v1alpha1.GitRepoUpdate{
 					{
-						Kustomize: &api.KustomizePromotionMechanism{},
+						Kustomize: &v1alpha1.KustomizePromotionMechanism{},
 					},
 				},
 			},
-			assertions: func(_ *api.PromotionMechanisms, errs field.ErrorList) {
+			assertions: func(_ *v1alpha1.PromotionMechanisms, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -564,17 +564,17 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 func TestValidateGitRepoUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
-		update     api.GitRepoUpdate
-		assertions func(api.GitRepoUpdate, field.ErrorList)
+		update     v1alpha1.GitRepoUpdate
+		assertions func(v1alpha1.GitRepoUpdate, field.ErrorList)
 	}{
 		{
 			name: "more than one config management tool specified",
-			update: api.GitRepoUpdate{
-				Bookkeeper: &api.BookkeeperPromotionMechanism{},
-				Kustomize:  &api.KustomizePromotionMechanism{},
-				Helm:       &api.HelmPromotionMechanism{},
+			update: v1alpha1.GitRepoUpdate{
+				Bookkeeper: &v1alpha1.BookkeeperPromotionMechanism{},
+				Kustomize:  &v1alpha1.KustomizePromotionMechanism{},
+				Helm:       &v1alpha1.HelmPromotionMechanism{},
 			},
-			assertions: func(update api.GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(update v1alpha1.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -594,10 +594,10 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 
 		{
 			name: "valid",
-			update: api.GitRepoUpdate{
-				Kustomize: &api.KustomizePromotionMechanism{},
+			update: v1alpha1.GitRepoUpdate{
+				Kustomize: &v1alpha1.KustomizePromotionMechanism{},
 			},
-			assertions: func(_ api.GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(_ v1alpha1.GitRepoUpdate, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -609,7 +609,7 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 				testCase.update,
 				w.validateGitRepoUpdates(
 					field.NewPath("gitRepoUpdates"),
-					[]api.GitRepoUpdate{
+					[]v1alpha1.GitRepoUpdate{
 						testCase.update,
 					},
 				),
@@ -621,17 +621,17 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 func TestValidateGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
-		update     api.GitRepoUpdate
-		assertions func(api.GitRepoUpdate, field.ErrorList)
+		update     v1alpha1.GitRepoUpdate
+		assertions func(v1alpha1.GitRepoUpdate, field.ErrorList)
 	}{
 		{
 			name: "more than one config management tool specified",
-			update: api.GitRepoUpdate{
-				Bookkeeper: &api.BookkeeperPromotionMechanism{},
-				Kustomize:  &api.KustomizePromotionMechanism{},
-				Helm:       &api.HelmPromotionMechanism{},
+			update: v1alpha1.GitRepoUpdate{
+				Bookkeeper: &v1alpha1.BookkeeperPromotionMechanism{},
+				Kustomize:  &v1alpha1.KustomizePromotionMechanism{},
+				Helm:       &v1alpha1.HelmPromotionMechanism{},
 			},
-			assertions: func(update api.GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(update v1alpha1.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -651,10 +651,10 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 
 		{
 			name: "valid",
-			update: api.GitRepoUpdate{
-				Kustomize: &api.KustomizePromotionMechanism{},
+			update: v1alpha1.GitRepoUpdate{
+				Kustomize: &v1alpha1.KustomizePromotionMechanism{},
 			},
-			assertions: func(_ api.GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(_ v1alpha1.GitRepoUpdate, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -676,12 +676,12 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 func TestValidateHelmPromotionMechanism(t *testing.T) {
 	testCases := []struct {
 		name       string
-		promoMech  *api.HelmPromotionMechanism
-		assertions func(*api.HelmPromotionMechanism, field.ErrorList)
+		promoMech  *v1alpha1.HelmPromotionMechanism
+		assertions func(*v1alpha1.HelmPromotionMechanism, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *api.HelmPromotionMechanism, errs field.ErrorList) {
+			assertions: func(_ *v1alpha1.HelmPromotionMechanism, errs field.ErrorList) {
 				require.Empty(t, errs)
 			},
 		},
@@ -689,9 +689,9 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 		{
 			name: "invalid",
 			// Doesn't define any changes
-			promoMech: &api.HelmPromotionMechanism{},
+			promoMech: &v1alpha1.HelmPromotionMechanism{},
 			assertions: func(
-				promoMech *api.HelmPromotionMechanism,
+				promoMech *v1alpha1.HelmPromotionMechanism,
 				errs field.ErrorList,
 			) {
 				require.Equal(
@@ -712,12 +712,12 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 
 		{
 			name: "valid",
-			promoMech: &api.HelmPromotionMechanism{
-				Images: []api.HelmImageUpdate{
+			promoMech: &v1alpha1.HelmPromotionMechanism{
+				Images: []v1alpha1.HelmImageUpdate{
 					{},
 				},
 			},
-			assertions: func(_ *api.HelmPromotionMechanism, errs field.ErrorList) {
+			assertions: func(_ *v1alpha1.HelmPromotionMechanism, errs field.ErrorList) {
 				require.Empty(t, errs)
 			},
 		},

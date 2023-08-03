@@ -1,4 +1,4 @@
-package promotions
+package promotion
 
 import (
 	"context"
@@ -14,18 +14,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/validation"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 var (
 	promotionGroupKind = schema.GroupKind{
-		Group: api.GroupVersion.Group,
+		Group: v1alpha1.GroupVersion.Group,
 		Kind:  "Promotion",
 	}
 	promotionGroupResource = schema.GroupResource{
-		Group:    api.GroupVersion.Group,
+		Group:    v1alpha1.GroupVersion.Group,
 		Resource: "Promotion",
 	}
 )
@@ -37,7 +37,7 @@ type webhook struct {
 
 	authorizeFn func(
 		ctx context.Context,
-		promo *api.Promotion,
+		promo *v1alpha1.Promotion,
 		action string,
 	) error
 
@@ -49,7 +49,7 @@ type webhook struct {
 		...client.CreateOption,
 	) error
 
-	validateProjectFn func(context.Context, *api.Promotion) error
+	validateProjectFn func(context.Context, *v1alpha1.Promotion) error
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -61,7 +61,7 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w.createSubjectAccessReviewFn = w.client.Create
 	w.validateProjectFn = w.validateProject
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&api.Promotion{}).
+		For(&v1alpha1.Promotion{}).
 		WithValidator(w).
 		Complete()
 }
@@ -70,7 +70,7 @@ func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
 ) error {
-	promo := obj.(*api.Promotion) // nolint: forcetypeassert
+	promo := obj.(*v1alpha1.Promotion) // nolint: forcetypeassert
 	if err := w.validateProjectFn(ctx, promo); err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (w *webhook) ValidateUpdate(
 	oldObj runtime.Object,
 	newObj runtime.Object,
 ) error {
-	promo := newObj.(*api.Promotion) // nolint: forcetypeassert
+	promo := newObj.(*v1alpha1.Promotion) // nolint: forcetypeassert
 	if err := w.validateProjectFn(ctx, promo); err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (w *webhook) ValidateUpdate(
 	}
 
 	// PromotionSpecs are meant to be immutable
-	if *promo.Spec != *(oldObj.(*api.Promotion).Spec) { // nolint: forcetypeassert
+	if *promo.Spec != *(oldObj.(*v1alpha1.Promotion).Spec) { // nolint: forcetypeassert
 		return apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,
@@ -111,7 +111,7 @@ func (w *webhook) ValidateDelete(
 	ctx context.Context,
 	obj runtime.Object,
 ) error {
-	promo := obj.(*api.Promotion) // nolint: forcetypeassert
+	promo := obj.(*v1alpha1.Promotion) // nolint: forcetypeassert
 	if err := w.validateProjectFn(ctx, promo); err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (w *webhook) ValidateDelete(
 
 func (w *webhook) authorize(
 	ctx context.Context,
-	promo *api.Promotion,
+	promo *v1alpha1.Promotion,
 	action string,
 ) error {
 	logger := logging.LoggerFromContext(ctx)
@@ -144,7 +144,7 @@ func (w *webhook) authorize(
 			User:   req.UserInfo.Username,
 			Groups: req.UserInfo.Groups,
 			ResourceAttributes: &authzv1.ResourceAttributes{
-				Group:     api.GroupVersion.Group,
+				Group:     v1alpha1.GroupVersion.Group,
 				Resource:  "stages",
 				Name:      promo.Spec.Stage,
 				Verb:      "promote",
@@ -180,7 +180,7 @@ func (w *webhook) authorize(
 	return nil
 }
 
-func (w *webhook) validateProject(ctx context.Context, promo *api.Promotion) error {
+func (w *webhook) validateProject(ctx context.Context, promo *v1alpha1.Promotion) error {
 	if err := validation.ValidateProject(ctx, w.client, promo.GetNamespace()); err != nil {
 		if errors.Is(err, validation.ErrProjectNotFound) {
 			return apierrors.NewNotFound(schema.GroupResource{

@@ -1,4 +1,4 @@
-package stages
+package stage
 
 import (
 	"context"
@@ -15,13 +15,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/validation"
 )
 
 var (
 	stageGroupKind = schema.GroupKind{
-		Group: api.GroupVersion.Group,
+		Group: v1alpha1.GroupVersion.Group,
 		Kind:  "Stage",
 	}
 )
@@ -35,14 +35,14 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		client: mgr.GetClient(),
 	}
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&api.Stage{}).
+		For(&v1alpha1.Stage{}).
 		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
 }
 
 func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
-	stage := obj.(*api.Stage) // nolint: forcetypeassert
+	stage := obj.(*v1alpha1.Stage) // nolint: forcetypeassert
 	// Note that defaults are applied BEFORE validation, so we do not have the
 	// luxury of assuming certain required fields must be non-nil.
 	if stage.Spec != nil {
@@ -63,7 +63,7 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 }
 
 func (w *webhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	stage := obj.(*api.Stage) // nolint: forcetypeassert
+	stage := obj.(*v1alpha1.Stage) // nolint: forcetypeassert
 	if err := w.validateProject(ctx, stage); err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (w *webhook) ValidateUpdate(
 	_ runtime.Object,
 	newObj runtime.Object,
 ) error {
-	stage := newObj.(*api.Stage) // nolint: forcetypeassert
+	stage := newObj.(*v1alpha1.Stage) // nolint: forcetypeassert
 	if err := w.validateProject(ctx, stage); err != nil {
 		return err
 	}
@@ -83,11 +83,11 @@ func (w *webhook) ValidateUpdate(
 }
 
 func (w *webhook) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	stage := obj.(*api.Stage) // nolint: forcetypeassert
+	stage := obj.(*v1alpha1.Stage) // nolint: forcetypeassert
 	return w.validateProject(ctx, stage)
 }
 
-func (w *webhook) validateProject(ctx context.Context, stage *api.Stage) error {
+func (w *webhook) validateProject(ctx context.Context, stage *v1alpha1.Stage) error {
 	if err := validation.ValidateProject(ctx, w.client, stage.GetNamespace()); err != nil {
 		if errors.Is(err, validation.ErrProjectNotFound) {
 			return apierrors.NewNotFound(schema.GroupResource{
@@ -104,7 +104,7 @@ func (w *webhook) validateProject(ctx context.Context, stage *api.Stage) error {
 	return nil
 }
 
-func (w *webhook) validateCreateOrUpdate(e *api.Stage) error {
+func (w *webhook) validateCreateOrUpdate(e *v1alpha1.Stage) error {
 	if errs := w.validateSpec(field.NewPath("spec"), e.Spec); len(errs) > 0 {
 		return apierrors.NewInvalid(stageGroupKind, e.Name, errs)
 	}
@@ -113,7 +113,7 @@ func (w *webhook) validateCreateOrUpdate(e *api.Stage) error {
 
 func (w *webhook) validateSpec(
 	f *field.Path,
-	spec *api.StageSpec,
+	spec *v1alpha1.StageSpec,
 ) field.ErrorList {
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
@@ -129,7 +129,7 @@ func (w *webhook) validateSpec(
 
 func (w *webhook) validateSubs(
 	f *field.Path,
-	subs *api.Subscriptions,
+	subs *v1alpha1.Subscriptions,
 ) field.ErrorList {
 	if subs == nil { // nil subs is caught by declarative validations
 		return nil
@@ -154,7 +154,7 @@ func (w *webhook) validateSubs(
 
 func (w *webhook) validateRepoSubs(
 	f *field.Path,
-	subs *api.RepoSubscriptions,
+	subs *v1alpha1.RepoSubscriptions,
 ) field.ErrorList {
 	if subs == nil {
 		return nil
@@ -180,7 +180,7 @@ func (w *webhook) validateRepoSubs(
 
 func (w *webhook) validateImageSubs(
 	f *field.Path,
-	subs []api.ImageSubscription,
+	subs []v1alpha1.ImageSubscription,
 ) field.ErrorList {
 	var errs field.ErrorList
 	for i, sub := range subs {
@@ -191,7 +191,7 @@ func (w *webhook) validateImageSubs(
 
 func (w *webhook) validateImageSub(
 	f *field.Path,
-	sub api.ImageSubscription,
+	sub v1alpha1.ImageSubscription,
 ) field.ErrorList {
 	var errs field.ErrorList
 	if err := validateSemverConstraint(
@@ -210,7 +210,7 @@ func (w *webhook) validateImageSub(
 
 func (w *webhook) validateChartSubs(
 	f *field.Path,
-	subs []api.ChartSubscription,
+	subs []v1alpha1.ChartSubscription,
 ) field.ErrorList {
 	var errs field.ErrorList
 	for i, sub := range subs {
@@ -221,7 +221,7 @@ func (w *webhook) validateChartSubs(
 
 func (w *webhook) validateChartSub(
 	f *field.Path,
-	sub api.ChartSubscription,
+	sub v1alpha1.ChartSubscription,
 ) field.ErrorList {
 	if err := validateSemverConstraint(
 		f.Child("semverConstraint"),
@@ -234,7 +234,7 @@ func (w *webhook) validateChartSub(
 
 func (w *webhook) validatePromotionMechanisms(
 	f *field.Path,
-	promoMechs *api.PromotionMechanisms,
+	promoMechs *v1alpha1.PromotionMechanisms,
 ) field.ErrorList {
 	if promoMechs == nil { // nil promoMechs is caught by declarative validations
 		return nil
@@ -263,7 +263,7 @@ func (w *webhook) validatePromotionMechanisms(
 
 func (w *webhook) validateGitRepoUpdates(
 	f *field.Path,
-	updates []api.GitRepoUpdate,
+	updates []v1alpha1.GitRepoUpdate,
 ) field.ErrorList {
 	var errs field.ErrorList
 	for i, update := range updates {
@@ -274,7 +274,7 @@ func (w *webhook) validateGitRepoUpdates(
 
 func (w *webhook) validateGitRepoUpdate(
 	f *field.Path,
-	update api.GitRepoUpdate,
+	update v1alpha1.GitRepoUpdate,
 ) field.ErrorList {
 	var count int
 	if update.Bookkeeper != nil {
@@ -306,7 +306,7 @@ func (w *webhook) validateGitRepoUpdate(
 
 func (w *webhook) validateHelmPromotionMechanism(
 	f *field.Path,
-	promoMech *api.HelmPromotionMechanism,
+	promoMech *v1alpha1.HelmPromotionMechanism,
 ) field.ErrorList {
 	if promoMech == nil {
 		return nil
