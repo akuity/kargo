@@ -95,8 +95,9 @@ func (w *webhook) validateProject(ctx context.Context, stage *api.Stage) error {
 				Resource: "Namespace",
 			}, stage.GetNamespace())
 		}
-		if fErr, ok := err.(*field.Error); ok {
-			return apierrors.NewInvalid(stageGroupKind, stage.GetName(), field.ErrorList{fErr})
+		var fieldErr *field.Error
+		if ok := errors.As(err, &fieldErr); ok {
+			return apierrors.NewInvalid(stageGroupKind, stage.GetName(), field.ErrorList{fieldErr})
 		}
 		return apierrors.NewInternalError(err)
 	}

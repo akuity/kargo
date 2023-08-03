@@ -19,7 +19,8 @@ func newProjectValidator(kc client.Client) projectValidatorFunc {
 			if errors.Is(err, validation.ErrProjectNotFound) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			if _, ok := err.(*field.Error); ok {
+			var fieldErr *field.Error
+			if ok := errors.As(err, &fieldErr); ok {
 				return connect.NewError(connect.CodeInvalidArgument, err)
 			}
 			return connect.NewError(connect.CodeInternal, err)
