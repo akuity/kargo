@@ -84,7 +84,7 @@ func (w *webhook) validateProject(ctx context.Context, policy *api.PromotionPoli
 
 func (w *webhook) validateStageUniqueness(ctx context.Context, policy *api.PromotionPolicy) error {
 	var list api.PromotionPolicyList
-	if err := w.client.List(ctx, &list); err != nil {
+	if err := w.client.List(ctx, &list, client.InNamespace(policy.GetNamespace())); err != nil {
 		return apierrors.NewInternalError(errors.Wrap(err, "list promotion policies"))
 	}
 	for _, ep := range list.Items {
