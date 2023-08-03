@@ -13,17 +13,17 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
+	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/validation"
 )
 
 var (
 	promotionPolicyGroupKind = schema.GroupKind{
-		Group: v1alpha1.GroupVersion.Group,
+		Group: api.GroupVersion.Group,
 		Kind:  "PromotionPolicy",
 	}
 	promotionPolicyGroupResource = schema.GroupResource{
-		Group:    v1alpha1.GroupVersion.Group,
+		Group:    api.GroupVersion.Group,
 		Resource: "PromotionPolicy",
 	}
 )
@@ -34,7 +34,7 @@ type webhook struct {
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&v1alpha1.PromotionPolicy{}).
+		For(&api.PromotionPolicy{}).
 		WithValidator(&webhook{
 			client: mgr.GetClient(),
 		}).
@@ -42,7 +42,7 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 func (w *webhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	policy := obj.(*v1alpha1.PromotionPolicy) // nolint: forcetypeassert
+	policy := obj.(*api.PromotionPolicy) // nolint: forcetypeassert
 	if err := w.validateProject(ctx, policy); err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (w *webhook) ValidateCreate(ctx context.Context, obj runtime.Object) error 
 }
 
 func (w *webhook) ValidateUpdate(ctx context.Context, _ runtime.Object, newObj runtime.Object) error {
-	policy := newObj.(*v1alpha1.PromotionPolicy) // nolint: forcetypeassert
+	policy := newObj.(*api.PromotionPolicy) // nolint: forcetypeassert
 	if err := w.validateProject(ctx, policy); err != nil {
 		return err
 	}
@@ -61,11 +61,11 @@ func (w *webhook) ValidateDelete(
 	ctx context.Context,
 	obj runtime.Object,
 ) error {
-	policy := obj.(*v1alpha1.PromotionPolicy) // nolint: forcetypeassert
+	policy := obj.(*api.PromotionPolicy) // nolint: forcetypeassert
 	return w.validateProject(ctx, policy)
 }
 
-func (w *webhook) validateProject(ctx context.Context, policy *v1alpha1.PromotionPolicy) error {
+func (w *webhook) validateProject(ctx context.Context, policy *api.PromotionPolicy) error {
 	if err := validation.ValidateProject(ctx, w.client, policy.GetNamespace()); err != nil {
 		if errors.Is(err, validation.ErrProjectNotFound) {
 			return apierrors.NewNotFound(schema.GroupResource{
@@ -82,8 +82,8 @@ func (w *webhook) validateProject(ctx context.Context, policy *v1alpha1.Promotio
 	return nil
 }
 
-func (w *webhook) validateStageUniqueness(ctx context.Context, policy *v1alpha1.PromotionPolicy) error {
-	var list v1alpha1.PromotionPolicyList
+func (w *webhook) validateStageUniqueness(ctx context.Context, policy *api.PromotionPolicy) error {
+	var list api.PromotionPolicyList
 	if err := w.client.List(ctx, &list); err != nil {
 		return apierrors.NewInternalError(errors.Wrap(err, "list promotion policies"))
 	}
