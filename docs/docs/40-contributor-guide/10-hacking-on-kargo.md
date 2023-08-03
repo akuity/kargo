@@ -191,19 +191,18 @@ installed, you can be up and running with just a few commands!
    altered. They can be rebuilt and replaced with a single click.
    :::
 
-   :::info
-   To be able to use cli locally, in case you want to test or contribute to the development, you will have to:
+1. Build executable cli to test locally:
 
    ```shell
-   cd cmd/cli
-   go build -o kargo
+   make hack-build-cli
    ```
-   After that you can run:
+
+   Then:
    
    ```shell
+   cd cmd/cli
    ./kargo <option> --local-server
    ```
-   :::
 
 1. When you are done with Tilt, interrupt the running `tilt up` process with
    `ctrl + c`. Components _will remain running in the cluster_, but Tilt will no
