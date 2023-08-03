@@ -1,0 +1,13 @@
+{{- if and .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled .Values.api.oidc.dex.tls.selfSignedCert }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "kargo.dexServer.fullname" . }}
+spec:
+  dnsNames:
+  - {{ include "kargo.dexServer.fullname" . }}.{{ .Release.Namespace }}.svc
+  issuerRef:
+    kind: Issuer
+    name: {{ include "kargo.fullname" . }}-selfsigned-cert-issuer
+  secretName: {{ include "kargo.dexServer.fullname" . }}-cert
+{{- end }}

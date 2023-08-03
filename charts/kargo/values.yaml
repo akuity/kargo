@@ -36,16 +36,121 @@ kubeconfigSecrets: {}
   # kargo:
   # argocd:
 
-## All settings for the api component
+## All settings for the api component.
 api:
 
   ## Whether the API server is enabled.
+  ##
+  ## All other settings in this section will be ignored when this is set to
+  ## false.
   enabled: true
 
   ## The number of API server pods. (Default: 1)
   # replicas: 3
 
+  ## The protocol and domain name where Kargo's API server will be accessible.
+  ## This should be set accurately for a variety of reasons, including (when
+  ## applicable) generation of correct OpenID Connect issuer and callback URLs.
+  address: http://localhost
+
   logLevel: INFO
+
+  ## All settings related to enabling OpenID Connect as an authentication
+  ## method.
+  oidc:
+
+    ## Whether to enable authentication using Open ID Connect.
+    ##
+    ## All other settings in this section will be ignored when this is set to
+    ## false.
+    enabled: false
+    
+    ## The issuer URL for the identity provider.
+    ##
+    ## If Dex is enabled, this value will be ignored and the issuer URL will be
+    ## automatically configured.
+    ##
+    ## If Dex is not enabled, this should be set to the issuer URL provided to
+    ## you by your identity provider.
+    issuerURL: <issuer URL>
+
+    ## The client ID for the OIDC client.
+    ## 
+    ## If Dex is enabled, this value will be ignored and the client ID will be
+    ## automatically configured.
+    ##
+    ## If Dex is not enabled, this should be set to the client ID provided to
+    ## you by your identity provider.
+    clientID: <client ID>
+
+    dex:
+
+      ## Whether to enable Dex as the identity provider.
+      ##
+      ## When set to true, the Kargo installation will include a Dex server and
+      ## the Kargo API server will be configured to make the /dex endpoint
+      ## a reverse proxy for the Dex server.
+      ##
+      ## All other settings in this section will be ignored when this is set to
+      ## false.
+      enabled: false
+
+      image: 
+        repository: ghcr.io/dexidp/dex
+        tag: v2.37.0
+        pullPolicy: IfNotPresent
+
+      tls:
+        ## Whether to generate a self-signed certificate for the Dex server.
+        ##
+        ## If true, cert-manager CRDs MUST be pre-installed on this cluster.
+        ## Kargo will create and use its own namespaced issuer.
+        ##
+        ## If false, a cert secret named <Helm release name>-dex-server-cert
+        ## MUST be provided in the same namespace as Kargo.
+        ##
+        ## There is no provision for running Dex without TLS.
+        selfSignedCert: true
+
+      ## Configure Dex connectors to one or more upstream identity providers.
+      ## See https://dexidp.io/docs/connectors/ for more information.
+      connectors:
+      - id: mock
+        name: Example
+        type: mockCallback
+      ## Google Example
+      # - id: google
+      #   name: Google
+      #   type: google
+      #   config:
+      #     clientID: <your client ID>
+      #     clientSecret: <your client secret>
+      #     redirectURI: <Kargo API server address>/dex/callback
+      ## GitHub Example
+      # - id: github
+      #   name: GitHub
+      #   type: github  
+      #   config:
+      #     clientID: <your client ID>
+      #     clientSecret: <your client secret>
+      #     redirectURI: <Kargo API server address>/dex/callback
+
+      resources: {}
+        # We usually recommend not to specify default resources and to leave
+        # this as a conscious choice for the user. This also increases chances
+        # charts run on environments with little resources, such as KinD. If you
+        # do want to specify resources, uncomment the following lines, adjust
+        # them as necessary, and remove the curly braces after 'resources:'.
+        # limits:
+        #   cpu: 100m
+        #   memory: 128Mi
+        # requests:
+        #   cpu: 100m
+        #   memory: 128Mi
+
+      nodeSelector: {}
+
+      tolerations: []
 
   resources: {}
     # We usually recommend not to specify default resources and to leave this as

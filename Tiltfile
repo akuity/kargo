@@ -67,6 +67,17 @@ k8s_resource(
 )
 
 k8s_resource(
+  workload = 'kargo-dex-server',
+  new_name = 'dex-server',
+  labels = ['kargo'],
+  objects = [
+    'kargo-dex-server:serviceaccount',
+    'kargo-dex-server:configmap',
+    'kargo-dex-server:certificate'
+  ]
+)
+
+k8s_resource(
   workload = 'kargo-garbage-collector',
   new_name = 'garbage-collector',
   labels = ['kargo'],
@@ -110,6 +121,9 @@ k8s_yaml(
     namespace = 'kargo',
     set = [
       'api.logLevel=DEBUG',
+      'api.address=http://localhost:30081',
+      'api.oidc.enabled=true',
+      'api.oidc.dex.enabled=true',
       'api-proxy.logLevel=DEBUG',
       'controller.logLevel=DEBUG'
     ]

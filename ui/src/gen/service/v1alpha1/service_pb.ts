@@ -8,6 +8,123 @@ import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Promotion, PromotionPolicy, Stage, StageSpec } from "../../v1alpha1/types_pb.js";
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
+ */
+export class GetPublicConfigRequest extends Message<GetPublicConfigRequest> {
+  constructor(data?: PartialMessage<GetPublicConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPublicConfigRequest {
+    return new GetPublicConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPublicConfigRequest {
+    return new GetPublicConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPublicConfigRequest {
+    return new GetPublicConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPublicConfigRequest | PlainMessage<GetPublicConfigRequest> | undefined, b: GetPublicConfigRequest | PlainMessage<GetPublicConfigRequest> | undefined): boolean {
+    return proto3.util.equals(GetPublicConfigRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
+ */
+export class GetPublicConfigResponse extends Message<GetPublicConfigResponse> {
+  /**
+   * @generated from field: akuity.io.kargo.service.v1alpha1.OIDCConfig oidc_config = 1;
+   */
+  oidcConfig?: OIDCConfig;
+
+  constructor(data?: PartialMessage<GetPublicConfigResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "oidc_config", kind: "message", T: OIDCConfig },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPublicConfigResponse {
+    return new GetPublicConfigResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPublicConfigResponse {
+    return new GetPublicConfigResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPublicConfigResponse {
+    return new GetPublicConfigResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPublicConfigResponse | PlainMessage<GetPublicConfigResponse> | undefined, b: GetPublicConfigResponse | PlainMessage<GetPublicConfigResponse> | undefined): boolean {
+    return proto3.util.equals(GetPublicConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.OIDCConfig
+ */
+export class OIDCConfig extends Message<OIDCConfig> {
+  /**
+   * @generated from field: string issuer_url = 1;
+   */
+  issuerUrl = "";
+
+  /**
+   * @generated from field: string client_id = 2;
+   */
+  clientId = "";
+
+  /**
+   * @generated from field: repeated string scopes = 3;
+   */
+  scopes: string[] = [];
+
+  constructor(data?: PartialMessage<OIDCConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.OIDCConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "issuer_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "client_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "scopes", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OIDCConfig {
+    return new OIDCConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OIDCConfig {
+    return new OIDCConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OIDCConfig {
+    return new OIDCConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OIDCConfig | PlainMessage<OIDCConfig> | undefined, b: OIDCConfig | PlainMessage<OIDCConfig> | undefined): boolean {
+    return proto3.util.equals(OIDCConfig, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.TypedStageSpec
  */
 export class TypedStageSpec extends Message<TypedStageSpec> {

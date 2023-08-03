@@ -14,9 +14,13 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/akuity/kargo/internal/api/dex"
 	"github.com/akuity/kargo/internal/api/handler"
+	"github.com/akuity/kargo/internal/api/oidc"
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/types"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -26,12 +30,22 @@ var (
 )
 
 type ServerConfig struct {
+	OIDCConfig              *oidc.Config
+	DexProxyConfig          *dex.ProxyConfig
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
 }
 
 func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg)
+	if types.MustParseBool(os.GetEnv("OIDC_ENABLED", "false")) {
+		oidcCfg := oidc.ConfigFromEnv()
+		cfg.OIDCConfig = &oidcCfg
+	}
+	if types.MustParseBool(os.GetEnv("DEX_ENABLED", "false")) {
+		dexProxyCfg := dex.ProxyConfigFromEnv()
+		cfg.DexProxyConfig = &dexProxyCfg
+	}
 	return cfg
 }
 
@@ -63,6 +77,14 @@ func (s *server) Serve(
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
+	if s.cfg.DexProxyConfig != nil {
+		dexProxyCfg := dex.ProxyConfigFromEnv()
+		dexProxy, err := dex.NewProxy(dexProxyCfg)
+		if err != nil {
+			return errors.Wrap(err, "error initializing dex proxy")
+		}
+		mux.Handle("/dex/", dexProxy)
+	}
 
 	srv := &http.Server{
 		Handler:           h2c.NewHandler(mux, &http2.Server{}),
@@ -85,6 +107,21 @@ func (s *server) Serve(
 		}
 		return err
 	}
+}
+
+func (s *server) GetPublicConfig(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.GetPublicConfigRequest],
+) (*connect.Response[svcv1alpha1.GetPublicConfigResponse], error) {
+	cfg := &svcv1alpha1.GetPublicConfigResponse{}
+	if s.cfg.OIDCConfig != nil {
+		cfg.OidcConfig = &svcv1alpha1.OIDCConfig{
+			IssuerUrl: s.cfg.OIDCConfig.IssuerURL,
+			ClientId:  s.cfg.OIDCConfig.ClientID,
+			Scopes:    s.cfg.OIDCConfig.Scopes,
+		}
+	}
+	return handler.GetPublicConfigV1Alpha1(cfg)(ctx, req)
 }
 
 func (s *server) CreateStage(
