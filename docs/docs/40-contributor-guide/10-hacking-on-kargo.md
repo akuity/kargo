@@ -191,7 +191,7 @@ installed, you can be up and running with just a few commands!
    altered. They can be rebuilt and replaced with a single click.
    :::
 
-1. Build executable cli to test locally:
+1. Build executable CLI to test locally:
 
    ```shell
    make hack-build-cli

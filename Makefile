@@ -122,7 +122,7 @@ hack-build:
 
 .PHONY: hack-build-cli
 hack-build-cli:
-	go build -C cmd/cli -o kargo
+	go build -C cmd/cli -o bin/kargo
 
 .PHONY: hack-kind-up
 hack-kind-up:
