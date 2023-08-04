@@ -62,6 +62,9 @@ func newAPICommand() *cobra.Command {
 
 			cfg := api.ServerConfigFromEnv()
 
+			if cfg.AdminConfig != nil {
+				log.Info("admin account is enabled")
+			}
 			if cfg.OIDCConfig != nil {
 				log.WithFields(log.Fields{
 					"issuerURL": cfg.OIDCConfig.IssuerURL,
