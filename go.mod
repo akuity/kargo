@@ -64,6 +64,7 @@ require (
 require k8s.io/apiserver v0.24.2 // indirect
 
 require (
+	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver v1.5.0
 	github.com/akuity/bookkeeper v0.1.0-rc.19
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
@@ -72,6 +73,7 @@ require (
 	github.com/bufbuild/connect-go v1.7.0
 	github.com/bufbuild/connect-grpchealth-go v1.0.0
 	github.com/coreos/go-oidc/v3 v3.6.0
+	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
@@ -147,7 +149,10 @@ require (
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mattn/go-colorable v0.1.8 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect

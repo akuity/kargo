@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/bacongobbler/browser"
 	"github.com/bufbuild/connect-go"
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -26,6 +27,8 @@ import (
 )
 
 const (
+	flagAdmin                = "admin"
+	flagPassword             = "password"
 	flagPort                 = "port"
 	flagSSO                  = "sso"
 	defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -40,13 +43,52 @@ func NewCommand(opt *option.Option) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
+			useAdmin, err := cmd.Flags().GetBool(flagAdmin)
+			if err != nil {
+				return err
+			}
+
 			useSSO, err := cmd.Flags().GetBool(flagSSO)
 			if err != nil {
 				return err
 			}
 
-			if !useSSO {
-				return errors.Errorf("the login command currently only supports SSO")
+			if !useAdmin && !useSSO {
+				return errors.Errorf("please specify either --admin or --sso")
+			}
+
+			if useAdmin && useSSO {
+				return errors.Errorf(
+					"--admin and --sso options are mutually exclusive; please specify " +
+						"only one",
+				)
+			}
+
+			if useAdmin {
+				fmt.Print(
+					"\nWARNING: This command initiates authentication as the Kargo " +
+						"admin user, but the resulting ID token is not yet stored or " +
+						"used for any purpose.\n\n",
+				)
+
+				var password string
+				if password, err = cmd.Flags().GetString(flagPassword); err != nil {
+					return err
+				}
+
+				for {
+					if password != "" {
+						break
+					}
+					prompt := &survey.Password{
+						Message: "Admin user password",
+					}
+					if err = survey.AskOne(prompt, &password); err != nil {
+						return err
+					}
+				}
+
+				return adminLogin(ctx, args[0], password)
 			}
 
 			fmt.Print(
@@ -64,20 +106,73 @@ func NewCommand(opt *option.Option) *cobra.Command {
 			return ssoLogin(ctx, args[0], callbackPort)
 		},
 	}
+	cmd.Flags().BoolP(
+		flagAdmin,
+		"a",
+		false,
+		"Log in as the Kargo admin user; mutually exclusive with --sso",
+	)
+	cmd.Flags().StringP(
+		flagPassword,
+		"P",
+		"",
+		"Specify the password for non-interactive admin user login; only used "+
+			"with --admin",
+	)
 	cmd.Flags().IntP(
 		flagPort,
 		"p",
 		0,
 		"Port to use for the callback URL; 0 selects any available, "+
-			"unprivileged port",
+			"unprivileged port; only used with --sso",
 	)
 	cmd.Flags().BoolP(
 		flagSSO,
 		"s",
 		false,
-		"Log in using OpenID Connect and the server's configured identity provider",
+		"Log in using OpenID Connect and the server's configured identity "+
+			"provider; mutually exclusive with --admin",
 	)
 	return cmd
+}
+
+func adminLogin(ctx context.Context, serverAddress, password string) error {
+	client := svcv1alpha1connect.NewKargoServiceClient(
+		http.DefaultClient,
+		serverAddress,
+	)
+
+	cfgRes, err := client.GetPublicConfig(
+		ctx,
+		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
+	)
+	if err != nil {
+		return errors.Wrap(
+			err,
+			"error retrieving public configuration from server",
+		)
+	}
+
+	if !cfgRes.Msg.AdminAccountEnabled {
+		return errors.New("server does not support admin user login")
+	}
+
+	loginRes, err := client.AdminLogin(
+		ctx,
+		connect.NewRequest(&v1alpha1.AdminLoginRequest{
+			Password: password,
+		}),
+	)
+	if err != nil {
+		return errors.Wrap(err, "error logging in as admin user")
+	}
+
+	idToken := loginRes.Msg.IdToken
+
+	// TODO: Do something more meaningful with the ID token
+	fmt.Printf("ID token: %s\n", idToken)
+
+	return nil
 }
 
 // ssoLogin performs a login using OpenID Connect. It first retrieves

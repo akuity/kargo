@@ -47,6 +47,11 @@ export class GetPublicConfigResponse extends Message<GetPublicConfigResponse> {
    */
   oidcConfig?: OIDCConfig;
 
+  /**
+   * @generated from field: bool admin_account_enabled = 2;
+   */
+  adminAccountEnabled = false;
+
   constructor(data?: PartialMessage<GetPublicConfigResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -56,6 +61,7 @@ export class GetPublicConfigResponse extends Message<GetPublicConfigResponse> {
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "oidc_config", kind: "message", T: OIDCConfig },
+    { no: 2, name: "admin_account_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPublicConfigResponse {
@@ -121,6 +127,80 @@ export class OIDCConfig extends Message<OIDCConfig> {
 
   static equals(a: OIDCConfig | PlainMessage<OIDCConfig> | undefined, b: OIDCConfig | PlainMessage<OIDCConfig> | undefined): boolean {
     return proto3.util.equals(OIDCConfig, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.AdminLoginRequest
+ */
+export class AdminLoginRequest extends Message<AdminLoginRequest> {
+  /**
+   * @generated from field: string password = 1;
+   */
+  password = "";
+
+  constructor(data?: PartialMessage<AdminLoginRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.AdminLoginRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminLoginRequest {
+    return new AdminLoginRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminLoginRequest {
+    return new AdminLoginRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminLoginRequest {
+    return new AdminLoginRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminLoginRequest | PlainMessage<AdminLoginRequest> | undefined, b: AdminLoginRequest | PlainMessage<AdminLoginRequest> | undefined): boolean {
+    return proto3.util.equals(AdminLoginRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.AdminLoginResponse
+ */
+export class AdminLoginResponse extends Message<AdminLoginResponse> {
+  /**
+   * @generated from field: string id_token = 1;
+   */
+  idToken = "";
+
+  constructor(data?: PartialMessage<AdminLoginResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.AdminLoginResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AdminLoginResponse {
+    return new AdminLoginResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AdminLoginResponse {
+    return new AdminLoginResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AdminLoginResponse {
+    return new AdminLoginResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AdminLoginResponse | PlainMessage<AdminLoginResponse> | undefined, b: AdminLoginResponse | PlainMessage<AdminLoginResponse> | undefined): boolean {
+    return proto3.util.equals(AdminLoginResponse, a, b);
   }
 }
 

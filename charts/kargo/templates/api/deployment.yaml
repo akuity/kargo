@@ -33,6 +33,20 @@ spec:
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.api.logLevel }}
+{{- if .Values.api.adminAccount.enabled }}
+            - name: ADMIN_ACCOUNT_ENABLED
+              value: "true"
+            - name: ADMIN_ACCOUNT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kargo.api.fullname" . }}
+                  key: adminPassword
+            - name: TOKEN_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kargo.api.fullname" . }}
+                  key: tokenSigningKey
+{{- end }}
 {{- if .Values.api.oidc.enabled }}
             - name: OIDC_ENABLED
               value: "true"

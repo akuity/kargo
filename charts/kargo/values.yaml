@@ -55,6 +55,24 @@ api:
 
   logLevel: INFO
 
+  adminAccount:
+
+    ## Whether to enable the admin account.
+    ##
+    ## All other settings in this section will be ignored when this is set to
+    ## false.
+    enabled: true
+
+    ## A password for the admin account. It is suggested that you generate this
+    ## using a password manager or a command like
+    ## `openssl rand -base64 29 | tr -d "=+/" | cut -c1-25`
+    password: <admin password>
+
+    ## Key used to sign ID tokens (JWTs) for the admin account. It is suggested
+    ## that you generate this using a password manager or a command like
+    ## `openssl rand -base64 29 | tr -d "=+/" | cut
+    tokenSigningKey: <signing key>
+
   ## All settings related to enabling OpenID Connect as an authentication
   ## method.
   oidc:

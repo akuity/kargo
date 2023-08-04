@@ -11,6 +11,8 @@ import "v1alpha1/types.proto";
 service KargoService {
   rpc GetPublicConfig(GetPublicConfigRequest) returns (GetPublicConfigResponse);
 
+  rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
+
   rpc CreateStage(CreateStageRequest) returns (CreateStageResponse);
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
@@ -33,12 +35,21 @@ message GetPublicConfigRequest {}
 
 message GetPublicConfigResponse {
   OIDCConfig oidc_config = 1;
+  bool admin_account_enabled = 2;
 }
 
 message OIDCConfig {
   string issuer_url = 1;
   string client_id = 2;
   repeated string scopes = 3;
+}
+
+message AdminLoginRequest {
+  string password = 1;
+}
+
+message AdminLoginResponse {
+  string id_token = 1;
 }
 
 message TypedStageSpec {
