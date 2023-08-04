@@ -120,6 +120,10 @@ hack-build:
 		--tag kargo:dev \
 		.
 
+.PHONY: hack-build-cli
+hack-build-cli:
+	go build -C cmd/cli -o bin/kargo
+
 .PHONY: hack-kind-up
 hack-kind-up:
 	ctlptl apply -f hack/kind/cluster.yaml
