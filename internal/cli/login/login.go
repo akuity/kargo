@@ -20,14 +20,17 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 	"k8s.io/utils/strings/slices"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/kubeclient"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 const (
 	flagAdmin                = "admin"
+	flagKubeconfig           = "kubeconfig"
 	flagPassword             = "password"
 	flagPort                 = "port"
 	flagSSO                  = "sso"
@@ -48,19 +51,29 @@ func NewCommand(opt *option.Option) *cobra.Command {
 				return err
 			}
 
+			useKubeconfig, err := cmd.Flags().GetBool(flagKubeconfig)
+			if err != nil {
+				return err
+			}
+
 			useSSO, err := cmd.Flags().GetBool(flagSSO)
 			if err != nil {
 				return err
 			}
 
-			if !useAdmin && !useSSO {
-				return errors.Errorf("please specify either --admin or --sso")
+			var flagCount int
+			if useAdmin {
+				flagCount++
 			}
-
-			if useAdmin && useSSO {
+			if useKubeconfig {
+				flagCount++
+			}
+			if useSSO {
+				flagCount++
+			}
+			if flagCount != 1 {
 				return errors.Errorf(
-					"--admin and --sso options are mutually exclusive; please specify " +
-						"only one",
+					"please specify exactly one of --admin, --kubeconfig, or --sso",
 				)
 			}
 
@@ -89,6 +102,14 @@ func NewCommand(opt *option.Option) *cobra.Command {
 				}
 
 				return adminLogin(ctx, args[0], password)
+			} else if useKubeconfig {
+				fmt.Print(
+					"\nWARNING: This command obtains a token from the local Kubernetes " +
+						"configuration's current context, but that token is not yet " +
+						"stored or used for any purpose.\n\n",
+				)
+
+				return kubeconfigLogin(ctx)
 			}
 
 			fmt.Print(
@@ -110,7 +131,15 @@ func NewCommand(opt *option.Option) *cobra.Command {
 		flagAdmin,
 		"a",
 		false,
-		"Log in as the Kargo admin user; mutually exclusive with --sso",
+		"Log in as the Kargo admin user; mutually exclusive with --kubeconfig and "+
+			"--sso",
+	)
+	cmd.Flags().BoolP(
+		flagKubeconfig,
+		"k",
+		false,
+		"Log in using a token obtained from the local Kubernetes configuration's "+
+			"current context; mutually exclusive with --admin and --sso",
 	)
 	cmd.Flags().StringP(
 		flagPassword,
@@ -131,7 +160,7 @@ func NewCommand(opt *option.Option) *cobra.Command {
 		"s",
 		false,
 		"Log in using OpenID Connect and the server's configured identity "+
-			"provider; mutually exclusive with --admin",
+			"provider; mutually exclusive with --admin and --kubeconfig",
 	)
 	return cmd
 }
@@ -171,6 +200,24 @@ func adminLogin(ctx context.Context, serverAddress, password string) error {
 
 	// TODO: Do something more meaningful with the ID token
 	fmt.Printf("ID token: %s\n", idToken)
+
+	return nil
+}
+
+// kubeconfigLogin gleans a bearer token from the local kubeconfig's current
+// context.
+func kubeconfigLogin(ctx context.Context) error {
+	restCfg, err := config.GetConfig()
+	if err != nil {
+		return errors.Wrap(err, "error loading kubeconfig")
+	}
+	bearerToken, err := kubeclient.GetCredential(ctx, restCfg)
+	if err != nil {
+		return errors.Wrap(err, "error retrieving bearer token from kubeconfig")
+	}
+
+	// TODO: Do something more meaningful with the bearer token
+	fmt.Printf("Bearer token: %s\n", bearerToken)
 
 	return nil
 }
