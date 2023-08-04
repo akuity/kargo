@@ -191,6 +191,19 @@ installed, you can be up and running with just a few commands!
    altered. They can be rebuilt and replaced with a single click.
    :::
 
+1. Build executable CLI to test locally:
+
+   ```shell
+   make hack-build-cli
+   ```
+
+   Then:
+   
+   ```shell
+   cd cmd/cli
+   ./kargo <option> --local-server
+   ```
+
 1. When you are done with Tilt, interrupt the running `tilt up` process with
    `ctrl + c`. Components _will remain running in the cluster_, but Tilt will no
    longer be in control. If Tilt is restarted later, it will retake control of
