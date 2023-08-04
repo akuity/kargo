@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-  push:
+  publish-image:
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU
@@ -55,7 +55,7 @@ jobs:
         image: ${{ steps.meta.outputs.tags }}
 
   publish-charts:
-    needs: push
+    needs: publish-image
     runs-on: ubuntu-latest
     steps:
     - name: Set up Helm
@@ -89,3 +89,36 @@ jobs:
         helm dep up
         helm package . --version ${CHART_VERSION}
         helm push argocd-kit-${CHART_VERSION}.tgz oci://${KARGO_CHARTS_REPO}
+
+  publish-cli:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.20.7-bookworm
+    strategy:
+      matrix:
+        os: [linux, darwin, windows]
+        arch: [amd64, arm64]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: /go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Build CLI
+      env:
+        GOFLAGS: -buildvcs=false
+        GOOS: ${{ matrix.os }}
+        GOARCH: ${{ matrix.arch }}
+        VERSION: ${{ github.ref_name }}
+        GIT_COMMIT: ${{ github.sha }}
+        GIT_TREE_STATE: clean
+      run: make build-cli
+    - name: Publish CLI
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: bin/*
+        file_glob: true
+        repo_token: ${{ secrets.GITHUB_TOKEN }}

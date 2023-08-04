@@ -119,7 +119,7 @@ jobs:
     - name: Check nothing has changed
       run: git diff --exit-code -- .
 
-  build:
+  build-image:
     needs: [test-unit, lint-go, lint-charts, lint-proto, check-codegen]
     runs-on: ubuntu-latest
     steps:
@@ -134,3 +134,22 @@ jobs:
         push: false
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+  build-cli:
+    needs: [test-unit, lint-go, lint-charts, lint-proto, check-codegen]
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.20.7-bookworm
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: /go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Build CLI
+      env:
+        GOFLAGS: -buildvcs=false
+      run: make build-cli

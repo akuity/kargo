@@ -5,6 +5,21 @@ BUF_LINT_ERROR_FORMAT ?= text
 GO_LINT_ERROR_FORMAT ?= colored-line-number
 CERT_MANAGER_CHART_VERSION := 1.11.0
 
+VERSION_PACKAGE := github.com/akuity/kargo/internal/version
+
+# These enable cross-compiling the CLI binary for any desired OS and CPU
+# architecture. Even if building inside a container, they will default to the
+# developer's native OS and CPU architecture.
+#
+# Note: We use `uname` instead of `go env` because if a developer intends to
+# build inside a container, it's possible they may not have Go installed on the
+# host machine.
+# 
+# This only works on Linux and macOS. Windows users are advised to undertake
+# Kargo development activities inside WSL2.
+GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
+GOARCH ?= $(shell uname -m)
+
 ################################################################################
 # Tests                                                                        #
 #                                                                              #
@@ -48,6 +63,24 @@ test-unit:
 		-coverprofile=coverage.txt \
 		-covermode=atomic \
 		./...
+
+################################################################################
+# Builds                                                                       #
+#                                                                              #
+# These targets are used by our continuous integration and release processes.  #
+# Use these directly at your own risk -- they assume required tools            #
+# correct versions thereof) to be present on your system.                      #
+#                                                                              #
+# If you prefer to execute these tasks in a container that is pre-loaded with  #
+# required tools, refer to the hacking section toward the bottom of this file. #
+################################################################################
+
+.PHONY: build-cli
+build-cli:
+	CGO_ENABLED=0 go build \
+		-ldflags "-w -X $(VERSION_PACKAGE).version=$(VERSION) -X $(VERSION_PACKAGE).buildDate=$$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X $(VERSION_PACKAGE).gitCommit=$(GIT_COMMIT) -X $(VERSION_PACKAGE).gitTreeState=$(GIT_TREE_STATE)" \
+		-o bin/kargo-$(GOOS)-$(GOARCH)$(shell [ ${GOOS} = windows ] && echo .exe) \
+		./cmd/cli
 
 ################################################################################
 # Code generation: To be run after modifications to API types                  #
@@ -121,8 +154,9 @@ hack-build:
 		.
 
 .PHONY: hack-build-cli
-hack-build-cli:
-	go build -C cmd/cli -o bin/kargo
+hack-build-cli: hack-build-dev-tools
+	@# Local values of GOOS and GOARCH get passed into the container.
+	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-cli'
 
 .PHONY: hack-kind-up
 hack-kind-up:
