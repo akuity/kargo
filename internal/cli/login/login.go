@@ -31,7 +31,7 @@ const (
 	defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func NewCommand(opt *option.Option) *cobra.Command {
+func NewCommand(_ *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "login server-address",
 		Args:    cobra.ExactArgs(1),

@@ -62,7 +62,7 @@ func newWebhooksServerCommand() *cobra.Command {
 			}
 
 			// Index PromotionPolicies by Stage
-			if err := kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
+			if err = kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
 				return errors.Wrap(err, "index PromotionPolicies by Stage")
 			}
 
