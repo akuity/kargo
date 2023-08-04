@@ -48,48 +48,6 @@ func TestNewStageReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestCommitIDFn)
 }
 
-func TestIndexOutstandingPromotionsByStage(t *testing.T) {
-	testCases := []struct {
-		name       string
-		promotion  *api.Promotion
-		assertions func([]string)
-	}{
-		{
-			name: "promotion is in terminal phase",
-			promotion: &api.Promotion{
-				Spec: &api.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: api.PromotionStatus{
-					Phase: api.PromotionPhaseComplete,
-				},
-			},
-			assertions: func(res []string) {
-				require.Nil(t, res)
-			},
-		},
-		{
-			name: "promotion is in non-terminal phase",
-			promotion: &api.Promotion{
-				Spec: &api.PromotionSpec{
-					Stage: "fake-stage",
-				},
-				Status: api.PromotionStatus{
-					Phase: api.PromotionPhasePending,
-				},
-			},
-			assertions: func(res []string) {
-				require.Equal(t, []string{"fake-stage"}, res)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			indexOutstandingPromotionsByStage(testCase.promotion)
-		})
-	}
-}
-
 func TestSync(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))

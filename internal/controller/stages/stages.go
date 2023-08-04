@@ -25,12 +25,8 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/images"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
-)
-
-const (
-	outstandingPromosByStageIndexField = "stage"
-	promoPoliciesByStageIndexField     = "stage"
 )
 
 // reconciler reconciles Stage resources.
@@ -129,29 +125,13 @@ func SetupReconcilerWithManager(
 	shardName string,
 ) error {
 	// Index Promotions in non-terminal states by Stage
-	if err := kargoMgr.GetFieldIndexer().IndexField(
-		ctx,
-		&api.Promotion{},
-		outstandingPromosByStageIndexField,
-		indexOutstandingPromotionsByStage,
-	); err != nil {
-		return errors.Wrap(
-			err,
-			"error indexing non-terminal Promotions by Stage",
-		)
+	if err := kubeclient.IndexOutstandingPromotionsByStage(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index non-terminal Promotions by Stage")
 	}
 
 	// Index PromotionPolicies by Stage
-	if err := kargoMgr.GetFieldIndexer().IndexField(
-		ctx,
-		&api.PromotionPolicy{},
-		promoPoliciesByStageIndexField,
-		func(obj client.Object) []string {
-			policy := obj.(*api.PromotionPolicy) // nolint: forcetypeassert
-			return []string{policy.Stage}
-		},
-	); err != nil {
-		return errors.Wrap(err, "error indexing PromotionPolicies by Stage")
+	if err := kubeclient.IndexPromotionPoliciesByStage(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index PromotionPolicies by Stage")
 	}
 
 	shardPredicate, err := controller.GetShardPredicate(shardName)
@@ -186,15 +166,6 @@ func SetupReconcilerWithManager(
 			),
 		"error registering Stage reconciler",
 	)
-}
-
-func indexOutstandingPromotionsByStage(obj client.Object) []string {
-	promo := obj.(*api.Promotion) // nolint: forcetypeassert
-	switch promo.Status.Phase {
-	case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
-		return nil
-	}
-	return []string{promo.Spec.Stage}
 }
 
 func newReconciler(
@@ -429,7 +400,7 @@ func (r *reconciler) sync(
 		&client.ListOptions{
 			Namespace: stage.Namespace,
 			FieldSelector: fields.Set(map[string]string{
-				promoPoliciesByStageIndexField: stage.Name,
+				kubeclient.PromotionPoliciesByStageIndexField: stage.Name,
 			}).AsSelector(),
 		},
 	); err != nil {
@@ -507,7 +478,7 @@ func (r *reconciler) hasOutstandingPromotions(
 		&client.ListOptions{
 			Namespace: stageNamespace,
 			FieldSelector: fields.Set(map[string]string{
-				outstandingPromosByStageIndexField: stageName,
+				kubeclient.OutstandingPromotionsByStageIndexField: stageName,
 			}).AsSelector(),
 		},
 	); err != nil {

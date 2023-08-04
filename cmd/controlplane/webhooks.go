@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 	"github.com/akuity/kargo/internal/webhook/promotion"
@@ -58,6 +59,11 @@ func newWebhooksServerCommand() *cobra.Command {
 			)
 			if err != nil {
 				return errors.Wrap(err, "new manager")
+			}
+
+			// Index PromotionPolicies by Stage
+			if err := kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
+				return errors.Wrap(err, "index PromotionPolicies by Stage")
 			}
 
 			if err = stage.SetupWebhookWithManager(mgr); err != nil {

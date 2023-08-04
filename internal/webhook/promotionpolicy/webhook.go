@@ -15,6 +15,7 @@ import (
 
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/validation"
+	"github.com/akuity/kargo/internal/kubeclient"
 )
 
 var (
@@ -84,7 +85,9 @@ func (w *webhook) validateProject(ctx context.Context, policy *api.PromotionPoli
 
 func (w *webhook) validateStageUniqueness(ctx context.Context, policy *api.PromotionPolicy) error {
 	var list api.PromotionPolicyList
-	if err := w.client.List(ctx, &list, client.InNamespace(policy.GetNamespace())); err != nil {
+	if err := w.client.List(ctx, &list, client.InNamespace(policy.GetNamespace()), client.MatchingFields{
+		kubeclient.PromotionPoliciesByStageIndexField: policy.Stage,
+	}); err != nil {
 		return apierrors.NewInternalError(errors.Wrap(err, "list promotion policies"))
 	}
 	for _, ep := range list.Items {

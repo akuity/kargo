@@ -15,11 +15,11 @@ import (
 
 	api "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
-	stagesByAppIndexField       = "applications"
 	forceReconcileAnnotationKey = "kargo.akuity.io/force-reconcile"
 )
 
@@ -37,18 +37,9 @@ func SetupReconcilerWithManager(
 	shardName string,
 ) error {
 	// Index Stages by Argo CD Applications
-	if err := kargoMgr.GetFieldIndexer().IndexField(
-		ctx,
-		&api.Stage{},
-		stagesByAppIndexField,
-		indexStagesByApp(shardName),
-	); err != nil {
-		return errors.Wrap(
-			err,
-			"error indexing Stages by Argo CD Applications",
-		)
+	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, shardName); err != nil {
+		return errors.Wrap(err, "index Stages by Argo CD Applications")
 	}
-
 	return ctrl.NewControllerManagedBy(argoMgr).
 		For(&argocd.Application{}).
 		Complete(newReconciler(kargoMgr.GetClient()))
@@ -110,7 +101,7 @@ func (r *reconciler) Reconcile(
 		stages,
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
-				stagesByAppIndexField,
+				kubeclient.StagesByArgoCDApplicationsIndexField,
 				fmt.Sprintf(
 					"%s:%s",
 					req.NamespacedName.Namespace,
