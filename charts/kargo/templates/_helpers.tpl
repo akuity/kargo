@@ -28,6 +28,10 @@ If release name contains chart name it will be used as a full name.
 {{ include "kargo.fullname" . | printf "%s-controller" }}
 {{- end -}}
 
+{{- define "kargo.dexServer.fullname" -}}
+{{ include "kargo.fullname" . | printf "%s-dex-server" }}
+{{- end -}}
+
 {{- define "kargo.garbageCollector.fullname" -}}
 {{ include "kargo.fullname" . | printf "%s-garbage-collector" }}
 {{- end -}}
@@ -74,6 +78,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "kargo.api.labels" -}}
 app.kubernetes.io/component: api
+{{- end -}}
+
+{{- define "kargo.dexServer.labels" -}}
+app.kubernetes.io/component: dex-server
 {{- end -}}
 
 {{- define "kargo.controller.labels" -}}

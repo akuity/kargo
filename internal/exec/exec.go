@@ -38,7 +38,8 @@ func (e *ExitError) Error() string {
 // cause of the error.
 func Exec(cmd *exec.Cmd) ([]byte, error) {
 	res, err := cmd.CombinedOutput()
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if ok := errors.As(err, &exitErr); ok {
 		return res, &ExitError{
 			Command:  cmd.String(),
 			Output:   res,

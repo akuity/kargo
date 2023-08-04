@@ -9,6 +9,8 @@ option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha
 import "v1alpha1/types.proto";
 
 service KargoService {
+  rpc GetPublicConfig(GetPublicConfigRequest) returns (GetPublicConfigResponse);
+
   rpc CreateStage(CreateStageRequest) returns (CreateStageResponse);
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
@@ -25,6 +27,18 @@ service KargoService {
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+}
+
+message GetPublicConfigRequest {}
+
+message GetPublicConfigResponse {
+  OIDCConfig oidc_config = 1;
+}
+
+message OIDCConfig {
+  string issuer_url = 1;
+  string client_id = 2;
+  repeated string scopes = 3;
 }
 
 message TypedStageSpec {

@@ -5,9 +5,26 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteStageRequest, DeleteStageResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
+import { CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteStageRequest, DeleteStageResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig
+ */
+export const getPublicConfig = createQueryService({
+  service: {
+    methods: {
+      getPublicConfig: {
+        name: "GetPublicConfig",
+        kind: MethodKind.Unary,
+        I: GetPublicConfigRequest,
+        O: GetPublicConfigResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).getPublicConfig;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateStage
