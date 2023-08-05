@@ -1,4 +1,4 @@
-package stages
+package stage
 
 import (
 	"context"

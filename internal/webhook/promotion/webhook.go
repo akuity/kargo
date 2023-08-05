@@ -1,4 +1,4 @@
-package promotions
+package promotion
 
 import (
 	"context"
