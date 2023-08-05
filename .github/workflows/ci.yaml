@@ -13,7 +13,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.4-bullseye
+      image: golang:1.20.7-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -33,13 +33,13 @@ jobs:
   lint-go:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.4-bullseye
+      image: golang:1.20.7-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Install linter
       env:
-        GOLANGCI_LINT_VERSION: 1.51.2
+        GOLANGCI_LINT_VERSION: 1.53.3
       working-directory: /usr/local/bin
       run: |
         curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz \
@@ -52,7 +52,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.4-bullseye
+      image: golang:1.20.7-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -67,7 +67,7 @@ jobs:
   lint-proto:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.4-bullseye
+      image: golang:1.20.7-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -83,7 +83,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.4-bullseye
+      image: golang:1.20.7-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v3

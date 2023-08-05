@@ -22,7 +22,6 @@ import (
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/kubeclient"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -37,7 +36,7 @@ const (
 	defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func NewCommand(_ *option.Option) *cobra.Command {
+func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "login server-address",
 		Args:    cobra.ExactArgs(1),

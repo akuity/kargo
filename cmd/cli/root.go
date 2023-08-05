@@ -106,7 +106,7 @@ func NewRootCommand(opt *option.Option) (*cobra.Command, error) {
 	option.ServerURL(&opt.ServerURL)(cmd.PersistentFlags())
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
-	cmd.AddCommand(login.NewCommand(opt))
+	cmd.AddCommand(login.NewCommand())
 	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(project.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand())

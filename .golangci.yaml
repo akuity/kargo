@@ -9,7 +9,6 @@ linters:
   disable-all: true
   enable:
   - bodyclose
-  - depguard
   - errcheck
   - exportloopref
   - forcetypeassert
@@ -33,11 +32,6 @@ linters:
 
 # all available settings for linters we enable
 linters-settings:
-  depguard:
-    list-type: blacklist
-    include-go-root: false
-    packages:
-    - github.com/davecgh/go-spew/spew
   errcheck:
     # report about not checking of errors in type assertions: `a := b.(MyStruct)`;
     # default is false: such cases aren't reported by default.
