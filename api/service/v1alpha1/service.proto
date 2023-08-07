@@ -13,6 +13,8 @@ service KargoService {
 
   rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
 
+  /* Stage APIs */
+
   rpc CreateStage(CreateStageRequest) returns (CreateStageResponse);
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
@@ -20,11 +22,16 @@ service KargoService {
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
 
+  /* PromotionPolicy APIs */
+
+  rpc SetAutoPromotionForStage(SetAutoPromotionForStageRequest) returns (SetAutoPromotionForStageResponse);
   rpc CreatePromotionPolicy(CreatePromotionPolicyRequest) returns (CreatePromotionPolicyResponse);
   rpc ListPromotionPolicies(ListPromotionPoliciesRequest) returns (ListPromotionPoliciesResponse);
   rpc GetPromotionPolicy(GetPromotionPolicyRequest) returns (GetPromotionPolicyResponse);
   rpc UpdatePromotionPolicy(UpdatePromotionPolicyRequest) returns (UpdatePromotionPolicyResponse);
   rpc DeletePromotionPolicy(DeletePromotionPolicyRequest) returns (DeletePromotionPolicyResponse);
+
+  /* Project APIs */
 
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
@@ -121,6 +128,16 @@ message TypedPromotionPolicySpec {
   string name = 2;
   string stage = 3;
   bool enable_auto_promotion = 4;
+}
+
+message SetAutoPromotionForStageRequest {
+  string project = 1;
+  string stage = 2;
+  bool enable = 3;
+}
+
+message SetAutoPromotionForStageResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy promotion_policy = 1;
 }
 
 message CreatePromotionPolicyRequest {
