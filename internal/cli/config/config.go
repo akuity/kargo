@@ -55,35 +55,39 @@ type CLIConfig struct {
 
 // LoadCLIConfig loads Kargo CLI configuration from a file in the Kargo home
 // directory.
-func LoadCLIConfig() (CLIConfig, bool, error) {
+func LoadCLIConfig() (CLIConfig, error) {
 	return loadCLIConfig(xdgConfigPath)
 }
 
-func loadCLIConfig(configPath string) (CLIConfig, bool, error) {
+func loadCLIConfig(configPath string) (CLIConfig, error) {
 	cfg := CLIConfig{}
 	_, err := os.Stat(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return cfg, false, nil
+			return cfg, errors.Errorf(
+				"no configuration file was found at %s; please use `kargo login` to "+
+					"continue\n",
+				configPath,
+			)
 		}
-		return cfg, false, err
+		return cfg, err
 	}
 	configBytes, err := os.ReadFile(configPath)
 	if err != nil {
-		return cfg, false, errors.Wrapf(
+		return cfg, errors.Wrapf(
 			err,
 			"error reading configuration file at %s",
 			configPath,
 		)
 	}
 	if err := yaml.Unmarshal(configBytes, &cfg); err != nil {
-		return cfg, false, errors.Wrapf(
+		return cfg, errors.Wrapf(
 			err,
 			"error parsing configuration file at %s",
 			configPath,
 		)
 	}
-	return cfg, true, nil
+	return cfg, nil
 }
 
 // SaveCLIConfig saves Kargo CLI configuration to a file in the Kargo home
