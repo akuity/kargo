@@ -17,8 +17,7 @@ import (
 )
 
 type PromoteFlags struct {
-	Project string
-	State   string
+	State string
 }
 
 func newPromoteCommand(opt *option.Option) *cobra.Command {

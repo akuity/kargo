@@ -116,8 +116,8 @@ func NewRootCommand(opt *option.Option) (*cobra.Command, error) {
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
 	cmd.AddCommand(login.NewCommand())
-	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(project.NewCommand(opt))
+	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand())
 	return cmd, nil
 }
