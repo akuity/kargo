@@ -14,25 +14,22 @@ import (
 )
 
 func TestUnaryServerAuth(t *testing.T) {
+	ctx := context.Background()
 	testSets := map[string]struct {
-		ctx            context.Context
-		shouldInjected bool
-		expectedCred   string
+		ctx                     context.Context
+		expectedAuthHeaderValue string
 	}{
 		"request with credential": {
-			ctx:            kubeclient.SetCredentialToContext(context.Background(), "Bearer some-token"),
-			shouldInjected: true,
-			expectedCred:   "Bearer some-token",
+			ctx:                     kubeclient.SetCredentialToContext(ctx, "some-token"),
+			expectedAuthHeaderValue: "Bearer some-token",
 		},
 		"request with empty credential": {
-			ctx:            kubeclient.SetCredentialToContext(context.Background(), ""),
-			shouldInjected: true,
-			expectedCred:   "",
+			ctx:                     kubeclient.SetCredentialToContext(ctx, ""),
+			expectedAuthHeaderValue: "",
 		},
 		"request without credential": {
-			ctx:            context.Background(),
-			shouldInjected: false,
-			expectedCred:   "",
+			ctx:                     ctx,
+			expectedAuthHeaderValue: "",
 		},
 	}
 	for name, ts := range testSets {
@@ -50,7 +47,7 @@ func TestUnaryServerAuth(t *testing.T) {
 					res := connect.NewResponse(&grpc_health_v1.HealthCheckResponse{})
 					cred, ok := kubeclient.GetCredentialFromContext(ctx)
 					if ok {
-						res.Header().Set("Authorization", cred)
+						setAuthHeader(res.Header(), cred)
 					}
 					return res, nil
 				},
@@ -71,12 +68,11 @@ func TestUnaryServerAuth(t *testing.T) {
 				connect.NewRequest[grpc_health_v1.HealthCheckRequest](&grpc_health_v1.HealthCheckRequest{}))
 			require.NoError(t, err)
 
-			if ts.shouldInjected {
-				cred := res.Header().Get("Authorization")
-				require.Equal(t, ts.expectedCred, cred)
-				return
-			}
-			require.Empty(t, res.Header().Values("Authorization"))
+			require.Equal(
+				t,
+				ts.expectedAuthHeaderValue,
+				res.Header().Get(authHeaderKey),
+			)
 		})
 	}
 }

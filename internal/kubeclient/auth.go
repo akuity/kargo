@@ -3,6 +3,7 @@ package kubeclient
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"k8s.io/client-go/rest"
 )
@@ -42,5 +43,8 @@ func GetCredential(ctx context.Context, cfg *rest.Config) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return res.Header.Get(xKargoUserCredentialHeader), nil
+	return strings.TrimPrefix(
+		res.Header.Get(xKargoUserCredentialHeader),
+		"Bearer ",
+	), nil
 }
