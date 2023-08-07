@@ -70,8 +70,8 @@ func newAPICommand() *cobra.Command {
 				if err = kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
 					return pkgerrors.Wrap(err, "index PromotionPolicies by Stage")
 				}
+				wg.Add(1)
 				go func() {
-					wg.Add(1)
 					mgrErr := mgr.Start(ctx)
 					errCh <- pkgerrors.Wrap(mgrErr, "start manager")
 					wg.Done()
@@ -109,8 +109,8 @@ func newAPICommand() *cobra.Command {
 			defer func() {
 				_ = l.Close()
 			}()
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				srvErr := srv.Serve(ctx, l, false)
 				errCh <- pkgerrors.Wrap(srvErr, "serve")
 				wg.Done()
