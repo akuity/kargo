@@ -91,7 +91,7 @@ func (w *webhook) validateStageUniqueness(ctx context.Context, policy *api.Promo
 		return apierrors.NewInternalError(errors.Wrap(err, "list promotion policies"))
 	}
 	for _, ep := range list.Items {
-		if policy.Stage == ep.Stage {
+		if policy.Name != ep.Name {
 			return apierrors.NewConflict(promotionPolicyGroupResource, policy.GetName(),
 				fmt.Errorf("policy for stage %q is already exists: %s", policy.Stage, ep.GetName()))
 		}
