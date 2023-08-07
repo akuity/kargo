@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -38,25 +39,33 @@ func NewRootCommand(opt *option.Option) (*cobra.Command, error) {
 
 			restCfg, err := config.GetConfig()
 			if err != nil {
-				return errors.Wrap(err, "error loading REST config")
+				return errors.Wrap(err, "get REST config")
 			}
 			var kubeClient client.Client
 			{
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "error adding Kubernetes core API to scheme")
+					return errors.Wrap(err, "add Kubernetes core API to scheme")
 				}
 				if err = kargoAPI.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "error adding Kargo API to scheme")
+					return errors.Wrap(err, "add Kargo API to scheme")
 				}
-				if kubeClient, err = client.New(
+				mgr, err := ctrl.NewManager(
 					restCfg,
-					client.Options{
-						Scheme: scheme,
+					ctrl.Options{
+						Scheme:             scheme,
+						MetricsBindAddress: "0",
 					},
-				); err != nil {
-					return errors.Wrap(err, "error initializing Kubernetes client")
+				)
+				if err != nil {
+					return errors.Wrap(err, "new manager")
 				}
+				// Index PromotionPolicies by Stage
+				if err = kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
+					return errors.Wrap(err, "index PromotionPolicies by Stage")
+				}
+				go mgr.Start(ctx) // nolint: errcheck
+				kubeClient = mgr.GetClient()
 			}
 
 			opt.ClientOption = apioption.NewClientOption(opt.UseLocalServer)

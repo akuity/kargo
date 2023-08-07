@@ -59,6 +59,7 @@ func SetAutoPromotionForStageV1Alpha1(
 					Namespace: req.Msg.GetProject(),
 					Name:      req.Msg.GetStage(),
 				},
+				Stage:               req.Msg.GetStage(),
 				EnableAutoPromotion: req.Msg.GetEnable(),
 			}
 			if err := kc.Create(ctx, &policy); err != nil {
