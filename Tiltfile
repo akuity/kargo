@@ -47,6 +47,7 @@ k8s_resource(
   objects = [
     'kargo-api:clusterrole',
     'kargo-api:clusterrolebinding',
+    'kargo-api:secret',
     'kargo-api:serviceaccount'
   ]
 )
