@@ -82,8 +82,8 @@ func NewCommand() *cobra.Command {
 			if useAdmin {
 				fmt.Print(
 					"\nWARNING: This command initiates authentication as the Kargo " +
-						"admin user, but the resulting ID token is not yet used for " +
-						"actual communication with the Kargo API server.\n\n",
+						"admin user, but the resulting ID token is not yet honored by " +
+						"the Kargo API server.\n\n",
 				)
 
 				var password string
@@ -108,12 +108,6 @@ func NewCommand() *cobra.Command {
 					return err
 				}
 			} else if useKubeconfig {
-				fmt.Print(
-					"\nWARNING: This command obtains a token from the local Kubernetes " +
-						"configuration's current context, but that token is not yet used " +
-						"for actual communication with the Kargo API server.\n\n",
-				)
-
 				bearerToken, err = kubeconfigLogin(ctx)
 				if err != nil {
 					return err
@@ -122,8 +116,8 @@ func NewCommand() *cobra.Command {
 				fmt.Print(
 					"\nWARNING: This command initiates authentication using the " +
 						"specified server's configured OpenID Connect identity provider, " +
-						"but the resulting ID token is not yet used for actual " +
-						"communication with the Kargo API server.\n\n",
+						"but the resulting ID token is not yet honored by the Kargo API " +
+						"server.\n\n",
 				)
 
 				var callbackPort int
