@@ -104,7 +104,6 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 		return nil, err
 	}
 	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
-	option.ServerURL(&opt.ServerURL)(cmd.PersistentFlags())
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
 	cmd.AddCommand(login.NewCommand())
