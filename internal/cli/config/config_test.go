@@ -17,16 +17,16 @@ func TestLoadCLIConfig(t *testing.T) {
 	testCases := []struct {
 		name       string
 		setup      func() string
-		assertions func(cfg CLIConfig, ok bool, err error)
+		assertions func(cfg CLIConfig, err error)
 	}{
 		{
 			name: "file does not exist",
 			setup: func() string {
 				return getTestConfigPath()
 			},
-			assertions: func(_ CLIConfig, ok bool, err error) {
-				require.NoError(t, err)
-				require.False(t, ok)
+			assertions: func(_ CLIConfig, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "no configuration file was found")
 			},
 		},
 		{
@@ -37,10 +37,9 @@ func TestLoadCLIConfig(t *testing.T) {
 				require.NoError(t, err)
 				return configPath
 			},
-			assertions: func(_ CLIConfig, ok bool, err error) {
+			assertions: func(_ CLIConfig, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing configuration file")
-				require.False(t, ok)
 			},
 		},
 		{
@@ -53,9 +52,8 @@ func TestLoadCLIConfig(t *testing.T) {
 				require.NoError(t, err)
 				return configPath
 			},
-			assertions: func(cfg CLIConfig, ok bool, err error) {
+			assertions: func(cfg CLIConfig, err error) {
 				require.NoError(t, err)
-				require.True(t, ok)
 				require.Equal(t, testConfig, cfg)
 			},
 		},
