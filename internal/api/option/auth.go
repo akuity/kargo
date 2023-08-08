@@ -21,6 +21,10 @@ func (a *authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		cred := credFromAuthHeader(req.Header())
 		if cred != "" {
+			// TODO: Determine what kind of credential this is. If it's a JWT
+			// we should verify it and map it to a Kubernetes service account. If it's
+			// not a JWT, we'll assume it might be a bearer token for the Kubernetes
+			// API server and no mapping is needed.
 			ctx = kubeclient.SetCredentialToContext(ctx, cred)
 		}
 		return next(ctx, req)
@@ -38,6 +42,10 @@ func (a *authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		cred := credFromAuthHeader(conn.RequestHeader())
 		if cred != "" {
+			// TODO: Determine what kind of credential this is. If it's a JWT
+			// we should verify it and map it to a Kubernetes service account. If it's
+			// not a JWT, we'll assume it might be a bearer token for the Kubernetes
+			// API server and no mapping is needed.
 			ctx = kubeclient.SetCredentialToContext(ctx, cred)
 		}
 		return next(ctx, conn)

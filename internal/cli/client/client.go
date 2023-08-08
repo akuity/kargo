@@ -25,6 +25,11 @@ func GetClientFromConfig(opt *option.Option) (
 	if err != nil {
 		return nil, err
 	}
+	// TODO: If cfg.BearerToken looks like an expired JWT and we have a
+	// refresh token, refresh the JWT and save the new JWT to the config file.
+	//
+	// If cfg.BearerToken looks like an expired JWT and we don't have a
+	// refresh token, prompt the user to log in again.
 	return GetClient(cfg.APIAddress, cfg.BearerToken), nil
 }
 
