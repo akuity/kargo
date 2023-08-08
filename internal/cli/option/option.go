@@ -10,8 +10,8 @@ import (
 )
 
 type Option struct {
-	ServerURL      string
-	UseLocalServer bool
+	LocalServerAddress string
+	UseLocalServer     bool
 
 	IOStreams  *genericclioptions.IOStreams
 	PrintFlags *genericclioptions.PrintFlags

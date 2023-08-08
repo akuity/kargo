@@ -79,7 +79,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 					return errors.Wrap(err, "new api server")
 				}
 				go srv.Serve(ctx, l, true) // nolint: errcheck
-				opt.ServerURL = fmt.Sprintf("http://%s", l.Addr())
+				opt.LocalServerAddress = fmt.Sprintf("http://%s", l.Addr())
 			}
 			return nil
 		},

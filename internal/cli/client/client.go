@@ -19,7 +19,7 @@ func GetClientFromConfig(opt *option.Option) (
 	error,
 ) {
 	if opt.UseLocalServer {
-		return GetClient(opt.ServerURL, ""), nil
+		return GetClient(opt.LocalServerAddress, ""), nil
 	}
 	cfg, err := config.LoadCLIConfig()
 	if err != nil {
