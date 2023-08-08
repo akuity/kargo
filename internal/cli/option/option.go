@@ -1,7 +1,6 @@
 package option
 
 import (
-	"github.com/bufbuild/connect-go"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,8 +12,6 @@ import (
 type Option struct {
 	ServerURL      string
 	UseLocalServer bool
-
-	ClientOption connect.ClientOption
 
 	IOStreams  *genericclioptions.IOStreams
 	PrintFlags *genericclioptions.PrintFlags

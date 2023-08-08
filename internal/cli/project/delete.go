@@ -9,6 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -27,11 +29,21 @@ func newDeleteCommand(opt *option.Option) *cobra.Command {
 				return errors.New("name is required")
 			}
 
-			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, opt.ServerURL, opt.ClientOption)
-			_, err := client.DeleteProject(ctx, connect.NewRequest(&v1alpha1.DeleteProjectRequest{
+			serverURL := opt.ServerURL
+			var clientOpt connect.ClientOption
+			if !opt.UseLocalServer {
+				cfg, err := config.LoadCLIConfig()
+				if err != nil {
+					return err
+				}
+				serverURL = cfg.APIAddress
+				clientOpt = client.NewOption(cfg.BearerToken)
+			}
+			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, serverURL, clientOpt)
+
+			if _, err := client.DeleteProject(ctx, connect.NewRequest(&v1alpha1.DeleteProjectRequest{
 				Name: name,
-			}))
-			if err != nil {
+			})); err != nil {
 				return errors.Wrap(err, "delete project")
 			}
 			_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Deleted: %q", name)

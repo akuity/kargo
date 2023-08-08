@@ -17,7 +17,6 @@ import (
 
 	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	apioption "github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/project"
@@ -69,7 +68,6 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 				kubeClient = mgr.GetClient()
 			}
 
-			opt.ClientOption = apioption.NewClientOption(opt.UseLocalServer)
 			if opt.UseLocalServer {
 				l, err := net.Listen("tcp", "127.0.0.1:0")
 				if err != nil {
@@ -82,12 +80,6 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 				}
 				go srv.Serve(ctx, l, true) // nolint: errcheck
 				opt.ServerURL = fmt.Sprintf("http://%s", l.Addr())
-			} else {
-				cred, err := kubeclient.GetCredential(ctx, restCfg)
-				if err != nil {
-					return errors.Wrap(err, "get credential")
-				}
-				cmd.SetContext(kubeclient.SetCredentialToContext(ctx, cred))
 			}
 			return nil
 		},

@@ -11,6 +11,8 @@ import (
 	"k8s.io/utils/pointer"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -44,7 +46,18 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 				return errors.New("state is required")
 			}
 
-			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, opt.ServerURL, opt.ClientOption)
+			serverURL := opt.ServerURL
+			var clientOpt connect.ClientOption
+			if !opt.UseLocalServer {
+				cfg, err := config.LoadCLIConfig()
+				if err != nil {
+					return err
+				}
+				serverURL = cfg.APIAddress
+				clientOpt = client.NewOption(cfg.BearerToken)
+			}
+			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, serverURL, clientOpt)
+
 			res, err := client.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
 				Project: project,
 				Name:    name,
