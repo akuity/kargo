@@ -22,10 +22,10 @@ import (
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	"github.com/akuity/kargo/internal/cli/client"
 	libConfig "github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 const (
@@ -191,10 +191,7 @@ func adminLogin(
 	serverAddress string,
 	password string,
 ) (string, error) {
-	client := svcv1alpha1connect.NewKargoServiceClient(
-		http.DefaultClient,
-		serverAddress,
-	)
+	client := client.GetClient(serverAddress, "")
 
 	cfgRes, err := client.GetPublicConfig(
 		ctx,
@@ -246,10 +243,7 @@ func ssoLogin(
 	serverAddress string,
 	callbackPort int,
 ) (string, string, error) {
-	client := svcv1alpha1connect.NewKargoServiceClient(
-		http.DefaultClient,
-		serverAddress,
-	)
+	client := client.GetClient(serverAddress, "")
 
 	res, err := client.GetPublicConfig(
 		ctx,
