@@ -181,6 +181,13 @@ func (s *server) PromoteStage(
 	return handler.PromoteStageV1Alpha1(s.kc)(ctx, req)
 }
 
+func (s *server) SetAutoPromotionForStage(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.SetAutoPromotionForStageRequest],
+) (*connect.Response[svcv1alpha1.SetAutoPromotionForStageResponse], error) {
+	return handler.SetAutoPromotionForStageV1Alpha1(s.kc)(ctx, req)
+}
+
 func (s *server) CreatePromotionPolicy(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreatePromotionPolicyRequest],

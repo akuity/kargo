@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { AdminLoginRequest, AdminLoginResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteStageRequest, DeleteStageResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteStageRequest, DeleteStageResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -144,6 +144,23 @@ export const promoteStage = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).promoteStage;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage
+ */
+export const setAutoPromotionForStage = createQueryService({
+  service: {
+    methods: {
+      setAutoPromotionForStage: {
+        name: "SetAutoPromotionForStage",
+        kind: MethodKind.Unary,
+        I: SetAutoPromotionForStageRequest,
+        O: SetAutoPromotionForStageResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).setAutoPromotionForStage;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreatePromotionPolicy
