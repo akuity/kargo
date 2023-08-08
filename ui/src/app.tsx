@@ -11,7 +11,7 @@ import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
 import { theme } from './config/theme';
 import { MainLayout } from './features/common/layout/main-layout';
-import { Login } from './pages/login';
+import { Login } from './pages/login/login';
 import { Projects } from './pages/projects';
 
 import './app.less';

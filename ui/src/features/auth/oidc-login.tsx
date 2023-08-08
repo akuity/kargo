@@ -2,13 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, notification } from 'antd';
 import * as oauth from 'oauth4webapi';
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
 import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
 
+import { useAuth } from './use-auth';
+
 const codeVerifierKey = 'PKCE_code_verifier';
-const authTokenKey = 'auth_token';
 
 type Props = {
   oidcConfig: OIDCConfig;
@@ -17,8 +17,8 @@ type Props = {
 export const OIDCLogin = ({ oidcConfig }: Props) => {
   const issuer = new URL(oidcConfig.issuerUrl);
   const location = useLocation();
-  const navigate = useNavigate();
   const redirectURI = `${window.location.protocol}//${window.location.hostname}:${window.location.port}${location.pathname}`;
+  const { onLogin } = useAuth();
 
   const client = React.useMemo(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,10 +117,13 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         return;
       }
 
-      localStorage.setItem(authTokenKey, result.id_token);
-      navigate(paths.home, { replace: true });
+      onLogin(result.id_token);
     })();
   }, [as, client, location]);
 
-  return <Button onClick={login}>Login</Button>;
+  return (
+    <Button onClick={login} block size='large'>
+      SSO Login
+    </Button>
+  );
 };
