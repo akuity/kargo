@@ -11,6 +11,7 @@ import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
 import { theme } from './config/theme';
 import { MainLayout } from './features/common/layout/main-layout';
+import { Login } from './pages/login';
 import { Projects } from './pages/projects';
 
 import './app.less';
@@ -28,6 +29,7 @@ export const App = () => (
                 <Route path={paths.project} element={<Project />} />
                 <Route path={paths.stage} element={<Project />} />
               </Route>
+              <Route path='login' element={<Login />} />
             </Routes>
           </BrowserRouter>
         </ModalContextProvider>

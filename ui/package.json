@@ -58,6 +58,7 @@
     "date-fns": "^2.30.0",
     "monaco-editor": "^0.39.0",
     "monaco-yaml": "^4.0.4",
+    "oauth4webapi": "^2.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.45.1",
