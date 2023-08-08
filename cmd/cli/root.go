@@ -25,11 +25,12 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
-type localServerListenerKey struct {
-	// explicitly empty
+// rootState holds state used internally by the root command.
+type rootState struct {
+	localServerListener net.Listener
 }
 
-func NewRootCommand(opt *option.Option) (*cobra.Command, error) {
+func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:               "kargo",
 		DisableAutoGenTag: true,
@@ -74,7 +75,7 @@ func NewRootCommand(opt *option.Option) (*cobra.Command, error) {
 				if err != nil {
 					return errors.Wrap(err, "start local server")
 				}
-				ctx = context.WithValue(ctx, localServerListenerKey{}, l)
+				rs.localServerListener = l
 				srv, err := api.NewServer(kubeClient, api.ServerConfig{})
 				if err != nil {
 					return errors.Wrap(err, "new api server")
@@ -86,17 +87,16 @@ func NewRootCommand(opt *option.Option) (*cobra.Command, error) {
 				if err != nil {
 					return errors.Wrap(err, "get credential")
 				}
-				ctx = kubeclient.SetCredentialToContext(ctx, cred)
+				cmd.SetContext(kubeclient.SetCredentialToContext(ctx, cred))
 			}
-			cmd.SetContext(ctx)
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.HelpFunc()(cmd, args)
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			if l, ok := cmd.Context().Value(localServerListenerKey{}).(net.Listener); ok {
-				return l.Close()
+			if rs.localServerListener != nil {
+				return rs.localServerListener.Close()
 			}
 			return nil
 		},
