@@ -18,7 +18,7 @@ for (const crdFile of crdFiles) {
   const name = crd.metadata.name;
   for (const version of crd.spec.versions) {
     const outputPath = path.join(outDir, `${name}_${version.name}.json`);
-    const schema = openapiSchemaToJsonSchema(version.schema);
+    const schema = openapiSchemaToJsonSchema(version.schema.openAPIV3Schema);
     await fs.outputFile(outputPath, jsonStringify(schema, { space: 2 }));
   }
 }

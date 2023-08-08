@@ -4,6 +4,7 @@ import { ConfigProvider } from 'antd';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { transport } from '@ui/config/transport';
+import { ModalContextProvider } from '@ui/features/common/modal/modal-context';
 import { Project } from '@ui/pages/project';
 
 import { paths } from './config/paths';
@@ -19,15 +20,17 @@ export const App = () => (
   <TransportProvider transport={transport}>
     <QueryClientProvider client={queryClient}>
       <ConfigProvider theme={theme}>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<MainLayout />}>
-              <Route path={paths.projects} element={<Projects />} />
-              <Route path={paths.project} element={<Project />} />
-              <Route path={paths.stage} element={<Project />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <ModalContextProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<MainLayout />}>
+                <Route path={paths.projects} element={<Projects />} />
+                <Route path={paths.project} element={<Project />} />
+                <Route path={paths.stage} element={<Project />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </ModalContextProvider>
       </ConfigProvider>
     </QueryClientProvider>
   </TransportProvider>
