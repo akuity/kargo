@@ -54,6 +54,9 @@ const (
 	// KargoServicePromoteStageProcedure is the fully-qualified name of the KargoService's PromoteStage
 	// RPC.
 	KargoServicePromoteStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/PromoteStage"
+	// KargoServiceSetAutoPromotionForStageProcedure is the fully-qualified name of the KargoService's
+	// SetAutoPromotionForStage RPC.
+	KargoServiceSetAutoPromotionForStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/SetAutoPromotionForStage"
 	// KargoServiceCreatePromotionPolicyProcedure is the fully-qualified name of the KargoService's
 	// CreatePromotionPolicy RPC.
 	KargoServiceCreatePromotionPolicyProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreatePromotionPolicy"
@@ -90,6 +93,7 @@ type KargoServiceClient interface {
 	UpdateStage(context.Context, *connect_go.Request[v1alpha1.UpdateStageRequest]) (*connect_go.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error)
+	SetAutoPromotionForStage(context.Context, *connect_go.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect_go.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
 	CreatePromotionPolicy(context.Context, *connect_go.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect_go.Response[v1alpha1.CreatePromotionPolicyResponse], error)
 	ListPromotionPolicies(context.Context, *connect_go.Request[v1alpha1.ListPromotionPoliciesRequest]) (*connect_go.Response[v1alpha1.ListPromotionPoliciesResponse], error)
 	GetPromotionPolicy(context.Context, *connect_go.Request[v1alpha1.GetPromotionPolicyRequest]) (*connect_go.Response[v1alpha1.GetPromotionPolicyResponse], error)
@@ -150,6 +154,11 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 			baseURL+KargoServicePromoteStageProcedure,
 			opts...,
 		),
+		setAutoPromotionForStage: connect_go.NewClient[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse](
+			httpClient,
+			baseURL+KargoServiceSetAutoPromotionForStageProcedure,
+			opts...,
+		),
 		createPromotionPolicy: connect_go.NewClient[v1alpha1.CreatePromotionPolicyRequest, v1alpha1.CreatePromotionPolicyResponse](
 			httpClient,
 			baseURL+KargoServiceCreatePromotionPolicyProcedure,
@@ -195,22 +204,23 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 
 // kargoServiceClient implements KargoServiceClient.
 type kargoServiceClient struct {
-	getPublicConfig       *connect_go.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
-	adminLogin            *connect_go.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
-	createStage           *connect_go.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
-	listStages            *connect_go.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
-	getStage              *connect_go.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
-	updateStage           *connect_go.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
-	deleteStage           *connect_go.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
-	promoteStage          *connect_go.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
-	createPromotionPolicy *connect_go.Client[v1alpha1.CreatePromotionPolicyRequest, v1alpha1.CreatePromotionPolicyResponse]
-	listPromotionPolicies *connect_go.Client[v1alpha1.ListPromotionPoliciesRequest, v1alpha1.ListPromotionPoliciesResponse]
-	getPromotionPolicy    *connect_go.Client[v1alpha1.GetPromotionPolicyRequest, v1alpha1.GetPromotionPolicyResponse]
-	updatePromotionPolicy *connect_go.Client[v1alpha1.UpdatePromotionPolicyRequest, v1alpha1.UpdatePromotionPolicyResponse]
-	deletePromotionPolicy *connect_go.Client[v1alpha1.DeletePromotionPolicyRequest, v1alpha1.DeletePromotionPolicyResponse]
-	createProject         *connect_go.Client[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse]
-	listProjects          *connect_go.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
-	deleteProject         *connect_go.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
+	getPublicConfig          *connect_go.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
+	adminLogin               *connect_go.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
+	createStage              *connect_go.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
+	listStages               *connect_go.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
+	getStage                 *connect_go.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
+	updateStage              *connect_go.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
+	deleteStage              *connect_go.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
+	promoteStage             *connect_go.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
+	setAutoPromotionForStage *connect_go.Client[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse]
+	createPromotionPolicy    *connect_go.Client[v1alpha1.CreatePromotionPolicyRequest, v1alpha1.CreatePromotionPolicyResponse]
+	listPromotionPolicies    *connect_go.Client[v1alpha1.ListPromotionPoliciesRequest, v1alpha1.ListPromotionPoliciesResponse]
+	getPromotionPolicy       *connect_go.Client[v1alpha1.GetPromotionPolicyRequest, v1alpha1.GetPromotionPolicyResponse]
+	updatePromotionPolicy    *connect_go.Client[v1alpha1.UpdatePromotionPolicyRequest, v1alpha1.UpdatePromotionPolicyResponse]
+	deletePromotionPolicy    *connect_go.Client[v1alpha1.DeletePromotionPolicyRequest, v1alpha1.DeletePromotionPolicyResponse]
+	createProject            *connect_go.Client[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse]
+	listProjects             *connect_go.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
+	deleteProject            *connect_go.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
 }
 
 // GetPublicConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig.
@@ -251,6 +261,12 @@ func (c *kargoServiceClient) DeleteStage(ctx context.Context, req *connect_go.Re
 // PromoteStage calls akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage.
 func (c *kargoServiceClient) PromoteStage(ctx context.Context, req *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error) {
 	return c.promoteStage.CallUnary(ctx, req)
+}
+
+// SetAutoPromotionForStage calls
+// akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage.
+func (c *kargoServiceClient) SetAutoPromotionForStage(ctx context.Context, req *connect_go.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect_go.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {
+	return c.setAutoPromotionForStage.CallUnary(ctx, req)
 }
 
 // CreatePromotionPolicy calls akuity.io.kargo.service.v1alpha1.KargoService.CreatePromotionPolicy.
@@ -304,6 +320,7 @@ type KargoServiceHandler interface {
 	UpdateStage(context.Context, *connect_go.Request[v1alpha1.UpdateStageRequest]) (*connect_go.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect_go.Request[v1alpha1.DeleteStageRequest]) (*connect_go.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error)
+	SetAutoPromotionForStage(context.Context, *connect_go.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect_go.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
 	CreatePromotionPolicy(context.Context, *connect_go.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect_go.Response[v1alpha1.CreatePromotionPolicyResponse], error)
 	ListPromotionPolicies(context.Context, *connect_go.Request[v1alpha1.ListPromotionPoliciesRequest]) (*connect_go.Response[v1alpha1.ListPromotionPoliciesResponse], error)
 	GetPromotionPolicy(context.Context, *connect_go.Request[v1alpha1.GetPromotionPolicyRequest]) (*connect_go.Response[v1alpha1.GetPromotionPolicyResponse], error)
@@ -359,6 +376,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect_go.HandlerO
 	mux.Handle(KargoServicePromoteStageProcedure, connect_go.NewUnaryHandler(
 		KargoServicePromoteStageProcedure,
 		svc.PromoteStage,
+		opts...,
+	))
+	mux.Handle(KargoServiceSetAutoPromotionForStageProcedure, connect_go.NewUnaryHandler(
+		KargoServiceSetAutoPromotionForStageProcedure,
+		svc.SetAutoPromotionForStage,
 		opts...,
 	))
 	mux.Handle(KargoServiceCreatePromotionPolicyProcedure, connect_go.NewUnaryHandler(
@@ -437,6 +459,10 @@ func (UnimplementedKargoServiceHandler) DeleteStage(context.Context, *connect_go
 
 func (UnimplementedKargoServiceHandler) PromoteStage(context.Context, *connect_go.Request[v1alpha1.PromoteStageRequest]) (*connect_go.Response[v1alpha1.PromoteStageResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) SetAutoPromotionForStage(context.Context, *connect_go.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect_go.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) CreatePromotionPolicy(context.Context, *connect_go.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect_go.Response[v1alpha1.CreatePromotionPolicyResponse], error) {

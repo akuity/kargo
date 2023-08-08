@@ -799,6 +799,92 @@ export class TypedPromotionPolicySpec extends Message<TypedPromotionPolicySpec> 
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageRequest
+ */
+export class SetAutoPromotionForStageRequest extends Message<SetAutoPromotionForStageRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string stage = 2;
+   */
+  stage = "";
+
+  /**
+   * @generated from field: bool enable = 3;
+   */
+  enable = false;
+
+  constructor(data?: PartialMessage<SetAutoPromotionForStageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "enable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetAutoPromotionForStageRequest {
+    return new SetAutoPromotionForStageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetAutoPromotionForStageRequest {
+    return new SetAutoPromotionForStageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetAutoPromotionForStageRequest {
+    return new SetAutoPromotionForStageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetAutoPromotionForStageRequest | PlainMessage<SetAutoPromotionForStageRequest> | undefined, b: SetAutoPromotionForStageRequest | PlainMessage<SetAutoPromotionForStageRequest> | undefined): boolean {
+    return proto3.util.equals(SetAutoPromotionForStageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageResponse
+ */
+export class SetAutoPromotionForStageResponse extends Message<SetAutoPromotionForStageResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy promotion_policy = 1;
+   */
+  promotionPolicy?: PromotionPolicy;
+
+  constructor(data?: PartialMessage<SetAutoPromotionForStageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "promotion_policy", kind: "message", T: PromotionPolicy },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetAutoPromotionForStageResponse {
+    return new SetAutoPromotionForStageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetAutoPromotionForStageResponse {
+    return new SetAutoPromotionForStageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetAutoPromotionForStageResponse {
+    return new SetAutoPromotionForStageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetAutoPromotionForStageResponse | PlainMessage<SetAutoPromotionForStageResponse> | undefined, b: SetAutoPromotionForStageResponse | PlainMessage<SetAutoPromotionForStageResponse> | undefined): boolean {
+    return proto3.util.equals(SetAutoPromotionForStageResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyRequest
  */
 export class CreatePromotionPolicyRequest extends Message<CreatePromotionPolicyRequest> {

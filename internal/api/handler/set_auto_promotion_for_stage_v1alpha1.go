@@ -1,0 +1,73 @@
+package handler
+
+import (
+	"context"
+
+	"github.com/bufbuild/connect-go"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
+	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+)
+
+type SetAutoPromotionForStageV1Alpha1Func func(
+	context.Context,
+	*connect.Request[svcv1alpha1.SetAutoPromotionForStageRequest],
+) (*connect.Response[svcv1alpha1.SetAutoPromotionForStageResponse], error)
+
+func SetAutoPromotionForStageV1Alpha1(
+	kc client.Client,
+) SetAutoPromotionForStageV1Alpha1Func {
+	validateProject := newProjectValidator(kc)
+	return func(
+		ctx context.Context,
+		req *connect.Request[svcv1alpha1.SetAutoPromotionForStageRequest],
+	) (*connect.Response[svcv1alpha1.SetAutoPromotionForStageResponse], error) {
+		if req.Msg.GetProject() == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
+		}
+		if req.Msg.GetStage() == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
+		}
+		if err := validateProject(ctx, req.Msg.GetProject()); err != nil {
+			return nil, err
+		}
+
+		var policyList kubev1alpha1.PromotionPolicyList
+		if err := kc.List(ctx, &policyList, client.InNamespace(req.Msg.GetProject()), client.MatchingFields{
+			kubeclient.PromotionPoliciesByStageIndexField: req.Msg.GetStage(),
+		}); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "list promotion policies"))
+		}
+
+		// Since only one PromotionPolicy is allowed per stage,
+		// create if not exists and update if exists.
+		var policy kubev1alpha1.PromotionPolicy
+		if len(policyList.Items) > 0 {
+			policy = policyList.Items[0]
+			policy.EnableAutoPromotion = req.Msg.GetEnable()
+			if err := kc.Update(ctx, &policy); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "update promotion policy"))
+			}
+		} else {
+			policy = kubev1alpha1.PromotionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: req.Msg.GetProject(),
+					Name:      req.Msg.GetStage(),
+				},
+				Stage:               req.Msg.GetStage(),
+				EnableAutoPromotion: req.Msg.GetEnable(),
+			}
+			if err := kc.Create(ctx, &policy); err != nil {
+				return nil, connect.NewError(connect.CodeInternal, errors.Wrap(err, "create promotion policy"))
+			}
+		}
+		return connect.NewResponse(&svcv1alpha1.SetAutoPromotionForStageResponse{
+			PromotionPolicy: typesv1alpha1.ToPromotionPolicyProto(policy),
+		}), nil
+	}
+}

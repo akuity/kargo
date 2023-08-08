@@ -1,15 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
@@ -34,30 +37,46 @@ func newAPICommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo API Server")
 
+			var wg sync.WaitGroup
+			errCh := make(chan error, 2)
+
 			var kubeClient client.Client
 			{
 				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
-					return errors.Wrap(err, "error loading REST config")
+					return pkgerrors.Wrap(err, "error loading REST config")
 				}
 				restCfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 					return kubeclient.NewCredentialInjector(rt)
 				}
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "error adding Kubernetes core API to scheme")
+					return pkgerrors.Wrap(err, "error adding Kubernetes core API to scheme")
 				}
 				if err = kargoAPI.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "error adding Kargo API to scheme")
+					return pkgerrors.Wrap(err, "error adding Kargo API to scheme")
 				}
-				if kubeClient, err = client.New(
+				mgr, err := ctrl.NewManager(
 					restCfg,
-					client.Options{
-						Scheme: scheme,
+					ctrl.Options{
+						Scheme:             scheme,
+						MetricsBindAddress: "0",
 					},
-				); err != nil {
-					return errors.Wrap(err, "error initializing Kubernetes client")
+				)
+				if err != nil {
+					return pkgerrors.Wrap(err, "new manager")
 				}
+				// Index PromotionPolicies by Stage
+				if err = kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
+					return pkgerrors.Wrap(err, "index PromotionPolicies by Stage")
+				}
+				wg.Add(1)
+				go func() {
+					mgrErr := mgr.Start(ctx)
+					errCh <- pkgerrors.Wrap(mgrErr, "start manager")
+					wg.Done()
+				}()
+				kubeClient = mgr.GetClient()
 			}
 
 			cfg := api.ServerConfigFromEnv()
@@ -74,7 +93,7 @@ func newAPICommand() *cobra.Command {
 
 			srv, err := api.NewServer(kubeClient, cfg)
 			if err != nil {
-				return errors.Wrap(err, "error creating API server")
+				return pkgerrors.Wrap(err, "error creating API server")
 			}
 			l, err := net.Listen(
 				"tcp",
@@ -85,10 +104,24 @@ func newAPICommand() *cobra.Command {
 				),
 			)
 			if err != nil {
-				return errors.Wrap(err, "error creating listener")
+				return pkgerrors.Wrap(err, "error creating listener")
 			}
-			defer l.Close()
-			return srv.Serve(ctx, l, false)
+			defer func() {
+				_ = l.Close()
+			}()
+			wg.Add(1)
+			go func() {
+				srvErr := srv.Serve(ctx, l, false)
+				errCh <- pkgerrors.Wrap(srvErr, "serve")
+				wg.Done()
+			}()
+			wg.Wait()
+			close(errCh)
+			var resErr error
+			for err := range errCh {
+				resErr = errors.Join(resErr, err)
+			}
+			return resErr
 		},
 	}
 }
