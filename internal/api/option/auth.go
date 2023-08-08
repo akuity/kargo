@@ -2,7 +2,6 @@ package option
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -11,68 +10,40 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
-const (
-	authHeaderKey = "Authorization"
-	bearerPrefix  = "Bearer "
-)
+const authHeaderKey = "Authorization"
 
-var (
-	_ connect.Interceptor = &authInterceptor{}
-)
-
+// authInterceptor implements connect.Interceptor and is used to retrieve the
+// value of the Authorization header from inbound requests/connections and
+// store it in the context.
 type authInterceptor struct{}
-
-func newAuthInterceptor() connect.Interceptor {
-	return &authInterceptor{}
-}
 
 func (a *authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		if req.Spec().IsClient {
-			cred, ok := kubeclient.GetCredentialFromContext(ctx)
-			if ok {
-				setAuthHeader(req.Header(), cred)
-			}
-			return next(ctx, req)
-		}
-
 		cred := credFromAuthHeader(req.Header())
-		if cred == "" {
-			return next(ctx, req)
+		if cred != "" {
+			ctx = kubeclient.SetCredentialToContext(ctx, cred)
 		}
-		return next(kubeclient.SetCredentialToContext(ctx, cred), req)
+		return next(ctx, req)
 	}
 }
 
 func (a *authInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return func(ctx context.Context, spec connect.Spec) connect.StreamingClientConn {
-		cred, ok := kubeclient.GetCredentialFromContext(ctx)
-		if !ok {
-			return next(ctx, spec)
-		}
-
-		conn := next(ctx, spec)
-		setAuthHeader(conn.RequestHeader(), cred)
-		return conn
+		// This is a no-op because this interceptor is only used with handlers.
+		return next(ctx, spec)
 	}
 }
 
 func (a *authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		cred := credFromAuthHeader(conn.RequestHeader())
-		if cred == "" {
-			return next(ctx, conn)
+		if cred != "" {
+			ctx = kubeclient.SetCredentialToContext(ctx, cred)
 		}
-		return next(kubeclient.SetCredentialToContext(ctx, cred), conn)
+		return next(ctx, conn)
 	}
 }
 
 func credFromAuthHeader(header http.Header) string {
-	return strings.TrimPrefix(header.Get(authHeaderKey), bearerPrefix)
-}
-
-func setAuthHeader(header http.Header, cred string) {
-	if cred != "" {
-		header.Set(authHeaderKey, fmt.Sprintf("%s%s", bearerPrefix, cred))
-	}
+	return strings.TrimPrefix(header.Get(authHeaderKey), "Bearer ")
 }

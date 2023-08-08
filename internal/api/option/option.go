@@ -11,22 +11,12 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func NewClientOption(skipAuth bool) connect.ClientOption {
-	var interceptors []connect.Interceptor
-	if !skipAuth {
-		interceptors = append(interceptors, newAuthInterceptor())
-	}
-	return connect.WithClientOptions(
-		connect.WithInterceptors(interceptors...),
-	)
-}
-
 func NewHandlerOption(ctx context.Context, localMode bool) connect.HandlerOption {
 	interceptors := []connect.Interceptor{
 		newLogInterceptor(logging.LoggerFromContext(ctx), loggingIgnorableMethods),
 	}
 	if !localMode {
-		interceptors = append(interceptors, newAuthInterceptor())
+		interceptors = append(interceptors, &authInterceptor{})
 	}
 	return connect.WithHandlerOptions(
 		connect.WithCodec(newJSONCodec("json")),
