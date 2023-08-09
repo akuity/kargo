@@ -14,6 +14,7 @@
   "license": "ISC",
   "devDependencies": {
     "@openapi-contrib/openapi-schema-to-json-schema": "^5.1.0",
+    "@types/json-schema": "^7.0.12",
     "@types/node": "^18.16.1",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.1",
@@ -41,21 +42,30 @@
   "packageManager": "pnpm@8.1.0",
   "dependencies": {
     "@ant-design/graphs": "^1.4.0",
-    "@bufbuild/connect": "0.8.6",
-    "@bufbuild/connect-query": "0.2.1",
-    "@bufbuild/connect-web": "^0.9.0",
-    "@bufbuild/protobuf": "1.2.0",
+    "@bufbuild/connect": "0.10.1",
+    "@bufbuild/connect-query": "0.3.0",
+    "@bufbuild/connect-web": "^0.10.1",
+    "@bufbuild/protobuf": "1.2.1",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-brands-svg-icons": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
+    "@hookform/resolvers": "^3.1.1",
+    "@monaco-editor/react": "^4.5.1",
     "@tanstack/react-query": "^4.29.5",
     "antd": "^5.4.5",
     "classnames": "^2.3.2",
     "date-fns": "^2.30.0",
+    "monaco-editor": "^0.39.0",
+    "monaco-yaml": "^4.0.4",
+    "oauth4webapi": "^2.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.45.1",
     "react-router-dom": "^6.10.0",
-    "vitest": "^0.31.1"
+    "vite-plugin-monaco-editor": "^1.1.0",
+    "vitest": "^0.31.1",
+    "yaml": "^2.3.1",
+    "zod": "^3.21.4"
   }
 }

@@ -79,7 +79,7 @@ func TestRandStringFromCharset(t *testing.T) {
 		// Generate many random strings of the same length to assert randomness
 		for j := 0; j < 100; j++ {
 			// Assert that the random string is the correct length
-			str, err := randStringFromCharset(i, "abc")
+			str, err := randStringFromCharset(i, chartSet)
 			require.NoError(t, err)
 			require.Len(t, str, i)
 			// Assert that the random string is composed only of characters from the
