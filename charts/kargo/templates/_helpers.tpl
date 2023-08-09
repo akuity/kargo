@@ -7,40 +7,6 @@ Expand the name of the chart.
 {{- end -}}
 
 {{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
-*/}}
-{{- define "kargo.fullname" -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-
-{{- define "kargo.api.fullname" -}}
-{{ include "kargo.fullname" . | printf "%s-api" }}
-{{- end -}}
-
-{{- define "kargo.controller.fullname" -}}
-{{ include "kargo.fullname" . | printf "%s-controller" }}
-{{- end -}}
-
-{{- define "kargo.dexServer.fullname" -}}
-{{ include "kargo.fullname" . | printf "%s-dex-server" }}
-{{- end -}}
-
-{{- define "kargo.garbageCollector.fullname" -}}
-{{ include "kargo.fullname" . | printf "%s-garbage-collector" }}
-{{- end -}}
-
-{{- define "kargo.webhooksServer.fullname" -}}
-{{ include "kargo.fullname" . | printf "%s-webhooks-server" }}
-{{- end -}}
-
-{{/*
 Create image reference as used by resources.
 */}}
 
@@ -102,22 +68,3 @@ app.kubernetes.io/component: webhooks-server
 {{- $template := index . 2 }}
 {{- include $template (dict "Chart" (dict "Name" $subchart) "Values" (index $dot.Values $subchart) "Release" $dot.Release "Capabilities" $dot.Capabilities) }}
 {{- end }}
-
-{{/*
-Return the appropriate apiVersion for a networking object.
-*/}}
-{{- define "networking.apiVersion" -}}
-{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
-{{- print "networking.k8s.io/v1" -}}
-{{- else -}}
-{{- print "networking.k8s.io/v1beta1" -}}
-{{- end -}}
-{{- end -}}
-
-{{- define "networking.apiVersion.isStable" -}}
-  {{- eq (include "networking.apiVersion" .) "networking.k8s.io/v1" -}}
-{{- end -}}
-
-{{- define "networking.apiVersion.supportIngressClassName" -}}
-  {{- semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion -}}
-{{- end -}}
