@@ -4,6 +4,7 @@ kind: ConfigMap
 metadata:
   name: 
   name: {{ include "kargo.dexServer.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.dexServer.labels" . | nindent 4 }}

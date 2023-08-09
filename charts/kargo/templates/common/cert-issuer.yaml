@@ -4,6 +4,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: {{ include "kargo.fullname" . }}-selfsigned-cert-issuer
+  namespace: {{ .Release.Namespace }}
 spec:
   selfSigned: {}
 {{- end }}
