@@ -6,8 +6,11 @@ issue:
     - prefix: kind
       list:
         - bug
-        - refactor
+        - chore
+        - discussion
         - enhancement
+        - question
+        - refactor
       multiple: true
       needs: true
 
@@ -23,7 +26,6 @@ issue:
     - prefix: area
       list:
         # generic areas
-        - chore
         - planning
         - devx
         - documentation
