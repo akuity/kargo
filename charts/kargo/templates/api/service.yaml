@@ -7,11 +7,14 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
 spec:
-  type: ClusterIP
+  type: {{ .Values.api.service.type }}
   ports:
-    - port: 80
-      protocol: TCP
-      targetPort: 8080
+  - protocol: TCP
+    port: 80
+    {{- if and (or (eq .Values.api.service.type "NodePort") (eq .Values.api.service.type "LoadBalancer")) .Values.api.service.nodePort}}
+    nodePort: {{ .Values.api.service.nodePort }}
+    {{- end }}
+    targetPort: 8080
   selector:
     {{- include "kargo.selectorLabels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
