@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	goos "os"
 	"time"
 
 	"github.com/bufbuild/connect-go"
@@ -18,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/api/handler"
 	"github.com/akuity/kargo/internal/api/oidc"
 	"github.com/akuity/kargo/internal/api/option"
+	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
@@ -34,6 +36,7 @@ type ServerConfig struct {
 	AdminConfig             *handler.AdminConfig
 	DexProxyConfig          *dex.ProxyConfig
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
+	UIDirectory             string        `envconfig:"UI_DIR" default:"./ui/build"`
 }
 
 func ServerConfigFromEnv() ServerConfig {
@@ -82,6 +85,7 @@ func (s *server) Serve(
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
+	mux.Handle("/", s.newDashboardRequestHandler())
 	if s.cfg.DexProxyConfig != nil {
 		dexProxyCfg := dex.ProxyConfigFromEnv()
 		dexProxy, err := dex.NewProxy(dexProxyCfg)
@@ -111,6 +115,22 @@ func (s *server) Serve(
 			return nil
 		}
 		return err
+	}
+}
+
+func (s *server) newDashboardRequestHandler() http.HandlerFunc {
+	fs := http.FileServer(http.Dir(s.cfg.UIDirectory))
+	return func(w http.ResponseWriter, req *http.Request) {
+		path := s.cfg.UIDirectory + req.URL.Path
+		info, err := goos.Stat(path)
+		if goos.IsNotExist(err) || info.IsDir() {
+			if w != nil {
+				httputil.SetNoCacheHeaders(w)
+				http.ServeFile(w, req, s.cfg.UIDirectory+"/index.html")
+			}
+		} else {
+			fs.ServeHTTP(w, req)
+		}
 	}
 }
 
