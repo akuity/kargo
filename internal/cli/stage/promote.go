@@ -42,7 +42,7 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 				return errors.New("state is required")
 			}
 
-			client, err := client.GetClientFromConfig(opt)
+			client, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
 				return err
 			}
