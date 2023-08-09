@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 
 	"github.com/bufbuild/connect-go"
@@ -21,16 +22,17 @@ func GetClientFromConfig(ctx context.Context, opt *option.Option) (
 	error,
 ) {
 	if opt.UseLocalServer {
-		return GetClient(opt.LocalServerAddress, ""), nil
+		return GetClient(opt.LocalServerAddress, "", opt.InsecureTLS), nil
 	}
 	cfg, err := config.LoadCLIConfig()
 	if err != nil {
 		return nil, err
 	}
-	if cfg, err = newTokenRefresher().refreshToken(ctx, cfg); err != nil {
+	if cfg, err =
+		newTokenRefresher().refreshToken(ctx, cfg, opt.InsecureTLS); err != nil {
 		return nil, errors.Wrap(err, "error refreshing token")
 	}
-	return GetClient(cfg.APIAddress, cfg.BearerToken), nil
+	return GetClient(cfg.APIAddress, cfg.BearerToken, opt.InsecureTLS), nil
 }
 
 // GetClient returns a new client for the Kargo API server located at the
@@ -40,15 +42,20 @@ func GetClientFromConfig(ctx context.Context, opt *option.Option) (
 func GetClient(
 	serverAddress string,
 	credential string,
+	insecureTLS bool,
 ) svcv1alpha1connect.KargoServiceClient {
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: insecureTLS, // nolint: gosec
+			},
+		},
+	}
 	if credential == "" {
-		return svcv1alpha1connect.NewKargoServiceClient(
-			http.DefaultClient,
-			serverAddress,
-		)
+		return svcv1alpha1connect.NewKargoServiceClient(httpClient, serverAddress)
 	}
 	return svcv1alpha1connect.NewKargoServiceClient(
-		http.DefaultClient,
+		httpClient,
 		serverAddress,
 		connect.WithClientOptions(
 			connect.WithInterceptors(

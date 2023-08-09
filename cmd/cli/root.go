@@ -104,9 +104,10 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 		return nil, err
 	}
 	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
+	option.InsecureTLS(&opt.InsecureTLS)(cmd.PersistentFlags())
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
-	cmd.AddCommand(login.NewCommand())
+	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(project.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand())

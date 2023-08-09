@@ -22,6 +22,7 @@ type tokenRefresher struct {
 		ctx context.Context,
 		serverAddress string,
 		refreshToken string,
+		insecureTLS bool,
 	) (string, string, error)
 
 	saveCLIConfigFn func(cfg config.CLIConfig) error
@@ -46,6 +47,7 @@ func newTokenRefresher() *tokenRefresher {
 func (t *tokenRefresher) refreshToken(
 	ctx context.Context,
 	cfg config.CLIConfig,
+	insecureTLS bool,
 ) (config.CLIConfig, error) {
 	jwtParser := jwt.NewParser(jwt.WithoutClaimsValidation())
 	var claims jwt.RegisteredClaims
@@ -75,8 +77,12 @@ func (t *tokenRefresher) refreshToken(
 	}
 
 	var err error
-	if cfg.BearerToken, cfg.RefreshToken, err =
-		t.redeemRefreshTokenFn(ctx, cfg.APIAddress, cfg.RefreshToken); err != nil {
+	if cfg.BearerToken, cfg.RefreshToken, err = t.redeemRefreshTokenFn(
+		ctx,
+		cfg.APIAddress,
+		cfg.RefreshToken,
+		insecureTLS,
+	); err != nil {
 		return cfg, errors.New(
 			"error refreshing token; please use `kargo login` to re-authenticate",
 		)
@@ -92,8 +98,9 @@ func redeemRefreshToken(
 	ctx context.Context,
 	serverAddress string,
 	refreshToken string,
+	insecureTLS bool,
 ) (string, string, error) {
-	client := GetClient(serverAddress, "")
+	client := GetClient(serverAddress, "", insecureTLS)
 
 	res, err := client.GetPublicConfig(
 		ctx,

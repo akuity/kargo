@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"math/big"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/akuity/kargo/internal/cli/client"
 	libConfig "github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/kubeclient"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -37,7 +39,7 @@ const (
 	defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func NewCommand() *cobra.Command {
+func NewCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "login server-address",
 		Args:    cobra.ExactArgs(1),
@@ -103,8 +105,8 @@ func NewCommand() *cobra.Command {
 					}
 				}
 
-				bearerToken, err = adminLogin(ctx, serverAddress, password)
-				if err != nil {
+				if bearerToken, err =
+					adminLogin(ctx, serverAddress, password, opt.InsecureTLS); err != nil {
 					return err
 				}
 			} else if useKubeconfig {
@@ -127,7 +129,7 @@ func NewCommand() *cobra.Command {
 				}
 
 				if bearerToken, refreshToken, err =
-					ssoLogin(ctx, serverAddress, callbackPort); err != nil {
+					ssoLogin(ctx, serverAddress, callbackPort, opt.InsecureTLS); err != nil {
 					return err
 				}
 			}
@@ -184,8 +186,9 @@ func adminLogin(
 	ctx context.Context,
 	serverAddress string,
 	password string,
+	insecureTLS bool,
 ) (string, error) {
-	client := client.GetClient(serverAddress, "")
+	client := client.GetClient(serverAddress, "", insecureTLS)
 
 	cfgRes, err := client.GetPublicConfig(
 		ctx,
@@ -236,8 +239,9 @@ func ssoLogin(
 	ctx context.Context,
 	serverAddress string,
 	callbackPort int,
+	insecureTLS bool,
 ) (string, string, error) {
-	client := client.GetClient(serverAddress, "")
+	client := client.GetClient(serverAddress, "", insecureTLS)
 
 	res, err := client.GetPublicConfig(
 		ctx,
@@ -256,6 +260,16 @@ func ssoLogin(
 
 	scopes := res.Msg.OidcConfig.Scopes
 
+	ctx = oidc.ClientContext(
+		ctx,
+		&http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: insecureTLS, // nolint: gosec
+				},
+			},
+		},
+	)
 	provider, err := oidc.NewProvider(ctx, res.Msg.OidcConfig.IssuerUrl)
 	if err != nil {
 		return "", "", errors.Wrap(err, "error initializing OIDC provider")
