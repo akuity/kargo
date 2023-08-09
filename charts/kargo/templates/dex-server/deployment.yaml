@@ -31,24 +31,24 @@ spec:
           readOnly: true
         resources:
           {{- toYaml .Values.api.oidc.dex.resources | nindent 10 }}
-      livenessProbe:
-        httpGet:
-          path: /healthz/live
-          port: 5558
-        initialDelaySeconds: 10
-        periodSeconds: 10
-        timeoutSeconds: 1
-        successThreshold: 1
-        failureThreshold: 300
-      readinessProbe:
-        httpGet:
-          path: /healthz/ready
-          port: 5558
-        initialDelaySeconds: 10
-        periodSeconds: 10
-        timeoutSeconds: 1
-        successThreshold: 1
-        failureThreshold: 300
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 5558
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 300
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 5558
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 300
       volumes:
       - name: config
         projected:
