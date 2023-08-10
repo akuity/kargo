@@ -7,6 +7,25 @@ CERT_MANAGER_CHART_VERSION := 1.11.0
 
 VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 
+IMAGE_REPO ?= kargo
+IMAGE_TAG ?= dev
+IMAGE_PUSH ?= false
+IMAGE_PLATFORMS =
+DOCKER_BUILD_OPTS =
+
+# Intelligently choose to build a multi-arch image if the intent is to push to a
+# container registry (IMAGE_PUSH=true). If not pushing, build an single-arch
+# image for the local architecture. Honor IMAGE_PLATFORMS above all.
+ifeq ($(strip $(IMAGE_PUSH)),true)
+  override DOCKER_BUILD_OPTS += --push
+  ifeq ($(strip $(IMAGE_PLATFORMS)),)
+    override DOCKER_BUILD_OPTS += --platform=linux/amd64,linux/arm64
+  endif
+endif
+ifneq ($(strip $(IMAGE_PLATFORMS)),)
+  override DOCKER_BUILD_OPTS += --platform=$(IMAGE_PLATFORMS)
+endif
+
 # These enable cross-compiling the CLI binary for any desired OS and CPU
 # architecture. Even if building inside a container, they will default to the
 # developer's native OS and CPU architecture.
@@ -145,12 +164,23 @@ hack-test-unit: hack-build-dev-tools
 hack-codegen: hack-build-dev-tools
 	$(DOCKER_CMD) make codegen
 
+# Build an image. Example usages:
+#
+# Build image for local architecture (kargo:dev)
+#   make hack-build
+#
+# Push a multi-arch image to a personal repository (myusername/kargo:latest)
+#   make hack-build IMAGE_REPO=myusername/kargo IMAGE_PUSH=true IMAGE_TAG=latest
+#
+# Build a linux/amd64 image with a docker build option to not re-use docker build cache
+# 	make hack-build IMAGE_PLATFORMS=linux/amd64 DOCKER_BUILD_OPTS=--no-cache
 .PHONY: hack-build
 hack-build:
-	docker build \
+	docker buildx build \
+		$(DOCKER_BUILD_OPTS) \
 		--build-arg GIT_COMMIT=$(shell git rev-parse HEAD) \
 		--build-arg GIT_TREE_STATE=$(shell if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi) \
-		--tag kargo:dev \
+		--tag $(IMAGE_REPO):$(IMAGE_TAG) \
 		.
 
 .PHONY: hack-build-cli
