@@ -16,6 +16,7 @@ docker_build(
     'cmd/',
     'internal/',
     'pkg/',
+    'ui',
     'go.mod',
     'go.sum'
   ],
