@@ -431,6 +431,25 @@ func FromPromotionStatusProto(s *v1alpha1.PromotionStatus) *kubev1alpha1.Promoti
 	}
 }
 
+func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kubev1alpha1.PromotionPolicy {
+	if p == nil {
+		return nil
+	}
+	var objectMeta kubemetav1.ObjectMeta
+	if p.GetMetadata() != nil {
+		objectMeta = *typesmetav1.FromObjectMetaProto(p.GetMetadata())
+	}
+	return &kubev1alpha1.PromotionPolicy{
+		TypeMeta: kubemetav1.TypeMeta{
+			APIVersion: kubev1alpha1.GroupVersion.String(),
+			Kind:       "PromotionPolicy",
+		},
+		ObjectMeta:          objectMeta,
+		Stage:               p.GetStage(),
+		EnableAutoPromotion: p.GetEnableAutoPromotion(),
+	}
+}
+
 func ToStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
 	// Status
 	availableStates := make([]*v1alpha1.StageState, len(e.Status.AvailableStates))
