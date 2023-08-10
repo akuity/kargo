@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "kargo.controller.fullname" . }}
+  name: kargo-controller
   namespace: {{ .Values.controller.argocd.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
@@ -10,9 +10,9 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "kargo.controller.fullname" . }}
+  name: kargo-controller
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: {{ include "kargo.controller.fullname" . }}
+  name: kargo-controller
 {{- end }}

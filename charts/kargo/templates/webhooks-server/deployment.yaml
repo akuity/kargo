@@ -2,7 +2,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kargo.webhooksServer.fullname" . }}
+  name: kargo-webhooks-server
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
@@ -20,7 +21,7 @@ spec:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.webhooksServer.labels" . | nindent 8 }}
     spec:
-      serviceAccount: {{ include "kargo.webhooksServer.fullname" . }}
+      serviceAccount: kargo-webhooks-server
       containers:
       - name: webhooks-server
         image: {{ include "kargo.image" . }}
@@ -52,7 +53,7 @@ spec:
       - name: cert
         secret:
           defaultMode: 0644
-          secretName: {{ include "kargo.webhooksServer.fullname" . }}-cert
+          secretName: kargo-webhooks-server-cert
       {{- if .Values.kubeconfigSecrets.kargo }}
       - name: kubeconfigs
         secret:

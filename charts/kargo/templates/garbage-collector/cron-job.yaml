@@ -2,7 +2,8 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "kargo.garbageCollector.fullname" . }}
+  name: kargo-garbage-collector
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
@@ -13,7 +14,7 @@ spec:
     spec:
       template:
         spec:
-          serviceAccountName: {{ include "kargo.garbageCollector.fullname" . }}
+          serviceAccountName: kargo-garbage-collector
           containers:
           - name: garbage-collector
             image: {{ include "kargo.image" . }}

@@ -2,12 +2,12 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: {{ include "kargo.fullname" . }}
+  name: kargo
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
   annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "kargo.webhooksServer.fullname" . }}
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/kargo-webhooks-server
 webhooks:
 - name: stage.kargo.akuity.io
   admissionReviewVersions: ["v1"]
@@ -15,7 +15,7 @@ webhooks:
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.webhooksServer.fullname" . }}
+      name: kargo-webhooks-server
       path: /mutate-kargo-akuity-io-v1alpha1-stage
   rules:
   - scope: Namespaced
@@ -28,12 +28,12 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: {{ include "kargo.fullname" . }}
+  name: kargo
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
   annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "kargo.webhooksServer.fullname" . }}
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/kargo-webhooks-server
 webhooks:
 - name: stage.kargo.akuity.io
   admissionReviewVersions: ["v1"]
@@ -41,7 +41,7 @@ webhooks:
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.webhooksServer.fullname" . }}
+      name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-stage
   rules:
   - scope: Namespaced
@@ -56,7 +56,7 @@ webhooks:
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.webhooksServer.fullname" . }}
+      name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-promotion
   rules:
   - scope: Namespaced
@@ -71,7 +71,7 @@ webhooks:
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
-      name: {{ include "kargo.webhooksServer.fullname" . }}
+      name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-promotionpolicy
   rules:
     - scope: Namespaced
