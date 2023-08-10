@@ -32,16 +32,20 @@ var (
 )
 
 type ServerConfig struct {
-	OIDCConfig              *oidc.Config
-	AdminConfig             *handler.AdminConfig
-	DexProxyConfig          *dex.ProxyConfig
+	StandardConfig
+	OIDCConfig     *oidc.Config
+	AdminConfig    *handler.AdminConfig
+	DexProxyConfig *dex.ProxyConfig
+}
+
+type StandardConfig struct {
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
 	UIDirectory             string        `envconfig:"UI_DIR" default:"./ui/build"`
 }
 
 func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
-	envconfig.MustProcess("", &cfg)
+	envconfig.MustProcess("", &cfg.StandardConfig)
 	if types.MustParseBool(os.GetEnv("ADMIN_ACCOUNT_ENABLED", "false")) {
 		adminCfg := handler.AdminConfigFromEnv()
 		cfg.AdminConfig = &adminCfg
