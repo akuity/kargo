@@ -2,7 +2,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kargo.api.fullname" . }}
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.api.labels" . | nindent 4 }}
@@ -20,7 +21,7 @@ spec:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.api.labels" . | nindent 8 }}
     spec:
-      serviceAccount: {{ include "kargo.api.fullname" . }}
+      serviceAccount: kargo-api
       containers:
         - name: api
           image: {{ include "kargo.image" . }}
@@ -39,12 +40,12 @@ spec:
             - name: ADMIN_ACCOUNT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kargo.api.fullname" . }}
+                  name: kargo-api
                   key: adminPassword
             - name: TOKEN_SIGNING_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kargo.api.fullname" . }}
+                  name: kargo-api
                   key: tokenSigningKey
 {{- end }}
 {{- if .Values.api.oidc.enabled }}
@@ -58,7 +59,7 @@ spec:
             - name: DEX_ENABLED
               value: "true"
             - name: DEX_SERVER_ADDRESS
-              value: https://{{ include "kargo.dexServer.fullname" . }}.{{ .Release.Namespace }}.svc
+              value: https://kargo-dex-server.{{ .Release.Namespace }}.svc
             - name: DEX_CA_CERT_PATH
               value: /etc/kargo/idp-ca.crt
 {{- else }}
@@ -98,7 +99,7 @@ spec:
 {{- end }}
 {{- if and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
               - secret:
-                  name: {{ include "kargo.dexServer.fullname" . }}-cert
+                  name: kargo-dex-server-cert
                   items:
                     - key: ca.crt
                       path: idp-ca.crt

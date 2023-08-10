@@ -2,12 +2,13 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "kargo.dexServer.fullname" . }}
+  name: kargo-dex-server
+  namespace: {{ .Release.Namespace }}
 spec:
   dnsNames:
-  - {{ include "kargo.dexServer.fullname" . }}.{{ .Release.Namespace }}.svc
+  - kargo-dex-server.{{ .Release.Namespace }}.svc
   issuerRef:
     kind: Issuer
-    name: {{ include "kargo.fullname" . }}-selfsigned-cert-issuer
-  secretName: {{ include "kargo.dexServer.fullname" . }}-cert
+    name: kargo-selfsigned-cert-issuer
+  secretName: kargo-dex-server-cert
 {{- end }}
