@@ -2,16 +2,15 @@ package project
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 func newDeleteCommand(opt *option.Option) *cobra.Command {
@@ -27,11 +26,14 @@ func newDeleteCommand(opt *option.Option) *cobra.Command {
 				return errors.New("name is required")
 			}
 
-			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, opt.ServerURL, opt.ClientOption)
-			_, err := client.DeleteProject(ctx, connect.NewRequest(&v1alpha1.DeleteProjectRequest{
-				Name: name,
-			}))
+			client, err := client.GetClientFromConfig(opt)
 			if err != nil {
+				return err
+			}
+
+			if _, err := client.DeleteProject(ctx, connect.NewRequest(&v1alpha1.DeleteProjectRequest{
+				Name: name,
+			})); err != nil {
 				return errors.Wrap(err, "delete project")
 			}
 			_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Deleted: %q", name)

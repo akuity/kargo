@@ -3,7 +3,6 @@ package stage
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/bufbuild/connect-go"
@@ -12,9 +11,9 @@ import (
 	"k8s.io/utils/pointer"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 func newEnableAutoPromotion(opt *option.Option) *cobra.Command {
@@ -64,7 +63,11 @@ func newDisableAutoPromotion(opt *option.Option) *cobra.Command {
 }
 
 func setAutoPromotionForStage(ctx context.Context, opt *option.Option, project, stage string, enable bool) error {
-	client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, opt.ServerURL, opt.ClientOption)
+	client, err := client.GetClientFromConfig(opt)
+	if err != nil {
+		return err
+	}
+
 	resp, err := client.SetAutoPromotionForStage(ctx,
 		connect.NewRequest(&v1alpha1.SetAutoPromotionForStageRequest{
 			Project: project,

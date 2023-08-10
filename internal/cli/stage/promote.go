@@ -2,7 +2,6 @@ package stage
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/bufbuild/connect-go"
@@ -11,9 +10,9 @@ import (
 	"k8s.io/utils/pointer"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 type PromoteFlags struct {
@@ -43,7 +42,11 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 				return errors.New("state is required")
 			}
 
-			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, opt.ServerURL, opt.ClientOption)
+			client, err := client.GetClientFromConfig(opt)
+			if err != nil {
+				return err
+			}
+
 			res, err := client.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
 				Project: project,
 				Name:    name,
