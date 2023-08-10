@@ -22,7 +22,7 @@ func newListCommand(opt *option.Option) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			client, err := client.GetClientFromConfig(opt)
+			client, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
 				return err
 			}

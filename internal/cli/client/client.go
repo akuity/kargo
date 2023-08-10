@@ -1,9 +1,11 @@
 package client
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/pkg/errors"
 
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -14,7 +16,7 @@ import (
 // the address specified in local configuration, using credentials also
 // specified in local configuration UNLESS the specified options indicates that
 // the local server should be used instead.
-func GetClientFromConfig(opt *option.Option) (
+func GetClientFromConfig(ctx context.Context, opt *option.Option) (
 	svcv1alpha1connect.KargoServiceClient,
 	error,
 ) {
@@ -25,11 +27,9 @@ func GetClientFromConfig(opt *option.Option) (
 	if err != nil {
 		return nil, err
 	}
-	// TODO: If cfg.BearerToken looks like an expired JWT and we have a
-	// refresh token, refresh the JWT and save the new JWT to the config file.
-	//
-	// If cfg.BearerToken looks like an expired JWT and we don't have a
-	// refresh token, prompt the user to log in again.
+	if cfg, err = newTokenRefresher().refreshToken(ctx, cfg); err != nil {
+		return nil, errors.Wrap(err, "error refreshing token")
+	}
 	return GetClient(cfg.APIAddress, cfg.BearerToken), nil
 }
 
