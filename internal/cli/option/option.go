@@ -10,6 +10,7 @@ import (
 )
 
 type Option struct {
+	InsecureTLS        bool
 	LocalServerAddress string
 	UseLocalServer     bool
 
