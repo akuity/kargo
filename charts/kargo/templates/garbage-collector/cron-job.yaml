@@ -8,6 +8,7 @@ metadata:
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
@@ -28,7 +29,6 @@ spec:
             resources:
               {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
           restartPolicy: Never
-          concurrencyPolicy: Forbid
           {{- with .Values.garbageCollector.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}
