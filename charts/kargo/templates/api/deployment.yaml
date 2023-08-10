@@ -52,7 +52,7 @@ spec:
               value: "true"
 {{- if .Values.api.oidc.dex.enabled }}
             - name: OIDC_ISSUER_URL
-              value: {{ .Values.api.address }}/dex
+              value: {{ .Values.api.protocol }}://{{ .Values.api.host }}/dex
             - name: OIDC_CLIENT_ID
               value: kargo
             - name: DEX_ENABLED

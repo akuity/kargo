@@ -50,10 +50,46 @@ api:
 
   ## The protocol and domain name where Kargo's API server will be accessible.
   ## This should be set accurately for a variety of reasons, including (when
-  ## applicable) generation of correct OpenID Connect issuer and callback URLs.
-  address: http://localhost
+  ## applicable) generation of a correct Ingress resource and correct OpenID
+  ## Connect issuer and callback URLs.
+  protocol: http
+  host: localhost
 
   logLevel: INFO
+
+  ingress:
+    ## Whether to enable ingress. By default, this is disabled. Enabling ingress
+    ## is advanced usage.
+    ##
+    ## All other settings in this section will be ignored when this is set to
+    ## false.
+    enabled: false
+    ## Optionally use annotations specified by your ingress controller's
+    ## documentation to customize the behavior of the ingress resource.
+    annotations:
+      # kubernetes.io/ingress.class: nginx
+    ## From Kubernetes 1.18+ this field is supported in case your ingress
+    ## controller supports it. When set, you do not need to add the ingress
+    ## class as annotation.
+    ingressClassName:
+    tls:
+      ## Whether to enable TLS.
+      ##
+      ## All other settings in this section will be ignored when this is set to
+      ## false.
+      enabled: true
+      ## Whether to generate a self-signed certificate for use with the API
+      ## server's Ingress resource.
+      ##
+      ## If true, cert-manager CRDs MUST be pre-installed on this cluster.
+      ## Kargo will create and use its own namespaced issuer.
+      ##
+      ## If false, a cert secret named
+      ## <Helm release name>-api-ingress-server-cert MUST be provided in the
+      ## same namespace as Kargo.
+      ##
+      ## There is no provision for running Dex without TLS.
+      selfSignedCert: true
 
   service:
     ## If you're not going to use an ingress controller, you may want to change
@@ -154,7 +190,7 @@ api:
       #   config:
       #     clientID: <your client ID>
       #     clientSecret: <your client secret>
-      #     redirectURI: <Kargo API server address>/dex/callback
+      #     redirectURI: <api.protocol>://<api.host>/dex/callback
       ## GitHub Example
       # - id: github
       #   name: GitHub
@@ -162,7 +198,7 @@ api:
       #   config:
       #     clientID: <your client ID>
       #     clientSecret: <your client secret>
-      #     redirectURI: <Kargo API server address>/dex/callback
+      #     redirectURI: <api.protocol>://<api.host>/dex/callback
 
       resources: {}
         # We usually recommend not to specify default resources and to leave
@@ -279,6 +315,8 @@ webhooksServer:
     ## namespaced issuer. If false, a cert secret named
     ## <Helm release name>-webhook-servers-cert MUST be provided in the same
     ## namespace as Kargo.
+    ##
+    ## ## There is no provision for webhooks without TLS.
     selfSignedCert: true
 
   resources: {}
