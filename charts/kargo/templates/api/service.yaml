@@ -1,0 +1,22 @@
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.api.service.type }}
+  ports:
+  - protocol: TCP
+    port: 80
+    {{- if and (or (eq .Values.api.service.type "NodePort") (eq .Values.api.service.type "LoadBalancer")) .Values.api.service.nodePort}}
+    nodePort: {{ .Values.api.service.nodePort }}
+    {{- end }}
+    targetPort: 8080
+  selector:
+    {{- include "kargo.selectorLabels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+{{- end }}

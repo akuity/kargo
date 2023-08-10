@@ -2,7 +2,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kargo.controller.fullname" . }}
+  name: kargo-controller
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.controller.labels" . | nindent 4 }}
@@ -20,7 +21,7 @@ spec:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.controller.labels" . | nindent 8 }}
     spec:
-      serviceAccount: {{ include "kargo.controller.fullname" . }}
+      serviceAccount: kargo-controller
       containers:
       - name: controller
         image: {{ include "kargo.image" . }}

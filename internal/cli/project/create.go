@@ -2,7 +2,6 @@ package project
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/bufbuild/connect-go"
@@ -13,9 +12,9 @@ import (
 	"k8s.io/utils/pointer"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 func newCreateCommand(opt *option.Option) *cobra.Command {
@@ -31,7 +30,11 @@ func newCreateCommand(opt *option.Option) *cobra.Command {
 				return errors.New("name is required")
 			}
 
-			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, opt.ServerURL, opt.ClientOption)
+			client, err := client.GetClientFromConfig(ctx, opt)
+			if err != nil {
+				return err
+			}
+
 			res, err := client.CreateProject(ctx, connect.NewRequest(&v1alpha1.CreateProjectRequest{
 				Name: name,
 			}))

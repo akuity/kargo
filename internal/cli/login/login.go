@@ -22,10 +22,10 @@ import (
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
+	"github.com/akuity/kargo/internal/cli/client"
 	libConfig "github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 const (
@@ -82,8 +82,8 @@ func NewCommand() *cobra.Command {
 			if useAdmin {
 				fmt.Print(
 					"\nWARNING: This command initiates authentication as the Kargo " +
-						"admin user, but the resulting ID token is not yet used for " +
-						"actual communication with the Kargo API server.\n\n",
+						"admin user, but the resulting ID token is not yet honored by " +
+						"the Kargo API server.\n\n",
 				)
 
 				var password string
@@ -108,12 +108,6 @@ func NewCommand() *cobra.Command {
 					return err
 				}
 			} else if useKubeconfig {
-				fmt.Print(
-					"\nWARNING: This command obtains a token from the local Kubernetes " +
-						"configuration's current context, but that token is not yet used " +
-						"for actual communication with the Kargo API server.\n\n",
-				)
-
 				bearerToken, err = kubeconfigLogin(ctx)
 				if err != nil {
 					return err
@@ -122,8 +116,8 @@ func NewCommand() *cobra.Command {
 				fmt.Print(
 					"\nWARNING: This command initiates authentication using the " +
 						"specified server's configured OpenID Connect identity provider, " +
-						"but the resulting ID token is not yet used for actual " +
-						"communication with the Kargo API server.\n\n",
+						"but the resulting ID token is not yet honored by the Kargo API " +
+						"server.\n\n",
 				)
 
 				var callbackPort int
@@ -191,10 +185,7 @@ func adminLogin(
 	serverAddress string,
 	password string,
 ) (string, error) {
-	client := svcv1alpha1connect.NewKargoServiceClient(
-		http.DefaultClient,
-		serverAddress,
-	)
+	client := client.GetClient(serverAddress, "")
 
 	cfgRes, err := client.GetPublicConfig(
 		ctx,
@@ -246,10 +237,7 @@ func ssoLogin(
 	serverAddress string,
 	callbackPort int,
 ) (string, string, error) {
-	client := svcv1alpha1connect.NewKargoServiceClient(
-		http.DefaultClient,
-		serverAddress,
-	)
+	client := client.GetClient(serverAddress, "")
 
 	res, err := client.GetPublicConfig(
 		ctx,

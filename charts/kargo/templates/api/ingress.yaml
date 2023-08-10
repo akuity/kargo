@@ -1,0 +1,35 @@
+{{- if and .Values.api.enabled .Values.api.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- with .Values.api.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.api.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.api.ingress.ingressClassName }}
+  {{- end }}
+  rules:
+  - host: {{ .Values.api.host }}
+    http:
+      paths:
+      - pathType: ImplementationSpecific
+        path: /
+        backend:
+          service:
+            name: kargo-api
+            port:
+              number: 80
+  {{- if .Values.api.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.api.host }}
+    secretName: kargo-api-ingress-cert
+  {{- end }}
+{{- end }}

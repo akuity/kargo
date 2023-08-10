@@ -2,17 +2,19 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "kargo.garbageCollector.fullname" . }}
+  name: kargo-garbage-collector
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
         spec:
-          serviceAccountName: {{ include "kargo.garbageCollector.fullname" . }}
+          serviceAccountName: kargo-garbage-collector
           containers:
           - name: garbage-collector
             image: {{ include "kargo.image" . }}
@@ -28,7 +30,6 @@ spec:
             resources:
               {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
           restartPolicy: Never
-          concurrencyPolicy: Forbid
           {{- with .Values.garbageCollector.nodeSelector }}
           nodeSelector:
             {{- toYaml . | nindent 12 }}

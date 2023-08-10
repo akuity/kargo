@@ -1,8 +1,6 @@
 package project
 
 import (
-	"net/http"
-
 	"github.com/bufbuild/connect-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -12,9 +10,9 @@ import (
 	"k8s.io/utils/pointer"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 func newListCommand(opt *option.Option) *cobra.Command {
@@ -24,7 +22,11 @@ func newListCommand(opt *option.Option) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			client := svcv1alpha1connect.NewKargoServiceClient(http.DefaultClient, opt.ServerURL, opt.ClientOption)
+			client, err := client.GetClientFromConfig(ctx, opt)
+			if err != nil {
+				return err
+			}
+
 			res, err := client.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{
 				/* explicitly empty */
 			}))

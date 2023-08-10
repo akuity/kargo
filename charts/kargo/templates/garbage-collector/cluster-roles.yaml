@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "kargo.garbageCollector.fullname" . }}
+  name: kargo-garbage-collector
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}

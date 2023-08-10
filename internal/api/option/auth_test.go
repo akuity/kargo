@@ -2,11 +2,11 @@ package option
 
 import (
 	"context"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
@@ -14,65 +14,81 @@ import (
 )
 
 func TestUnaryServerAuth(t *testing.T) {
-	ctx := context.Background()
 	testSets := map[string]struct {
-		ctx                     context.Context
-		expectedAuthHeaderValue string
+		authHeaderValue    string
+		expectedCredential string
 	}{
-		"request with credential": {
-			ctx:                     kubeclient.SetCredentialToContext(ctx, "some-token"),
-			expectedAuthHeaderValue: "Bearer some-token",
+		"without credential": {
+			authHeaderValue:    "",
+			expectedCredential: "",
 		},
-		"request with empty credential": {
-			ctx:                     kubeclient.SetCredentialToContext(ctx, ""),
-			expectedAuthHeaderValue: "",
-		},
-		"request without credential": {
-			ctx:                     ctx,
-			expectedAuthHeaderValue: "",
+		"with credential": {
+			authHeaderValue:    "Bearer some-token",
+			expectedCredential: "some-token",
 		},
 	}
 	for name, ts := range testSets {
 		ts := ts
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			opt := connect.WithInterceptors(newAuthInterceptor())
-			mux := http.NewServeMux()
-			handler := connect.NewUnaryHandler(
-				"/grpc.health.v1.Health/Check",
-				func(
-					ctx context.Context,
-					req *connect.Request[grpc_health_v1.HealthCheckRequest],
-				) (*connect.Response[grpc_health_v1.HealthCheckResponse], error) {
-					res := connect.NewResponse(&grpc_health_v1.HealthCheckResponse{})
-					cred, ok := kubeclient.GetCredentialFromContext(ctx)
-					if ok {
-						setAuthHeader(res.Header(), cred)
-					}
-					return res, nil
-				},
-				opt,
+			srv := httptest.NewServer(
+				connect.NewUnaryHandler(
+					"/",
+					func(
+						ctx context.Context,
+						_ *connect.Request[grpc_health_v1.HealthCheckRequest],
+					) (*connect.Response[grpc_health_v1.HealthCheckResponse], error) {
+						// This is where we actually test that the interceptor did its job.
+						cred, ok := kubeclient.GetCredentialFromContext(ctx)
+						assert.Equal(t, cred != "", ok)
+						assert.Equal(t, ts.expectedCredential, cred)
+						return connect.NewResponse(&grpc_health_v1.HealthCheckResponse{}),
+							nil
+					},
+					connect.WithInterceptors(&authInterceptor{}),
+				),
 			)
-			mux.Handle("/grpc.health.v1.Health/Check", handler)
-			srv := httptest.NewServer(mux)
-			srv.EnableHTTP2 = true
 			t.Cleanup(srv.Close)
 
 			client := connect.NewClient[grpc_health_v1.HealthCheckRequest, grpc_health_v1.HealthCheckResponse](
 				srv.Client(),
-				srv.URL+"/grpc.health.v1.Health/Check",
-				connect.WithGRPC(),
-				opt,
+				srv.URL,
+				connect.WithInterceptors(
+					&testClientAuthInterceptor{
+						authHeaderValue: ts.authHeaderValue,
+					},
+				),
 			)
-			res, err := client.CallUnary(ts.ctx,
-				connect.NewRequest[grpc_health_v1.HealthCheckRequest](&grpc_health_v1.HealthCheckRequest{}))
+			_, err := client.CallUnary(
+				context.Background(),
+				connect.NewRequest[grpc_health_v1.HealthCheckRequest](&grpc_health_v1.HealthCheckRequest{}),
+			)
 			require.NoError(t, err)
-
-			require.Equal(
-				t,
-				ts.expectedAuthHeaderValue,
-				res.Header().Get(authHeaderKey),
-			)
 		})
+	}
+}
+
+type testClientAuthInterceptor struct {
+	authHeaderValue string
+}
+
+func (t *testClientAuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		req.Header().Set("Authorization", t.authHeaderValue)
+		return next(ctx, req)
+	}
+}
+
+func (t *testClientAuthInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return func(ctx context.Context, spec connect.Spec) connect.StreamingClientConn {
+		return next(ctx, spec)
+	}
+}
+
+func (t *testClientAuthInterceptor) WrapStreamingHandler(
+	next connect.StreamingHandlerFunc,
+) connect.StreamingHandlerFunc {
+	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
+		return next(ctx, conn)
 	}
 }

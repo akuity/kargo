@@ -2,7 +2,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kargo.dexServer.fullname" . }}
+  name: kargo-dex-server
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.dexServer.labels" . | nindent 4 }}
@@ -18,7 +19,7 @@ spec:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.dexServer.labels" . | nindent 8 }}
     spec:
-      serviceAccount: {{ include "kargo.dexServer.fullname" . }}
+      serviceAccount: kargo-dex-server
       containers:
       - name: dex-server
         image: {{ .Values.api.oidc.dex.image.repository }}:{{ .Values.api.oidc.dex.image.tag }}
@@ -31,37 +32,37 @@ spec:
           readOnly: true
         resources:
           {{- toYaml .Values.api.oidc.dex.resources | nindent 10 }}
-      livenessProbe:
-        httpGet:
-          path: /healthz/live
-          port: 5558
-        initialDelaySeconds: 10
-        periodSeconds: 10
-        timeoutSeconds: 1
-        successThreshold: 1
-        failureThreshold: 300
-      readinessProbe:
-        httpGet:
-          path: /healthz/ready
-          port: 5558
-        initialDelaySeconds: 10
-        periodSeconds: 10
-        timeoutSeconds: 1
-        successThreshold: 1
-        failureThreshold: 300
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 5558
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 300
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 5558
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 300
       volumes:
       - name: config
         projected:
           sources:
           - secret:
-              name: {{ include "kargo.dexServer.fullname" . }}-cert
+              name: kargo-dex-server-cert
               items:
               - key: tls.crt
                 path: tls.crt
               - key: tls.key
                 path: tls.key
           - configMap:
-              name: {{ include "kargo.dexServer.fullname" . }}
+              name: kargo-dex-server
               items:
               - key: config.yaml
                 path: config.yaml

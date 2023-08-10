@@ -2,30 +2,30 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "kargo.webhooksServer.fullname" . }}
+  name: kargo-webhooks-server
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "kargo.webhooksServer.fullname" . }}
+  name: kargo-webhooks-server
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
-  name: {{ include "kargo.webhooksServer.fullname" . }}
+  name: kargo-webhooks-server
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "kargo.webhooksServer.fullname" . }}-ns-controller
+  name: kargo-webhooks-server-ns-controller
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "kargo.webhooksServer.fullname" . }}-ns-controller
+  name: kargo-webhooks-server-ns-controller
 subjects:
 - kind: ServiceAccount
   namespace: kube-system

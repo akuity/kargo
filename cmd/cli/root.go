@@ -17,7 +17,6 @@ import (
 
 	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	apioption "github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/project"
@@ -69,7 +68,6 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 				kubeClient = mgr.GetClient()
 			}
 
-			opt.ClientOption = apioption.NewClientOption(opt.UseLocalServer)
 			if opt.UseLocalServer {
 				l, err := net.Listen("tcp", "127.0.0.1:0")
 				if err != nil {
@@ -81,13 +79,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 					return errors.Wrap(err, "new api server")
 				}
 				go srv.Serve(ctx, l, true) // nolint: errcheck
-				opt.ServerURL = fmt.Sprintf("http://%s", l.Addr())
-			} else {
-				cred, err := kubeclient.GetCredential(ctx, restCfg)
-				if err != nil {
-					return errors.Wrap(err, "get credential")
-				}
-				cmd.SetContext(kubeclient.SetCredentialToContext(ctx, cred))
+				opt.LocalServerAddress = fmt.Sprintf("http://%s", l.Addr())
 			}
 			return nil
 		},
@@ -112,12 +104,11 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 		return nil, err
 	}
 	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
-	option.ServerURL(&opt.ServerURL)(cmd.PersistentFlags())
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
 	cmd.AddCommand(login.NewCommand())
-	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(project.NewCommand(opt))
+	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand())
 	return cmd, nil
 }
