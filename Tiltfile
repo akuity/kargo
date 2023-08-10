@@ -73,9 +73,9 @@ k8s_resource(
   new_name = 'dex-server',
   labels = ['kargo'],
   objects = [
-    'kargo-dex-server:serviceaccount',
-    'kargo-dex-server:configmap',
-    'kargo-dex-server:certificate'
+    'kargo-dex-server:certificate',
+    'kargo-dex-server:secret',
+    'kargo-dex-server:serviceaccount'
   ]
 )
 
