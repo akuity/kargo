@@ -20,6 +20,10 @@ spec:
       labels:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.api.labels" . | nindent 8 }}
+      annotations:
+        {{- if .Values.api.adminAccount.enabled }}
+        secret-checksum/kargo-api: {{ include (print $.Template.BasePath "/api/secret.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       serviceAccount: kargo-api
       containers:
