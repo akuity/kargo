@@ -8,7 +8,7 @@ CERT_MANAGER_CHART_VERSION := 1.11.0
 VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 
 IMAGE_REPO ?= kargo
-IMAGE_TAG ?= latest
+IMAGE_TAG ?= dev
 IMAGE_PUSH ?= false
 IMAGE_PLATFORMS =
 DOCKER_BUILD_OPTS =
@@ -166,14 +166,11 @@ hack-codegen: hack-build-dev-tools
 
 # Build an image. Example usages:
 #
-# Build image (kargo:latest)
+# Build image for local architecture (kargo:dev)
 #   make hack-build
 #
 # Push a multi-arch image to a personal repository (myusername/kargo:latest)
-#   make hack-build IMAGE_REPO=myusername/kargo IMAGE_PUSH=true
-#
-# Build image (local architecture) with the :dev image tag
-# 	make hack-build IMAGE_TAG=dev
+#   make hack-build IMAGE_REPO=myusername/kargo IMAGE_PUSH=true IMAGE_TAG=latest
 #
 # Build a linux/amd64 image with a docker build option to not re-use docker build cache
 # 	make hack-build IMAGE_PLATFORMS=linux/amd64 DOCKER_BUILD_OPTS=--no-cache

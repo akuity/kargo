@@ -11,10 +11,12 @@ ARG VERSION_PACKAGE=github.com/akuity/kargo/internal/version
 ARG CGO_ENABLED=0
 
 WORKDIR /kargo
-COPY go.mod .
-COPY go.sum .
+COPY ["go.mod", "go.sum", "./"]
 RUN go mod download
-COPY . .
+COPY api/ api/
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY pkg/ pkg/
 
 ARG VERSION
 ARG GIT_COMMIT
@@ -35,11 +37,11 @@ FROM --platform=$BUILDPLATFORM docker.io/library/node:18.16.1 AS ui-builder
 
 RUN npm install --global pnpm
 WORKDIR /ui
-ADD ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
 
 RUN pnpm install
 
-ADD ["ui/", "."]
+COPY ["ui/", "."]
 
 RUN NODE_ENV='production' pnpm run build
 
