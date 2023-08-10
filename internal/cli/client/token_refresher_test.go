@@ -26,6 +26,7 @@ func TestRefreshToken(t *testing.T) {
 			ctx context.Context,
 			serverAddress string,
 			refreshToken string,
+			insecureTLS bool,
 		) (string, string, error)
 		saveCLIConfigFn func(config.CLIConfig) error
 		assertions      func(
@@ -109,6 +110,7 @@ func TestRefreshToken(t *testing.T) {
 				context.Context,
 				string,
 				string,
+				bool,
 			) (string, string, error) {
 				return "", "", errors.New("something went wrong")
 			},
@@ -141,6 +143,7 @@ func TestRefreshToken(t *testing.T) {
 				context.Context,
 				string,
 				string,
+				bool,
 			) (string, string, error) {
 				return "new-token", "new-refresh-token", nil
 			},
@@ -161,7 +164,8 @@ func TestRefreshToken(t *testing.T) {
 				saveCLIConfigFn:      testCase.saveCLIConfigFn,
 			}
 			cfg := testCase.setup()
-			newCfg, err := tf.refreshToken(context.Background(), testCase.setup())
+			newCfg, err :=
+				tf.refreshToken(context.Background(), testCase.setup(), false)
 			testCase.assertions(cfg, newCfg, err)
 		})
 	}
