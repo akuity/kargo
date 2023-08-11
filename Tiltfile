@@ -124,7 +124,7 @@ k8s_yaml(
     set = [
       'api.logLevel=DEBUG',
       'api.protocol=http',
-      'api.host=localhost',
+      'api.host=localhost:30081',
       'api.adminAccount.password=admin',
       'api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch',
       'api.oidc.enabled=true',
