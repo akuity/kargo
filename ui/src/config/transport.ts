@@ -15,6 +15,6 @@ const errorHandler: Interceptor = (next) => async (req) => {
 };
 
 export const transport = createConnectTransport({
-  baseUrl: '/api',
+  baseUrl: '',
   interceptors: [errorHandler]
 });

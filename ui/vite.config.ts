@@ -42,10 +42,9 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': {
+      '/akuity.io.kargo.service.v1alpha1.KargoService': {
         target: 'http://localhost:30081',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        changeOrigin: true
       }
     },
     port: 3333
