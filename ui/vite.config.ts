@@ -42,7 +42,7 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '': {
+      '/akuity.io.kargo.service.v1alpha1.KargoService': {
         target: 'http://localhost:30081',
         changeOrigin: true
       }
