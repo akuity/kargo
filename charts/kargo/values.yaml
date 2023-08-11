@@ -85,8 +85,7 @@ api:
       ## Kargo will create and use its own namespaced issuer.
       ##
       ## If false, a cert secret named
-      ## <Helm release name>-api-ingress-server-cert MUST be provided in the
-      ## same namespace as Kargo.
+      ## kargo-api-ingress-cert MUST be provided in the same namespace as Kargo.
       ##
       ## There is no provision for running Dex without TLS.
       selfSignedCert: true
@@ -171,8 +170,8 @@ api:
         ## If true, cert-manager CRDs MUST be pre-installed on this cluster.
         ## Kargo will create and use its own namespaced issuer.
         ##
-        ## If false, a cert secret named <Helm release name>-dex-server-cert
-        ## MUST be provided in the same namespace as Kargo.
+        ## If false, a cert secret named kargo-dex-server-cert MUST be provided
+        ## in the same namespace as Kargo.
         ##
         ## There is no provision for running Dex without TLS.
         selfSignedCert: true
@@ -313,8 +312,8 @@ webhooksServer:
     ## built-in webhook server. If true, cert-manager CRDs MUST be
     ## pre-installed on this cluster. Kargo will create and use its own
     ## namespaced issuer. If false, a cert secret named
-    ## <Helm release name>-webhook-servers-cert MUST be provided in the same
-    ## namespace as Kargo.
+    ## kargo-webhooks-server-cert MUST be provided in the same namespace as
+    ## Kargo.
     ##
     ## ## There is no provision for webhooks without TLS.
     selfSignedCert: true
