@@ -4,6 +4,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	kubemetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	typesmetav1 "github.com/akuity/kargo/internal/api/types/metav1"
@@ -11,6 +12,18 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
+
+func FromProjectProto(p *svcv1alpha1.Project) *unstructured.Unstructured {
+	if p == nil {
+		return nil
+	}
+	u := &unstructured.Unstructured{}
+	u.SetAPIVersion(kubev1alpha1.GroupVersion.String())
+	u.SetKind("Project")
+	u.SetCreationTimestamp(kubemetav1.NewTime(p.GetCreateTime().AsTime()))
+	u.SetName(p.GetName())
+	return u
+}
 
 func FromStageProto(s *v1alpha1.Stage) *kubev1alpha1.Stage {
 	if s == nil {

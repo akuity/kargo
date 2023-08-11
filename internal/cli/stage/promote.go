@@ -27,6 +27,10 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 		Example: "kargo stage promote (PROJECT) (NAME) [(--state=)state-id]",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			if err != nil {
+				return err
+			}
 
 			project := strings.TrimSpace(args[0])
 			if project == "" {
@@ -42,12 +46,7 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 				return errors.New("state is required")
 			}
 
-			client, err := client.GetClientFromConfig(ctx, opt)
-			if err != nil {
-				return err
-			}
-
-			res, err := client.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
+			res, err := kargoSvcCli.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
 				Project: project,
 				Name:    name,
 				State:   state,
