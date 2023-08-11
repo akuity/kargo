@@ -61,7 +61,7 @@ spec:
                 path: tls.crt
               - key: tls.key
                 path: tls.key
-          - configMap:
+          - secret:
               name: kargo-dex-server
               items:
               - key: config.yaml
