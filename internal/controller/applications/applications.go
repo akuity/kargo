@@ -122,6 +122,9 @@ func (r *reconciler) Reconcile(
 	for _, e := range stages.Items {
 		stage := e // This is to sidestep implicit memory aliasing in this for loop
 		patch := client.MergeFrom(stage.DeepCopy())
+		if stage.Annotations == nil {
+			stage.Annotations = map[string]string{}
+		}
 		stage.Annotations[forceReconcileAnnotationKey] = uuid.NewV4().String()
 		if err := r.client.Patch(ctx, &stage, patch); err != nil {
 			logger.Error(err)
