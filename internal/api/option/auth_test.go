@@ -2,93 +2,578 @@ package option
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
-	"connectrpc.com/connect"
-	"github.com/stretchr/testify/assert"
+	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/api/config"
+	"github.com/akuity/kargo/internal/api/dex"
+	libOIDC "github.com/akuity/kargo/internal/api/oidc"
+	"github.com/akuity/kargo/internal/api/user"
 )
 
-func TestUnaryServerAuth(t *testing.T) {
-	testSets := map[string]struct {
-		authHeaderValue    string
-		expectedCredential string
+// This is self-signed and completely useless CA cert just for testing purposes.
+var dummyCACertBytes = []byte(`-----BEGIN CERTIFICATE-----
+MIIDvzCCAqcCFExIS2KGsSnWD7a8V0zmqhQD+XZ8MA0GCSqGSIb3DQEBCwUAMIGb
+MQswCQYDVQQGEwJVUzEUMBIGA1UECAwLQ29ubmVjdGljdXQxEzARBgNVBAcMClBs
+YWludmlsbGUxEjAQBgNVBAoMCUtyYW5jb3ZpYTEUMBIGA1UECwwLRW5naW5lZXJp
+bmcxGDAWBgNVBAMMD2NhLmtyYW5jb3ZpYS5pbzEdMBsGCSqGSIb3DQEJARYOa2Vu
+dEBha3VpdHkuaW8wHhcNMjMwNzMxMjEzMTM1WhcNMjQwNzMwMjEzMTM1WjCBmzEL
+MAkGA1UEBhMCVVMxFDASBgNVBAgMC0Nvbm5lY3RpY3V0MRMwEQYDVQQHDApQbGFp
+bnZpbGxlMRIwEAYDVQQKDAlLcmFuY292aWExFDASBgNVBAsMC0VuZ2luZWVyaW5n
+MRgwFgYDVQQDDA9jYS5rcmFuY292aWEuaW8xHTAbBgkqhkiG9w0BCQEWDmtlbnRA
+YWt1aXR5LmlvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwycyalcg
+p7jSBkekhPakfJYYyu8/p5J+kY75Yj7Z+9ed7xTYy3bNJ09OkkUHGUyO39pK1oe/
+dUgsxUC9N0Wqpo2t4+UHyc12rmX8Yi1v4G4mZj5XdV4fGh7CjqFwc3497eVqwLXJ
+qDCDuvT2n5+zcgmt9f8+BUhZJh+lFPywLC62+sD74nT3oE6niREi95O3/SQT79SR
+IeMWNXiZmoTETEX3Jhs1dhkVw/KhrjCXraMKK1Og9FnmLRR3JPYpl76za2MC7i9K
+rzZfU7YW8Aj1sqZrLYuvxnVz4LiB1BaG0Aniz1gGfFDkaP/WvCYeDkyW19kmOyPC
+LHF+4K4dAmXsQwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBSA3qk72RbsIjKvFGy
+fwg1vpnq00y8ILRKdSYYA2+HifX9R4WyqaYSdo2S9qp+dU1iz4gFgokiut9C+kEc
+zosRma12jmuMum8RfUEGUl/V9KHWjXKoJPbCKijql4InlDN5hFh32bigtgRcj9yE
+1Ya4+nHHtLnUJOHLSRycBQ8BbK6o/fKz/RN4kDPBehWe7hlLmzdlSRfG6GT2tVUq
+pqwF8ujOBXbmjfPqZK8rlFcGtfVotldmaFsnQuEVyO132MDyfHnyDrgqT3Ytsq8d
+EZv4FqnG2KDTlXoV/Ku1ib5vzgQK5fTFfqO5dm5sLM4qQFmLadULaTcNOldyH3KG
+c1e3
+-----END CERTIFICATE-----`)
+
+func TestNewAuthInterceptor(t *testing.T) {
+	a, err := newAuthInterceptor(context.Background(), config.ServerConfig{})
+	require.NoError(t, err)
+	require.NotNil(t, a)
+	require.NotNil(t, a.verifyOIDCIssuedTokenFn)
+	require.NotNil(t, a.verifyKargoIssuedTokenFn)
+	require.NotNil(t, a.oidcExtractGroupsFn)
+}
+
+func TestGetKeySet(t *testing.T) {
+	const discoPath = "/.well-known/openid-configuration"
+	const dexDiscoPath = "/dex/.well-known/openid-configuration"
+	testCases := []struct {
+		name  string
+		setup func() (*httptest.Server, config.ServerConfig)
 	}{
-		"without credential": {
-			authHeaderValue:    "",
-			expectedCredential: "",
+		{
+			name: "basic case",
+			setup: func() (*httptest.Server, config.ServerConfig) {
+				mux := http.NewServeMux()
+				srv := httptest.NewServer(mux)
+				t.Cleanup(srv.Close)
+				mux.HandleFunc(discoPath, func(w http.ResponseWriter, r *http.Request) {
+					_, err := w.Write([]byte(`{
+						"issuer": "` + srv.URL + `",
+						"jwks_uri": "` + srv.URL + `/keys"
+					}`))
+					require.NoError(t, err)
+				})
+				return srv, config.ServerConfig{
+					OIDCConfig: &libOIDC.Config{
+						IssuerURL: srv.URL,
+					},
+				}
+			},
 		},
-		"with credential": {
-			authHeaderValue:    "Bearer some-token",
-			expectedCredential: "some-token",
+		{
+			name: "with Dex proxy",
+			setup: func() (*httptest.Server, config.ServerConfig) {
+				mux := http.NewServeMux()
+				srv := httptest.NewServer(mux)
+				t.Cleanup(srv.Close)
+				mux.HandleFunc(
+					dexDiscoPath,
+					func(w http.ResponseWriter, r *http.Request) {
+						_, err := w.Write([]byte(`{
+						"issuer": "` + srv.URL + `",
+						"jwks_uri": "` + srv.URL + `/keys"
+					}`))
+						require.NoError(t, err)
+					},
+				)
+				return srv, config.ServerConfig{
+					DexProxyConfig: &dex.ProxyConfig{
+						ServerAddr: srv.URL,
+					},
+					OIDCConfig: &libOIDC.Config{
+						IssuerURL: srv.URL,
+					},
+				}
+			},
+		},
+		{
+			name: "with Dex proxy and CA cert",
+			setup: func() (*httptest.Server, config.ServerConfig) {
+				mux := http.NewServeMux()
+				srv := httptest.NewServer(mux)
+				t.Cleanup(srv.Close)
+				mux.HandleFunc(
+					dexDiscoPath,
+					func(w http.ResponseWriter, r *http.Request) {
+						_, err := w.Write([]byte(`{
+						"issuer": "` + srv.URL + `",
+						"jwks_uri": "` + srv.URL + `/keys"
+					}`))
+						require.NoError(t, err)
+					},
+				)
+				cfg := config.ServerConfig{
+					DexProxyConfig: &dex.ProxyConfig{
+						ServerAddr: srv.URL,
+						CACertPath: filepath.Join(t.TempDir(), "ca.crt"),
+					},
+					OIDCConfig: &libOIDC.Config{
+						IssuerURL: srv.URL,
+					},
+				}
+				err :=
+					os.WriteFile(cfg.DexProxyConfig.CACertPath, dummyCACertBytes, 0600)
+				require.NoError(t, err)
+				return srv, cfg
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			svr, cfg := testCase.setup()
+			t.Cleanup(svr.Close)
+			keyset, err := getKeySet(context.Background(), cfg)
+			require.NoError(t, err)
+			require.NotNil(t, keyset)
+		})
+	}
+}
+
+func TestAuthenticate(t *testing.T) {
+	// The way the tests are structured, we don't need this to be valid. It just
+	// needs to be non-empty.
+	const testToken = "some-token"
+	testSets := map[string]struct {
+		procedure       string
+		tokenFn         func() string
+		authInterceptor *authInterceptor
+		assertions      func(ctx context.Context, err error)
+	}{
+		"exempt procedure": {
+			procedure: "/grpc.health.v1.Health/Check",
+			tokenFn: func() string {
+				return ""
+			},
+			authInterceptor: &authInterceptor{},
+			// The procedure is exempt from authentication, so no user information
+			// should be bound to the context.
+			assertions: func(ctx context.Context, err error) {
+				require.NoError(t, err)
+				_, ok := user.InfoFromContext(ctx)
+				require.False(t, ok)
+			},
+		},
+		"no token provided": {
+			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+			tokenFn: func() string {
+				return ""
+			},
+			// It's an error if no token is provided.
+			assertions: func(ctx context.Context, err error) {
+				require.Error(t, err)
+				require.Equal(t, "no token provided", err.Error())
+				_, ok := user.InfoFromContext(ctx)
+				require.False(t, ok)
+			},
+		},
+		"non-JWT token": {
+			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+			tokenFn: func() string {
+				return testToken
+			},
+			authInterceptor: &authInterceptor{
+				expirationFromJWTFn: func(string) *time.Time {
+					return nil
+				},
+			},
+			// We can't parse the token as a JWT, so we assume it could be an opaque
+			// bearer token for the k8s API server. We expect user info containing
+			// the raw token to be bound to the context.
+			assertions: func(ctx context.Context, err error) {
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.Equal(t, testToken, u.BearerToken)
+			},
+		},
+		"expired JWT": {
+			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+			authInterceptor: &authInterceptor{
+				expirationFromJWTFn: func(string) *time.Time {
+					t := time.Now().Add(-1 * time.Hour)
+					return &t
+				},
+			},
+			tokenFn: func() string {
+				return testToken
+			},
+			// If we can determine the token is expired, we return an error.
+			assertions: func(ctx context.Context, err error) {
+				require.Error(t, err)
+				require.Equal(t, "token is expired", err.Error())
+				_, ok := user.InfoFromContext(ctx)
+				require.False(t, ok)
+			},
+		},
+		"error verifying as JWT issued by OIDC identity provider": {
+			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+			authInterceptor: &authInterceptor{
+				expirationFromJWTFn: func(string) *time.Time {
+					t := time.Now().Add(time.Hour)
+					return &t
+				},
+				verifyOIDCIssuedTokenFn: func(
+					context.Context,
+					string,
+				) (string, []string, bool, error) {
+					return "", nil, false, errors.New("something went wrong")
+				},
+			},
+			tokenFn: func() string {
+				return testToken
+			},
+			// If we experience an error trying to verify the token, we wrap and
+			// return the error. Note that failure to verify a token WITHOUT an error
+			// is an entirely different case.
+			assertions: func(ctx context.Context, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error verifying token")
+			},
+		},
+		"success verifying as JWT issued by OIDC identity provider": {
+			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+			authInterceptor: &authInterceptor{
+				expirationFromJWTFn: func(string) *time.Time {
+					t := time.Now().Add(time.Hour)
+					return &t
+				},
+				verifyOIDCIssuedTokenFn: func(
+					context.Context,
+					string,
+				) (string, []string, bool, error) {
+					return "tony@starkindustries.com", []string{"avengers"}, true, nil
+				},
+			},
+			tokenFn: func() string {
+				return testToken
+			},
+			// On success, we expect user info containing username and groups to be
+			// bound to the context.
+			assertions: func(ctx context.Context, err error) {
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.False(t, u.IsAdmin)
+				require.Equal(t, "tony@starkindustries.com", u.Username)
+				require.Equal(t, []string{"avengers"}, u.Groups)
+				require.Empty(t, u.BearerToken)
+			},
+		},
+		"failure verifying as Kargo-issued token": {
+			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+			authInterceptor: &authInterceptor{
+				expirationFromJWTFn: func(string) *time.Time {
+					t := time.Now().Add(time.Hour)
+					return &t
+				},
+				verifyOIDCIssuedTokenFn: func(
+					context.Context,
+					string,
+				) (string, []string, bool, error) {
+					return "", nil, false, nil
+				},
+				verifyKargoIssuedTokenFn: func(rawToken string) bool {
+					return false
+				},
+			},
+			tokenFn: func() string {
+				return testToken
+			},
+			// If we couldn't verify the token was issued by either Kargo's OIDC
+			// identity provider or issued by the Kargo API server itself, then we
+			// have a JWT, but we really don't know what it is. We assume it could be
+			// an ID token for the k8s API server issued by the cluster's own identity
+			// provider. We expect user info containing the raw token to be bound to
+			// the context.
+			assertions: func(ctx context.Context, err error) {
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.False(t, u.IsAdmin)
+				require.Empty(t, u.Username)
+				require.Empty(t, u.Groups)
+				require.Equal(t, testToken, u.BearerToken)
+			},
+		},
+		"success verifying as Kargo-issued token": { // admin
+			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+			authInterceptor: &authInterceptor{
+				expirationFromJWTFn: func(string) *time.Time {
+					t := time.Now().Add(time.Hour)
+					return &t
+				},
+				verifyOIDCIssuedTokenFn: func(ctx context.Context, rawToken string) (string, []string, bool, error) {
+					return "tony@starkindustries.com", []string{"avengers"}, false, nil
+				},
+				verifyKargoIssuedTokenFn: func(rawToken string) bool {
+					return true
+				},
+			},
+			tokenFn: func() string {
+				return testToken
+			},
+			// If this is successful, we expect that user info for the admin user
+			// is bound to the context.
+			assertions: func(ctx context.Context, err error) {
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.True(t, u.IsAdmin)
+				require.Empty(t, u.Username)
+				require.Empty(t, u.Groups)
+				require.Empty(t, u.BearerToken)
+			},
 		},
 	}
 	for name, ts := range testSets {
 		ts := ts
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			srv := httptest.NewServer(
-				connect.NewUnaryHandler(
-					"/",
-					func(
-						ctx context.Context,
-						_ *connect.Request[grpc_health_v1.HealthCheckRequest],
-					) (*connect.Response[grpc_health_v1.HealthCheckResponse], error) {
-						// This is where we actually test that the interceptor did its job.
-						cred, ok := kubeclient.GetCredentialFromContext(ctx)
-						assert.Equal(t, cred != "", ok)
-						assert.Equal(t, ts.expectedCredential, cred)
-						return connect.NewResponse(&grpc_health_v1.HealthCheckResponse{}),
-							nil
-					},
-					connect.WithInterceptors(&authInterceptor{}),
-				),
-			)
-			t.Cleanup(srv.Close)
-
-			client := connect.NewClient[grpc_health_v1.HealthCheckRequest, grpc_health_v1.HealthCheckResponse](
-				srv.Client(),
-				srv.URL,
-				connect.WithInterceptors(
-					&testClientAuthInterceptor{
-						authHeaderValue: ts.authHeaderValue,
-					},
-				),
-			)
-			_, err := client.CallUnary(
+			header := http.Header{}
+			token := ts.tokenFn()
+			if token != "" {
+				header.Set("Authorization", token)
+			}
+			ctx, err := ts.authInterceptor.authenticate(
 				context.Background(),
-				connect.NewRequest[grpc_health_v1.HealthCheckRequest](&grpc_health_v1.HealthCheckRequest{}),
+				ts.procedure,
+				header,
 			)
-			require.NoError(t, err)
+			ts.assertions(ctx, err)
 		})
 	}
 }
 
-type testClientAuthInterceptor struct {
-	authHeaderValue string
-}
-
-func (t *testClientAuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
-	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		req.Header().Set("Authorization", t.authHeaderValue)
-		return next(ctx, req)
+func TestExpirationFromJWT(t *testing.T) {
+	now := time.Now()
+	testCases := []struct {
+		name       string
+		tokenFn    func() string // Returns a raw token
+		assertions func(*time.Time)
+	}{
+		{
+			name: "token is not a JWT",
+			tokenFn: func() string {
+				return "some-token"
+			},
+			assertions: func(exp *time.Time) {
+				require.Nil(t, exp)
+			},
+		},
+		{
+			name: "token is a JWT",
+			tokenFn: func() string {
+				token, err := jwt.NewWithClaims(
+					jwt.SigningMethodHS256,
+					jwt.RegisteredClaims{
+						ExpiresAt: jwt.NewNumericDate(now),
+					},
+				).SignedString([]byte("signing key"))
+				require.NoError(t, err)
+				return token
+			},
+			assertions: func(exp *time.Time) {
+				require.NotNil(t, exp)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(expirationFromJWT(testCase.tokenFn()))
+		})
 	}
 }
 
-func (t *testClientAuthInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
-	return func(ctx context.Context, spec connect.Spec) connect.StreamingClientConn {
-		return next(ctx, spec)
+func TestVerifyOIDCIssuedToken(t *testing.T) {
+	// testTokenSigningKey := []byte("iwishtowashmyirishwristwatch")
+	testCases := []struct {
+		name            string
+		authInterceptor *authInterceptor
+		assertions      func(username string, groups []string, ok bool, err error)
+	}{
+		{
+			name:            "OIDC not supported",
+			authInterceptor: &authInterceptor{},
+			assertions: func(username string, groups []string, ok bool, err error) {
+				require.NoError(t, err)
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "token cannot be verified",
+			authInterceptor: &authInterceptor{
+				oidcTokenVerifyFn: func(
+					context.Context,
+					string,
+				) (*oidc.IDToken, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ string, _ []string, ok bool, err error) {
+				require.NoError(t, err)
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "error getting claims from token",
+			authInterceptor: &authInterceptor{
+				oidcTokenVerifyFn: func(
+					context.Context,
+					string,
+				) (*oidc.IDToken, error) {
+					return &oidc.IDToken{}, nil
+				},
+				oidcExtractGroupsFn: func(*oidc.IDToken) ([]string, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(username string, _ []string, ok bool, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error getting claims from token")
+				require.Contains(t, err.Error(), "something went wrong")
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "token is successfully verified",
+			authInterceptor: &authInterceptor{
+				oidcTokenVerifyFn: func(
+					context.Context,
+					string,
+				) (*oidc.IDToken, error) {
+					return &oidc.IDToken{
+						Subject: "tony@starkindustries.io",
+					}, nil
+				},
+				oidcExtractGroupsFn: func(*oidc.IDToken) ([]string, error) {
+					return []string{"avengers"}, nil
+				},
+			},
+			assertions: func(username string, groups []string, ok bool, err error) {
+				require.NoError(t, err)
+				require.True(t, ok)
+				require.Equal(t, "tony@starkindustries.io", username)
+				require.Equal(t, []string{"avengers"}, groups)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.authInterceptor.verifyOIDCIssuedToken(
+					context.Background(),
+					// With the way these tests are constructed, this doesn't have to
+					// be valid.
+					"some-token",
+				),
+			)
+		})
 	}
 }
 
-func (t *testClientAuthInterceptor) WrapStreamingHandler(
-	next connect.StreamingHandlerFunc,
-) connect.StreamingHandlerFunc {
-	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
-		return next(ctx, conn)
+func TestVerifyKargoIssuedToken(t *testing.T) {
+	const testNonJWTToken = "some-token"
+	testTokenSigningKey := []byte("iwishtowashmyirishwristwatch")
+	testCases := []struct {
+		name            string
+		tokenFn         func() string // Returns a raw token
+		authInterceptor *authInterceptor
+		valid           bool
+	}{
+		{
+			name:            "admin user not supported",
+			authInterceptor: &authInterceptor{},
+			tokenFn: func() string {
+				return testNonJWTToken
+			},
+			valid: false,
+		},
+		{
+			name: "token is not a JWT",
+			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					AdminConfig: &config.AdminConfig{
+						TokenSigningKey: testTokenSigningKey,
+					},
+				},
+			},
+			tokenFn: func() string {
+				return testNonJWTToken
+			},
+			valid: false,
+		},
+		{
+			name: "token was not issued by Kargo",
+			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					AdminConfig: &config.AdminConfig{
+						TokenSigningKey: testTokenSigningKey,
+					},
+				},
+			},
+			tokenFn: func() string {
+				token, err := jwt.NewWithClaims(
+					jwt.SigningMethodHS256,
+					jwt.RegisteredClaims{
+						ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+					},
+				).SignedString([]byte("wrong key")) // Not testTokenSigningKey
+				require.NoError(t, err)
+				return token
+			},
+			valid: false,
+		},
+		{
+			name: "token was issued by Kargo",
+			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					AdminConfig: &config.AdminConfig{
+						TokenSigningKey: testTokenSigningKey,
+					},
+				},
+			},
+			tokenFn: func() string {
+				token, err := jwt.NewWithClaims(
+					jwt.SigningMethodHS256,
+					jwt.RegisteredClaims{
+						ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+					},
+				).SignedString(testTokenSigningKey)
+				require.NoError(t, err)
+				return token
+			},
+			valid: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.valid,
+				testCase.authInterceptor.verifyKargoIssuedToken(testCase.tokenFn()),
+			)
+		})
 	}
 }
