@@ -7,6 +7,8 @@ import (
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	typesmetav1 "github.com/akuity/kargo/internal/api/types/metav1"
+	"github.com/akuity/kargo/internal/version"
+	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
@@ -781,5 +783,17 @@ func ToPromotionPolicyProto(p kubev1alpha1.PromotionPolicy) *v1alpha1.PromotionP
 		Metadata:            typesmetav1.ToObjectMetaProto(*metadata),
 		Stage:               p.Stage,
 		EnableAutoPromotion: p.EnableAutoPromotion,
+	}
+}
+
+func ToVersionProto(v version.Version) *svcv1alpha1.VersionInfo {
+	return &svcv1alpha1.VersionInfo{
+		Version:      v.Version,
+		GitCommit:    v.GitCommit,
+		GitTreeDirty: v.GitTreeDirty,
+		BuildTime:    timestamppb.New(v.BuildDate),
+		GoVersion:    v.GoVersion,
+		Compiler:     v.Compiler,
+		Platform:     v.Platform,
 	}
 }

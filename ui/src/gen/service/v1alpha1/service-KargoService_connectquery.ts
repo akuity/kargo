@@ -5,9 +5,26 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { AdminLoginRequest, AdminLoginResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteStageRequest, DeleteStageResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteStageRequest, DeleteStageResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo
+ */
+export const getVersionInfo = createQueryService({
+  service: {
+    methods: {
+      getVersionInfo: {
+        name: "GetVersionInfo",
+        kind: MethodKind.Unary,
+        I: GetVersionInfoRequest,
+        O: GetVersionInfoResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).getVersionInfo;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig

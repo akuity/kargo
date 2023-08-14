@@ -17,6 +17,7 @@ import (
 
 	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -79,7 +80,7 @@ func newAPICommand() *cobra.Command {
 				kubeClient = mgr.GetClient()
 			}
 
-			cfg := api.ServerConfigFromEnv()
+			cfg := config.ServerConfigFromEnv()
 
 			if cfg.AdminConfig != nil {
 				log.Info("admin account is enabled")

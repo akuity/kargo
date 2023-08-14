@@ -9,20 +9,18 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	grpchealth "github.com/bufbuild/connect-grpchealth-go"
-	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/dex"
 	"github.com/akuity/kargo/internal/api/handler"
-	"github.com/akuity/kargo/internal/api/oidc"
 	"github.com/akuity/kargo/internal/api/option"
 	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/types"
+	"github.com/akuity/kargo/internal/version"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -31,38 +29,8 @@ var (
 	_ svcv1alpha1connect.KargoServiceHandler = &server{}
 )
 
-type ServerConfig struct {
-	StandardConfig
-	OIDCConfig     *oidc.Config
-	AdminConfig    *handler.AdminConfig
-	DexProxyConfig *dex.ProxyConfig
-}
-
-type StandardConfig struct {
-	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
-	UIDirectory             string        `envconfig:"UI_DIR" default:"./ui/build"`
-}
-
-func ServerConfigFromEnv() ServerConfig {
-	cfg := ServerConfig{}
-	envconfig.MustProcess("", &cfg.StandardConfig)
-	if types.MustParseBool(os.GetEnv("ADMIN_ACCOUNT_ENABLED", "false")) {
-		adminCfg := handler.AdminConfigFromEnv()
-		cfg.AdminConfig = &adminCfg
-	}
-	if types.MustParseBool(os.GetEnv("OIDC_ENABLED", "false")) {
-		oidcCfg := oidc.ConfigFromEnv()
-		cfg.OIDCConfig = &oidcCfg
-	}
-	if types.MustParseBool(os.GetEnv("DEX_ENABLED", "false")) {
-		dexProxyCfg := dex.ProxyConfigFromEnv()
-		cfg.DexProxyConfig = &dexProxyCfg
-	}
-	return cfg
-}
-
 type server struct {
-	cfg ServerConfig
+	cfg config.ServerConfig
 	kc  client.Client
 }
 
@@ -70,7 +38,7 @@ type Server interface {
 	Serve(ctx context.Context, l net.Listener, localMode bool) error
 }
 
-func NewServer(kc client.Client, cfg ServerConfig) (Server, error) {
+func NewServer(kc client.Client, cfg config.ServerConfig) (Server, error) {
 	return &server{
 		cfg: cfg,
 		kc:  kc,
@@ -138,22 +106,18 @@ func (s *server) newDashboardRequestHandler() http.HandlerFunc {
 	}
 }
 
+func (s *server) GetVersionInfo(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.GetVersionInfoRequest],
+) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
+	return handler.GetVersionInfoV1Alpha1(version.GetVersion())(ctx, req)
+}
+
 func (s *server) GetPublicConfig(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetPublicConfigRequest],
 ) (*connect.Response[svcv1alpha1.GetPublicConfigResponse], error) {
-	cfg := &svcv1alpha1.GetPublicConfigResponse{}
-	if s.cfg.AdminConfig != nil {
-		cfg.AdminAccountEnabled = true
-	}
-	if s.cfg.OIDCConfig != nil {
-		cfg.OidcConfig = &svcv1alpha1.OIDCConfig{
-			IssuerUrl: s.cfg.OIDCConfig.IssuerURL,
-			ClientId:  s.cfg.OIDCConfig.ClientID,
-			Scopes:    s.cfg.OIDCConfig.Scopes,
-		}
-	}
-	return handler.GetPublicConfigV1Alpha1(cfg)(ctx, req)
+	return handler.GetPublicConfigV1Alpha1(s.cfg)(ctx, req)
 }
 
 func (s *server) AdminLogin(
