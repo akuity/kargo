@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/pkg/errors"
@@ -45,9 +44,6 @@ func WatchStageV1Alpha1(
 		if err := validateProject(ctx, req.Msg.GetProject()); err != nil {
 			return err
 		}
-
-		u, err := stageCli.Get(ctx, req.Msg.GetName(), metav1.GetOptions{})
-		fmt.Println(u, err)
 
 		if err := kubeCli.Get(ctx, client.ObjectKey{
 			Namespace: req.Msg.GetProject(),
