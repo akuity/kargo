@@ -23,6 +23,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/kustomize"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/yaml"
@@ -237,9 +238,11 @@ func (r *reconciler) Reconcile(
 		return result, nil
 	}
 
-	promo.Status = r.sync(ctx, promo)
+	newStatus := r.sync(ctx, promo)
 
-	updateErr := r.kargoClient.Status().Update(ctx, promo)
+	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *api.PromotionStatus) {
+		*status = newStatus
+	})
 	if updateErr != nil {
 		logger.Errorf("error updating Promotion status: %s", updateErr)
 	}
@@ -272,8 +275,9 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 		case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
 			continue
 		case "":
-			promo.Status.Phase = api.PromotionPhasePending
-			if err := r.kargoClient.Status().Update(ctx, &promo); err != nil {
+			if err := kubeclient.PatchStatus(ctx, r.kargoClient, &promo, func(status *api.PromotionStatus) {
+				status.Phase = api.PromotionPhasePending
+			}); err != nil {
 				return errors.Wrapf(
 					err,
 					"error updating status of Promotion %q in namespace %q",
@@ -400,21 +404,23 @@ func (r *reconciler) serializedSync(
 
 				promoCtx := logging.ContextWithLogger(ctx, logger)
 
+				phase := api.PromotionPhaseComplete
+				phaseError := ""
 				if err = r.promoteFn(
 					promoCtx,
 					promo.Spec.Stage,
 					promo.Namespace,
 					promo.Spec.State,
 				); err != nil {
-					promo.Status.Phase = api.PromotionPhaseFailed
-					promo.Status.Error = err.Error()
+					phase = api.PromotionPhaseFailed
+					phaseError = err.Error()
 					logger.Errorf("error executing Promotion: %s", err)
-				} else {
-					promo.Status.Phase = api.PromotionPhaseComplete
-					promo.Status.Error = ""
 				}
 
-				if err = r.kargoClient.Status().Update(ctx, promo); err != nil {
+				if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *api.PromotionStatus) {
+					status.Phase = phase
+					status.Error = phaseError
+				}); err != nil {
 					logger.Errorf("error updating Promotion status: %s", err)
 				}
 
@@ -493,11 +499,15 @@ func (r *reconciler) promote(
 	if err != nil {
 		return err
 	}
-	stage.Status.CurrentState = &nextState
-	stage.Status.AvailableStates[targetStateIndex] = nextState
-	stage.Status.History.Push(nextState)
 
-	err = r.kargoClient.Status().Update(ctx, stage)
+	// The assumption is that controller does not process multiple promotions in one stage
+	// so we are safe from race conditions and can just update the status
+	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *api.StageStatus) {
+		status.CurrentState = &nextState
+		status.AvailableStates[targetStateIndex] = nextState
+		status.History.Push(nextState)
+	})
+
 	return errors.Wrapf(
 		err,
 		"error updating status of Stage %q in namespace %q",
