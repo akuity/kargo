@@ -6,35 +6,19 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 
+	"github.com/akuity/kargo/internal/api/config"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
-
-// AdminConfig represents configuration for an admin account.
-type AdminConfig struct {
-	// Password is the password for the admin account.
-	Password string `envconfig:"ADMIN_ACCOUNT_PASSWORD" required:"true"`
-	// TokenSigningKey is the key used to sign ID tokens for the admin account.
-	TokenSigningKey []byte `envconfig:"TOKEN_SIGNING_KEY" required:"true"`
-}
-
-// AdminConfigFromEnv returns an AdminConfig populated from environment
-// variables.
-func AdminConfigFromEnv() AdminConfig {
-	cfg := AdminConfig{}
-	envconfig.MustProcess("", &cfg)
-	return cfg
-}
 
 type AdminLoginV1Alpha1Func func(
 	context.Context,
 	*connect.Request[svcv1alpha1.AdminLoginRequest],
 ) (*connect.Response[svcv1alpha1.AdminLoginResponse], error)
 
-func AdminLoginV1Alpha1(cfg *AdminConfig) AdminLoginV1Alpha1Func {
+func AdminLoginV1Alpha1(cfg *config.AdminConfig) AdminLoginV1Alpha1Func {
 	return func(
 		_ context.Context,
 		req *connect.Request[svcv1alpha1.AdminLoginRequest],

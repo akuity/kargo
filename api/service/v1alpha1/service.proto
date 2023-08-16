@@ -9,6 +9,7 @@ option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha
 import "v1alpha1/types.proto";
 
 service KargoService {
+  rpc GetVersionInfo(GetVersionInfoRequest) returns (GetVersionInfoResponse);
   rpc GetPublicConfig(GetPublicConfigRequest) returns (GetPublicConfigResponse);
 
   rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
@@ -36,6 +37,22 @@ service KargoService {
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+}
+
+message VersionInfo {
+  string version = 1;
+  string git_commit = 2;
+  bool git_tree_dirty = 3;
+  google.protobuf.Timestamp build_time = 4;
+  string go_version = 5;
+  string compiler = 6;
+  string platform = 7;
+}
+
+message GetVersionInfoRequest {}
+
+message GetVersionInfoResponse {
+  VersionInfo version_info = 1;
 }
 
 message GetPublicConfigRequest {}

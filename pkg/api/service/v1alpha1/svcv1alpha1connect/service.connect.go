@@ -33,6 +33,9 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// KargoServiceGetVersionInfoProcedure is the fully-qualified name of the KargoService's
+	// GetVersionInfo RPC.
+	KargoServiceGetVersionInfoProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetVersionInfo"
 	// KargoServiceGetPublicConfigProcedure is the fully-qualified name of the KargoService's
 	// GetPublicConfig RPC.
 	KargoServiceGetPublicConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetPublicConfig"
@@ -85,6 +88,7 @@ const (
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
 type KargoServiceClient interface {
+	GetVersionInfo(context.Context, *connect_go.Request[v1alpha1.GetVersionInfoRequest]) (*connect_go.Response[v1alpha1.GetVersionInfoResponse], error)
 	GetPublicConfig(context.Context, *connect_go.Request[v1alpha1.GetPublicConfigRequest]) (*connect_go.Response[v1alpha1.GetPublicConfigResponse], error)
 	AdminLogin(context.Context, *connect_go.Request[v1alpha1.AdminLoginRequest]) (*connect_go.Response[v1alpha1.AdminLoginResponse], error)
 	CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error)
@@ -114,6 +118,11 @@ type KargoServiceClient interface {
 func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) KargoServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &kargoServiceClient{
+		getVersionInfo: connect_go.NewClient[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse](
+			httpClient,
+			baseURL+KargoServiceGetVersionInfoProcedure,
+			opts...,
+		),
 		getPublicConfig: connect_go.NewClient[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse](
 			httpClient,
 			baseURL+KargoServiceGetPublicConfigProcedure,
@@ -204,6 +213,7 @@ func NewKargoServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 
 // kargoServiceClient implements KargoServiceClient.
 type kargoServiceClient struct {
+	getVersionInfo           *connect_go.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
 	getPublicConfig          *connect_go.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
 	adminLogin               *connect_go.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
 	createStage              *connect_go.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
@@ -221,6 +231,11 @@ type kargoServiceClient struct {
 	createProject            *connect_go.Client[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse]
 	listProjects             *connect_go.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
 	deleteProject            *connect_go.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
+}
+
+// GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
+func (c *kargoServiceClient) GetVersionInfo(ctx context.Context, req *connect_go.Request[v1alpha1.GetVersionInfoRequest]) (*connect_go.Response[v1alpha1.GetVersionInfoResponse], error) {
+	return c.getVersionInfo.CallUnary(ctx, req)
 }
 
 // GetPublicConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig.
@@ -312,6 +327,7 @@ func (c *kargoServiceClient) DeleteProject(ctx context.Context, req *connect_go.
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
 // service.
 type KargoServiceHandler interface {
+	GetVersionInfo(context.Context, *connect_go.Request[v1alpha1.GetVersionInfoRequest]) (*connect_go.Response[v1alpha1.GetVersionInfoResponse], error)
 	GetPublicConfig(context.Context, *connect_go.Request[v1alpha1.GetPublicConfigRequest]) (*connect_go.Response[v1alpha1.GetPublicConfigResponse], error)
 	AdminLogin(context.Context, *connect_go.Request[v1alpha1.AdminLoginRequest]) (*connect_go.Response[v1alpha1.AdminLoginResponse], error)
 	CreateStage(context.Context, *connect_go.Request[v1alpha1.CreateStageRequest]) (*connect_go.Response[v1alpha1.CreateStageResponse], error)
@@ -338,6 +354,11 @@ type KargoServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
 	mux := http.NewServeMux()
+	mux.Handle(KargoServiceGetVersionInfoProcedure, connect_go.NewUnaryHandler(
+		KargoServiceGetVersionInfoProcedure,
+		svc.GetVersionInfo,
+		opts...,
+	))
 	mux.Handle(KargoServiceGetPublicConfigProcedure, connect_go.NewUnaryHandler(
 		KargoServiceGetPublicConfigProcedure,
 		svc.GetPublicConfig,
@@ -428,6 +449,10 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect_go.HandlerO
 
 // UnimplementedKargoServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedKargoServiceHandler struct{}
+
+func (UnimplementedKargoServiceHandler) GetVersionInfo(context.Context, *connect_go.Request[v1alpha1.GetVersionInfoRequest]) (*connect_go.Response[v1alpha1.GetVersionInfoResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo is not implemented"))
+}
 
 func (UnimplementedKargoServiceHandler) GetPublicConfig(context.Context, *connect_go.Request[v1alpha1.GetPublicConfigRequest]) (*connect_go.Response[v1alpha1.GetPublicConfigResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig is not implemented"))
