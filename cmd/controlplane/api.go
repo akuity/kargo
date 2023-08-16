@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,7 +42,8 @@ func newAPICommand() *cobra.Command {
 			var wg sync.WaitGroup
 			errCh := make(chan error, 2)
 
-			var kubeClient client.Client
+			var kubeCli client.Client
+			var dynamicCli dynamic.Interface
 			{
 				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
@@ -77,7 +79,8 @@ func newAPICommand() *cobra.Command {
 					errCh <- pkgerrors.Wrap(mgrErr, "start manager")
 					wg.Done()
 				}()
-				kubeClient = mgr.GetClient()
+				kubeCli = mgr.GetClient()
+				dynamicCli = dynamic.NewForConfigOrDie(restCfg)
 			}
 
 			cfg := config.ServerConfigFromEnv()
@@ -92,7 +95,7 @@ func newAPICommand() *cobra.Command {
 				}).Info("SSO via OpenID Connect is enabled")
 			}
 
-			srv, err := api.NewServer(kubeClient, cfg)
+			srv, err := api.NewServer(cfg, kubeCli, dynamicCli)
 			if err != nil {
 				return pkgerrors.Wrap(err, "error creating API server")
 			}

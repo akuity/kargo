@@ -839,6 +839,108 @@ func (x *GetStageResponse) GetStage() *v1alpha1.Stage {
 	return nil
 }
 
+type WatchStageRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+}
+
+func (x *WatchStageRequest) Reset() {
+	*x = WatchStageRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_v1alpha1_service_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WatchStageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchStageRequest) ProtoMessage() {}
+
+func (x *WatchStageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_service_v1alpha1_service_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchStageRequest.ProtoReflect.Descriptor instead.
+func (*WatchStageRequest) Descriptor() ([]byte, []int) {
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *WatchStageRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *WatchStageRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type WatchStageResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Stage *v1alpha1.Stage `protobuf:"bytes,1,opt,name=stage,proto3" json:"stage,omitempty"`
+}
+
+func (x *WatchStageResponse) Reset() {
+	*x = WatchStageResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_v1alpha1_service_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WatchStageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchStageResponse) ProtoMessage() {}
+
+func (x *WatchStageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_service_v1alpha1_service_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchStageResponse.ProtoReflect.Descriptor instead.
+func (*WatchStageResponse) Descriptor() ([]byte, []int) {
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *WatchStageResponse) GetStage() *v1alpha1.Stage {
+	if x != nil {
+		return x.Stage
+	}
+	return nil
+}
+
 type UpdateStageRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -854,7 +956,7 @@ type UpdateStageRequest struct {
 func (x *UpdateStageRequest) Reset() {
 	*x = UpdateStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[15]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -867,7 +969,7 @@ func (x *UpdateStageRequest) String() string {
 func (*UpdateStageRequest) ProtoMessage() {}
 
 func (x *UpdateStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[15]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -880,7 +982,7 @@ func (x *UpdateStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateStageRequest.ProtoReflect.Descriptor instead.
 func (*UpdateStageRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{15}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{17}
 }
 
 func (m *UpdateStageRequest) GetStage() isUpdateStageRequest_Stage {
@@ -931,7 +1033,7 @@ type UpdateStageResponse struct {
 func (x *UpdateStageResponse) Reset() {
 	*x = UpdateStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[16]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -944,7 +1046,7 @@ func (x *UpdateStageResponse) String() string {
 func (*UpdateStageResponse) ProtoMessage() {}
 
 func (x *UpdateStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[16]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -957,7 +1059,7 @@ func (x *UpdateStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateStageResponse.ProtoReflect.Descriptor instead.
 func (*UpdateStageResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{16}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UpdateStageResponse) GetStage() *v1alpha1.Stage {
@@ -979,7 +1081,7 @@ type DeleteStageRequest struct {
 func (x *DeleteStageRequest) Reset() {
 	*x = DeleteStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[17]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -992,7 +1094,7 @@ func (x *DeleteStageRequest) String() string {
 func (*DeleteStageRequest) ProtoMessage() {}
 
 func (x *DeleteStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[17]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1005,7 +1107,7 @@ func (x *DeleteStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteStageRequest.ProtoReflect.Descriptor instead.
 func (*DeleteStageRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{17}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *DeleteStageRequest) GetProject() string {
@@ -1031,7 +1133,7 @@ type DeleteStageResponse struct {
 func (x *DeleteStageResponse) Reset() {
 	*x = DeleteStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[18]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1044,7 +1146,7 @@ func (x *DeleteStageResponse) String() string {
 func (*DeleteStageResponse) ProtoMessage() {}
 
 func (x *DeleteStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[18]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1057,7 +1159,7 @@ func (x *DeleteStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteStageResponse.ProtoReflect.Descriptor instead.
 func (*DeleteStageResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{18}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{20}
 }
 
 type PromoteStageRequest struct {
@@ -1073,7 +1175,7 @@ type PromoteStageRequest struct {
 func (x *PromoteStageRequest) Reset() {
 	*x = PromoteStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[19]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1086,7 +1188,7 @@ func (x *PromoteStageRequest) String() string {
 func (*PromoteStageRequest) ProtoMessage() {}
 
 func (x *PromoteStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[19]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1099,7 +1201,7 @@ func (x *PromoteStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteStageRequest.ProtoReflect.Descriptor instead.
 func (*PromoteStageRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{19}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PromoteStageRequest) GetProject() string {
@@ -1134,7 +1236,7 @@ type PromoteStageResponse struct {
 func (x *PromoteStageResponse) Reset() {
 	*x = PromoteStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[20]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1147,7 +1249,7 @@ func (x *PromoteStageResponse) String() string {
 func (*PromoteStageResponse) ProtoMessage() {}
 
 func (x *PromoteStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[20]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1160,7 +1262,7 @@ func (x *PromoteStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteStageResponse.ProtoReflect.Descriptor instead.
 func (*PromoteStageResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{20}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *PromoteStageResponse) GetPromotion() *v1alpha1.Promotion {
@@ -1184,7 +1286,7 @@ type TypedPromotionPolicySpec struct {
 func (x *TypedPromotionPolicySpec) Reset() {
 	*x = TypedPromotionPolicySpec{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[21]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1197,7 +1299,7 @@ func (x *TypedPromotionPolicySpec) String() string {
 func (*TypedPromotionPolicySpec) ProtoMessage() {}
 
 func (x *TypedPromotionPolicySpec) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[21]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1210,7 +1312,7 @@ func (x *TypedPromotionPolicySpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TypedPromotionPolicySpec.ProtoReflect.Descriptor instead.
 func (*TypedPromotionPolicySpec) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{21}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *TypedPromotionPolicySpec) GetProject() string {
@@ -1254,7 +1356,7 @@ type SetAutoPromotionForStageRequest struct {
 func (x *SetAutoPromotionForStageRequest) Reset() {
 	*x = SetAutoPromotionForStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[22]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1267,7 +1369,7 @@ func (x *SetAutoPromotionForStageRequest) String() string {
 func (*SetAutoPromotionForStageRequest) ProtoMessage() {}
 
 func (x *SetAutoPromotionForStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[22]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1280,7 +1382,7 @@ func (x *SetAutoPromotionForStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAutoPromotionForStageRequest.ProtoReflect.Descriptor instead.
 func (*SetAutoPromotionForStageRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{22}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *SetAutoPromotionForStageRequest) GetProject() string {
@@ -1315,7 +1417,7 @@ type SetAutoPromotionForStageResponse struct {
 func (x *SetAutoPromotionForStageResponse) Reset() {
 	*x = SetAutoPromotionForStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[23]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1328,7 +1430,7 @@ func (x *SetAutoPromotionForStageResponse) String() string {
 func (*SetAutoPromotionForStageResponse) ProtoMessage() {}
 
 func (x *SetAutoPromotionForStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[23]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1341,7 +1443,7 @@ func (x *SetAutoPromotionForStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetAutoPromotionForStageResponse.ProtoReflect.Descriptor instead.
 func (*SetAutoPromotionForStageResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{23}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *SetAutoPromotionForStageResponse) GetPromotionPolicy() *v1alpha1.PromotionPolicy {
@@ -1366,7 +1468,7 @@ type CreatePromotionPolicyRequest struct {
 func (x *CreatePromotionPolicyRequest) Reset() {
 	*x = CreatePromotionPolicyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[24]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1379,7 +1481,7 @@ func (x *CreatePromotionPolicyRequest) String() string {
 func (*CreatePromotionPolicyRequest) ProtoMessage() {}
 
 func (x *CreatePromotionPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[24]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1392,7 +1494,7 @@ func (x *CreatePromotionPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePromotionPolicyRequest.ProtoReflect.Descriptor instead.
 func (*CreatePromotionPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{24}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{26}
 }
 
 func (m *CreatePromotionPolicyRequest) GetPromotionPolicy() isCreatePromotionPolicyRequest_PromotionPolicy {
@@ -1443,7 +1545,7 @@ type CreatePromotionPolicyResponse struct {
 func (x *CreatePromotionPolicyResponse) Reset() {
 	*x = CreatePromotionPolicyResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[25]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1456,7 +1558,7 @@ func (x *CreatePromotionPolicyResponse) String() string {
 func (*CreatePromotionPolicyResponse) ProtoMessage() {}
 
 func (x *CreatePromotionPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[25]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1469,7 +1571,7 @@ func (x *CreatePromotionPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePromotionPolicyResponse.ProtoReflect.Descriptor instead.
 func (*CreatePromotionPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{25}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *CreatePromotionPolicyResponse) GetPromotionPolicy() *v1alpha1.PromotionPolicy {
@@ -1490,7 +1592,7 @@ type ListPromotionPoliciesRequest struct {
 func (x *ListPromotionPoliciesRequest) Reset() {
 	*x = ListPromotionPoliciesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[26]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1503,7 +1605,7 @@ func (x *ListPromotionPoliciesRequest) String() string {
 func (*ListPromotionPoliciesRequest) ProtoMessage() {}
 
 func (x *ListPromotionPoliciesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[26]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1516,7 +1618,7 @@ func (x *ListPromotionPoliciesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromotionPoliciesRequest.ProtoReflect.Descriptor instead.
 func (*ListPromotionPoliciesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{26}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListPromotionPoliciesRequest) GetProject() string {
@@ -1537,7 +1639,7 @@ type ListPromotionPoliciesResponse struct {
 func (x *ListPromotionPoliciesResponse) Reset() {
 	*x = ListPromotionPoliciesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[27]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1550,7 +1652,7 @@ func (x *ListPromotionPoliciesResponse) String() string {
 func (*ListPromotionPoliciesResponse) ProtoMessage() {}
 
 func (x *ListPromotionPoliciesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[27]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1563,7 +1665,7 @@ func (x *ListPromotionPoliciesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromotionPoliciesResponse.ProtoReflect.Descriptor instead.
 func (*ListPromotionPoliciesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{27}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListPromotionPoliciesResponse) GetPromotionPolicies() []*v1alpha1.PromotionPolicy {
@@ -1585,7 +1687,7 @@ type GetPromotionPolicyRequest struct {
 func (x *GetPromotionPolicyRequest) Reset() {
 	*x = GetPromotionPolicyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[28]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1598,7 +1700,7 @@ func (x *GetPromotionPolicyRequest) String() string {
 func (*GetPromotionPolicyRequest) ProtoMessage() {}
 
 func (x *GetPromotionPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[28]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1611,7 +1713,7 @@ func (x *GetPromotionPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromotionPolicyRequest.ProtoReflect.Descriptor instead.
 func (*GetPromotionPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{28}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetPromotionPolicyRequest) GetProject() string {
@@ -1639,7 +1741,7 @@ type GetPromotionPolicyResponse struct {
 func (x *GetPromotionPolicyResponse) Reset() {
 	*x = GetPromotionPolicyResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[29]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1652,7 +1754,7 @@ func (x *GetPromotionPolicyResponse) String() string {
 func (*GetPromotionPolicyResponse) ProtoMessage() {}
 
 func (x *GetPromotionPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[29]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1665,7 +1767,7 @@ func (x *GetPromotionPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromotionPolicyResponse.ProtoReflect.Descriptor instead.
 func (*GetPromotionPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{29}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *GetPromotionPolicyResponse) GetPromotionPolicy() *v1alpha1.PromotionPolicy {
@@ -1690,7 +1792,7 @@ type UpdatePromotionPolicyRequest struct {
 func (x *UpdatePromotionPolicyRequest) Reset() {
 	*x = UpdatePromotionPolicyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[30]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1703,7 +1805,7 @@ func (x *UpdatePromotionPolicyRequest) String() string {
 func (*UpdatePromotionPolicyRequest) ProtoMessage() {}
 
 func (x *UpdatePromotionPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[30]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1716,7 +1818,7 @@ func (x *UpdatePromotionPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePromotionPolicyRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePromotionPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{30}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{32}
 }
 
 func (m *UpdatePromotionPolicyRequest) GetPromotionPolicy() isUpdatePromotionPolicyRequest_PromotionPolicy {
@@ -1767,7 +1869,7 @@ type UpdatePromotionPolicyResponse struct {
 func (x *UpdatePromotionPolicyResponse) Reset() {
 	*x = UpdatePromotionPolicyResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[31]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1780,7 +1882,7 @@ func (x *UpdatePromotionPolicyResponse) String() string {
 func (*UpdatePromotionPolicyResponse) ProtoMessage() {}
 
 func (x *UpdatePromotionPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[31]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1793,7 +1895,7 @@ func (x *UpdatePromotionPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePromotionPolicyResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePromotionPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{31}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *UpdatePromotionPolicyResponse) GetPromotionPolicy() *v1alpha1.PromotionPolicy {
@@ -1815,7 +1917,7 @@ type DeletePromotionPolicyRequest struct {
 func (x *DeletePromotionPolicyRequest) Reset() {
 	*x = DeletePromotionPolicyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[32]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1828,7 +1930,7 @@ func (x *DeletePromotionPolicyRequest) String() string {
 func (*DeletePromotionPolicyRequest) ProtoMessage() {}
 
 func (x *DeletePromotionPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[32]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1841,7 +1943,7 @@ func (x *DeletePromotionPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePromotionPolicyRequest.ProtoReflect.Descriptor instead.
 func (*DeletePromotionPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{32}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *DeletePromotionPolicyRequest) GetProject() string {
@@ -1867,7 +1969,7 @@ type DeletePromotionPolicyResponse struct {
 func (x *DeletePromotionPolicyResponse) Reset() {
 	*x = DeletePromotionPolicyResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[33]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1880,7 +1982,7 @@ func (x *DeletePromotionPolicyResponse) String() string {
 func (*DeletePromotionPolicyResponse) ProtoMessage() {}
 
 func (x *DeletePromotionPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[33]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1893,7 +1995,7 @@ func (x *DeletePromotionPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePromotionPolicyResponse.ProtoReflect.Descriptor instead.
 func (*DeletePromotionPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{33}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{35}
 }
 
 type Project struct {
@@ -1908,7 +2010,7 @@ type Project struct {
 func (x *Project) Reset() {
 	*x = Project{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[34]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1921,7 +2023,7 @@ func (x *Project) String() string {
 func (*Project) ProtoMessage() {}
 
 func (x *Project) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[34]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1934,7 +2036,7 @@ func (x *Project) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Project.ProtoReflect.Descriptor instead.
 func (*Project) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{34}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *Project) GetName() string {
@@ -1962,7 +2064,7 @@ type CreateProjectRequest struct {
 func (x *CreateProjectRequest) Reset() {
 	*x = CreateProjectRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[35]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1975,7 +2077,7 @@ func (x *CreateProjectRequest) String() string {
 func (*CreateProjectRequest) ProtoMessage() {}
 
 func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[35]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1988,7 +2090,7 @@ func (x *CreateProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectRequest.ProtoReflect.Descriptor instead.
 func (*CreateProjectRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{35}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *CreateProjectRequest) GetName() string {
@@ -2009,7 +2111,7 @@ type CreateProjectResponse struct {
 func (x *CreateProjectResponse) Reset() {
 	*x = CreateProjectResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[36]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2022,7 +2124,7 @@ func (x *CreateProjectResponse) String() string {
 func (*CreateProjectResponse) ProtoMessage() {}
 
 func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[36]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2035,7 +2137,7 @@ func (x *CreateProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectResponse.ProtoReflect.Descriptor instead.
 func (*CreateProjectResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{36}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *CreateProjectResponse) GetProject() *Project {
@@ -2054,7 +2156,7 @@ type ListProjectsRequest struct {
 func (x *ListProjectsRequest) Reset() {
 	*x = ListProjectsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[37]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2067,7 +2169,7 @@ func (x *ListProjectsRequest) String() string {
 func (*ListProjectsRequest) ProtoMessage() {}
 
 func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[37]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2080,7 +2182,7 @@ func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectsRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{37}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{39}
 }
 
 type ListProjectsResponse struct {
@@ -2094,7 +2196,7 @@ type ListProjectsResponse struct {
 func (x *ListProjectsResponse) Reset() {
 	*x = ListProjectsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[38]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2107,7 +2209,7 @@ func (x *ListProjectsResponse) String() string {
 func (*ListProjectsResponse) ProtoMessage() {}
 
 func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[38]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2120,7 +2222,7 @@ func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectsResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{38}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ListProjectsResponse) GetProjects() []*Project {
@@ -2141,7 +2243,7 @@ type DeleteProjectRequest struct {
 func (x *DeleteProjectRequest) Reset() {
 	*x = DeleteProjectRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[39]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2154,7 +2256,7 @@ func (x *DeleteProjectRequest) String() string {
 func (*DeleteProjectRequest) ProtoMessage() {}
 
 func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[39]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2167,7 +2269,7 @@ func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProjectRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{39}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *DeleteProjectRequest) GetName() string {
@@ -2186,7 +2288,7 @@ type DeleteProjectResponse struct {
 func (x *DeleteProjectResponse) Reset() {
 	*x = DeleteProjectResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[40]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2199,7 +2301,7 @@ func (x *DeleteProjectResponse) String() string {
 func (*DeleteProjectResponse) ProtoMessage() {}
 
 func (x *DeleteProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[40]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2212,7 +2314,7 @@ func (x *DeleteProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectResponse.ProtoReflect.Descriptor instead.
 func (*DeleteProjectResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{40}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{42}
 }
 
 var File_service_v1alpha1_service_proto protoreflect.FileDescriptor
@@ -2310,6 +2412,16 @@ var file_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12,
 	0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61,
 	0x6d, 0x65, 0x22, 0x59, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x45, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
+	0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x22, 0x41, 0x0a,
+	0x11, 0x57, 0x61, 0x74, 0x63, 0x68, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x22, 0x5b, 0x0a, 0x12, 0x57, 0x61, 0x74, 0x63, 0x68, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65,
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x45, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
 	0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
@@ -2466,7 +2578,7 @@ var file_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a,
 	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d,
 	0x65, 0x22, 0x17, 0x0a, 0x15, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65,
-	0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x32, 0x9c, 0x13, 0x0a, 0x0c, 0x4b,
+	0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x32, 0x97, 0x14, 0x0a, 0x0c, 0x4b,
 	0x61, 0x72, 0x67, 0x6f, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x83, 0x01, 0x0a, 0x0e,
 	0x47, 0x65, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x37,
 	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
@@ -2514,131 +2626,139 @@ var file_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x32, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
 	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
 	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74,
-	0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x7a, 0x0a, 0x0b, 0x55,
-	0x70, 0x64, 0x61, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x12, 0x34, 0x2e, 0x61, 0x6b, 0x75,
+	0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x79, 0x0a, 0x0a, 0x57,
+	0x61, 0x74, 0x63, 0x68, 0x53, 0x74, 0x61, 0x67, 0x65, 0x12, 0x33, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74,
+	0x63, 0x68, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x34,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x7a, 0x0a, 0x0b, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65,
+	0x53, 0x74, 0x61, 0x67, 0x65, 0x12, 0x34, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
+	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x53,
+	0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x35, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x7a, 0x0a, 0x0b, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67,
+	0x65, 0x12, 0x34, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
+	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74,
+	0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x7d,
+	0x0a, 0x0c, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x12, 0x35,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
+	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x65,
+	0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0xa1, 0x01,
+	0x0a, 0x18, 0x53, 0x65, 0x74, 0x41, 0x75, 0x74, 0x6f, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69,
+	0x6f, 0x6e, 0x46, 0x6f, 0x72, 0x53, 0x74, 0x61, 0x67, 0x65, 0x12, 0x41, 0x2e, 0x61, 0x6b, 0x75,
 	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70,
-	0x64, 0x61, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x7a, 0x0a, 0x0b, 0x44, 0x65, 0x6c, 0x65, 0x74,
-	0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x12, 0x34, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
+	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x65,
+	0x74, 0x41, 0x75, 0x74, 0x6f, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x46, 0x6f,
+	0x72, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x42, 0x2e,
+	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x53, 0x65, 0x74, 0x41, 0x75, 0x74, 0x6f, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
+	0x6e, 0x46, 0x6f, 0x72, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x98, 0x01, 0x0a, 0x15, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d,
+	0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x3e, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43,
+	0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f,
+	0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3f, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43,
+	0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f,
+	0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x98, 0x01, 0x0a,
+	0x15, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f,
+	0x6c, 0x69, 0x63, 0x69, 0x65, 0x73, 0x12, 0x3e, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
 	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
-	0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x35, 0x2e, 0x61,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
-	0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x7d, 0x0a, 0x0c, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x65, 0x53, 0x74,
-	0x61, 0x67, 0x65, 0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
-	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x65, 0x53, 0x74,
-	0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36, 0x2e, 0x61, 0x6b, 0x75,
-	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72,
-	0x6f, 0x6d, 0x6f, 0x74, 0x65, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x12, 0xa1, 0x01, 0x0a, 0x18, 0x53, 0x65, 0x74, 0x41, 0x75, 0x74, 0x6f, 0x50, 0x72,
-	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x46, 0x6f, 0x72, 0x53, 0x74, 0x61, 0x67, 0x65, 0x12,
-	0x41, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
-	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x2e, 0x53, 0x65, 0x74, 0x41, 0x75, 0x74, 0x6f, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x46, 0x6f, 0x72, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x42, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
-	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x65, 0x74, 0x41, 0x75, 0x74, 0x6f, 0x50, 0x72, 0x6f,
-	0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x46, 0x6f, 0x72, 0x53, 0x74, 0x61, 0x67, 0x65, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x98, 0x01, 0x0a, 0x15, 0x43, 0x72, 0x65, 0x61, 0x74,
-	0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79,
-	0x12, 0x3e, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x3f, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x98, 0x01, 0x0a, 0x15, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x69, 0x65, 0x73, 0x12, 0x3e, 0x2e, 0x61, 0x6b,
+	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72,
+	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x69, 0x65, 0x73, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3f, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
+	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72,
+	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x69, 0x65, 0x73, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x8f, 0x01, 0x0a, 0x12, 0x47, 0x65, 0x74, 0x50,
+	0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x3b,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f,
+	0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3c, 0x2e, 0x61, 0x6b,
 	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
-	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c,
-	0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69,
-	0x63, 0x69, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3f, 0x2e, 0x61, 0x6b,
-	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
-	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c,
-	0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69,
-	0x63, 0x69, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x8f, 0x01, 0x0a,
-	0x12, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c,
-	0x69, 0x63, 0x79, 0x12, 0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
-	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e,
-	0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x98,
-	0x01, 0x0a, 0x15, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69,
-	0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x3e, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61,
-	0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63,
-	0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3f, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61,
-	0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63,
-	0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x98, 0x01, 0x0a, 0x15, 0x44, 0x65,
-	0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47,
+	0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63,
+	0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x98, 0x01, 0x0a, 0x15, 0x55, 0x70,
+	0x64, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c,
 	0x69, 0x63, 0x79, 0x12, 0x3e, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
 	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f,
 	0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75,
 	0x65, 0x73, 0x74, 0x1a, 0x3f, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
 	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f,
 	0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x80, 0x01, 0x0a, 0x0d, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50,
-	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
-	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65,
-	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x37,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x98, 0x01, 0x0a, 0x15, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50,
+	0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x3e,
 	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
 	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
-	0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x7d, 0x0a, 0x0c, 0x4c, 0x69, 0x73, 0x74, 0x50,
-	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50,
-	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36,
+	0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
+	0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3f,
 	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
 	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
-	0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x80, 0x01, 0x0a, 0x0d, 0x44, 0x65, 0x6c, 0x65, 0x74,
-	0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65,
-	0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
-	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x97, 0x02, 0x0a, 0x24, 0x63, 0x6f,
-	0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
-	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x42, 0x0c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f,
-	0x50, 0x01, 0x5a, 0x3c, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f, 0x70, 0x6b, 0x67, 0x2f,
-	0x61, 0x70, 0x69, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31, 0x61, 0x6c,
-	0x70, 0x68, 0x61, 0x31, 0x3b, 0x73, 0x76, 0x63, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0xa2, 0x02, 0x04, 0x41, 0x49, 0x4b, 0x53, 0xaa, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2e, 0x49, 0x6f, 0x2e, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02, 0x20, 0x41, 0x6b, 0x75,
-	0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2, 0x02, 0x2c,
-	0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c,
-	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x24, 0x41,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x3a, 0x3a, 0x49, 0x6f, 0x3a, 0x3a, 0x4b, 0x61, 0x72, 0x67, 0x6f,
-	0x3a, 0x3a, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x3a, 0x56, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
+	0x6e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x80, 0x01, 0x0a, 0x0d, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x12, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
+	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65,
+	0x61, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x7d, 0x0a, 0x0c, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x73, 0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
+	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73,
+	0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x80, 0x01, 0x0a, 0x0d, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a,
+	0x65, 0x63, 0x74, 0x12, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f,
+	0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x37, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44,
+	0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x42, 0x97, 0x02, 0x0a, 0x24, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x42, 0x0c, 0x53,
+	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x3c, 0x67,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x73,
+	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x3b,
+	0x73, 0x76, 0x63, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xa2, 0x02, 0x04, 0x41, 0x49,
+	0x4b, 0x53, 0xaa, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x49, 0x6f, 0x2e, 0x4b,
+	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x56, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x49,
+	0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5c,
+	0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2, 0x02, 0x2c, 0x41, 0x6b, 0x75, 0x69, 0x74,
+	0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d,
+	0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x24, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x3a, 0x3a, 0x49, 0x6f, 0x3a, 0x3a, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x3a, 0x3a, 0x53, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x3a, 0x3a, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -2653,7 +2773,7 @@ func file_service_v1alpha1_service_proto_rawDescGZIP() []byte {
 	return file_service_v1alpha1_service_proto_rawDescData
 }
 
-var file_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(*VersionInfo)(nil),                      // 0: akuity.io.kargo.service.v1alpha1.VersionInfo
 	(*GetVersionInfoRequest)(nil),            // 1: akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
@@ -2670,101 +2790,106 @@ var file_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(*ListStagesResponse)(nil),               // 12: akuity.io.kargo.service.v1alpha1.ListStagesResponse
 	(*GetStageRequest)(nil),                  // 13: akuity.io.kargo.service.v1alpha1.GetStageRequest
 	(*GetStageResponse)(nil),                 // 14: akuity.io.kargo.service.v1alpha1.GetStageResponse
-	(*UpdateStageRequest)(nil),               // 15: akuity.io.kargo.service.v1alpha1.UpdateStageRequest
-	(*UpdateStageResponse)(nil),              // 16: akuity.io.kargo.service.v1alpha1.UpdateStageResponse
-	(*DeleteStageRequest)(nil),               // 17: akuity.io.kargo.service.v1alpha1.DeleteStageRequest
-	(*DeleteStageResponse)(nil),              // 18: akuity.io.kargo.service.v1alpha1.DeleteStageResponse
-	(*PromoteStageRequest)(nil),              // 19: akuity.io.kargo.service.v1alpha1.PromoteStageRequest
-	(*PromoteStageResponse)(nil),             // 20: akuity.io.kargo.service.v1alpha1.PromoteStageResponse
-	(*TypedPromotionPolicySpec)(nil),         // 21: akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec
-	(*SetAutoPromotionForStageRequest)(nil),  // 22: akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageRequest
-	(*SetAutoPromotionForStageResponse)(nil), // 23: akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageResponse
-	(*CreatePromotionPolicyRequest)(nil),     // 24: akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyRequest
-	(*CreatePromotionPolicyResponse)(nil),    // 25: akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyResponse
-	(*ListPromotionPoliciesRequest)(nil),     // 26: akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesRequest
-	(*ListPromotionPoliciesResponse)(nil),    // 27: akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesResponse
-	(*GetPromotionPolicyRequest)(nil),        // 28: akuity.io.kargo.service.v1alpha1.GetPromotionPolicyRequest
-	(*GetPromotionPolicyResponse)(nil),       // 29: akuity.io.kargo.service.v1alpha1.GetPromotionPolicyResponse
-	(*UpdatePromotionPolicyRequest)(nil),     // 30: akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyRequest
-	(*UpdatePromotionPolicyResponse)(nil),    // 31: akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyResponse
-	(*DeletePromotionPolicyRequest)(nil),     // 32: akuity.io.kargo.service.v1alpha1.DeletePromotionPolicyRequest
-	(*DeletePromotionPolicyResponse)(nil),    // 33: akuity.io.kargo.service.v1alpha1.DeletePromotionPolicyResponse
-	(*Project)(nil),                          // 34: akuity.io.kargo.service.v1alpha1.Project
-	(*CreateProjectRequest)(nil),             // 35: akuity.io.kargo.service.v1alpha1.CreateProjectRequest
-	(*CreateProjectResponse)(nil),            // 36: akuity.io.kargo.service.v1alpha1.CreateProjectResponse
-	(*ListProjectsRequest)(nil),              // 37: akuity.io.kargo.service.v1alpha1.ListProjectsRequest
-	(*ListProjectsResponse)(nil),             // 38: akuity.io.kargo.service.v1alpha1.ListProjectsResponse
-	(*DeleteProjectRequest)(nil),             // 39: akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
-	(*DeleteProjectResponse)(nil),            // 40: akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
-	(*timestamppb.Timestamp)(nil),            // 41: google.protobuf.Timestamp
-	(*v1alpha1.StageSpec)(nil),               // 42: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
-	(*v1alpha1.Stage)(nil),                   // 43: github.com.akuity.kargo.pkg.api.v1alpha1.Stage
-	(*v1alpha1.Promotion)(nil),               // 44: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
-	(*v1alpha1.PromotionPolicy)(nil),         // 45: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
+	(*WatchStageRequest)(nil),                // 15: akuity.io.kargo.service.v1alpha1.WatchStageRequest
+	(*WatchStageResponse)(nil),               // 16: akuity.io.kargo.service.v1alpha1.WatchStageResponse
+	(*UpdateStageRequest)(nil),               // 17: akuity.io.kargo.service.v1alpha1.UpdateStageRequest
+	(*UpdateStageResponse)(nil),              // 18: akuity.io.kargo.service.v1alpha1.UpdateStageResponse
+	(*DeleteStageRequest)(nil),               // 19: akuity.io.kargo.service.v1alpha1.DeleteStageRequest
+	(*DeleteStageResponse)(nil),              // 20: akuity.io.kargo.service.v1alpha1.DeleteStageResponse
+	(*PromoteStageRequest)(nil),              // 21: akuity.io.kargo.service.v1alpha1.PromoteStageRequest
+	(*PromoteStageResponse)(nil),             // 22: akuity.io.kargo.service.v1alpha1.PromoteStageResponse
+	(*TypedPromotionPolicySpec)(nil),         // 23: akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec
+	(*SetAutoPromotionForStageRequest)(nil),  // 24: akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageRequest
+	(*SetAutoPromotionForStageResponse)(nil), // 25: akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageResponse
+	(*CreatePromotionPolicyRequest)(nil),     // 26: akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyRequest
+	(*CreatePromotionPolicyResponse)(nil),    // 27: akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyResponse
+	(*ListPromotionPoliciesRequest)(nil),     // 28: akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesRequest
+	(*ListPromotionPoliciesResponse)(nil),    // 29: akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesResponse
+	(*GetPromotionPolicyRequest)(nil),        // 30: akuity.io.kargo.service.v1alpha1.GetPromotionPolicyRequest
+	(*GetPromotionPolicyResponse)(nil),       // 31: akuity.io.kargo.service.v1alpha1.GetPromotionPolicyResponse
+	(*UpdatePromotionPolicyRequest)(nil),     // 32: akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyRequest
+	(*UpdatePromotionPolicyResponse)(nil),    // 33: akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyResponse
+	(*DeletePromotionPolicyRequest)(nil),     // 34: akuity.io.kargo.service.v1alpha1.DeletePromotionPolicyRequest
+	(*DeletePromotionPolicyResponse)(nil),    // 35: akuity.io.kargo.service.v1alpha1.DeletePromotionPolicyResponse
+	(*Project)(nil),                          // 36: akuity.io.kargo.service.v1alpha1.Project
+	(*CreateProjectRequest)(nil),             // 37: akuity.io.kargo.service.v1alpha1.CreateProjectRequest
+	(*CreateProjectResponse)(nil),            // 38: akuity.io.kargo.service.v1alpha1.CreateProjectResponse
+	(*ListProjectsRequest)(nil),              // 39: akuity.io.kargo.service.v1alpha1.ListProjectsRequest
+	(*ListProjectsResponse)(nil),             // 40: akuity.io.kargo.service.v1alpha1.ListProjectsResponse
+	(*DeleteProjectRequest)(nil),             // 41: akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
+	(*DeleteProjectResponse)(nil),            // 42: akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
+	(*timestamppb.Timestamp)(nil),            // 43: google.protobuf.Timestamp
+	(*v1alpha1.StageSpec)(nil),               // 44: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
+	(*v1alpha1.Stage)(nil),                   // 45: github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+	(*v1alpha1.Promotion)(nil),               // 46: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
+	(*v1alpha1.PromotionPolicy)(nil),         // 47: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
 }
 var file_service_v1alpha1_service_proto_depIdxs = []int32{
-	41, // 0: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
+	43, // 0: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
 	0,  // 1: akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse.version_info:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
 	5,  // 2: akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse.oidc_config:type_name -> akuity.io.kargo.service.v1alpha1.OIDCConfig
-	42, // 3: akuity.io.kargo.service.v1alpha1.TypedStageSpec.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
+	44, // 3: akuity.io.kargo.service.v1alpha1.TypedStageSpec.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
 	8,  // 4: akuity.io.kargo.service.v1alpha1.CreateStageRequest.typed:type_name -> akuity.io.kargo.service.v1alpha1.TypedStageSpec
-	43, // 5: akuity.io.kargo.service.v1alpha1.CreateStageResponse.stage:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
-	43, // 6: akuity.io.kargo.service.v1alpha1.ListStagesResponse.stages:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
-	43, // 7: akuity.io.kargo.service.v1alpha1.GetStageResponse.stage:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
-	8,  // 8: akuity.io.kargo.service.v1alpha1.UpdateStageRequest.typed:type_name -> akuity.io.kargo.service.v1alpha1.TypedStageSpec
-	43, // 9: akuity.io.kargo.service.v1alpha1.UpdateStageResponse.stage:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
-	44, // 10: akuity.io.kargo.service.v1alpha1.PromoteStageResponse.promotion:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
-	45, // 11: akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageResponse.promotion_policy:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
-	21, // 12: akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyRequest.typed:type_name -> akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec
-	45, // 13: akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyResponse.promotion_policy:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
-	45, // 14: akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesResponse.promotion_policies:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
-	45, // 15: akuity.io.kargo.service.v1alpha1.GetPromotionPolicyResponse.promotion_policy:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
-	21, // 16: akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyRequest.typed:type_name -> akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec
-	45, // 17: akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyResponse.promotion_policy:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
-	41, // 18: akuity.io.kargo.service.v1alpha1.Project.create_time:type_name -> google.protobuf.Timestamp
-	34, // 19: akuity.io.kargo.service.v1alpha1.CreateProjectResponse.project:type_name -> akuity.io.kargo.service.v1alpha1.Project
-	34, // 20: akuity.io.kargo.service.v1alpha1.ListProjectsResponse.projects:type_name -> akuity.io.kargo.service.v1alpha1.Project
-	1,  // 21: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
-	3,  // 22: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
-	6,  // 23: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:input_type -> akuity.io.kargo.service.v1alpha1.AdminLoginRequest
-	9,  // 24: akuity.io.kargo.service.v1alpha1.KargoService.CreateStage:input_type -> akuity.io.kargo.service.v1alpha1.CreateStageRequest
-	11, // 25: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:input_type -> akuity.io.kargo.service.v1alpha1.ListStagesRequest
-	13, // 26: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:input_type -> akuity.io.kargo.service.v1alpha1.GetStageRequest
-	15, // 27: akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage:input_type -> akuity.io.kargo.service.v1alpha1.UpdateStageRequest
-	17, // 28: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:input_type -> akuity.io.kargo.service.v1alpha1.DeleteStageRequest
-	19, // 29: akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage:input_type -> akuity.io.kargo.service.v1alpha1.PromoteStageRequest
-	22, // 30: akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage:input_type -> akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageRequest
-	24, // 31: akuity.io.kargo.service.v1alpha1.KargoService.CreatePromotionPolicy:input_type -> akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyRequest
-	26, // 32: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionPolicies:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesRequest
-	28, // 33: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionPolicy:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionPolicyRequest
-	30, // 34: akuity.io.kargo.service.v1alpha1.KargoService.UpdatePromotionPolicy:input_type -> akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyRequest
-	32, // 35: akuity.io.kargo.service.v1alpha1.KargoService.DeletePromotionPolicy:input_type -> akuity.io.kargo.service.v1alpha1.DeletePromotionPolicyRequest
-	35, // 36: akuity.io.kargo.service.v1alpha1.KargoService.CreateProject:input_type -> akuity.io.kargo.service.v1alpha1.CreateProjectRequest
-	37, // 37: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectsRequest
-	39, // 38: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
-	2,  // 39: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
-	4,  // 40: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
-	7,  // 41: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
-	10, // 42: akuity.io.kargo.service.v1alpha1.KargoService.CreateStage:output_type -> akuity.io.kargo.service.v1alpha1.CreateStageResponse
-	12, // 43: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
-	14, // 44: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
-	16, // 45: akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage:output_type -> akuity.io.kargo.service.v1alpha1.UpdateStageResponse
-	18, // 46: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
-	20, // 47: akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteStageResponse
-	23, // 48: akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage:output_type -> akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageResponse
-	25, // 49: akuity.io.kargo.service.v1alpha1.KargoService.CreatePromotionPolicy:output_type -> akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyResponse
-	27, // 50: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionPolicies:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesResponse
-	29, // 51: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionPolicy:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionPolicyResponse
-	31, // 52: akuity.io.kargo.service.v1alpha1.KargoService.UpdatePromotionPolicy:output_type -> akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyResponse
-	33, // 53: akuity.io.kargo.service.v1alpha1.KargoService.DeletePromotionPolicy:output_type -> akuity.io.kargo.service.v1alpha1.DeletePromotionPolicyResponse
-	36, // 54: akuity.io.kargo.service.v1alpha1.KargoService.CreateProject:output_type -> akuity.io.kargo.service.v1alpha1.CreateProjectResponse
-	38, // 55: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
-	40, // 56: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
-	39, // [39:57] is the sub-list for method output_type
-	21, // [21:39] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	45, // 5: akuity.io.kargo.service.v1alpha1.CreateStageResponse.stage:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+	45, // 6: akuity.io.kargo.service.v1alpha1.ListStagesResponse.stages:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+	45, // 7: akuity.io.kargo.service.v1alpha1.GetStageResponse.stage:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+	45, // 8: akuity.io.kargo.service.v1alpha1.WatchStageResponse.stage:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+	8,  // 9: akuity.io.kargo.service.v1alpha1.UpdateStageRequest.typed:type_name -> akuity.io.kargo.service.v1alpha1.TypedStageSpec
+	45, // 10: akuity.io.kargo.service.v1alpha1.UpdateStageResponse.stage:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+	46, // 11: akuity.io.kargo.service.v1alpha1.PromoteStageResponse.promotion:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
+	47, // 12: akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageResponse.promotion_policy:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
+	23, // 13: akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyRequest.typed:type_name -> akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec
+	47, // 14: akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyResponse.promotion_policy:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
+	47, // 15: akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesResponse.promotion_policies:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
+	47, // 16: akuity.io.kargo.service.v1alpha1.GetPromotionPolicyResponse.promotion_policy:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
+	23, // 17: akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyRequest.typed:type_name -> akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec
+	47, // 18: akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyResponse.promotion_policy:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
+	43, // 19: akuity.io.kargo.service.v1alpha1.Project.create_time:type_name -> google.protobuf.Timestamp
+	36, // 20: akuity.io.kargo.service.v1alpha1.CreateProjectResponse.project:type_name -> akuity.io.kargo.service.v1alpha1.Project
+	36, // 21: akuity.io.kargo.service.v1alpha1.ListProjectsResponse.projects:type_name -> akuity.io.kargo.service.v1alpha1.Project
+	1,  // 22: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
+	3,  // 23: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
+	6,  // 24: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:input_type -> akuity.io.kargo.service.v1alpha1.AdminLoginRequest
+	9,  // 25: akuity.io.kargo.service.v1alpha1.KargoService.CreateStage:input_type -> akuity.io.kargo.service.v1alpha1.CreateStageRequest
+	11, // 26: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:input_type -> akuity.io.kargo.service.v1alpha1.ListStagesRequest
+	13, // 27: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:input_type -> akuity.io.kargo.service.v1alpha1.GetStageRequest
+	15, // 28: akuity.io.kargo.service.v1alpha1.KargoService.WatchStage:input_type -> akuity.io.kargo.service.v1alpha1.WatchStageRequest
+	17, // 29: akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage:input_type -> akuity.io.kargo.service.v1alpha1.UpdateStageRequest
+	19, // 30: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:input_type -> akuity.io.kargo.service.v1alpha1.DeleteStageRequest
+	21, // 31: akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage:input_type -> akuity.io.kargo.service.v1alpha1.PromoteStageRequest
+	24, // 32: akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage:input_type -> akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageRequest
+	26, // 33: akuity.io.kargo.service.v1alpha1.KargoService.CreatePromotionPolicy:input_type -> akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyRequest
+	28, // 34: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionPolicies:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesRequest
+	30, // 35: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionPolicy:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionPolicyRequest
+	32, // 36: akuity.io.kargo.service.v1alpha1.KargoService.UpdatePromotionPolicy:input_type -> akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyRequest
+	34, // 37: akuity.io.kargo.service.v1alpha1.KargoService.DeletePromotionPolicy:input_type -> akuity.io.kargo.service.v1alpha1.DeletePromotionPolicyRequest
+	37, // 38: akuity.io.kargo.service.v1alpha1.KargoService.CreateProject:input_type -> akuity.io.kargo.service.v1alpha1.CreateProjectRequest
+	39, // 39: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectsRequest
+	41, // 40: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
+	2,  // 41: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
+	4,  // 42: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
+	7,  // 43: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
+	10, // 44: akuity.io.kargo.service.v1alpha1.KargoService.CreateStage:output_type -> akuity.io.kargo.service.v1alpha1.CreateStageResponse
+	12, // 45: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
+	14, // 46: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
+	16, // 47: akuity.io.kargo.service.v1alpha1.KargoService.WatchStage:output_type -> akuity.io.kargo.service.v1alpha1.WatchStageResponse
+	18, // 48: akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage:output_type -> akuity.io.kargo.service.v1alpha1.UpdateStageResponse
+	20, // 49: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
+	22, // 50: akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteStageResponse
+	25, // 51: akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage:output_type -> akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageResponse
+	27, // 52: akuity.io.kargo.service.v1alpha1.KargoService.CreatePromotionPolicy:output_type -> akuity.io.kargo.service.v1alpha1.CreatePromotionPolicyResponse
+	29, // 53: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionPolicies:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionPoliciesResponse
+	31, // 54: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionPolicy:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionPolicyResponse
+	33, // 55: akuity.io.kargo.service.v1alpha1.KargoService.UpdatePromotionPolicy:output_type -> akuity.io.kargo.service.v1alpha1.UpdatePromotionPolicyResponse
+	35, // 56: akuity.io.kargo.service.v1alpha1.KargoService.DeletePromotionPolicy:output_type -> akuity.io.kargo.service.v1alpha1.DeletePromotionPolicyResponse
+	38, // 57: akuity.io.kargo.service.v1alpha1.KargoService.CreateProject:output_type -> akuity.io.kargo.service.v1alpha1.CreateProjectResponse
+	40, // 58: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
+	42, // 59: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
+	41, // [41:60] is the sub-list for method output_type
+	22, // [22:41] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_service_v1alpha1_service_proto_init() }
@@ -2954,7 +3079,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateStageRequest); i {
+			switch v := v.(*WatchStageRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2966,7 +3091,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateStageResponse); i {
+			switch v := v.(*WatchStageResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2978,7 +3103,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteStageRequest); i {
+			switch v := v.(*UpdateStageRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2990,7 +3115,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteStageResponse); i {
+			switch v := v.(*UpdateStageResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3002,7 +3127,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromoteStageRequest); i {
+			switch v := v.(*DeleteStageRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3014,7 +3139,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromoteStageResponse); i {
+			switch v := v.(*DeleteStageResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3026,7 +3151,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TypedPromotionPolicySpec); i {
+			switch v := v.(*PromoteStageRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3038,7 +3163,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SetAutoPromotionForStageRequest); i {
+			switch v := v.(*PromoteStageResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3050,7 +3175,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SetAutoPromotionForStageResponse); i {
+			switch v := v.(*TypedPromotionPolicySpec); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3062,7 +3187,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreatePromotionPolicyRequest); i {
+			switch v := v.(*SetAutoPromotionForStageRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3074,7 +3199,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreatePromotionPolicyResponse); i {
+			switch v := v.(*SetAutoPromotionForStageResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3086,7 +3211,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListPromotionPoliciesRequest); i {
+			switch v := v.(*CreatePromotionPolicyRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3098,7 +3223,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListPromotionPoliciesResponse); i {
+			switch v := v.(*CreatePromotionPolicyResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3110,7 +3235,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetPromotionPolicyRequest); i {
+			switch v := v.(*ListPromotionPoliciesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3122,7 +3247,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetPromotionPolicyResponse); i {
+			switch v := v.(*ListPromotionPoliciesResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3134,7 +3259,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdatePromotionPolicyRequest); i {
+			switch v := v.(*GetPromotionPolicyRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3146,7 +3271,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdatePromotionPolicyResponse); i {
+			switch v := v.(*GetPromotionPolicyResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3158,7 +3283,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeletePromotionPolicyRequest); i {
+			switch v := v.(*UpdatePromotionPolicyRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3170,7 +3295,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeletePromotionPolicyResponse); i {
+			switch v := v.(*UpdatePromotionPolicyResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3182,7 +3307,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Project); i {
+			switch v := v.(*DeletePromotionPolicyRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3194,7 +3319,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateProjectRequest); i {
+			switch v := v.(*DeletePromotionPolicyResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3206,7 +3331,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateProjectResponse); i {
+			switch v := v.(*Project); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3218,7 +3343,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListProjectsRequest); i {
+			switch v := v.(*CreateProjectRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3230,7 +3355,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListProjectsResponse); i {
+			switch v := v.(*CreateProjectResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3242,7 +3367,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteProjectRequest); i {
+			switch v := v.(*ListProjectsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3254,6 +3379,30 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListProjectsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_v1alpha1_service_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeleteProjectRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_v1alpha1_service_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteProjectResponse); i {
 			case 0:
 				return &v.state
@@ -3270,15 +3419,15 @@ func file_service_v1alpha1_service_proto_init() {
 		(*CreateStageRequest_Typed)(nil),
 		(*CreateStageRequest_Yaml)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[15].OneofWrappers = []interface{}{
+	file_service_v1alpha1_service_proto_msgTypes[17].OneofWrappers = []interface{}{
 		(*UpdateStageRequest_Typed)(nil),
 		(*UpdateStageRequest_Yaml)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[24].OneofWrappers = []interface{}{
+	file_service_v1alpha1_service_proto_msgTypes[26].OneofWrappers = []interface{}{
 		(*CreatePromotionPolicyRequest_Typed)(nil),
 		(*CreatePromotionPolicyRequest_Yaml)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[30].OneofWrappers = []interface{}{
+	file_service_v1alpha1_service_proto_msgTypes[32].OneofWrappers = []interface{}{
 		(*UpdatePromotionPolicyRequest_Typed)(nil),
 		(*UpdatePromotionPolicyRequest_Yaml)(nil),
 	}
@@ -3288,7 +3437,7 @@ func file_service_v1alpha1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_service_v1alpha1_service_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   41,
+			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
