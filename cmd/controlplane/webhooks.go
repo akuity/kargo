@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -45,7 +45,7 @@ func newWebhooksServerCommand() *cobra.Command {
 			if err = authzv1.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "add authzv1 to scheme")
 			}
-			if err = api.AddToScheme(scheme); err != nil {
+			if err = kargoapi.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "add kargo api to scheme")
 			}
 

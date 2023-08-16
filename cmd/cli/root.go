@@ -15,8 +15,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	apiconfig "github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/project"
@@ -47,7 +48,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 				if err = corev1.AddToScheme(scheme); err != nil {
 					return errors.Wrap(err, "add Kubernetes core API to scheme")
 				}
-				if err = kargoAPI.AddToScheme(scheme); err != nil {
+				if err = kargoapi.AddToScheme(scheme); err != nil {
 					return errors.Wrap(err, "add Kargo API to scheme")
 				}
 				mgr, err := ctrl.NewManager(
@@ -74,7 +75,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 					return errors.Wrap(err, "start local server")
 				}
 				rs.localServerListener = l
-				srv, err := api.NewServer(kubeClient, api.ServerConfig{})
+				srv, err := api.NewServer(kubeClient, apiconfig.ServerConfig{})
 				if err != nil {
 					return errors.Wrap(err, "new api server")
 				}

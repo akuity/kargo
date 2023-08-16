@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/garbage"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -41,7 +41,7 @@ func newGarbageCollectorCommand() *cobra.Command {
 				if err = corev1.AddToScheme(scheme); err != nil {
 					return errors.Wrap(err, "error adding Kubernetes core API to scheme")
 				}
-				if err = api.AddToScheme(scheme); err != nil {
+				if err = kargoapi.AddToScheme(scheme); err != nil {
 					return errors.Wrap(err, "error adding Kargo API to scheme")
 				}
 				if kubeClient, err = client.New(

@@ -8,14 +8,22 @@ on:
 jobs:
 
   publish-image:
+    permissions:
+      contents: read
+      packages: write # Used to push images to `ghcr.io`
+      id-token: write # Needed to create an OIDC token for keyless signing
     runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.image.outputs.digest }}
     steps:
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v2
+      uses: sigstore/cosign-installer@v3.1.1
+      with:
+        cosign-release: 'v2.1.1' # optional
     - name: Login to GHCR
       uses: docker/login-action@v2
       with:
@@ -32,6 +40,7 @@ jobs:
         flavor: latest=false
         tags: type=semver,pattern={{raw}}
     - name: Build and push
+      id: image
       uses: docker/build-push-action@v3
       with:
         platforms: linux/amd64,linux/arm64
@@ -43,16 +52,38 @@ jobs:
         push: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        provenance: false
+        sbom: false
     - name: Sign image
       env:
         TAGS: ${{ steps.meta.outputs.tags }}
-        COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-        COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-      run: cosign sign --key env://COSIGN_PRIVATE_KEY ${TAGS}
+      run: |
+          cosign sign \
+          -a "repo=${{ github.repository }}" \
+          -a "workflow=${{ github.workflow }}" \
+          -a "sha=${{ github.sha }}" \
+          --yes \
+          ghcr.io/akuity/kargo@${{ steps.image.outputs.digest}}
     - name: Publish SBOM
       uses: anchore/sbom-action@v0
       with:
         image: ${{ steps.meta.outputs.tags }}
+
+  kargo-image-provenance:
+    needs:
+      - publish-image
+    permissions:
+      actions: read # for detecting the Github Actions environment.
+      id-token: write # for creating OIDC tokens for signing.
+      packages: write # for uploading attestations. (https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/container/README.md#known-issues)
+    # Must be refernced by a tag. https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/container/README.md#referencing-the-slsa-generator
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.8.0
+    with:
+      image: ghcr.io/akuity/kargo
+      digest: ${{ needs.publish-image.outputs.image-digest }}
+    secrets:
+      registry-username: ${{ secrets.GH_USERNAME }}
+      registry-password: ${{ secrets.GH_TOKEN }}
 
   publish-charts:
     needs: publish-image
@@ -98,6 +129,13 @@ jobs:
       matrix:
         os: [linux, darwin, windows]
         arch: [amd64, arm64]
+    outputs:
+      hash-linux-amd64: ${{ steps.hash.outputs.hash-linux-amd64 }}
+      hash-linux-arm64: ${{ steps.hash.outputs.hash-linux-arm64 }}
+      hash-darwin-amd64: ${{ steps.hash.outputs.hash-darwin-amd64 }}
+      hash-darwin-arm64: ${{ steps.hash.outputs.hash-darwin-arm64 }}
+      hash-windows-amd64: ${{ steps.hash.outputs.hash-windows-amd64 }}
+      hash-windows-arm64: ${{ steps.hash.outputs.hash-windows-arm64 }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -122,3 +160,32 @@ jobs:
         file: bin/*
         file_glob: true
         repo_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Generate subject
+      id: hash
+      run: |
+        echo "hash-${{ matrix.os }}-${{ matrix.arch }}=$(sha256sum bin/kargo* | awk -F 'bin/' '{print $1 $2}'| base64 -w0)" >> "$GITHUB_OUTPUT"
+
+  combine_hashes:
+    needs: [publish-cli]
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hashes.outputs.hashes }}
+    env:
+      HASHES: ${{ toJSON(needs.publish-cli.outputs) }}
+    steps:
+      - id: hashes
+        run: |
+          echo "$HASHES" | jq -r '.[] | @base64d' | sed "/^$/d" > hashes.txt
+          echo "hashes=$(cat hashes.txt | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+  provenance:
+    needs: [combine_hashes]
+    permissions:
+      actions: read # To read the workflow path.
+      id-token: write # To sign the provenance.
+      contents: write # To add assets to a release.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.8.0
+    with:
+      base64-subjects: "${{ needs.combine_hashes.outputs.hashes }}"
+      upload-assets: true # Optional: Upload to a new release
+      provenance-name: kargo-cli.intoto.jsonl

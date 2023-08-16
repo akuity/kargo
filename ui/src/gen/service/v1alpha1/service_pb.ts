@@ -8,6 +8,147 @@ import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Promotion, PromotionPolicy, Stage, StageSpec } from "../../v1alpha1/types_pb.js";
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.VersionInfo
+ */
+export class VersionInfo extends Message<VersionInfo> {
+  /**
+   * @generated from field: string version = 1;
+   */
+  version = "";
+
+  /**
+   * @generated from field: string git_commit = 2;
+   */
+  gitCommit = "";
+
+  /**
+   * @generated from field: bool git_tree_dirty = 3;
+   */
+  gitTreeDirty = false;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp build_time = 4;
+   */
+  buildTime?: Timestamp;
+
+  /**
+   * @generated from field: string go_version = 5;
+   */
+  goVersion = "";
+
+  /**
+   * @generated from field: string compiler = 6;
+   */
+  compiler = "";
+
+  /**
+   * @generated from field: string platform = 7;
+   */
+  platform = "";
+
+  constructor(data?: PartialMessage<VersionInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.VersionInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "git_commit", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "git_tree_dirty", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "build_time", kind: "message", T: Timestamp },
+    { no: 5, name: "go_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "compiler", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "platform", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VersionInfo {
+    return new VersionInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VersionInfo {
+    return new VersionInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VersionInfo {
+    return new VersionInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VersionInfo | PlainMessage<VersionInfo> | undefined, b: VersionInfo | PlainMessage<VersionInfo> | undefined): boolean {
+    return proto3.util.equals(VersionInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
+ */
+export class GetVersionInfoRequest extends Message<GetVersionInfoRequest> {
+  constructor(data?: PartialMessage<GetVersionInfoRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetVersionInfoRequest {
+    return new GetVersionInfoRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetVersionInfoRequest {
+    return new GetVersionInfoRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetVersionInfoRequest {
+    return new GetVersionInfoRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetVersionInfoRequest | PlainMessage<GetVersionInfoRequest> | undefined, b: GetVersionInfoRequest | PlainMessage<GetVersionInfoRequest> | undefined): boolean {
+    return proto3.util.equals(GetVersionInfoRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
+ */
+export class GetVersionInfoResponse extends Message<GetVersionInfoResponse> {
+  /**
+   * @generated from field: akuity.io.kargo.service.v1alpha1.VersionInfo version_info = 1;
+   */
+  versionInfo?: VersionInfo;
+
+  constructor(data?: PartialMessage<GetVersionInfoResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "version_info", kind: "message", T: VersionInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetVersionInfoResponse {
+    return new GetVersionInfoResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetVersionInfoResponse {
+    return new GetVersionInfoResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetVersionInfoResponse {
+    return new GetVersionInfoResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetVersionInfoResponse | PlainMessage<GetVersionInfoResponse> | undefined, b: GetVersionInfoResponse | PlainMessage<GetVersionInfoResponse> | undefined): boolean {
+    return proto3.util.equals(GetVersionInfoResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
  */
 export class GetPublicConfigRequest extends Message<GetPublicConfigRequest> {
