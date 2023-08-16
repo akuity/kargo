@@ -114,7 +114,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(project.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
-	cmd.AddCommand(newVersionCommand())
+	cmd.AddCommand(newVersionCommand(opt))
 	return cmd, nil
 }
 

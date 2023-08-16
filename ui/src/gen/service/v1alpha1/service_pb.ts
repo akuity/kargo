@@ -8,6 +8,49 @@ import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Promotion, PromotionPolicy, Stage, StageSpec } from "../../v1alpha1/types_pb.js";
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
+ */
+export class ComponentVersions extends Message<ComponentVersions> {
+  /**
+   * @generated from field: optional akuity.io.kargo.service.v1alpha1.VersionInfo server = 1;
+   */
+  server?: VersionInfo;
+
+  /**
+   * @generated from field: optional akuity.io.kargo.service.v1alpha1.VersionInfo cli = 2;
+   */
+  cli?: VersionInfo;
+
+  constructor(data?: PartialMessage<ComponentVersions>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ComponentVersions";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "server", kind: "message", T: VersionInfo, opt: true },
+    { no: 2, name: "cli", kind: "message", T: VersionInfo, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ComponentVersions {
+    return new ComponentVersions().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ComponentVersions {
+    return new ComponentVersions().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ComponentVersions {
+    return new ComponentVersions().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ComponentVersions | PlainMessage<ComponentVersions> | undefined, b: ComponentVersions | PlainMessage<ComponentVersions> | undefined): boolean {
+    return proto3.util.equals(ComponentVersions, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.VersionInfo
  */
 export class VersionInfo extends Message<VersionInfo> {
