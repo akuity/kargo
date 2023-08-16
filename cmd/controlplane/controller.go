@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/akuity/bookkeeper"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/applications"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/controller/stages"
@@ -65,7 +65,7 @@ func newControllerCommand() *cobra.Command {
 							"scheme",
 					)
 				}
-				if err = api.AddToScheme(scheme); err != nil {
+				if err = kargoapi.AddToScheme(scheme); err != nil {
 					return errors.Wrap(
 						err,
 						"error adding Kargo API to Kargo controller manager scheme",

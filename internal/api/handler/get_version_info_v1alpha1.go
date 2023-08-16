@@ -16,12 +16,13 @@ type GetVersionInfoV1Alpha1Func func(
 ) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error)
 
 func GetVersionInfoV1Alpha1(v version.Version) GetVersionInfoV1Alpha1Func {
+	resp := &svcv1alpha1.GetVersionInfoResponse{
+		VersionInfo: typesv1alpha1.ToVersionProto(v),
+	}
 	return func(
 		_ context.Context,
 		_ *connect.Request[svcv1alpha1.GetVersionInfoRequest],
 	) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
-		return connect.NewResponse(&svcv1alpha1.GetVersionInfoResponse{
-			VersionInfo: typesv1alpha1.ToVersionProto(v),
-		}), nil
+		return connect.NewResponse(resp), nil
 	}
 }

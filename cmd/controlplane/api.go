@@ -15,7 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoAPI "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -54,7 +54,7 @@ func newAPICommand() *cobra.Command {
 				if err = corev1.AddToScheme(scheme); err != nil {
 					return pkgerrors.Wrap(err, "error adding Kubernetes core API to scheme")
 				}
-				if err = kargoAPI.AddToScheme(scheme); err != nil {
+				if err = kargoapi.AddToScheme(scheme); err != nil {
 					return pkgerrors.Wrap(err, "error adding Kargo API to scheme")
 				}
 				mgr, err := ctrl.NewManager(
