@@ -37,7 +37,7 @@ type server struct {
 }
 
 type Server interface {
-	Serve(ctx context.Context, l net.Listener, localMode bool) error
+	Serve(ctx context.Context, l net.Listener) error
 }
 
 func NewServer(
@@ -52,15 +52,11 @@ func NewServer(
 	}, nil
 }
 
-func (s *server) Serve(
-	ctx context.Context,
-	l net.Listener,
-	localMode bool,
-) error {
+func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	log := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	opts := option.NewHandlerOption(ctx, localMode)
+	opts := option.NewHandlerOption(ctx, s.cfg)
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)

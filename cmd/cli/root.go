@@ -78,11 +78,17 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 					return errors.Wrap(err, "start local server")
 				}
 				rs.localServerListener = l
-				srv, err := api.NewServer(apiconfig.ServerConfig{}, kubeCli, dynamicCli)
+				srv, err := api.NewServer(
+					apiconfig.ServerConfig{
+						LocalMode: true,
+					},
+					kubeCli,
+					dynamicCli,
+				)
 				if err != nil {
 					return errors.Wrap(err, "new api server")
 				}
-				go srv.Serve(ctx, l, true) // nolint: errcheck
+				go srv.Serve(ctx, l) // nolint: errcheck
 				opt.LocalServerAddress = fmt.Sprintf("http://%s", l.Addr())
 			}
 			return nil

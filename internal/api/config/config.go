@@ -29,6 +29,7 @@ func AdminConfigFromEnv() AdminConfig {
 
 type ServerConfig struct {
 	StandardConfig
+	LocalMode      bool
 	OIDCConfig     *oidc.Config
 	AdminConfig    *AdminConfig
 	DexProxyConfig *dex.ProxyConfig
