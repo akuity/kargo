@@ -35,7 +35,7 @@ export const ProjectDetails = () => {
     const watchStages = async () => {
       const transport = createConnectTransport({ baseUrl: '' });
       const promiseClient = createPromiseClient(KargoService, transport);
-      const stream = promiseClient.watchStage(
+      const stream = promiseClient.watchStages(
         { project: 'kargo-demo', name: 'test' },
         { signal: cancel.signal }
       );

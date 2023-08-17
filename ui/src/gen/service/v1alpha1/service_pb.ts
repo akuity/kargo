@@ -679,9 +679,9 @@ export class GetStageResponse extends Message<GetStageResponse> {
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.WatchStageRequest
+ * @generated from message akuity.io.kargo.service.v1alpha1.WatchStagesRequest
  */
-export class WatchStageRequest extends Message<WatchStageRequest> {
+export class WatchStagesRequest extends Message<WatchStagesRequest> {
   /**
    * @generated from field: string project = 1;
    */
@@ -692,39 +692,39 @@ export class WatchStageRequest extends Message<WatchStageRequest> {
    */
   name = "";
 
-  constructor(data?: PartialMessage<WatchStageRequest>) {
+  constructor(data?: PartialMessage<WatchStagesRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.WatchStageRequest";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.WatchStagesRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WatchStageRequest {
-    return new WatchStageRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WatchStagesRequest {
+    return new WatchStagesRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WatchStageRequest {
-    return new WatchStageRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WatchStagesRequest {
+    return new WatchStagesRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WatchStageRequest {
-    return new WatchStageRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WatchStagesRequest {
+    return new WatchStagesRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: WatchStageRequest | PlainMessage<WatchStageRequest> | undefined, b: WatchStageRequest | PlainMessage<WatchStageRequest> | undefined): boolean {
-    return proto3.util.equals(WatchStageRequest, a, b);
+  static equals(a: WatchStagesRequest | PlainMessage<WatchStagesRequest> | undefined, b: WatchStagesRequest | PlainMessage<WatchStagesRequest> | undefined): boolean {
+    return proto3.util.equals(WatchStagesRequest, a, b);
   }
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.WatchStageResponse
+ * @generated from message akuity.io.kargo.service.v1alpha1.WatchStagesResponse
  */
-export class WatchStageResponse extends Message<WatchStageResponse> {
+export class WatchStagesResponse extends Message<WatchStagesResponse> {
   /**
    * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
    */
@@ -735,32 +735,32 @@ export class WatchStageResponse extends Message<WatchStageResponse> {
    */
   type = "";
 
-  constructor(data?: PartialMessage<WatchStageResponse>) {
+  constructor(data?: PartialMessage<WatchStagesResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.WatchStageResponse";
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.WatchStagesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "stage", kind: "message", T: Stage },
     { no: 2, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WatchStageResponse {
-    return new WatchStageResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WatchStagesResponse {
+    return new WatchStagesResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WatchStageResponse {
-    return new WatchStageResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WatchStagesResponse {
+    return new WatchStagesResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WatchStageResponse {
-    return new WatchStageResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WatchStagesResponse {
+    return new WatchStagesResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: WatchStageResponse | PlainMessage<WatchStageResponse> | undefined, b: WatchStageResponse | PlainMessage<WatchStageResponse> | undefined): boolean {
-    return proto3.util.equals(WatchStageResponse, a, b);
+  static equals(a: WatchStagesResponse | PlainMessage<WatchStagesResponse> | undefined, b: WatchStagesResponse | PlainMessage<WatchStagesResponse> | undefined): boolean {
+    return proto3.util.equals(WatchStagesResponse, a, b);
   }
 }
 

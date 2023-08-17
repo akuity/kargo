@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AdminLoginRequest, AdminLoginResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteStageRequest, DeleteStageResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateStageRequest, UpdateStageResponse, WatchStageRequest, WatchStageResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteStageRequest, DeleteStageResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateStageRequest, UpdateStageResponse, WatchStagesRequest, WatchStagesResponse } from "./service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -67,12 +67,12 @@ export const KargoService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.WatchStage
+     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.WatchStages
      */
-    watchStage: {
-      name: "WatchStage",
-      I: WatchStageRequest,
-      O: WatchStageResponse,
+    watchStages: {
+      name: "WatchStages",
+      I: WatchStagesRequest,
+      O: WatchStagesResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**

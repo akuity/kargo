@@ -20,8 +20,8 @@ import (
 
 type WatchStageV1Alpha1Func func(
 	context.Context,
-	*connect.Request[svcv1alpha1.WatchStageRequest],
-	*connect.ServerStream[svcv1alpha1.WatchStageResponse],
+	*connect.Request[svcv1alpha1.WatchStagesRequest],
+	*connect.ServerStream[svcv1alpha1.WatchStagesResponse],
 ) error
 
 func WatchStageV1Alpha1(
@@ -32,8 +32,8 @@ func WatchStageV1Alpha1(
 	stageCli := dynamicCli.Resource(kargov1alpha1.GroupVersion.WithResource("stages"))
 	return func(
 		ctx context.Context,
-		req *connect.Request[svcv1alpha1.WatchStageRequest],
-		stream *connect.ServerStream[svcv1alpha1.WatchStageResponse],
+		req *connect.Request[svcv1alpha1.WatchStagesRequest],
+		stream *connect.ServerStream[svcv1alpha1.WatchStagesResponse],
 	) error {
 		if req.Msg.GetProject() == "" {
 			return connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
@@ -79,7 +79,7 @@ func WatchStageV1Alpha1(
 				if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &stage); err != nil {
 					return errors.Wrap(err, "from unstructured")
 				}
-				if err := stream.Send(&svcv1alpha1.WatchStageResponse{
+				if err := stream.Send(&svcv1alpha1.WatchStagesResponse{
 					Stage: typesv1alpha1.ToStageProto(*stage),
 					Type:  string(e.Type),
 				}); err != nil {
