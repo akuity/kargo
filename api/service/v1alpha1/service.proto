@@ -40,6 +40,11 @@ service KargoService {
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
 }
 
+message ComponentVersions {
+  optional VersionInfo server = 1;
+  optional VersionInfo cli = 2;
+}
+
 message VersionInfo {
   string version = 1;
   string git_commit = 2;
