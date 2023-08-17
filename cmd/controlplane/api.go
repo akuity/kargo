@@ -115,7 +115,7 @@ func newAPICommand() *cobra.Command {
 			}()
 			wg.Add(1)
 			go func() {
-				srvErr := srv.Serve(ctx, l, false)
+				srvErr := srv.Serve(ctx, l)
 				errCh <- pkgerrors.Wrap(srvErr, "serve")
 				wg.Done()
 			}()
