@@ -33,12 +33,10 @@ export const Login = () => {
             <AdminLogin />
           </>
         )}
-        {data?.oidcConfig && (
-          <>
-            <Divider className='!my-6 !text-gray-400 !font-light'>OR</Divider>
-            <OIDCLogin oidcConfig={data.oidcConfig} />
-          </>
+        {data?.oidcConfig && data?.adminAccountEnabled && (
+          <Divider className='!my-6 !text-gray-400 !font-light'>OR</Divider>
         )}
+        {data?.oidcConfig && <OIDCLogin oidcConfig={data.oidcConfig} />}
         {data && !data.oidcConfig && !data.adminAccountEnabled && (
           <Typography.Text>
             Login is disabled. Please contact your system administrator.
