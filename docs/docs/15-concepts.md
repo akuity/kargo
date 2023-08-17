@@ -7,45 +7,10 @@ This section covers important Kargo concepts.
 
 ## What is a `stage`?
 
-_What is a `Stage`?_
-
-At [Akuity](https://akuity.io/), we've heard one consistent thing from GitOps
-practitioners -- they want a sensible and mostly automated means of progressing
-changes through a series of environments. In this context, we understand
-"environments" to be a shorthand for the _sources of truth_ for various
-application instances that each exist for a specific purpose and may posses
-different qualities of service.
-
-GitOps creates an implicit abstraction between an application instance's source
-of truth and its deployment, so this "environment" shorthand makes sense to
-consummate GitOps practitioners who are not-so-directly concerned with _where_
-each application instance is deployed and more concerned with simply maintaining
-the _source of truth_ for each application instance. When a GitOps practitioner
-talks about "updating production," they're more likely talking about updating
-the _source of truth_ for an application instance _deployed to_ the production
-environment -- and they trust that a platform such as Argo CD will take
-responsibility for reconciling that source of truth with the corresponding
-deployment.
-
-We've also noticed that those less familiar with GitOps are less likely to be
-aware of this shorthand and are apt to interpret "environment" in more literal
-terms. "Test" or "production" may be thought of as _locations_ -- particular
-clusters, VPCs, or failure domains, for instance, each hosting many
-applications.
-
 To eliminate confusion, Kargo avoids the term "environment" altogether in favor
-of something more precise: _stage_. The important feature of a stage is that its
+of something more precise: _stage_. The important feature of a _stage_ is that its
 name ("test" or "prod," for instance) denotes an application instance's
 _purpose_ and not its _location_.
-
-Kargo's `Stage` custom resource type helps you describe an application's stages:
-
-* Where can new materials (such as container images, Kubernetes manifests, or
-  Helm charts) be discovered? Directly from their repositories? Indirectly from
-  another, "upstream" `Stage`?
-
-* How can newly discovered materials be incorporated into an application
-  instance's source of truth?
 
 The progression of new materials from stage-to-stage can be fully automated or
 manually triggered, as called for by your use cases or preferences.
