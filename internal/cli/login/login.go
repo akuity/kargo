@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bacongobbler/browser"
-	"github.com/bufbuild/connect-go"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"

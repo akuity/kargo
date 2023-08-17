@@ -7,8 +7,8 @@ import (
 	goos "os"
 	"time"
 
-	"github.com/bufbuild/connect-go"
-	grpchealth "github.com/bufbuild/connect-grpchealth-go"
+	"connectrpc.com/connect"
+	grpchealth "connectrpc.com/grpchealth"
 	"github.com/pkg/errors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"

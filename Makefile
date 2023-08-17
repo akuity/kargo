@@ -33,7 +33,7 @@ endif
 # Note: We use `uname` instead of `go env` because if a developer intends to
 # build inside a container, it's possible they may not have Go installed on the
 # host machine.
-# 
+#
 # This only works on Linux and macOS. Windows users are advised to undertake
 # Kargo development activities inside WSL2.
 GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')

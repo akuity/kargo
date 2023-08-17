@@ -1,7 +1,7 @@
 package api
 
 import (
-	grpchealth "github.com/bufbuild/connect-grpchealth-go"
+	grpchealth "connectrpc.com/grpchealth"
 )
 
 func NewHealthChecker() grpchealth.Checker {
