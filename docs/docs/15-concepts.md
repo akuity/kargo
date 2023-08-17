@@ -5,9 +5,9 @@ description: Concepts
 
 This section covers important Kargo concepts.
 
-## What is a stage?
+## What is a `stage`?
 
-_And what is a `Stage`?_
+_What is a `Stage`?_
 
 At [Akuity](https://akuity.io/), we've heard one consistent thing from GitOps
 practitioners -- they want a sensible and mostly automated means of progressing
