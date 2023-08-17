@@ -48,8 +48,9 @@ const (
 	KargoServiceListStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListStages"
 	// KargoServiceGetStageProcedure is the fully-qualified name of the KargoService's GetStage RPC.
 	KargoServiceGetStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetStage"
-	// KargoServiceWatchStageProcedure is the fully-qualified name of the KargoService's WatchStage RPC.
-	KargoServiceWatchStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchStage"
+	// KargoServiceWatchStagesProcedure is the fully-qualified name of the KargoService's WatchStages
+	// RPC.
+	KargoServiceWatchStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchStages"
 	// KargoServiceUpdateStageProcedure is the fully-qualified name of the KargoService's UpdateStage
 	// RPC.
 	KargoServiceUpdateStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateStage"
@@ -96,7 +97,7 @@ type KargoServiceClient interface {
 	CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
-	WatchStage(context.Context, *connect.Request[v1alpha1.WatchStageRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStageResponse], error)
+	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
 	UpdateStage(context.Context, *connect.Request[v1alpha1.UpdateStageRequest]) (*connect.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect.Request[v1alpha1.PromoteStageRequest]) (*connect.Response[v1alpha1.PromoteStageResponse], error)
@@ -151,9 +152,9 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceGetStageProcedure,
 			opts...,
 		),
-		watchStage: connect.NewClient[v1alpha1.WatchStageRequest, v1alpha1.WatchStageResponse](
+		watchStages: connect.NewClient[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse](
 			httpClient,
-			baseURL+KargoServiceWatchStageProcedure,
+			baseURL+KargoServiceWatchStagesProcedure,
 			opts...,
 		),
 		updateStage: connect.NewClient[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse](
@@ -227,7 +228,7 @@ type kargoServiceClient struct {
 	createStage              *connect.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
 	listStages               *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
 	getStage                 *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
-	watchStage               *connect.Client[v1alpha1.WatchStageRequest, v1alpha1.WatchStageResponse]
+	watchStages              *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
 	updateStage              *connect.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
 	deleteStage              *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
 	promoteStage             *connect.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
@@ -272,9 +273,9 @@ func (c *kargoServiceClient) GetStage(ctx context.Context, req *connect.Request[
 	return c.getStage.CallUnary(ctx, req)
 }
 
-// WatchStage calls akuity.io.kargo.service.v1alpha1.KargoService.WatchStage.
-func (c *kargoServiceClient) WatchStage(ctx context.Context, req *connect.Request[v1alpha1.WatchStageRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStageResponse], error) {
-	return c.watchStage.CallServerStream(ctx, req)
+// WatchStages calls akuity.io.kargo.service.v1alpha1.KargoService.WatchStages.
+func (c *kargoServiceClient) WatchStages(ctx context.Context, req *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error) {
+	return c.watchStages.CallServerStream(ctx, req)
 }
 
 // UpdateStage calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage.
@@ -347,7 +348,7 @@ type KargoServiceHandler interface {
 	CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
-	WatchStage(context.Context, *connect.Request[v1alpha1.WatchStageRequest], *connect.ServerStream[v1alpha1.WatchStageResponse]) error
+	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
 	UpdateStage(context.Context, *connect.Request[v1alpha1.UpdateStageRequest]) (*connect.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect.Request[v1alpha1.PromoteStageRequest]) (*connect.Response[v1alpha1.PromoteStageResponse], error)
@@ -398,9 +399,9 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		svc.GetStage,
 		opts...,
 	)
-	kargoServiceWatchStageHandler := connect.NewServerStreamHandler(
-		KargoServiceWatchStageProcedure,
-		svc.WatchStage,
+	kargoServiceWatchStagesHandler := connect.NewServerStreamHandler(
+		KargoServiceWatchStagesProcedure,
+		svc.WatchStages,
 		opts...,
 	)
 	kargoServiceUpdateStageHandler := connect.NewUnaryHandler(
@@ -477,8 +478,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceListStagesHandler.ServeHTTP(w, r)
 		case KargoServiceGetStageProcedure:
 			kargoServiceGetStageHandler.ServeHTTP(w, r)
-		case KargoServiceWatchStageProcedure:
-			kargoServiceWatchStageHandler.ServeHTTP(w, r)
+		case KargoServiceWatchStagesProcedure:
+			kargoServiceWatchStagesHandler.ServeHTTP(w, r)
 		case KargoServiceUpdateStageProcedure:
 			kargoServiceUpdateStageHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteStageProcedure:
@@ -536,8 +537,8 @@ func (UnimplementedKargoServiceHandler) GetStage(context.Context, *connect.Reque
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetStage is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) WatchStage(context.Context, *connect.Request[v1alpha1.WatchStageRequest], *connect.ServerStream[v1alpha1.WatchStageResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchStage is not implemented"))
+func (UnimplementedKargoServiceHandler) WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchStages is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) UpdateStage(context.Context, *connect.Request[v1alpha1.UpdateStageRequest]) (*connect.Response[v1alpha1.UpdateStageResponse], error) {
