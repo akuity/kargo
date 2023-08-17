@@ -123,6 +123,7 @@ message WatchStageRequest {
 
 message WatchStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  string type = 2;
 }
 
 message UpdateStageRequest {
