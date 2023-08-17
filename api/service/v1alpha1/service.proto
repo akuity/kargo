@@ -19,7 +19,7 @@ service KargoService {
   rpc CreateStage(CreateStageRequest) returns (CreateStageResponse);
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
-  rpc WatchStage(WatchStageRequest) returns (stream WatchStageResponse);
+  rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   rpc UpdateStage(UpdateStageRequest) returns (UpdateStageResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
@@ -38,6 +38,11 @@ service KargoService {
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+}
+
+message ComponentVersions {
+  optional VersionInfo server = 1;
+  optional VersionInfo cli = 2;
 }
 
 message VersionInfo {
@@ -111,13 +116,14 @@ message GetStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
 }
 
-message WatchStageRequest {
+message WatchStagesRequest {
   string project = 1;
   string name = 2;
 }
 
-message WatchStageResponse {
+message WatchStagesResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  string type = 2;
 }
 
 message UpdateStageRequest {

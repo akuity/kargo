@@ -7,8 +7,8 @@ import (
 	goos "os"
 	"time"
 
-	"github.com/bufbuild/connect-go"
-	grpchealth "github.com/bufbuild/connect-grpchealth-go"
+	"connectrpc.com/connect"
+	"connectrpc.com/grpchealth"
 	"github.com/pkg/errors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -155,10 +155,10 @@ func (s *server) GetStage(
 	return handler.GetStageV1Alpha1(s.kubeCli)(ctx, req)
 }
 
-func (s *server) WatchStage(
+func (s *server) WatchStages(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.WatchStageRequest],
-	stream *connect.ServerStream[svcv1alpha1.WatchStageResponse],
+	req *connect.Request[svcv1alpha1.WatchStagesRequest],
+	stream *connect.ServerStream[svcv1alpha1.WatchStagesResponse],
 ) error {
 	return handler.WatchStageV1Alpha1(s.kubeCli, s.dynamicCli)(ctx, req, stream)
 }
