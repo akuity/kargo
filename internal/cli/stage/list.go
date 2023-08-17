@@ -3,7 +3,7 @@ package stage
 import (
 	"strings"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/printers"

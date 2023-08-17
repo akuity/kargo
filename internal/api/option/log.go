@@ -5,7 +5,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"

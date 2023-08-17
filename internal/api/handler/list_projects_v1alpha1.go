@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"

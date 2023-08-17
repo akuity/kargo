@@ -46,7 +46,7 @@ require (
 	golang.org/x/term v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	google.golang.org/grpc v1.55.0
-	google.golang.org/protobuf v1.30.0
+	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/api v1.22.4
 	k8s.io/apiextensions-apiserver v0.25.0 // indirect
@@ -64,6 +64,8 @@ require (
 require k8s.io/apiserver v0.24.2 // indirect
 
 require (
+	connectrpc.com/connect v1.11.0
+	connectrpc.com/grpchealth v1.2.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver v1.5.0
 	github.com/adrg/xdg v0.4.0
@@ -71,9 +73,8 @@ require (
 	github.com/argoproj-labs/argocd-image-updater v0.12.1
 	github.com/argoproj/argo-cd/v2 v2.6.7
 	github.com/bacongobbler/browser v1.1.0
-	github.com/bufbuild/connect-go v1.7.0
-	github.com/bufbuild/connect-grpchealth-go v1.0.0
 	github.com/coreos/go-oidc/v3 v3.6.0
+	github.com/evanphx/json-patch/v5 v5.6.0
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/samber/mo v1.8.0
@@ -121,7 +122,6 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
-	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect

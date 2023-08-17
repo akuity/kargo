@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

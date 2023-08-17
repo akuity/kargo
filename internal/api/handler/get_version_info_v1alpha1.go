@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/version"
