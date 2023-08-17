@@ -6,7 +6,7 @@ import { useLocation } from 'react-router-dom';
 
 import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
 
-import { useAuth } from './use-auth';
+import { useAuthContext } from './context/use-auth-context';
 
 const codeVerifierKey = 'PKCE_code_verifier';
 
@@ -15,10 +15,20 @@ type Props = {
 };
 
 export const OIDCLogin = ({ oidcConfig }: Props) => {
-  const issuer = new URL(oidcConfig.issuerUrl);
   const location = useLocation();
   const redirectURI = `${window.location.protocol}//${window.location.hostname}:${window.location.port}${location.pathname}`;
-  const { onLogin } = useAuth();
+  const { login: onLogin } = useAuthContext();
+
+  const issuerUrl = React.useMemo(() => {
+    try {
+      return new URL(oidcConfig.issuerUrl);
+    } catch (err) {
+      notification.error({
+        message: 'Invalid issuerURL',
+        placement: 'bottomRight'
+      });
+    }
+  }, [oidcConfig.issuerUrl]);
 
   const client = React.useMemo(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,12 +36,13 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     [oidcConfig]
   );
 
-  const { data: as } = useQuery(
-    [issuer],
+  const { data: as, isFetching } = useQuery(
+    [issuerUrl],
     () =>
+      issuerUrl &&
       oauth
-        .discoveryRequest(issuer)
-        .then((response) => oauth.processDiscoveryResponse(issuer, response))
+        .discoveryRequest(issuerUrl)
+        .then((response) => oauth.processDiscoveryResponse(issuerUrl, response))
         .then((response) => {
           if (response.code_challenge_methods_supported?.includes('S256') !== true) {
             throw new Error('OIDC config fetch error');
@@ -40,6 +51,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
           return response;
         }),
     {
+      enabled: !!issuerUrl,
       onError: (err) => {
         const errorMessage = err instanceof Error ? err.message : 'OIDC config fetch error';
         notification.error({ message: errorMessage, placement: 'bottomRight' });
@@ -122,7 +134,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
   }, [as, client, location]);
 
   return (
-    <Button onClick={login} block size='large'>
+    <Button onClick={login} block size='large' loading={isFetching} disabled={!issuerUrl}>
       SSO Login
     </Button>
   );
