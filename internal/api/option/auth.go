@@ -227,14 +227,18 @@ func (a *authInterceptor) authenticate(
 
 	// Are we dealing with a JWT of any kind and if so, is it expired?
 	if expiration := a.expirationFromJWTFn(rawToken); expiration == nil {
-		// This token isn't a JWT. So it's probably an opaque bearer token for the
-		// Kubernetes API server. Just run with it.
-		return user.ContextWithInfo(
-			ctx,
-			user.Info{
-				BearerToken: rawToken,
-			},
-		), nil
+		// TODO: krancour: This isn't safe to do until we start actually using this
+		// unidentified bearer token for accessing Kubernetes.
+		//
+		// // This token isn't a JWT. So it's probably an opaque bearer token for
+		// // the Kubernetes API server. Just run with it.
+		// return user.ContextWithInfo(
+		// 	ctx,
+		// 	user.Info{
+		// 		BearerToken: rawToken,
+		// 	},
+		// ), nil
+		return ctx, errors.New("client authentication is not yet supported")
 	} else if time.Now().After(*expiration) {
 		return ctx, errors.New("token is expired")
 	}
@@ -270,15 +274,19 @@ func (a *authInterceptor) authenticate(
 		), nil
 	}
 
-	// Case 3: We don't know how to verify this token. It's probably a token
-	// issued by the Kubernetes cluster's identity provider. We'll just run with
-	// it.
-	return user.ContextWithInfo(
-		ctx,
-		user.Info{
-			BearerToken: rawToken,
-		},
-	), nil
+	// TODO: krancour: This isn't safe to do until we start actually using this
+	// unidentified bearer token for accessing Kubernetes.
+	//
+	// // Case 3: We don't know how to verify this token. It's probably a token
+	// // issued by the Kubernetes cluster's identity provider. We'll just run with
+	// // it.
+	// return user.ContextWithInfo(
+	// 	ctx,
+	// 	user.Info{
+	// 		BearerToken: rawToken,
+	// 	},
+	// ), nil
+	return ctx, errors.New("client authentication is not yet supported")
 }
 
 // expirationFromJWT attempts to parse the provided raw token as a JWT without

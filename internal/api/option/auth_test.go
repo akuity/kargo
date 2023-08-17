@@ -197,14 +197,27 @@ func TestAuthenticate(t *testing.T) {
 					return nil
 				},
 			},
-			// We can't parse the token as a JWT, so we assume it could be an opaque
-			// bearer token for the k8s API server. We expect user info containing
-			// the raw token to be bound to the context.
+			// TODO: krancour: Until we actually start using unidentified bearer
+			// tokens for accessing Kubernetes, this case should produce an error.
+			//
+			// // We can't parse the token as a JWT, so we assume it could be an opaque
+			// // bearer token for the k8s API server. We expect user info containing
+			// // the raw token to be bound to the context.
+			// assertions: func(ctx context.Context, err error) {
+			// 	require.NoError(t, err)
+			// 	u, ok := user.InfoFromContext(ctx)
+			// 	require.True(t, ok)
+			// 	require.Equal(t, testToken, u.BearerToken)
+			// },
 			assertions: func(ctx context.Context, err error) {
-				require.NoError(t, err)
-				u, ok := user.InfoFromContext(ctx)
-				require.True(t, ok)
-				require.Equal(t, testToken, u.BearerToken)
+				require.Error(t, err)
+				require.Equal(
+					t,
+					"client authentication is not yet supported",
+					err.Error(),
+				)
+				_, ok := user.InfoFromContext(ctx)
+				require.False(t, ok)
 			},
 		},
 		"expired JWT": {
@@ -301,20 +314,33 @@ func TestAuthenticate(t *testing.T) {
 			tokenFn: func() string {
 				return testToken
 			},
-			// If we couldn't verify the token was issued by either Kargo's OIDC
-			// identity provider or issued by the Kargo API server itself, then we
-			// have a JWT, but we really don't know what it is. We assume it could be
-			// an ID token for the k8s API server issued by the cluster's own identity
-			// provider. We expect user info containing the raw token to be bound to
-			// the context.
+			// TODO: krancour: Until we actually start using unidentified bearer
+			// tokens for accessing Kubernetes, this case should produce an error.
+			//
+			// // If we couldn't verify the token was issued by either Kargo's OIDC
+			// // identity provider or issued by the Kargo API server itself, then we
+			// // have a JWT, but we really don't know what it is. We assume it could be
+			// // an ID token for the k8s API server issued by the cluster's own identity
+			// // provider. We expect user info containing the raw token to be bound to
+			// // the context.
+			// assertions: func(ctx context.Context, err error) {
+			// 	require.NoError(t, err)
+			// 	u, ok := user.InfoFromContext(ctx)
+			// 	require.True(t, ok)
+			// 	require.False(t, u.IsAdmin)
+			// 	require.Empty(t, u.Username)
+			// 	require.Empty(t, u.Groups)
+			// 	require.Equal(t, testToken, u.BearerToken)
+			// },
 			assertions: func(ctx context.Context, err error) {
-				require.NoError(t, err)
-				u, ok := user.InfoFromContext(ctx)
-				require.True(t, ok)
-				require.False(t, u.IsAdmin)
-				require.Empty(t, u.Username)
-				require.Empty(t, u.Groups)
-				require.Equal(t, testToken, u.BearerToken)
+				require.Error(t, err)
+				require.Equal(
+					t,
+					"client authentication is not yet supported",
+					err.Error(),
+				)
+				_, ok := user.InfoFromContext(ctx)
+				require.False(t, ok)
 			},
 		},
 		"success verifying as Kargo-issued token": { // admin
