@@ -60,17 +60,14 @@ func LoadCLIConfig() (CLIConfig, error) {
 }
 
 func loadCLIConfig(configPath string) (CLIConfig, error) {
-	cfg := CLIConfig{}
+	var cfg CLIConfig
 	_, err := os.Stat(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return cfg, errors.Errorf(
-				"no configuration file was found at %s; please use `kargo login` to "+
-					"continue\n",
-				configPath,
-			)
+			return cfg, errors.Wrap(
+				NewConfigNotFoundErr(configPath), "please use `kargo login` to continue")
 		}
-		return cfg, err
+		return cfg, errors.Wrap(err, "os.Stat")
 	}
 	configBytes, err := os.ReadFile(configPath)
 	if err != nil {

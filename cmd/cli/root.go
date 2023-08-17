@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/dynamic"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -42,7 +43,8 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 			if err != nil {
 				return errors.Wrap(err, "get REST config")
 			}
-			var kubeClient client.Client
+			var kubeCli client.Client
+			var dynamicCli dynamic.Interface
 			{
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
@@ -66,7 +68,8 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 					return errors.Wrap(err, "index PromotionPolicies by Stage")
 				}
 				go mgr.Start(ctx) // nolint: errcheck
-				kubeClient = mgr.GetClient()
+				kubeCli = mgr.GetClient()
+				dynamicCli = dynamic.NewForConfigOrDie(restCfg)
 			}
 
 			if opt.UseLocalServer {
@@ -75,7 +78,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 					return errors.Wrap(err, "start local server")
 				}
 				rs.localServerListener = l
-				srv, err := api.NewServer(kubeClient, apiconfig.ServerConfig{})
+				srv, err := api.NewServer(apiconfig.ServerConfig{}, kubeCli, dynamicCli)
 				if err != nil {
 					return errors.Wrap(err, "new api server")
 				}
@@ -111,7 +114,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(project.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
-	cmd.AddCommand(newVersionCommand())
+	cmd.AddCommand(newVersionCommand(opt))
 	return cmd, nil
 }
 
