@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"sync"
 
 	pkgerrors "github.com/pkg/errors"
@@ -48,9 +47,6 @@ func newAPICommand() *cobra.Command {
 				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
 					return pkgerrors.Wrap(err, "error loading REST config")
-				}
-				restCfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-					return kubeclient.NewCredentialInjector(rt)
 				}
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
