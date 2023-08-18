@@ -45,7 +45,7 @@ func newVersionCommand(opt *option.Option) *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "get version info from server")
 			}
-			fmt.Println(string(data))
+			_, _ = fmt.Println(string(data))
 			return nil
 		},
 	}

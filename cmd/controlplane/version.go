@@ -21,7 +21,7 @@ func newVersionCommand() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "marshal version")
 			}
-			fmt.Println(string(version))
+			_, _ = fmt.Println(string(version))
 			return nil
 		},
 	}

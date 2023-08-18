@@ -63,12 +63,12 @@ func newDisableAutoPromotion(opt *option.Option) *cobra.Command {
 }
 
 func setAutoPromotionForStage(ctx context.Context, opt *option.Option, project, stage string, enable bool) error {
-	client, err := client.GetClientFromConfig(ctx, opt)
+	kargoClient, err := client.GetClientFromConfig(ctx, opt)
 	if err != nil {
 		return err
 	}
 
-	resp, err := client.SetAutoPromotionForStage(ctx,
+	resp, err := kargoClient.SetAutoPromotionForStage(ctx,
 		connect.NewRequest(&v1alpha1.SetAutoPromotionForStageRequest{
 			Project: project,
 			Stage:   stage,

@@ -82,7 +82,7 @@ func NewCommand(opt *option.Option) *cobra.Command {
 			serverAddress := args[0]
 			var bearerToken, refreshToken string
 			if useAdmin {
-				fmt.Print(
+				_, _ = fmt.Print(
 					"\nWARNING: This command initiates authentication as the Kargo " +
 						"admin user, but the resulting ID token is not yet honored by " +
 						"the Kargo API server.\n\n",
@@ -115,7 +115,7 @@ func NewCommand(opt *option.Option) *cobra.Command {
 					return err
 				}
 			} else {
-				fmt.Print(
+				_, _ = fmt.Print(
 					"\nWARNING: This command initiates authentication using the " +
 						"specified server's configured OpenID Connect identity provider, " +
 						"but the resulting ID token is not yet honored by the Kargo API " +
@@ -188,9 +188,9 @@ func adminLogin(
 	password string,
 	insecureTLS bool,
 ) (string, error) {
-	client := client.GetClient(serverAddress, "", insecureTLS)
+	kargoClient := client.GetClient(serverAddress, "", insecureTLS)
 
-	cfgRes, err := client.GetPublicConfig(
+	cfgRes, err := kargoClient.GetPublicConfig(
 		ctx,
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
@@ -205,7 +205,7 @@ func adminLogin(
 		return "", errors.New("server does not support admin user login")
 	}
 
-	loginRes, err := client.AdminLogin(
+	loginRes, err := kargoClient.AdminLogin(
 		ctx,
 		connect.NewRequest(&v1alpha1.AdminLoginRequest{
 			Password: password,
@@ -241,9 +241,9 @@ func ssoLogin(
 	callbackPort int,
 	insecureTLS bool,
 ) (string, string, error) {
-	client := client.GetClient(serverAddress, "", insecureTLS)
+	kargoClient := client.GetClient(serverAddress, "", insecureTLS)
 
-	res, err := client.GetPublicConfig(
+	res, err := kargoClient.GetPublicConfig(
 		ctx,
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
@@ -424,7 +424,7 @@ func receiveAuthCode(
 			case codeCh <- code:
 				w.WriteHeader(http.StatusOK)
 				// TODO: Return a nicer page
-				w.Write( // nolint: errcheck
+				_, _ = w.Write(
 					[]byte(
 						"You are now logged in. You may close this window and resume " +
 							"using the Kargo CLI.",

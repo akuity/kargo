@@ -20,9 +20,9 @@ import (
 )
 
 func TestNewCollector(t *testing.T) {
-	client := fake.NewClientBuilder().Build()
+	watchClient := fake.NewClientBuilder().Build()
 	testCfg := CollectorConfigFromEnv()
-	c, ok := NewCollector(client, testCfg).(*collector)
+	c, ok := NewCollector(watchClient, testCfg).(*collector)
 	require.True(t, ok)
 	require.Equal(t, testCfg, c.cfg)
 	require.NotNil(t, c.cleanProjectsFn)
