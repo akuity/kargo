@@ -82,7 +82,7 @@ func setAutoPromotionForStage(ctx context.Context, opt *option.Option, project, 
 		if enable {
 			res = "Enabled"
 		}
-		_, _ = fmt.Fprintf(opt.IOStreams.Out,
+		fmt.Fprintf(opt.IOStreams.Out,
 			"%s AutoPromotion for Stage %q", res, resp.Msg.GetPromotionPolicy().GetStage())
 		return nil
 	}

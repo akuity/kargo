@@ -42,7 +42,7 @@ func newDeleteCommand(opt *option.Option) *cobra.Command {
 			})); err != nil {
 				return errors.Wrap(err, "delete stage")
 			}
-			_, _ = fmt.Fprintf(opt.IOStreams.Out, "Stage Deleted: %q", name)
+			fmt.Fprintf(opt.IOStreams.Out, "Stage Deleted: %q", name)
 			return nil
 		},
 	}

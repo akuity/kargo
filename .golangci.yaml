@@ -2,33 +2,33 @@ run:
   go: "1.20"
   deadline: 10m
   skip-files:
-  - api/.*/*_types.go
-  - api/.*/groupversion_info.go
+    - api/.*/*_types.go
+    - api/.*/groupversion_info.go
 
 linters:
   disable-all: true
   enable:
-  - bodyclose
-  - errcheck
-  - exportloopref
-  - forcetypeassert
-  - gci
-  - goconst
-  - gofmt
-  - goimports
-  - gosec
-  - gosimple
-  - govet
-  - ineffassign
-  - lll
-  - misspell
-  - nakedret
-  - revive
-  - staticcheck
-  - typecheck
-  - unconvert
-  - unparam
-  - unused
+    - bodyclose
+    - errcheck
+    - exportloopref
+    - forcetypeassert
+    - gci
+    - goconst
+    - gofmt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - revive
+    - staticcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
 
 # all available settings for linters we enable
 linters-settings:
@@ -123,7 +123,7 @@ linters-settings:
       - name: exported
       # Allow maximum 3 results in function
       - name: function-result-limit
-        arguments: [3]
+        arguments: [ 3 ]
       - name: if-return
       - name: import-shadowing
       - name: indent-error-flow
@@ -139,6 +139,13 @@ linters-settings:
       # Handle error always
       - name: unhandled-error
         severity: error
+        # Ignore following functions
+        arguments:
+          - fmt.Print
+          - fmt.Fprintf
+          - fmt.Fprintln
+          - fmt.Printf
+          - fmt.Println
       - name: unused-parameter
       - name: use-any
       - name: useless-break

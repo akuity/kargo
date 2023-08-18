@@ -36,7 +36,7 @@ func newDeleteCommand(opt *option.Option) *cobra.Command {
 			})); err != nil {
 				return errors.Wrap(err, "delete project")
 			}
-			_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Deleted: %q", name)
+			fmt.Fprintf(opt.IOStreams.Out, "Project Deleted: %q", name)
 			return nil
 		},
 	}
