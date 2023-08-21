@@ -80,6 +80,7 @@ require (
 	github.com/samber/mo v1.8.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
+	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/cli-runtime v0.24.2
 	oras.land/oras-go v1.2.2
@@ -195,7 +196,6 @@ require (
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	go.uber.org/goleak v1.2.0 // indirect
 	go.uber.org/ratelimit v0.1.1-0.20201110185707-e86515f0dda9 // indirect
-	golang.org/x/exp v0.0.0-20230131160201-f062dba9d201 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect

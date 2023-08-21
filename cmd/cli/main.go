@@ -12,7 +12,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	cmd, err := NewRootCommand(&option.Option{}, &rootState{})
+	cmd, err := NewRootCommand(option.NewOption(), &rootState{})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, errors.Wrap(err, "new root command"))
 		os.Exit(1)
