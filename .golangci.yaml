@@ -121,9 +121,6 @@ linters-settings:
       - name: error-strings
       - name: errorf
       - name: exported
-      # Allow maximum 3 results in function
-      - name: function-result-limit
-        arguments: [ 3 ]
       - name: if-return
       - name: import-shadowing
       - name: indent-error-flow
