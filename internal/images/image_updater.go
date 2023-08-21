@@ -5,7 +5,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
-	"github.com/argoproj-labs/argocd-image-updater/pkg/tag"
+	tagpkg "github.com/argoproj-labs/argocd-image-updater/pkg/tag"
 )
 
 // Everything in this file is a workaround for non-deterministic sorting in the
@@ -22,7 +22,7 @@ import (
 func getNewestVersionFromTags(
 	img *image.ContainerImage,
 	vc *image.VersionConstraint,
-	tagList *tag.ImageTagList,
+	tagList *tagpkg.ImageTagList,
 ) (string, error) {
 	var availableTags []string
 	switch vc.Strategy {
@@ -103,19 +103,19 @@ func getNewestVersionFromTags(
 // sortBySemVer is a replacement for similar functionality in Argo CD Image
 // Updater. It relies on a workaround for Masterminds/semver package's
 // non-deterministic sorts.
-func sortBySemVer(tags *tag.ImageTagList) []string {
-	semvers := []*semver.Version{}
+func sortBySemVer(tags *tagpkg.ImageTagList) []string {
+	semvers := make([]*semver.Version, 0, len(tags.Tags()))
 	for _, tagName := range tags.Tags() {
-		semver, err := semver.NewVersion(tagName)
+		version, err := semver.NewVersion(tagName)
 		if err != nil {
 			continue
 		}
-		semvers = append(semvers, semver)
+		semvers = append(semvers, version)
 	}
 	sort.Sort(semverCollection(semvers))
 	sortedTagNames := make([]string, len(semvers))
-	for i, semver := range semvers {
-		sortedTagNames[i] = semver.Original()
+	for i, version := range semvers {
+		sortedTagNames[i] = version.Original()
 	}
 	return sortedTagNames
 }
@@ -123,7 +123,7 @@ func sortBySemVer(tags *tag.ImageTagList) []string {
 // sortByName is a replacement for similar functionality in Argo CD Image
 // Updater. It relies on Argo CD Image Updater to do most of its work. The main
 // difference is that it returns just tag names instead of tag.ImageTag objects.
-func sortByName(tags *tag.ImageTagList) []string {
+func sortByName(tags *tagpkg.ImageTagList) []string {
 	sortedTags := tags.SortByName()
 	sortedTagNames := make([]string, len(sortedTags))
 	for i, tag := range sortedTags {
@@ -135,7 +135,7 @@ func sortByName(tags *tag.ImageTagList) []string {
 // sortByDate is a replacement for similar functionality in Argo CD Image
 // Updater. It relies on Argo CD Image Updater to do most of its work. The main
 // difference is that it returns just tag names instead of tag.ImageTag objects.
-func sortByDate(tags *tag.ImageTagList) []string {
+func sortByDate(tags *tagpkg.ImageTagList) []string {
 	sortedTags := tags.SortByDate()
 	sortedTagNames := make([]string, len(sortedTags))
 	for i, tag := range sortedTags {

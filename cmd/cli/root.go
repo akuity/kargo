@@ -19,9 +19,11 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	apiconfig "github.com/akuity/kargo/internal/api/config"
+	"github.com/akuity/kargo/internal/cli/create"
+	"github.com/akuity/kargo/internal/cli/delete"
+	"github.com/akuity/kargo/internal/cli/get"
 	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/cli/project"
 	"github.com/akuity/kargo/internal/cli/stage"
 	"github.com/akuity/kargo/internal/kubeclient"
 )
@@ -117,8 +119,10 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	option.InsecureTLS(&opt.InsecureTLS)(cmd.PersistentFlags())
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
+	cmd.AddCommand(create.NewCommand(opt))
+	cmd.AddCommand(delete.NewCommand(opt))
+	cmd.AddCommand(get.NewCommand(opt))
 	cmd.AddCommand(login.NewCommand(opt))
-	cmd.AddCommand(project.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand(opt))
 	return cmd, nil

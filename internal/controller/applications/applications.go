@@ -25,7 +25,7 @@ const (
 
 // reconciler reconciles Argo CD Application resources.
 type reconciler struct {
-	client client.Client
+	kubeClient client.Client
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Argo CD Application
@@ -74,9 +74,9 @@ func indexStagesByApp(shardName string) func(client.Object) []string {
 	}
 }
 
-func newReconciler(client client.Client) *reconciler {
+func newReconciler(kubeClient client.Client) *reconciler {
 	return &reconciler{
-		client: client,
+		kubeClient: kubeClient,
 	}
 }
 
@@ -96,7 +96,7 @@ func (r *reconciler) Reconcile(
 
 	// Find all Stages associated with this Application
 	stages := &api.StageList{}
-	if err := r.client.List(
+	if err := r.kubeClient.List(
 		ctx,
 		stages,
 		&client.ListOptions{
@@ -126,7 +126,7 @@ func (r *reconciler) Reconcile(
 			stage.Annotations = map[string]string{}
 		}
 		stage.Annotations[forceReconcileAnnotationKey] = uuid.NewV4().String()
-		if err := r.client.Patch(ctx, &stage, patch); err != nil {
+		if err := r.kubeClient.Patch(ctx, &stage, patch); err != nil {
 			logger.Error(err)
 			return result, errors.Wrapf(
 				err,

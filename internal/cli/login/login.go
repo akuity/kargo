@@ -175,9 +175,9 @@ func adminLogin(
 	password string,
 	insecureTLS bool,
 ) (string, error) {
-	client := client.GetClient(serverAddress, "", insecureTLS)
+	kargoClient := client.GetClient(serverAddress, "", insecureTLS)
 
-	cfgRes, err := client.GetPublicConfig(
+	cfgRes, err := kargoClient.GetPublicConfig(
 		ctx,
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
@@ -192,7 +192,7 @@ func adminLogin(
 		return "", errors.New("server does not support admin user login")
 	}
 
-	loginRes, err := client.AdminLogin(
+	loginRes, err := kargoClient.AdminLogin(
 		ctx,
 		connect.NewRequest(&v1alpha1.AdminLoginRequest{
 			Password: password,
@@ -228,9 +228,9 @@ func ssoLogin(
 	callbackPort int,
 	insecureTLS bool,
 ) (string, string, error) {
-	client := client.GetClient(serverAddress, "", insecureTLS)
+	kargoClient := client.GetClient(serverAddress, "", insecureTLS)
 
-	res, err := client.GetPublicConfig(
+	res, err := kargoClient.GetPublicConfig(
 		ctx,
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
@@ -411,7 +411,7 @@ func receiveAuthCode(
 			case codeCh <- code:
 				w.WriteHeader(http.StatusOK)
 				// TODO: Return a nicer page
-				w.Write( // nolint: errcheck
+				_, _ = w.Write(
 					[]byte(
 						"You are now logged in. You may close this window and resume " +
 							"using the Kargo CLI.",

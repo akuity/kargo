@@ -14,8 +14,16 @@ type Option struct {
 	LocalServerAddress string
 	UseLocalServer     bool
 
+	Project Optional[string]
+
 	IOStreams  *genericclioptions.IOStreams
 	PrintFlags *genericclioptions.PrintFlags
+}
+
+func NewOption() *Option {
+	return &Option{
+		Project: OptionalString(),
+	}
 }
 
 func NewScheme() (*runtime.Scheme, error) {

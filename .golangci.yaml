@@ -2,33 +2,33 @@ run:
   go: "1.20"
   deadline: 10m
   skip-files:
-  - api/.*/*_types.go
-  - api/.*/groupversion_info.go
+    - api/.*/*_types.go
+    - api/.*/groupversion_info.go
 
 linters:
   disable-all: true
   enable:
-  - bodyclose
-  - errcheck
-  - exportloopref
-  - forcetypeassert
-  - gci
-  - goconst
-  - gofmt
-  - goimports
-  - gosec
-  - gosimple
-  - govet
-  - ineffassign
-  - lll
-  - misspell
-  - nakedret
-  - revive
-  - staticcheck
-  - typecheck
-  - unconvert
-  - unparam
-  - unused
+    - bodyclose
+    - errcheck
+    - exportloopref
+    - forcetypeassert
+    - gci
+    - goconst
+    - gofmt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - revive
+    - staticcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
 
 # all available settings for linters we enable
 linters-settings:
@@ -97,3 +97,60 @@ linters-settings:
     # if it's called for subdir of a project it can't find funcs usages. All text editor integrations
     # with golangci-lint call it on a directory with the changed file.
     check-exported: false
+  revive:
+    # based on https://github.com/mgechev/revive#recommended-configuration
+    ignore-generated-header: false
+    severity: warning
+    confidence: 0.8
+    error-code: 0
+    warning-code: 0
+    # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
+    rules:
+      # Deny naked return always
+      - name: bare-return
+        severity: error
+      - name: blank-imports
+      - name: bool-literal-in-expr
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: datarace
+      - name: defer
+      - name: early-return
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+      # Allow maximum 3 results in function
+      - name: function-result-limit
+        arguments: [ 3 ]
+      - name: if-return
+      - name: import-shadowing
+      - name: indent-error-flow
+      - name: increment-decrement
+      - name: range
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: superfluous-else
+      - name: time-equal
+      - name: time-naming
+      - name: var-declaration
+      - name: unexported-naming
+      # Handle error always
+      - name: unhandled-error
+        severity: error
+        # Ignore following functions
+        arguments:
+          - fmt.Print
+          - fmt.Fprintf
+          - fmt.Fprintln
+          - fmt.Printf
+          - fmt.Println
+      - name: unused-parameter
+      - name: use-any
+      - name: useless-break
+      - name: waitgroup-by-value
+      # Explicitly disabled rules
+      - name: var-naming
+        # Disable because it conflicts with protobuf naming convention like "Id"
+        disabled: true

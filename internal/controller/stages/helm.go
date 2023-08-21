@@ -62,10 +62,7 @@ func (r *reconciler) getLatestCharts(
 			)
 		}
 
-		if vers != "" {
-			logger.WithField("version", vers).
-				Debug("found latest suitable chart version")
-		} else {
+		if vers == "" {
 			logger.Error("found no suitable chart version")
 			return nil, errors.Errorf(
 				"found no suitable version of chart %q in registry %q",
@@ -73,6 +70,8 @@ func (r *reconciler) getLatestCharts(
 				sub.RegistryURL,
 			)
 		}
+		logger.WithField("version", vers).
+			Debug("found latest suitable chart version")
 
 		charts[i] = api.Chart{
 			RegistryURL: sub.RegistryURL,

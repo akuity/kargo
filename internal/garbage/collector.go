@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
-	logging "github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // CollectorConfig is configuration for the garbage collector.
@@ -80,15 +80,15 @@ type collector struct {
 
 // NewCollector initializes and returns an implementation of the Collector
 // interface.
-func NewCollector(client client.Client, cfg CollectorConfig) Collector {
+func NewCollector(kubeClient client.Client, cfg CollectorConfig) Collector {
 	c := &collector{
 		cfg: cfg,
 	}
 	c.cleanProjectsFn = c.cleanProjects
 	c.cleanProjectFn = c.cleanProject
-	c.listProjectsFn = client.List
-	c.listPromotionsFn = client.List
-	c.deletePromotionFn = client.Delete
+	c.listProjectsFn = kubeClient.List
+	c.listPromotionsFn = kubeClient.List
+	c.deletePromotionFn = kubeClient.Delete
 	return c
 }
 

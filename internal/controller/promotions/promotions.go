@@ -238,7 +238,7 @@ func (r *reconciler) Reconcile(
 		return result, nil
 	}
 
-	newStatus := r.sync(ctx, promo)
+	newStatus := r.syncPromo(ctx, promo)
 
 	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *api.PromotionStatus) {
 		*status = newStatus
@@ -317,9 +317,9 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 	return nil
 }
 
-// sync enqueues Promotion requests to a Stage-specific priority queue. This
+// syncPromo enqueues Promotion requests to a Stage-specific priority queue. This
 // functions assumes the caller has obtained a lock on promoQueuesByStageMu.
-func (r *reconciler) sync(
+func (r *reconciler) syncPromo(
 	ctx context.Context,
 	promo *api.Promotion,
 ) api.PromotionStatus {
