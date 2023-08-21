@@ -19,10 +19,10 @@ import (
 )
 
 func TestNewPromotionReconciler(t *testing.T) {
-	client := fake.NewClientBuilder().Build()
+	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
-		client,
-		client,
+		kubeClient,
+		kubeClient,
 		&credentials.FakeDB{},
 		bookkeeper.NewService(nil),
 	)
@@ -212,7 +212,7 @@ func TestPromotionSync(t *testing.T) {
 			r := reconciler{
 				promoQueuesByStage: testCase.pqs,
 			}
-			status := r.sync(context.Background(), testCase.promo)
+			status := r.syncPromo(context.Background(), testCase.promo)
 			testCase.assertions(
 				status,
 				r.promoQueuesByStage,
@@ -238,7 +238,7 @@ func TestSerializedSync(t *testing.T) {
 
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
-	client := fake.NewClientBuilder().
+	kargoClient := fake.NewClientBuilder().
 		WithScheme(scheme).WithObjects(promo).Build()
 
 	pq := newPromotionsQueue()
@@ -246,7 +246,7 @@ func TestSerializedSync(t *testing.T) {
 	require.NoError(t, err)
 
 	r := reconciler{
-		kargoClient: client,
+		kargoClient: kargoClient,
 		promoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{
 			{Namespace: "fake-namespace", Name: "fake-stage"}: pq,
 		},
