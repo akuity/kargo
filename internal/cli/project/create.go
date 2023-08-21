@@ -42,7 +42,7 @@ func newCreateCommand(opt *option.Option) *cobra.Command {
 				return errors.Wrap(err, "create project")
 			}
 			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
-				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Created: %q", res.Msg.GetProject().GetName())
+				fmt.Fprintf(opt.IOStreams.Out, "Project Created: %q", res.Msg.GetProject().GetName())
 				return nil
 			}
 			var project unstructured.Unstructured

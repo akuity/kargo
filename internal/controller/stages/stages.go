@@ -238,7 +238,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("found Stage")
 
 	var newStatus api.StageStatus
-	newStatus, err = r.sync(ctx, stage)
+	newStatus, err = r.syncStage(ctx, stage)
 	if err != nil {
 		newStatus.Error = err.Error()
 		logger.Errorf("error syncing Stage: %s", stage.Status.Error)
@@ -269,7 +269,7 @@ func (r *reconciler) Reconcile(
 	return result, err
 }
 
-func (r *reconciler) sync(
+func (r *reconciler) syncStage(
 	ctx context.Context,
 	stage *api.Stage,
 ) (api.StageStatus, error) {

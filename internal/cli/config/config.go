@@ -24,7 +24,9 @@ func init() {
 		// This is what the spec says the default should be.
 		//
 		// See https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-		os.Setenv("XDG_CONFIG_HOME", filepath.Join(userHome, ".config"))
+		if err := os.Setenv("XDG_CONFIG_HOME", filepath.Join(userHome, ".config")); err != nil {
+			panic(errors.Wrap(err, "set XDG_CONFIG_HOME environment variable"))
+		}
 		xdg.Reload()
 	}
 	var err error

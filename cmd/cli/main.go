@@ -14,7 +14,7 @@ func main() {
 	ctx := context.Background()
 	cmd, err := NewRootCommand(&option.Option{}, &rootState{})
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, errors.Wrap(err, "new root command"))
+		fmt.Fprintln(os.Stderr, errors.Wrap(err, "new root command"))
 		os.Exit(1)
 	}
 	if err := cmd.ExecuteContext(ctx); err != nil {

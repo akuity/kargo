@@ -21,14 +21,14 @@ func takeStacktrace(n, skip uint) string {
 	for i := 0; ; i++ {
 		frame, more := frames.Next()
 		if i != 0 {
-			builder.WriteByte('\n')
+			_ = builder.WriteByte('\n')
 		}
-		builder.WriteString(frame.Function)
-		builder.WriteByte('\n')
-		builder.WriteByte('\t')
-		builder.WriteString(frame.File)
-		builder.WriteByte(':')
-		builder.WriteString(strconv.Itoa(frame.Line))
+		_, _ = builder.WriteString(frame.Function)
+		_ = builder.WriteByte('\n')
+		_ = builder.WriteByte('\t')
+		_, _ = builder.WriteString(frame.File)
+		_ = builder.WriteByte(':')
+		_, _ = builder.WriteString(strconv.Itoa(frame.Line))
 		if !more {
 			break
 		}

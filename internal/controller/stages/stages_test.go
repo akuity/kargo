@@ -16,10 +16,10 @@ import (
 )
 
 func TestNewStageReconciler(t *testing.T) {
-	client := fake.NewClientBuilder().Build()
+	kubeClient := fake.NewClientBuilder().Build()
 	e := newReconciler(
-		client,
-		client,
+		kubeClient,
+		kubeClient,
 		&credentials.FakeDB{},
 	)
 	require.NotNil(t, e.kargoClient)
@@ -740,7 +740,7 @@ func TestSync(t *testing.T) {
 			getAvailableStatesFromUpstreamStagesFn: testCase.getAvailableStatesFromUpstreamStagesFn,
 		}
 		t.Run(testCase.name, func(t *testing.T) {
-			newStatus, err := reconciler.sync(context.Background(), testStage)
+			newStatus, err := reconciler.syncStage(context.Background(), testStage)
 			testCase.assertions(
 				testCase.initialStatus,
 				newStatus,

@@ -56,7 +56,7 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 				return errors.Wrap(err, "promote stage")
 			}
 			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
-				_, _ = fmt.Fprintf(opt.IOStreams.Out,
+				fmt.Fprintf(opt.IOStreams.Out,
 					"Promotion Created: %q", res.Msg.GetPromotion().GetMetadata().GetName())
 				return nil
 			}
