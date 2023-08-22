@@ -524,7 +524,28 @@ func TestVerifyKargoIssuedToken(t *testing.T) {
 			valid: false,
 		},
 		{
-			name: "token was issued by Kargo",
+			name: "token was issued by Kargo, but is expired",
+			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					AdminConfig: &config.AdminConfig{
+						TokenSigningKey: testTokenSigningKey,
+					},
+				},
+			},
+			tokenFn: func() string {
+				token, err := jwt.NewWithClaims(
+					jwt.SigningMethodHS256,
+					jwt.RegisteredClaims{
+						ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+					},
+				).SignedString(testTokenSigningKey)
+				require.NoError(t, err)
+				return token
+			},
+			valid: false,
+		},
+		{
+			name: "success",
 			authInterceptor: &authInterceptor{
 				cfg: config.ServerConfig{
 					AdminConfig: &config.AdminConfig{
