@@ -10,6 +10,8 @@ import { Project } from '@ui/pages/project';
 import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
 import { theme } from './config/theme';
+import { AuthContextProvider } from './features/auth/context/auth-context-provider';
+import { ProtectedRoute } from './features/auth/protected-route';
 import { MainLayout } from './features/common/layout/main-layout';
 import { Login } from './pages/login/login';
 import { Projects } from './pages/projects';
@@ -22,16 +24,20 @@ export const App = () => (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider theme={theme}>
         <ModalContextProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route element={<MainLayout />}>
-                <Route path={paths.projects} element={<Projects />} />
-                <Route path={paths.project} element={<Project />} />
-                <Route path={paths.stage} element={<Project />} />
-              </Route>
-              <Route path='login' element={<Login />} />
-            </Routes>
-          </BrowserRouter>
+          <AuthContextProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<MainLayout />}>
+                    <Route path={paths.projects} element={<Projects />} />
+                    <Route path={paths.project} element={<Project />} />
+                    <Route path={paths.stage} element={<Project />} />
+                  </Route>
+                </Route>
+                <Route path={paths.login} element={<Login />} />
+              </Routes>
+            </BrowserRouter>
+          </AuthContextProvider>
         </ModalContextProvider>
       </ConfigProvider>
     </QueryClientProvider>

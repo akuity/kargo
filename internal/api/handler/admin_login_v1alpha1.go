@@ -8,6 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/akuity/kargo/internal/api/config"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -30,7 +31,10 @@ func AdminLoginV1Alpha1(cfg *config.AdminConfig) AdminLoginV1Alpha1Func {
 			)
 		}
 
-		if req.Msg.Password != cfg.Password {
+		if err := bcrypt.CompareHashAndPassword(
+			[]byte(cfg.HashedPassword),
+			[]byte(req.Msg.Password),
+		); err != nil {
 			return nil, connect.NewError(
 				connect.CodePermissionDenied,
 				errors.New("invalid password"),

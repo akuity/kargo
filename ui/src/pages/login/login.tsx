@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Divider, Typography } from 'antd';
+import { Navigate } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { AdminLogin } from '@ui/features/auth/admin-login';
+import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
 import { OIDCLogin } from '@ui/features/auth/oidc-login';
 import { LoadingState } from '@ui/features/common';
 import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
@@ -10,11 +13,16 @@ import * as styles from './login.module.less';
 
 export const Login = () => {
   const { data, isLoading } = useQuery(getPublicConfig.useQuery());
+  const { isLoggedIn } = useAuthContext();
+
+  if (isLoggedIn) {
+    return <Navigate to={paths.home} replace />;
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.logo}>
-        <img src='/kargo-icon.png' alt='Kargo Icon' className={styles.icon} />
+        <img src='/kargo-icon.png' alt='Kargo Icon' />
         Kargo
       </div>
       <div className={styles.box}>
@@ -25,12 +33,10 @@ export const Login = () => {
             <AdminLogin />
           </>
         )}
-        {data?.oidcConfig && (
-          <>
-            <Divider className='!my-6 !text-gray-400 !font-light'>OR</Divider>
-            <OIDCLogin oidcConfig={data.oidcConfig} />
-          </>
+        {data?.oidcConfig && data?.adminAccountEnabled && (
+          <Divider className='!my-6 !text-gray-400 !font-light'>OR</Divider>
         )}
+        {data?.oidcConfig && <OIDCLogin oidcConfig={data.oidcConfig} />}
         {data && !data.oidcConfig && !data.adminAccountEnabled && (
           <Typography.Text>
             Login is disabled. Please contact your system administrator.
