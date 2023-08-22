@@ -49,8 +49,9 @@ func TestNewAuthInterceptor(t *testing.T) {
 	a, err := newAuthInterceptor(context.Background(), config.ServerConfig{})
 	require.NoError(t, err)
 	require.NotNil(t, a)
-	require.NotNil(t, a.verifyOIDCIssuedTokenFn)
+	require.NotNil(t, a.parseUnverifiedJWTFn)
 	require.NotNil(t, a.verifyKargoIssuedTokenFn)
+	require.NotNil(t, a.verifyIDPIssuedTokenFn)
 	require.NotNil(t, a.oidcExtractGroupsFn)
 }
 
@@ -153,18 +154,19 @@ func TestGetKeySet(t *testing.T) {
 func TestAuthenticate(t *testing.T) {
 	// The way the tests are structured, we don't need this to be valid. It just
 	// needs to be non-empty.
-	const testToken = "some-token"
+	const (
+		testProcedure = "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects"
+		testIDPIssuer = "fake-issuer"
+		testToken     = "some-token"
+	)
 	testSets := map[string]struct {
 		procedure       string
-		tokenFn         func() string
 		authInterceptor *authInterceptor
+		token           string
 		assertions      func(ctx context.Context, err error)
 	}{
 		"exempt procedure": {
-			procedure: "/grpc.health.v1.Health/Check",
-			tokenFn: func() string {
-				return ""
-			},
+			procedure:       "/grpc.health.v1.Health/Check",
 			authInterceptor: &authInterceptor{},
 			// The procedure is exempt from authentication, so no user information
 			// should be bound to the context.
@@ -175,10 +177,7 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 		"no token provided": {
-			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
-			tokenFn: func() string {
-				return ""
-			},
+			procedure: testProcedure,
 			// It's an error if no token is provided.
 			assertions: func(ctx context.Context, err error) {
 				require.Error(t, err)
@@ -188,15 +187,16 @@ func TestAuthenticate(t *testing.T) {
 			},
 		},
 		"non-JWT token": {
-			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
-			tokenFn: func() string {
-				return testToken
-			},
+			procedure: testProcedure,
 			authInterceptor: &authInterceptor{
-				expirationFromJWTFn: func(string) *time.Time {
-					return nil
+				parseUnverifiedJWTFn: func(
+					string,
+					jwt.Claims,
+				) (*jwt.Token, []string, error) {
+					return nil, nil, errors.New("this is not a JWT")
 				},
 			},
+			token: testToken,
 			// TODO: krancour: Until we actually start using unidentified bearer
 			// tokens for accessing Kubernetes, this case should produce an error.
 			//
@@ -220,68 +220,112 @@ func TestAuthenticate(t *testing.T) {
 				require.False(t, ok)
 			},
 		},
-		"expired JWT": {
-			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+		"failure verifying Kargo-issued token": {
+			procedure: testProcedure,
 			authInterceptor: &authInterceptor{
-				expirationFromJWTFn: func(string) *time.Time {
-					t := time.Now().Add(-1 * time.Hour)
-					return &t
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = kargoIssuer
+					return nil, nil, nil
+				},
+				verifyKargoIssuedTokenFn: func(rawToken string) bool {
+					return false
 				},
 			},
-			tokenFn: func() string {
-				return testToken
-			},
-			// If we can determine the token is expired, we return an error.
+			token: testToken,
 			assertions: func(ctx context.Context, err error) {
 				require.Error(t, err)
-				require.Equal(t, "token is expired", err.Error())
+				require.Equal(
+					t,
+					"invalid token",
+					err.Error(),
+				)
 				_, ok := user.InfoFromContext(ctx)
 				require.False(t, ok)
 			},
 		},
-		"error verifying as JWT issued by OIDC identity provider": {
-			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+		"success verifying Kargo-issued token": {
+			procedure: testProcedure,
 			authInterceptor: &authInterceptor{
-				expirationFromJWTFn: func(string) *time.Time {
-					t := time.Now().Add(time.Hour)
-					return &t
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = kargoIssuer
+					return nil, nil, nil
 				},
-				verifyOIDCIssuedTokenFn: func(
-					context.Context,
-					string,
-				) (string, []string, bool, error) {
-					return "", nil, false, errors.New("something went wrong")
+				verifyKargoIssuedTokenFn: func(rawToken string) bool {
+					return true
 				},
 			},
-			tokenFn: func() string {
-				return testToken
-			},
-			// If we experience an error trying to verify the token, we wrap and
-			// return the error. Note that failure to verify a token WITHOUT an error
-			// is an entirely different case.
+			token: testToken,
+			// If this is successful, we expect that user info for the admin user
+			// is bound to the context.
 			assertions: func(ctx context.Context, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error verifying token")
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.True(t, u.IsAdmin)
+				require.Empty(t, u.Username)
+				require.Empty(t, u.Groups)
+				require.Empty(t, u.BearerToken)
 			},
 		},
-		"success verifying as JWT issued by OIDC identity provider": {
-			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+		"failure verifying IDP-issued token": {
+			procedure: testProcedure,
 			authInterceptor: &authInterceptor{
-				expirationFromJWTFn: func(string) *time.Time {
-					t := time.Now().Add(time.Hour)
-					return &t
+				cfg: config.ServerConfig{
+					OIDCConfig: &libOIDC.Config{
+						IssuerURL: testIDPIssuer,
+					},
 				},
-				verifyOIDCIssuedTokenFn: func(
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = testIDPIssuer
+					return nil, nil, nil
+				},
+				verifyIDPIssuedTokenFn: func(
 					context.Context,
 					string,
-				) (string, []string, bool, error) {
-					return "tony@starkindustries.com", []string{"avengers"}, true, nil
+				) (string, []string, bool) {
+					return "", nil, false
 				},
 			},
-			tokenFn: func() string {
-				return testToken
+			token: testToken,
+			assertions: func(ctx context.Context, err error) {
+				require.Error(t, err)
+				require.Equal(
+					t,
+					"invalid token",
+					err.Error(),
+				)
+				_, ok := user.InfoFromContext(ctx)
+				require.False(t, ok)
 			},
+		},
+		"success verifying IDP-issued token": {
+			procedure: testProcedure,
+			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					OIDCConfig: &libOIDC.Config{
+						IssuerURL: testIDPIssuer,
+					},
+				},
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = testIDPIssuer
+					return nil, nil, nil
+				},
+				verifyIDPIssuedTokenFn: func(
+					context.Context,
+					string,
+				) (string, []string, bool) {
+					return "tony@starkindustries.com", []string{"avengers"}, true
+				},
+			},
+			token: testToken,
 			// On success, we expect user info containing username and groups to be
 			// bound to the context.
 			assertions: func(ctx context.Context, err error) {
@@ -294,42 +338,27 @@ func TestAuthenticate(t *testing.T) {
 				require.Empty(t, u.BearerToken)
 			},
 		},
-		"failure verifying as Kargo-issued token": {
-			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
+		"unrecognized JWT": {
+			procedure: testProcedure,
 			authInterceptor: &authInterceptor{
-				expirationFromJWTFn: func(string) *time.Time {
-					t := time.Now().Add(time.Hour)
-					return &t
-				},
-				verifyOIDCIssuedTokenFn: func(
-					context.Context,
-					string,
-				) (string, []string, bool, error) {
-					return "", nil, false, nil
-				},
-				verifyKargoIssuedTokenFn: func(rawToken string) bool {
-					return false
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = "unrecognized-issuer"
+					return nil, nil, nil
 				},
 			},
-			tokenFn: func() string {
-				return testToken
-			},
+			token: testToken,
 			// TODO: krancour: Until we actually start using unidentified bearer
 			// tokens for accessing Kubernetes, this case should produce an error.
 			//
-			// // If we couldn't verify the token was issued by either Kargo's OIDC
-			// // identity provider or issued by the Kargo API server itself, then we
-			// // have a JWT, but we really don't know what it is. We assume it could be
-			// // an ID token for the k8s API server issued by the cluster's own identity
-			// // provider. We expect user info containing the raw token to be bound to
-			// // the context.
+			// // We can't verify this token, so we assume it could be an an identity
+			// // token from the k8s API server's identity provider. We expect user
+			// // info containing the raw token to be bound to the context.
 			// assertions: func(ctx context.Context, err error) {
 			// 	require.NoError(t, err)
 			// 	u, ok := user.InfoFromContext(ctx)
 			// 	require.True(t, ok)
-			// 	require.False(t, u.IsAdmin)
-			// 	require.Empty(t, u.Username)
-			// 	require.Empty(t, u.Groups)
 			// 	require.Equal(t, testToken, u.BearerToken)
 			// },
 			assertions: func(ctx context.Context, err error) {
@@ -343,44 +372,14 @@ func TestAuthenticate(t *testing.T) {
 				require.False(t, ok)
 			},
 		},
-		"success verifying as Kargo-issued token": { // admin
-			procedure: "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects",
-			authInterceptor: &authInterceptor{
-				expirationFromJWTFn: func(string) *time.Time {
-					t := time.Now().Add(time.Hour)
-					return &t
-				},
-				verifyOIDCIssuedTokenFn: func(ctx context.Context, rawToken string) (string, []string, bool, error) {
-					return "tony@starkindustries.com", []string{"avengers"}, false, nil
-				},
-				verifyKargoIssuedTokenFn: func(rawToken string) bool {
-					return true
-				},
-			},
-			tokenFn: func() string {
-				return testToken
-			},
-			// If this is successful, we expect that user info for the admin user
-			// is bound to the context.
-			assertions: func(ctx context.Context, err error) {
-				require.NoError(t, err)
-				u, ok := user.InfoFromContext(ctx)
-				require.True(t, ok)
-				require.True(t, u.IsAdmin)
-				require.Empty(t, u.Username)
-				require.Empty(t, u.Groups)
-				require.Empty(t, u.BearerToken)
-			},
-		},
 	}
 	for name, ts := range testSets {
 		ts := ts
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			header := http.Header{}
-			token := ts.tokenFn()
-			if token != "" {
-				header.Set("Authorization", token)
+			if ts.token != "" {
+				header.Set("Authorization", ts.token)
 			}
 			ctx, err := ts.authInterceptor.authenticate(
 				context.Background(),
@@ -392,58 +391,16 @@ func TestAuthenticate(t *testing.T) {
 	}
 }
 
-func TestExpirationFromJWT(t *testing.T) {
-	now := time.Now()
-	testCases := []struct {
-		name       string
-		tokenFn    func() string // Returns a raw token
-		assertions func(*time.Time)
-	}{
-		{
-			name: "token is not a JWT",
-			tokenFn: func() string {
-				return "some-token"
-			},
-			assertions: func(exp *time.Time) {
-				require.Nil(t, exp)
-			},
-		},
-		{
-			name: "token is a JWT",
-			tokenFn: func() string {
-				token, err := jwt.NewWithClaims(
-					jwt.SigningMethodHS256,
-					jwt.RegisteredClaims{
-						ExpiresAt: jwt.NewNumericDate(now),
-					},
-				).SignedString([]byte("signing key"))
-				require.NoError(t, err)
-				return token
-			},
-			assertions: func(exp *time.Time) {
-				require.NotNil(t, exp)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(expirationFromJWT(testCase.tokenFn()))
-		})
-	}
-}
-
-func TestVerifyOIDCIssuedToken(t *testing.T) {
-	// testTokenSigningKey := []byte("iwishtowashmyirishwristwatch")
+func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 	testCases := []struct {
 		name            string
 		authInterceptor *authInterceptor
-		assertions      func(username string, groups []string, ok bool, err error)
+		assertions      func(username string, groups []string, ok bool)
 	}{
 		{
 			name:            "OIDC not supported",
 			authInterceptor: &authInterceptor{},
-			assertions: func(username string, groups []string, ok bool, err error) {
-				require.NoError(t, err)
+			assertions: func(_ string, _ []string, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -457,8 +414,7 @@ func TestVerifyOIDCIssuedToken(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ string, _ []string, ok bool, err error) {
-				require.NoError(t, err)
+			assertions: func(_ string, _ []string, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -475,10 +431,7 @@ func TestVerifyOIDCIssuedToken(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(username string, _ []string, ok bool, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error getting claims from token")
-				require.Contains(t, err.Error(), "something went wrong")
+			assertions: func(_ string, _ []string, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -497,8 +450,7 @@ func TestVerifyOIDCIssuedToken(t *testing.T) {
 					return []string{"avengers"}, nil
 				},
 			},
-			assertions: func(username string, groups []string, ok bool, err error) {
-				require.NoError(t, err)
+			assertions: func(username string, groups []string, ok bool) {
 				require.True(t, ok)
 				require.Equal(t, "tony@starkindustries.io", username)
 				require.Equal(t, []string{"avengers"}, groups)
@@ -508,7 +460,7 @@ func TestVerifyOIDCIssuedToken(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.authInterceptor.verifyOIDCIssuedToken(
+				testCase.authInterceptor.verifyIDPIssuedToken(
 					context.Background(),
 					// With the way these tests are constructed, this doesn't have to
 					// be valid.

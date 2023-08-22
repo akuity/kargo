@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -21,7 +20,11 @@ import (
 	"github.com/akuity/kargo/internal/api/user"
 )
 
-const authHeaderKey = "Authorization"
+const (
+	authHeaderKey = "Authorization"
+
+	kargoIssuer = "kargo"
+)
 
 var exemptProcedures = map[string]struct{}{
 	"/grpc.health.v1.Health/Check":                                   {},
@@ -36,14 +39,17 @@ var exemptProcedures = map[string]struct{}{
 type authInterceptor struct {
 	cfg config.ServerConfig
 
-	expirationFromJWTFn     func(rawToken string) *time.Time
-	verifyOIDCIssuedTokenFn func(
+	parseUnverifiedJWTFn func(
+		rawToken string,
+		claims jwt.Claims,
+	) (*jwt.Token, []string, error)
+	verifyKargoIssuedTokenFn func(rawToken string) bool
+	verifyIDPIssuedTokenFn   func(
 		ctx context.Context,
 		rawToken string,
-	) (string, []string, bool, error)
-	verifyKargoIssuedTokenFn func(rawToken string) bool
-	oidcTokenVerifyFn        func(context.Context, string) (*oidc.IDToken, error)
-	oidcExtractGroupsFn      func(*oidc.IDToken) ([]string, error)
+	) (string, []string, bool)
+	oidcTokenVerifyFn   func(context.Context, string) (*oidc.IDToken, error)
+	oidcExtractGroupsFn func(*oidc.IDToken) ([]string, error)
 }
 
 // newAuthInterceptor returns an initialized *authInterceptor.
@@ -69,9 +75,10 @@ func newAuthInterceptor(
 	a := &authInterceptor{
 		cfg: cfg,
 	}
-	a.expirationFromJWTFn = expirationFromJWT
-	a.verifyOIDCIssuedTokenFn = a.verifyOIDCIssuedToken
+	a.parseUnverifiedJWTFn =
+		jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
+	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
 	if tokenVerifier != nil {
 		a.oidcTokenVerifyFn = tokenVerifier.Verify
 	}
@@ -225,13 +232,20 @@ func (a *authInterceptor) authenticate(
 		return ctx, errors.New("no token provided")
 	}
 
-	// Are we dealing with a JWT of any kind and if so, is it expired?
-	if expiration := a.expirationFromJWTFn(rawToken); expiration == nil {
+	// Are we dealing with a JWT?
+	//
+	// Note: If this is a JWT, we cannot trust these claims yet because we're not
+	// verifying the token yet. We use untrustedClaims.Issuer only as a hint as to
+	// HOW we might be able to verify the token further.
+	untrustedClaims := jwt.RegisteredClaims{}
+	if _, _, err := a.parseUnverifiedJWTFn(rawToken, &untrustedClaims); err != nil {
 		// TODO: krancour: This isn't safe to do until we start actually using this
 		// unidentified bearer token for accessing Kubernetes.
 		//
-		// // This token isn't a JWT. So it's probably an opaque bearer token for
-		// // the Kubernetes API server. Just run with it.
+		// // This token isn't a JWT, so it's probably an opaque bearer token for
+		// // the Kubernetes API server. Just run with it. If we're wrong,
+		// // Kubernetes API calls will simply have auth errors that will bubble
+		// // back to the client.
 		// return user.ContextWithInfo(
 		// 	ctx,
 		// 	user.Info{
@@ -239,47 +253,51 @@ func (a *authInterceptor) authenticate(
 		// 	},
 		// ), nil
 		return ctx, errors.New("client authentication is not yet supported")
-	} else if time.Now().After(*expiration) {
-		return ctx, errors.New("token is expired")
 	}
 
 	// If we get to here, we're dealing with a JWT. It could have been issued:
-	//   1. By Kargo's OpenID Connect identity provider
-	//   2. Directly by the Kargo API server (in the case of admin)
+	//
+	//   1. Directly by the Kargo API server (in the case of admin)
+	//   2. By Kargo's OpenID Connect identity provider
 	//   3. By the Kubernetes cluster's identity provider
-	// For all cases, we pursue some further verification...
 
-	// Case 1: Was this issued by Kargo's OpenID Connect identity provider?
-	username, groups, ok, err := a.verifyOIDCIssuedTokenFn(ctx, rawToken)
-	if err != nil {
-		return ctx, errors.Wrap(err, "error verifying token")
-	}
-	if ok {
-		return user.ContextWithInfo(
-			ctx,
-			user.Info{
-				Username: username,
-				Groups:   groups,
-			},
-		), nil
+	if untrustedClaims.Issuer == kargoIssuer {
+		// Case 1: This token was allegedly issued directly by the Kargo API server.
+		if a.verifyKargoIssuedTokenFn(rawToken) {
+			return user.ContextWithInfo(
+				ctx,
+				user.Info{
+					IsAdmin: true,
+				},
+			), nil
+		}
+		return ctx, errors.New("invalid token")
 	}
 
-	// Case 2: Was this issued by the Kargo API server?
-	if a.verifyKargoIssuedTokenFn(rawToken) {
-		return user.ContextWithInfo(
-			ctx,
-			user.Info{
-				IsAdmin: true,
-			},
-		), nil
+	if a.cfg.OIDCConfig != nil &&
+		untrustedClaims.Issuer == a.cfg.OIDCConfig.IssuerURL {
+		// Case 2: This token was allegedly issued by Kargo's OpenID Connect
+		// identity provider.
+		username, groups, ok := a.verifyIDPIssuedTokenFn(ctx, rawToken)
+		if ok {
+			return user.ContextWithInfo(
+				ctx,
+				user.Info{
+					Username: username,
+					Groups:   groups,
+				},
+			), nil
+		}
+		return ctx, errors.New("invalid token")
 	}
 
 	// TODO: krancour: This isn't safe to do until we start actually using this
 	// unidentified bearer token for accessing Kubernetes.
 	//
 	// // Case 3: We don't know how to verify this token. It's probably a token
-	// // issued by the Kubernetes cluster's identity provider. We'll just run with
-	// // it.
+	// // issued by the Kubernetes cluster's identity provider. Just run with it.
+	// // If we're wrong, Kubernetes API calls will simply have auth errors that
+	// // will bubble back to the client.
 	// return user.ContextWithInfo(
 	// 	ctx,
 	// 	user.Info{
@@ -289,43 +307,29 @@ func (a *authInterceptor) authenticate(
 	return ctx, errors.New("client authentication is not yet supported")
 }
 
-// expirationFromJWT attempts to parse the provided raw token as a JWT without
-// verifying. On success, the token's expiration time is returned. If
-// unsuccessful for any reason, a nil expiration time is returned. Callers may
-// infer that if a nil expiration time is returned, the raw token was not a JWT.
-func expirationFromJWT(rawToken string) *time.Time {
-	var claims jwt.RegisteredClaims
-	if _, _, err := jwt.NewParser(jwt.WithoutClaimsValidation()).
-		ParseUnverified(rawToken, &claims); err == nil {
-		return &claims.ExpiresAt.Time
-	}
-	return nil
-}
-
-// verifyOIDCIssuedToken attempts to verify that the provided raw token was
-// issued by Kargo's OpenID Connect identity provider. On success, username,
-// and groups are extracted and returned along with a true boolean. If the
-// provided raw token couldn't be verified, the returned boolean is false.
-// A non-nil error is only ever returned if something goes wrong AFTER
-// successfully verifying the token. Callers may infer that if the returned
-// error is nil, but the returned boolean is false, the provided raw token
-// could not be verified.
-func (a *authInterceptor) verifyOIDCIssuedToken(
+// verifyIDPIssuedToken attempts to verify that the provided raw token was
+// issued by Kargo's OpenID Connect identity provider. On success, username, and
+// groups are extracted and returned along with a true boolean. If the provided
+// raw token couldn't be verified, the returned boolean is false. A non-nil
+// error is only ever returned if something goes wrong AFTER successfully
+// verifying the token. Callers may infer that if the returned error is nil, but
+// the returned boolean is false, the provided raw token could not be verified.
+func (a *authInterceptor) verifyIDPIssuedToken(
 	ctx context.Context,
 	rawToken string,
-) (string, []string, bool, error) {
+) (string, []string, bool) {
 	if a.oidcTokenVerifyFn == nil {
-		return "", nil, false, nil
+		return "", nil, false
 	}
 	token, err := a.oidcTokenVerifyFn(ctx, rawToken)
 	if err != nil {
-		return "", nil, false, nil
+		return "", nil, false
 	}
 	groups, err := a.oidcExtractGroupsFn(token)
 	if err != nil {
-		return "", nil, false, errors.Wrap(err, "error getting claims from token")
+		return "", nil, false
 	}
-	return token.Subject, groups, true, nil
+	return token.Subject, groups, true
 }
 
 // verifyKargoIssuedToken attempts to verify that the provided raw token was
