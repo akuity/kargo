@@ -40,7 +40,7 @@ func PatchStatus[T HasStatus[S], S any](
 		return err
 	}
 
-	patchMap := map[string]interface{}{}
+	patchMap := map[string]any{}
 	if err = json.Unmarshal(statusPatch, &patchMap); err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func PatchStatus[T HasStatus[S], S any](
 		return nil
 	}
 
-	patch, err := json.Marshal(map[string]interface{}{
+	patch, err := json.Marshal(map[string]any{
 		"status": patchMap,
 	})
 	if err != nil {

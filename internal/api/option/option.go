@@ -8,14 +8,15 @@ import (
 	"connectrpc.com/connect"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func NewHandlerOption(ctx context.Context, localMode bool) connect.HandlerOption {
+func NewHandlerOption(ctx context.Context, cfg config.ServerConfig) connect.HandlerOption {
 	interceptors := []connect.Interceptor{
 		newLogInterceptor(logging.LoggerFromContext(ctx), loggingIgnorableMethods),
 	}
-	if !localMode {
+	if !cfg.LocalMode {
 		interceptors = append(interceptors, &authInterceptor{})
 	}
 	return connect.WithHandlerOptions(
