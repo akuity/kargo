@@ -14,7 +14,7 @@ import (
 // AdminConfig represents configuration for an admin account.
 type AdminConfig struct {
 	// HashedPassword is a bcrypt hash of the password for the admin account.
-	HashedPassword string `envconfig:"HASHED_ADMIN_ACCOUNT_PASSWORD" required:"true"`
+	HashedPassword string `envconfig:"ADMIN_ACCOUNT_PASSWORD_HASH" required:"true"`
 	// TokenSigningKey is the key used to sign ID tokens for the admin account.
 	TokenSigningKey []byte `envconfig:"TOKEN_SIGNING_KEY" required:"true"`
 }

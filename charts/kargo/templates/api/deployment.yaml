@@ -41,7 +41,7 @@ spec:
 {{- if .Values.api.adminAccount.enabled }}
             - name: ADMIN_ACCOUNT_ENABLED
               value: "true"
-            - name: HASHED_ADMIN_ACCOUNT_PASSWORD
+            - name: ADMIN_ACCOUNT_PASSWORD_HASH
               valueFrom:
                 secretKeyRef:
                   name: kargo-api
