@@ -82,12 +82,6 @@ func NewCommand(opt *option.Option) *cobra.Command {
 			serverAddress := args[0]
 			var bearerToken, refreshToken string
 			if useAdmin {
-				fmt.Print(
-					"\nWARNING: This command initiates authentication as the Kargo " +
-						"admin user, but the resulting ID token is not yet honored by " +
-						"the Kargo API server.\n\n",
-				)
-
 				var password string
 				if password, err = cmd.Flags().GetString(flagPassword); err != nil {
 					return err
@@ -115,13 +109,6 @@ func NewCommand(opt *option.Option) *cobra.Command {
 					return err
 				}
 			} else {
-				fmt.Print(
-					"\nWARNING: This command initiates authentication using the " +
-						"specified server's configured OpenID Connect identity provider, " +
-						"but the resulting ID token is not yet honored by the Kargo API " +
-						"server.\n\n",
-				)
-
 				var callbackPort int
 				callbackPort, err = cmd.Flags().GetInt(flagPort)
 				if err != nil {

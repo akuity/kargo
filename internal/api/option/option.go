@@ -6,18 +6,27 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func NewHandlerOption(ctx context.Context, cfg config.ServerConfig) connect.HandlerOption {
+func NewHandlerOption(
+	ctx context.Context,
+	cfg config.ServerConfig,
+) (connect.HandlerOption, error) {
 	interceptors := []connect.Interceptor{
 		newLogInterceptor(logging.LoggerFromContext(ctx), loggingIgnorableMethods),
 	}
 	if !cfg.LocalMode {
-		interceptors = append(interceptors, &authInterceptor{})
+		authInterceptor, err := newAuthInterceptor(ctx, cfg)
+		if err != nil {
+			return nil,
+				errors.Wrap(err, "error initializing authentication interceptor")
+		}
+		interceptors = append(interceptors, authInterceptor)
 	}
 	return connect.WithHandlerOptions(
 		connect.WithCodec(newJSONCodec("json")),
@@ -29,5 +38,5 @@ func NewHandlerOption(ctx context.Context, cfg config.ServerConfig) connect.Hand
 				return connect.NewError(
 					connect.CodeInternal, fmt.Errorf("panic: %v", r))
 			}),
-	)
+	), nil
 }
