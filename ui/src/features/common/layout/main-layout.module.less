@@ -4,6 +4,8 @@
 }
 
 .sidebar {
+  display: flex;
+  flex-direction: column;
   flex: 0 0 110px;
   background: linear-gradient(
     177deg,
@@ -49,4 +51,17 @@
   width: 50px;
   margin: 0 auto;
   margin-bottom: 0.75em;
+}
+
+.nav {
+  flex: 1;
+}
+
+.logout {
+  color: #a0b3c2;
+  margin: ~'@{sizeSM}px 0';
+
+  &:hover {
+    color: #cddae4 !important;
+  }
 }

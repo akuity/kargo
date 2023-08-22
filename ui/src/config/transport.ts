@@ -6,8 +6,9 @@ const errorHandler: Interceptor = (next) => async (req) => {
   try {
     return await next(req);
   } catch (err) {
-    if (err instanceof ConnectError) {
-      notification.error({ message: err.rawMessage, placement: 'bottomRight' });
+    if (!req.signal.aborted) {
+      const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
+      notification.error({ message: errorMessage, placement: 'bottomRight' });
     }
 
     throw err;
