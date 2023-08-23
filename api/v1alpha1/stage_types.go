@@ -114,6 +114,14 @@ type ImageSubscription struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
 	RepoURL string `json:"repoURL"`
+	// GitRepoURL optionally specifies the URL of a Git repository that contains
+	// the source code for the image repository referenced by the RepoURL field.
+	// When this is specified, Kargo MAY be able to infer and link to the exact
+	// revision of that source code that was used to build the image.
+	//
+	//+kubebuilder:validation:Optional
+	//+kubebuilder:validation:Pattern=`^(((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*))?$`
+	GitRepoURL string `json:"gitRepoURL,omitempty"`
 	// UpdateStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
@@ -557,6 +565,10 @@ func (e *StageStateStack) Push(states ...StageState) {
 type Image struct {
 	// RepoURL describes the repository in which the image can be found.
 	RepoURL string `json:"repoURL,omitempty"`
+	// GitRepoURL specifies the URL of a Git repository that contains the source
+	// code for the image repository referenced by the RepoURL field if Kargo was
+	// able to infer it.
+	GitRepoURL string `json:"gitRepoURL,omitempty"`
 	// Tag identifies a specific version of the image in the repository specified
 	// by RepoURL.
 	Tag string `json:"tag,omitempty"`
