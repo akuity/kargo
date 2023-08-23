@@ -50,19 +50,24 @@ func (t *tokenRefresher) refreshToken(
 	insecureTLS bool,
 ) (config.CLIConfig, error) {
 	jwtParser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	var claims jwt.RegisteredClaims
+	var untrustedClaims jwt.RegisteredClaims
 	if _, _, err :=
-		jwtParser.ParseUnverified(cfg.BearerToken, &claims); err != nil {
+		jwtParser.ParseUnverified(cfg.BearerToken, &untrustedClaims); err != nil {
 		// This token isn't a JWT. So it's probably a bearer token for the
 		// Kubernetes API server. Just return. There's nothing further to do.
 		return cfg, nil
 	}
 
-	// If we get to here, we're dealing with an ID token (JWT) issued either by
-	// an OpenID Connect identity provider or by the Kargo API server itself.
+	// If we get to here, we're dealing with a JWT. It could have been issued:
+	//
+	//   1. Directly by the Kargo API server (in the case of admin)
+	//   2. By Kargo's OpenID Connect identity provider
+	//   3. By the Kubernetes cluster's identity provider
+	//   4. By Kubernetes itself (a service account token, perhaps)
 
-	if time.Now().Before(claims.ExpiresAt.Time) {
-		// Token is still valid. There's nothing further to do.
+	if untrustedClaims.ExpiresAt == nil || time.Now().Before(untrustedClaims.ExpiresAt.Time) {
+		// Token doesn't expire (possible for case 4) or hasn't yet. There's nothing
+		// further to do.
 		return cfg, nil
 	}
 
