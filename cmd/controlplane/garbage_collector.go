@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/garbage"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -33,7 +34,8 @@ func newGarbageCollectorCommand() *cobra.Command {
 
 			var kubeClient client.Client
 			{
-				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
+				restCfg, err :=
+					kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(err, "error loading REST config")
 				}

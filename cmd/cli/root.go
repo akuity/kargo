@@ -8,24 +8,18 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/dynamic"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	apiconfig "github.com/akuity/kargo/internal/api/config"
+	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/cli/create"
 	"github.com/akuity/kargo/internal/cli/delete"
 	"github.com/akuity/kargo/internal/cli/get"
 	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/stage"
-	"github.com/akuity/kargo/internal/kubeclient"
 )
 
 // rootState holds state used internally by the root command.
@@ -45,33 +39,10 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 			if err != nil {
 				return errors.Wrap(err, "get REST config")
 			}
-			var kubeCli client.Client
-			var dynamicCli dynamic.Interface
-			{
-				scheme := runtime.NewScheme()
-				if err = corev1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "add Kubernetes core API to scheme")
-				}
-				if err = kargoapi.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "add Kargo API to scheme")
-				}
-				mgr, err := ctrl.NewManager(
-					restCfg,
-					ctrl.Options{
-						Scheme:             scheme,
-						MetricsBindAddress: "0",
-					},
-				)
-				if err != nil {
-					return errors.Wrap(err, "new manager")
-				}
-				// Index PromotionPolicies by Stage
-				if err = kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
-					return errors.Wrap(err, "index PromotionPolicies by Stage")
-				}
-				go mgr.Start(ctx) // nolint: errcheck
-				kubeCli = mgr.GetClient()
-				dynamicCli = dynamic.NewForConfigOrDie(restCfg)
+			client, err :=
+				kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{})
+			if err != nil {
+				return errors.Wrap(err, "error creating Kubernetes client")
 			}
 
 			if opt.UseLocalServer {
@@ -84,8 +55,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 					apiconfig.ServerConfig{
 						LocalMode: true,
 					},
-					kubeCli,
-					dynamicCli,
+					client,
 				)
 				if err != nil {
 					return errors.Wrap(err, "new api server")

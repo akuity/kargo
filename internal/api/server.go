@@ -12,12 +12,11 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
-	"k8s.io/client-go/dynamic"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/dex"
 	"github.com/akuity/kargo/internal/api/handler"
+	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/option"
 	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
@@ -31,9 +30,8 @@ var (
 )
 
 type server struct {
-	cfg        config.ServerConfig
-	kubeCli    client.Client
-	dynamicCli dynamic.Interface
+	cfg    config.ServerConfig
+	client kubernetes.Client
 }
 
 type Server interface {
@@ -42,13 +40,11 @@ type Server interface {
 
 func NewServer(
 	cfg config.ServerConfig,
-	kc client.Client,
-	dynamicCli dynamic.Interface,
+	client kubernetes.Client,
 ) (Server, error) {
 	return &server{
-		cfg:        cfg,
-		kubeCli:    kc,
-		dynamicCli: dynamicCli,
+		cfg:    cfg,
+		client: client,
 	}, nil
 }
 
@@ -137,21 +133,21 @@ func (s *server) CreateStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreateStageRequest],
 ) (*connect.Response[svcv1alpha1.CreateStageResponse], error) {
-	return handler.CreateStageV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.CreateStageV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) ListStages(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListStagesRequest],
 ) (*connect.Response[svcv1alpha1.ListStagesResponse], error) {
-	return handler.ListStagesV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.ListStagesV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) GetStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetStageRequest],
 ) (*connect.Response[svcv1alpha1.GetStageResponse], error) {
-	return handler.GetStageV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.GetStageV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) WatchStages(
@@ -159,89 +155,89 @@ func (s *server) WatchStages(
 	req *connect.Request[svcv1alpha1.WatchStagesRequest],
 	stream *connect.ServerStream[svcv1alpha1.WatchStagesResponse],
 ) error {
-	return handler.WatchStageV1Alpha1(s.kubeCli, s.dynamicCli)(ctx, req, stream)
+	return handler.WatchStageV1Alpha1(s.client)(ctx, req, stream)
 }
 
 func (s *server) UpdateStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdateStageRequest],
 ) (*connect.Response[svcv1alpha1.UpdateStageResponse], error) {
-	return handler.UpdateStageV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.UpdateStageV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) DeleteStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteStageRequest],
 ) (*connect.Response[svcv1alpha1.DeleteStageResponse], error) {
-	return handler.DeleteStageV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.DeleteStageV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) PromoteStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.PromoteStageRequest],
 ) (*connect.Response[svcv1alpha1.PromoteStageResponse], error) {
-	return handler.PromoteStageV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.PromoteStageV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) SetAutoPromotionForStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.SetAutoPromotionForStageRequest],
 ) (*connect.Response[svcv1alpha1.SetAutoPromotionForStageResponse], error) {
-	return handler.SetAutoPromotionForStageV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.SetAutoPromotionForStageV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) CreatePromotionPolicy(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreatePromotionPolicyRequest],
 ) (*connect.Response[svcv1alpha1.CreatePromotionPolicyResponse], error) {
-	return handler.CreatePromotionPolicyV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.CreatePromotionPolicyV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) ListPromotionPolicies(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListPromotionPoliciesRequest],
 ) (*connect.Response[svcv1alpha1.ListPromotionPoliciesResponse], error) {
-	return handler.ListPromotionPoliciesV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.ListPromotionPoliciesV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) GetPromotionPolicy(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetPromotionPolicyRequest],
 ) (*connect.Response[svcv1alpha1.GetPromotionPolicyResponse], error) {
-	return handler.GetPromotionPolicyV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.GetPromotionPolicyV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) UpdatePromotionPolicy(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdatePromotionPolicyRequest],
 ) (*connect.Response[svcv1alpha1.UpdatePromotionPolicyResponse], error) {
-	return handler.UpdatePromotionPolicyV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.UpdatePromotionPolicyV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) DeletePromotionPolicy(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeletePromotionPolicyRequest],
 ) (*connect.Response[svcv1alpha1.DeletePromotionPolicyResponse], error) {
-	return handler.DeletePromotionPolicyV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.DeletePromotionPolicyV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) CreateProject(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreateProjectRequest],
 ) (*connect.Response[svcv1alpha1.CreateProjectResponse], error) {
-	return handler.CreateProjectV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.CreateProjectV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) ListProjects(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListProjectsRequest],
 ) (*connect.Response[svcv1alpha1.ListProjectsResponse], error) {
-	return handler.ListProjectsV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.ListProjectsV1Alpha1(s.client)(ctx, req)
 }
 
 func (s *server) DeleteProject(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteProjectRequest],
 ) (*connect.Response[svcv1alpha1.DeleteProjectResponse], error) {
-	return handler.DeleteProjectV1Alpha1(s.kubeCli)(ctx, req)
+	return handler.DeleteProjectV1Alpha1(s.client)(ctx, req)
 }
