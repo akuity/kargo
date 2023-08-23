@@ -260,6 +260,7 @@ func (a *authInterceptor) authenticate(
 	//   1. Directly by the Kargo API server (in the case of admin)
 	//   2. By Kargo's OpenID Connect identity provider
 	//   3. By the Kubernetes cluster's identity provider
+	//   4. By Kubernetes itself (a service account token, perhaps)
 
 	if untrustedClaims.Issuer == kargoIssuer {
 		// Case 1: This token was allegedly issued directly by the Kargo API server.
@@ -294,7 +295,7 @@ func (a *authInterceptor) authenticate(
 	// TODO: krancour: This isn't safe to do until we start actually using this
 	// unidentified bearer token for accessing Kubernetes.
 	//
-	// // Case 3: We don't know how to verify this token. It's probably a token
+	// // Case 3 or 4: We don't know how to verify this token. It's probably a token
 	// // issued by the Kubernetes cluster's identity provider. Just run with it.
 	// // If we're wrong, Kubernetes API calls will simply have auth errors that
 	// // will bubble back to the client.
