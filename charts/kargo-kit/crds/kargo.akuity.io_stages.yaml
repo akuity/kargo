@@ -427,6 +427,15 @@ spec:
                                 are considered in determining the newest version of
                                 an image. This field is optional.
                               type: string
+                            gitRepoURL:
+                              description: GitRepoURL optionally specifies the URL
+                                of a Git repository that contains the source code
+                                for the image repository referenced by the RepoURL
+                                field. When this is specified, Kargo MAY be able to
+                                infer and link to the exact revision of that source
+                                code that was used to build the image.
+                              pattern: ^(((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*))?$
+                              type: string
                             ignoreTags:
                               description: IgnoreTags is a list of tags that must
                                 be ignored when determining the newest version of
@@ -611,6 +620,12 @@ spec:
                         description: Image describes a specific version of a container
                           image.
                         properties:
+                          gitRepoURL:
+                            description: GitRepoURL specifies the URL of a Git repository
+                              that contains the source code for the image repository
+                              referenced by the RepoURL field if Kargo was able to
+                              infer it.
+                            type: string
                           repoURL:
                             description: RepoURL describes the repository in which
                               the image can be found.
@@ -719,6 +734,12 @@ spec:
                       description: Image describes a specific version of a container
                         image.
                       properties:
+                        gitRepoURL:
+                          description: GitRepoURL specifies the URL of a Git repository
+                            that contains the source code for the image repository
+                            referenced by the RepoURL field if Kargo was able to infer
+                            it.
+                          type: string
                         repoURL:
                           description: RepoURL describes the repository in which the
                             image can be found.
@@ -838,6 +859,12 @@ spec:
                         description: Image describes a specific version of a container
                           image.
                         properties:
+                          gitRepoURL:
+                            description: GitRepoURL specifies the URL of a Git repository
+                              that contains the source code for the image repository
+                              referenced by the RepoURL field if Kargo was able to
+                              infer it.
+                            type: string
                           repoURL:
                             description: RepoURL describes the repository in which
                               the image can be found.
