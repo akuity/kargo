@@ -9,17 +9,17 @@ import { zodValidators } from '@ui/utils/validators';
 
 import { FieldContainer } from '../common/form/field-container';
 
-import { useAuth } from './use-auth';
+import { useAuthContext } from './context/use-auth-context';
 
 const formSchema = z.object({
   password: zodValidators.requiredString
 });
 
 export const AdminLogin = () => {
-  const { onLogin } = useAuth();
+  const { login } = useAuthContext();
   const { mutate, isLoading } = useMutation({
     ...adminLogin.useMutation(),
-    onSuccess: (response) => onLogin(response.idToken)
+    onSuccess: (response) => login(response.idToken)
   });
 
   const { control, handleSubmit } = useForm({

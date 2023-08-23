@@ -1,28 +1,45 @@
-import { faTableList } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRightFromBracket, faTableList } from '@fortawesome/free-solid-svg-icons';
+import { Button } from 'antd';
 import { Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
+
+import { ButtonIcon } from '../button-icon/button-icon';
 
 import * as styles from './main-layout.module.less';
 import { NavItem } from './nav-item/nav-item';
 
-export const MainLayout = () => (
-  <div className={styles.wrapper}>
-    <aside className={styles.sidebar}>
-      <div className={styles.logo}>
-        <img src='/kargo-icon.png' alt='Kargo Icon' className={styles.icon} />
-        Kargo
-      </div>
-      <nav>
-        <NavItem icon={faTableList} path={paths.projects}>
-          Projects
-        </NavItem>
-      </nav>
-    </aside>
-    <div className={styles.contentWrapper}>
-      <div className={styles.content}>
-        <Outlet />
+export const MainLayout = () => {
+  const { logout } = useAuthContext();
+
+  return (
+    <div className={styles.wrapper}>
+      <aside className={styles.sidebar}>
+        <div className={styles.logo}>
+          <img src='/kargo-icon.png' alt='Kargo Icon' className={styles.icon} />
+          Kargo
+        </div>
+        <nav className={styles.nav}>
+          <NavItem icon={faTableList} path={paths.projects}>
+            Projects
+          </NavItem>
+        </nav>
+
+        <Button
+          className={styles.logout}
+          onClick={logout}
+          type='text'
+          icon={<ButtonIcon icon={faArrowRightFromBracket} />}
+        >
+          Logout
+        </Button>
+      </aside>
+      <div className={styles.contentWrapper}>
+        <div className={styles.content}>
+          <Outlet />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
