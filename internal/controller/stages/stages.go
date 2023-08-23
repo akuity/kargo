@@ -31,9 +31,10 @@ import (
 
 // reconciler reconciles Stage resources.
 type reconciler struct {
-	kargoClient   client.Client
-	argoClient    client.Client
-	credentialsDB credentials.Database
+	kargoClient                client.Client
+	argoClient                 client.Client
+	credentialsDB              credentials.Database
+	imageSourceURLFnsByBaseURL map[string]func(string, string) string
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -177,6 +178,9 @@ func newReconciler(
 		kargoClient:   kargoClient,
 		argoClient:    argoClient,
 		credentialsDB: credentialsDB,
+		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
+			githubURLPrefix: getGithubImageSourceURL,
+		},
 	}
 
 	// The following default behaviors are overridable for testing purposes:
