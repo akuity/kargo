@@ -3,13 +3,48 @@ package yaml
 import (
 	"bufio"
 	"bytes"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
+
+type KubernetesManifestParserFunc func(data []byte) ([]*unstructured.Unstructured, error)
+
+func NewKubernetesManifestParser(scheme *runtime.Scheme) KubernetesManifestParserFunc {
+	codecs := serializer.NewCodecFactory(scheme)
+	deserializer := codecs.UniversalDeserializer()
+	return func(data []byte) ([]*unstructured.Unstructured, error) {
+		d := kubeyaml.NewYAMLOrJSONDecoder(bytes.NewReader(data), 4096)
+		var res []*unstructured.Unstructured
+		for {
+			var ext runtime.RawExtension
+			if err := d.Decode(&ext); err != nil {
+				if errors.Is(err, io.EOF) {
+					return res, nil
+				}
+				return nil, errors.Wrap(err, "decode data")
+			}
+
+			obj, _, err := deserializer.Decode(ext.Raw, nil, nil)
+			if err != nil {
+				return nil, errors.Wrap(err, "decode object")
+			}
+			u, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&obj)
+			if err != nil {
+				return nil, errors.Wrap(err, "convert to unstructured")
+			}
+			res = append(res, &unstructured.Unstructured{Object: u})
+		}
+	}
+}
 
 // SetStringsInFile overwrites the specified file with the changes specified by
 // the changes map applied. The changes map maps keys to new values. Keys are of
