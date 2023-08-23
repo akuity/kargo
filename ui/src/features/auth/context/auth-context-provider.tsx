@@ -1,8 +1,8 @@
 import React, { PropsWithChildren } from 'react';
 
-import { AuthContext } from './auth-context';
+import { authTokenKey } from '@ui/config/transport';
 
-const authTokenKey = 'auth_token';
+import { AuthContext } from './auth-context';
 
 export const AuthContextProvider = ({ children }: PropsWithChildren) => {
   const [token, setToken] = React.useState(localStorage.getItem(authTokenKey));
