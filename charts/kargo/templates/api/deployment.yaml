@@ -41,12 +41,14 @@ spec:
 {{- if .Values.api.adminAccount.enabled }}
             - name: ADMIN_ACCOUNT_ENABLED
               value: "true"
+            - name: ADMIN_ACCOUNT_TOKEN_ISSUER
+              value: {{ .Values.api.protocol }}://{{ .Values.api.host }}
             - name: ADMIN_ACCOUNT_PASSWORD_HASH
               valueFrom:
                 secretKeyRef:
                   name: kargo-api
                   key: adminPassword
-            - name: TOKEN_SIGNING_KEY
+            - name: ADMIN_ACCOUNT_TOKEN_SIGNING_KEY
               valueFrom:
                 secretKeyRef:
                   name: kargo-api

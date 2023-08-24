@@ -46,7 +46,7 @@ func AdminLoginV1Alpha1(cfg *config.AdminConfig) AdminLoginV1Alpha1Func {
 			jwt.SigningMethodHS256,
 			jwt.RegisteredClaims{
 				IssuedAt:  jwt.NewNumericDate(now),
-				Issuer:    "kargo",
+				Issuer:    cfg.TokenIssuer,
 				NotBefore: jwt.NewNumericDate(now),
 				Subject:   "admin",
 				ID:        uuid.NewV4().String(),
