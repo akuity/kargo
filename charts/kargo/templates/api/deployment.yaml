@@ -41,6 +41,8 @@ spec:
 {{- if .Values.api.adminAccount.enabled }}
             - name: ADMIN_ACCOUNT_ENABLED
               value: "true"
+            - name: ADMIN_ACCOUNT_TOKEN_AUDIENCE
+              value: {{ .Values.api.host }}
             - name: ADMIN_ACCOUNT_PASSWORD_HASH
               valueFrom:
                 secretKeyRef:
