@@ -61,7 +61,7 @@ spec:
             - name: OIDC_ISSUER_URL
               value: {{ .Values.api.protocol }}://{{ .Values.api.host }}/dex
             - name: OIDC_CLIENT_ID
-              value: kargo
+              value: {{ .Values.api.host }}
             - name: DEX_ENABLED
               value: "true"
             - name: DEX_SERVER_ADDRESS
