@@ -15,6 +15,9 @@ import (
 type AdminConfig struct {
 	// HashedPassword is a bcrypt hash of the password for the admin account.
 	HashedPassword string `envconfig:"ADMIN_ACCOUNT_PASSWORD_HASH" required:"true"`
+	// TokenAudience is the value to be used in the AUD claim of ID tokens issued
+	// for the admin account.
+	TokenAudience string `envconfig:"ADMIN_ACCOUNT_TOKEN_AUDIENCE" required:"true"`
 	// TokenSigningKey is the key used to sign ID tokens for the admin account.
 	TokenSigningKey []byte `envconfig:"TOKEN_SIGNING_KEY" required:"true"`
 }
