@@ -55,6 +55,10 @@ type Stage struct {
 	Status StageStatus `json:"status,omitempty"`
 }
 
+func (s *Stage) GetStatus() *StageStatus {
+	return &s.Status
+}
+
 // StageSpec describes the sources of material used by a Stage and how to
 // incorporate newly observed materials into the Stage.
 type StageSpec struct {
