@@ -20,11 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/api/user"
 )
 
-const (
-	authHeaderKey = "Authorization"
-
-	kargoIssuer = "kargo"
-)
+const authHeaderKey = "Authorization"
 
 var exemptProcedures = map[string]struct{}{
 	"/grpc.health.v1.Health/Check":                                   {},
@@ -262,7 +258,8 @@ func (a *authInterceptor) authenticate(
 	//   3. By the Kubernetes cluster's identity provider
 	//   4. By Kubernetes itself (a service account token, perhaps)
 
-	if untrustedClaims.Issuer == kargoIssuer {
+	if a.cfg.AdminConfig != nil &&
+		untrustedClaims.Issuer == a.cfg.AdminConfig.TokenIssuer {
 		// Case 1: This token was allegedly issued directly by the Kargo API server.
 		if a.verifyKargoIssuedTokenFn(rawToken) {
 			return user.ContextWithInfo(
