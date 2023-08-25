@@ -15,7 +15,7 @@ import (
 type AdminConfig struct {
 	// HashedPassword is a bcrypt hash of the password for the admin account.
 	HashedPassword string `envconfig:"ADMIN_ACCOUNT_PASSWORD_HASH" required:"true"`
-	// TokenIssuer the value to be used in the ISS claim of ID tokens issued for
+	// TokenIssuer is the value to be used in the ISS claim of ID tokens issued for
 	// for the admin account.
 	TokenIssuer string `envconfig:"ADMIN_ACCOUNT_TOKEN_ISSUER" required:"true"`
 	// TokenAudience is the value to be used in the AUD claim of ID tokens issued
