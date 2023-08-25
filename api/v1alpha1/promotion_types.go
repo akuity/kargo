@@ -36,6 +36,10 @@ type Promotion struct {
 	Status PromotionStatus `json:"status,omitempty"`
 }
 
+func (p *Promotion) GetStatus() *PromotionStatus {
+	return &p.Status
+}
+
 // PromotionSpec describes the desired transition of a specific Stage into a
 // specific StageState.
 type PromotionSpec struct {
