@@ -43,6 +43,8 @@ spec:
               value: "true"
             - name: ADMIN_ACCOUNT_TOKEN_ISSUER
               value: {{ .Values.api.protocol }}://{{ .Values.api.host }}
+            - name: ADMIN_ACCOUNT_TOKEN_AUDIENCE
+              value: {{ .Values.api.host }}
             - name: ADMIN_ACCOUNT_PASSWORD_HASH
               valueFrom:
                 secretKeyRef:

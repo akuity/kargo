@@ -14,6 +14,10 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+func init() {
+	jwt.MarshalSingleStringAsArray = false
+}
+
 type AdminLoginV1Alpha1Func func(
 	context.Context,
 	*connect.Request[svcv1alpha1.AdminLoginRequest],
@@ -47,6 +51,7 @@ func AdminLoginV1Alpha1(cfg *config.AdminConfig) AdminLoginV1Alpha1Func {
 			jwt.RegisteredClaims{
 				IssuedAt:  jwt.NewNumericDate(now),
 				Issuer:    cfg.TokenIssuer,
+				Audience:  []string{cfg.TokenAudience},
 				NotBefore: jwt.NewNumericDate(now),
 				Subject:   "admin",
 				ID:        uuid.NewV4().String(),
