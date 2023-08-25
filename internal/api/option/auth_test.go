@@ -155,9 +155,10 @@ func TestAuthenticate(t *testing.T) {
 	// The way the tests are structured, we don't need this to be valid. It just
 	// needs to be non-empty.
 	const (
-		testProcedure = "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects"
-		testIDPIssuer = "fake-issuer"
-		testToken     = "some-token"
+		testProcedure   = "akuity.io.kargo.service.v1alpha1.KargoService/ListProjects"
+		testIDPIssuer   = "fake-idp-issuer"
+		testKargoIssuer = "fake-kargo-issuer"
+		testToken       = "some-token"
 	)
 	testSets := map[string]struct {
 		procedure       string
@@ -223,10 +224,15 @@ func TestAuthenticate(t *testing.T) {
 		"failure verifying Kargo-issued token": {
 			procedure: testProcedure,
 			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					AdminConfig: &config.AdminConfig{
+						TokenIssuer: testKargoIssuer,
+					},
+				},
 				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
 					rc, ok := claims.(*jwt.RegisteredClaims)
 					require.True(t, ok)
-					rc.Issuer = kargoIssuer
+					rc.Issuer = testKargoIssuer
 					return nil, nil, nil
 				},
 				verifyKargoIssuedTokenFn: func(rawToken string) bool {
@@ -248,10 +254,15 @@ func TestAuthenticate(t *testing.T) {
 		"success verifying Kargo-issued token": {
 			procedure: testProcedure,
 			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					AdminConfig: &config.AdminConfig{
+						TokenIssuer: testKargoIssuer,
+					},
+				},
 				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
 					rc, ok := claims.(*jwt.RegisteredClaims)
 					require.True(t, ok)
-					rc.Issuer = kargoIssuer
+					rc.Issuer = testKargoIssuer
 					return nil, nil, nil
 				},
 				verifyKargoIssuedTokenFn: func(rawToken string) bool {
