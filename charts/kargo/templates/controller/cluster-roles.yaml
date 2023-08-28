@@ -49,6 +49,7 @@ rules:
   - promotions/status
   verbs:
   - update
+  - patch
 ---
 {{- if not .Values.controller.argocd.watchArgocdNamespaceOnly }}
 apiVersion: rbac.authorization.k8s.io/v1
