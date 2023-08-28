@@ -26,7 +26,6 @@ type WatchStageV1Alpha1Func func(
 
 func WatchStageV1Alpha1(client kubernetes.Client) WatchStageV1Alpha1Func {
 	validateProject := newProjectValidator(client)
-	// stageCli := dynamicCli.Resource(kargov1alpha1.GroupVersion.WithResource("stages"))
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.WatchStagesRequest],
