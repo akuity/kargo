@@ -11,6 +11,12 @@ spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
   concurrencyPolicy: Forbid
   jobTemplate:
+    metadata:
+      labels:
+        {{- include "kargo.selectorLabels" . | nindent 8 }}
+        {{- include "kargo.garbageCollector.labels" . | nindent 8 }}
+      annotations:
+        configmap/checksum: {{ include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | sha256sum }}
     spec:
       template:
         spec:
@@ -20,13 +26,9 @@ spec:
             image: {{ include "kargo.image" . }}
             imagePullPolicy: {{ .Values.image.pullPolicy }}
             command: ["/usr/local/bin/kargo", "garbage-collector"]
-            env:
-            - name: NUM_WORKERS
-              value: {{ quote .Values.garbageCollector.workers }}
-            - name: MAX_RETAINED_PROMOTIONS
-              value: {{ quote .Values.garbageCollector.maxRetainedPromotions }}
-            - name: LOG_LEVEL
-              value: {{ .Values.garbageCollector.logLevel }}
+            envFrom:
+            - configMapRef:
+                name: kargo-garbage-collector
             resources:
               {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
           restartPolicy: Never

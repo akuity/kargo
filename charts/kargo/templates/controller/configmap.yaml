@@ -1,0 +1,24 @@
+{{- if .Values.controller.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kargo-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.controller.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.controller.logLevel }}
+  {{- if .Values.controller.shardName }}
+  SHARD_NAME: {{ .Values.controller.shardName }}
+  {{- end }}
+  {{- if .Values.kubeconfigSecrets.kargo }}
+  KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
+  {{- end }}
+  {{- if .Values.kubeconfigSecrets.argocd }}
+  ARGOCD_KUBECONFIG: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml
+  {{- end }}
+  ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace }}
+  ARGOCD_ENABLE_CREDENTIAL_BORROWING: {{ quote .Values.controller.argocd.enableCredentialBorrowing }}
+  ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY: {{ quote .Values.controller.argocd.watchArgocdNamespaceOnly }}
+{{- end }}
