@@ -21,9 +21,6 @@ func (s *server) DeleteResource(
 	}
 
 	var res []*svcv1alpha1.DeleteResourceResult
-	for _, obj := range cluster {
-		res = append(res, s.deleteResource(ctx, obj))
-	}
 	for _, obj := range namespaced {
 		if err := s.validateProject(ctx, obj.GetNamespace()); err != nil {
 			res = append(res, &svcv1alpha1.DeleteResourceResult{
@@ -33,6 +30,9 @@ func (s *server) DeleteResource(
 			})
 			continue
 		}
+		res = append(res, s.deleteResource(ctx, obj))
+	}
+	for _, obj := range cluster {
 		res = append(res, s.deleteResource(ctx, obj))
 	}
 	return &connect.Response[svcv1alpha1.DeleteResourceResponse]{
