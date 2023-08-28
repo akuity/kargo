@@ -8,7 +8,7 @@ import React from 'react';
 
 import { ButtonIcon } from '@ui/features/common';
 import { promoteStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
 export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void }) => {
   const [promotingStateId, setPromotingStateId] = React.useState<string | null>(null);
@@ -60,7 +60,7 @@ export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void })
                 avatar={<FontAwesomeIcon icon={faCodeCommit} />}
                 title={
                   <Typography.Link
-                    href={`${commit.repoURL?.replace('.git', '')}/commit/${commit.id}`}
+                    href={`${commit.healthCheckCommit?.replace('.git', '')}/commit/${commit.id}`}
                     target='_blank'
                   >
                     {commit?.id?.slice(0, 7)}
@@ -86,7 +86,7 @@ export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void })
                 description={
                   <Descriptions size='small' column={1}>
                     <Descriptions.Item label='Repo URL'>
-                      {state.images[0]?.repoURL}
+                      {state.images[0]?.repoUrl}
                     </Descriptions.Item>
                     <Descriptions.Item label='Tag'>{state.images[0]?.tag}</Descriptions.Item>
                   </Descriptions>
