@@ -1,6 +1,8 @@
 package manifest
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -8,6 +10,11 @@ import (
 	"sigs.k8s.io/kustomize/api/provider"
 	"sigs.k8s.io/kustomize/api/resmap"
 	"sigs.k8s.io/kustomize/api/resource"
+	"sigs.k8s.io/kustomize/kyaml/openapi"
+)
+
+var (
+	initSchemaOnce = &sync.Once{}
 )
 
 type ParseFunc func(data []byte) (cluster, namespaced []*unstructured.Unstructured, err error)
@@ -15,10 +22,12 @@ type ParseFunc func(data []byte) (cluster, namespaced []*unstructured.Unstructur
 // NewParser returns a new parser that parses Kubernetes manifest and
 // returns parsed objects in cluster - namespaced order.
 func NewParser(scheme *runtime.Scheme) ParseFunc {
+	initSchemaOnce.Do(func() {
+		_ = openapi.Schema()
+	})
 	codecs := serializer.NewCodecFactory(scheme)
 	deserializer := codecs.UniversalDeserializer()
-	resourceFactory := provider.NewDefaultDepProvider().GetResourceFactory()
-	factory := resmap.NewFactory(resourceFactory)
+	factory := resmap.NewFactory(provider.NewDefaultDepProvider().GetResourceFactory())
 
 	return func(data []byte) (cluster, namespaced []*unstructured.Unstructured, err error) {
 		resMap, err := factory.NewResMapFromBytes(data)
