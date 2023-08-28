@@ -10,10 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargov1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/kubernetes"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -24,12 +24,8 @@ type WatchStageV1Alpha1Func func(
 	*connect.ServerStream[svcv1alpha1.WatchStagesResponse],
 ) error
 
-func WatchStageV1Alpha1(
-	kubeCli client.Client,
-	dynamicCli dynamic.Interface,
-) WatchStageV1Alpha1Func {
-	validateProject := newProjectValidator(kubeCli)
-	stageCli := dynamicCli.Resource(kargov1alpha1.GroupVersion.WithResource("stages"))
+func WatchStageV1Alpha1(client kubernetes.Client) WatchStageV1Alpha1Func {
+	validateProject := newProjectValidator(client)
 	return func(
 		ctx context.Context,
 		req *connect.Request[svcv1alpha1.WatchStagesRequest],
@@ -43,7 +39,7 @@ func WatchStageV1Alpha1(
 		}
 
 		if req.Msg.GetName() != "" {
-			if err := kubeCli.Get(ctx, client.ObjectKey{
+			if err := client.Get(ctx, libClient.ObjectKey{
 				Namespace: req.Msg.GetProject(),
 				Name:      req.Msg.GetName(),
 			}, &kargov1alpha1.Stage{}); err != nil {
@@ -58,7 +54,8 @@ func WatchStageV1Alpha1(
 		if req.Msg.GetName() != "" {
 			opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, req.Msg.GetName()).String()
 		}
-		w, err := stageCli.Namespace(req.Msg.GetProject()).Watch(ctx, opts)
+		w, err :=
+			client.Watch(ctx, &kargov1alpha1.Stage{}, req.Msg.GetProject(), opts)
 		if err != nil {
 			return errors.Wrap(err, "watch stage")
 		}

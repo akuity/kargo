@@ -235,20 +235,15 @@ func (a *authInterceptor) authenticate(
 	// HOW we might be able to verify the token further.
 	untrustedClaims := jwt.RegisteredClaims{}
 	if _, _, err := a.parseUnverifiedJWTFn(rawToken, &untrustedClaims); err != nil {
-		// TODO: krancour: This isn't safe to do until we start actually using this
-		// unidentified bearer token for accessing Kubernetes.
-		//
-		// // This token isn't a JWT, so it's probably an opaque bearer token for
-		// // the Kubernetes API server. Just run with it. If we're wrong,
-		// // Kubernetes API calls will simply have auth errors that will bubble
-		// // back to the client.
-		// return user.ContextWithInfo(
-		// 	ctx,
-		// 	user.Info{
-		// 		BearerToken: rawToken,
-		// 	},
-		// ), nil
-		return ctx, errors.New("client authentication is not yet supported")
+		// This token isn't a JWT, so it's probably an opaque bearer token for the
+		// Kubernetes API server. Just run with it. If we're wrong, Kubernetes API
+		// calls will simply have auth errors that will bubble back to the client.
+		return user.ContextWithInfo(
+			ctx,
+			user.Info{
+				BearerToken: rawToken,
+			},
+		), nil
 	}
 
 	// If we get to here, we're dealing with a JWT. It could have been issued:
@@ -289,20 +284,16 @@ func (a *authInterceptor) authenticate(
 		return ctx, errors.New("invalid token")
 	}
 
-	// TODO: krancour: This isn't safe to do until we start actually using this
-	// unidentified bearer token for accessing Kubernetes.
-	//
-	// // Case 3 or 4: We don't know how to verify this token. It's probably a token
-	// // issued by the Kubernetes cluster's identity provider. Just run with it.
-	// // If we're wrong, Kubernetes API calls will simply have auth errors that
-	// // will bubble back to the client.
-	// return user.ContextWithInfo(
-	// 	ctx,
-	// 	user.Info{
-	// 		BearerToken: rawToken,
-	// 	},
-	// ), nil
-	return ctx, errors.New("client authentication is not yet supported")
+	// Case 3 or 4: We don't know how to verify this token. It's probably a token
+	// issued by the Kubernetes cluster's identity provider. Just run with it. If
+	// we're wrong, Kubernetes API calls will simply have auth errors that will
+	// bubble back to the client.
+	return user.ContextWithInfo(
+		ctx,
+		user.Info{
+			BearerToken: rawToken,
+		},
+	), nil
 }
 
 // verifyIDPIssuedToken attempts to verify that the provided raw token was

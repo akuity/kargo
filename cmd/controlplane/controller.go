@@ -15,6 +15,7 @@ import (
 
 	"github.com/akuity/bookkeeper"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/applications"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/controller/stages"
@@ -48,7 +49,8 @@ func newControllerCommand() *cobra.Command {
 
 			var kargoMgr manager.Manager
 			{
-				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
+				restCfg, err :=
+					kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,
@@ -84,7 +86,8 @@ func newControllerCommand() *cobra.Command {
 
 			var appMgr manager.Manager
 			{
-				restCfg, err := getRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
+				restCfg, err :=
+					kubernetes.GetRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,

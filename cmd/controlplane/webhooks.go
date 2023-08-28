@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -33,7 +34,7 @@ func newWebhooksServerCommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo Webhooks Server")
 
-			restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
+			restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 			if err != nil {
 				return errors.Wrap(err, "error getting REST config")
 			}

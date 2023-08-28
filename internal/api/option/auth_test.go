@@ -198,27 +198,14 @@ func TestAuthenticate(t *testing.T) {
 				},
 			},
 			token: testToken,
-			// TODO: krancour: Until we actually start using unidentified bearer
-			// tokens for accessing Kubernetes, this case should produce an error.
-			//
-			// // We can't parse the token as a JWT, so we assume it could be an opaque
-			// // bearer token for the k8s API server. We expect user info containing
-			// // the raw token to be bound to the context.
-			// assertions: func(ctx context.Context, err error) {
-			// 	require.NoError(t, err)
-			// 	u, ok := user.InfoFromContext(ctx)
-			// 	require.True(t, ok)
-			// 	require.Equal(t, testToken, u.BearerToken)
-			// },
+			// We can't parse the token as a JWT, so we assume it could be an opaque
+			// bearer token for the k8s API server. We expect user info containing the
+			// raw token to be bound to the context.
 			assertions: func(ctx context.Context, err error) {
-				require.Error(t, err)
-				require.Equal(
-					t,
-					"client authentication is not yet supported",
-					err.Error(),
-				)
-				_, ok := user.InfoFromContext(ctx)
-				require.False(t, ok)
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
 		"failure verifying Kargo-issued token": {
@@ -360,27 +347,14 @@ func TestAuthenticate(t *testing.T) {
 				},
 			},
 			token: testToken,
-			// TODO: krancour: Until we actually start using unidentified bearer
-			// tokens for accessing Kubernetes, this case should produce an error.
-			//
-			// // We can't verify this token, so we assume it could be an an identity
-			// // token from the k8s API server's identity provider. We expect user
-			// // info containing the raw token to be bound to the context.
-			// assertions: func(ctx context.Context, err error) {
-			// 	require.NoError(t, err)
-			// 	u, ok := user.InfoFromContext(ctx)
-			// 	require.True(t, ok)
-			// 	require.Equal(t, testToken, u.BearerToken)
-			// },
+			// We can't verify this token, so we assume it could be an an identity
+			// token from the k8s API server's identity provider. We expect user info
+			// containing the raw token to be bound to the context.
 			assertions: func(ctx context.Context, err error) {
-				require.Error(t, err)
-				require.Equal(
-					t,
-					"client authentication is not yet supported",
-					err.Error(),
-				)
-				_, ok := user.InfoFromContext(ctx)
-				require.False(t, ok)
+				require.NoError(t, err)
+				u, ok := user.InfoFromContext(ctx)
+				require.True(t, ok)
+				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
 	}

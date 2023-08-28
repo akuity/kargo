@@ -1,24 +1,16 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net"
-	"sync"
 
 	pkgerrors "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/dynamic"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/config"
-	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
@@ -38,45 +30,13 @@ func newAPICommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo API Server")
 
-			var wg sync.WaitGroup
-			errCh := make(chan error, 2)
-
-			var kubeCli client.Client
-			var dynamicCli dynamic.Interface
-			{
-				restCfg, err := getRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
-				if err != nil {
-					return pkgerrors.Wrap(err, "error loading REST config")
-				}
-				scheme := runtime.NewScheme()
-				if err = corev1.AddToScheme(scheme); err != nil {
-					return pkgerrors.Wrap(err, "error adding Kubernetes core API to scheme")
-				}
-				if err = kargoapi.AddToScheme(scheme); err != nil {
-					return pkgerrors.Wrap(err, "error adding Kargo API to scheme")
-				}
-				mgr, err := ctrl.NewManager(
-					restCfg,
-					ctrl.Options{
-						Scheme:             scheme,
-						MetricsBindAddress: "0",
-					},
-				)
-				if err != nil {
-					return pkgerrors.Wrap(err, "new manager")
-				}
-				// Index PromotionPolicies by Stage
-				if err = kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
-					return pkgerrors.Wrap(err, "index PromotionPolicies by Stage")
-				}
-				wg.Add(1)
-				go func() {
-					mgrErr := mgr.Start(ctx)
-					errCh <- pkgerrors.Wrap(mgrErr, "start manager")
-					wg.Done()
-				}()
-				kubeCli = mgr.GetClient()
-				dynamicCli = dynamic.NewForConfigOrDie(restCfg)
+			restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
+			if err != nil {
+				return pkgerrors.Wrap(err, "error loading REST config")
+			}
+			client, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{})
+			if err != nil {
+				return pkgerrors.Wrap(err, "error creating Kubernetes client")
 			}
 
 			cfg := config.ServerConfigFromEnv()
@@ -91,7 +51,7 @@ func newAPICommand() *cobra.Command {
 				}).Info("SSO via OpenID Connect is enabled")
 			}
 
-			srv, err := api.NewServer(cfg, kubeCli, dynamicCli)
+			srv, err := api.NewServer(cfg, client)
 			if err != nil {
 				return pkgerrors.Wrap(err, "error creating API server")
 			}
@@ -106,22 +66,9 @@ func newAPICommand() *cobra.Command {
 			if err != nil {
 				return pkgerrors.Wrap(err, "error creating listener")
 			}
-			defer func() {
-				_ = l.Close()
-			}()
-			wg.Add(1)
-			go func() {
-				srvErr := srv.Serve(ctx, l)
-				errCh <- pkgerrors.Wrap(srvErr, "serve")
-				wg.Done()
-			}()
-			wg.Wait()
-			close(errCh)
-			var resErr error
-			for err := range errCh {
-				resErr = errors.Join(resErr, err)
-			}
-			return resErr
+			defer l.Close()
+
+			return pkgerrors.Wrap(srv.Serve(ctx, l), "serve")
 		},
 	}
 }
