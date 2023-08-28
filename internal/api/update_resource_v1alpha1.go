@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigyaml "sigs.k8s.io/yaml"
 
@@ -15,16 +16,16 @@ func (s *server) UpdateResource(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdateResourceRequest],
 ) (*connect.Response[svcv1alpha1.UpdateResourceResponse], error) {
-	parsed, err := s.parseKubernetesManifest(req.Msg.GetManifest())
+	cluster, namespaced, err := s.parseKubernetesManifest(req.Msg.GetManifest())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}
 
 	var res []*svcv1alpha1.UpdateResourceResult
-	for _, obj := range parsed {
-		if req.Msg.GetNamespace() != "" {
-			obj.SetNamespace(req.Msg.GetNamespace())
-		}
+	for _, obj := range cluster {
+		res = append(res, s.updateResource(ctx, obj))
+	}
+	for _, obj := range namespaced {
 		if err := s.validateProject(ctx, obj.GetNamespace()); err != nil {
 			res = append(res, &svcv1alpha1.UpdateResourceResult{
 				Result: &svcv1alpha1.UpdateResourceResult_Error{
@@ -33,44 +34,48 @@ func (s *server) UpdateResource(
 			})
 			continue
 		}
-
-		currentObj := obj.DeepCopy()
-		if err := s.client.Get(ctx, client.ObjectKeyFromObject(obj), currentObj); err != nil {
-			res = append(res, &svcv1alpha1.UpdateResourceResult{
-				Result: &svcv1alpha1.UpdateResourceResult_Error{
-					Error: errors.Wrap(err, "get resource").Error(),
-				},
-			})
-			continue
-		}
-
-		obj.SetResourceVersion(currentObj.GetResourceVersion())
-		if err := s.client.Update(ctx, obj); err != nil {
-			res = append(res, &svcv1alpha1.UpdateResourceResult{
-				Result: &svcv1alpha1.UpdateResourceResult_Error{
-					Error: errors.Wrap(err, "update resource").Error(),
-				},
-			})
-			continue
-		}
-
-		updatedManifest, err := sigyaml.Marshal(obj)
-		if err != nil {
-			res = append(res, &svcv1alpha1.UpdateResourceResult{
-				Result: &svcv1alpha1.UpdateResourceResult_Error{
-					Error: errors.Wrap(err, "marshal updated manifest").Error(),
-				},
-			})
-		}
-		res = append(res, &svcv1alpha1.UpdateResourceResult{
-			Result: &svcv1alpha1.UpdateResourceResult_UpdatedResourceManifest{
-				UpdatedResourceManifest: updatedManifest,
-			},
-		})
+		res = append(res, s.updateResource(ctx, obj))
 	}
 	return &connect.Response[svcv1alpha1.UpdateResourceResponse]{
 		Msg: &svcv1alpha1.UpdateResourceResponse{
 			Results: res,
 		},
 	}, nil
+}
+
+func (s *server) updateResource(
+	ctx context.Context,
+	obj *unstructured.Unstructured,
+) *svcv1alpha1.UpdateResourceResult {
+	currentObj := obj.DeepCopy()
+	if err := s.client.Get(ctx, client.ObjectKeyFromObject(obj), currentObj); err != nil {
+		return &svcv1alpha1.UpdateResourceResult{
+			Result: &svcv1alpha1.UpdateResourceResult_Error{
+				Error: errors.Wrap(err, "get resource").Error(),
+			},
+		}
+	}
+
+	obj.SetResourceVersion(currentObj.GetResourceVersion())
+	if err := s.client.Update(ctx, obj); err != nil {
+		return &svcv1alpha1.UpdateResourceResult{
+			Result: &svcv1alpha1.UpdateResourceResult_Error{
+				Error: errors.Wrap(err, "update resource").Error(),
+			},
+		}
+	}
+
+	updatedManifest, err := sigyaml.Marshal(obj)
+	if err != nil {
+		return &svcv1alpha1.UpdateResourceResult{
+			Result: &svcv1alpha1.UpdateResourceResult_Error{
+				Error: errors.Wrap(err, "marshal updated manifest").Error(),
+			},
+		}
+	}
+	return &svcv1alpha1.UpdateResourceResult{
+		Result: &svcv1alpha1.UpdateResourceResult_UpdatedResourceManifest{
+			UpdatedResourceManifest: updatedManifest,
+		},
+	}
 }

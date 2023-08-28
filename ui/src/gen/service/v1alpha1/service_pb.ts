@@ -442,12 +442,7 @@ export class TypedStageSpec extends Message<TypedStageSpec> {
  */
 export class CreateResourceRequest extends Message<CreateResourceRequest> {
   /**
-   * @generated from field: optional string namespace = 1;
-   */
-  namespace?: string;
-
-  /**
-   * @generated from field: bytes manifest = 2;
+   * @generated from field: bytes manifest = 1;
    */
   manifest = new Uint8Array(0);
 
@@ -459,8 +454,7 @@ export class CreateResourceRequest extends Message<CreateResourceRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateResourceRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 1, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateResourceRequest {
@@ -572,12 +566,7 @@ export class CreateResourceResponse extends Message<CreateResourceResponse> {
  */
 export class UpdateResourceRequest extends Message<UpdateResourceRequest> {
   /**
-   * @generated from field: optional string namespace = 1;
-   */
-  namespace?: string;
-
-  /**
-   * @generated from field: bytes manifest = 2;
+   * @generated from field: bytes manifest = 1;
    */
   manifest = new Uint8Array(0);
 
@@ -589,8 +578,7 @@ export class UpdateResourceRequest extends Message<UpdateResourceRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateResourceRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 1, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateResourceRequest {
@@ -702,12 +690,7 @@ export class UpdateResourceResponse extends Message<UpdateResourceResponse> {
  */
 export class DeleteResourceRequest extends Message<DeleteResourceRequest> {
   /**
-   * @generated from field: optional string namespace = 1;
-   */
-  namespace?: string;
-
-  /**
-   * @generated from field: bytes manifest = 2;
+   * @generated from field: bytes manifest = 1;
    */
   manifest = new Uint8Array(0);
 
@@ -719,8 +702,7 @@ export class DeleteResourceRequest extends Message<DeleteResourceRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteResourceRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 1, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteResourceRequest {

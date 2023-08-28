@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/kustomize/api/resource"
 )
 
-type ParseFunc func(data []byte) ([]*unstructured.Unstructured, error)
+type ParseFunc func(data []byte) (cluster, namespaced []*unstructured.Unstructured, err error)
 
 // NewParser returns a new parser that parses Kubernetes manifest and
 // returns parsed objects in cluster - namespaced order.
@@ -20,29 +20,30 @@ func NewParser(scheme *runtime.Scheme) ParseFunc {
 	resourceFactory := provider.NewDefaultDepProvider().GetResourceFactory()
 	factory := resmap.NewFactory(resourceFactory)
 
-	return func(data []byte) ([]*unstructured.Unstructured, error) {
+	return func(data []byte) (cluster, namespaced []*unstructured.Unstructured, err error) {
 		resMap, err := factory.NewResMapFromBytes(data)
 		if err != nil {
-			return nil, errors.Wrap(err, "new resmap from data")
+			return nil, nil, errors.Wrap(err, "new resmap from data")
 		}
-		res := make([]*unstructured.Unstructured, 0, resMap.Size())
+		cluster = make([]*unstructured.Unstructured, 0, resMap.Size())
 		for _, r := range resMap.ClusterScoped() {
 			u, err := resourceToUnstructured(deserializer, r)
 			if err != nil {
-				return nil, errors.Wrap(err, "resource to unstructured")
+				return nil, nil, errors.Wrap(err, "resource to unstructured")
 			}
-			res = append(res, u)
+			cluster = append(cluster, u)
 		}
+		namespaced = make([]*unstructured.Unstructured, 0, resMap.Size()-len(cluster))
 		for _, resources := range resMap.GroupedByOriginalNamespace() {
 			for _, r := range resources {
 				u, err := resourceToUnstructured(deserializer, r)
 				if err != nil {
-					return nil, errors.Wrap(err, "resource to unstructured")
+					return nil, nil, errors.Wrap(err, "resource to unstructured")
 				}
-				res = append(res, u)
+				namespaced = append(namespaced, u)
 			}
 		}
-		return res, nil
+		return cluster, namespaced, nil
 	}
 }
 

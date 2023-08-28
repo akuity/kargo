@@ -97,8 +97,7 @@ message TypedStageSpec {
 }
 
 message CreateResourceRequest {
-  optional string namespace = 1;
-  bytes manifest = 2;
+  bytes manifest = 1;
 }
 
 message CreateResourceResult {
@@ -113,8 +112,7 @@ message CreateResourceResponse {
 }
 
 message UpdateResourceRequest {
-  optional string namespace = 1;
-  bytes manifest = 2;
+  bytes manifest = 1;
 }
 
 message UpdateResourceResult {
@@ -129,8 +127,7 @@ message UpdateResourceResponse {
 }
 
 message DeleteResourceRequest {
-  optional string namespace = 1;
-  bytes manifest = 2;
+  bytes manifest = 1;
 }
 
 message DeleteResourceResult {

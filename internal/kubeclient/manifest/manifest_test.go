@@ -141,7 +141,7 @@ metadata:
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := parseKubernetesManifest(tc.data)
+			actualCluster, actualNamespaced, err := parseKubernetesManifest(tc.data)
 			if tc.expectedErr {
 				require.Error(t, err)
 				return
@@ -154,7 +154,7 @@ metadata:
 				require.NoError(t, err)
 				expected[idx] = &unstructured.Unstructured{Object: u}
 			}
-			require.EqualValues(t, expected, actual)
+			require.EqualValues(t, expected, append(actualCluster, actualNamespaced...))
 		})
 	}
 }
