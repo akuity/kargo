@@ -118,6 +118,9 @@ api:
     ## that you generate this using a password manager or a command like
     ## `openssl rand -base64 29 | tr -d "=+/" | cut
     tokenSigningKey: <signing key>
+    ## Specifies how long ID tokens for the admin account are valid. i.e.
+    ## The expiry will be the time of issue plus this duration.
+    tokenTTL: 1h
 
   ## All settings related to enabling OpenID Connect as an authentication
   ## method.

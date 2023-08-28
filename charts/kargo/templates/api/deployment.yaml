@@ -55,6 +55,8 @@ spec:
                 secretKeyRef:
                   name: kargo-api
                   key: tokenSigningKey
+            - name: ADMIN_ACCOUNT_TOKEN_TTL
+              value: {{ .Values.api.adminAccount.tokenTTL }}
 {{- end }}
 {{- if .Values.api.oidc.enabled }}
             - name: OIDC_ENABLED

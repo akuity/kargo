@@ -55,7 +55,7 @@ func AdminLoginV1Alpha1(cfg *config.AdminConfig) AdminLoginV1Alpha1Func {
 				NotBefore: jwt.NewNumericDate(now),
 				Subject:   "admin",
 				ID:        uuid.NewV4().String(),
-				ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
+				ExpiresAt: jwt.NewNumericDate(now.Add(cfg.TokenTTL)),
 			},
 		)
 

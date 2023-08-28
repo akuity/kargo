@@ -23,6 +23,9 @@ type AdminConfig struct {
 	TokenAudience string `envconfig:"ADMIN_ACCOUNT_TOKEN_AUDIENCE" required:"true"`
 	// TokenSigningKey is the key used to sign ID tokens for the admin account.
 	TokenSigningKey []byte `envconfig:"ADMIN_ACCOUNT_TOKEN_SIGNING_KEY" required:"true"`
+	// TokenTTL specifies how long ID tokens for the admin account are valid. i.e.
+	// The expiry will be the time of issue plus this duration.
+	TokenTTL time.Duration `envconfig:"ADMIN_ACCOUNT_TOKEN_TTL" default:"1h"`
 }
 
 // AdminConfigFromEnv returns an AdminConfig populated from environment
