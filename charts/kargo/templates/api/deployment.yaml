@@ -41,6 +41,8 @@ spec:
 {{- if .Values.api.adminAccount.enabled }}
             - name: ADMIN_ACCOUNT_ENABLED
               value: "true"
+            - name: ADMIN_ACCOUNT_TOKEN_ISSUER
+              value: {{ .Values.api.protocol }}://{{ .Values.api.host }}
             - name: ADMIN_ACCOUNT_TOKEN_AUDIENCE
               value: {{ .Values.api.host }}
             - name: ADMIN_ACCOUNT_PASSWORD_HASH
@@ -48,11 +50,13 @@ spec:
                 secretKeyRef:
                   name: kargo-api
                   key: adminPassword
-            - name: TOKEN_SIGNING_KEY
+            - name: ADMIN_ACCOUNT_TOKEN_SIGNING_KEY
               valueFrom:
                 secretKeyRef:
                   name: kargo-api
                   key: tokenSigningKey
+            - name: ADMIN_ACCOUNT_TOKEN_TTL
+              value: {{ .Values.api.adminAccount.tokenTTL }}
 {{- end }}
 {{- if .Values.api.oidc.enabled }}
             - name: OIDC_ENABLED
@@ -61,7 +65,7 @@ spec:
             - name: OIDC_ISSUER_URL
               value: {{ .Values.api.protocol }}://{{ .Values.api.host }}/dex
             - name: OIDC_CLIENT_ID
-              value: kargo
+              value: {{ .Values.api.host }}
             - name: DEX_ENABLED
               value: "true"
             - name: DEX_SERVER_ADDRESS

@@ -15,11 +15,17 @@ import (
 type AdminConfig struct {
 	// HashedPassword is a bcrypt hash of the password for the admin account.
 	HashedPassword string `envconfig:"ADMIN_ACCOUNT_PASSWORD_HASH" required:"true"`
+	// TokenIssuer is the value to be used in the ISS claim of ID tokens issued for
+	// the admin account.
+	TokenIssuer string `envconfig:"ADMIN_ACCOUNT_TOKEN_ISSUER" required:"true"`
 	// TokenAudience is the value to be used in the AUD claim of ID tokens issued
 	// for the admin account.
 	TokenAudience string `envconfig:"ADMIN_ACCOUNT_TOKEN_AUDIENCE" required:"true"`
 	// TokenSigningKey is the key used to sign ID tokens for the admin account.
-	TokenSigningKey []byte `envconfig:"TOKEN_SIGNING_KEY" required:"true"`
+	TokenSigningKey []byte `envconfig:"ADMIN_ACCOUNT_TOKEN_SIGNING_KEY" required:"true"`
+	// TokenTTL specifies how long ID tokens for the admin account are valid. i.e.
+	// The expiry will be the time of issue plus this duration.
+	TokenTTL time.Duration `envconfig:"ADMIN_ACCOUNT_TOKEN_TTL" default:"1h"`
 }
 
 // AdminConfigFromEnv returns an AdminConfig populated from environment

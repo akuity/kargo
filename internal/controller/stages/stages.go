@@ -241,17 +241,20 @@ func (r *reconciler) Reconcile(
 	}
 	logger.Debug("found Stage")
 
-	stage.Status, err = r.syncStage(ctx, stage)
+	var newStatus api.StageStatus
+	newStatus, err = r.syncStage(ctx, stage)
 	if err != nil {
-		stage.Status.Error = err.Error()
+		newStatus.Error = err.Error()
 		logger.Errorf("error syncing Stage: %s", stage.Status.Error)
 	} else {
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
-		stage.Status.Error = ""
+		newStatus.Error = ""
 	}
 
-	updateErr := r.kargoClient.Status().Update(ctx, stage)
+	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *api.StageStatus) {
+		*status = newStatus
+	})
 	if updateErr != nil {
 		logger.Errorf("error updating Stage status: %s", updateErr)
 	}
