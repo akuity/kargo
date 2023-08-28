@@ -1,42 +1,63 @@
 package manifest
 
 import (
-	"bytes"
-	"io"
-
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/kustomize/api/provider"
+	"sigs.k8s.io/kustomize/api/resmap"
+	"sigs.k8s.io/kustomize/api/resource"
 )
 
 type ParseFunc func(data []byte) ([]*unstructured.Unstructured, error)
 
+// NewParser returns a new parser that parses Kubernetes manifest and
+// returns parsed objects in cluster - namespaced order.
 func NewParser(scheme *runtime.Scheme) ParseFunc {
 	codecs := serializer.NewCodecFactory(scheme)
 	deserializer := codecs.UniversalDeserializer()
-	return func(data []byte) ([]*unstructured.Unstructured, error) {
-		d := kubeyaml.NewYAMLOrJSONDecoder(bytes.NewReader(data), 4096)
-		var res []*unstructured.Unstructured
-		for {
-			var ext runtime.RawExtension
-			if err := d.Decode(&ext); err != nil {
-				if errors.Is(err, io.EOF) {
-					return res, nil
-				}
-				return nil, errors.Wrap(err, "decode data")
-			}
+	resourceFactory := provider.NewDefaultDepProvider().GetResourceFactory()
+	factory := resmap.NewFactory(resourceFactory)
 
-			obj, _, err := deserializer.Decode(ext.Raw, nil, nil)
-			if err != nil {
-				return nil, errors.Wrap(err, "decode object")
-			}
-			u, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&obj)
-			if err != nil {
-				return nil, errors.Wrap(err, "convert to unstructured")
-			}
-			res = append(res, &unstructured.Unstructured{Object: u})
+	return func(data []byte) ([]*unstructured.Unstructured, error) {
+		resMap, err := factory.NewResMapFromBytes(data)
+		if err != nil {
+			return nil, errors.Wrap(err, "new resmap from data")
 		}
+		res := make([]*unstructured.Unstructured, 0, resMap.Size())
+		for _, r := range resMap.ClusterScoped() {
+			u, err := resourceToUnstructured(deserializer, r)
+			if err != nil {
+				return nil, errors.Wrap(err, "resource to unstructured")
+			}
+			res = append(res, u)
+		}
+		for _, resources := range resMap.GroupedByOriginalNamespace() {
+			for _, r := range resources {
+				u, err := resourceToUnstructured(deserializer, r)
+				if err != nil {
+					return nil, errors.Wrap(err, "resource to unstructured")
+				}
+				res = append(res, u)
+			}
+		}
+		return res, nil
 	}
+}
+
+func resourceToUnstructured(decoder runtime.Decoder, r *resource.Resource) (*unstructured.Unstructured, error) {
+	data, err := r.AsYAML()
+	if err != nil {
+		return nil, errors.Wrap(err, "resource to yaml")
+	}
+	obj, _, err := decoder.Decode(data, nil, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "decode object")
+	}
+	u, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&obj)
+	if err != nil {
+		return nil, errors.Wrap(err, "convert to unstructured")
+	}
+	return &unstructured.Unstructured{Object: u}, nil
 }

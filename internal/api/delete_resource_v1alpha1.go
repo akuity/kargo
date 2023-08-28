@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
+	"golang.org/x/exp/slices"
 	sigyaml "sigs.k8s.io/yaml"
 
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -18,6 +19,9 @@ func (s *server) DeleteResource(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}
+
+	// Reverse parsed objects to delete namespaced resources first
+	slices.Reverse(parsed)
 
 	var res []*svcv1alpha1.DeleteResourceResult
 	for _, obj := range parsed {
