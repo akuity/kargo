@@ -41,6 +41,15 @@ const (
 	KargoServiceGetPublicConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetPublicConfig"
 	// KargoServiceAdminLoginProcedure is the fully-qualified name of the KargoService's AdminLogin RPC.
 	KargoServiceAdminLoginProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/AdminLogin"
+	// KargoServiceCreateResourceProcedure is the fully-qualified name of the KargoService's
+	// CreateResource RPC.
+	KargoServiceCreateResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateResource"
+	// KargoServiceUpdateResourceProcedure is the fully-qualified name of the KargoService's
+	// UpdateResource RPC.
+	KargoServiceUpdateResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateResource"
+	// KargoServiceDeleteResourceProcedure is the fully-qualified name of the KargoService's
+	// DeleteResource RPC.
+	KargoServiceDeleteResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteResource"
 	// KargoServiceCreateStageProcedure is the fully-qualified name of the KargoService's CreateStage
 	// RPC.
 	KargoServiceCreateStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateStage"
@@ -97,6 +106,11 @@ type KargoServiceClient interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
+	// TODO(devholic): Add ApplyResource API
+	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+	CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error)
+	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
+	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
 	CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
@@ -139,6 +153,21 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 		adminLogin: connect.NewClient[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse](
 			httpClient,
 			baseURL+KargoServiceAdminLoginProcedure,
+			opts...,
+		),
+		createResource: connect.NewClient[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse](
+			httpClient,
+			baseURL+KargoServiceCreateResourceProcedure,
+			opts...,
+		),
+		updateResource: connect.NewClient[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse](
+			httpClient,
+			baseURL+KargoServiceUpdateResourceProcedure,
+			opts...,
+		),
+		deleteResource: connect.NewClient[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteResourceProcedure,
 			opts...,
 		),
 		createStage: connect.NewClient[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse](
@@ -234,6 +263,9 @@ type kargoServiceClient struct {
 	getVersionInfo           *connect.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
 	getPublicConfig          *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
 	adminLogin               *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
+	createResource           *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
+	updateResource           *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
+	deleteResource           *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
 	createStage              *connect.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
 	listStages               *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
 	getStage                 *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
@@ -266,6 +298,21 @@ func (c *kargoServiceClient) GetPublicConfig(ctx context.Context, req *connect.R
 // AdminLogin calls akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin.
 func (c *kargoServiceClient) AdminLogin(ctx context.Context, req *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error) {
 	return c.adminLogin.CallUnary(ctx, req)
+}
+
+// CreateResource calls akuity.io.kargo.service.v1alpha1.KargoService.CreateResource.
+func (c *kargoServiceClient) CreateResource(ctx context.Context, req *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error) {
+	return c.createResource.CallUnary(ctx, req)
+}
+
+// UpdateResource calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource.
+func (c *kargoServiceClient) UpdateResource(ctx context.Context, req *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error) {
+	return c.updateResource.CallUnary(ctx, req)
+}
+
+// DeleteResource calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource.
+func (c *kargoServiceClient) DeleteResource(ctx context.Context, req *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error) {
+	return c.deleteResource.CallUnary(ctx, req)
 }
 
 // CreateStage calls akuity.io.kargo.service.v1alpha1.KargoService.CreateStage.
@@ -360,6 +407,11 @@ type KargoServiceHandler interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
+	// TODO(devholic): Add ApplyResource API
+	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+	CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error)
+	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
+	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
 	CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
@@ -398,6 +450,21 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServiceAdminLoginHandler := connect.NewUnaryHandler(
 		KargoServiceAdminLoginProcedure,
 		svc.AdminLogin,
+		opts...,
+	)
+	kargoServiceCreateResourceHandler := connect.NewUnaryHandler(
+		KargoServiceCreateResourceProcedure,
+		svc.CreateResource,
+		opts...,
+	)
+	kargoServiceUpdateResourceHandler := connect.NewUnaryHandler(
+		KargoServiceUpdateResourceProcedure,
+		svc.UpdateResource,
+		opts...,
+	)
+	kargoServiceDeleteResourceHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteResourceProcedure,
+		svc.DeleteResource,
 		opts...,
 	)
 	kargoServiceCreateStageHandler := connect.NewUnaryHandler(
@@ -493,6 +560,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetPublicConfigHandler.ServeHTTP(w, r)
 		case KargoServiceAdminLoginProcedure:
 			kargoServiceAdminLoginHandler.ServeHTTP(w, r)
+		case KargoServiceCreateResourceProcedure:
+			kargoServiceCreateResourceHandler.ServeHTTP(w, r)
+		case KargoServiceUpdateResourceProcedure:
+			kargoServiceUpdateResourceHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteResourceProcedure:
+			kargoServiceDeleteResourceHandler.ServeHTTP(w, r)
 		case KargoServiceCreateStageProcedure:
 			kargoServiceCreateStageHandler.ServeHTTP(w, r)
 		case KargoServiceListStagesProcedure:
@@ -546,6 +619,18 @@ func (UnimplementedKargoServiceHandler) GetPublicConfig(context.Context, *connec
 
 func (UnimplementedKargoServiceHandler) AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateResource is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error) {
