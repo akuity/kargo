@@ -1,0 +1,14 @@
+{{- if .Values.garbageCollector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kargo-garbage-collector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.garbageCollector.logLevel }}
+  NUM_WORKERS: {{ quote .Values.garbageCollector.workers }}
+  MAX_RETAINED_PROMOTIONS: {{ quote .Values.garbageCollector.maxRetainedPromotions }}
+{{- end }}

@@ -19,7 +19,7 @@ spec:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.dexServer.labels" . | nindent 8 }}
       annotations:
-        secret-checksum/kargo-dex-server: {{ include (print $.Template.BasePath "/dex-server/secret.yaml") . | sha256sum }}
+        secret/checksum: {{ include (print $.Template.BasePath "/dex-server/secret.yaml") . | sha256sum }}
     spec:
       serviceAccount: kargo-dex-server
       containers:
