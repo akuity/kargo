@@ -1014,6 +1014,86 @@ export class PromoteStageResponse extends Message<PromoteStageResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.RefreshStageRequest
+ */
+export class RefreshStageRequest extends Message<RefreshStageRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<RefreshStageRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.RefreshStageRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RefreshStageRequest {
+    return new RefreshStageRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RefreshStageRequest {
+    return new RefreshStageRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RefreshStageRequest {
+    return new RefreshStageRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RefreshStageRequest | PlainMessage<RefreshStageRequest> | undefined, b: RefreshStageRequest | PlainMessage<RefreshStageRequest> | undefined): boolean {
+    return proto3.util.equals(RefreshStageRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.RefreshStageResponse
+ */
+export class RefreshStageResponse extends Message<RefreshStageResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+   */
+  stage?: Stage;
+
+  constructor(data?: PartialMessage<RefreshStageResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.RefreshStageResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "stage", kind: "message", T: Stage },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RefreshStageResponse {
+    return new RefreshStageResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RefreshStageResponse {
+    return new RefreshStageResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RefreshStageResponse {
+    return new RefreshStageResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RefreshStageResponse | PlainMessage<RefreshStageResponse> | undefined, b: RefreshStageResponse | PlainMessage<RefreshStageResponse> | undefined): boolean {
+    return proto3.util.equals(RefreshStageResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec
  */
 export class TypedPromotionPolicySpec extends Message<TypedPromotionPolicySpec> {

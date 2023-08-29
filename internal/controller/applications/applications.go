@@ -6,7 +6,6 @@ import (
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -17,10 +16,6 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
-)
-
-const (
-	forceReconcileAnnotationKey = "kargo.akuity.io/force-reconcile"
 )
 
 // reconciler reconciles Argo CD Application resources.
@@ -119,26 +114,25 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Force associated Stages to reconcile by patching an annotation
+	var errs []error
 	for _, e := range stages.Items {
 		stage := e // This is to sidestep implicit memory aliasing in this for loop
-		patch := client.MergeFrom(stage.DeepCopy())
-		if stage.Annotations == nil {
-			stage.Annotations = map[string]string{}
+		objKey := client.ObjectKey{
+			Namespace: stage.Namespace,
+			Name:      stage.Name,
 		}
-		stage.Annotations[forceReconcileAnnotationKey] = uuid.NewV4().String()
-		if err := r.kubeClient.Patch(ctx, &stage, patch); err != nil {
-			logger.Error(err)
-			return result, errors.Wrapf(
-				err,
-				"error patching Stage %q in namespace %q",
-				stage.Name,
-				stage.Namespace,
-			)
+		_, err := api.RefreshStage(ctx, r.kubeClient, objKey)
+		if err != nil {
+			errs = append(errs, err)
+			continue
 		}
 		logger.WithFields(log.Fields{
 			"stageNamespace": stage.Namespace,
 			"stage":          stage.Name,
 		}).Debug("successfully patched Stage to force reconciliation")
+	}
+	if len(errs) > 0 {
+		return result, errs[0]
 	}
 
 	return result, nil
