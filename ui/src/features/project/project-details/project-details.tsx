@@ -1,12 +1,12 @@
 import { FlowAnalysisGraph, FlowGraphEdgeData, IGraph, LabelStyle } from '@ant-design/graphs';
 import { createPromiseClient } from '@bufbuild/connect';
-import { createConnectTransport } from '@bufbuild/connect-web';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
 import { listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
@@ -33,7 +33,6 @@ export const ProjectDetails = () => {
     const cancel = new AbortController();
 
     const watchStages = async () => {
-      const transport = createConnectTransport({ baseUrl: '' });
       const promiseClient = createPromiseClient(KargoService, transport);
       const stream = promiseClient.watchStages(
         { project: 'kargo-demo', name: 'test' },
