@@ -61,7 +61,7 @@ export const Subscriptions = (props: {
       {!!subscriptions.repos?.images.length && (
         <>
           <Typography.Title level={5} style={{ marginTop: '.8em' }}>
-            Images
+            Docker images
           </Typography.Title>
           <Space direction='vertical' style={{ width: '100%' }}>
             {subscriptions?.repos.images.map((image) => (
@@ -75,6 +75,27 @@ export const Subscriptions = (props: {
                 <Descriptions.Item label='Update Strategy'>
                   {image.updateStrategy}
                 </Descriptions.Item>
+              </Descriptions>
+            ))}
+          </Space>
+        </>
+      )}
+
+      {!!subscriptions.repos?.charts.length && (
+        <>
+          <Typography.Title level={5} style={{ marginTop: '.8em' }}>
+            Helm charts
+          </Typography.Title>
+          <Space direction='vertical' style={{ width: '100%' }}>
+            {subscriptions?.repos.charts.map((chart) => (
+              <Descriptions bordered size='small' key={chart.registryUrl}>
+                <Descriptions.Item label='Registry URL'>{chart.registryUrl}</Descriptions.Item>
+                {chart.name && <Descriptions.Item label='Name'>{chart.name}</Descriptions.Item>}
+                {chart.semverConstraint && (
+                  <Descriptions.Item label='Semver Constraint'>
+                    {chart.semverConstraint}
+                  </Descriptions.Item>
+                )}
               </Descriptions>
             ))}
           </Space>
