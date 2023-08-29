@@ -2,7 +2,7 @@ import { Descriptions, Space, Typography } from 'antd';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { Subscriptions as SubscriptionsType } from '@ui/gen/v1alpha1/generated_pb';
+import { Subscriptions as SubscriptionsType } from '@ui/gen/v1alpha1/types_pb';
 
 export const Subscriptions = (props: {
   subscriptions?: SubscriptionsType;
@@ -18,7 +18,7 @@ export const Subscriptions = (props: {
     <div>
       <Typography.Title level={3}>Subscriptions</Typography.Title>
 
-      {subscriptions.upstreamStages.length > 0 && (
+      {!!subscriptions.upstreamStages.length && (
         <>
           <Typography.Title level={5} style={{ marginTop: '.8em' }}>
             Upstream Stages
@@ -36,40 +36,42 @@ export const Subscriptions = (props: {
                     {stage.name}
                   </Link>
                 </Descriptions.Item>
-                <Descriptions.Item label='Project'>{stage.namespace}</Descriptions.Item>
               </Descriptions>
             ))}
           </Space>
         </>
       )}
 
-      {subscriptions.repos?.git && (
+      {!!subscriptions.repos?.git.length && (
         <>
           <Typography.Title level={5} style={{ marginTop: '.8em' }}>
             Git Repositories
           </Typography.Title>
           <Space direction='vertical' style={{ width: '100%' }}>
             {subscriptions?.repos.git.map((gitRepo) => (
-              <Descriptions bordered size='small' key={gitRepo.repoURL} column={1}>
-                <Descriptions.Item label='URL'>{gitRepo.repoURL}</Descriptions.Item>
+              <Descriptions bordered size='small' key={gitRepo.repoUrl} column={1}>
+                <Descriptions.Item label='URL'>{gitRepo.repoUrl}</Descriptions.Item>
+                <Descriptions.Item label='Branch'>{gitRepo.branch}</Descriptions.Item>
               </Descriptions>
             ))}
           </Space>
         </>
       )}
 
-      {subscriptions.repos?.images && (
+      {!!subscriptions.repos?.images.length && (
         <>
           <Typography.Title level={5} style={{ marginTop: '.8em' }}>
             Images
           </Typography.Title>
           <Space direction='vertical' style={{ width: '100%' }}>
             {subscriptions?.repos.images.map((image) => (
-              <Descriptions bordered size='small' key={image.repoURL}>
-                <Descriptions.Item label='URL'>{image.repoURL}</Descriptions.Item>
-                <Descriptions.Item label='Semver Constraint'>
-                  {image.semverConstraint}
-                </Descriptions.Item>
+              <Descriptions bordered size='small' key={image.repoUrl}>
+                <Descriptions.Item label='URL'>{image.repoUrl}</Descriptions.Item>
+                {image.semverConstraint && (
+                  <Descriptions.Item label='Semver Constraint'>
+                    {image.semverConstraint}
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label='Update Strategy'>
                   {image.updateStrategy}
                 </Descriptions.Item>

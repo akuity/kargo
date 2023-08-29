@@ -21,9 +21,8 @@ spec:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.api.labels" . | nindent 8 }}
       annotations:
-        {{- if .Values.api.adminAccount.enabled }}
-        secret-checksum/kargo-api: {{ include (print $.Template.BasePath "/api/secret.yaml") . | sha256sum }}
-        {{- end }}
+        configmap/checksum: {{ include (print $.Template.BasePath "/api/configmap.yaml") . | sha256sum }}
+        secret/checksum: {{ include (print $.Template.BasePath "/api/secret.yaml") . | sha256sum }}
     spec:
       serviceAccount: kargo-api
       containers:
@@ -31,54 +30,11 @@ spec:
           image: {{ include "kargo.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/usr/local/bin/kargo", "api"]
-          env:
-{{- if .Values.kubeconfigSecrets.kargo }}
-            - name: KUBECONFIG
-              value: /etc/kargo/kubeconfig.yaml
-{{- end }}
-            - name: LOG_LEVEL
-              value: {{ .Values.api.logLevel }}
-{{- if .Values.api.adminAccount.enabled }}
-            - name: ADMIN_ACCOUNT_ENABLED
-              value: "true"
-            - name: ADMIN_ACCOUNT_TOKEN_ISSUER
-              value: {{ .Values.api.protocol }}://{{ .Values.api.host }}
-            - name: ADMIN_ACCOUNT_TOKEN_AUDIENCE
-              value: {{ .Values.api.host }}
-            - name: ADMIN_ACCOUNT_PASSWORD_HASH
-              valueFrom:
-                secretKeyRef:
-                  name: kargo-api
-                  key: adminPassword
-            - name: ADMIN_ACCOUNT_TOKEN_SIGNING_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: kargo-api
-                  key: tokenSigningKey
-            - name: ADMIN_ACCOUNT_TOKEN_TTL
-              value: {{ .Values.api.adminAccount.tokenTTL }}
-{{- end }}
-{{- if .Values.api.oidc.enabled }}
-            - name: OIDC_ENABLED
-              value: "true"
-{{- if .Values.api.oidc.dex.enabled }}
-            - name: OIDC_ISSUER_URL
-              value: {{ .Values.api.protocol }}://{{ .Values.api.host }}/dex
-            - name: OIDC_CLIENT_ID
-              value: {{ .Values.api.host }}
-            - name: DEX_ENABLED
-              value: "true"
-            - name: DEX_SERVER_ADDRESS
-              value: https://kargo-dex-server.{{ .Release.Namespace }}.svc
-            - name: DEX_CA_CERT_PATH
-              value: /etc/kargo/idp-ca.crt
-{{- else }}
-            - name: OIDC_ISSUER_URL
-              value: {{ .Values.api.oidc.issuerURL }}
-            - name: OIDC_CLIENT_ID
-              value: {{ .Values.api.oidc.clientID }}
-{{- end }}
-{{- end }}
+          envFrom:
+            - configMapRef:
+                name: kargo-api
+            - secretRef:
+                name: kargo-api
           ports:
             - name: h2c
               containerPort: 8080

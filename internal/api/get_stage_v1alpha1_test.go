@@ -1,4 +1,4 @@
-package handler
+package api
 
 import (
 	"context"
@@ -7,13 +7,18 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/api/user"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func TestGetStageV1Alpha1(t *testing.T) {
+func TestGetStage(t *testing.T) {
 	testSets := map[string]struct {
 		req          *svcv1alpha1.GetStageRequest
 		errExpected  bool
@@ -63,16 +68,39 @@ func TestGetStageV1Alpha1(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			kc := fake.NewClientBuilder().
-				WithScheme(mustNewScheme()).
-				WithObjects(
-					mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-					mustNewObject[kubev1alpha1.Stage]("testdata/stage.yaml"),
-				).
-				Build()
+			// Simulate an admin user to prevent any authz issues with the authorizing
+			// client.
+			ctx := user.ContextWithInfo(
+				context.Background(),
+				user.Info{
+					IsAdmin: true,
+				},
+			)
 
-			res, err :=
-				GetStageV1Alpha1(kc)(context.Background(), connect.NewRequest(ts.req))
+			client, err := kubernetes.NewClient(
+				ctx,
+				&rest.Config{},
+				kubernetes.ClientOptions{
+					NewInternalClient: func(
+						_ context.Context,
+						_ *rest.Config,
+						scheme *runtime.Scheme,
+					) (client.Client, error) {
+						return fake.NewClientBuilder().
+							WithScheme(scheme).
+							WithObjects(
+								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+								mustNewObject[kubev1alpha1.Stage]("testdata/stage.yaml"),
+							).
+							Build(), nil
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			res, err := (&server{
+				client: client,
+			}).GetStage(ctx, connect.NewRequest(ts.req))
 			if ts.errExpected {
 				require.Error(t, err)
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))
