@@ -23,6 +23,7 @@ service KargoService {
   rpc UpdateStage(UpdateStageRequest) returns (UpdateStageResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
+  rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
   /* PromotionPolicy APIs */
 
@@ -154,6 +155,15 @@ message PromoteStageRequest {
 
 message PromoteStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+}
+
+message RefreshStageRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message RefreshStageResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
 }
 
 message TypedPromotionPolicySpec {
