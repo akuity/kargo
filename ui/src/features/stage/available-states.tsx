@@ -2,7 +2,7 @@ import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import { faArrowTurnUp, faCodeCommit, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation } from '@tanstack/react-query';
-import { Button, Descriptions, List, Tooltip, Typography, message } from 'antd';
+import { Button, Descriptions, List, Popconfirm, Tooltip, Typography, message } from 'antd';
 import { format, formatRelative } from 'date-fns';
 import React from 'react';
 
@@ -42,16 +42,24 @@ export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void })
         renderItem={(state) => (
           <List.Item
             actions={[
-              <Button
+              <Popconfirm
                 key='promote'
-                type='primary'
-                icon={<ButtonIcon icon={faArrowTurnUp} size='1x' />}
-                onClick={() => state.id && promote(state.id)}
+                title='Are you sure to promote this state?'
+                onConfirm={() => state.id && promote(state.id)}
+                okText='Confirm'
+                placement='left'
+                icon=''
                 disabled={stage.status?.currentState?.id === state.id}
-                loading={isLoadingPromote && promotingStateId === state.id}
               >
-                Promote
-              </Button>
+                <Button
+                  type='primary'
+                  icon={<ButtonIcon icon={faArrowTurnUp} size='1x' />}
+                  disabled={stage.status?.currentState?.id === state.id}
+                  loading={isLoadingPromote && promotingStateId === state.id}
+                >
+                  Promote
+                </Button>
+              </Popconfirm>
             ]}
           >
             {state.commits.map((commit) => (
