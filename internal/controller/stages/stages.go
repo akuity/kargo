@@ -258,6 +258,10 @@ func (r *reconciler) Reconcile(
 	if updateErr != nil {
 		logger.Errorf("error updating Stage status: %s", updateErr)
 	}
+	clearRefreshErr := api.ClearStageRefresh(ctx, r.kargoClient, stage)
+	if clearRefreshErr != nil {
+		logger.Errorf("error clearing Stage refresh annotation: %s", clearRefreshErr)
+	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
 	// do it this way so that a failure to update is never counted as THE failure
@@ -265,7 +269,9 @@ func (r *reconciler) Reconcile(
 	if err == nil {
 		err = updateErr
 	}
-
+	if err == nil {
+		err = clearRefreshErr
+	}
 	logger.Debug("done reconciling Stage")
 
 	// Controller runtime automatically gives us a progressive backoff if err is
@@ -297,6 +303,7 @@ func (r *reconciler) syncStage(
 		return status, nil
 	}
 
+	status.ObservedGeneration = stage.Generation
 	// Only perform health checks if we have a current state
 	if status.CurrentState != nil && stage.Spec.PromotionMechanisms != nil {
 		health := r.checkHealthFn(

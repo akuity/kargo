@@ -457,6 +457,9 @@ type StageStatus struct {
 	// from assessing Stage health or from polling repositories or upstream
 	// Stages to discover new StageStates.
 	Error string `json:"error,omitempty"`
+	// ObservedGeneration represents the .metadata.generation that this Stage
+	// status was reconciled against.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // StageState is a "bill of materials" describing what is, was, or can be
