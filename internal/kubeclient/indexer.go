@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/exp/slices"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -13,8 +14,16 @@ import (
 
 const (
 	StagesByArgoCDApplicationsIndexField   = "applications"
-	OutstandingPromotionsByStageIndexField = "stage"
+	PromotionsByStageIndexField            = "stage"
+	OutstandingPromotionsByStageIndexField = PromotionPoliciesByStageIndexField
 	PromotionPoliciesByStageIndexField     = "stage"
+)
+
+var (
+	NonOutstandingPromotionPhases = []api.PromotionPhase{
+		api.PromotionPhaseComplete,
+		api.PromotionPhaseFailed,
+	}
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -54,22 +63,40 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 	}
 }
 
-// IndexOutstandingPromotionsByStage creates index for Promotions in non-terminal states by Stage
-func IndexOutstandingPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
+// IndexPromotionsByStage creates Promotion index by Stage for which
+// all the given predicates returns true for the Promotion.
+func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager, predicates ...func(*api.Promotion) bool) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&api.Promotion{},
-		OutstandingPromotionsByStageIndexField,
-		indexOutstandingPromotionsByStage)
+		PromotionsByStageIndexField,
+		indexPromotionsByStage(predicates...))
 }
 
-func indexOutstandingPromotionsByStage(obj client.Object) []string {
-	promo := obj.(*api.Promotion) // nolint: forcetypeassert
-	switch promo.Status.Phase {
-	case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
-		return nil
+// IndexOutstandingPromotionsByStage creates index for Promotions in non-terminal states by Stage
+func IndexOutstandingPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
+	return IndexPromotionsByStage(ctx, mgr, filterNonOutstandingPromotionPhases)
+}
+
+func filterNonOutstandingPromotionPhases(promo *api.Promotion) bool {
+	return !slices.Contains(NonOutstandingPromotionPhases, promo.GetStatus().Phase)
+}
+
+// indexPromotionsByStage indexes Promotion if all the given predicates
+// returns true for the Promotion.
+func indexPromotionsByStage(predicates ...func(*api.Promotion) bool) client.IndexerFunc {
+	return func(obj client.Object) []string {
+		promo, ok := obj.(*api.Promotion)
+		if !ok {
+			return nil
+		}
+		for _, predicate := range predicates {
+			if !predicate(promo) {
+				return nil
+			}
+		}
+		return []string{promo.Spec.Stage}
 	}
-	return []string{promo.Spec.Stage}
 }
 
 func IndexPromotionPoliciesByStage(ctx context.Context, mgr ctrl.Manager) error {
