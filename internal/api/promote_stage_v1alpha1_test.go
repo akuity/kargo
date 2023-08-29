@@ -1,4 +1,4 @@
-package handler
+package api
 
 import (
 	"context"
@@ -8,14 +8,17 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/kubernetes"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func TestPromoteStageV1Alpha1(t *testing.T) {
+func TestPromoteStage(t *testing.T) {
 	testSets := map[string]struct {
 		req          *svcv1alpha1.PromoteStageRequest
 		errExpected  bool
@@ -60,20 +63,36 @@ func TestPromoteStageV1Alpha1(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			kc := fake.NewClientBuilder().
-				WithScheme(mustNewScheme()).
-				WithObjects(
-					mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-				).
-				WithLists(&kubev1alpha1.StageList{
-					Items: []kubev1alpha1.Stage{
-						*mustNewObject[kubev1alpha1.Stage]("testdata/stage.yaml"),
-					},
-				}).
-				Build()
-
 			ctx := context.Background()
-			res, err := PromoteStageV1Alpha1(kc)(ctx, connect.NewRequest(ts.req))
+
+			client, err := kubernetes.NewClient(
+				ctx,
+				nil,
+				kubernetes.ClientOptions{
+					NewInternalClient: func(
+						context.Context,
+						*rest.Config,
+						*runtime.Scheme,
+					) (libClient.Client, error) {
+						return fake.NewClientBuilder().
+							WithScheme(mustNewScheme()).
+							WithObjects(
+								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+							).
+							WithLists(&kubev1alpha1.StageList{
+								Items: []kubev1alpha1.Stage{
+									*mustNewObject[kubev1alpha1.Stage]("testdata/stage.yaml"),
+								},
+							}).
+							Build(), nil
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			res, err := (&server{
+				client: client,
+			}).PromoteStage(ctx, connect.NewRequest(ts.req))
 			if ts.errExpected {
 				require.Error(t, err)
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))
@@ -85,7 +104,7 @@ func TestPromoteStageV1Alpha1(t *testing.T) {
 			require.Equal(t, ts.req.GetState(), res.Msg.GetPromotion().GetSpec().GetState())
 
 			var actual kubev1alpha1.Promotion
-			require.NoError(t, kc.Get(ctx, client.ObjectKey{
+			require.NoError(t, client.Get(ctx, libClient.ObjectKey{
 				Namespace: ts.req.GetProject(),
 				Name:      res.Msg.GetPromotion().GetMetadata().GetName(),
 			}, &actual))

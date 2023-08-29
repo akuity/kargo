@@ -1,4 +1,4 @@
-package handler
+package api
 
 import (
 	"context"
@@ -10,19 +10,13 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type GetVersionInfoV1Alpha1Func func(
-	context.Context,
-	*connect.Request[svcv1alpha1.GetVersionInfoRequest],
-) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error)
-
-func GetVersionInfoV1Alpha1(v version.Version) GetVersionInfoV1Alpha1Func {
-	resp := &svcv1alpha1.GetVersionInfoResponse{
-		VersionInfo: typesv1alpha1.ToVersionProto(v),
-	}
-	return func(
-		_ context.Context,
-		_ *connect.Request[svcv1alpha1.GetVersionInfoRequest],
-	) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
-		return connect.NewResponse(resp), nil
-	}
+func (s *server) GetVersionInfo(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.GetVersionInfoRequest],
+) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
+	return connect.NewResponse(
+		&svcv1alpha1.GetVersionInfoResponse{
+			VersionInfo: typesv1alpha1.ToVersionProto(version.GetVersion()),
+		},
+	), nil
 }
