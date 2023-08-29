@@ -1,0 +1,34 @@
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.api.logLevel }}
+  {{- if .Values.kubeconfigSecrets.kargo }}
+  KUBECONFIG: /etc/kargo/kubeconfig.yaml
+  {{- end }}
+  {{- if .Values.api.adminAccount.enabled }}
+  ADMIN_ACCOUNT_ENABLED: "true"
+  ADMIN_ACCOUNT_TOKEN_ISSUER: {{ .Values.api.protocol }}://{{ .Values.api.host }}
+  ADMIN_ACCOUNT_TOKEN_AUDIENCE: {{ .Values.api.host }}
+  ADMIN_ACCOUNT_TOKEN_TTL: {{ .Values.api.adminAccount.tokenTTL }}
+  {{- end }}
+  {{- if .Values.api.oidc.enabled }}
+  OIDC_ENABLED: "true"
+  {{- if .Values.api.oidc.dex.enabled }}
+  OIDC_ISSUER_URL: {{ .Values.api.protocol }}://{{ .Values.api.host }}/dex
+  OIDC_CLIENT_ID: {{ .Values.api.host }}
+  DEX_ENABLED: "true"
+  DEX_SERVER_ADDRESS: https://kargo-dex-server.{{ .Release.Namespace }}.svc
+  DEX_CA_CERT_PATH: /etc/kargo/idp-ca.crt
+  {{- else }}
+  OIDC_ISSUER_URL: {{ .Values.api.oidc.issuerURL }}
+  OIDC_CLIENT_ID: {{ .Values.api.oidc.clientID }}
+  {{- end }}
+  {{- end }}
+{{- end }}

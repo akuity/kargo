@@ -48,6 +48,7 @@ k8s_resource(
   objects = [
     'kargo-api:clusterrole',
     'kargo-api:clusterrolebinding',
+    'kargo-api:configmap',
     'kargo-api:secret',
     'kargo-api:serviceaccount'
   ]
@@ -60,6 +61,7 @@ k8s_resource(
   objects = [
     'kargo-controller:clusterrole',
     'kargo-controller:clusterrolebinding',
+    'kargo-controller:configmap',
     'kargo-controller:role',
     'kargo-controller:rolebinding',
     'kargo-controller:serviceaccount',
@@ -86,6 +88,7 @@ k8s_resource(
   objects = [
     'kargo-garbage-collector:clusterrole',
     'kargo-garbage-collector:clusterrolebinding',
+    'kargo-garbage-collector:configmap',
     'kargo-garbage-collector:serviceaccount'
   ]
 )
@@ -100,6 +103,7 @@ k8s_resource(
     'kargo-webhooks-server:certificate',
     'kargo-webhooks-server:clusterrole',
     'kargo-webhooks-server:clusterrolebinding',
+    'kargo-webhooks-server:configmap',
     'kargo-webhooks-server:serviceaccount',
     'kargo-webhooks-server-ns-controller:clusterrole',
     'kargo-webhooks-server-ns-controller:clusterrolebinding'

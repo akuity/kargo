@@ -20,6 +20,8 @@ spec:
       labels:
         {{- include "kargo.selectorLabels" . | nindent 8 }}
         {{- include "kargo.controller.labels" . | nindent 8 }}
+      annotations:
+        configmap/checksum: {{ include (print $.Template.BasePath "/controller/configmap.yaml") . | sha256sum }}
     spec:
       serviceAccount: kargo-controller
       containers:
@@ -27,27 +29,9 @@ spec:
         image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/kargo", "controller"]
-        env:
-        {{- if .Values.controller.shardName }}
-        - name: SHARD_NAME
-          value: {{ .Values.controller.shardName }}
-        {{- end }}
-        {{- if .Values.kubeconfigSecrets.kargo }}
-        - name: KUBECONFIG
-          value: /etc/kargo/kubeconfigs/kubeconfig.yaml
-        {{- end }}
-        {{- if .Values.kubeconfigSecrets.argocd }}
-        - name: ARGOCD_KUBECONFIG
-          value: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml
-        {{- end }}
-        - name: ARGOCD_NAMESPACE
-          value: {{ .Values.controller.argocd.namespace }}
-        - name: ARGOCD_ENABLE_CREDENTIAL_BORROWING
-          value: {{ quote .Values.controller.argocd.enableCredentialBorrowing }}
-        - name: ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY
-          value: {{ quote .Values.controller.argocd.watchArgocdNamespaceOnly }}
-        - name: LOG_LEVEL
-          value: {{ .Values.controller.logLevel }}
+        envFrom:
+        - configMapRef:
+            name: kargo-controller
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         volumeMounts:
         - mountPath: /etc/kargo/kubeconfigs
