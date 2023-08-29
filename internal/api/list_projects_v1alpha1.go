@@ -15,7 +15,7 @@ import (
 
 func (s *server) ListProjects(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListProjectsRequest],
+	_ *connect.Request[svcv1alpha1.ListProjectsRequest],
 ) (*connect.Response[svcv1alpha1.ListProjectsResponse], error) {
 	// Only list namespaces which are labeled as Kargo projects
 	selector := labels.Set{v1alpha1.LabelProjectKey: v1alpha1.LabelTrueValue}.AsSelector()

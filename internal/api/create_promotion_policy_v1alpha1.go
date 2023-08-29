@@ -43,7 +43,7 @@ func (s *server) CreatePromotionPolicy(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("promotion_policy should not be empty"))
 	}
 
-	if err := validateProject(ctx, policy.GetNamespace()); err != nil {
+	if err := s.validateProject(ctx, policy.GetNamespace()); err != nil {
 		return nil, err
 	}
 	if err := s.client.Create(ctx, &policy); err != nil {

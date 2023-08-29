@@ -11,8 +11,8 @@ import (
 )
 
 func (s *server) GetVersionInfo(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.GetVersionInfoRequest],
+	context.Context,
+	*connect.Request[svcv1alpha1.GetVersionInfoRequest],
 ) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
 	return connect.NewResponse(
 		&svcv1alpha1.GetVersionInfoResponse{

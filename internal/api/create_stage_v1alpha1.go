@@ -42,7 +42,7 @@ func (s *server) CreateStage(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
 	}
 
-	if err := validateProject(ctx, stage.GetNamespace()); err != nil {
+	if err := s.validateProject(ctx, stage.GetNamespace()); err != nil {
 		return nil, err
 	}
 	if err := s.client.Create(ctx, &stage); err != nil {

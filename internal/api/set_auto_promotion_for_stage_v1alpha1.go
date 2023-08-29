@@ -24,7 +24,7 @@ func (s *server) SetAutoPromotionForStage(
 	if req.Msg.GetStage() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
 	}
-	if err := validateProject(ctx, req.Msg.GetProject()); err != nil {
+	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
 		return nil, err
 	}
 

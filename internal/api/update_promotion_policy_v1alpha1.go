@@ -44,7 +44,7 @@ func (s *server) UpdatePromotionPolicy(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("promotion_policy should not be empty"))
 	}
 
-	if err := validateProject(ctx, policy.GetNamespace()); err != nil {
+	if err := s.validateProject(ctx, policy.GetNamespace()); err != nil {
 		return nil, err
 	}
 	var existingPolicy kubev1alpha1.PromotionPolicy

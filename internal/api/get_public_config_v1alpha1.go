@@ -9,8 +9,8 @@ import (
 )
 
 func (s *server) GetPublicConfig(
-	ctx context.Context,
-	req *connect.Request[svcv1alpha1.GetPublicConfigRequest],
+	context.Context,
+	*connect.Request[svcv1alpha1.GetPublicConfigRequest],
 ) (*connect.Response[svcv1alpha1.GetPublicConfigResponse], error) {
 	var oidcCfg *svcv1alpha1.OIDCConfig
 	if s.cfg.OIDCConfig != nil {

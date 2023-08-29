@@ -43,7 +43,7 @@ func (s *server) UpdateStage(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
 	}
 
-	if err := validateProject(ctx, stage.GetNamespace()); err != nil {
+	if err := s.validateProject(ctx, stage.GetNamespace()); err != nil {
 		return nil, err
 	}
 	var existingStage kubev1alpha1.Stage

@@ -18,7 +18,7 @@ func init() {
 }
 
 func (s *server) AdminLogin(
-	ctx context.Context,
+	_ context.Context,
 	req *connect.Request[svcv1alpha1.AdminLoginRequest],
 ) (*connect.Response[svcv1alpha1.AdminLoginResponse], error) {
 	if s.cfg.AdminConfig == nil {

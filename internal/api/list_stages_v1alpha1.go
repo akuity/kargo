@@ -20,7 +20,7 @@ func (s *server) ListStages(
 	if req.Msg.GetProject() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
 	}
-	if err := validateProject(ctx, req.Msg.GetProject()); err != nil {
+	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
 		return nil, err
 	}
 
