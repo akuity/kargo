@@ -23,7 +23,7 @@ export const Subscriptions = (props: {
           <Typography.Title level={5} style={{ marginTop: '.8em' }}>
             Upstream Stages
           </Typography.Title>
-          <Space direction='vertical' style={{ width: '100%' }}>
+          <Space direction='vertical' style={{ width: '50%' }}>
             {subscriptions?.upstreamStages.map((stage) => (
               <Descriptions bordered size='small' key={stage.name} column={1}>
                 <Descriptions.Item label='Stage'>
