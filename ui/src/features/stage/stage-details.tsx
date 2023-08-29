@@ -1,6 +1,6 @@
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Divider, Drawer, Empty, Typography } from 'antd';
+import { Button, Divider, Drawer, Empty, Space, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -10,7 +10,8 @@ import { Subscriptions } from '@ui/features/stage/subscriptions';
 import {
   deleteStage,
   getStage,
-  listStages
+  listStages,
+  refreshStage
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { ButtonIcon, LoadingState } from '../common';
@@ -34,6 +35,15 @@ export const StageDetails = () => {
     onSuccess: () => queryClient.invalidateQueries(listStages.getQueryKey({ project: projectName }))
   });
 
+  const { mutate: refresh, isLoading: isRefreshLoading } = useMutation({
+    ...refreshStage.useMutation(),
+    onSuccess: (data) =>
+      queryClient.setQueryData(
+        getStage.getQueryKey({ project: projectName, name: stageName }),
+        data
+      )
+  });
+
   const onDelete = () => {
     confirm({
       onOk: () => {
@@ -43,6 +53,8 @@ export const StageDetails = () => {
       title: 'Are you sure you want to delete Stage?'
     });
   };
+
+  const onRefresh = () => refresh({ name: stageName, project: projectName });
 
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
@@ -63,15 +75,26 @@ export const StageDetails = () => {
                 <Typography.Text type='secondary'>{projectName}</Typography.Text>
               </div>
             </div>
-            <Button
-              danger
-              type='text'
-              icon={<ButtonIcon icon={faTrash} size='1x' />}
-              onClick={onDelete}
-              loading={isLoadingDelete}
-            >
-              Delete
-            </Button>
+            <Space size={16}>
+              <Button
+                type='default'
+                icon={<ButtonIcon icon={faRefresh} size='1x' />}
+                onClick={onRefresh}
+                loading={isRefreshLoading}
+              >
+                Refresh
+              </Button>
+              <Button
+                danger
+                type='text'
+                icon={<ButtonIcon icon={faTrash} size='1x' />}
+                onClick={onDelete}
+                loading={isLoadingDelete}
+                size='small'
+              >
+                Delete
+              </Button>
+            </Space>
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
