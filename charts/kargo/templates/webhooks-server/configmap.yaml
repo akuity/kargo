@@ -1,0 +1,15 @@
+{{- if .Values.webhooksServer.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kargo-webhooks-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.webhooksServer.logLevel }}
+  {{- if .Values.kubeconfigSecrets.kargo }}
+  KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
+  {{- end }}
+{{- end }}
