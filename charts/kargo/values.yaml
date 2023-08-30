@@ -150,6 +150,18 @@ api:
     ## you by your identity provider.
     clientID: <client ID>
 
+    ## The client ID for the OIDC client used by CLI (optional).
+    ## 
+    ## Needed by some OIDC providers (such as Dex) that require a separate
+    ## Client ID for web app login vs. CLI login (http://localhost).
+    ##
+    ## If Dex is enabled, this value will be ignored and cli client ID will be
+    ## automatically configured.
+    ##
+    ## If Dex is not enabled, and a different client app is configured for
+    ## localhost CLI login, this should be the client ID configured in the IdP.
+    cliClientID:
+
     dex:
 
       ## Whether to enable Dex as the identity provider.
@@ -178,6 +190,11 @@ api:
         ##
         ## There is no provision for running Dex without TLS.
         selfSignedCert: true
+
+      ## Whether to skip Dex's own approval screen. Since upstream identity
+      ## providers will already request user consent, this second approval
+      ## screen from Dex can be both superfluous and confusing.
+      skipApprovalScreen: true
 
       ## Configure Dex connectors to one or more upstream identity providers.
       ## See https://dexidp.io/docs/connectors/ for more information.

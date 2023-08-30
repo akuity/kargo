@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/option"
 	httputil "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/kubeclient/manifest"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -28,6 +29,8 @@ var (
 type server struct {
 	cfg    config.ServerConfig
 	client kubernetes.Client
+
+	parseKubernetesManifest manifest.ParseFunc
 }
 
 type Server interface {
@@ -41,6 +44,8 @@ func NewServer(
 	return &server{
 		cfg:    cfg,
 		client: client,
+
+		parseKubernetesManifest: manifest.NewParser(client.Scheme()),
 	}, nil
 }
 

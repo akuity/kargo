@@ -14,6 +14,13 @@ service KargoService {
 
   rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
 
+  /* Kargo-related resources management API */
+  // TODO(devholic): Add ApplyResource API
+  // rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+  rpc CreateResource(CreateResourceRequest) returns (CreateResourceResponse);
+  rpc UpdateResource(UpdateResourceRequest) returns (UpdateResourceResponse);
+  rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
+
   /* Stage APIs */
 
   rpc CreateStage(CreateStageRequest) returns (CreateStageResponse);
@@ -23,6 +30,7 @@ service KargoService {
   rpc UpdateStage(UpdateStageRequest) returns (UpdateStageResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
+  rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
   /* PromotionPolicy APIs */
 
@@ -72,6 +80,7 @@ message OIDCConfig {
   string issuer_url = 1;
   string client_id = 2;
   repeated string scopes = 3;
+  string cli_client_id = 4;
 }
 
 message AdminLoginRequest {
@@ -86,6 +95,51 @@ message TypedStageSpec {
   string project = 1;
   string name = 2;
   github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 3;
+}
+
+message CreateResourceRequest {
+  bytes manifest = 1;
+}
+
+message CreateResourceResult {
+  oneof result {
+    bytes created_resource_manifest = 1;
+    string error = 2;
+  }
+}
+
+message CreateResourceResponse {
+  repeated CreateResourceResult results = 1;
+}
+
+message UpdateResourceRequest {
+  bytes manifest = 1;
+}
+
+message UpdateResourceResult {
+  oneof result {
+    bytes updated_resource_manifest = 1;
+    string error = 2;
+  }
+}
+
+message UpdateResourceResponse {
+  repeated UpdateResourceResult results = 1;
+}
+
+message DeleteResourceRequest {
+  bytes manifest = 1;
+}
+
+message DeleteResourceResult {
+  oneof result {
+    bytes deleted_resource_manifest = 1;
+    string error = 2;
+  }
+}
+
+message DeleteResourceResponse {
+  repeated DeleteResourceResult results = 1;
 }
 
 message CreateStageRequest {
@@ -154,6 +208,15 @@ message PromoteStageRequest {
 
 message PromoteStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+}
+
+message RefreshStageRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message RefreshStageResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
 }
 
 message TypedPromotionPolicySpec {

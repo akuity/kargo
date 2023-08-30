@@ -16,7 +16,7 @@ type Props = {
 
 export const OIDCLogin = ({ oidcConfig }: Props) => {
   const location = useLocation();
-  const redirectURI = `${window.location.protocol}//${window.location.hostname}:${window.location.port}${location.pathname}`;
+  const redirectURI = window.location.origin + window.location.pathname;
   const { login: onLogin } = useAuthContext();
 
   const issuerUrl = React.useMemo(() => {

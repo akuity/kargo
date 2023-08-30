@@ -46,8 +46,9 @@ func newAPICommand() *cobra.Command {
 			}
 			if cfg.OIDCConfig != nil {
 				log.WithFields(log.Fields{
-					"issuerURL": cfg.OIDCConfig.IssuerURL,
-					"clientID":  cfg.OIDCConfig.ClientID,
+					"issuerURL":   cfg.OIDCConfig.IssuerURL,
+					"clientID":    cfg.OIDCConfig.ClientID,
+					"cliClientID": cfg.OIDCConfig.CLIClientID,
 				}).Info("SSO via OpenID Connect is enabled")
 			}
 

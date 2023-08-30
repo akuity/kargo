@@ -6,8 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -47,7 +47,7 @@ func (s *server) AdminLogin(
 			Audience:  []string{s.cfg.AdminConfig.TokenAudience},
 			NotBefore: jwt.NewNumericDate(now),
 			Subject:   "admin",
-			ID:        uuid.NewV4().String(),
+			ID:        uuid.NewString(),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.AdminConfig.TokenTTL)),
 		},
 	)

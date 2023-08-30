@@ -722,29 +722,31 @@ func TestSync(t *testing.T) {
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		testStage := &api.Stage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-stage",
-				Namespace: "fake-namespace",
-			},
-			Spec:   &testCase.spec,
-			Status: testCase.initialStatus,
-		}
-		// nolint: lll
-		reconciler := &reconciler{
-			kargoClient:                            testCase.kargoClient,
-			hasOutstandingPromotionsFn:             testCase.hasOutstandingPromotionsFn,
-			checkHealthFn:                          testCase.checkHealthFn,
-			getLatestStateFromReposFn:              testCase.getLatestStateFromReposFn,
-			getAvailableStatesFromUpstreamStagesFn: testCase.getAvailableStatesFromUpstreamStagesFn,
-		}
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			testStage := &api.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec:   &tc.spec,
+				Status: tc.initialStatus,
+			}
+			// nolint: lll
+			reconciler := &reconciler{
+				kargoClient:                            tc.kargoClient,
+				hasOutstandingPromotionsFn:             tc.hasOutstandingPromotionsFn,
+				checkHealthFn:                          tc.checkHealthFn,
+				getLatestStateFromReposFn:              tc.getLatestStateFromReposFn,
+				getAvailableStatesFromUpstreamStagesFn: tc.getAvailableStatesFromUpstreamStagesFn,
+			}
 			newStatus, err := reconciler.syncStage(context.Background(), testStage)
-			testCase.assertions(
-				testCase.initialStatus,
+			tc.assertions(
+				tc.initialStatus,
 				newStatus,
-				testCase.kargoClient,
+				tc.kargoClient,
 				err,
 			)
 		})

@@ -41,6 +41,15 @@ const (
 	KargoServiceGetPublicConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetPublicConfig"
 	// KargoServiceAdminLoginProcedure is the fully-qualified name of the KargoService's AdminLogin RPC.
 	KargoServiceAdminLoginProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/AdminLogin"
+	// KargoServiceCreateResourceProcedure is the fully-qualified name of the KargoService's
+	// CreateResource RPC.
+	KargoServiceCreateResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateResource"
+	// KargoServiceUpdateResourceProcedure is the fully-qualified name of the KargoService's
+	// UpdateResource RPC.
+	KargoServiceUpdateResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateResource"
+	// KargoServiceDeleteResourceProcedure is the fully-qualified name of the KargoService's
+	// DeleteResource RPC.
+	KargoServiceDeleteResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteResource"
 	// KargoServiceCreateStageProcedure is the fully-qualified name of the KargoService's CreateStage
 	// RPC.
 	KargoServiceCreateStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateStage"
@@ -60,6 +69,9 @@ const (
 	// KargoServicePromoteStageProcedure is the fully-qualified name of the KargoService's PromoteStage
 	// RPC.
 	KargoServicePromoteStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/PromoteStage"
+	// KargoServiceRefreshStageProcedure is the fully-qualified name of the KargoService's RefreshStage
+	// RPC.
+	KargoServiceRefreshStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshStage"
 	// KargoServiceSetAutoPromotionForStageProcedure is the fully-qualified name of the KargoService's
 	// SetAutoPromotionForStage RPC.
 	KargoServiceSetAutoPromotionForStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/SetAutoPromotionForStage"
@@ -94,6 +106,11 @@ type KargoServiceClient interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
+	// TODO(devholic): Add ApplyResource API
+	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+	CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error)
+	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
+	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
 	CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
@@ -101,6 +118,7 @@ type KargoServiceClient interface {
 	UpdateStage(context.Context, *connect.Request[v1alpha1.UpdateStageRequest]) (*connect.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect.Request[v1alpha1.PromoteStageRequest]) (*connect.Response[v1alpha1.PromoteStageResponse], error)
+	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
 	SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
 	CreatePromotionPolicy(context.Context, *connect.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect.Response[v1alpha1.CreatePromotionPolicyResponse], error)
 	ListPromotionPolicies(context.Context, *connect.Request[v1alpha1.ListPromotionPoliciesRequest]) (*connect.Response[v1alpha1.ListPromotionPoliciesResponse], error)
@@ -137,6 +155,21 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceAdminLoginProcedure,
 			opts...,
 		),
+		createResource: connect.NewClient[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse](
+			httpClient,
+			baseURL+KargoServiceCreateResourceProcedure,
+			opts...,
+		),
+		updateResource: connect.NewClient[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse](
+			httpClient,
+			baseURL+KargoServiceUpdateResourceProcedure,
+			opts...,
+		),
+		deleteResource: connect.NewClient[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteResourceProcedure,
+			opts...,
+		),
 		createStage: connect.NewClient[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse](
 			httpClient,
 			baseURL+KargoServiceCreateStageProcedure,
@@ -170,6 +203,11 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 		promoteStage: connect.NewClient[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse](
 			httpClient,
 			baseURL+KargoServicePromoteStageProcedure,
+			opts...,
+		),
+		refreshStage: connect.NewClient[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse](
+			httpClient,
+			baseURL+KargoServiceRefreshStageProcedure,
 			opts...,
 		),
 		setAutoPromotionForStage: connect.NewClient[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse](
@@ -225,6 +263,9 @@ type kargoServiceClient struct {
 	getVersionInfo           *connect.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
 	getPublicConfig          *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
 	adminLogin               *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
+	createResource           *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
+	updateResource           *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
+	deleteResource           *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
 	createStage              *connect.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
 	listStages               *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
 	getStage                 *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
@@ -232,6 +273,7 @@ type kargoServiceClient struct {
 	updateStage              *connect.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
 	deleteStage              *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
 	promoteStage             *connect.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
+	refreshStage             *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
 	setAutoPromotionForStage *connect.Client[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse]
 	createPromotionPolicy    *connect.Client[v1alpha1.CreatePromotionPolicyRequest, v1alpha1.CreatePromotionPolicyResponse]
 	listPromotionPolicies    *connect.Client[v1alpha1.ListPromotionPoliciesRequest, v1alpha1.ListPromotionPoliciesResponse]
@@ -256,6 +298,21 @@ func (c *kargoServiceClient) GetPublicConfig(ctx context.Context, req *connect.R
 // AdminLogin calls akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin.
 func (c *kargoServiceClient) AdminLogin(ctx context.Context, req *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error) {
 	return c.adminLogin.CallUnary(ctx, req)
+}
+
+// CreateResource calls akuity.io.kargo.service.v1alpha1.KargoService.CreateResource.
+func (c *kargoServiceClient) CreateResource(ctx context.Context, req *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error) {
+	return c.createResource.CallUnary(ctx, req)
+}
+
+// UpdateResource calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource.
+func (c *kargoServiceClient) UpdateResource(ctx context.Context, req *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error) {
+	return c.updateResource.CallUnary(ctx, req)
+}
+
+// DeleteResource calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource.
+func (c *kargoServiceClient) DeleteResource(ctx context.Context, req *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error) {
+	return c.deleteResource.CallUnary(ctx, req)
 }
 
 // CreateStage calls akuity.io.kargo.service.v1alpha1.KargoService.CreateStage.
@@ -291,6 +348,11 @@ func (c *kargoServiceClient) DeleteStage(ctx context.Context, req *connect.Reque
 // PromoteStage calls akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage.
 func (c *kargoServiceClient) PromoteStage(ctx context.Context, req *connect.Request[v1alpha1.PromoteStageRequest]) (*connect.Response[v1alpha1.PromoteStageResponse], error) {
 	return c.promoteStage.CallUnary(ctx, req)
+}
+
+// RefreshStage calls akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage.
+func (c *kargoServiceClient) RefreshStage(ctx context.Context, req *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error) {
+	return c.refreshStage.CallUnary(ctx, req)
 }
 
 // SetAutoPromotionForStage calls
@@ -345,6 +407,11 @@ type KargoServiceHandler interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
+	// TODO(devholic): Add ApplyResource API
+	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+	CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error)
+	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
+	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
 	CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error)
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
@@ -352,6 +419,7 @@ type KargoServiceHandler interface {
 	UpdateStage(context.Context, *connect.Request[v1alpha1.UpdateStageRequest]) (*connect.Response[v1alpha1.UpdateStageResponse], error)
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	PromoteStage(context.Context, *connect.Request[v1alpha1.PromoteStageRequest]) (*connect.Response[v1alpha1.PromoteStageResponse], error)
+	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
 	SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
 	CreatePromotionPolicy(context.Context, *connect.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect.Response[v1alpha1.CreatePromotionPolicyResponse], error)
 	ListPromotionPolicies(context.Context, *connect.Request[v1alpha1.ListPromotionPoliciesRequest]) (*connect.Response[v1alpha1.ListPromotionPoliciesResponse], error)
@@ -382,6 +450,21 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServiceAdminLoginHandler := connect.NewUnaryHandler(
 		KargoServiceAdminLoginProcedure,
 		svc.AdminLogin,
+		opts...,
+	)
+	kargoServiceCreateResourceHandler := connect.NewUnaryHandler(
+		KargoServiceCreateResourceProcedure,
+		svc.CreateResource,
+		opts...,
+	)
+	kargoServiceUpdateResourceHandler := connect.NewUnaryHandler(
+		KargoServiceUpdateResourceProcedure,
+		svc.UpdateResource,
+		opts...,
+	)
+	kargoServiceDeleteResourceHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteResourceProcedure,
+		svc.DeleteResource,
 		opts...,
 	)
 	kargoServiceCreateStageHandler := connect.NewUnaryHandler(
@@ -417,6 +500,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServicePromoteStageHandler := connect.NewUnaryHandler(
 		KargoServicePromoteStageProcedure,
 		svc.PromoteStage,
+		opts...,
+	)
+	kargoServiceRefreshStageHandler := connect.NewUnaryHandler(
+		KargoServiceRefreshStageProcedure,
+		svc.RefreshStage,
 		opts...,
 	)
 	kargoServiceSetAutoPromotionForStageHandler := connect.NewUnaryHandler(
@@ -472,6 +560,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetPublicConfigHandler.ServeHTTP(w, r)
 		case KargoServiceAdminLoginProcedure:
 			kargoServiceAdminLoginHandler.ServeHTTP(w, r)
+		case KargoServiceCreateResourceProcedure:
+			kargoServiceCreateResourceHandler.ServeHTTP(w, r)
+		case KargoServiceUpdateResourceProcedure:
+			kargoServiceUpdateResourceHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteResourceProcedure:
+			kargoServiceDeleteResourceHandler.ServeHTTP(w, r)
 		case KargoServiceCreateStageProcedure:
 			kargoServiceCreateStageHandler.ServeHTTP(w, r)
 		case KargoServiceListStagesProcedure:
@@ -486,6 +580,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteStageHandler.ServeHTTP(w, r)
 		case KargoServicePromoteStageProcedure:
 			kargoServicePromoteStageHandler.ServeHTTP(w, r)
+		case KargoServiceRefreshStageProcedure:
+			kargoServiceRefreshStageHandler.ServeHTTP(w, r)
 		case KargoServiceSetAutoPromotionForStageProcedure:
 			kargoServiceSetAutoPromotionForStageHandler.ServeHTTP(w, r)
 		case KargoServiceCreatePromotionPolicyProcedure:
@@ -525,6 +621,18 @@ func (UnimplementedKargoServiceHandler) AdminLogin(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin is not implemented"))
 }
 
+func (UnimplementedKargoServiceHandler) CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateResource is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource is not implemented"))
+}
+
 func (UnimplementedKargoServiceHandler) CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateStage is not implemented"))
 }
@@ -551,6 +659,10 @@ func (UnimplementedKargoServiceHandler) DeleteStage(context.Context, *connect.Re
 
 func (UnimplementedKargoServiceHandler) PromoteStage(context.Context, *connect.Request[v1alpha1.PromoteStageRequest]) (*connect.Response[v1alpha1.PromoteStageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {

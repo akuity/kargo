@@ -92,7 +92,7 @@ jobs:
     - name: Set up Helm
       uses: azure/setup-helm@v3
       with:
-        version: '3.10.0'
+        version: '3.12.3'
     - name: Login to GHCR
       uses: docker/login-action@v2
       with:
@@ -124,7 +124,7 @@ jobs:
   publish-cli:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.7-bookworm
+      image: golang:1.21.0-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
