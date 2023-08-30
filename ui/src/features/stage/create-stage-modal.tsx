@@ -5,15 +5,11 @@ import type { JSONSchema4 } from 'json-schema';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { queryClient } from '@ui/config/query-client';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
-import {
-  createStage,
-  listStages
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { createStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from './stage-yaml-example';
@@ -29,10 +25,7 @@ const formSchema = z.object({
 export const CreateStageModal = ({ visible, hide, project }: Props) => {
   const { mutateAsync, isLoading } = useMutation({
     ...createStage.useMutation(),
-    onSuccess: () => {
-      queryClient.invalidateQueries(listStages.getQueryKey({ project }));
-      hide();
-    }
+    onSuccess: () => hide()
   });
 
   const { control, handleSubmit } = useForm({
