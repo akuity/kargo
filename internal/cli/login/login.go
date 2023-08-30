@@ -292,6 +292,10 @@ func ssoLogin(
 			strings.Split(listener.Addr().String(), ":")[1],
 		),
 	}
+	if res.Msg.OidcConfig.CliClientId != "" {
+		// There is an OIDC client ID specifically meant for CLI use
+		cfg.ClientID = res.Msg.OidcConfig.CliClientId
+	}
 
 	// Per the spec, this must be guessable with probability <= 2^(-128). The
 	// following call generates one of 52^24 random strings, ~= 2^136

@@ -44,42 +44,77 @@ type authInterceptor struct {
 		ctx context.Context,
 		rawToken string,
 	) (string, []string, bool)
-	oidcTokenVerifyFn   func(context.Context, string) (*oidc.IDToken, error)
+	oidcTokenVerifyFn   goOIDCIDTokenVerifyFn
 	oidcExtractGroupsFn func(*oidc.IDToken) ([]string, error)
 }
+
+// goOIDCIDTokenVerifyFn is a github.com/coreos/go-oidc/v3/oidc/IDTokenVerifier.Verify() function
+type goOIDCIDTokenVerifyFn func(ctx context.Context, rawIDToken string) (*oidc.IDToken, error)
 
 // newAuthInterceptor returns an initialized *authInterceptor.
 func newAuthInterceptor(
 	ctx context.Context,
 	cfg config.ServerConfig,
 ) (*authInterceptor, error) {
-	var tokenVerifier *oidc.IDTokenVerifier
-	if cfg.OIDCConfig != nil {
-		keyset, err := getKeySet(ctx, cfg)
-		if err != nil {
-			return nil,
-				errors.Wrap(err, "error getting keys from OpenID Connect provider")
-		}
-		tokenVerifier = oidc.NewVerifier(
-			cfg.OIDCConfig.IssuerURL,
-			keyset,
-			&oidc.Config{
-				ClientID: cfg.OIDCConfig.ClientID,
-			},
-		)
-	}
 	a := &authInterceptor{
 		cfg: cfg,
+	}
+	if cfg.OIDCConfig != nil {
+		var err error
+		a.oidcTokenVerifyFn, err = newMultiClientVerifier(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
 	}
 	a.parseUnverifiedJWTFn =
 		jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
-	if tokenVerifier != nil {
-		a.oidcTokenVerifyFn = tokenVerifier.Verify
-	}
 	a.oidcExtractGroupsFn = oidcExtractGroups
 	return a, nil
+}
+
+// newMultiClientVerifier returns a function that implements go-oidc IDTokenVerifier.Verify()
+// but iterates through multiple verifiers. We commonly have both a CLI and Web OIDC client,
+// each needing it's own OIDC verification.
+func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) (goOIDCIDTokenVerifyFn, error) {
+	keyset, err := getKeySet(ctx, cfg)
+	if err != nil {
+		return nil,
+			errors.Wrap(err, "error getting keys from OpenID Connect provider")
+	}
+	// verifyFuncs might have two verify funcs: the web and cli verifier
+	var verifyFuncs []goOIDCIDTokenVerifyFn
+	verifyFuncs = append(verifyFuncs, oidc.NewVerifier(
+		cfg.OIDCConfig.IssuerURL,
+		keyset,
+		&oidc.Config{
+			ClientID: cfg.OIDCConfig.ClientID,
+		},
+	).Verify)
+	if cfg.OIDCConfig.CLIClientID != "" {
+		verifyFuncs = append(verifyFuncs, oidc.NewVerifier(
+			cfg.OIDCConfig.IssuerURL,
+			keyset,
+			&oidc.Config{
+				ClientID: cfg.OIDCConfig.CLIClientID,
+			},
+		).Verify)
+	}
+	multiVerifyFunc := func(ctx context.Context, rawIDToken string) (*oidc.IDToken, error) {
+		var errs []error
+		for _, fn := range verifyFuncs {
+			t, err := fn(ctx, rawIDToken)
+			if err == nil {
+				// we found one that worked
+				return t, nil
+			}
+			errs = append(errs, err)
+		}
+		// if we get here, we've iterated all our verifiers and none of them worked.
+		return nil, errs[0]
+	}
+	return multiVerifyFunc, nil
 }
 
 // getKeySet retrieves the key set from the an OpenID Connect identify provider.

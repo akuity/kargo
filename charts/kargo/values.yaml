@@ -150,6 +150,12 @@ api:
     ## you by your identity provider.
     clientID: <client ID>
 
+    ## The client ID for the OIDC client.
+    ## 
+    # Some OIDC providers (such as Dex) require a separate clientID for different
+    # callback URLs such as the web app vs. CLI http://localhost login.
+    cliClientID:
+
     dex:
 
       ## Whether to enable Dex as the identity provider.

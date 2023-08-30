@@ -284,6 +284,11 @@ export class OIDCConfig extends Message<OIDCConfig> {
    */
   scopes: string[] = [];
 
+  /**
+   * @generated from field: string cli_client_id = 4;
+   */
+  cliClientId = "";
+
   constructor(data?: PartialMessage<OIDCConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -295,6 +300,7 @@ export class OIDCConfig extends Message<OIDCConfig> {
     { no: 1, name: "issuer_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "client_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "scopes", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "cli_client_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OIDCConfig {

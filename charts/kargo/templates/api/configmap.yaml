@@ -29,6 +29,9 @@ data:
   {{- else }}
   OIDC_ISSUER_URL: {{ .Values.api.oidc.issuerURL }}
   OIDC_CLIENT_ID: {{ .Values.api.oidc.clientID }}
+  {{- if .Values.api.oidc.cliClientID }}
+  OIDC_CLI_CLIENT_ID: {{ .Values.api.oidc.cliClientID }}
+  {{- end }}
   {{- end }}
   {{- end }}
 {{- end }}

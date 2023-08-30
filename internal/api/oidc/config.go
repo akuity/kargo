@@ -14,6 +14,9 @@ type Config struct {
 	// Client ID is the client ID provided by the OpenID Connect identity
 	// provider.
 	ClientID string `envconfig:"OIDC_CLIENT_ID" required:"true"`
+	// CLIClientID is the client ID provided by the OpenID Connect identity
+	// provider for CLI login.
+	CLIClientID string `envconfig:"OIDC_CLI_CLIENT_ID"`
 	// Scopes are the scopes to be requested during the authorization code flow.
 	Scopes []string
 }
