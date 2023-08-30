@@ -44,6 +44,8 @@ jobs:
       run: |
         curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz \
         | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint --strip-components=1
+    - name: Configure Git
+      run: git config --global --add safe.directory '*'
     - name: Run linter
       env:
         GO_LINT_ERROR_FORMAT: github-actions
