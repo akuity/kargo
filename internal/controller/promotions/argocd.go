@@ -148,11 +148,21 @@ func (r *reconciler) authorizeArgoCDAppUpdate(
 	}
 	allowedNamespaceGlob, err := glob.Compile(tokens[0])
 	if err != nil {
-		return permErr
+		return errors.Errorf(
+			"Argo CD Application %q in namespace %q has invalid glob expression: %q",
+			app.Name,
+			app.Namespace,
+			tokens[0],
+		)
 	}
 	allowedNameGlob, err := glob.Compile(tokens[1])
 	if err != nil {
-		return permErr
+		return errors.Errorf(
+			"Argo CD Application %q in namespace %q has invalid glob expression: %q",
+			app.Name,
+			app.Namespace,
+			tokens[1],
+		)
 	}
 	if !allowedNamespaceGlob.Match(stageMeta.Namespace) || !allowedNameGlob.Match(stageMeta.Name) {
 		return permErr
