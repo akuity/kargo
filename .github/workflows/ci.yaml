@@ -13,7 +13,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.7-bookworm
+      image: golang:1.21.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -33,13 +33,13 @@ jobs:
   lint-go:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.7-bookworm
+      image: golang:1.21.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Install linter
       env:
-        GOLANGCI_LINT_VERSION: 1.53.3
+        GOLANGCI_LINT_VERSION: 1.54.2
       working-directory: /usr/local/bin
       run: |
         curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz \
@@ -52,7 +52,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.7-bookworm
+      image: golang:1.21.0-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -67,7 +67,7 @@ jobs:
   lint-proto:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.7-bookworm
+      image: golang:1.21.0-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -83,7 +83,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.7-bookworm
+      image: golang:1.21.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -107,9 +107,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Install buf
-      run: go install github.com/bufbuild/buf/cmd/buf@v1.15.1
+      run: go install github.com/bufbuild/buf/cmd/buf@v1.26.1
     - name: Install controller-gen
-      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3
+      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.13.0
     - name: Run Codegen
       run: make codegen
     - name: Git stuff
@@ -139,7 +139,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.20.7-bookworm
+      image: golang:1.21.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
