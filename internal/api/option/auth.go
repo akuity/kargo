@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	goerrors "errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -112,7 +113,7 @@ func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) (goOID
 			errs = append(errs, err)
 		}
 		// if we get here, we've iterated all our verifiers and none of them worked.
-		return nil, errs[0]
+		return nil, goerrors.Join(errs...)
 	}
 	return multiVerifyFunc, nil
 }
