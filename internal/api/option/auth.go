@@ -102,7 +102,7 @@ func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) (goOID
 		).Verify)
 	}
 	multiVerifyFunc := func(ctx context.Context, rawIDToken string) (*oidc.IDToken, error) {
-		var errs []error
+		errs := make([]error, 0, len(verifyFuncs))
 		for _, fn := range verifyFuncs {
 			t, err := fn(ctx, rawIDToken)
 			if err == nil {
