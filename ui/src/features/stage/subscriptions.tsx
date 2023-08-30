@@ -61,7 +61,7 @@ export const Subscriptions = (props: {
       {!!subscriptions.repos?.images.length && (
         <>
           <Typography.Title level={5} style={{ marginTop: '.8em' }}>
-            Docker images
+            Container images
           </Typography.Title>
           <Space direction='vertical' style={{ width: '100%' }}>
             {subscriptions?.repos.images.map((image) => (
