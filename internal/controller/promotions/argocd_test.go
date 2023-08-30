@@ -275,6 +275,50 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 			},
 			allowed: true,
 		},
+		{
+			name: "wildcard-full-ns",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*:name-yep",
+					},
+				},
+			},
+			allowed: true,
+		},
+		{
+			name: "wildcard-full-namespace",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "ns-yep:*",
+					},
+				},
+			},
+			allowed: true,
+		},
+		{
+			name: "wildcard-partial",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*-ye*:*-y*",
+					},
+				},
+			},
+			allowed: true,
+		},
+		{
+			name: "wildcard-reject",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*-nope:*-nope",
+					},
+				},
+			},
+			allowed: false,
+		},
 	}
 	r := reconciler{}
 	for _, testCase := range testCases {
