@@ -23,12 +23,16 @@ data:
   {{- if .Values.api.oidc.dex.enabled }}
   OIDC_ISSUER_URL: {{ .Values.api.protocol }}://{{ .Values.api.host }}/dex
   OIDC_CLIENT_ID: {{ .Values.api.host }}
+  OIDC_CLI_CLIENT_ID: {{ .Values.api.host }}-cli
   DEX_ENABLED: "true"
   DEX_SERVER_ADDRESS: https://kargo-dex-server.{{ .Release.Namespace }}.svc
   DEX_CA_CERT_PATH: /etc/kargo/idp-ca.crt
   {{- else }}
   OIDC_ISSUER_URL: {{ .Values.api.oidc.issuerURL }}
   OIDC_CLIENT_ID: {{ .Values.api.oidc.clientID }}
+  {{- if .Values.api.oidc.cliClientID }}
+  OIDC_CLI_CLIENT_ID: {{ .Values.api.oidc.cliClientID }}
+  {{- end }}
   {{- end }}
   {{- end }}
 {{- end }}
