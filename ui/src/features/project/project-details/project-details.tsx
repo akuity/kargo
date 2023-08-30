@@ -8,7 +8,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
-import { listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { getStage, listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
@@ -37,7 +37,6 @@ export const ProjectDetails = () => {
       const stream = promiseClient.watchStages({ project: name }, { signal: cancel.signal });
 
       for await (const e of stream) {
-        const key = listStages.getQueryKey({ project: name });
         const index = data.stages.findIndex(
           (item) => item.metadata?.name === e.stage?.metadata?.name
         );
@@ -57,13 +56,23 @@ export const ProjectDetails = () => {
             ];
           }
         }
-        client.setQueryData(key, { stages });
+
+        // Update Stages list
+        const listStagesQueryKey = listStages.getQueryKey({ project: name });
+        client.setQueryData(listStagesQueryKey, { stages });
+
+        // Update Stage details
+        const getStageQueryKey = getStage.getQueryKey({
+          project: name,
+          name: e.stage?.metadata?.name
+        });
+        client.setQueryData(getStageQueryKey, { stage: e.stage });
       }
     };
     watchStages();
 
     return () => cancel.abort();
-  }, [isLoading, isVisible]);
+  }, [isLoading, isVisible, name]);
 
   const nodes = React.useMemo(
     () =>

@@ -1,5 +1,5 @@
 import { faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button, Divider, Drawer, Empty, Space, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -10,7 +10,6 @@ import { Subscriptions } from '@ui/features/stage/subscriptions';
 import {
   deleteStage,
   getStage,
-  listStages,
   refreshStage
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
@@ -26,23 +25,11 @@ export const StageDetails = () => {
     ...getStage.useQuery({ project: projectName, name: stageName }),
     enabled: !!stageName
   });
-  const queryClient = useQueryClient();
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
 
-  const { mutate, isLoading: isLoadingDelete } = useMutation({
-    ...deleteStage.useMutation(),
-    onSuccess: () => queryClient.invalidateQueries(listStages.getQueryKey({ project: projectName }))
-  });
-
-  const { mutate: refresh, isLoading: isRefreshLoading } = useMutation({
-    ...refreshStage.useMutation(),
-    onSuccess: (data) =>
-      queryClient.setQueryData(
-        getStage.getQueryKey({ project: projectName, name: stageName }),
-        data
-      )
-  });
+  const { mutate, isLoading: isLoadingDelete } = useMutation(deleteStage.useMutation());
+  const { mutate: refresh, isLoading: isRefreshLoading } = useMutation(refreshStage.useMutation());
 
   const onDelete = () => {
     confirm({
@@ -80,7 +67,9 @@ export const StageDetails = () => {
                 type='default'
                 icon={<ButtonIcon icon={faRefresh} size='1x' />}
                 onClick={onRefresh}
-                loading={isRefreshLoading}
+                loading={
+                  isRefreshLoading || !!data.stage.metadata?.annotations['kargo.akuity.io/refresh']
+                }
               >
                 Refresh
               </Button>
