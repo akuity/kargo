@@ -34,10 +34,7 @@ export const ProjectDetails = () => {
 
     const watchStages = async () => {
       const promiseClient = createPromiseClient(KargoService, transport);
-      const stream = promiseClient.watchStages(
-        { project: 'kargo-demo', name: 'test' },
-        { signal: cancel.signal }
-      );
+      const stream = promiseClient.watchStages({ project: name }, { signal: cancel.signal });
 
       for await (const e of stream) {
         const key = listStages.getQueryKey({ project: name });
