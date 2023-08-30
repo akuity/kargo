@@ -330,8 +330,6 @@ func (r *reconciler) syncPromo(
 		return status
 	}
 
-	promo.Status.Phase = api.PromotionPhasePending
-
 	stage := types.NamespacedName{
 		Namespace: promo.Namespace,
 		Name:      promo.Spec.Stage,
