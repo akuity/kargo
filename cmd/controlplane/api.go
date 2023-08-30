@@ -40,7 +40,7 @@ func newAPICommand() *cobra.Command {
 			if err != nil {
 				return pkgerrors.Wrap(err, "error loading REST config")
 			}
-			kubeCli, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{
+			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{
 				NewInternalClient: newClientForAPI,
 			})
 			if err != nil {
@@ -60,7 +60,7 @@ func newAPICommand() *cobra.Command {
 				}).Info("SSO via OpenID Connect is enabled")
 			}
 
-			srv, err := api.NewServer(cfg, kubeCli)
+			srv, err := api.NewServer(cfg, kubeClient)
 			if err != nil {
 				return pkgerrors.Wrap(err, "error creating API server")
 			}
