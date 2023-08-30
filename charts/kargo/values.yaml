@@ -179,6 +179,11 @@ api:
         ## There is no provision for running Dex without TLS.
         selfSignedCert: true
 
+      ## Whether to skip Dex's own approval screen. Since upstream identity
+      ## providers will already request user consent, this second approval
+      ## screen from Dex can be both superfluous and confusing.
+      skipApprovalScreen: true
+
       ## Configure Dex connectors to one or more upstream identity providers.
       ## See https://dexidp.io/docs/connectors/ for more information.
       connectors:
