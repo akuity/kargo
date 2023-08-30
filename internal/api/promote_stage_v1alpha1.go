@@ -2,17 +2,11 @@ package api
 
 import (
 	"context"
-	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
+	"github.com/akuity/kargo/internal/kargo"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -20,63 +14,25 @@ func (s *server) PromoteStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.PromoteStageRequest],
 ) (*connect.Response[svcv1alpha1.PromoteStageResponse], error) {
-	if req.Msg.GetProject() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
-	}
-	if req.Msg.GetState() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("state should not be empty"))
+	if err := validateProjectAndStageNonEmpty(req.Msg.GetProject(), req.Msg.GetName()); err != nil {
+		return nil, err
 	}
 	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
 		return nil, err
 	}
-
-	var stage kubev1alpha1.Stage
-	if err := s.client.Get(ctx, client.ObjectKey{
-		Namespace: req.Msg.GetProject(),
-		Name:      req.Msg.GetName(),
-	}, &stage); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound,
-				fmt.Errorf("stage %q not found", req.Msg.GetName()))
-		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+	stage, err := getStage(ctx, s.client, req.Msg.GetProject(), req.Msg.GetName())
+	if err != nil {
+		return nil, err
+	}
+	if err := validateFreightExists(req.Msg.GetState(), stage.Status.AvailableStates); err != nil {
+		return nil, err
 	}
 
-	stateExists := false
-	for _, state := range stage.Status.AvailableStates {
-		if req.Msg.GetState() == state.ID {
-			stateExists = true
-			break
-		}
-	}
-	if !stateExists {
-		return nil, connect.NewError(connect.CodeNotFound,
-			fmt.Errorf("state %q not found in Stage %q", req.Msg.GetState(), stage.Name))
-	}
-
-	promotion := &kubev1alpha1.Promotion{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", req.Msg.GetName()),
-			Namespace:    req.Msg.GetProject(),
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         kubev1alpha1.GroupVersion.String(),
-					Kind:               "Stage",
-					Name:               stage.Name,
-					UID:                stage.UID,
-					BlockOwnerDeletion: pointer.Bool(true),
-				},
-			},
-		},
-		Spec: &kubev1alpha1.PromotionSpec{
-			Stage: stage.Name,
-			State: req.Msg.GetState(),
-		},
-	}
-	if err := s.client.Create(ctx, promotion); err != nil {
+	promotion := kargo.NewPromotion(*stage, req.Msg.GetState())
+	if err := s.client.Create(ctx, &promotion); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&svcv1alpha1.PromoteStageResponse{
-		Promotion: typesv1alpha1.ToPromotionProto(*promotion),
+		Promotion: typesv1alpha1.ToPromotionProto(promotion),
 	}), nil
 }

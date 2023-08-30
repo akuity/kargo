@@ -1,0 +1,18 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: downstream2
+  namespace: kargo-demo
+spec:
+  promotionMechanisms:
+    gitRepoUpdates:
+    - kustomize:
+        images:
+        - image: ghcr.io/akuity/guestbook
+          path: env/staging
+      readBranch: ""
+      repoURL: https://github.com/akuity/guestbook-deploy.git
+      writeBranch: main
+  subscriptions:
+    upstreamStages:
+    - name: upstream

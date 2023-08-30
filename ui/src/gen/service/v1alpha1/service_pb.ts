@@ -1392,6 +1392,92 @@ export class PromoteStageResponse extends Message<PromoteStageResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.PromoteSubscribersRequest
+ */
+export class PromoteSubscribersRequest extends Message<PromoteSubscribersRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string stage = 2;
+   */
+  stage = "";
+
+  /**
+   * @generated from field: string freight = 3;
+   */
+  freight = "";
+
+  constructor(data?: PartialMessage<PromoteSubscribersRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.PromoteSubscribersRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "freight", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromoteSubscribersRequest {
+    return new PromoteSubscribersRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromoteSubscribersRequest {
+    return new PromoteSubscribersRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromoteSubscribersRequest {
+    return new PromoteSubscribersRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromoteSubscribersRequest | PlainMessage<PromoteSubscribersRequest> | undefined, b: PromoteSubscribersRequest | PlainMessage<PromoteSubscribersRequest> | undefined): boolean {
+    return proto3.util.equals(PromoteSubscribersRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.PromoteSubscribersResponse
+ */
+export class PromoteSubscribersResponse extends Message<PromoteSubscribersResponse> {
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+   */
+  promotions: Promotion[] = [];
+
+  constructor(data?: PartialMessage<PromoteSubscribersResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.PromoteSubscribersResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "promotions", kind: "message", T: Promotion, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromoteSubscribersResponse {
+    return new PromoteSubscribersResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromoteSubscribersResponse {
+    return new PromoteSubscribersResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromoteSubscribersResponse {
+    return new PromoteSubscribersResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromoteSubscribersResponse | PlainMessage<PromoteSubscribersResponse> | undefined, b: PromoteSubscribersResponse | PlainMessage<PromoteSubscribersResponse> | undefined): boolean {
+    return proto3.util.equals(PromoteSubscribersResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshStageRequest
  */
 export class RefreshStageRequest extends Message<RefreshStageRequest> {

@@ -15,16 +15,16 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type PromoteFlags struct {
+type PromoteSubscribersFlags struct {
 	Freight string
 }
 
-func newPromoteCommand(opt *option.Option) *cobra.Command {
-	var flag PromoteFlags
+func newPromoteSubscribersCommand(opt *option.Option) *cobra.Command {
+	var flag PromoteSubscribersFlags
 	cmd := &cobra.Command{
-		Use:     "promote",
+		Use:     "promote-subscribers",
 		Args:    cobra.ExactArgs(2),
-		Example: "kargo stage promote (PROJECT) (NAME) [(--freight=)freight-id]",
+		Example: "kargo stage promote-subscribers (PROJECT) (NAME) [(--freight=)freight-id]",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
@@ -42,30 +42,35 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 			}
 			freight := strings.TrimSpace(flag.Freight)
 			if freight == "" {
-				// TODO: Get latest available freight if empty
 				return errors.New("freight is required")
 			}
 
-			res, err := kargoSvcCli.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
+			res, promoteErr := kargoSvcCli.PromoteSubscribers(ctx, connect.NewRequest(&v1alpha1.PromoteSubscribersRequest{
 				Project: project,
-				Name:    name,
-				State:   freight,
+				Stage:   name,
+				Freight: freight,
 			}))
-			if err != nil {
-				return errors.Wrap(err, "promote stage")
-			}
 			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
-				fmt.Fprintf(opt.IOStreams.Out,
-					"Promotion Created: %q", res.Msg.GetPromotion().GetMetadata().GetName())
+				if res != nil && res.Msg != nil {
+					for _, p := range res.Msg.GetPromotions() {
+						fmt.Fprintf(opt.IOStreams.Out, "Promotion Created: %q\n", *p.Metadata.Name)
+					}
+				}
+				if promoteErr != nil {
+					return errors.Wrap(promoteErr, "promote subscribers")
+				}
 				return nil
 			}
-			printer, err := opt.PrintFlags.ToPrinter()
-			if err != nil {
-				return errors.Wrap(err, "new printer")
+
+			printer, printerErr := opt.PrintFlags.ToPrinter()
+			if printerErr != nil {
+				return errors.Wrap(printerErr, "new printer")
 			}
-			promo := typesv1alpha1.FromPromotionProto(res.Msg.GetPromotion())
-			_ = printer.PrintObj(promo, opt.IOStreams.Out)
-			return nil
+			for _, p := range res.Msg.GetPromotions() {
+				kubeP := typesv1alpha1.FromPromotionProto(p)
+				_ = printer.PrintObj(kubeP, opt.IOStreams.Out)
+			}
+			return promoteErr
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)

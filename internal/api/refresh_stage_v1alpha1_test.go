@@ -108,13 +108,13 @@ func TestRefreshStage(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			// Make sure we set timestamp is close to now
-			// Assume it doesn't take 3 seconds to run this unit test.
 			stage := res.Msg.GetStage()
 			annotation := stage.Metadata.Annotations[kubev1alpha1.AnnotationKeyRefresh]
 			refreshTime, err := time.Parse(time.RFC3339, annotation)
 			require.NoError(t, err)
-			require.LessOrEqual(t, time.Now().UTC().Sub(refreshTime), 3*time.Second)
+			// Make sure we set timestamp is close to now
+			// Assume it doesn't take 3 seconds to run this unit test.
+			require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
 			require.Equal(t, ts.req.GetProject(), stage.GetMetadata().GetNamespace())
 			require.Equal(t, ts.req.GetName(), stage.GetMetadata().GetName())
 		})
