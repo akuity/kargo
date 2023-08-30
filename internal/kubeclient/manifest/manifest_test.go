@@ -85,6 +85,50 @@ enableAutoPromotion: true
 				},
 			},
 		},
+		"cluster resource should be present first": {
+			data: []byte(`---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionPolicy
+metadata:
+  name: test
+  namespace: kargo-demo
+stage: test
+enableAutoPromotion: true
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kargo-demo
+  labels:
+    kargo.akuity.io/project: "true"
+`),
+			expectedObjects: []runtime.Object{
+				&corev1.Namespace{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kargo-demo",
+						Labels: map[string]string{
+							"kargo.akuity.io/project": "true",
+						},
+					},
+				},
+				&kargoapi.PromotionPolicy{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "PromotionPolicy",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kargo-demo",
+						Name:      "test",
+					},
+					Stage:               "test",
+					EnableAutoPromotion: true,
+				},
+			},
+		},
 	}
 
 	scheme := runtime.NewScheme()
@@ -97,7 +141,7 @@ enableAutoPromotion: true
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := parseKubernetesManifest(tc.data)
+			actualCluster, actualNamespaced, err := parseKubernetesManifest(tc.data)
 			if tc.expectedErr {
 				require.Error(t, err)
 				return
@@ -110,7 +154,7 @@ enableAutoPromotion: true
 				require.NoError(t, err)
 				expected[idx] = &unstructured.Unstructured{Object: u}
 			}
-			require.EqualValues(t, expected, actual)
+			require.EqualValues(t, expected, append(actualCluster, actualNamespaced...))
 		})
 	}
 }

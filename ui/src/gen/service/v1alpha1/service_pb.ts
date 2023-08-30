@@ -438,6 +438,378 @@ export class TypedStageSpec extends Message<TypedStageSpec> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateResourceRequest
+ */
+export class CreateResourceRequest extends Message<CreateResourceRequest> {
+  /**
+   * @generated from field: bytes manifest = 1;
+   */
+  manifest = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<CreateResourceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateResourceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateResourceRequest {
+    return new CreateResourceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateResourceRequest {
+    return new CreateResourceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateResourceRequest {
+    return new CreateResourceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateResourceRequest | PlainMessage<CreateResourceRequest> | undefined, b: CreateResourceRequest | PlainMessage<CreateResourceRequest> | undefined): boolean {
+    return proto3.util.equals(CreateResourceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateResourceResult
+ */
+export class CreateResourceResult extends Message<CreateResourceResult> {
+  /**
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.CreateResourceResult.result
+   */
+  result: {
+    /**
+     * @generated from field: bytes created_resource_manifest = 1;
+     */
+    value: Uint8Array;
+    case: "createdResourceManifest";
+  } | {
+    /**
+     * @generated from field: string error = 2;
+     */
+    value: string;
+    case: "error";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<CreateResourceResult>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateResourceResult";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "created_resource_manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
+    { no: 2, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, oneof: "result" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateResourceResult {
+    return new CreateResourceResult().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateResourceResult {
+    return new CreateResourceResult().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateResourceResult {
+    return new CreateResourceResult().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateResourceResult | PlainMessage<CreateResourceResult> | undefined, b: CreateResourceResult | PlainMessage<CreateResourceResult> | undefined): boolean {
+    return proto3.util.equals(CreateResourceResult, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateResourceResponse
+ */
+export class CreateResourceResponse extends Message<CreateResourceResponse> {
+  /**
+   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.CreateResourceResult results = 1;
+   */
+  results: CreateResourceResult[] = [];
+
+  constructor(data?: PartialMessage<CreateResourceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateResourceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "results", kind: "message", T: CreateResourceResult, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateResourceResponse {
+    return new CreateResourceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateResourceResponse {
+    return new CreateResourceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateResourceResponse {
+    return new CreateResourceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateResourceResponse | PlainMessage<CreateResourceResponse> | undefined, b: CreateResourceResponse | PlainMessage<CreateResourceResponse> | undefined): boolean {
+    return proto3.util.equals(CreateResourceResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateResourceRequest
+ */
+export class UpdateResourceRequest extends Message<UpdateResourceRequest> {
+  /**
+   * @generated from field: bytes manifest = 1;
+   */
+  manifest = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<UpdateResourceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateResourceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateResourceRequest {
+    return new UpdateResourceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateResourceRequest {
+    return new UpdateResourceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateResourceRequest {
+    return new UpdateResourceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateResourceRequest | PlainMessage<UpdateResourceRequest> | undefined, b: UpdateResourceRequest | PlainMessage<UpdateResourceRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateResourceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateResourceResult
+ */
+export class UpdateResourceResult extends Message<UpdateResourceResult> {
+  /**
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.UpdateResourceResult.result
+   */
+  result: {
+    /**
+     * @generated from field: bytes updated_resource_manifest = 1;
+     */
+    value: Uint8Array;
+    case: "updatedResourceManifest";
+  } | {
+    /**
+     * @generated from field: string error = 2;
+     */
+    value: string;
+    case: "error";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<UpdateResourceResult>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateResourceResult";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "updated_resource_manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
+    { no: 2, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, oneof: "result" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateResourceResult {
+    return new UpdateResourceResult().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateResourceResult {
+    return new UpdateResourceResult().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateResourceResult {
+    return new UpdateResourceResult().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateResourceResult | PlainMessage<UpdateResourceResult> | undefined, b: UpdateResourceResult | PlainMessage<UpdateResourceResult> | undefined): boolean {
+    return proto3.util.equals(UpdateResourceResult, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
+ */
+export class UpdateResourceResponse extends Message<UpdateResourceResponse> {
+  /**
+   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.UpdateResourceResult results = 1;
+   */
+  results: UpdateResourceResult[] = [];
+
+  constructor(data?: PartialMessage<UpdateResourceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateResourceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "results", kind: "message", T: UpdateResourceResult, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateResourceResponse {
+    return new UpdateResourceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateResourceResponse {
+    return new UpdateResourceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateResourceResponse {
+    return new UpdateResourceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateResourceResponse | PlainMessage<UpdateResourceResponse> | undefined, b: UpdateResourceResponse | PlainMessage<UpdateResourceResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateResourceResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteResourceRequest
+ */
+export class DeleteResourceRequest extends Message<DeleteResourceRequest> {
+  /**
+   * @generated from field: bytes manifest = 1;
+   */
+  manifest = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<DeleteResourceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteResourceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteResourceRequest {
+    return new DeleteResourceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteResourceRequest {
+    return new DeleteResourceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteResourceRequest {
+    return new DeleteResourceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteResourceRequest | PlainMessage<DeleteResourceRequest> | undefined, b: DeleteResourceRequest | PlainMessage<DeleteResourceRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteResourceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteResourceResult
+ */
+export class DeleteResourceResult extends Message<DeleteResourceResult> {
+  /**
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.DeleteResourceResult.result
+   */
+  result: {
+    /**
+     * @generated from field: bytes deleted_resource_manifest = 1;
+     */
+    value: Uint8Array;
+    case: "deletedResourceManifest";
+  } | {
+    /**
+     * @generated from field: string error = 2;
+     */
+    value: string;
+    case: "error";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<DeleteResourceResult>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteResourceResult";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deleted_resource_manifest", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
+    { no: 2, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, oneof: "result" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteResourceResult {
+    return new DeleteResourceResult().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteResourceResult {
+    return new DeleteResourceResult().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteResourceResult {
+    return new DeleteResourceResult().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteResourceResult | PlainMessage<DeleteResourceResult> | undefined, b: DeleteResourceResult | PlainMessage<DeleteResourceResult> | undefined): boolean {
+    return proto3.util.equals(DeleteResourceResult, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
+ */
+export class DeleteResourceResponse extends Message<DeleteResourceResponse> {
+  /**
+   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.DeleteResourceResult results = 1;
+   */
+  results: DeleteResourceResult[] = [];
+
+  constructor(data?: PartialMessage<DeleteResourceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteResourceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "results", kind: "message", T: DeleteResourceResult, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteResourceResponse {
+    return new DeleteResourceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteResourceResponse {
+    return new DeleteResourceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteResourceResponse {
+    return new DeleteResourceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteResourceResponse | PlainMessage<DeleteResourceResponse> | undefined, b: DeleteResourceResponse | PlainMessage<DeleteResourceResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteResourceResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateStageRequest
  */
 export class CreateStageRequest extends Message<CreateStageRequest> {
