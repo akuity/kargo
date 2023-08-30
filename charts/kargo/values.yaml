@@ -150,10 +150,16 @@ api:
     ## you by your identity provider.
     clientID: <client ID>
 
-    ## The client ID for the OIDC client.
+    ## The client ID for the OIDC client used by CLI (optional).
     ## 
-    # Some OIDC providers (such as Dex) require a separate clientID for different
-    # callback URLs such as the web app vs. CLI http://localhost login.
+    ## Needed by some OIDC providers (such as Dex) that require a separate
+    ## Client ID for web app login vs. CLI login (http://localhost).
+    ##
+    ## If Dex is enabled, this value will be ignored and cli client ID will be
+    ## automatically configured.
+    ##
+    ## If Dex is not enabled, and a different client app is configured for
+    ## localhost CLI login, this should be the client ID configured in the IdP.
     cliClientID:
 
     dex:
