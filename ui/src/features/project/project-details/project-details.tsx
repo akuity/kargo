@@ -175,6 +175,11 @@ export const ProjectDetails = () => {
           label: { style: { cursor: 'pointer', fontSize: 14 } as LabelStyle },
           customContent: (item: CardItems, group: IGroup, cfg: CustomCfg) => {
             const { startX, startY } = cfg;
+
+            if (!item.icon || !item.value) {
+              return;
+            }
+
             group.addShape('image', {
               attrs: {
                 x: startX,
@@ -199,6 +204,8 @@ export const ProjectDetails = () => {
               },
               name: `text-${Math.random()}`
             });
+
+            return 26;
           },
           title: {
             style: {
