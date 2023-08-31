@@ -9,7 +9,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import { CSSProperties } from 'react';
 
-import { Health } from '@ui/gen/v1alpha1/types_pb';
+import { Health, HealthState } from '@ui/gen/v1alpha1/types_pb';
 
 export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties }) => {
   const { health } = props;
@@ -28,26 +28,26 @@ export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties
   );
 };
 
-const iconForHealthStatus = (status?: string): IconDefinition => {
+const iconForHealthStatus = (status?: HealthState): IconDefinition => {
   switch (status) {
-    case 'Healthy':
+    case HealthState.HEALTHY:
       return faHeart;
-    case 'Unhealthy':
+    case HealthState.UNHEALTHY:
       return faHeartBroken;
-    case 'Unknown':
+    case HealthState.UNKNOWN:
       return faQuestionCircle;
     default:
       return faCircle;
   }
 };
 
-const colorForHealthStatus = (status?: string): string => {
+const colorForHealthStatus = (status?: HealthState): string => {
   switch (status) {
-    case 'Healthy':
+    case HealthState.HEALTHY:
       return '#52c41a';
-    case 'Unhealthy':
+    case HealthState.UNHEALTHY:
       return '#f5222d';
-    case 'Unknown':
+    case HealthState.UNKNOWN:
       return '#faad14';
     default:
       return '#ccc';

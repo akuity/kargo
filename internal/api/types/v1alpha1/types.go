@@ -144,8 +144,18 @@ func FromHealthProto(h *v1alpha1.Health) *kubev1alpha1.Health {
 	if h == nil {
 		return nil
 	}
+
+	status := kubev1alpha1.HealthStateUnknown
+	switch h.GetStatus() {
+	case v1alpha1.HealthState_HEALTH_STATE_UNKNOWN:
+		status = kubev1alpha1.HealthStateUnknown
+	case v1alpha1.HealthState_HEALTH_STATE_HEALTHY:
+		status = kubev1alpha1.HealthStateHealthy
+	case v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY:
+		status = kubev1alpha1.HealthStateUnhealthy
+	}
 	return &kubev1alpha1.Health{
-		Status: kubev1alpha1.HealthState(h.GetStatus()),
+		Status: status,
 		Issues: h.GetIssues(),
 	}
 }
@@ -765,8 +775,17 @@ func ToChartProto(c kubev1alpha1.Chart) *v1alpha1.Chart {
 }
 
 func ToHealthProto(h kubev1alpha1.Health) *v1alpha1.Health {
+	status := v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
+	switch h.Status {
+	case kubev1alpha1.HealthStateHealthy:
+		status = v1alpha1.HealthState_HEALTH_STATE_HEALTHY
+	case kubev1alpha1.HealthStateUnhealthy:
+		status = v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY
+	case kubev1alpha1.HealthStateUnknown:
+		status = v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
+	}
 	return &v1alpha1.Health{
-		Status: proto.String(string(h.Status)),
+		Status: status,
 		Issues: h.Issues,
 	}
 }

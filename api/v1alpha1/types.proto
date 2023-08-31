@@ -71,8 +71,15 @@ message GitSubscription {
   string branch = 2;
 }
 
+enum HealthState {
+  // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
+  HEALTH_STATE_UNKNOWN = 0;
+  HEALTH_STATE_HEALTHY = 1;
+  HEALTH_STATE_UNHEALTHY = 2;
+}
+
 message Health {
-  optional string status = 1;
+  HealthState status = 1;
   repeated string issues = 2;
 }
 

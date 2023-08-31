@@ -10,6 +10,7 @@ lint:
   ignore_only:
     PACKAGE_VERSION_SUFFIX:
       - metav1/types.proto
+  allow_comment_ignores: true
 breaking:
   use:
     - FILE
