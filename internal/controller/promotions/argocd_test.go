@@ -227,14 +227,19 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 }
 
 func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
+	permErr := "does not permit mutation"
+	parseErr := "unable to parse"
+	invalidGlobErr := "invalid glob expression"
+
 	testCases := []struct {
-		name    string
-		app     *argocd.Application
-		allowed bool
+		name   string
+		app    *argocd.Application
+		errMsg string
 	}{
 		{
-			name: "annotations are nil",
-			app:  &argocd.Application{},
+			name:   "annotations are nil",
+			app:    &argocd.Application{},
+			errMsg: permErr,
 		},
 		{
 			name: "annotation is missing",
@@ -243,6 +248,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 					Annotations: map[string]string{},
 				},
 			},
+			errMsg: permErr,
 		},
 		{
 			name: "annotation cannot be parsed",
@@ -253,6 +259,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 					},
 				},
 			},
+			errMsg: parseErr,
 		},
 		{
 			name: "mutation is not allowed",
@@ -263,6 +270,7 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 					},
 				},
 			},
+			errMsg: permErr,
 		},
 		{
 			name: "mutation is allowed",
@@ -273,7 +281,69 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 					},
 				},
 			},
-			allowed: true,
+		},
+		{
+			name: "wildcard-full-ns",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*:name-yep",
+					},
+				},
+			},
+		},
+		{
+			name: "wildcard-full-namespace",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "ns-yep:*",
+					},
+				},
+			},
+		},
+		{
+			name: "wildcard-partial",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*-ye*:*-y*",
+					},
+				},
+			},
+		},
+		{
+			name: "wildcard-reject",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*-nope:*-nope",
+					},
+				},
+			},
+			errMsg: permErr,
+		},
+		{
+			name: "invalid-project-glob",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*[:*",
+					},
+				},
+			},
+			errMsg: invalidGlobErr,
+		},
+		{
+			name: "invalid-stage-glob",
+			app: &argocd.Application{
+				ObjectMeta: v1.ObjectMeta{
+					Annotations: map[string]string{
+						authorizedStageAnnotationKey: "*:*[",
+					},
+				},
+			},
+			errMsg: invalidGlobErr,
 		},
 	}
 	r := reconciler{}
@@ -286,10 +356,10 @@ func TestAuthorizeArgoCDAppUpdate(t *testing.T) {
 				},
 				testCase.app,
 			)
-			if testCase.allowed {
+			if testCase.errMsg == "" {
 				require.NoError(t, err)
 			} else {
-				require.Error(t, err)
+				require.ErrorContains(t, err, testCase.errMsg)
 			}
 		})
 	}

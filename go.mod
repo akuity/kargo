@@ -16,6 +16,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.6.0
 	github.com/evanphx/json-patch/v5 v5.6.0
 	github.com/ghodss/yaml v1.0.0
+	github.com/gobwas/glob v0.2.3
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/google/uuid v1.3.1
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -102,7 +103,6 @@ require (
 	github.com/go-openapi/swag v0.21.1 // indirect
 	github.com/go-redis/cache/v8 v8.4.2 // indirect
 	github.com/go-redis/redis/v8 v8.11.5 // indirect
-	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
