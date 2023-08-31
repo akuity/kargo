@@ -1,4 +1,12 @@
-import { FlowAnalysisGraph, FlowGraphEdgeData, IGraph, LabelStyle } from '@ant-design/graphs';
+import {
+  CardItems,
+  CustomCfg,
+  FlowAnalysisGraph,
+  FlowGraphEdgeData,
+  IGraph,
+  IGroup,
+  LabelStyle
+} from '@ant-design/graphs';
 import { createPromiseClient } from '@bufbuild/connect';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
@@ -10,9 +18,10 @@ import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
 import { getStage, listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
-import {HealthState, Stage} from '@ui/gen/v1alpha1/types_pb';
+import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
-import {faCircle, faHeart, faHeartBroken, faQuestionCircle, IconDefinition} from "@fortawesome/free-solid-svg-icons";
+
+import { healthStateToIcon, healthStateToString } from './utils/health';
 
 export const ProjectDetails = () => {
   const { name } = useParams();
@@ -87,7 +96,8 @@ export const ProjectDetails = () => {
                   items: [
                     {
                       text: 'Status',
-                      value: healthStateToString(item.status?.currentState?.health?.status)
+                      value: healthStateToString(item.status?.currentState?.health?.status),
+                      icon: healthStateToIcon(item.status?.currentState?.health?.status)
                     }
                   ]
                 }
@@ -163,6 +173,40 @@ export const ProjectDetails = () => {
           style: { cursor: 'pointer', stroke: '#e8e8e8', radius: 4 },
           padding: 12,
           label: { style: { cursor: 'pointer', fontSize: 14 } as LabelStyle },
+          customContent: (item: CardItems, group: IGroup, cfg: CustomCfg) => {
+            const { startX, startY } = cfg;
+
+            if (!item.icon || !item.value) {
+              return;
+            }
+
+            group.addShape('image', {
+              attrs: {
+                x: startX,
+                y: startY,
+                img: item.icon,
+                width: 20,
+                height: 20,
+                cursor: 'pointer'
+              },
+              name: `image-${Math.random()}`
+            });
+
+            group?.addShape('text', {
+              attrs: {
+                textBaseline: 'top',
+                x: (startX || 0) + 28,
+                y: (startY || 0) + 4,
+                text: item.value,
+                fill: '#5a5a5a',
+                cursor: 'pointer',
+                fontSize: 13
+              },
+              name: `text-${Math.random()}`
+            });
+
+            return 26;
+          },
           title: {
             style: {
               cursor: 'pointer',
@@ -195,17 +239,4 @@ export const ProjectDetails = () => {
       />
     </>
   );
-};
-
-const healthStateToString = (status?: HealthState): string => {
-  switch (status) {
-    case HealthState.HEALTHY:
-      return 'Healthy'
-    case HealthState.UNHEALTHY:
-      return 'Unhealthy'
-    case HealthState.UNKNOWN:
-      return 'Unknown'
-    default:
-      return 'Unknown'
-  }
 };
