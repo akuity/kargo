@@ -32,4 +32,7 @@ rules:
       - promotions
     verbs:
       - create
+      - get
+      - list
+      - watch
 {{- end }}

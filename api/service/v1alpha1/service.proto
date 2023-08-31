@@ -32,6 +32,10 @@ service KargoService {
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
   rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
+  /* Promotion APIs */
+  rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
+  rpc GetPromotion(GetPromotionRequest) returns (GetPromotionResponse);
+
   /* PromotionPolicy APIs */
 
   rpc SetAutoPromotionForStage(SetAutoPromotionForStageRequest) returns (SetAutoPromotionForStageResponse);
@@ -224,6 +228,24 @@ message TypedPromotionPolicySpec {
   string name = 2;
   string stage = 3;
   bool enable_auto_promotion = 4;
+}
+
+message ListPromotionsRequest {
+  string project = 1;
+  optional string stage = 2;
+}
+
+message ListPromotionsResponse {
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+}
+
+message GetPromotionRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message GetPromotionResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
 }
 
 message SetAutoPromotionForStageRequest {
