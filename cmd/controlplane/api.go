@@ -1,16 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 
 	pkgerrors "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
@@ -34,7 +40,9 @@ func newAPICommand() *cobra.Command {
 			if err != nil {
 				return pkgerrors.Wrap(err, "error loading REST config")
 			}
-			client, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{})
+			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{
+				NewInternalClient: newClientForAPI,
+			})
 			if err != nil {
 				return pkgerrors.Wrap(err, "error creating Kubernetes client")
 			}
@@ -52,7 +60,7 @@ func newAPICommand() *cobra.Command {
 				}).Info("SSO via OpenID Connect is enabled")
 			}
 
-			srv, err := api.NewServer(cfg, client)
+			srv, err := api.NewServer(cfg, kubeClient)
 			if err != nil {
 				return pkgerrors.Wrap(err, "error creating API server")
 			}
@@ -72,4 +80,24 @@ func newAPICommand() *cobra.Command {
 			return pkgerrors.Wrap(srv.Serve(ctx, l), "serve")
 		},
 	}
+}
+
+func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme) (client.Client, error) {
+	mgr, err := ctrl.NewManager(r, ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: "0",
+	})
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "new manager")
+	}
+	// Index Promotions by Stage
+	if err := kubeclient.IndexPromotionsByStage(ctx, mgr); err != nil {
+		return nil, pkgerrors.Wrap(err, "index promotions by stage")
+	}
+	go func() {
+		if err := mgr.Start(ctx); err != nil {
+			panic(pkgerrors.Wrap(err, "start manager"))
+		}
+	}()
+	return mgr.GetClient(), nil
 }

@@ -127,16 +127,14 @@ func TestIndexStagesByApp(t *testing.T) {
 	}
 }
 
-func TestIndexOutstandingPromotionsByStage(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		name       string
-		promotion  *api.Promotion
-		assertions func(*testing.T, []string)
+func TestIndexPromotionsByStage(t *testing.T) {
+	testCases := map[string]struct {
+		input      *api.Promotion
+		predicates []func(*api.Promotion) bool
+		expected   []string
 	}{
-		{
-			name: "promotion is in terminal phase",
-			promotion: &api.Promotion{
+		"empty predicates/terminal phase": {
+			input: &api.Promotion{
 				Spec: &api.PromotionSpec{
 					Stage: "fake-stage",
 				},
@@ -144,13 +142,10 @@ func TestIndexOutstandingPromotionsByStage(t *testing.T) {
 					Phase: api.PromotionPhaseComplete,
 				},
 			},
-			assertions: func(t *testing.T, res []string) {
-				require.Nil(t, res)
-			},
+			expected: []string{"fake-stage"},
 		},
-		{
-			name: "promotion is in non-terminal phase",
-			promotion: &api.Promotion{
+		"empty predicates/non-terminal phase": {
+			input: &api.Promotion{
 				Spec: &api.PromotionSpec{
 					Stage: "fake-stage",
 				},
@@ -158,16 +153,43 @@ func TestIndexOutstandingPromotionsByStage(t *testing.T) {
 					Phase: api.PromotionPhasePending,
 				},
 			},
-			assertions: func(t *testing.T, res []string) {
-				require.Equal(t, []string{"fake-stage"}, res)
+			expected: []string{"fake-stage"},
+		},
+		"filter nonOutstandingPromotionPhase/terminal phase": {
+			input: &api.Promotion{
+				Spec: &api.PromotionSpec{
+					Stage: "fake-stage",
+				},
+				Status: api.PromotionStatus{
+					Phase: api.PromotionPhaseComplete,
+				},
 			},
+			predicates: []func(*api.Promotion) bool{
+				filterNonOutstandingPromotionPhases,
+			},
+			expected: nil,
+		},
+		"filter nonOutstandingPromotionPhase/non-terminal phase": {
+			input: &api.Promotion{
+				Spec: &api.PromotionSpec{
+					Stage: "fake-stage",
+				},
+				Status: api.PromotionStatus{
+					Phase: api.PromotionPhasePending,
+				},
+			},
+			predicates: []func(*api.Promotion) bool{
+				filterNonOutstandingPromotionPhases,
+			},
+			expected: []string{"fake-stage"},
 		},
 	}
-	for _, tc := range testCases {
+	for name, tc := range testCases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			res := indexOutstandingPromotionsByStage(tc.promotion)
-			tc.assertions(t, res)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			actual := indexPromotionsByStage(tc.predicates...)(tc.input)
+			require.ElementsMatch(t, tc.expected, actual)
 		})
 	}
 }

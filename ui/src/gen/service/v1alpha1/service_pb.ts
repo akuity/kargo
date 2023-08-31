@@ -1527,6 +1527,166 @@ export class TypedPromotionPolicySpec extends Message<TypedPromotionPolicySpec> 
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
+ */
+export class ListPromotionsRequest extends Message<ListPromotionsRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: optional string stage = 2;
+   */
+  stage?: string;
+
+  constructor(data?: PartialMessage<ListPromotionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListPromotionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListPromotionsRequest {
+    return new ListPromotionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListPromotionsRequest {
+    return new ListPromotionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListPromotionsRequest {
+    return new ListPromotionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListPromotionsRequest | PlainMessage<ListPromotionsRequest> | undefined, b: ListPromotionsRequest | PlainMessage<ListPromotionsRequest> | undefined): boolean {
+    return proto3.util.equals(ListPromotionsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
+ */
+export class ListPromotionsResponse extends Message<ListPromotionsResponse> {
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+   */
+  promotions: Promotion[] = [];
+
+  constructor(data?: PartialMessage<ListPromotionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListPromotionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "promotions", kind: "message", T: Promotion, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListPromotionsResponse {
+    return new ListPromotionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListPromotionsResponse {
+    return new ListPromotionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListPromotionsResponse {
+    return new ListPromotionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListPromotionsResponse | PlainMessage<ListPromotionsResponse> | undefined, b: ListPromotionsResponse | PlainMessage<ListPromotionsResponse> | undefined): boolean {
+    return proto3.util.equals(ListPromotionsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetPromotionRequest
+ */
+export class GetPromotionRequest extends Message<GetPromotionRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetPromotionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetPromotionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPromotionRequest {
+    return new GetPromotionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPromotionRequest {
+    return new GetPromotionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPromotionRequest {
+    return new GetPromotionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPromotionRequest | PlainMessage<GetPromotionRequest> | undefined, b: GetPromotionRequest | PlainMessage<GetPromotionRequest> | undefined): boolean {
+    return proto3.util.equals(GetPromotionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetPromotionResponse
+ */
+export class GetPromotionResponse extends Message<GetPromotionResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+   */
+  promotion?: Promotion;
+
+  constructor(data?: PartialMessage<GetPromotionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetPromotionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "promotion", kind: "message", T: Promotion },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPromotionResponse {
+    return new GetPromotionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetPromotionResponse {
+    return new GetPromotionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetPromotionResponse {
+    return new GetPromotionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetPromotionResponse | PlainMessage<GetPromotionResponse> | undefined, b: GetPromotionResponse | PlainMessage<GetPromotionResponse> | undefined): boolean {
+    return proto3.util.equals(GetPromotionResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.SetAutoPromotionForStageRequest
  */
 export class SetAutoPromotionForStageRequest extends Message<SetAutoPromotionForStageRequest> {
