@@ -8,6 +8,34 @@ import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { ListMeta, ObjectMeta } from "../metav1/types_pb.js";
 
 /**
+ * @generated from enum github.com.akuity.kargo.pkg.api.v1alpha1.HealthState
+ */
+export enum HealthState {
+  /**
+   * buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
+   *
+   * @generated from enum value: HEALTH_STATE_UNKNOWN = 0;
+   */
+  UNKNOWN = 0,
+
+  /**
+   * @generated from enum value: HEALTH_STATE_HEALTHY = 1;
+   */
+  HEALTHY = 1,
+
+  /**
+   * @generated from enum value: HEALTH_STATE_UNHEALTHY = 2;
+   */
+  UNHEALTHY = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(HealthState)
+proto3.util.setEnumType(HealthState, "github.com.akuity.kargo.pkg.api.v1alpha1.HealthState", [
+  { no: 0, name: "HEALTH_STATE_UNKNOWN" },
+  { no: 1, name: "HEALTH_STATE_HEALTHY" },
+  { no: 2, name: "HEALTH_STATE_UNHEALTHY" },
+]);
+
+/**
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
  */
 export class ArgoCDAppUpdate extends Message<ArgoCDAppUpdate> {
@@ -539,9 +567,9 @@ export class GitSubscription extends Message<GitSubscription> {
  */
 export class Health extends Message<Health> {
   /**
-   * @generated from field: optional string status = 1;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.HealthState status = 1;
    */
-  status?: string;
+  status = HealthState.UNKNOWN;
 
   /**
    * @generated from field: repeated string issues = 2;
@@ -556,7 +584,7 @@ export class Health extends Message<Health> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Health";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "status", kind: "enum", T: proto3.getEnumType(HealthState) },
     { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 

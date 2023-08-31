@@ -10,8 +10,9 @@ import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
 import { getStage, listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import {HealthState, Stage} from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
+import {faCircle, faHeart, faHeartBroken, faQuestionCircle, IconDefinition} from "@fortawesome/free-solid-svg-icons";
 
 export const ProjectDetails = () => {
   const { name } = useParams();
@@ -86,7 +87,7 @@ export const ProjectDetails = () => {
                   items: [
                     {
                       text: 'Status',
-                      value: item.status?.currentState?.health?.status || 'Unknown'
+                      value: healthStateToString(item.status?.currentState?.health?.status)
                     }
                   ]
                 }
@@ -194,4 +195,17 @@ export const ProjectDetails = () => {
       />
     </>
   );
+};
+
+const healthStateToString = (status?: HealthState): string => {
+  switch (status) {
+    case HealthState.HEALTHY:
+      return 'Healthy'
+    case HealthState.UNHEALTHY:
+      return 'Unhealthy'
+    case HealthState.UNKNOWN:
+      return 'Unknown'
+    default:
+      return 'Unknown'
+  }
 };
