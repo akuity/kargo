@@ -68,10 +68,12 @@ type StageSpec struct {
 	//+kubebuilder:validation:Required
 	Subscriptions *Subscriptions `json:"subscriptions"`
 	// PromotionMechanisms describes how to incorporate newly observed materials
-	// into the Stage. This is a required field.
-	//
-	//+kubebuilder:validation:Required
-	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms"`
+	// into the Stage. This is an optional field as it is sometimes useful to
+	// aggregates available states from multiple upstream Stages without
+	// performing any actions. The utility of this is to allow multiple downstream
+	// Stages to be able to subscribe to a single upstream Stage where they may
+	// otherwise have subscribed to multiple upstream Stages.
+	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty"`
 }
 
 // Subscriptions describes a Stage's sources of material.
