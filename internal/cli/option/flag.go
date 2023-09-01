@@ -21,8 +21,8 @@ func OptionalProject(v Optional[string]) FlagFn {
 	}
 }
 
-func State(v *string) FlagFn {
+func Freight(v *string) FlagFn {
 	return func(fs *pflag.FlagSet) {
-		fs.StringVar(v, "state", "", "State ID")
+		fs.StringVar(v, "freight", "", "Freight ID")
 	}
 }

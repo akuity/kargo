@@ -2,7 +2,6 @@ package stages
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
@@ -25,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/images"
+	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -444,25 +444,10 @@ func (r *reconciler) syncStage(
 	logger = logger.WithField("state", nextState.ID)
 	logger.Debug("auto-promotion will proceed")
 
-	promo := &api.Promotion{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-to-%s", stage.Name, nextState.ID),
-			Namespace: stage.Namespace,
-		},
-		Spec: &api.PromotionSpec{
-			Stage: stage.Name,
-			State: nextState.ID,
-		},
-	}
-
-	if stage.Labels != nil && stage.Labels[controller.ShardLabelKey] != "" {
-		promo.ObjectMeta.Labels = map[string]string{
-			controller.ShardLabelKey: stage.Labels[controller.ShardLabelKey],
-		}
-	}
+	promo := kargo.NewPromotion(*stage, nextState.ID)
 
 	if err :=
-		r.kargoClient.Create(ctx, promo, &client.CreateOptions{}); err != nil {
+		r.kargoClient.Create(ctx, &promo, &client.CreateOptions{}); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			logger.Debug("Promotion resource already exists")
 			return status, nil

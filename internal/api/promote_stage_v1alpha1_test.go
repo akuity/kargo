@@ -107,7 +107,7 @@ func TestPromoteStage(t *testing.T) {
 				return
 			}
 
-			require.True(t, strings.HasPrefix(res.Msg.GetPromotion().GetMetadata().GetName(), ts.req.GetName()+"-"))
+			require.True(t, strings.HasPrefix(res.Msg.GetPromotion().GetMetadata().GetName(), ts.req.GetName()+"."))
 			require.Equal(t, ts.req.GetName(), res.Msg.GetPromotion().GetSpec().GetStage())
 			require.Equal(t, ts.req.GetState(), res.Msg.GetPromotion().GetSpec().GetState())
 
