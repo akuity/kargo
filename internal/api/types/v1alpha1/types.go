@@ -493,11 +493,15 @@ func ToStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
 	metadata := e.ObjectMeta.DeepCopy()
 	metadata.SetManagedFields(nil)
 
+	var promotionMechanisms *v1alpha1.PromotionMechanisms
+	if e.Spec.PromotionMechanisms != nil {
+		promotionMechanisms = ToPromotionMechanismsProto(*e.Spec.PromotionMechanisms)
+	}
 	return &v1alpha1.Stage{
 		Metadata: typesmetav1.ToObjectMetaProto(*metadata),
 		Spec: &v1alpha1.StageSpec{
 			Subscriptions:       ToSubscriptionsProto(*e.Spec.Subscriptions),
-			PromotionMechanisms: ToPromotionMechanismsProto(*e.Spec.PromotionMechanisms),
+			PromotionMechanisms: promotionMechanisms,
 		},
 		Status: &v1alpha1.StageStatus{
 			AvailableStates: availableStates,
