@@ -5,10 +5,8 @@ import (
 	"sync"
 	"time"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,92 +14,30 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/akuity/bookkeeper"
-	"github.com/akuity/bookkeeper/pkg/git"
 	api "github.com/akuity/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
+	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/kubeclient"
-	"github.com/akuity/kargo/internal/kustomize"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/yaml"
 )
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
-	kargoClient       client.Client
-	argoClient        client.Client
-	credentialsDB     credentials.Database
-	bookkeeperService bookkeeper.Service
+	kargoClient     client.Client
+	promoMechanisms promotion.Mechanism
 
 	promoQueuesByStage   map[types.NamespacedName]runtime.PriorityQueue
 	promoQueuesByStageMu sync.Mutex
 	initializeOnce       sync.Once
 
-	// The following behaviors are overridable for testing purposes:
-
-	// Promotions (general):
+	// Overridable for testing:
 	promoteFn func(
 		ctx context.Context,
 		stageName string,
 		stageNamespace string,
 		stateID string,
-	) error
-
-	applyPromotionMechanismsFn func(
-		ctx context.Context,
-		stageMeta metav1.ObjectMeta,
-		promoMechanisms api.PromotionMechanisms,
-		newState api.StageState,
-	) (api.StageState, error)
-
-	// Promotions via Git:
-	gitApplyUpdateFn func(
-		repoURL string,
-		readRef string,
-		writeBranch string,
-		creds *git.RepoCredentials,
-		updateFn func(homeDir, workingDir string) (string, error),
-	) (string, error)
-
-	// Promotions via Git + Kustomize:
-	kustomizeSetImageFn func(dir, repo, tag string) error
-
-	// Promotions via Git + Helm:
-	buildChartDependencyChangesFn func(
-		repoDir string,
-		charts []api.Chart,
-		chartUpdates []api.HelmChartDependencyUpdate,
-	) (map[string]map[string]string, []string, error)
-
-	updateChartDependenciesFn func(homePath, chartPath string) error
-
-	setStringsInYAMLFileFn func(
-		file string,
-		changes map[string]string,
-	) error
-
-	// Promotions via Argo CD:
-	getArgoCDAppFn func(
-		ctx context.Context,
-		client client.Client,
-		namespace string,
-		name string,
-	) (*argocd.Application, error)
-
-	applyArgoCDSourceUpdateFn func(
-		argocd.ApplicationSource,
-		api.StageState,
-		api.ArgoCDSourceUpdate,
-	) (argocd.ApplicationSource, error)
-
-	argoCDAppPatchFn func(
-		ctx context.Context,
-		obj client.Object,
-		patch client.Patch,
-		opts ...client.PatchOption,
 	) error
 }
 
@@ -145,28 +81,14 @@ func newReconciler(
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:        kargoClient,
-		argoClient:         argoClient,
-		credentialsDB:      credentialsDB,
-		bookkeeperService:  bookkeeperService,
 		promoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
+		promoMechanisms: promotion.NewMechanisms(
+			argoClient,
+			credentialsDB,
+			bookkeeperService,
+		),
 	}
-
-	// Promotions (general):
 	r.promoteFn = r.promote
-	r.applyPromotionMechanismsFn = r.applyPromotionMechanisms
-	// Promotions via Git:
-	r.gitApplyUpdateFn = gitApplyUpdate
-	// Promotions via Git + Kustomize:
-	r.kustomizeSetImageFn = kustomize.SetImage
-	// Promotions via Git + Helm:
-	r.buildChartDependencyChangesFn = buildChartDependencyChanges
-	r.updateChartDependenciesFn = helm.UpdateChartDependencies
-	r.setStringsInYAMLFileFn = yaml.SetStringsInFile
-	// Promotions via Argo CD:
-	r.getArgoCDAppFn = libArgoCD.GetApplication
-	r.applyArgoCDSourceUpdateFn = r.applyArgoCDSourceUpdate
-	r.argoCDAppPatchFn = argoClient.Patch
-
 	return r
 }
 
@@ -488,12 +410,7 @@ func (r *reconciler) promote(
 		)
 	}
 
-	nextState, err := r.applyPromotionMechanismsFn(
-		ctx,
-		stage.ObjectMeta,
-		*stage.Spec.PromotionMechanisms,
-		*targetState,
-	)
+	nextState, err := r.promoMechanisms.Promote(ctx, stage, *targetState)
 	if err != nil {
 		return err
 	}
@@ -512,63 +429,6 @@ func (r *reconciler) promote(
 		stageName,
 		stageNamespace,
 	)
-}
-
-// TODO: This function could use some tests
-func (r *reconciler) applyPromotionMechanisms(
-	ctx context.Context,
-	stageMeta metav1.ObjectMeta,
-	promoMechanisms api.PromotionMechanisms,
-	newState api.StageState,
-) (api.StageState, error) {
-	logger := logging.LoggerFromContext(ctx)
-	logger.Debug("executing promotion mechanisms")
-	var err error
-	for _, gitRepoUpdate := range promoMechanisms.GitRepoUpdates {
-		if gitRepoUpdate.Bookkeeper != nil {
-			if newState, err = r.applyBookkeeperUpdate(
-				ctx,
-				stageMeta.Namespace,
-				newState,
-				gitRepoUpdate,
-			); err != nil {
-				return newState, errors.Wrap(err, "error promoting via Git")
-			}
-		} else {
-			if newState, err = r.applyGitRepoUpdate(
-				ctx,
-				stageMeta.Namespace,
-				newState,
-				gitRepoUpdate,
-			); err != nil {
-				return newState, errors.Wrap(err, "error promoting via Git")
-			}
-		}
-	}
-	if len(promoMechanisms.GitRepoUpdates) > 0 {
-		logger.Debug("completed git-based promotion steps")
-	}
-
-	for _, argoCDAppUpdate := range promoMechanisms.ArgoCDAppUpdates {
-		if err = r.applyArgoCDAppUpdate(
-			ctx,
-			stageMeta,
-			newState,
-			argoCDAppUpdate,
-		); err != nil {
-			return newState, errors.Wrap(err, "error promoting via Argo CD")
-		}
-	}
-	if len(promoMechanisms.ArgoCDAppUpdates) > 0 {
-		logger.Debug("completed Argo CD-based promotion steps")
-	}
-
-	newState.Health = &api.Health{
-		Status: api.HealthStateUnknown,
-		Issues: []string{"Health has not yet been assessed"},
-	}
-
-	return newState, nil
 }
 
 // getPromo returns a pointer to the Promotion resource specified by the

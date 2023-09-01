@@ -1,4 +1,4 @@
-package promotions
+package promotion
 
 import (
 	"fmt"
@@ -9,20 +9,70 @@ import (
 	"gopkg.in/yaml.v3"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/helm"
+	libYAML "github.com/akuity/kargo/internal/yaml"
 )
 
-func (r *reconciler) applyHelm(
+// newGenericGitMechanism returns a gitMechanism that only only selects and
+// performs updates that involve Helm.
+func newHelmMechanism(
+	credentialsDB credentials.Database,
+) Mechanism {
+	return newGitMechanism(
+		"Helm promotion mechanism",
+		credentialsDB,
+		selectHelmUpdates,
+		(&helmer{
+			buildValuesFilesChangesFn:     buildValuesFilesChanges,
+			buildChartDependencyChangesFn: buildChartDependencyChanges,
+			setStringsInYAMLFileFn:        libYAML.SetStringsInFile,
+			updateChartDependenciesFn:     helm.UpdateChartDependencies,
+		}).apply,
+	)
+}
+
+// selectHelmUpdates returns a subset of the given updates that involve Helm.
+func selectHelmUpdates(updates []api.GitRepoUpdate) []api.GitRepoUpdate {
+	var selectedUpdates []api.GitRepoUpdate
+	for _, update := range updates {
+		if update.Helm != nil {
+			selectedUpdates = append(selectedUpdates, update)
+		}
+	}
+	return selectedUpdates
+}
+
+// helmer is a helper struct whose sole purpose is to close over several other
+// functions that are used in the implementation of the apply() function.
+type helmer struct {
+	buildValuesFilesChangesFn func(
+		[]api.Image,
+		[]api.HelmImageUpdate,
+	) (map[string]map[string]string, []string)
+	buildChartDependencyChangesFn func(
+		string,
+		[]api.Chart,
+		[]api.HelmChartDependencyUpdate,
+	) (map[string]map[string]string, []string, error)
+	setStringsInYAMLFileFn    func(file string, changes map[string]string) error
+	updateChartDependenciesFn func(homeDir, chartPath string) error
+}
+
+// apply uses Helm to carry out the provided update in the specified working
+// directory.
+func (h *helmer) apply(
+	update api.GitRepoUpdate,
 	newState api.StageState,
-	update api.HelmPromotionMechanism,
 	homeDir string,
-	repoDir string,
+	workingDir string,
 ) ([]string, error) {
 	// Image updates
 	changesByFile, imageChangeSummary :=
-		buildValuesFilesChanges(newState.Images, update.Images)
+		h.buildValuesFilesChangesFn(newState.Images, update.Helm.Images)
 	for file, changes := range changesByFile {
-		if err := r.setStringsInYAMLFileFn(
-			filepath.Join(repoDir, file),
+		if err := h.setStringsInYAMLFileFn(
+			filepath.Join(workingDir, file),
 			changes,
 		); err != nil {
 			return nil, errors.Wrapf(err, "error updating values in file %q", file)
@@ -30,11 +80,12 @@ func (r *reconciler) applyHelm(
 	}
 
 	// Chart dependency updates
-	changesByChart, subchartChangeSummary, err := r.buildChartDependencyChangesFn(
-		repoDir,
-		newState.Charts,
-		update.Charts,
-	)
+	changesByChart, subchartChangeSummary, err :=
+		h.buildChartDependencyChangesFn(
+			workingDir,
+			newState.Charts,
+			update.Helm.Charts,
+		)
 	if err != nil {
 		return nil, errors.Wrap(
 			err,
@@ -42,17 +93,16 @@ func (r *reconciler) applyHelm(
 		)
 	}
 	for chart, changes := range changesByChart {
-		chartPath := filepath.Join(repoDir, chart)
+		chartPath := filepath.Join(workingDir, chart)
 		chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
-		if err := r.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
+		if err = h.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"error updating dependencies for chart %q",
 				chart,
 			)
 		}
-		if err :=
-			r.updateChartDependenciesFn(homeDir, chartPath); err != nil {
+		if err = h.updateChartDependenciesFn(homeDir, chartPath); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"error updating dependencies for chart %q",

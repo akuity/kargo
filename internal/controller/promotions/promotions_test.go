@@ -27,28 +27,8 @@ func TestNewPromotionReconciler(t *testing.T) {
 		bookkeeper.NewService(nil),
 	)
 	require.NotNil(t, r.kargoClient)
-	require.NotNil(t, r.argoClient)
-	require.NotNil(t, r.credentialsDB)
-	require.NotNil(t, r.bookkeeperService)
 	require.NotNil(t, r.promoQueuesByStage)
-
-	// Assert that all overridable behaviors were initialized to a default:
-
-	// Promotions (general):
 	require.NotNil(t, r.promoteFn)
-	require.NotNil(t, r.applyPromotionMechanismsFn)
-	// Promotions via Git:
-	require.NotNil(t, r.gitApplyUpdateFn)
-	// Promotions via Git + Kustomize:
-	require.NotNil(t, r.kustomizeSetImageFn)
-	// Promotions via Git + Helm:
-	require.NotNil(t, r.buildChartDependencyChangesFn)
-	require.NotNil(t, r.updateChartDependenciesFn)
-	require.NotNil(t, r.setStringsInYAMLFileFn)
-	// Promotions via Argo CD:
-	require.NotNil(t, r.getArgoCDAppFn)
-	require.NotNil(t, r.applyArgoCDSourceUpdateFn)
-	require.NotNil(t, r.argoCDAppPatchFn)
 }
 
 func TestInitializeQueues(t *testing.T) {

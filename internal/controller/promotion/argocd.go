@@ -1,4 +1,4 @@
-package promotions
+package promotion
 
 import (
 	"context"
@@ -12,19 +12,97 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
+	libArgoCD "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 const authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
 
-func (r *reconciler) applyArgoCDAppUpdate(
+// argoCDMechanism is an implementation of the Mechanism interface that updates
+// Argo CD Application resources.
+type argoCDMechanism struct {
+	// These behaviors are overridable for testing purposes:
+	doSingleUpdateFn func(
+		ctx context.Context,
+		stageMeta metav1.ObjectMeta,
+		update api.ArgoCDAppUpdate,
+		newState api.StageState,
+	) error
+	getArgoCDAppFn func(
+		ctx context.Context,
+		namespace string,
+		name string,
+	) (*argocd.Application, error)
+	applyArgoCDSourceUpdateFn func(
+		argocd.ApplicationSource,
+		api.StageState,
+		api.ArgoCDSourceUpdate,
+	) (argocd.ApplicationSource, error)
+	argoCDAppPatchFn func(
+		ctx context.Context,
+		obj client.Object,
+		patch client.Patch,
+		opts ...client.PatchOption,
+	) error
+}
+
+// newArgoCDMechanism returns an implementation of the Mechanism interface that
+// updates Argo CD Application resources.
+func newArgoCDMechanism(
+	argoClient client.Client,
+) Mechanism {
+	a := &argoCDMechanism{}
+	a.doSingleUpdateFn = a.doSingleUpdate
+	a.getArgoCDAppFn = getApplicationFn(argoClient)
+	a.applyArgoCDSourceUpdateFn = applyArgoCDSourceUpdate
+	a.argoCDAppPatchFn = argoClient.Patch
+	return a
+}
+
+// GetName implements the Mechanism interface.
+func (*argoCDMechanism) GetName() string {
+	return "Argo CD promotion mechanism"
+}
+
+// Promote implements the Mechanism interface.
+func (a *argoCDMechanism) Promote(
+	ctx context.Context,
+	stage *api.Stage,
+	newState api.StageState,
+) (api.StageState, error) {
+	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
+
+	if len(updates) == 0 {
+		return newState, nil
+	}
+
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("executing Argo CD-based promotion mechanisms")
+
+	for _, update := range updates {
+		if err := a.doSingleUpdateFn(
+			ctx,
+			stage.ObjectMeta,
+			update,
+			newState,
+		); err != nil {
+			return newState, err
+		}
+	}
+
+	logger.Debug("done executing Argo CD-based promotion mechanisms")
+
+	return newState, nil
+}
+
+func (a *argoCDMechanism) doSingleUpdate(
 	ctx context.Context,
 	stageMeta metav1.ObjectMeta,
-	newState api.StageState,
 	update api.ArgoCDAppUpdate,
+	newState api.StageState,
 ) error {
 	app, err :=
-		r.getArgoCDAppFn(ctx, r.argoClient, update.AppNamespace, update.AppName)
+		a.getArgoCDAppFn(ctx, update.AppNamespace, update.AppName)
 	if err != nil {
 		return errors.Wrapf(
 			err,
@@ -40,23 +118,19 @@ func (r *reconciler) applyArgoCDAppUpdate(
 			update.AppNamespace,
 		)
 	}
-
 	// Make sure this is allowed!
-	if err = r.authorizeArgoCDAppUpdate(stageMeta, app); err != nil {
+	if err = authorizeArgoCDAppUpdate(stageMeta, app.ObjectMeta); err != nil {
 		return err
 	}
-
 	patch := client.MergeFrom(app.DeepCopy())
-
 	for _, srcUpdate := range update.SourceUpdates {
 		if app.Spec.Source != nil {
 			var source argocd.ApplicationSource
-			source, err = r.applyArgoCDSourceUpdateFn(
+			if source, err = a.applyArgoCDSourceUpdateFn(
 				*app.Spec.Source,
 				newState,
 				srcUpdate,
-			)
-			if err != nil {
+			); err != nil {
 				return errors.Wrapf(
 					err,
 					"error updating source of Argo CD Application %q in namespace %q",
@@ -67,7 +141,7 @@ func (r *reconciler) applyArgoCDAppUpdate(
 			app.Spec.Source = &source
 		}
 		for i, source := range app.Spec.Sources {
-			if source, err = r.applyArgoCDSourceUpdateFn(
+			if source, err = a.applyArgoCDSourceUpdateFn(
 				source,
 				newState,
 				srcUpdate,
@@ -81,10 +155,6 @@ func (r *reconciler) applyArgoCDAppUpdate(
 			}
 			app.Spec.Sources[i] = source
 		}
-	}
-
-	if app.ObjectMeta.Annotations == nil {
-		app.ObjectMeta.Annotations = map[string]string{}
 	}
 	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] =
 		string(argocd.RefreshTypeHard)
@@ -100,8 +170,7 @@ func (r *reconciler) applyArgoCDAppUpdate(
 		app.Operation.Sync.Revisions =
 			append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
-
-	if err = r.argoCDAppPatchFn(
+	if err = a.argoCDAppPatchFn(
 		ctx,
 		app,
 		patch,
@@ -109,29 +178,46 @@ func (r *reconciler) applyArgoCDAppUpdate(
 	); err != nil {
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}
-
 	logging.LoggerFromContext(ctx).WithField("app", app.Name).
 		Debug("patched Argo CD Application")
-
 	return nil
 }
 
-func (r *reconciler) authorizeArgoCDAppUpdate(
+func getApplicationFn(
+	argoClient client.Client,
+) func(
+	ctx context.Context,
+	namespace string,
+	name string,
+) (*argocd.Application, error) {
+	return func(
+		ctx context.Context,
+		namespace string,
+		name string,
+	) (*argocd.Application, error) {
+		return libArgoCD.GetApplication(ctx, argoClient, namespace, name)
+	}
+}
+
+// authorizeArgoCDAppUpdate returns an error if the Argo CD Application
+// represented by appMeta does not explicitly permit mutation by the Kargo Stage
+// represented by stageMeta.
+func authorizeArgoCDAppUpdate(
 	stageMeta metav1.ObjectMeta,
-	app *argocd.Application,
+	appMeta metav1.ObjectMeta,
 ) error {
 	permErr := errors.Errorf(
 		"Argo CD Application %q in namespace %q does not permit mutation by "+
 			"Kargo Stage %s in namespace %s",
-		app.Name,
-		app.Namespace,
+		appMeta.Name,
+		appMeta.Namespace,
 		stageMeta.Name,
 		stageMeta.Namespace,
 	)
-	if app.Annotations == nil {
+	if appMeta.Annotations == nil {
 		return permErr
 	}
-	allowedStage, ok := app.Annotations[authorizedStageAnnotationKey]
+	allowedStage, ok := appMeta.Annotations[authorizedStageAnnotationKey]
 	if !ok {
 		return permErr
 	}
@@ -142,16 +228,16 @@ func (r *reconciler) authorizeArgoCDAppUpdate(
 				"%q in namespace %q",
 			authorizedStageAnnotationKey,
 			allowedStage,
-			app.Name,
-			app.Namespace,
+			appMeta.Name,
+			appMeta.Namespace,
 		)
 	}
 	allowedNamespaceGlob, err := glob.Compile(tokens[0])
 	if err != nil {
 		return errors.Errorf(
 			"Argo CD Application %q in namespace %q has invalid glob expression: %q",
-			app.Name,
-			app.Namespace,
+			appMeta.Name,
+			appMeta.Namespace,
 			tokens[0],
 		)
 	}
@@ -159,18 +245,20 @@ func (r *reconciler) authorizeArgoCDAppUpdate(
 	if err != nil {
 		return errors.Errorf(
 			"Argo CD Application %q in namespace %q has invalid glob expression: %q",
-			app.Name,
-			app.Namespace,
+			appMeta.Name,
+			appMeta.Namespace,
 			tokens[1],
 		)
 	}
-	if !allowedNamespaceGlob.Match(stageMeta.Namespace) || !allowedNameGlob.Match(stageMeta.Name) {
+	if !allowedNamespaceGlob.Match(stageMeta.Namespace) ||
+		!allowedNameGlob.Match(stageMeta.Name) {
 		return permErr
 	}
 	return nil
 }
 
-func (r *reconciler) applyArgoCDSourceUpdate(
+// applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
+func applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
 	newState api.StageState,
 	update api.ArgoCDSourceUpdate,

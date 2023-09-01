@@ -1,54 +1,102 @@
-package promotions
+package promotion
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	api "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
 )
 
-func TestApplyHelm(t *testing.T) {
+func TestNewHelmMechanism(t *testing.T) {
+	pm := newHelmMechanism(&credentials.FakeDB{})
+	hpm, ok := pm.(*gitMechanism)
+	require.True(t, ok)
+	require.NotNil(t, hpm.selectUpdatesFn)
+	require.NotNil(t, hpm.applyConfigManagementFn)
+}
+
+func TestSelectHelmUpdates(t *testing.T) {
 	testCases := []struct {
-		name                   string
-		newState               api.StageState
-		update                 api.HelmPromotionMechanism
-		setStringsInYAMLFileFn func(
-			string,
-			map[string]string,
-		) error
-		buildChartDependencyChangesFn func(
-			string,
-			[]api.Chart,
-			[]api.HelmChartDependencyUpdate,
-		) (map[string]map[string]string, []string, error)
-		updateChartDependenciesFn func(homePath, chartPath string) error
-		assertions                func(changeSummary []string, err error)
+		name       string
+		updates    []api.GitRepoUpdate
+		assertions func(selectedUpdates []api.GitRepoUpdate)
 	}{
 		{
-			name: "error modifying values.yaml",
-			newState: api.StageState{
-				Images: []api.Image{
-					{
-						RepoURL: "fake-url",
-						Tag:     "fake-tag",
-					},
+			name: "no updates",
+			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+				require.Empty(t, selectedUpdates)
+			},
+		},
+		{
+			name: "no helm updates",
+			updates: []api.GitRepoUpdate{
+				{
+					RepoURL: "fake-url",
 				},
 			},
-			update: api.HelmPromotionMechanism{
-				Images: []api.HelmImageUpdate{
-					{
-						Image: "fake-url",
-						Key:   "image",
-						Value: "Image",
-					},
+			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+				require.Empty(t, selectedUpdates)
+			},
+		},
+		{
+			name: "some helm updates",
+			updates: []api.GitRepoUpdate{
+				{
+					RepoURL:   "fake-url",
+					Kustomize: &api.KustomizePromotionMechanism{},
+				},
+				{
+					RepoURL: "fake-url",
+					Helm:    &api.HelmPromotionMechanism{},
+				},
+				{
+					RepoURL: "fake-url",
 				},
 			},
-			setStringsInYAMLFileFn: func(string, map[string]string) error {
-				return errors.New("something went wrong")
+			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+				require.Len(t, selectedUpdates, 1)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(selectHelmUpdates(testCase.updates))
+		})
+	}
+}
+
+func TestHelmerApply(t *testing.T) {
+	const testChartDir = "fake-chart-dir"
+	testValuesFile := filepath.Join(testChartDir, "values.yaml")
+	testChartFile := filepath.Join(testChartDir, "Chart.yaml")
+	const testKey = "fake-key"
+	const testValue = "fake-value"
+	testCases := []struct {
+		name       string
+		helmer     *helmer
+		assertions func(changes []string, err error)
+	}{
+		{
+			name: "error updating values file",
+			helmer: &helmer{
+				buildValuesFilesChangesFn: func(
+					[]api.Image,
+					[]api.HelmImageUpdate,
+				) (map[string]map[string]string, []string) {
+					return map[string]map[string]string{
+						testValuesFile: {
+							testKey: testValue,
+						},
+					}, nil
+				},
+				setStringsInYAMLFileFn: func(string, map[string]string) error {
+					return errors.New("something went wrong")
+				},
 			},
 			assertions: func(_ []string, err error) {
 				require.Error(t, err)
@@ -56,15 +104,25 @@ func TestApplyHelm(t *testing.T) {
 				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
-
 		{
 			name: "error building chart dependency changes",
-			buildChartDependencyChangesFn: func(
-				string,
-				[]api.Chart,
-				[]api.HelmChartDependencyUpdate,
-			) (map[string]map[string]string, []string, error) {
-				return nil, nil, errors.New("something went wrong")
+			helmer: &helmer{
+				buildValuesFilesChangesFn: func(
+					[]api.Image,
+					[]api.HelmImageUpdate,
+				) (map[string]map[string]string, []string) {
+					// This returns nothing so that the only calls to
+					// setStringsInYAMLFileFn will be for updating subcharts in
+					// Charts.yaml.
+					return nil, nil
+				},
+				buildChartDependencyChangesFn: func(
+					string,
+					[]api.Chart,
+					[]api.HelmChartDependencyUpdate,
+				) (map[string]map[string]string, []string, error) {
+					return nil, nil, errors.New("something went wrong")
+				},
 			},
 			assertions: func(_ []string, err error) {
 				require.Error(t, err)
@@ -76,22 +134,32 @@ func TestApplyHelm(t *testing.T) {
 				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
-
 		{
 			name: "error updating Chart.yaml",
-			buildChartDependencyChangesFn: func(
-				string,
-				[]api.Chart,
-				[]api.HelmChartDependencyUpdate,
-			) (map[string]map[string]string, []string, error) {
-				// We only need to build enough of a change map to make sure we get into
-				// the loop
-				return map[string]map[string]string{
-					"/fake/path/Chart.yaml": {},
-				}, nil, nil
-			},
-			setStringsInYAMLFileFn: func(string, map[string]string) error {
-				return errors.New("something went wrong")
+			helmer: &helmer{
+				buildValuesFilesChangesFn: func(
+					[]api.Image,
+					[]api.HelmImageUpdate,
+				) (map[string]map[string]string, []string) {
+					// This returns nothing so that the only calls to
+					// setStringsInYAMLFileFn will be for updating subcharts in
+					// Charts.yaml.
+					return nil, nil
+				},
+				buildChartDependencyChangesFn: func(
+					string,
+					[]api.Chart,
+					[]api.HelmChartDependencyUpdate,
+				) (map[string]map[string]string, []string, error) {
+					return map[string]map[string]string{
+						testChartFile: {
+							testKey: testValue,
+						},
+					}, nil, nil
+				},
+				setStringsInYAMLFileFn: func(string, map[string]string) error {
+					return errors.New("something went wrong")
+				},
 			},
 			assertions: func(_ []string, err error) {
 				require.Error(t, err)
@@ -103,25 +171,32 @@ func TestApplyHelm(t *testing.T) {
 				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
-
 		{
-			name: "error updating chart dependencies",
-			buildChartDependencyChangesFn: func(
-				string,
-				[]api.Chart,
-				[]api.HelmChartDependencyUpdate,
-			) (map[string]map[string]string, []string, error) {
-				return map[string]map[string]string{
-					// We only need to build enough of a change map to make sure we get
-					// into the loop
-					"/fake/path/Chart.yaml": {},
-				}, nil, nil
-			},
-			setStringsInYAMLFileFn: func(string, map[string]string) error {
-				return nil
-			},
-			updateChartDependenciesFn: func(string, string) error {
-				return errors.New("something went wrong")
+			name: "error running helm chart dep up",
+			helmer: &helmer{
+				buildValuesFilesChangesFn: func(
+					[]api.Image,
+					[]api.HelmImageUpdate,
+				) (map[string]map[string]string, []string) {
+					return nil, nil
+				},
+				buildChartDependencyChangesFn: func(
+					string,
+					[]api.Chart,
+					[]api.HelmChartDependencyUpdate,
+				) (map[string]map[string]string, []string, error) {
+					return map[string]map[string]string{
+						testChartFile: {
+							testKey: testValue,
+						},
+					}, nil, nil
+				},
+				setStringsInYAMLFileFn: func(string, map[string]string) error {
+					return nil
+				},
+				updateChartDependenciesFn: func(string, string) error {
+					return errors.New("something went wrong")
+				},
 			},
 			assertions: func(_ []string, err error) {
 				require.Error(t, err)
@@ -133,32 +208,51 @@ func TestApplyHelm(t *testing.T) {
 				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
-
 		{
 			name: "success",
-			buildChartDependencyChangesFn: func(
-				string,
-				[]api.Chart,
-				[]api.HelmChartDependencyUpdate,
-			) (map[string]map[string]string, []string, error) {
-				return nil, nil, nil
+			helmer: &helmer{
+				buildValuesFilesChangesFn: func(
+					[]api.Image,
+					[]api.HelmImageUpdate,
+				) (map[string]map[string]string, []string) {
+					return map[string]map[string]string{
+						testValuesFile: {
+							testKey: testValue,
+						},
+					}, []string{"fake-image-update"}
+				},
+				buildChartDependencyChangesFn: func(
+					string,
+					[]api.Chart,
+					[]api.HelmChartDependencyUpdate,
+				) (map[string]map[string]string, []string, error) {
+					return map[string]map[string]string{
+						testChartFile: {
+							testKey: testValue,
+						},
+					}, []string{"fake-chart-update"}, nil
+				},
+				setStringsInYAMLFileFn: func(string, map[string]string) error {
+					return nil
+				},
+				updateChartDependenciesFn: func(string, string) error {
+					return nil
+				},
 			},
-			assertions: func(_ []string, err error) {
+			assertions: func(changes []string, err error) {
 				require.NoError(t, err)
+				require.Len(t, changes, 2)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := reconciler{
-				setStringsInYAMLFileFn:        testCase.setStringsInYAMLFileFn,
-				buildChartDependencyChangesFn: testCase.buildChartDependencyChangesFn,
-				updateChartDependenciesFn:     testCase.updateChartDependenciesFn,
-			}
 			testCase.assertions(
-				r.applyHelm(
-					testCase.newState,
-					testCase.update,
+				testCase.helmer.apply(
+					api.GitRepoUpdate{
+						Helm: &api.HelmPromotionMechanism{},
+					},
+					api.StageState{}, // The way the tests are structured, this value doesn't matter
 					"",
 					"",
 				),
