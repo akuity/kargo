@@ -17,7 +17,7 @@
       "description": "Spec describes the sources of material used by the Stage and how to incorporate newly observed materials into the Stage.",
       "properties": {
         "promotionMechanisms": {
-          "description": "PromotionMechanisms describes how to incorporate newly observed materials into the Stage. This is a required field.",
+          "description": "PromotionMechanisms describes how to incorporate newly observed materials into the Stage. This is an optional field as it is sometimes useful to aggregates available states from multiple upstream Stages without performing any actions. The utility of this is to allow multiple downstream Stages to be able to subscribe to a single upstream Stage where they may otherwise have subscribed to multiple upstream Stages.",
           "properties": {
             "argoCDAppUpdates": {
               "description": "ArgoCDAppUpdates describes updates that should be applied to Argo CD Application resources to incorporate newly observed materials into the Stage. This field is optional, as such actions are not required in all cases. Note that all updates specified by the GitRepoUpdates field, if any, are applied BEFORE these.",
@@ -423,7 +423,6 @@
         }
       },
       "required": [
-        "promotionMechanisms",
         "subscriptions"
       ],
       "type": "object"
