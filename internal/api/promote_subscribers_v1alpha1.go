@@ -68,6 +68,8 @@ func (s *server) PromoteSubscribers(
 	}), errors.Join(promoteErrs...)
 }
 
+// findStageSubscribers returns a list of Stages that are subscribed to the given Stage
+// TODO: this could be powered by an index.
 func (s *server) findStageSubscribers(ctx context.Context, stage *kubev1alpha1.Stage) ([]kubev1alpha1.Stage, error) {
 	var allStages kubev1alpha1.StageList
 	if err := s.client.List(ctx, &allStages, client.InNamespace(stage.Namespace)); err != nil {
