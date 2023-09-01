@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Promotion, PromotionPolicy, Stage, StageSpec } from "../../v1alpha1/types_pb.js";
+import { Promotion, PromotionPolicy, Stage, StageSpec, StageState } from "../../v1alpha1/types_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -2516,6 +2516,141 @@ export class DeleteProjectResponse extends Message<DeleteProjectResponse> {
 
   static equals(a: DeleteProjectResponse | PlainMessage<DeleteProjectResponse> | undefined, b: DeleteProjectResponse | PlainMessage<DeleteProjectResponse> | undefined): boolean {
     return proto3.util.equals(DeleteProjectResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.QueryFreightsRequest
+ */
+export class QueryFreightsRequest extends Message<QueryFreightsRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string stage = 2;
+   */
+  stage = "";
+
+  /**
+   * @generated from field: string group_by = 3;
+   */
+  groupBy = "";
+
+  /**
+   * @generated from field: string group = 4;
+   */
+  group = "";
+
+  /**
+   * @generated from field: string order_by = 5;
+   */
+  orderBy = "";
+
+  constructor(data?: PartialMessage<QueryFreightsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.QueryFreightsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "group_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "group", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "order_by", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): QueryFreightsRequest {
+    return new QueryFreightsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): QueryFreightsRequest {
+    return new QueryFreightsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): QueryFreightsRequest {
+    return new QueryFreightsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: QueryFreightsRequest | PlainMessage<QueryFreightsRequest> | undefined, b: QueryFreightsRequest | PlainMessage<QueryFreightsRequest> | undefined): boolean {
+    return proto3.util.equals(QueryFreightsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.QueryFreightsResponse
+ */
+export class QueryFreightsResponse extends Message<QueryFreightsResponse> {
+  /**
+   * @generated from field: map<string, akuity.io.kargo.service.v1alpha1.FreightList> groups = 1;
+   */
+  groups: { [key: string]: FreightList } = {};
+
+  constructor(data?: PartialMessage<QueryFreightsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.QueryFreightsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "groups", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FreightList} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): QueryFreightsResponse {
+    return new QueryFreightsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): QueryFreightsResponse {
+    return new QueryFreightsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): QueryFreightsResponse {
+    return new QueryFreightsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: QueryFreightsResponse | PlainMessage<QueryFreightsResponse> | undefined, b: QueryFreightsResponse | PlainMessage<QueryFreightsResponse> | undefined): boolean {
+    return proto3.util.equals(QueryFreightsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.FreightList
+ */
+export class FreightList extends Message<FreightList> {
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageState freights = 1;
+   */
+  freights: StageState[] = [];
+
+  constructor(data?: PartialMessage<FreightList>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.FreightList";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "freights", kind: "message", T: StageState, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightList {
+    return new FreightList().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightList {
+    return new FreightList().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightList {
+    return new FreightList().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightList | PlainMessage<FreightList> | undefined, b: FreightList | PlainMessage<FreightList> | undefined): boolean {
+    return proto3.util.equals(FreightList, a, b);
   }
 }
 

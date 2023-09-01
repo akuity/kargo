@@ -49,3 +49,19 @@ func validateFreightExists(freight string, freights kubev1alpha1.StageStateStack
 	}
 	return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("freight %q not found in Stage", freight))
 }
+
+func validateGroupBy(groupBy string) error {
+	switch groupBy {
+	case GroupByContainerRepository, GroupByGitRepository, GroupByHelmRepository, "":
+		return nil
+	}
+	return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("Invalid group by: %s", groupBy))
+}
+
+func validateOrderBy(orderBy string) error {
+	switch orderBy {
+	case OrderByFirstSeen, OrderBySemanticVersion, "":
+		return nil
+	}
+	return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("Invalid order by: %s", orderBy))
+}
