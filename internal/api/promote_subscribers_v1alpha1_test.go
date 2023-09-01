@@ -23,7 +23,7 @@ import (
 func TestPromoteSubscribers(t *testing.T) {
 	testSets := map[string]struct {
 		req                *svcv1alpha1.PromoteSubscribersRequest
-		errExpected        bool
+		errMsg             string
 		expectedCode       connect.Code
 		expectedPromotions int32
 	}{
@@ -32,7 +32,7 @@ func TestPromoteSubscribers(t *testing.T) {
 				Project: "kargo-demo",
 				Stage:   "upstream",
 			},
-			errExpected:  true,
+			errMsg:       "freight should not be empty",
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"non-existing Stage": {
@@ -41,7 +41,7 @@ func TestPromoteSubscribers(t *testing.T) {
 				Stage:   "does-not-exist",
 				Freight: "c353927ca7af42b38c0cdcfa393b2c552740e547",
 			},
-			errExpected:  true,
+			errMsg:       `stage "kargo-demo" not found`,
 			expectedCode: connect.CodeNotFound,
 		},
 		"existing Stage with non-existing freight": {
@@ -50,7 +50,7 @@ func TestPromoteSubscribers(t *testing.T) {
 				Stage:   "upstream",
 				Freight: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			},
-			errExpected:  true,
+			errMsg:       `freight "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" not found in Stage`,
 			expectedCode: connect.CodeNotFound,
 		},
 		"existing Stage with no subscribers": {
@@ -59,8 +59,17 @@ func TestPromoteSubscribers(t *testing.T) {
 				Stage:   "downstream1",
 				Freight: "f08b2e72c9b2b7b263da6d55f9536e49b5ce972c",
 			},
-			errExpected:  true,
+			errMsg:       `Stage "downstream1" has no subscribers`,
 			expectedCode: connect.CodeNotFound,
+		},
+		"existing Stage with unhealthy freight": {
+			req: &svcv1alpha1.PromoteSubscribersRequest{
+				Project: "kargo-demo",
+				Stage:   "upstream",
+				Freight: "abc1237ca7af42b38c0cdcfa393b2c552740e547",
+			},
+			errMsg:       "Cannot promote freight with health status: Unhealthy",
+			expectedCode: connect.CodeInvalidArgument,
 		},
 		"existing Stage with subscribers": {
 			req: &svcv1alpha1.PromoteSubscribersRequest{
@@ -115,8 +124,8 @@ func TestPromoteSubscribers(t *testing.T) {
 			res, err := (&server{
 				client: client,
 			}).PromoteSubscribers(ctx, connect.NewRequest(ts.req))
-			if ts.errExpected {
-				require.Error(t, err)
+			if ts.errMsg != "" {
+				require.ErrorContains(t, err, ts.errMsg)
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))
 				return
 			}

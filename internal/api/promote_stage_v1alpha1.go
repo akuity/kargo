@@ -24,7 +24,7 @@ func (s *server) PromoteStage(
 	if err != nil {
 		return nil, err
 	}
-	if err := validateFreightExists(req.Msg.GetState(), stage.Status.AvailableStates); err != nil {
+	if _, err = validateFreightExists(req.Msg.GetState(), stage.Status.AvailableStates); err != nil {
 		return nil, err
 	}
 

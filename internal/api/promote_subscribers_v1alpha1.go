@@ -30,8 +30,14 @@ func (s *server) PromoteSubscribers(
 	if err != nil {
 		return nil, err
 	}
-	if err = validateFreightExists(req.Msg.GetFreight(), stage.Status.History); err != nil {
+	freightToPromote, err := validateFreightExists(req.Msg.GetFreight(), stage.Status.History)
+	if err != nil {
 		return nil, err
+	}
+	// TODO: this may also need to include Not Applicable if/when that state is introduced
+	if freightToPromote.Health != nil && freightToPromote.Health.Status != kubev1alpha1.HealthStateHealthy {
+		return nil, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("Cannot promote freight with health status: %s", freightToPromote.Health.Status))
 	}
 
 	subscribers, err := s.findStageSubscribers(ctx, stage)
@@ -47,7 +53,7 @@ func (s *server) PromoteSubscribers(
 	var promoteErrs []error
 	var createdPromos []*v1alpha1.Promotion
 	for _, subscriber := range subscribers {
-		if err := validateFreightExists(req.Msg.GetFreight(), subscriber.Status.AvailableStates); err != nil {
+		if _, err := validateFreightExists(req.Msg.GetFreight(), subscriber.Status.AvailableStates); err != nil {
 			// TODO(JS): currently we create promotions to all of this Stage's subscribers, ignoring
 			// whether or not the freight *also* appears in the availableStates of the subscriber.
 			// Normally, it should always be the case that if it's in our history, it should also

@@ -36,15 +36,16 @@ func validateProjectAndStageNonEmpty(project string, stage string) error {
 	return nil
 }
 
-// validateFreightExists is a helper to find a freight in a list of freights, and return an error if it doesn't exit
-func validateFreightExists(freight string, freights kubev1alpha1.StageStateStack) error {
+// validateFreightExists returns the freight with the given ID in the list of freights, otherwise
+// return an error if it doesn't exist
+func validateFreightExists(freight string, freights kubev1alpha1.StageStateStack) (*kubev1alpha1.StageState, error) {
 	if freight == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("freight should not be empty"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("freight should not be empty"))
 	}
 	for _, f := range freights {
 		if freight == f.ID {
-			return nil
+			return &f, nil
 		}
 	}
-	return connect.NewError(connect.CodeNotFound, fmt.Errorf("freight %q not found in Stage", freight))
+	return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("freight %q not found in Stage", freight))
 }
