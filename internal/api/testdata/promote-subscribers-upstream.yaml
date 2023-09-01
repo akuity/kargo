@@ -1,0 +1,52 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: upstream
+  namespace: kargo-demo
+spec:
+  promotionMechanisms:
+    gitRepoUpdates:
+    - kustomize:
+        images:
+        - image: ghcr.io/akuity/guestbook
+          path: env/staging
+      readBranch: ""
+      repoURL: https://github.com/akuity/guestbook-deploy.git
+      writeBranch: main
+  subscriptions:
+    upstreamStages:
+    - name: dev
+status:
+  availableStates:
+  - firstSeen: "2023-08-28T15:18:57Z"
+    id: c353927ca7af42b38c0cdcfa393b2c552740e547
+    images:
+    - repoURL: ghcr.io/akuity/guestbook
+      tag: v0.0.1
+    provenance: dev
+  currentState:
+    firstSeen: "2023-08-28T15:18:57Z"
+    health:
+      status: Healthy
+    id: c353927ca7af42b38c0cdcfa393b2c552740e547
+    images:
+    - repoURL: ghcr.io/akuity/guestbook
+      tag: v0.0.1
+    provenance: dev
+  history:
+  - firstSeen: "2023-08-28T15:18:57Z"
+    health:
+      status: Healthy
+    id: c353927ca7af42b38c0cdcfa393b2c552740e547
+    images:
+    - repoURL: ghcr.io/akuity/guestbook
+      tag: v0.0.1
+    provenance: dev
+  - firstSeen: "2023-08-28T15:17:57Z"
+    health:
+      status: Unhealthy
+    id: abc1237ca7af42b38c0cdcfa393b2c552740e547
+    images:
+    - repoURL: ghcr.io/akuity/guestbook
+      tag: v0.0.0
+    provenance: dev

@@ -14,5 +14,6 @@ func NewCommand(opt *option.Option) *cobra.Command {
 	cmd.AddCommand(newPromoteCommand(opt))
 	cmd.AddCommand(newEnableAutoPromotion(opt))
 	cmd.AddCommand(newDisableAutoPromotion(opt))
+	cmd.AddCommand(newPromoteSubscribersCommand(opt))
 	return cmd
 }

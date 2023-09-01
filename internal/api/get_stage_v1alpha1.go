@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -17,12 +16,10 @@ func (s *server) GetStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetStageRequest],
 ) (*connect.Response[svcv1alpha1.GetStageResponse], error) {
-	if req.Msg.GetProject() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
+	if err := validateProjectAndStageNonEmpty(req.Msg.GetProject(), req.Msg.GetName()); err != nil {
+		return nil, err
 	}
-	if req.Msg.GetName() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
-	}
+
 	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
 		return nil, err
 	}
