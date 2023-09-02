@@ -22,7 +22,7 @@ func getStage(ctx context.Context, kc kubernetes.Client, project string, name st
 	err := kc.Get(ctx, objKey, &stage)
 	if err != nil {
 		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q not found", project))
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q not found", name))
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

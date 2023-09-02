@@ -50,18 +50,26 @@ func validateFreightExists(freight string, freights kubev1alpha1.StageStateStack
 	return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("freight %q not found in Stage", freight))
 }
 
-func validateGroupBy(groupBy string) error {
+func validateGroupByOrderBy(group string, groupBy string, orderBy string) error {
+	if group != "" && groupBy == "" {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("Cannot filter by group without group by"))
+	}
 	switch groupBy {
 	case GroupByContainerRepository, GroupByGitRepository, GroupByHelmRepository, "":
-		return nil
+	default:
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("Invalid group by: %s", groupBy))
 	}
-	return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("Invalid group by: %s", groupBy))
-}
-
-func validateOrderBy(orderBy string) error {
 	switch orderBy {
-	case OrderByFirstSeen, OrderBySemanticVersion, "":
-		return nil
+	case OrderByTag:
+		if groupBy != GroupByContainerRepository && groupBy != GroupByHelmRepository {
+			return connect.NewError(connect.CodeInvalidArgument,
+				fmt.Errorf("Tag ordering only valid when grouping by: %s, %s",
+					GroupByContainerRepository, GroupByHelmRepository))
+		}
+	case OrderByFirstSeen, "":
+	default:
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("Invalid order by: %s", orderBy))
 	}
-	return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("Invalid order by: %s", orderBy))
+
+	return nil
 }

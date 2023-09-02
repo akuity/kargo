@@ -357,6 +357,7 @@ message QueryFreightsRequest {
   string group_by = 3;
   string group = 4;
   string order_by = 5;
+  bool reverse = 6;
 }
 
 message QueryFreightsResponse {
