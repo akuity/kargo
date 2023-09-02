@@ -51,6 +51,11 @@ service KargoService {
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+
+  /* Freight APIs */
+
+  rpc QueryFreights(QueryFreightsRequest) returns (QueryFreightsResponse);
+
 }
 
 message ComponentVersions {
@@ -344,4 +349,21 @@ message DeleteProjectRequest {
 
 message DeleteProjectResponse {
   /* explicitly empty */
+}
+
+message QueryFreightsRequest {
+  string project = 1;
+  string stage = 2;
+  string group_by = 3;
+  string group = 4;
+  string order_by = 5;
+  bool reverse = 6;
+}
+
+message QueryFreightsResponse {
+  map<string, FreightList> groups = 1;
+}
+
+message FreightList {
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageState freights = 1;
 }

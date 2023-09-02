@@ -41,7 +41,7 @@ func TestPromoteSubscribers(t *testing.T) {
 				Stage:   "does-not-exist",
 				Freight: "c353927ca7af42b38c0cdcfa393b2c552740e547",
 			},
-			errMsg:       `stage "kargo-demo" not found`,
+			errMsg:       `stage "does-not-exist" not found`,
 			expectedCode: connect.CodeNotFound,
 		},
 		"existing Stage with non-existing freight": {
@@ -129,6 +129,7 @@ func TestPromoteSubscribers(t *testing.T) {
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))
 				return
 			}
+			require.NoError(t, err)
 			assert.Len(t, res.Msg.GetPromotions(), int(ts.expectedPromotions))
 			for _, p := range res.Msg.GetPromotions() {
 				parts := strings.Split(p.GetMetadata().GetName(), ".")

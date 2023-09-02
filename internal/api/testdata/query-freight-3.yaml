@@ -1,0 +1,35 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: query-freight-3
+  namespace: kargo-demo
+spec:
+  promotionMechanisms:
+    gitRepoUpdates:
+    - kustomize:
+        images:
+        - image: ghcr.io/akuity/guestbook
+          path: env/staging
+      readBranch: ""
+      repoURL: https://github.com/akuity/guestbook-deploy.git
+      writeBranch: main
+  subscriptions:
+    upstreamStages:
+    - name: dev
+status:
+  availableStates:
+  - firstSeen: "2023-08-30T15:18:57Z"
+    id: dddddddddddddddddddddddddddddddddddddddd
+    images:
+    - repoURL: ghcr.io/akuity/guestbook2
+      tag: v0.0.0
+    provenance: dev
+  currentState:
+    firstSeen: "2023-08-30T15:18:57Z"
+    health:
+      status: Healthy
+    id: dddddddddddddddddddddddddddddddddddddddd
+    images:
+    - repoURL: ghcr.io/akuity/guestbook2
+      tag: v0.0.0
+    provenance: dev
