@@ -47,7 +47,12 @@ spec:
             properties:
               promotionMechanisms:
                 description: PromotionMechanisms describes how to incorporate newly
-                  observed materials into the Stage. This is a required field.
+                  observed materials into the Stage. This is an optional field as
+                  it is sometimes useful to aggregates available states from multiple
+                  upstream Stages without performing any actions. The utility of this
+                  is to allow multiple downstream Stages to be able to subscribe to
+                  a single upstream Stage where they may otherwise have subscribed
+                  to multiple upstream Stages.
                 properties:
                   argoCDAppUpdates:
                     description: ArgoCDAppUpdates describes updates that should be
@@ -513,7 +518,6 @@ spec:
                     type: array
                 type: object
             required:
-            - promotionMechanisms
             - subscriptions
             type: object
           status:

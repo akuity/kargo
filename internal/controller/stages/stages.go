@@ -305,12 +305,20 @@ func (r *reconciler) syncStage(
 
 	status.ObservedGeneration = stage.Generation
 	// Only perform health checks if we have a current state
-	if status.CurrentState != nil && stage.Spec.PromotionMechanisms != nil {
-		health := r.checkHealthFn(
-			ctx,
-			*status.CurrentState,
-			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
-		)
+	if status.CurrentState != nil {
+		var health api.Health
+		if stage.Spec.PromotionMechanisms != nil {
+			health = r.checkHealthFn(
+				ctx,
+				*status.CurrentState,
+				stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
+			)
+		} else {
+			// Healthy by default if there are no promotion mechanisms.
+			health = api.Health{
+				Status: api.HealthStateHealthy,
+			}
+		}
 		status.CurrentState.Health = &health
 		status.History.Pop()
 		status.History.Push(*status.CurrentState)

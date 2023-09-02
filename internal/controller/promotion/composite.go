@@ -43,6 +43,10 @@ func (c *compositeMechanism) Promote(
 	stage *api.Stage,
 	newState api.StageState,
 ) (api.StageState, error) {
+	if stage.Spec.PromotionMechanisms == nil {
+		return newState, nil
+	}
+
 	newState = *newState.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)

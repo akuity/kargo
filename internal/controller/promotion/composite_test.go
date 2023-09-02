@@ -105,7 +105,11 @@ func TestCompositePromote(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			newStateOut, err := testCase.promoMech.Promote(
 				context.Background(),
-				&api.Stage{},
+				&api.Stage{
+					Spec: &api.StageSpec{
+						PromotionMechanisms: &api.PromotionMechanisms{},
+					},
+				},
 				testCase.newState,
 			)
 			testCase.assertions(testCase.newState, newStateOut, err)
