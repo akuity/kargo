@@ -39,6 +39,10 @@ spec:
             - name: h2c
               containerPort: 8080
               protocol: TCP
+          livenessProbe:
+            exec:
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:8080"]
+            initialDelaySeconds: 10
           readinessProbe:
             exec:
               command: ["/usr/local/bin/grpc_health_probe", "-addr=:8080"]
