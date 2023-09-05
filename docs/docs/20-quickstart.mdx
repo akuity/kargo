@@ -380,11 +380,11 @@ EOF
 
 Dissecting the manifest above, we see the `test` `Stage` subscribes directly to
 the `nginx` image repository. When a new, semantically tagged version of the
-`nginx` container image is discovered, Kargo has discovered a new _state_.
+`nginx` container image is discovered, Kargo has discovered new _freight_.
 Because the corresponding `PromotionPolicy` resource permits auto-promotion, the
-discovery of this new state will immediately result in the creation of a new
-`Promotion` resource that will effect the transition of the `Stage` to that
-state.
+discovery of this new freight will immediately result in the creation of a new
+`Promotion` resource that will transition the new piece of freight to the `test`
+`Stage`.
 
 The actual promotion process involves running `kustomize edit set image` on the
 `stages/test` directory of our GitOps repository and committing those changes,
@@ -392,20 +392,20 @@ then forcing the `kargo-demo-test` Argo CD `Application` to refresh and sync.
 
 After creating the `test` `Stage` resource, we should almost immediately see:
 
-1. The `test` `Stage` has been assigned a current state and is healthy:
+1. The `test` `Stage` has been assigned a current freight and is healthy:
 
    ```text
    kubectl get stage test --namespace kargo-demo
    ```
 
   ```text
-   NAME   CURRENT STATE                              HEALTH    AGE
+   NAME   CURRENT FREIGHT                            HEALTH    AGE
    test   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   30s
    ```
 
-1. The `test` `Stage` resource's `status` field reflects the one available
-   state, the current state, and the history of all states this `Stage` has been
-   in:
+1. The `test` `Stage` resource's `status` field reflects the available freight,
+   the current freight, and the history of freight that has moved through this
+   `Stage`:
 
    ```text
    kubectl get stage test \
@@ -413,15 +413,15 @@ After creating the `test` `Stage` resource, we should almost immediately see:
      --output jsonpath-as-json={.status}
    ```
 
-1. A `Promotion` resource was also created which was responsible for the `test`
-   `Stage` transitioning into its one available state.
+1. A `Promotion` resource was also created which was responsible for
+   transitioning the new piece of freight into the `test` `Stage`.
 
    ```texts
    kubectl get promotions --namespace kargo-demo
    ```
 
    ```text
-   NAME                                               STAGE   STATE                                      PHASE       AGE
+   NAME                                               STAGE   FREIGHT                                    PHASE       AGE
    test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   55s
    ```
 
@@ -461,14 +461,13 @@ EOF
 ```
 
 Dissecting the manifest above, we see the `uat` `Stage` is somewhat different
-from the `test` `Stage` in that it does not find new states by subscribing
-directly to an image repository, but discovers them by monitoring the "upstream"
-`test` `Stage`. Any healthy state from the `test` `Stage`'s `history` field
-becomes available state for the `uat` `Stage`. Because the corresponding
-`PromotionPolicy` resource permits auto-promotion, the discovery of the `test`
-`Stage`'s current, healthy state immediately results in the creation of a new
-`Promotion` resource that will effect the transition of the `Stage` to that
-state.
+from the `test` `Stage` in that it does not find new freight by subscribing
+directly to an image repository, but discovers freight by monitoring the
+"upstream" `test` `Stage`. Any healthy piece of freight from the `test` `Stage`'s
+`history` field becomes available freight for the `uat` `Stage`. Because the
+corresponding `PromotionPolicy` resource permits auto-promotion, the discovery
+of the `test` `Stage`'s current, healthy freight immediately results in the
+creation of a new `Promotion` resource to move that freight into this `Stage`.
 
 The `promotionMechanisms` for the `uat` `Stage` are not substantially different
 from those for the `test` `Stage`. They involve running `kustomize edit set
@@ -479,19 +478,20 @@ refresh and sync.
 After creating the `uat` `Stage` resource, we should almost immediately
 see:
 
-1. The `uat` `Stage` has been assigned a current state and is healthy:
+1. The `uat` `Stage` has been assigned a current freight and is healthy:
 
    ```shell
    kubectl get stage uat --namespace kargo-demo
    ```
 
    ```text
-   NAME    CURRENT STATE                              HEALTH    AGE
+   NAME    CURRENT FREIGHT                            HEALTH    AGE
    stage   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   13s
    ```
 
-1. The `uat` `Stage` resource's `status` field reflects the one available state,
-   the current state, and the history of all states this `Stage` has been in:
+1. The `uat` `Stage` resource's `status` field reflects the available freight,
+   the current freight, and the history of all freight that has moved through
+   this `Stage`:
 
    ```shell
    kubectl get stage uat \
@@ -499,16 +499,15 @@ see:
      --output jsonpath-as-json={.status}
    ```
 
-1. A `Promotion` resource was created which was responsible for the `uat`
-   `Stage` transitioning into its one available state -- the same state that the
-   `test` `Stage` is already in.
+1. A `Promotion` resource was created which was responsible for moving the one
+   available piece of freight into the `uat` `Stage`.
 
    ```shell
    kubectl get promotions --namespace kargo-demo
    ```
 
    ```
-   NAME                                               STAGE   STATE                                      PHASE       AGE
+   NAME                                               STAGE   FREIGHT                                    PHASE       AGE
    test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   2m40s
    uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   43s
    ```
@@ -547,9 +546,9 @@ EOF
 ```
 
 Dissecting the manifest above, we see the `prod` `Stage` is remarkably similar
-to the `uat` `Stage`. It discovers new states by monitoring the "upstream" `uat`
-`Stage`. Any healthy state from the `uat` `Stage`'s `history` field becomes
-available state for the `prod` `Stage`.
+to the `uat` `Stage`. It discovers new freight by monitoring the "upstream"
+`uat` `Stage`. Any healthy freight from the `uat` `Stage`'s `history` field
+becomes available freight for the `prod` `Stage`.
 
 The `promotionMechanisms` for the `prod` `Stage` also are not substantially
 different from those for either the `test` or `uat` `Stage`s. They involve
@@ -562,19 +561,19 @@ auto-promotion, no `Promotion` resource will be automatically created.
 
 After creating the `prod` `Stage` resource, we should almost immediately see:
 
-1. The `prod` `Stage` has not yet been assigned a current state:
+1. The `prod` `Stage` has not yet been assigned a current freight:
 
    ```shell
    kubectl get stage prod --namespace kargo-demo
    ```
 
    ```text
-   NAME   CURRENT STATE   HEALTH   AGE
+   NAME   CURRENT FREIGHT   HEALTH   AGE
    prod                            12s
    ```
 
 1. The `prod` `Stage` resource's `status` field reflects the one available
-   state, but shows no current state or history:
+   piece of freight, but shows no current freight or history:
 
    ```shell
    kubectl get stage prod \
@@ -582,15 +581,15 @@ After creating the `prod` `Stage` resource, we should almost immediately see:
      --output jsonpath-as-json={.status}
    ```
 
-1. No `Promotion` resource was automatically created to transition the `prod`
-   `Stage` into its one available state.
+1. No `Promotion` resource was automatically created to transition the freight
+   into the `prod` `Stage`.
 
    ```shell
    kubectl get promotions --namespace kargo-demo
    ```
 
    ```
-   NAME                                               STAGE   STATE                                      PHASE       AGE
+   NAME                                               STAGE   FREIGHT                                    PHASE       AGE
    test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   4m4s
    uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   2m7s
    ```
@@ -600,14 +599,14 @@ After creating the `prod` `Stage` resource, we should almost immediately see:
 
 ### Trigger a promotion to prod
 
-In this step, we will trigger a promotion to transition the `prod` `Stage` into
-a new state by manually creating a `Promotion` resource.
+In this step, we will trigger a promotion to transition the new freight into the
+`prod` `Stage` by manually creating a `Promotion` resource.
 
-First, copy the ID of the `uat` `Stage`'s current state and assign it to
-`STATE_ID` environment variable:
+First, copy the ID of the `uat` `Stage`'s current freight and assign it to a
+`FREIGHT_ID` environment variable:
 
 ```shell
-export STATE_ID=$(kubectl get stage uat -n kargo-demo -o jsonpath={.status.currentState.id})
+export FREIGHT_ID=$(kubectl get stage uat -n kargo-demo -o jsonpath={.status.currentFreight.id})
 ```
 
 Then apply the following:
@@ -617,11 +616,11 @@ cat <<EOF | kubectl apply -f -
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Promotion
 metadata:
-  name: prod-to-${STATE_ID}
+  name: prod-to-${FREIGHT_ID}
   namespace: kargo-demo
 spec:
   stage: prod
-  state: ${STATE_ID}
+  freight: ${FREIGHT_ID}
 EOF
 ```
 
@@ -634,25 +633,26 @@ After a few moments, we should be able to see:
    ```
 
    ```text
-   NAME                                               STAGE   STATE                                      PHASE       AGE
+   NAME                                               STAGE   FREIGHT                                    PHASE       AGE
    prod-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   prod    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   12s
    test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   8m11s
    uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   6m14ss
    ```
 
-1. The `prod` `Stage` has now been assigned a current state:
+1. The `prod` `Stage` has now been assigned a current freight:
 
    ```shell
    kubectl get stage prod --namespace kargo-demo
    ```
 
    ```text
-   NAME   CURRENT STATE                              HEALTH    AGE
+   NAME   CURRENT FREIGHT                            HEALTH    AGE
    prod   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   5m20s
    ```
 
-1. The `prod` `Stage` resource's `status` field reflects the available state,
-   the current state, and the history of all states this `Stage` has been in:
+1. The `prod` `Stage` resource's `status` field reflects the available freight,
+   the current freight, and the history of all freight that has moved through
+   this `Stage`:
 
    ```text
    kubectl get stage prod \
