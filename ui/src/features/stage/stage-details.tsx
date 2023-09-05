@@ -5,7 +5,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status-icon/health-status-icon';
-import { AvailableStates } from '@ui/features/stage/available-states';
+import { AvailableFreight } from '@ui/features/stage/available-freight';
 import { Subscriptions } from '@ui/features/stage/subscriptions';
 import {
   deleteStage,
@@ -52,7 +52,7 @@ export const StageDetails = () => {
           <div className='flex items-center justify-between'>
             <div className='flex gap-1 items-start'>
               <HealthStatusIcon
-                health={data.stage.status?.currentState?.health}
+                health={data.stage.status?.currentFreight?.health}
                 style={{ marginRight: '10px', marginTop: '10px' }}
               />
               <div>
@@ -92,7 +92,7 @@ export const StageDetails = () => {
               subscriptions={data.stage.spec?.subscriptions}
               projectName={projectName}
             />
-            <AvailableStates stage={data.stage} onSuccess={refetch} />
+            <AvailableFreight stage={data.stage} onSuccess={refetch} />
           </div>
         </>
       )}

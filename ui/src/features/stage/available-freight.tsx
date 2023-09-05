@@ -10,8 +10,8 @@ import { ButtonIcon } from '@ui/features/common';
 import { promoteStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
-export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void }) => {
-  const [promotingStateId, setPromotingStateId] = React.useState<string | null>(null);
+export const AvailableFreight = (props: { stage: Stage; onSuccess?: () => void }) => {
+  const [promotingFreightId, setPromotingFreightId] = React.useState<string | null>(null);
   const { stage, onSuccess } = props;
   const { mutate, isLoading: isLoadingPromote } = useMutation({
     ...promoteStage.useMutation(),
@@ -25,44 +25,44 @@ export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void })
   });
 
   const promote = (id: string) => {
-    setPromotingStateId(id);
+    setPromotingFreightId(id);
     mutate({
       name: stage.metadata?.name,
       project: stage.metadata?.namespace,
-      state: id
+      freight: id
     });
   };
 
   return (
     <div>
-      <Typography.Title level={3}>Available States</Typography.Title>
+      <Typography.Title level={3}>Available Freight</Typography.Title>
       <List
         itemLayout='horizontal'
-        dataSource={stage?.status?.availableStates || []}
-        renderItem={(state) => (
+        dataSource={stage?.status?.availableFreight || []}
+        renderItem={(freight) => (
           <List.Item
             actions={[
               <Popconfirm
                 key='promote'
-                title='Are you sure to promote this state?'
-                onConfirm={() => state.id && promote(state.id)}
+                title='Are you sure to promote to this freight?'
+                onConfirm={() => freight.id && promote(freight.id)}
                 okText='Confirm'
                 placement='left'
                 icon=''
-                disabled={stage.status?.currentState?.id === state.id}
+                disabled={stage.status?.currentFreight?.id === freight.id}
               >
                 <Button
                   type='primary'
                   icon={<ButtonIcon icon={faArrowTurnUp} size='1x' />}
-                  disabled={stage.status?.currentState?.id === state.id}
-                  loading={isLoadingPromote && promotingStateId === state.id}
+                  disabled={stage.status?.currentFreight?.id === freight.id}
+                  loading={isLoadingPromote && promotingFreightId === freight.id}
                 >
                   Promote
                 </Button>
               </Popconfirm>
             ]}
           >
-            {state.commits.map((commit) => (
+            {freight.commits.map((commit) => (
               <List.Item.Meta
                 key={commit.id}
                 avatar={<FontAwesomeIcon icon={faCodeCommit} />}
@@ -78,25 +78,25 @@ export const AvailableStates = (props: { stage: Stage; onSuccess?: () => void })
                 description={
                   <Tooltip
                     title={
-                      state.firstSeen &&
-                      format(state.firstSeen.toDate(), "HH:mm:ss 'on' MMM do yyyy")
+                      freight.firstSeen &&
+                      format(freight.firstSeen.toDate(), "HH:mm:ss 'on' MMM do yyyy")
                     }
                   >
-                    {state.firstSeen && formatRelative(state.firstSeen?.toDate(), new Date())}
+                    {freight.firstSeen && formatRelative(freight.firstSeen?.toDate(), new Date())}
                   </Tooltip>
                 }
               />
             ))}
-            {state.commits.length === 0 && (
+            {freight.commits.length === 0 && (
               <List.Item.Meta
                 avatar={<FontAwesomeIcon icon={faDocker} />}
                 title='Image'
                 description={
                   <Descriptions size='small' column={1}>
                     <Descriptions.Item label='Repo URL'>
-                      {state.images[0]?.repoUrl}
+                      {freight.images[0]?.repoUrl}
                     </Descriptions.Item>
-                    <Descriptions.Item label='Tag'>{state.images[0]?.tag}</Descriptions.Item>
+                    <Descriptions.Item label='Tag'>{freight.images[0]?.tag}</Descriptions.Item>
                   </Descriptions>
                 }
               />
