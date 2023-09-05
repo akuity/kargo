@@ -96,8 +96,8 @@ export const ProjectDetails = () => {
                   items: [
                     {
                       text: 'Status',
-                      value: healthStateToString(item.status?.currentState?.health?.status),
-                      icon: healthStateToIcon(item.status?.currentState?.health?.status)
+                      value: healthStateToString(item.status?.currentFreight?.health?.status),
+                      icon: healthStateToIcon(item.status?.currentFreight?.health?.status)
                     }
                   ]
                 }
