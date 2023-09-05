@@ -75,8 +75,8 @@ func TestGitCommitEquals(t *testing.T) {
 	}
 }
 
-func TestStageStateUpdateID(t *testing.T) {
-	state := StageState{
+func TestStageFreightUpdateID(t *testing.T) {
+	freight := Freight{
 		Commits: []GitCommit{
 			{
 				RepoURL: "fake-git-repo",
@@ -97,23 +97,23 @@ func TestStageStateUpdateID(t *testing.T) {
 			},
 		},
 	}
-	state.UpdateStateID()
-	result := state.ID
+	freight.UpdateFreightID()
+	result := freight.ID
 	// Doing this any number of times should yield the same ID
 	for i := 0; i < 100; i++ {
-		state.UpdateStateID()
-		require.Equal(t, result, state.ID)
+		freight.UpdateFreightID()
+		require.Equal(t, result, freight.ID)
 	}
 	// Changing anything should change the result
-	state.Commits[0].ID = "a-different-fake-commit"
-	state.UpdateStateID()
-	require.NotEqual(t, result, state.ID)
+	freight.Commits[0].ID = "a-different-fake-commit"
+	freight.UpdateFreightID()
+	require.NotEqual(t, result, freight.ID)
 }
 
-func TestStageStateStackEmpty(t *testing.T) {
+func TestStageFreightStackEmpty(t *testing.T) {
 	testCases := []struct {
 		name           string
-		stack          StageStateStack
+		stack          FreightStack
 		expectedResult bool
 	}{
 		{
@@ -123,12 +123,12 @@ func TestStageStateStackEmpty(t *testing.T) {
 		},
 		{
 			name:           "stack is empty",
-			stack:          StageStateStack{},
+			stack:          FreightStack{},
 			expectedResult: true,
 		},
 		{
 			name:           "stack has items",
-			stack:          StageStateStack{{ID: "foo"}},
+			stack:          FreightStack{{ID: "foo"}},
 			expectedResult: false,
 		},
 	}
@@ -139,116 +139,116 @@ func TestStageStateStackEmpty(t *testing.T) {
 	}
 }
 
-func TestStageStateStackPop(t *testing.T) {
+func TestStageFreightStackPop(t *testing.T) {
 	testCases := []struct {
-		name          string
-		stack         StageStateStack
-		expectedStack StageStateStack
-		expectedState StageState
-		expectedOK    bool
+		name            string
+		stack           FreightStack
+		expectedStack   FreightStack
+		expectedFreight Freight
+		expectedOK      bool
 	}{
 		{
-			name:          "stack is nil",
-			stack:         nil,
-			expectedStack: nil,
-			expectedState: StageState{},
-			expectedOK:    false,
+			name:            "stack is nil",
+			stack:           nil,
+			expectedStack:   nil,
+			expectedFreight: Freight{},
+			expectedOK:      false,
 		},
 		{
-			name:          "stack is empty",
-			stack:         StageStateStack{},
-			expectedStack: StageStateStack{},
-			expectedState: StageState{},
-			expectedOK:    false,
+			name:            "stack is empty",
+			stack:           FreightStack{},
+			expectedStack:   FreightStack{},
+			expectedFreight: Freight{},
+			expectedOK:      false,
 		},
 		{
-			name:          "stack has items",
-			stack:         StageStateStack{{ID: "foo"}, {ID: "bar"}},
-			expectedStack: StageStateStack{{ID: "bar"}},
-			expectedState: StageState{ID: "foo"},
-			expectedOK:    true,
+			name:            "stack has items",
+			stack:           FreightStack{{ID: "foo"}, {ID: "bar"}},
+			expectedStack:   FreightStack{{ID: "bar"}},
+			expectedFreight: Freight{ID: "foo"},
+			expectedOK:      true,
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			state, ok := testCase.stack.Pop()
+			freight, ok := testCase.stack.Pop()
 			require.Equal(t, testCase.expectedStack, testCase.stack)
-			require.Equal(t, testCase.expectedState, state)
+			require.Equal(t, testCase.expectedFreight, freight)
 			require.Equal(t, testCase.expectedOK, ok)
 		})
 	}
 }
 
-func TestStageStateStackTop(t *testing.T) {
+func TestStageFreightStackTop(t *testing.T) {
 	testCases := []struct {
-		name          string
-		stack         StageStateStack
-		expectedState StageState
-		expectedOK    bool
+		name            string
+		stack           FreightStack
+		expectedFreight Freight
+		expectedOK      bool
 	}{
 		{
-			name:          "stack is nil",
-			stack:         nil,
-			expectedState: StageState{},
-			expectedOK:    false,
+			name:            "stack is nil",
+			stack:           nil,
+			expectedFreight: Freight{},
+			expectedOK:      false,
 		},
 		{
-			name:          "stack is empty",
-			stack:         StageStateStack{},
-			expectedState: StageState{},
-			expectedOK:    false,
+			name:            "stack is empty",
+			stack:           FreightStack{},
+			expectedFreight: Freight{},
+			expectedOK:      false,
 		},
 		{
-			name:          "stack has items",
-			stack:         StageStateStack{{ID: "foo"}, {ID: "bar"}},
-			expectedState: StageState{ID: "foo"},
-			expectedOK:    true,
+			name:            "stack has items",
+			stack:           FreightStack{{ID: "foo"}, {ID: "bar"}},
+			expectedFreight: Freight{ID: "foo"},
+			expectedOK:      true,
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			initialLen := len(testCase.stack)
-			state, ok := testCase.stack.Top()
+			freight, ok := testCase.stack.Top()
 			require.Len(t, testCase.stack, initialLen)
-			require.Equal(t, testCase.expectedState, state)
+			require.Equal(t, testCase.expectedFreight, freight)
 			require.Equal(t, testCase.expectedOK, ok)
 		})
 	}
 }
 
-func TestStageStateStackPush(t *testing.T) {
+func TestStageFreightStackPush(t *testing.T) {
 	testCases := []struct {
 		name          string
-		stack         StageStateStack
-		newStates     []StageState
-		expectedStack StageStateStack
+		stack         FreightStack
+		newFreight    []Freight
+		expectedStack FreightStack
 	}{
 		{
 			name:          "initial stack is nil",
 			stack:         nil,
-			newStates:     []StageState{{ID: "foo"}, {ID: "bar"}},
-			expectedStack: StageStateStack{{ID: "foo"}, {ID: "bar"}},
+			newFreight:    []Freight{{ID: "foo"}, {ID: "bar"}},
+			expectedStack: FreightStack{{ID: "foo"}, {ID: "bar"}},
 		},
 		{
 			name:          "initial stack is not nil",
-			stack:         StageStateStack{{ID: "foo"}},
-			newStates:     []StageState{{ID: "bar"}},
-			expectedStack: StageStateStack{{ID: "bar"}, {ID: "foo"}},
+			stack:         FreightStack{{ID: "foo"}},
+			newFreight:    []Freight{{ID: "bar"}},
+			expectedStack: FreightStack{{ID: "bar"}, {ID: "foo"}},
 		},
 		{
 			name: "initial stack is full",
-			stack: StageStateStack{
+			stack: FreightStack{
 				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
-			newStates: []StageState{{ID: "foo"}},
-			expectedStack: StageStateStack{
+			newFreight: []Freight{{ID: "foo"}},
+			expectedStack: FreightStack{
 				{ID: "foo"}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.stack.Push(testCase.newStates...)
+			testCase.stack.Push(testCase.newFreight...)
 			require.Equal(t, testCase.expectedStack, testCase.stack)
 		})
 	}

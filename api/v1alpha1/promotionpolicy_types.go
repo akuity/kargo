@@ -8,7 +8,7 @@ import (
 //+kubebuilder:object:root=true
 
 // PromotionPolicy specifies whether a given Stage is eligible for
-// auto-promotion to newly discovered StageStates.
+// auto-promotion to newly discovered Freight.
 type PromotionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -18,16 +18,15 @@ type PromotionPolicy struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Stage string `json:"stage,"`
-	// EnableAutoPromotion indicates whether new StageStates can automatically be
+	// EnableAutoPromotion indicates whether new Freight can automatically be
 	// promoted into the Stage referenced by the Stage field. Note: There are
 	// other conditions also required for an auto-promotion to occur.
-	// Specifically, there must be a single source of new StageStates, so
-	// regardless of the value of this field, an auto-promotion could never occur
-	// for a Stage subscribed to MULTIPLE upstream Stages. This field defaults to
-	// false, but is commonly set to true for Stages that subscribe to
-	// repositories instead of other, upstream Stages. This allows users to define
-	// Stages that are automatically updated as soon as new materials are
-	// detected.
+	// Specifically, there must be a single source of new Freight, so regardless
+	// of the value of this field, an auto-promotion could never occur for a Stage
+	// subscribed to MULTIPLE upstream Stages. This field defaults to false, but
+	// is commonly set to true for Stages that subscribe to repositories instead
+	// of other, upstream Stages. This allows users to define Stages that are
+	// automatically updated as soon as new materials are detected.
 	EnableAutoPromotion bool `json:"enableAutoPromotion,omitempty"`
 }
 
