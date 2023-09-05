@@ -21,8 +21,8 @@ spec:
     - jsonPath: .spec.stage
       name: Stage
       type: string
-    - jsonPath: .spec.state
-      name: State
+    - jsonPath: .spec.freight
+      name: Freight
       type: string
     - jsonPath: .status.phase
       name: Phase
@@ -34,7 +34,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: Promotion represents a request to transition a particular Stage
-          into a particular state.
+          into a particular Freight.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -50,8 +50,15 @@ spec:
             type: object
           spec:
             description: Spec describes the desired transition of a specific Stage
-              into a specific StageState.
+              into a specific Freight.
             properties:
+              freight:
+                description: Freight specifies the specific Freight into which the
+                  Stage referenced by the Stage field should be transitioned. The
+                  Freight MUST be among the Stage's Status.AvailableFreight or the
+                  Promotion will ultimately fail.
+                minLength: 1
+                type: string
               stage:
                 description: Stage specifies the name of the Stage to which this Promotion
                   applies. The Stage referenced by this field MUST be in the same
@@ -59,16 +66,9 @@ spec:
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
-              state:
-                description: State specifies the specific StageState into which the
-                  Stage referenced by the Stage field should be transitioned. The
-                  State MUST be among the Stage's Status.AvailableStates or the Promotion
-                  will ultimately fail.
-                minLength: 1
-                type: string
             required:
+            - freight
             - stage
-            - state
             type: object
           status:
             description: Status describes the current state of the transition represented
