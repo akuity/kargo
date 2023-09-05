@@ -14,10 +14,10 @@ import (
 type Mechanism interface {
 	// GetName returns the name of a promotion mechanism.
 	GetName() string
-	// Promote consults rules in the provided Stage to perform some portion of
-	// the transition into the specified StageState. It returns the StageState,
-	// which may possibly be updated by the process.
-	Promote(context.Context, *api.Stage, api.StageState) (api.StageState, error)
+	// Promote consults rules in the provided Stage to perform some portion of the
+	// transition into the specified Freight. It returns the Freight, which may
+	// possibly be updated by the process.
+	Promote(context.Context, *api.Stage, api.Freight) (api.Freight, error)
 }
 
 // NewMechanisms returns the entrypoint to a hierarchical tree of promotion

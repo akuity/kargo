@@ -60,12 +60,12 @@ func TestValidateUpdate(t *testing.T) {
 						Namespace: "fake-namespace",
 					},
 					Spec: &api.PromotionSpec{
-						Stage: "fake-stage",
-						State: "fake-state",
+						Stage:   "fake-stage",
+						Freight: "fake-freight",
 					},
 				}
 				newPromo := oldPromo.DeepCopy()
-				newPromo.Spec.State = "another-fake-state"
+				newPromo.Spec.Freight = "another-fake-freight"
 				return oldPromo, newPromo
 			},
 			authorizeFn: func(context.Context, *api.Promotion, string) error {
@@ -87,8 +87,8 @@ func TestValidateUpdate(t *testing.T) {
 						Namespace: "fake-namespace",
 					},
 					Spec: &api.PromotionSpec{
-						Stage: "fake-stage",
-						State: "fake-state",
+						Stage:   "fake-stage",
+						Freight: "fake-freight",
 					},
 				}
 				newPromo := oldPromo.DeepCopy()

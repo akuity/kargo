@@ -17,7 +17,7 @@
       "description": "Spec describes the sources of material used by the Stage and how to incorporate newly observed materials into the Stage.",
       "properties": {
         "promotionMechanisms": {
-          "description": "PromotionMechanisms describes how to incorporate newly observed materials into the Stage. This is an optional field as it is sometimes useful to aggregates available states from multiple upstream Stages without performing any actions. The utility of this is to allow multiple downstream Stages to be able to subscribe to a single upstream Stage where they may otherwise have subscribed to multiple upstream Stages.",
+          "description": "PromotionMechanisms describes how to incorporate newly observed materials into the Stage. This is an optional field as it is sometimes useful to aggregates available Freight from multiple upstream Stages without performing any actions. The utility of this is to allow multiple downstream Stages to be able to subscribe to a single upstream Stage where they may otherwise have subscribed to multiple upstream Stages.",
           "properties": {
             "argoCDAppUpdates": {
               "description": "ArgoCDAppUpdates describes updates that should be applied to Argo CD Application resources to incorporate newly observed materials into the Stage. This field is optional, as such actions are not required in all cases. Note that all updates specified by the GitRepoUpdates field, if any, are applied BEFORE these.",
@@ -402,7 +402,7 @@
             "upstreamStages": {
               "description": "UpstreamStages identifies other Stages as potential sources of material for this Stage. This field is mutually exclusive with the Repos field.",
               "items": {
-                "description": "StageSubscription defines a subscription to states from another Stage.",
+                "description": "StageSubscription defines a subscription to Freight from another Stage.",
                 "properties": {
                   "name": {
                     "description": "Name specifies the name of a Stage.",
@@ -428,15 +428,15 @@
       "type": "object"
     },
     "status": {
-      "description": "Status describes the most recently observed versions of this Stage's sources of material as well as the Stage's current and recent states.",
+      "description": "Status describes the most recently observed Freight as well as the Stage's current and recent Freight.",
       "properties": {
-        "availableStates": {
-          "description": "AvailableStates is a stack of available StageStates, where each state is essentially a \"bill of materials\" describing what can be automatically or manually deployed to the Stage.",
+        "availableFreight": {
+          "description": "AvailableFreight is a stack of available Freight, where each Freight is essentially a \"bill of materials\" describing what can be automatically or manually deployed to the Stage.",
           "items": {
-            "description": "StageState is a \"bill of materials\" describing what is, was, or can be deployed to a Stage.",
+            "description": "Freight is a \"bill of materials\" describing what is, was, or can be deployed to a Stage.",
             "properties": {
               "charts": {
-                "description": "Charts describes Helm charts that were used in this state.",
+                "description": "Charts describes Helm charts that were used in this Freight.",
                 "items": {
                   "description": "Chart describes a specific version of a Helm chart.",
                   "properties": {
@@ -458,7 +458,7 @@
                 "type": "array"
               },
               "commits": {
-                "description": "Commits describes specific Git repository commits that were used in this state.",
+                "description": "Commits describes specific Git repository commits that were used in this Freight.",
                 "items": {
                   "description": "GitCommit describes a specific commit from a specific Git repository.",
                   "properties": {
@@ -484,12 +484,12 @@
                 "type": "array"
               },
               "firstSeen": {
-                "description": "FirstSeen represents the date/time when this StageStage first entered the system. This is useful and important information because it enables the controller to block auto-promotion of StageStates that are older than a Stages's current state, which is a case that can arise if a Stage has ROLLED BACK to an older state whilst a downstream Stage is already on to a newer state.",
+                "description": "FirstSeen represents the date/time when this Freight first entered the system. This is useful and important information because it enables the controller to block auto-promotion of Freight that are older than a Stages's current Freight, which is a case that can arise if a Stage has ROLLED BACK to an older Freight whilst a downstream Stage is already on to a newer Freight.",
                 "format": "date-time",
                 "type": "string"
               },
               "health": {
-                "description": "Health is the StageState's last observed health. If this state is the Stage's current state, this will be continuously re-assessed and updated. If this StageState is a past state of the Stage, this field will denote the last observed health state before transitioning into a different state.",
+                "description": "Health is the Freight's last observed health. If this Freight is the Stage's current Freight, this will be continuously re-assessed and updated. If this Freight is a past Freight of the Stage, this field will denote the last observed health state before transitioning into a different Freight.",
                 "properties": {
                   "issues": {
                     "description": "Issues clarifies why a Stage in any state other than Healthy is in that state. This field will always be the empty when a Stage is Healthy.",
@@ -506,11 +506,11 @@
                 "type": "object"
               },
               "id": {
-                "description": "ID is a unique, system-assigned identifier for this state.",
+                "description": "ID is a unique, system-assigned identifier for this Freight.",
                 "type": "string"
               },
               "images": {
-                "description": "Images describes container images and versions thereof that were used in this state.",
+                "description": "Images describes container images and versions thereof that were used in this Freight.",
                 "items": {
                   "description": "Image describes a specific version of a container image.",
                   "properties": {
@@ -532,7 +532,7 @@
                 "type": "array"
               },
               "provenance": {
-                "description": "Provenance describes the proximate source of this StageState. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
+                "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
                 "type": "string"
               }
             },
@@ -540,11 +540,11 @@
           },
           "type": "array"
         },
-        "currentState": {
-          "description": "CurrentState is the Stage's current state -- a \"bill of materials\" describing what is currently deployed to the Stage.",
+        "currentFreight": {
+          "description": "CurrentFreight is the Stage's current Freight -- a \"bill of materials\" describing what is currently deployed to the Stage.",
           "properties": {
             "charts": {
-              "description": "Charts describes Helm charts that were used in this state.",
+              "description": "Charts describes Helm charts that were used in this Freight.",
               "items": {
                 "description": "Chart describes a specific version of a Helm chart.",
                 "properties": {
@@ -566,7 +566,7 @@
               "type": "array"
             },
             "commits": {
-              "description": "Commits describes specific Git repository commits that were used in this state.",
+              "description": "Commits describes specific Git repository commits that were used in this Freight.",
               "items": {
                 "description": "GitCommit describes a specific commit from a specific Git repository.",
                 "properties": {
@@ -592,12 +592,12 @@
               "type": "array"
             },
             "firstSeen": {
-              "description": "FirstSeen represents the date/time when this StageStage first entered the system. This is useful and important information because it enables the controller to block auto-promotion of StageStates that are older than a Stages's current state, which is a case that can arise if a Stage has ROLLED BACK to an older state whilst a downstream Stage is already on to a newer state.",
+              "description": "FirstSeen represents the date/time when this Freight first entered the system. This is useful and important information because it enables the controller to block auto-promotion of Freight that are older than a Stages's current Freight, which is a case that can arise if a Stage has ROLLED BACK to an older Freight whilst a downstream Stage is already on to a newer Freight.",
               "format": "date-time",
               "type": "string"
             },
             "health": {
-              "description": "Health is the StageState's last observed health. If this state is the Stage's current state, this will be continuously re-assessed and updated. If this StageState is a past state of the Stage, this field will denote the last observed health state before transitioning into a different state.",
+              "description": "Health is the Freight's last observed health. If this Freight is the Stage's current Freight, this will be continuously re-assessed and updated. If this Freight is a past Freight of the Stage, this field will denote the last observed health state before transitioning into a different Freight.",
               "properties": {
                 "issues": {
                   "description": "Issues clarifies why a Stage in any state other than Healthy is in that state. This field will always be the empty when a Stage is Healthy.",
@@ -614,11 +614,11 @@
               "type": "object"
             },
             "id": {
-              "description": "ID is a unique, system-assigned identifier for this state.",
+              "description": "ID is a unique, system-assigned identifier for this Freight.",
               "type": "string"
             },
             "images": {
-              "description": "Images describes container images and versions thereof that were used in this state.",
+              "description": "Images describes container images and versions thereof that were used in this Freight.",
               "items": {
                 "description": "Image describes a specific version of a container image.",
                 "properties": {
@@ -640,23 +640,23 @@
               "type": "array"
             },
             "provenance": {
-              "description": "Provenance describes the proximate source of this StageState. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
+              "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
               "type": "string"
             }
           },
           "type": "object"
         },
         "error": {
-          "description": "Error describes any errors that are preventing the Stage controller from assessing Stage health or from polling repositories or upstream Stages to discover new StageStates.",
+          "description": "Error describes any errors that are preventing the Stage controller from assessing Stage health or from polling repositories or upstream Stages to discover new Freight.",
           "type": "string"
         },
         "history": {
-          "description": "History is a stack of recent StageStates, where each state is essentially a \"bill of materials\" describing what was deployed to the Stage. By default, the last ten states are stored.",
+          "description": "History is a stack of recent Freight, where each Freight is essentially a \"bill of materials\" describing what was deployed to the Stage. By default, the last ten Freight are stored.",
           "items": {
-            "description": "StageState is a \"bill of materials\" describing what is, was, or can be deployed to a Stage.",
+            "description": "Freight is a \"bill of materials\" describing what is, was, or can be deployed to a Stage.",
             "properties": {
               "charts": {
-                "description": "Charts describes Helm charts that were used in this state.",
+                "description": "Charts describes Helm charts that were used in this Freight.",
                 "items": {
                   "description": "Chart describes a specific version of a Helm chart.",
                   "properties": {
@@ -678,7 +678,7 @@
                 "type": "array"
               },
               "commits": {
-                "description": "Commits describes specific Git repository commits that were used in this state.",
+                "description": "Commits describes specific Git repository commits that were used in this Freight.",
                 "items": {
                   "description": "GitCommit describes a specific commit from a specific Git repository.",
                   "properties": {
@@ -704,12 +704,12 @@
                 "type": "array"
               },
               "firstSeen": {
-                "description": "FirstSeen represents the date/time when this StageStage first entered the system. This is useful and important information because it enables the controller to block auto-promotion of StageStates that are older than a Stages's current state, which is a case that can arise if a Stage has ROLLED BACK to an older state whilst a downstream Stage is already on to a newer state.",
+                "description": "FirstSeen represents the date/time when this Freight first entered the system. This is useful and important information because it enables the controller to block auto-promotion of Freight that are older than a Stages's current Freight, which is a case that can arise if a Stage has ROLLED BACK to an older Freight whilst a downstream Stage is already on to a newer Freight.",
                 "format": "date-time",
                 "type": "string"
               },
               "health": {
-                "description": "Health is the StageState's last observed health. If this state is the Stage's current state, this will be continuously re-assessed and updated. If this StageState is a past state of the Stage, this field will denote the last observed health state before transitioning into a different state.",
+                "description": "Health is the Freight's last observed health. If this Freight is the Stage's current Freight, this will be continuously re-assessed and updated. If this Freight is a past Freight of the Stage, this field will denote the last observed health state before transitioning into a different Freight.",
                 "properties": {
                   "issues": {
                     "description": "Issues clarifies why a Stage in any state other than Healthy is in that state. This field will always be the empty when a Stage is Healthy.",
@@ -726,11 +726,11 @@
                 "type": "object"
               },
               "id": {
-                "description": "ID is a unique, system-assigned identifier for this state.",
+                "description": "ID is a unique, system-assigned identifier for this Freight.",
                 "type": "string"
               },
               "images": {
-                "description": "Images describes container images and versions thereof that were used in this state.",
+                "description": "Images describes container images and versions thereof that were used in this Freight.",
                 "items": {
                   "description": "Image describes a specific version of a container image.",
                   "properties": {
@@ -752,7 +752,7 @@
                 "type": "array"
               },
               "provenance": {
-                "description": "Provenance describes the proximate source of this StageState. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
+                "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
                 "type": "string"
               }
             },

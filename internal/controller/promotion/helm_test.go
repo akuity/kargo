@@ -252,7 +252,7 @@ func TestHelmerApply(t *testing.T) {
 					api.GitRepoUpdate{
 						Helm: &api.HelmPromotionMechanism{},
 					},
-					api.StageState{}, // The way the tests are structured, this value doesn't matter
+					api.Freight{}, // The way the tests are structured, this value doesn't matter
 					"",
 					"",
 				),

@@ -49,7 +49,7 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 			res, err := kargoSvcCli.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
 				Project: project,
 				Name:    name,
-				State:   freight,
+				Freight: freight,
 			}))
 			if err != nil {
 				return errors.Wrap(err, "promote stage")

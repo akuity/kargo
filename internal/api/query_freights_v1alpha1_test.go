@@ -18,23 +18,23 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func TestQueryFreights(t *testing.T) {
+func TestQueryFreight(t *testing.T) {
 	testSets := map[string]struct {
-		req                *svcv1alpha1.QueryFreightsRequest
+		req                *svcv1alpha1.QueryFreightRequest
 		errMsg             string
 		expectedCode       connect.Code
 		expectedPromotions int32
-		assertions         func(res *svcv1alpha1.QueryFreightsResponse)
+		assertions         func(res *svcv1alpha1.QueryFreightResponse)
 	}{
 		"empty project": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "",
 			},
 			errMsg:       "project should not be empty",
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"non-existing Stage": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				Stage:   "does-not-exist",
 			},
@@ -42,7 +42,7 @@ func TestQueryFreights(t *testing.T) {
 			expectedCode: connect.CodeNotFound,
 		},
 		"invalid group by": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				GroupBy: "notvalid",
 			},
@@ -50,7 +50,7 @@ func TestQueryFreights(t *testing.T) {
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"invalid order by": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				OrderBy: "notvalid",
 			},
@@ -58,7 +58,7 @@ func TestQueryFreights(t *testing.T) {
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"invalid group filter": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				Group:   "ghcr.io/akuity/guestbook",
 			},
@@ -66,7 +66,7 @@ func TestQueryFreights(t *testing.T) {
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"invalid order by tag": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				OrderBy: OrderByTag,
 			},
@@ -74,93 +74,93 @@ func TestQueryFreights(t *testing.T) {
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"query all freight": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 			},
-			assertions: func(res *svcv1alpha1.QueryFreightsResponse) {
+			assertions: func(res *svcv1alpha1.QueryFreightResponse) {
 				require.Len(t, res.GetGroups(), 1)
-				require.Len(t, res.GetGroups()[""].Freights, 4)
-				require.Equal(t, res.GetGroups()[""].Freights[0].Id, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-				require.Equal(t, res.GetGroups()[""].Freights[1].Id, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-				require.Equal(t, res.GetGroups()[""].Freights[2].Id, "cccccccccccccccccccccccccccccccccccccccc")
-				require.Equal(t, res.GetGroups()[""].Freights[3].Id, "dddddddddddddddddddddddddddddddddddddddd")
+				require.Len(t, res.GetGroups()[""].Freight, 4)
+				require.Equal(t, res.GetGroups()[""].Freight[0].Id, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+				require.Equal(t, res.GetGroups()[""].Freight[1].Id, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+				require.Equal(t, res.GetGroups()[""].Freight[2].Id, "cccccccccccccccccccccccccccccccccccccccc")
+				require.Equal(t, res.GetGroups()[""].Freight[3].Id, "dddddddddddddddddddddddddddddddddddddddd")
 			},
 		},
 		"reverse sort": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				Reverse: true,
 			},
-			assertions: func(res *svcv1alpha1.QueryFreightsResponse) {
+			assertions: func(res *svcv1alpha1.QueryFreightResponse) {
 				require.Len(t, res.GetGroups(), 1)
-				require.Len(t, res.GetGroups()[""].Freights, 4)
-				require.Equal(t, res.GetGroups()[""].Freights[0].Id, "dddddddddddddddddddddddddddddddddddddddd")
-				require.Equal(t, res.GetGroups()[""].Freights[1].Id, "cccccccccccccccccccccccccccccccccccccccc")
-				require.Equal(t, res.GetGroups()[""].Freights[2].Id, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-				require.Equal(t, res.GetGroups()[""].Freights[3].Id, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+				require.Len(t, res.GetGroups()[""].Freight, 4)
+				require.Equal(t, res.GetGroups()[""].Freight[0].Id, "dddddddddddddddddddddddddddddddddddddddd")
+				require.Equal(t, res.GetGroups()[""].Freight[1].Id, "cccccccccccccccccccccccccccccccccccccccc")
+				require.Equal(t, res.GetGroups()[""].Freight[2].Id, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+				require.Equal(t, res.GetGroups()[""].Freight[3].Id, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 			},
 		},
 		"query single stage": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				Stage:   "query-freight-3",
 			},
-			assertions: func(res *svcv1alpha1.QueryFreightsResponse) {
+			assertions: func(res *svcv1alpha1.QueryFreightResponse) {
 				require.Len(t, res.GetGroups(), 1)
-				require.Len(t, res.GetGroups()[""].Freights, 1)
-				require.Equal(t, res.GetGroups()[""].Freights[0].Id, "dddddddddddddddddddddddddddddddddddddddd")
+				require.Len(t, res.GetGroups()[""].Freight, 1)
+				require.Equal(t, res.GetGroups()[""].Freight[0].Id, "dddddddddddddddddddddddddddddddddddddddd")
 			},
 		},
 		"query group by container_repo": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				GroupBy: GroupByContainerRepository,
 			},
-			assertions: func(res *svcv1alpha1.QueryFreightsResponse) {
+			assertions: func(res *svcv1alpha1.QueryFreightResponse) {
 				require.Len(t, res.GetGroups(), 2)
 
 				gb1 := res.GetGroups()["ghcr.io/akuity/guestbook"]
-				require.Len(t, gb1.Freights, 3)
-				require.Equal(t, gb1.Freights[0].Id, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-				require.Equal(t, gb1.Freights[1].Id, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-				require.Equal(t, gb1.Freights[2].Id, "cccccccccccccccccccccccccccccccccccccccc")
+				require.Len(t, gb1.Freight, 3)
+				require.Equal(t, gb1.Freight[0].Id, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+				require.Equal(t, gb1.Freight[1].Id, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+				require.Equal(t, gb1.Freight[2].Id, "cccccccccccccccccccccccccccccccccccccccc")
 
 				gb2 := res.GetGroups()["ghcr.io/akuity/guestbook2"]
-				require.Len(t, gb2.Freights, 1)
-				require.Equal(t, gb2.Freights[0].Id, "dddddddddddddddddddddddddddddddddddddddd")
+				require.Len(t, gb2.Freight, 1)
+				require.Equal(t, gb2.Freight[0].Id, "dddddddddddddddddddddddddddddddddddddddd")
 			},
 		},
 		"group by container, order by tag": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				GroupBy: GroupByContainerRepository,
 				OrderBy: OrderByTag,
 			},
-			assertions: func(res *svcv1alpha1.QueryFreightsResponse) {
+			assertions: func(res *svcv1alpha1.QueryFreightResponse) {
 				require.Len(t, res.GetGroups(), 2)
 
 				gb1 := res.GetGroups()["ghcr.io/akuity/guestbook"]
-				require.Len(t, gb1.Freights, 3)
-				require.Equal(t, gb1.Freights[0].Images[0].Tag, "v0.0.1")
-				require.Equal(t, gb1.Freights[1].Images[0].Tag, "v0.0.2")
-				require.Equal(t, gb1.Freights[2].Images[0].Tag, "v0.0.4")
+				require.Len(t, gb1.Freight, 3)
+				require.Equal(t, gb1.Freight[0].Images[0].Tag, "v0.0.1")
+				require.Equal(t, gb1.Freight[1].Images[0].Tag, "v0.0.2")
+				require.Equal(t, gb1.Freight[2].Images[0].Tag, "v0.0.4")
 
 				gb2 := res.GetGroups()["ghcr.io/akuity/guestbook2"]
-				require.Len(t, gb2.Freights, 1)
-				require.Equal(t, gb2.Freights[0].Images[0].Tag, "v0.0.0")
+				require.Len(t, gb2.Freight, 1)
+				require.Equal(t, gb2.Freight[0].Images[0].Tag, "v0.0.0")
 			},
 		},
 		"filter by group": {
-			req: &svcv1alpha1.QueryFreightsRequest{
+			req: &svcv1alpha1.QueryFreightRequest{
 				Project: "kargo-demo",
 				GroupBy: GroupByContainerRepository,
 				Group:   "ghcr.io/akuity/guestbook2",
 			},
-			assertions: func(res *svcv1alpha1.QueryFreightsResponse) {
+			assertions: func(res *svcv1alpha1.QueryFreightResponse) {
 				require.Len(t, res.GetGroups(), 1)
 				gb2 := res.GetGroups()["ghcr.io/akuity/guestbook2"]
-				require.Len(t, gb2.Freights, 1)
-				require.Equal(t, gb2.Freights[0].Id, "dddddddddddddddddddddddddddddddddddddddd")
+				require.Len(t, gb2.Freight, 1)
+				require.Equal(t, gb2.Freight[0].Id, "dddddddddddddddddddddddddddddddddddddddd")
 			},
 		},
 	}
@@ -207,7 +207,7 @@ func TestQueryFreights(t *testing.T) {
 
 			res, err := (&server{
 				client: client,
-			}).QueryFreights(ctx, connect.NewRequest(ts.req))
+			}).QueryFreight(ctx, connect.NewRequest(ts.req))
 			if ts.errMsg != "" {
 				require.ErrorContains(t, err, ts.errMsg)
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))

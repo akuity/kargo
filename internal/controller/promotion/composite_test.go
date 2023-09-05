@@ -41,8 +41,8 @@ func TestCompositePromote(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMech  *compositeMechanism
-		newState   api.StageState
-		assertions func(newStateIn, newStateOut api.StageState, err error)
+		newFreight api.Freight
+		assertions func(newFreightIn, newFreightOut api.Freight, err error)
 	}{
 		{
 			name: "error executing child promotion mechanism",
@@ -53,14 +53,14 @@ func TestCompositePromote(t *testing.T) {
 						PromoteFn: func(
 							context.Context,
 							*api.Stage,
-							api.StageState,
-						) (api.StageState, error) {
-							return api.StageState{}, errors.New("something went wrong")
+							api.Freight,
+						) (api.Freight, error) {
+							return api.Freight{}, errors.New("something went wrong")
 						},
 					},
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -79,40 +79,40 @@ func TestCompositePromote(t *testing.T) {
 						PromoteFn: func(
 							_ context.Context,
 							_ *api.Stage,
-							newState api.StageState,
-						) (api.StageState, error) {
+							newFreight api.Freight,
+						) (api.Freight, error) {
 							// This is not a realistic change that a child promotion mechanism
 							// would make, but for testing purposes, this is good enough to
 							// help us assert that the function under test does return all
 							// modifications made by its child promotion mechanisms.
-							newState.ID = "fake-mutated-id"
-							return newState, nil
+							newFreight.ID = "fake-mutated-id"
+							return newFreight, nil
 						},
 					},
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
 				// Verify that changes made by child promotion mechanism are returned
-				require.Equal(t, "fake-mutated-id", newStateOut.ID)
+				require.Equal(t, "fake-mutated-id", newFreightOut.ID)
 				// Everything else should be unchanged
-				newStateOut.ID = newStateIn.ID
-				require.Equal(t, newStateIn, newStateOut)
+				newFreightOut.ID = newFreightIn.ID
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newStateOut, err := testCase.promoMech.Promote(
+			newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				&api.Stage{
 					Spec: &api.StageSpec{
 						PromotionMechanisms: &api.PromotionMechanisms{},
 					},
 				},
-				testCase.newState,
+				testCase.newFreight,
 			)
-			testCase.assertions(testCase.newState, newStateOut, err)
+			testCase.assertions(testCase.newFreight, newFreightOut, err)
 		})
 	}
 }

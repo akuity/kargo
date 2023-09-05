@@ -116,7 +116,7 @@ func TestKustomizerApply(t *testing.T) {
 							},
 						},
 					},
-					api.StageState{
+					api.Freight{
 						Images: []api.Image{
 							{
 								RepoURL: testImage,

@@ -37,8 +37,8 @@ const (
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name=Current State,type=string,JSONPath=`.status.currentState.id`
-//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.currentState.health.status`
+//+kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.currentFreight.id`
+//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.currentFreight.health.status`
 //+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Stage is the Kargo API's main type.
@@ -50,8 +50,8 @@ type Stage struct {
 	//
 	//+kubebuilder:validation:Required
 	Spec *StageSpec `json:"spec"`
-	// Status describes the most recently observed versions of this Stage's
-	// sources of material as well as the Stage's current and recent states.
+	// Status describes the most recently observed Freight as well as the Stage's
+	// current and recent Freight.
 	Status StageStatus `json:"status,omitempty"`
 }
 
@@ -69,7 +69,7 @@ type StageSpec struct {
 	Subscriptions *Subscriptions `json:"subscriptions"`
 	// PromotionMechanisms describes how to incorporate newly observed materials
 	// into the Stage. This is an optional field as it is sometimes useful to
-	// aggregates available states from multiple upstream Stages without
+	// aggregates available Freight from multiple upstream Stages without
 	// performing any actions. The utility of this is to allow multiple downstream
 	// Stages to be able to subscribe to a single upstream Stage where they may
 	// otherwise have subscribed to multiple upstream Stages.
@@ -195,7 +195,7 @@ type ChartSubscription struct {
 	SemverConstraint string `json:"semverConstraint,omitempty"`
 }
 
-// StageSubscription defines a subscription to states from another Stage.
+// StageSubscription defines a subscription to Freight from another Stage.
 type StageSubscription struct {
 	// Name specifies the name of a Stage.
 	//
@@ -441,132 +441,131 @@ type ArgoCDHelmImageUpdate struct {
 	Value ImageUpdateValueType `json:"value"`
 }
 
-// StageStatus describes the most recently observed versions of a Stage's
-// sources of material as well as its current and recent states.
+// StageStatus describes a Stages's most recently observed Freight as well
+// current and recent Freight.
 type StageStatus struct {
-	// AvailableStates is a stack of available StageStates, where each state is
+	// AvailableFreight is a stack of available Freight, where each Freight is
 	// essentially a "bill of materials" describing what can be automatically or
 	// manually deployed to the Stage.
-	AvailableStates StageStateStack `json:"availableStates,omitempty"`
-	// CurrentState is the Stage's current state -- a "bill of materials"
+	AvailableFreight FreightStack `json:"availableFreight,omitempty"`
+	// CurrentFreight is the Stage's current Freight -- a "bill of materials"
 	// describing what is currently deployed to the Stage.
-	CurrentState *StageState `json:"currentState,omitempty"`
-	// History is a stack of recent StageStates, where each state is
-	// essentially a "bill of materials" describing what was deployed to the
-	// Stage. By default, the last ten states are stored.
-	History StageStateStack `json:"history,omitempty"`
+	CurrentFreight *Freight `json:"currentFreight,omitempty"`
+	// History is a stack of recent Freight, where each Freight is essentially a
+	// "bill of materials" describing what was deployed to the Stage. By default,
+	// the last ten Freight are stored.
+	History FreightStack `json:"history,omitempty"`
 	// Error describes any errors that are preventing the Stage controller
 	// from assessing Stage health or from polling repositories or upstream
-	// Stages to discover new StageStates.
+	// Stages to discover new Freight.
 	Error string `json:"error,omitempty"`
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-// StageState is a "bill of materials" describing what is, was, or can be
-// deployed to a Stage.
-type StageState struct {
-	// ID is a unique, system-assigned identifier for this state.
+// Freight is a "bill of materials" describing what is, was, or can be deployed
+// to a Stage.
+type Freight struct {
+	// ID is a unique, system-assigned identifier for this Freight.
 	ID string `json:"id,omitempty"`
-	// FirstSeen represents the date/time when this StageStage first entered the
+	// FirstSeen represents the date/time when this Freight first entered the
 	// system. This is useful and important information because it enables the
-	// controller to block auto-promotion of StageStates that are older than a
-	// Stages's current state, which is a case that can arise if a Stage has
-	// ROLLED BACK to an older state whilst a downstream Stage is already on to a
-	// newer state.
+	// controller to block auto-promotion of Freight that are older than a
+	// Stages's current Freight, which is a case that can arise if a Stage has
+	// ROLLED BACK to an older Freight whilst a downstream Stage is already on to
+	// a newer Freight.
 	FirstSeen *metav1.Time `json:"firstSeen,omitempty"`
-	// Provenance describes the proximate source of this StageState. i.e. Did it
-	// come directly from upstream repositories? Or an upstream Stage.
+	// Provenance describes the proximate source of this Freight. i.e. Did it come
+	// directly from upstream repositories? Or an upstream Stage.
 	Provenance string `json:"provenance,omitempty"`
 	// Commits describes specific Git repository commits that were used in this
-	// state.
+	// Freight.
 	Commits []GitCommit `json:"commits,omitempty"`
 	// Images describes container images and versions thereof that were used
-	// in this state.
+	// in this Freight.
 	Images []Image `json:"images,omitempty"`
-	// Charts describes Helm charts that were used in this state.
+	// Charts describes Helm charts that were used in this Freight.
 	Charts []Chart `json:"charts,omitempty"`
-	// Health is the StageState's last observed health. If this state is the
-	// Stage's current state, this will be continuously re-assessed and
-	// updated. If this StageState is a past state of the Stage, this field will
-	// denote the last observed health state before transitioning into a different
-	// state.
+	// Health is the Freight's last observed health. If this Freight is the
+	// Stage's current Freight, this will be continuously re-assessed and updated.
+	// If this Freight is a past Freight of the Stage, this field will denote the
+	// last observed health state before transitioning into a different Freight.
 	Health *Health `json:"health,omitempty"`
 }
 
-func (e *StageState) UpdateStateID() {
+func (f *Freight) UpdateFreightID() {
 	materials := []string{}
-	for _, commit := range e.Commits {
+	for _, commit := range f.Commits {
 		materials = append(
 			materials,
 			fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
 		)
 	}
-	for _, image := range e.Images {
+	for _, image := range f.Images {
 		materials = append(
 			materials,
 			fmt.Sprintf("%s:%s", image.RepoURL, image.Tag),
 		)
 	}
-	for _, chart := range e.Charts {
+	for _, chart := range f.Charts {
 		materials = append(
 			materials,
 			fmt.Sprintf("%s/%s:%s", chart.RegistryURL, chart.Name, chart.Version),
 		)
 	}
 	sort.Strings(materials)
-	e.ID = fmt.Sprintf(
+	f.ID = fmt.Sprintf(
 		"%x",
 		sha1.Sum([]byte(strings.Join(materials, "|"))),
 	)
 }
 
-type StageStateStack []StageState
+type FreightStack []Freight
 
-// Empty returns a bool indicating whether or not the StageStateStack is empty.
+// Empty returns a bool indicating whether or not the FreightStack is empty.
 // nil counts as empty.
-func (e StageStateStack) Empty() bool {
-	return len(e) == 0
+func (f FreightStack) Empty() bool {
+	return len(f) == 0
 }
 
-// Pop removes and returns the leading element from a StageStateStack. If the
-// StageStateStack is empty, the StageStack is not modified and a empty
-// StageState is returned instead. A boolean is also returned indicating whether
-// the returned StageState came from the top of the stack (true) or is a zero
-// value for that type (false).
-func (e *StageStateStack) Pop() (StageState, bool) {
-	item, ok := e.Top()
+// Pop removes and returns the leading element from a FreightStack. If the
+// FreightStack is empty, the FreightStack is not modified and a empty Freight
+// is returned instead. A boolean is also returned indicating whether the
+// returned Freight came from the top of the stack (true) or is a zero value for
+// that type (false).
+func (f *FreightStack) Pop() (Freight, bool) {
+	item, ok := f.Top()
 	if ok {
-		*e = (*e)[1:]
+		*f = (*f)[1:]
 	}
 	return item, ok
 }
 
-// Top returns the leading element from a StageStateStack without modifying the
-// StageStateStack. If the StageStateStack is empty, an empty StageState is
-// returned instead. A boolean is also returned indicating whether the returned
-// StageState came from the top of the stack (true) or is a zero value for that
-// type (false).
-func (e StageStateStack) Top() (StageState, bool) {
-	if e.Empty() {
-		return StageState{}, false
+// Top returns the leading element from a FreightStack without modifying the
+// FreightStack. If the FreightStack is empty, an empty Freight is returned
+// instead. A boolean is also returned indicating whether the returned Freight
+// came from the top of the stack (true) or is a zero value for that type
+// (false).
+func (f FreightStack) Top() (Freight, bool) {
+	if f.Empty() {
+		return Freight{}, false
 	}
-	item := *e[0].DeepCopy()
+	item := *f[0].DeepCopy()
 	return item, true
 }
 
-// Push pushes one or more StageStates onto the StageStateStack. The order of
+// Push pushes one or more Freight onto the FreightStack. The order of
 // the new elements at the top of the stack will be equal to the order in which
 // they were passed to this function. i.e. The first new element passed will be
 // the element at the top of the stack. If resulting modification grow the depth
 // of the stack beyond 10 elements, the stack is truncated at the bottom. i.e.
 // Modified to contain only the top 10 elements.
-func (e *StageStateStack) Push(states ...StageState) {
-	*e = append(states, *e...)
+func (f *FreightStack) Push(freight ...Freight) {
+	*f = append(freight, *f...)
 	const max = 10
-	if len(*e) > max {
-		*e = (*e)[:max]
+	if len(*f) > max {
+		*f = (*f)[:max]
 	}
 }
 

@@ -38,8 +38,8 @@ func TestNewStageReconciler(t *testing.T) {
 	require.NotNil(t, e.checkHealthFn)
 
 	// Syncing:
-	require.NotNil(t, e.getLatestStateFromReposFn)
-	require.NotNil(t, e.getAvailableStatesFromUpstreamStagesFn)
+	require.NotNil(t, e.getLatestFreightFromReposFn)
+	require.NotNil(t, e.getAvailableFreightFromUpstreamStagesFn)
 	require.NotNil(t, e.getLatestCommitsFn)
 	require.NotNil(t, e.getLatestImagesFn)
 	require.NotNil(t, e.getLatestTagFn)
@@ -71,19 +71,19 @@ func TestSync(t *testing.T) {
 		) (bool, error)
 		checkHealthFn func(
 			context.Context,
-			api.StageState,
+			api.Freight,
 			[]api.ArgoCDAppUpdate,
 		) api.Health
-		getLatestStateFromReposFn func(
+		getLatestFreightFromReposFn func(
 			context.Context,
 			string,
 			api.RepoSubscriptions,
-		) (*api.StageState, error)
-		getAvailableStatesFromUpstreamStagesFn func(
+		) (*api.Freight, error)
+		getAvailableFreightFromUpstreamStagesFn func(
 			ctx context.Context,
 			namespace string,
 			subs []api.StageSubscription,
-		) ([]api.StageState, error)
+		) ([]api.Freight, error)
 		kargoClient client.Client
 		assertions  func(
 			initialStatus api.StageStatus,
@@ -155,18 +155,18 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "error getting latest state from repos",
+			name: "error getting latest Freight from repos",
 			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getLatestStateFromReposFn: func(
+			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.StageState, error) {
+			) (*api.Freight, error) {
 				return nil, errors.New("something went wrong")
 			},
 			assertions: func(
@@ -183,18 +183,18 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "no latest state from repos",
+			name: "no latest Freight from repos",
 			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getLatestStateFromReposFn: func(
+			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.StageState, error) {
+			) (*api.Freight, error) {
 				return nil, nil
 			},
 			assertions: func(
@@ -210,7 +210,7 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "latest state from repos isn't new",
+			name: "latest Freight from repos isn't new",
 			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					Repos: &api.RepoSubscriptions{},
@@ -219,7 +219,7 @@ func TestSync(t *testing.T) {
 				// HealthChecks: &api.HealthChecks{},
 			},
 			initialStatus: api.StageStatus{
-				AvailableStates: []api.StageState{
+				AvailableFreight: []api.Freight{
 					{
 						Commits: []api.GitCommit{
 							{
@@ -235,7 +235,7 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
-				CurrentState: &api.StageState{
+				CurrentFreight: &api.Freight{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -252,7 +252,7 @@ func TestSync(t *testing.T) {
 						Status: api.HealthStateHealthy,
 					},
 				},
-				History: []api.StageState{
+				History: []api.Freight{
 					{
 						Commits: []api.GitCommit{
 							{
@@ -275,19 +275,19 @@ func TestSync(t *testing.T) {
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			checkHealthFn: func(
 				context.Context,
-				api.StageState,
+				api.Freight,
 				[]api.ArgoCDAppUpdate,
 			) api.Health {
 				return api.Health{
 					Status: api.HealthStateHealthy,
 				}
 			},
-			getLatestStateFromReposFn: func(
+			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.StageState, error) {
-				return &api.StageState{
+			) (*api.Freight, error) {
+				return &api.Freight{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -315,7 +315,7 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "error getting available states from upstream Stages",
+			name: "error getting available Freight from upstream Stages",
 			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					UpstreamStages: []api.StageSubscription{
@@ -326,11 +326,11 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getAvailableStatesFromUpstreamStagesFn: func(
+			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
 				[]api.StageSubscription,
-			) ([]api.StageState, error) {
+			) ([]api.Freight, error) {
 				return nil, errors.New("something went wrong")
 			},
 			assertions: func(
@@ -347,7 +347,7 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "no latest state from upstream Stages",
+			name: "no latest Freight from upstream Stages",
 			spec: api.StageSpec{
 				Subscriptions: &api.Subscriptions{
 					UpstreamStages: []api.StageSubscription{
@@ -358,11 +358,11 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getAvailableStatesFromUpstreamStagesFn: func(
+			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
 				[]api.StageSubscription,
-			) ([]api.StageState, error) {
+			) ([]api.Freight, error) {
 				return nil, nil
 			},
 			assertions: func(
@@ -394,12 +394,12 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getAvailableStatesFromUpstreamStagesFn: func(
+			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
 				[]api.StageSubscription,
-			) ([]api.StageState, error) {
-				return []api.StageState{
+			) ([]api.Freight, error) {
+				return []api.Freight{
 					{},
 					{},
 				}, nil
@@ -411,13 +411,14 @@ func TestSync(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				// Status should have updated AvailableStates and otherwise be unchanged
+				// Status should have updated AvailableFreight and otherwise be
+				// unchanged
 				require.Equal(
 					t,
-					api.StageStateStack{{}, {}},
-					newStatus.AvailableStates,
+					api.FreightStack{{}, {}},
+					newStatus.AvailableFreight,
 				)
-				newStatus.AvailableStates = initialStatus.AvailableStates
+				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
@@ -430,12 +431,12 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getLatestStateFromReposFn: func(
+			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.StageState, error) {
-				return &api.StageState{
+			) (*api.Freight, error) {
+				return &api.Freight{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -458,10 +459,11 @@ func TestSync(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				// Status should have updated AvailableStates and otherwise be unchanged
+				// Status should have updated AvailableFreight and otherwise be
+				// unchanged
 				require.Equal(
 					t,
-					api.StageStateStack{
+					api.FreightStack{
 						{
 							Commits: []api.GitCommit{
 								{
@@ -477,9 +479,9 @@ func TestSync(t *testing.T) {
 							},
 						},
 					},
-					newStatus.AvailableStates,
+					newStatus.AvailableFreight,
 				)
-				newStatus.AvailableStates = initialStatus.AvailableStates
+				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 				// And no Promotion should have been created
 				promos := api.PromotionList{}
@@ -497,12 +499,12 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getLatestStateFromReposFn: func(
+			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.StageState, error) {
-				return &api.StageState{
+			) (*api.Freight, error) {
+				return &api.Freight{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -540,10 +542,11 @@ func TestSync(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				// Status should have updated AvailableStates and otherwise be unchanged
+				// Status should have updated AvailableFreight and otherwise be
+				// unchanged
 				require.Equal(
 					t,
-					api.StageStateStack{
+					api.FreightStack{
 						{
 							Commits: []api.GitCommit{
 								{
@@ -559,9 +562,9 @@ func TestSync(t *testing.T) {
 							},
 						},
 					},
-					newStatus.AvailableStates,
+					newStatus.AvailableFreight,
 				)
-				newStatus.AvailableStates = initialStatus.AvailableStates
+				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 				// And no Promotion should have been created
 				promos := api.PromotionList{}
@@ -579,12 +582,12 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getLatestStateFromReposFn: func(
+			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.StageState, error) {
-				return &api.StageState{
+			) (*api.Freight, error) {
+				return &api.Freight{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -615,10 +618,11 @@ func TestSync(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				// Status should have updated AvailableStates and otherwise be unchanged
+				// Status should have updated AvailableFreight and otherwise be
+				// unchanged
 				require.Equal(
 					t,
-					api.StageStateStack{
+					api.FreightStack{
 						{
 							Commits: []api.GitCommit{
 								{
@@ -634,9 +638,9 @@ func TestSync(t *testing.T) {
 							},
 						},
 					},
-					newStatus.AvailableStates,
+					newStatus.AvailableFreight,
 				)
-				newStatus.AvailableStates = initialStatus.AvailableStates
+				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 				// And no Promotion should have been created
 				promos := api.PromotionList{}
@@ -654,12 +658,12 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			getLatestStateFromReposFn: func(
+			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
 				api.RepoSubscriptions,
-			) (*api.StageState, error) {
-				return &api.StageState{
+			) (*api.Freight, error) {
+				return &api.Freight{
 					Commits: []api.GitCommit{
 						{
 							RepoURL: "fake-url",
@@ -691,10 +695,11 @@ func TestSync(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				// Status should have updated AvailableStates and otherwise be unchanged
+				// Status should have updated AvailableFreight and otherwise be
+				// unchanged
 				require.Equal(
 					t,
-					api.StageStateStack{
+					api.FreightStack{
 						{
 							Commits: []api.GitCommit{
 								{
@@ -710,9 +715,9 @@ func TestSync(t *testing.T) {
 							},
 						},
 					},
-					newStatus.AvailableStates,
+					newStatus.AvailableFreight,
 				)
-				newStatus.AvailableStates = initialStatus.AvailableStates
+				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 				// And a Promotion should have been created
 				promos := api.PromotionList{}
@@ -736,11 +741,11 @@ func TestSync(t *testing.T) {
 			}
 			// nolint: lll
 			reconciler := &reconciler{
-				kargoClient:                            tc.kargoClient,
-				hasOutstandingPromotionsFn:             tc.hasOutstandingPromotionsFn,
-				checkHealthFn:                          tc.checkHealthFn,
-				getLatestStateFromReposFn:              tc.getLatestStateFromReposFn,
-				getAvailableStatesFromUpstreamStagesFn: tc.getAvailableStatesFromUpstreamStagesFn,
+				kargoClient:                             tc.kargoClient,
+				hasOutstandingPromotionsFn:              tc.hasOutstandingPromotionsFn,
+				checkHealthFn:                           tc.checkHealthFn,
+				getLatestFreightFromReposFn:             tc.getLatestFreightFromReposFn,
+				getAvailableFreightFromUpstreamStagesFn: tc.getAvailableFreightFromUpstreamStagesFn,
 			}
 			newStatus, err := reconciler.syncStage(context.Background(), testStage)
 			tc.assertions(
@@ -753,7 +758,7 @@ func TestSync(t *testing.T) {
 	}
 }
 
-func TestGetLatestStateFromRepos(t *testing.T) {
+func TestGetLatestFreightFromRepos(t *testing.T) {
 	testCases := []struct {
 		name               string
 		getLatestCommitsFn func(
@@ -771,7 +776,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			string,
 			[]api.ChartSubscription,
 		) ([]api.Chart, error)
-		assertions func(*api.StageState, error)
+		assertions func(*api.Freight, error)
 	}{
 		{
 			name: "error getting latest git commit",
@@ -782,7 +787,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			) ([]api.GitCommit, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(state *api.StageState, err error) {
+			assertions: func(freight *api.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error syncing git repo subscription")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -805,7 +810,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			) ([]api.Image, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(state *api.StageState, err error) {
+			assertions: func(freight *api.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -839,7 +844,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 			) ([]api.Chart, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(state *api.StageState, err error) {
+			assertions: func(freight *api.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -889,17 +894,17 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 					},
 				}, nil
 			},
-			assertions: func(state *api.StageState, err error) {
+			assertions: func(freight *api.Freight, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, state)
-				require.NotEmpty(t, state.ID)
-				require.NotNil(t, state.FirstSeen)
+				require.NotNil(t, freight)
+				require.NotEmpty(t, freight.ID)
+				require.NotNil(t, freight.FirstSeen)
 				// All other fields should have a predictable value
-				state.ID = ""
-				state.FirstSeen = nil
+				freight.ID = ""
+				freight.FirstSeen = nil
 				require.Equal(
 					t,
-					&api.StageState{
+					&api.Freight{
 						Commits: []api.GitCommit{
 							{
 								RepoURL: "fake-url",
@@ -920,7 +925,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 							},
 						},
 					},
-					state,
+					freight,
 				)
 			},
 		},
@@ -933,7 +938,7 @@ func TestGetLatestStateFromRepos(t *testing.T) {
 		}
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testReconciler.getLatestStateFromRepos(
+				testReconciler.getLatestFreightFromRepos(
 					context.Background(),
 					"fake-namespace",
 					api.RepoSubscriptions{},

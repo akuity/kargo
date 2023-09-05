@@ -24,10 +24,10 @@ const (
 	OrderByTag       = "tag"
 )
 
-func (s *server) QueryFreights(
+func (s *server) QueryFreight(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.QueryFreightsRequest],
-) (*connect.Response[svcv1alpha1.QueryFreightsResponse], error) {
+	req *connect.Request[svcv1alpha1.QueryFreightRequest],
+) (*connect.Response[svcv1alpha1.QueryFreightResponse], error) {
 	if req.Msg.GetProject() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
 	}
@@ -60,19 +60,19 @@ func (s *server) QueryFreights(
 	}
 	sortFreightGroups(req.Msg.GetOrderBy(), req.Msg.GetReverse(), freightGroups)
 
-	return connect.NewResponse(&svcv1alpha1.QueryFreightsResponse{
+	return connect.NewResponse(&svcv1alpha1.QueryFreightResponse{
 		Groups: freightGroups,
 	}), nil
 }
 
 func addToGroups(
-	req *svcv1alpha1.QueryFreightsRequest,
+	req *svcv1alpha1.QueryFreightRequest,
 	groups map[string]*svcv1alpha1.FreightList,
 	stage kubev1alpha1.Stage,
 	seen map[string]bool,
 ) {
 
-	appendToStageGroups := func(stack kubev1alpha1.StageStateStack) {
+	appendToStageGroups := func(stack kubev1alpha1.FreightStack) {
 		for _, f := range stack {
 			if seen[f.ID] {
 				continue
@@ -107,15 +107,15 @@ func addToGroups(
 			seen[f.ID] = true
 		}
 	}
-	appendToStageGroups(stage.Status.AvailableStates)
+	appendToStageGroups(stage.Status.AvailableFreight)
 	appendToStageGroups(stage.Status.History)
 }
 
-func appendToFreightList(list *svcv1alpha1.FreightList, f kubev1alpha1.StageState) *svcv1alpha1.FreightList {
+func appendToFreightList(list *svcv1alpha1.FreightList, f kubev1alpha1.Freight) *svcv1alpha1.FreightList {
 	if list == nil {
 		list = &svcv1alpha1.FreightList{}
 	}
-	list.Freights = append(list.Freights, v1alpha1.ToStageStateProto(f))
+	list.Freight = append(list.Freight, v1alpha1.ToFreightProto(f))
 	return list
 }
 
@@ -124,9 +124,9 @@ func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alp
 		var dataToSort sort.Interface
 		switch orderBy {
 		case OrderByTag:
-			dataToSort = ByTag(groups[k].Freights)
+			dataToSort = ByTag(groups[k].Freight)
 		default:
-			dataToSort = ByFirstSeen(groups[k].Freights)
+			dataToSort = ByFirstSeen(groups[k].Freight)
 		}
 		if reverse {
 			dataToSort = sort.Reverse(dataToSort)
@@ -135,7 +135,7 @@ func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alp
 	}
 }
 
-type ByFirstSeen []*apiv1alpha1.StageState
+type ByFirstSeen []*apiv1alpha1.Freight
 
 func (a ByFirstSeen) Len() int      { return len(a) }
 func (a ByFirstSeen) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -145,7 +145,7 @@ func (a ByFirstSeen) Less(i, j int) bool {
 
 // NOTE: sorting by tag will sort by the first container image we found
 // or the first helm chart we found in the freight.
-type ByTag []*apiv1alpha1.StageState
+type ByTag []*apiv1alpha1.Freight
 
 func (a ByTag) Len() int      { return len(a) }
 func (a ByTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -164,7 +164,7 @@ func (a ByTag) Less(i, j int) bool {
 	return a[i].FirstSeen.AsTime().Before(a[j].FirstSeen.AsTime())
 }
 
-func getRepoAndTag(s *apiv1alpha1.StageState) (string, string, *semver.Version) {
+func getRepoAndTag(s *apiv1alpha1.Freight) (string, string, *semver.Version) {
 	var repo, tag string
 	if len(s.Images) > 0 {
 		repo = s.Images[0].RepoUrl

@@ -26,7 +26,7 @@ type argoCDMechanism struct {
 		ctx context.Context,
 		stageMeta metav1.ObjectMeta,
 		update api.ArgoCDAppUpdate,
-		newState api.StageState,
+		newFreight api.Freight,
 	) error
 	getArgoCDAppFn func(
 		ctx context.Context,
@@ -35,7 +35,7 @@ type argoCDMechanism struct {
 	) (*argocd.Application, error)
 	applyArgoCDSourceUpdateFn func(
 		argocd.ApplicationSource,
-		api.StageState,
+		api.Freight,
 		api.ArgoCDSourceUpdate,
 	) (argocd.ApplicationSource, error)
 	argoCDAppPatchFn func(
@@ -68,12 +68,12 @@ func (*argoCDMechanism) GetName() string {
 func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *api.Stage,
-	newState api.StageState,
-) (api.StageState, error) {
+	newFreight api.Freight,
+) (api.Freight, error) {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
-		return newState, nil
+		return newFreight, nil
 	}
 
 	logger := logging.LoggerFromContext(ctx)
@@ -84,22 +84,22 @@ func (a *argoCDMechanism) Promote(
 			ctx,
 			stage.ObjectMeta,
 			update,
-			newState,
+			newFreight,
 		); err != nil {
-			return newState, err
+			return newFreight, err
 		}
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
 
-	return newState, nil
+	return newFreight, nil
 }
 
 func (a *argoCDMechanism) doSingleUpdate(
 	ctx context.Context,
 	stageMeta metav1.ObjectMeta,
 	update api.ArgoCDAppUpdate,
-	newState api.StageState,
+	newFreight api.Freight,
 ) error {
 	app, err :=
 		a.getArgoCDAppFn(ctx, update.AppNamespace, update.AppName)
@@ -128,7 +128,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 			var source argocd.ApplicationSource
 			if source, err = a.applyArgoCDSourceUpdateFn(
 				*app.Spec.Source,
-				newState,
+				newFreight,
 				srcUpdate,
 			); err != nil {
 				return errors.Wrapf(
@@ -143,7 +143,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 		for i, source := range app.Spec.Sources {
 			if source, err = a.applyArgoCDSourceUpdateFn(
 				source,
-				newState,
+				newFreight,
 				srcUpdate,
 			); err != nil {
 				return errors.Wrapf(
@@ -260,7 +260,7 @@ func authorizeArgoCDAppUpdate(
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
-	newState api.StageState,
+	newFreight api.Freight,
 	update api.ArgoCDSourceUpdate,
 ) (argocd.ApplicationSource, error) {
 	if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
@@ -269,7 +269,7 @@ func applyArgoCDSourceUpdate(
 
 	if update.UpdateTargetRevision {
 		var done bool
-		for _, commit := range newState.Commits {
+		for _, commit := range newFreight.Commits {
 			if commit.RepoURL == source.RepoURL {
 				source.TargetRevision = commit.ID
 				done = true
@@ -277,7 +277,7 @@ func applyArgoCDSourceUpdate(
 			}
 		}
 		if !done {
-			for _, chart := range newState.Charts {
+			for _, chart := range newFreight.Charts {
 				if chart.RegistryURL == source.RepoURL && chart.Name == source.Chart {
 					source.TargetRevision = chart.Version
 					break
@@ -291,7 +291,7 @@ func applyArgoCDSourceUpdate(
 			source.Kustomize = &argocd.ApplicationSourceKustomize{}
 		}
 		source.Kustomize.Images = buildKustomizeImagesForArgoCDAppSource(
-			newState.Images,
+			newFreight.Images,
 			update.Kustomize.Images,
 		)
 	}
@@ -304,7 +304,7 @@ func applyArgoCDSourceUpdate(
 			source.Helm.Parameters = []argocd.HelmParameter{}
 		}
 		changes := buildHelmParamChangesForArgoCDAppSource(
-			newState.Images,
+			newFreight.Images,
 			update.Helm.Images,
 		)
 	imageUpdateLoop:

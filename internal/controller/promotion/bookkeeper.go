@@ -20,9 +20,9 @@ type bookkeeperMechanism struct {
 		ctx context.Context,
 		namespace string,
 		update api.GitRepoUpdate,
-		newState api.StageState,
+		newFreight api.Freight,
 		images []string,
-	) (api.StageState, error)
+	) (api.Freight, error)
 	getReadRefFn func(
 		update api.GitRepoUpdate,
 		commits []api.GitCommit,
@@ -62,8 +62,8 @@ func (*bookkeeperMechanism) GetName() string {
 func (b *bookkeeperMechanism) Promote(
 	ctx context.Context,
 	stage *api.Stage,
-	newState api.StageState,
-) (api.StageState, error) {
+	newFreight api.Freight,
+) (api.Freight, error) {
 	var updates []api.GitRepoUpdate
 	for _, update := range stage.Spec.PromotionMechanisms.GitRepoUpdates {
 		if update.Bookkeeper != nil {
@@ -72,35 +72,35 @@ func (b *bookkeeperMechanism) Promote(
 	}
 
 	if len(updates) == 0 {
-		return newState, nil
+		return newFreight, nil
 	}
 
-	newState = *newState.DeepCopy()
+	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Bookkeeper-based promotion mechanisms")
 
-	images := make([]string, len(newState.Images))
-	for i, image := range newState.Images {
+	images := make([]string, len(newFreight.Images))
+	for i, image := range newFreight.Images {
 		images[i] = fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
 	}
 
 	for _, update := range updates {
 		var err error
-		if newState, err = b.doSingleUpdateFn(
+		if newFreight, err = b.doSingleUpdateFn(
 			ctx,
 			stage.Namespace,
 			update,
-			newState,
+			newFreight,
 			images,
 		); err != nil {
-			return newState, err
+			return newFreight, err
 		}
 	}
 
 	logger.Debug("done executing Bookkeeper-based promotion mechanisms")
 
-	return newState, nil
+	return newFreight, nil
 }
 
 // doSingleUpdateFn updates configuration in a single Git repository using
@@ -109,14 +109,14 @@ func (b *bookkeeperMechanism) doSingleUpdate(
 	ctx context.Context,
 	namespace string,
 	update api.GitRepoUpdate,
-	newState api.StageState,
+	newFreight api.Freight,
 	images []string,
-) (api.StageState, error) {
+) (api.Freight, error) {
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
-	readRef, commitIndex, err := b.getReadRefFn(update, newState.Commits)
+	readRef, commitIndex, err := b.getReadRefFn(update, newFreight.Commits)
 	if err != nil {
-		return newState, err
+		return newFreight, err
 	}
 
 	creds, ok, err := b.getCredentialsFn(
@@ -126,7 +126,7 @@ func (b *bookkeeperMechanism) doSingleUpdate(
 		update.RepoURL,
 	)
 	if err != nil {
-		return newState, errors.Wrapf(
+		return newFreight, errors.Wrapf(
 			err,
 			"error obtaining credentials for git repo %q",
 			update.RepoURL,
@@ -152,7 +152,7 @@ func (b *bookkeeperMechanism) doSingleUpdate(
 
 	res, err := b.renderManifestsFn(ctx, req)
 	if err != nil {
-		return newState, errors.Wrapf(
+		return newFreight, errors.Wrapf(
 			err,
 			"error rendering manifests for git repo %q via Bookkeeper",
 			update.RepoURL,
@@ -163,16 +163,16 @@ func (b *bookkeeperMechanism) doSingleUpdate(
 		logger.WithField("commit", res.CommitID).
 			Debug("pushed new commit to repo via Bookkeeper")
 		if commitIndex > -1 {
-			newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
+			newFreight.Commits[commitIndex].HealthCheckCommit = res.CommitID
 		}
 	case bookkeeper.ActionTakenNone:
 		logger.Debug("Bookkeeper made no changes to repo")
 		if commitIndex > -1 {
-			newState.Commits[commitIndex].HealthCheckCommit = res.CommitID
+			newFreight.Commits[commitIndex].HealthCheckCommit = res.CommitID
 		}
 	default:
 		// TODO: Not sure yet how to handle PRs.
 	}
 
-	return newState, nil
+	return newFreight, nil
 }

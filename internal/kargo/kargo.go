@@ -43,8 +43,8 @@ func NewPromotion(stage kubev1alpha1.Stage, freight string) kubev1alpha1.Promoti
 			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},
 		Spec: &kubev1alpha1.PromotionSpec{
-			Stage: stage.Name,
-			State: freight,
+			Stage:   stage.Name,
+			Freight: freight,
 		},
 	}
 	if stage.Labels != nil && stage.Labels[controller.ShardLabelKey] != "" {

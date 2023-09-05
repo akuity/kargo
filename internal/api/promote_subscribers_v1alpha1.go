@@ -53,13 +53,14 @@ func (s *server) PromoteSubscribers(
 	var promoteErrs []error
 	var createdPromos []*v1alpha1.Promotion
 	for _, subscriber := range subscribers {
-		if _, err := validateFreightExists(req.Msg.GetFreight(), subscriber.Status.AvailableStates); err != nil {
-			// TODO(JS): currently we create promotions to all of this Stage's subscribers, ignoring
-			// whether or not the freight *also* appears in the availableStates of the subscriber.
-			// Normally, it should always be the case that if it's in our history, it should also
-			// appear in our subscriber's availableStates. For now, just log a warning if we are
+		if _, err := validateFreightExists(req.Msg.GetFreight(), subscriber.Status.AvailableFreight); err != nil {
+			// TODO(JS): currently we create promotions to all of this Stage's
+			// subscribers, ignoring whether or not the freight *also* appears in the
+			// availableFreight of the subscriber. Normally, it should always be the
+			// case that if it's in our history, it should also appear in our
+			// subscriber's availableFreight. For now, just log a warning if we are
 			// promoting something that for some reason, has not yet appeared there.
-			logger.Warnf("Freight '%s' does not appear in availableStates of '%s'", req.Msg.GetFreight(), subscriber.Name)
+			logger.Warnf("Freight '%s' does not appear in available Freight of '%s'", req.Msg.GetFreight(), subscriber.Name)
 		}
 		newPromo := kargo.NewPromotion(subscriber, req.Msg.GetFreight())
 		if err := s.client.Create(ctx, &newPromo); err != nil {

@@ -54,7 +54,7 @@ service KargoService {
 
   /* Freight APIs */
 
-  rpc QueryFreights(QueryFreightsRequest) returns (QueryFreightsResponse);
+  rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
 
 }
 
@@ -213,7 +213,7 @@ message DeleteStageResponse {
 message PromoteStageRequest {
   string project = 1;
   string name = 2;
-  string state = 3;
+  string freight = 3;
 }
 
 message PromoteStageResponse {
@@ -351,7 +351,7 @@ message DeleteProjectResponse {
   /* explicitly empty */
 }
 
-message QueryFreightsRequest {
+message QueryFreightRequest {
   string project = 1;
   string stage = 2;
   string group_by = 3;
@@ -360,10 +360,10 @@ message QueryFreightsRequest {
   bool reverse = 6;
 }
 
-message QueryFreightsResponse {
+message QueryFreightResponse {
   map<string, FreightList> groups = 1;
 }
 
 message FreightList {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageState freights = 1;
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
 }

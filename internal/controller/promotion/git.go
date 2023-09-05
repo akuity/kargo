@@ -25,8 +25,8 @@ type gitMechanism struct {
 		ctx context.Context,
 		namespace string,
 		update api.GitRepoUpdate,
-		newState api.StageState,
-	) (api.StageState, error)
+		newFreight api.Freight,
+	) (api.Freight, error)
 	getReadRefFn func(
 		update api.GitRepoUpdate,
 		commits []api.GitCommit,
@@ -38,14 +38,14 @@ type gitMechanism struct {
 	) (*git.RepoCredentials, error)
 	gitCommitFn func(
 		update api.GitRepoUpdate,
-		newState api.StageState,
+		newFreight api.Freight,
 		readRef string,
 		writeBranch string,
 		creds *git.RepoCredentials,
 	) (string, error)
 	applyConfigManagementFn func(
 		update api.GitRepoUpdate,
-		newState api.StageState,
+		newFreight api.Freight,
 		homeDir string,
 		workingDir string,
 	) ([]string, error)
@@ -61,7 +61,7 @@ func newGitMechanism(
 	selectUpdatesFn func([]api.GitRepoUpdate) []api.GitRepoUpdate,
 	applyConfigManagementFn func(
 		update api.GitRepoUpdate,
-		newState api.StageState,
+		newFreight api.Freight,
 		homeDir string,
 		workingDir string,
 	) ([]string, error),
@@ -87,34 +87,34 @@ func (g *gitMechanism) GetName() string {
 func (g *gitMechanism) Promote(
 	ctx context.Context,
 	stage *api.Stage,
-	newState api.StageState,
-) (api.StageState, error) {
+	newFreight api.Freight,
+) (api.Freight, error) {
 	updates := g.selectUpdatesFn(stage.Spec.PromotionMechanisms.GitRepoUpdates)
 
 	if len(updates) == 0 {
-		return newState, nil
+		return newFreight, nil
 	}
 
-	newState = *newState.DeepCopy()
+	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debugf("executing %s", g.name)
 
 	for _, update := range updates {
 		var err error
-		if newState, err = g.doSingleUpdateFn(
+		if newFreight, err = g.doSingleUpdateFn(
 			ctx,
 			stage.Namespace,
 			update,
-			newState,
+			newFreight,
 		); err != nil {
-			return newState, err
+			return newFreight, err
 		}
 	}
 
 	logger.Debugf("done executing %s", g.name)
 
-	return newState, nil
+	return newFreight, nil
 }
 
 // doSingleUpdate updates configuration in a single Git repository.
@@ -122,11 +122,11 @@ func (g *gitMechanism) doSingleUpdate(
 	ctx context.Context,
 	namespace string,
 	update api.GitRepoUpdate,
-	newState api.StageState,
-) (api.StageState, error) {
-	readRef, commitIndex, err := g.getReadRefFn(update, newState.Commits)
+	newFreight api.Freight,
+) (api.Freight, error) {
+	readRef, commitIndex, err := g.getReadRefFn(update, newFreight.Commits)
 	if err != nil {
-		return newState, err
+		return newFreight, err
 	}
 
 	creds, err := g.getCredentialsFn(
@@ -135,25 +135,25 @@ func (g *gitMechanism) doSingleUpdate(
 		update.RepoURL,
 	)
 	if err != nil {
-		return newState, err
+		return newFreight, err
 	}
 
 	commitID, err := g.gitCommitFn(
 		update,
-		newState,
+		newFreight,
 		readRef,
 		update.WriteBranch,
 		creds,
 	)
 	if err != nil {
-		return newState, err
+		return newFreight, err
 	}
 
 	if commitIndex > -1 {
-		newState.Commits[commitIndex].HealthCheckCommit = commitID
+		newFreight.Commits[commitIndex].HealthCheckCommit = commitID
 	}
 
-	return newState, nil
+	return newFreight, nil
 }
 
 // getReadRef steps through the provided slice of commits to determine if any of
@@ -235,7 +235,7 @@ func getRepoCredentialsFn(
 // the above fails.
 func (g *gitMechanism) gitCommit(
 	update api.GitRepoUpdate,
-	newState api.StageState,
+	newFreight api.Freight,
 	readRef string,
 	writeBranch string,
 	creds *git.RepoCredentials,
@@ -265,7 +265,7 @@ func (g *gitMechanism) gitCommit(
 	if g.applyConfigManagementFn != nil {
 		if changes, err = g.applyConfigManagementFn(
 			update,
-			newState,
+			newFreight,
 			repo.HomeDir(),
 			repo.WorkingDir(),
 		); err != nil {

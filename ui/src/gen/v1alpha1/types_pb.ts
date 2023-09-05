@@ -1179,9 +1179,9 @@ export class PromotionSpec extends Message<PromotionSpec> {
   stage = "";
 
   /**
-   * @generated from field: string state = 2;
+   * @generated from field: string freight = 2;
    */
-  state = "";
+  freight = "";
 
   constructor(data?: PartialMessage<PromotionSpec>) {
     super();
@@ -1192,7 +1192,7 @@ export class PromotionSpec extends Message<PromotionSpec> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "state", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "freight", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionSpec {
@@ -1440,9 +1440,9 @@ export class StageSpec extends Message<StageSpec> {
 }
 
 /**
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.StageState
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Freight
  */
-export class StageState extends Message<StageState> {
+export class Freight extends Message<Freight> {
   /**
    * @generated from field: string id = 1;
    */
@@ -1478,13 +1478,13 @@ export class StageState extends Message<StageState> {
    */
   health?: Health;
 
-  constructor(data?: PartialMessage<StageState>) {
+  constructor(data?: PartialMessage<Freight>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageState";
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Freight";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "first_seen", kind: "message", T: Timestamp, opt: true },
@@ -1495,20 +1495,20 @@ export class StageState extends Message<StageState> {
     { no: 7, name: "health", kind: "message", T: Health, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageState {
-    return new StageState().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Freight {
+    return new Freight().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StageState {
-    return new StageState().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Freight {
+    return new Freight().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StageState {
-    return new StageState().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Freight {
+    return new Freight().fromJsonString(jsonString, options);
   }
 
-  static equals(a: StageState | PlainMessage<StageState> | undefined, b: StageState | PlainMessage<StageState> | undefined): boolean {
-    return proto3.util.equals(StageState, a, b);
+  static equals(a: Freight | PlainMessage<Freight> | undefined, b: Freight | PlainMessage<Freight> | undefined): boolean {
+    return proto3.util.equals(Freight, a, b);
   }
 }
 
@@ -1517,19 +1517,19 @@ export class StageState extends Message<StageState> {
  */
 export class StageStatus extends Message<StageStatus> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageState available_states = 1;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight available_freight = 1;
    */
-  availableStates: StageState[] = [];
+  availableFreight: Freight[] = [];
 
   /**
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.StageState current_state = 2;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Freight current_freight = 2;
    */
-  currentState?: StageState;
+  currentFreight?: Freight;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageState history = 3;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight history = 3;
    */
-  history: StageState[] = [];
+  history: Freight[] = [];
 
   /**
    * @generated from field: string error = 4;
@@ -1544,9 +1544,9 @@ export class StageStatus extends Message<StageStatus> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "available_states", kind: "message", T: StageState, repeated: true },
-    { no: 2, name: "current_state", kind: "message", T: StageState, opt: true },
-    { no: 3, name: "history", kind: "message", T: StageState, repeated: true },
+    { no: 1, name: "available_freight", kind: "message", T: Freight, repeated: true },
+    { no: 2, name: "current_freight", kind: "message", T: Freight, opt: true },
+    { no: 3, name: "history", kind: "message", T: Freight, repeated: true },
     { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 

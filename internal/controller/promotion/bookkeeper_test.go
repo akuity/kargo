@@ -34,8 +34,8 @@ func TestBookkeeperPromote(t *testing.T) {
 		name       string
 		promoMech  *bookkeeperMechanism
 		stage      *api.Stage
-		newState   api.StageState
-		assertions func(newStateIn, newStateOut api.StageState, err error)
+		newFreight api.Freight
+		assertions func(newFreightIn, newFreightOut api.Freight, err error)
 	}{
 		{
 			name:      "no updates",
@@ -45,9 +45,9 @@ func TestBookkeeperPromote(t *testing.T) {
 					PromotionMechanisms: &api.PromotionMechanisms{},
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -57,11 +57,11 @@ func TestBookkeeperPromote(t *testing.T) {
 					_ context.Context,
 					_ string,
 					_ api.GitRepoUpdate,
-					newState api.StageState,
+					newFreight api.Freight,
 					images []string,
-				) (api.StageState, error) {
+				) (api.Freight, error) {
 					require.Equal(t, []string{"fake-url:fake-tag"}, images)
-					return newState, errors.New("something went wrong")
+					return newFreight, errors.New("something went wrong")
 				},
 			},
 			stage: &api.Stage{
@@ -75,7 +75,7 @@ func TestBookkeeperPromote(t *testing.T) {
 					},
 				},
 			},
-			newState: api.StageState{
+			newFreight: api.Freight{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-url",
@@ -83,10 +83,10 @@ func TestBookkeeperPromote(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -96,11 +96,11 @@ func TestBookkeeperPromote(t *testing.T) {
 					_ context.Context,
 					_ string,
 					_ api.GitRepoUpdate,
-					newState api.StageState,
+					newFreight api.Freight,
 					images []string,
-				) (api.StageState, error) {
+				) (api.Freight, error) {
 					require.Equal(t, []string{"fake-url:fake-tag"}, images)
-					return newState, nil
+					return newFreight, nil
 				},
 			},
 			stage: &api.Stage{
@@ -114,7 +114,7 @@ func TestBookkeeperPromote(t *testing.T) {
 					},
 				},
 			},
-			newState: api.StageState{
+			newFreight: api.Freight{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-url",
@@ -122,20 +122,20 @@ func TestBookkeeperPromote(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newStateOut, err := testCase.promoMech.Promote(
+			newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				testCase.stage,
-				testCase.newState,
+				testCase.newFreight,
 			)
-			testCase.assertions(testCase.newState, newStateOut, err)
+			testCase.assertions(testCase.newFreight, newFreightOut, err)
 		})
 	}
 }
@@ -146,7 +146,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 		name       string
 		promoMech  *bookkeeperMechanism
 		update     api.GitRepoUpdate
-		assertions func(newStateIn, newStateOut api.StageState, err error)
+		assertions func(newFreightIn, newFreightOut api.Freight, err error)
 	}{
 		{
 			name: "error getting readref",
@@ -158,10 +158,10 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					return "", 0, errors.New("something went wrong")
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -184,7 +184,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 						errors.New("something went wrong")
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -192,7 +192,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					"error obtaining credentials for git repo",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -222,7 +222,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					return bookkeeper.RenderResponse{}, errors.New("something went wrong")
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -230,7 +230,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					"error rendering manifests for git repo",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -263,16 +263,16 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
 					"fake-commit-id",
-					newStateOut.Commits[0].HealthCheckCommit,
+					newFreightOut.Commits[0].HealthCheckCommit,
 				)
-				// The newState is otherwise unaltered
-				newStateIn.Commits[0].HealthCheckCommit = ""
-				require.Equal(t, newStateIn, newStateOut)
+				// The newFreight is otherwise unaltered
+				newFreightIn.Commits[0].HealthCheckCommit = ""
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -305,32 +305,32 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
 					"fake-commit-id",
-					newStateOut.Commits[0].HealthCheckCommit,
+					newFreightOut.Commits[0].HealthCheckCommit,
 				)
-				// The newState is otherwise unaltered
-				newStateIn.Commits[0].HealthCheckCommit = ""
-				require.Equal(t, newStateIn, newStateOut)
+				// The newFreight is otherwise unaltered
+				newFreightIn.Commits[0].HealthCheckCommit = ""
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newStateIn := api.StageState{
+			newFreightIn := api.Freight{
 				Commits: []api.GitCommit{{}},
 			}
-			newStateOut, err := testCase.promoMech.doSingleUpdate(
+			newFreightOut, err := testCase.promoMech.doSingleUpdate(
 				context.Background(),
 				"fake-namespace",
 				testCase.update,
-				newStateIn,
+				newFreightIn,
 				nil, // Images
 			)
-			testCase.assertions(newStateIn, newStateOut, err)
+			testCase.assertions(newFreightIn, newFreightOut, err)
 		})
 	}
 }

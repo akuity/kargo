@@ -25,7 +25,7 @@ func TestNewGitMechanism(t *testing.T) {
 		},
 		func(
 			update api.GitRepoUpdate,
-			newState api.StageState,
+			newFreight api.Freight,
 			homeDir string,
 			workingDir string,
 		) ([]string, error) {
@@ -53,7 +53,7 @@ func TestGitPromote(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMech  *gitMechanism
-		assertions func(newStateIn, newStateOut api.StageState, err error)
+		assertions func(newFreightIn, newFreightOut api.Freight, err error)
 	}{
 		{
 			name: "no updates",
@@ -62,9 +62,9 @@ func TestGitPromote(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -77,15 +77,15 @@ func TestGitPromote(t *testing.T) {
 					_ context.Context,
 					_ string,
 					_ api.GitRepoUpdate,
-					newState api.StageState,
-				) (api.StageState, error) {
-					return newState, errors.New("something went wrong")
+					newFreight api.Freight,
+				) (api.Freight, error) {
+					return newFreight, errors.New("something went wrong")
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -98,30 +98,30 @@ func TestGitPromote(t *testing.T) {
 					_ context.Context,
 					_ string,
 					_ api.GitRepoUpdate,
-					newState api.StageState,
-				) (api.StageState, error) {
-					return newState, nil
+					newFreight api.Freight,
+				) (api.Freight, error) {
+					return newFreight, nil
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newStateIn := api.StageState{}
-			newStateOut, err := testCase.promoMech.Promote(
+			newFreightIn := api.Freight{}
+			newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				&api.Stage{
 					Spec: &api.StageSpec{
 						PromotionMechanisms: &api.PromotionMechanisms{},
 					},
 				},
-				newStateIn,
+				newFreightIn,
 			)
-			testCase.assertions(newStateIn, newStateOut, err)
+			testCase.assertions(newFreightIn, newFreightOut, err)
 		})
 	}
 }
@@ -131,7 +131,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMech  *gitMechanism
-		assertions func(newStateIn, newStateOut api.StageState, err error)
+		assertions func(newFreightIn, newFreightOut api.Freight, err error)
 	}{
 		{
 			name: "error getting readref",
@@ -143,10 +143,10 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					return "", 0, errors.New("something went wrong")
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -166,10 +166,10 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -190,7 +190,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 				gitCommitFn: func(
 					update api.GitRepoUpdate,
-					newState api.StageState,
+					newFreight api.Freight,
 					readRef string,
 					writeBranch string,
 					creds *git.RepoCredentials,
@@ -198,10 +198,10 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					return "", errors.New("something went wrong")
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -222,7 +222,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 				gitCommitFn: func(
 					update api.GitRepoUpdate,
-					newState api.StageState,
+					newFreight api.Freight,
 					readRef string,
 					writeBranch string,
 					creds *git.RepoCredentials,
@@ -230,31 +230,31 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					return "fake-commit-id", nil
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
 					"fake-commit-id",
-					newStateOut.Commits[0].HealthCheckCommit,
+					newFreightOut.Commits[0].HealthCheckCommit,
 				)
-				// The newState is otherwise unaltered
-				newStateIn.Commits[0].HealthCheckCommit = ""
-				require.Equal(t, newStateIn, newStateOut)
+				// The newFreight is otherwise unaltered
+				newFreightIn.Commits[0].HealthCheckCommit = ""
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newStateIn := api.StageState{
+			newFreightIn := api.Freight{
 				Commits: []api.GitCommit{{}},
 			}
-			newStateOut, err := testCase.promoMech.doSingleUpdate(
+			newFreightOut, err := testCase.promoMech.doSingleUpdate(
 				context.Background(),
 				"fake-namespace",
 				api.GitRepoUpdate{},
-				newStateIn,
+				newFreightIn,
 			)
-			testCase.assertions(newStateIn, newStateOut, err)
+			testCase.assertions(newFreightIn, newFreightOut, err)
 		})
 	}
 }

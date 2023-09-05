@@ -10,7 +10,7 @@ import (
 
 func (r *reconciler) checkHealth(
 	ctx context.Context,
-	currentState api.StageState,
+	currentFreight api.Freight,
 	argoCDAppUpdates []api.ArgoCDAppUpdate,
 ) api.Health {
 	if len(argoCDAppUpdates) == 0 {
@@ -71,7 +71,7 @@ func (r *reconciler) checkHealth(
 			)
 		} else {
 			var desiredRevision string
-			for _, commit := range currentState.Commits {
+			for _, commit := range currentFreight.Commits {
 				if commit.RepoURL == app.Spec.Source.RepoURL {
 					if commit.HealthCheckCommit != "" {
 						desiredRevision = commit.HealthCheckCommit
@@ -81,7 +81,7 @@ func (r *reconciler) checkHealth(
 				}
 			}
 			if desiredRevision == "" {
-				for _, chart := range currentState.Charts {
+				for _, chart := range currentFreight.Charts {
 					if chart.RegistryURL == app.Spec.Source.RepoURL &&
 						chart.Name == app.Spec.Source.Chart {
 						desiredRevision = chart.Version

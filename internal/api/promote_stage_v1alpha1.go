@@ -24,11 +24,11 @@ func (s *server) PromoteStage(
 	if err != nil {
 		return nil, err
 	}
-	if _, err = validateFreightExists(req.Msg.GetState(), stage.Status.AvailableStates); err != nil {
+	if _, err = validateFreightExists(req.Msg.GetFreight(), stage.Status.AvailableFreight); err != nil {
 		return nil, err
 	}
 
-	promotion := kargo.NewPromotion(*stage, req.Msg.GetState())
+	promotion := kargo.NewPromotion(*stage, req.Msg.GetFreight())
 	if err := s.client.Create(ctx, &promotion); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

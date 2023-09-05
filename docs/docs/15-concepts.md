@@ -81,16 +81,17 @@ Alternatively, instead of subscribing directly to repositories, a `Stage` may
 subscribe to another, "upstream" `Stage`.
 
 For each `Stage`, the Kargo controller will periodically check all subscriptions
-for the latest available materials. A single set of materials is known,
-internally, as a *state*. The controller produces a canonical representation of
-each state and uses that to calculate a SHA1 hash which becomes the state's ID.
-Because state IDs are calculated deterministically from the underlying
-materials, each state ID is also a fingerprint of sorts. This ID is compared to
-those in a stack of known, *available states* stored in the `Stage` resource's
-`status` field. If a state is new, it is pushed onto the stack and becomes
-*available.*
+for the latest available materials. A single set of materials is known as a
+*freight* (or _piece_ of freight). The controller produces a canonical
+representation of each piece of freight and uses that to calculate a SHA1 hash
+which becomes its ID. Because freight IDs are calculated deterministically from
+the underlying materials, each ID is intrinsically a _fingerprint_. Two pieces
+of freight having the same materials have the same ID. (This enables cheap
+comparisons.) This ID is compared to those in a stack of known, *available
+freight* stored in the `Stage` resource's `status` field. If a piece of freight
+is new, it is pushed onto the stack and becomes *available.*
 
-In the following example, the `Stage` subscribes to manifests from a Git
+In the following example, the `test` `Stage` subscribes to manifests from a Git
 repository _and_ images from an image repository:
 
 ```yaml
@@ -116,7 +117,7 @@ polling the two repositories to which it subscribes:
 
 ```yaml
 status:
-  availableStates:
+  availableFreight:
   - id: 51636b9332d5938b9f2d382e9713b54ceb62a323
     firstSeen: "2023-04-21T18:34:56Z"
     commits:
@@ -129,8 +130,8 @@ status:
 
 ### Promotion mechanisms
 
-The `spec.promotionMechanisms` field is used to describe how to transition a
-stage into a new state.
+The `spec.promotionMechanisms` field is used to describe _how_ to move freight
+into the `Stage`.
 
 There are two general methods of accomplishing this:
 
@@ -177,10 +178,10 @@ aggregating the results of sync/health state for all such `Application`
 resources(s).
 :::
 
-In the following example, the `Stage` subscribes to manifests from a Git
+In the following example, the `test` `Stage` subscribes to manifests from a Git
 repository _and_ images from an image repository, as in the previous section.
-Our example also now states that transitioning the stage to a new state
-requires:
+The example has now been amended to also show that transitioning freight into
+the `test` `Stage` requires:
 
 1. Updating the `https://github.com/example/kargo-demo.git` repository by
    running `kustomize edit set image` in the `stages/test` directory and
@@ -219,12 +220,12 @@ spec:
 
 If you commit changes to the Git repository's `main` branch _or_ if a new
 version of the `nginx` image were published to Docker Hub, these mechanisms
-provide the recipe for applying those changes to our test stage.
+provide the recipe for applying those changes to our `test` `Stage`.
 
 :::note
-Promotion mechanisms describe _how_ to transition a `Stage` into a new state,
-but they say nothing of _which_ state or _when_ to make the transition. Keep
-reading. These will be covered in the next section.
+Promotion mechanisms describe _how_ to move freight into a `Stage`, but they say
+nothing of _which_ piece of freight or _when_ to do this. Keep reading. These
+will be covered in the next section.
 :::
 
 :::info
@@ -237,15 +238,16 @@ corresponding Argo CD `Application` would reference as its `targetRevision`) is
 a strategy to prevent such a loop from ever forming.
 :::
 
-The application of any `Stage` resource's promotion mechanisms transitions the
-`Stage` into a new state and updates the `Stage`'s `status` field accordingly.
+The application of any `Stage` resource's promotion mechanisms transitions a
+piece of freight into the `Stage` and updates the `Stage`'s `status` field
+accordingly.
 
 Continuing with our example, our `test` `Stage`'s `status` may appear as follows
 after its first promotion:
 
 ```yaml
 status:
-  availableStates:
+  availableFreight:
   - id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     firstSeen: "2023-04-21T19:05:36Z"
     commits:
@@ -254,7 +256,7 @@ status:
     images:
     - repoURL: nginx
       tag: 1.24.0
-  currentState:
+  currentFreight:
     id: 404df86560cab5d515e7aa74653e665c1dc96e1c
     firstSeen: "2023-04-21T19:05:36Z"
     commits:
@@ -278,20 +280,20 @@ status:
       status: Healthy
 ```
 
-Above, we can see that the state currently deployed to the stage is
-recorded in the `currentState` field. The `history` field duplicates this
-information, but as state continues to change over time, each new state will be
-_pushed_ onto the `history` collection, making that field a historic record of
-what's been deployed to the stage.
+Above, we can see that the piece of freight currently deployed to the `Stage` is
+recorded in the `currentFreight` field. The `history` field duplicates this
+information, but as the freight in a stage continues to change over time, each
+new piece of freight will be _pushed_ onto the `history` collection, making that
+field a historic record of of the freight that has moved through the `Stage`.
 
 ## `Promotion` resources
 
-In the previous section, we discussed _how_ promotion mechanisms transition
-stages from one state to another, but we have not yet discussed what actually
+In the previous section, we discussed _how_ promotion mechanisms move freight
+from one `Stage` to another, but we have not yet discussed what actually
 triggers that process.
 
-Kargo `Promotion` resources are used as _requests_ to transition a `Stage` from
-its current state to any of its available states.
+Kargo `Promotion` resources are used as _requests_ to progress a piece of
+freight from one `Stage`to another.
 
 `Promotion` resources may be created either automatically or manually, depending
 on policies (covered in the next section).
@@ -307,21 +309,20 @@ metadata:
   namespace: kargo-demo
 spec:
   stage: test
-  state: 404df86560cab5d515e7aa74653e665c1dc96e1c
+  freight: 404df86560cab5d515e7aa74653e665c1dc96e1c
 ```
 
-`Promotion` resources are simple. Their `spec.environment` and `spec.state`
-fields specify a `Stage` by name and one of its available states, into which
-that `Stage` should be transitioned.
+`Promotion` resources are simple. Their `spec.environment` and `spec.freight`
+fields specify a `Stage` by name and one of its available pieces of freight,
+which should be moved into that `Stage`.
 
 :::info
 The name in a `Promotion`'s `metadata.name` field is inconsequential. Only
 the `spec` matters.
 :::
 
-When the state transition specified by a `Promotion` has concluded -- whether
-successfully or unsuccessfully -- the `Promotion`'s `status` field is updated
-to reflect the outcome.
+When a `Promotion` has concluded -- whether successfully or unsuccessfully --
+the `Promotion`'s `status` field is updated to reflect the outcome.
 
 _So, who can create `Promotion` resources? And when does Kargo create them
 automatically?_
@@ -445,7 +446,7 @@ subjects:
 ## Auto-promotions
 
 At times, it may be desirable for Kargo itself to create a new `Promotion`
-resource to automatically transition a `Stage` into a newly discovered state.
+resource to _automatically_ transition new freight into a certain `Stage`.
 
 Enabling this requires the creation of a `PromotionPolicy` resource. The
 following example demonstrates how a `test` `Stage` can take advantage of

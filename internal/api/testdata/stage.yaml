@@ -27,7 +27,7 @@ spec:
           - repoURL: https://github.com/akuity/kargo-test
             updateTargetRevision: true
 status:
-  availableStates:
+  availableFreight:
     - firstSeen: "2023-05-30T15:32:04Z"
       id: 73024971ee9c6daac0ad78aea87803bf332cfdb7
       images:

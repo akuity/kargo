@@ -41,22 +41,22 @@ func (c *compositeMechanism) GetName() string {
 func (c *compositeMechanism) Promote(
 	ctx context.Context,
 	stage *api.Stage,
-	newState api.StageState,
-) (api.StageState, error) {
+	newFreight api.Freight,
+) (api.Freight, error) {
 	if stage.Spec.PromotionMechanisms == nil {
-		return newState, nil
+		return newFreight, nil
 	}
 
-	newState = *newState.DeepCopy()
+	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debugf("executing %s", c.name)
 
 	for _, childMechanism := range c.childMechanisms {
 		var err error
-		newState, err = childMechanism.Promote(ctx, stage, newState)
+		newFreight, err = childMechanism.Promote(ctx, stage, newFreight)
 		if err != nil {
-			return newState, errors.Wrapf(
+			return newFreight, errors.Wrapf(
 				err,
 				"error executing %s",
 				childMechanism.GetName(),
@@ -66,5 +66,5 @@ func (c *compositeMechanism) Promote(
 
 	logger.Debug("done executing promotion mechanisms")
 
-	return newState, nil
+	return newFreight, nil
 }
