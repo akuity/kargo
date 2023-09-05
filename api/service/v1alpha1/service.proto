@@ -35,7 +35,9 @@ service KargoService {
 
   /* Promotion APIs */
   rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
+  rpc WatchPromotions(WatchPromotionsRequest) returns (stream WatchPromotionsResponse);
   rpc GetPromotion(GetPromotionRequest) returns (GetPromotionResponse);
+  rpc WatchPromotion(WatchPromotionRequest) returns (stream WatchPromotionResponse);
 
   /* PromotionPolicy APIs */
 
@@ -255,6 +257,16 @@ message ListPromotionsResponse {
   repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
 }
 
+message WatchPromotionsRequest {
+  string project = 1;
+  optional string stage = 2;
+}
+
+message WatchPromotionsResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  string type = 2;
+}
+
 message GetPromotionRequest {
   string project = 1;
   string name = 2;
@@ -262,6 +274,16 @@ message GetPromotionRequest {
 
 message GetPromotionResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+}
+
+message WatchPromotionRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message WatchPromotionResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  string type = 2;
 }
 
 message SetAutoPromotionForStageRequest {
