@@ -153,7 +153,7 @@ message PromotionPolicyList {
 
 message PromotionSpec {
   string stage = 1;
-  string state = 2;
+  string freight = 2;
 }
 
 message PromotionStatus {
@@ -183,7 +183,7 @@ message StageSpec {
   PromotionMechanisms promotion_mechanisms = 2;
 }
 
-message StageState {
+message Freight {
   string id = 1;
   optional google.protobuf.Timestamp first_seen = 2;
   optional string provenance = 3;
@@ -194,9 +194,9 @@ message StageState {
 }
 
 message StageStatus {
-  repeated StageState available_states = 1;
-  optional StageState current_state = 2;
-  repeated StageState history = 3;
+  repeated Freight available_freight = 1;
+  optional Freight current_freight = 2;
+  repeated Freight history = 3;
   string error = 4;
 }
 
