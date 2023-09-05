@@ -17,14 +17,14 @@ spec:
     upstreamStages:
     - name: dev
 status:
-  availableStates:
+  availableFreight:
   - firstSeen: "2023-08-30T15:18:57Z"
     id: dddddddddddddddddddddddddddddddddddddddd
     images:
     - repoURL: ghcr.io/akuity/guestbook2
       tag: v0.0.0
     provenance: dev
-  currentState:
+  currentFreight:
     firstSeen: "2023-08-30T15:18:57Z"
     health:
       status: Healthy

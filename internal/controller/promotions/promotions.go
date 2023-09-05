@@ -37,7 +37,7 @@ type reconciler struct {
 		ctx context.Context,
 		stageName string,
 		stageNamespace string,
-		stateID string,
+		freightID string,
 	) error
 }
 
@@ -317,8 +317,8 @@ func (r *reconciler) serializedSync(
 				}
 
 				logger = logger.WithFields(log.Fields{
-					"stage": promo.Spec.Stage,
-					"state": promo.Spec.State,
+					"stage":   promo.Spec.Stage,
+					"freight": promo.Spec.Freight,
 				})
 				logger.Debug("executing Promotion")
 
@@ -330,7 +330,7 @@ func (r *reconciler) serializedSync(
 					promoCtx,
 					promo.Spec.Stage,
 					promo.Namespace,
-					promo.Spec.State,
+					promo.Spec.Freight,
 				); err != nil {
 					phase = api.PromotionPhaseFailed
 					phaseError = err.Error()
@@ -356,7 +356,7 @@ func (r *reconciler) promote(
 	ctx context.Context,
 	stageName string,
 	stageNamespace string,
-	stateID string,
+	freightID string,
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -385,32 +385,32 @@ func (r *reconciler) promote(
 	}
 	logger.Debug("found associated Stage")
 
-	if currentState, ok :=
-		stage.Status.History.Top(); ok && currentState.ID == stateID {
-		logger.Debug("Stage is already in desired state")
+	if currentFreight, ok :=
+		stage.Status.History.Top(); ok && currentFreight.ID == freightID {
+		logger.Debug("Stage is already in desired Freight")
 		return nil
 	}
 
-	var targetStateIndex int
-	var targetState *api.StageState
-	for i, availableState := range stage.Status.AvailableStates {
-		if availableState.ID == stateID {
-			targetStateIndex = i
-			targetState = availableState.DeepCopy()
+	var targetFreightIndex int
+	var targetFreight *api.Freight
+	for i, availableFreight := range stage.Status.AvailableFreight {
+		if availableFreight.ID == freightID {
+			targetFreightIndex = i
+			targetFreight = availableFreight.DeepCopy()
 			break
 		}
 	}
-	if targetState == nil {
+	if targetFreight == nil {
 		return errors.Errorf(
-			"target state %q not found among available states of Stage %q "+
+			"target Freight %q not found among available Freight of Stage %q "+
 				"in namespace %q",
-			stateID,
+			freightID,
 			stageName,
 			stageNamespace,
 		)
 	}
 
-	nextState, err := r.promoMechanisms.Promote(ctx, stage, *targetState)
+	nextFreight, err := r.promoMechanisms.Promote(ctx, stage, *targetFreight)
 	if err != nil {
 		return err
 	}
@@ -418,9 +418,9 @@ func (r *reconciler) promote(
 	// The assumption is that controller does not process multiple promotions in one stage
 	// so we are safe from race conditions and can just update the status
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *api.StageStatus) {
-		status.CurrentState = &nextState
-		status.AvailableStates[targetStateIndex] = nextState
-		status.History.Push(nextState)
+		status.CurrentFreight = &nextFreight
+		status.AvailableFreight[targetFreightIndex] = nextFreight
+		status.History.Push(nextFreight)
 	})
 
 	return errors.Wrapf(

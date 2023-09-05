@@ -35,8 +35,8 @@ func TestArgoCDPromote(t *testing.T) {
 		name       string
 		promoMech  *argoCDMechanism
 		stage      *api.Stage
-		newState   api.StageState
-		assertions func(newStateIn, newStateOut api.StageState, err error)
+		newFreight api.Freight
+		assertions func(newFreightIn, newFreightOut api.Freight, err error)
 	}{
 		{
 			name:      "no updates",
@@ -46,9 +46,9 @@ func TestArgoCDPromote(t *testing.T) {
 					PromotionMechanisms: &api.PromotionMechanisms{},
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -58,7 +58,7 @@ func TestArgoCDPromote(t *testing.T) {
 					context.Context,
 					metav1.ObjectMeta,
 					api.ArgoCDAppUpdate,
-					api.StageState,
+					api.Freight,
 				) error {
 					return errors.New("something went wrong")
 				},
@@ -72,14 +72,14 @@ func TestArgoCDPromote(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.Error(t, err)
 				require.Equal(
 					t,
 					"something went wrong",
 					err.Error(),
 				)
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
@@ -89,7 +89,7 @@ func TestArgoCDPromote(t *testing.T) {
 					context.Context,
 					metav1.ObjectMeta,
 					api.ArgoCDAppUpdate,
-					api.StageState,
+					api.Freight,
 				) error {
 					return nil
 				},
@@ -103,20 +103,20 @@ func TestArgoCDPromote(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(newStateIn, newStateOut api.StageState, err error) {
+			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
 				require.NoError(t, err)
-				require.Equal(t, newStateIn, newStateOut)
+				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newStateOut, err := testCase.promoMech.Promote(
+			newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				testCase.stage,
-				testCase.newState,
+				testCase.newFreight,
 			)
-			testCase.assertions(testCase.newState, newStateOut, err)
+			testCase.assertions(testCase.newFreight, newFreightOut, err)
 		})
 	}
 }
@@ -211,7 +211,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				},
 				applyArgoCDSourceUpdateFn: func(
 					argocd.ApplicationSource,
-					api.StageState,
+					api.Freight,
 					api.ArgoCDSourceUpdate,
 				) (argocd.ApplicationSource, error) {
 					return argocd.ApplicationSource{}, errors.New("something went wrong")
@@ -261,7 +261,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				},
 				applyArgoCDSourceUpdateFn: func(
 					argocd.ApplicationSource,
-					api.StageState,
+					api.Freight,
 					api.ArgoCDSourceUpdate,
 				) (argocd.ApplicationSource, error) {
 					return argocd.ApplicationSource{}, errors.New("something went wrong")
@@ -370,7 +370,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 					context.Background(),
 					testCase.stageMeta,
 					testCase.update,
-					api.StageState{},
+					api.Freight{},
 				),
 			)
 		})
@@ -498,7 +498,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		source     argocd.ApplicationSource
-		newState   api.StageState
+		newFreight api.Freight
 		update     api.ArgoCDSourceUpdate
 		assertions func(
 			originalSource argocd.ApplicationSource,
@@ -530,7 +530,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			newState: api.StageState{
+			newFreight: api.Freight{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -562,7 +562,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				RepoURL: "fake-url",
 				Chart:   "fake-chart",
 			},
-			newState: api.StageState{
+			newFreight: api.Freight{
 				Charts: []api.Chart{
 					{
 						RegistryURL: "fake-url",
@@ -595,7 +595,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			newState: api.StageState{
+			newFreight: api.Freight{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-image-url",
@@ -643,7 +643,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			newState: api.StageState{
+			newFreight: api.Freight{
 				Images: []api.Image{
 					{
 						RepoURL: "fake-image-url",
@@ -698,7 +698,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			updatedSource, err := applyArgoCDSourceUpdate(
 				testCase.source,
-				testCase.newState,
+				testCase.newFreight,
 				testCase.update,
 			)
 			testCase.assertions(testCase.source, updatedSource, err)

@@ -136,7 +136,7 @@ func TestPromoteSubscribers(t *testing.T) {
 				require.True(t, strings.HasPrefix(parts[0], "downstream"))
 				require.True(t, strings.HasPrefix(p.GetSpec().GetStage(), "downstream"))
 				require.Equal(t, parts[2], ts.req.Freight[0:7])
-				require.Equal(t, ts.req.GetFreight(), p.GetSpec().GetState())
+				require.Equal(t, ts.req.GetFreight(), p.GetSpec().GetFreight())
 
 				var actual kubev1alpha1.Promotion
 				require.NoError(t, client.Get(ctx, libClient.ObjectKey{

@@ -63,13 +63,13 @@ type helmer struct {
 // directory.
 func (h *helmer) apply(
 	update api.GitRepoUpdate,
-	newState api.StageState,
+	newFreight api.Freight,
 	homeDir string,
 	workingDir string,
 ) ([]string, error) {
 	// Image updates
 	changesByFile, imageChangeSummary :=
-		h.buildValuesFilesChangesFn(newState.Images, update.Helm.Images)
+		h.buildValuesFilesChangesFn(newFreight.Images, update.Helm.Images)
 	for file, changes := range changesByFile {
 		if err := h.setStringsInYAMLFileFn(
 			filepath.Join(workingDir, file),
@@ -83,7 +83,7 @@ func (h *helmer) apply(
 	changesByChart, subchartChangeSummary, err :=
 		h.buildChartDependencyChangesFn(
 			workingDir,
-			newState.Charts,
+			newFreight.Charts,
 			update.Helm.Charts,
 		)
 	if err != nil {

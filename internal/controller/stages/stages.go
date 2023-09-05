@@ -56,22 +56,22 @@ type reconciler struct {
 	// Health checks:
 	checkHealthFn func(
 		context.Context,
-		api.StageState,
+		api.Freight,
 		[]api.ArgoCDAppUpdate,
 	) api.Health
 
 	// Syncing:
-	getLatestStateFromReposFn func(
+	getLatestFreightFromReposFn func(
 		ctx context.Context,
 		namespace string,
 		subs api.RepoSubscriptions,
-	) (*api.StageState, error)
+	) (*api.Freight, error)
 
-	getAvailableStatesFromUpstreamStagesFn func(
+	getAvailableFreightFromUpstreamStagesFn func(
 		ctx context.Context,
 		namespace string,
 		subs []api.StageSubscription,
-	) ([]api.StageState, error)
+	) ([]api.Freight, error)
 
 	getLatestCommitsFn func(
 		ctx context.Context,
@@ -195,8 +195,8 @@ func newReconciler(
 	r.checkHealthFn = r.checkHealth
 
 	// Syncing:
-	r.getLatestStateFromReposFn = r.getLatestStateFromRepos
-	r.getAvailableStatesFromUpstreamStagesFn = r.getAvailableStatesFromUpstreamStages
+	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
+	r.getAvailableFreightFromUpstreamStagesFn = r.getAvailableFreightFromUpstreamStages
 	r.getLatestCommitsFn = r.getLatestCommits
 	r.getLatestImagesFn = r.getLatestImages
 	r.getLatestTagFn = images.GetLatestTag
@@ -304,13 +304,13 @@ func (r *reconciler) syncStage(
 	}
 
 	status.ObservedGeneration = stage.Generation
-	// Only perform health checks if we have a current state
-	if status.CurrentState != nil {
+	// Only perform health checks if we have a current Freight
+	if status.CurrentFreight != nil {
 		var health api.Health
 		if stage.Spec.PromotionMechanisms != nil {
 			health = r.checkHealthFn(
 				ctx,
-				*status.CurrentState,
+				*status.CurrentFreight,
 				stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 			)
 		} else {
@@ -319,16 +319,16 @@ func (r *reconciler) syncStage(
 				Status: api.HealthStateHealthy,
 			}
 		}
-		status.CurrentState.Health = &health
+		status.CurrentFreight.Health = &health
 		status.History.Pop()
-		status.History.Push(*status.CurrentState)
+		status.History.Push(*status.CurrentFreight)
 	} else {
-		logger.Debug("Stage has no current state; skipping health checks")
+		logger.Debug("Stage has no current Freight; skipping health checks")
 	}
 
 	if stage.Spec.Subscriptions.Repos != nil {
 
-		latestState, err := r.getLatestStateFromReposFn(
+		latestFreight, err := r.getLatestFreightFromReposFn(
 			ctx,
 			stage.Namespace,
 			*stage.Spec.Subscriptions.Repos,
@@ -336,38 +336,38 @@ func (r *reconciler) syncStage(
 		if err != nil {
 			return status, err
 		}
-		if latestState == nil {
-			logger.Debug("found no state from upstream repositories")
+		if latestFreight == nil {
+			logger.Debug("found no Freight from upstream repositories")
 			return status, nil
 		}
-		logger.Debug("got latest state from upstream repositories")
+		logger.Debug("got latest Freight from upstream repositories")
 
-		// latestState from upstream repos will always have a shiny new ID. To
+		// latestFreight from upstream repos will always have a shiny new ID. To
 		// determine if this is actually new and needs to be pushed onto the
-		// status.AvailableStates stack, either that stack needs to be empty or
-		// latestState's MATERIALS must differ from what is at the top of the
-		// status.AvailableStates stack.
-		if topAvailableState, ok := status.AvailableStates.Top(); ok &&
-			latestState.ID == topAvailableState.ID {
-			logger.Debug("latest state is not new")
+		// status.AvailableFreight stack, either that stack needs to be empty or
+		// latestFreight's MATERIALS must differ from what is at the top of the
+		// status.AvailableFreight stack.
+		if topAvailableFreight, ok := status.AvailableFreight.Top(); ok &&
+			latestFreight.ID == topAvailableFreight.ID {
+			logger.Debug("latest Freight is not new")
 			return status, nil
 		}
-		status.AvailableStates.Push(*latestState)
-		logger.Debug("latest state is new; added to available states")
+		status.AvailableFreight.Push(*latestFreight)
+		logger.Debug("latest Freight is new; added to available Freight")
 
 	} else if len(stage.Spec.Subscriptions.UpstreamStages) > 0 {
 
-		// Grab the latest known state before we overwrite status.AvailableStates
-		var latestKnownState *api.StageState
-		if lks, ok := status.AvailableStates.Top(); ok {
-			latestKnownState = &lks
+		// Grab the latest known Freight before we overwrite status.AvailableFreight
+		var latestKnownFreight *api.Freight
+		if lks, ok := status.AvailableFreight.Top(); ok {
+			latestKnownFreight = &lks
 		}
 
-		// This returns de-duped, healthy states only from all upstream Stages.
+		// This returns de-duped, healthy Freight only from all upstream Stages.
 		// There could be up to ten per upstream Stage. This is more than the usual
-		// quantity we permit in status.AvailableStates, but we'll allow it.
+		// quantity we permit in status.AvailableFreight, but we'll allow it.
 		var err error
-		if status.AvailableStates, err = r.getAvailableStatesFromUpstreamStagesFn(
+		if status.AvailableFreight, err = r.getAvailableFreightFromUpstreamStagesFn(
 			ctx,
 			stage.Namespace,
 			stage.Spec.Subscriptions.UpstreamStages,
@@ -375,11 +375,11 @@ func (r *reconciler) syncStage(
 			return status, err
 		}
 
-		if status.AvailableStates.Empty() {
-			logger.Debug("got no available states from upstream Stages")
+		if status.AvailableFreight.Empty() {
+			logger.Debug("got no available Freight from upstream Stages")
 			return status, nil
 		}
-		logger.Debug("got available states from upstream Stages")
+		logger.Debug("got available Freight from upstream Stages")
 
 		if len(stage.Spec.Subscriptions.UpstreamStages) > 1 {
 			logger.Debug(
@@ -388,11 +388,11 @@ func (r *reconciler) syncStage(
 			return status, nil
 		}
 
-		if latestKnownState != nil {
+		if latestKnownFreight != nil {
 			// We already know this stack isn't empty
-			latestAvailableState, _ := status.AvailableStates.Top()
-			if latestKnownState.ID == latestAvailableState.ID {
-				logger.Debug("latest state is not new")
+			latestAvailableFreight, _ := status.AvailableFreight.Top()
+			if latestKnownFreight.ID == latestAvailableFreight.ID {
+				logger.Debug("latest Freight is not new")
 				return status, nil
 			}
 		}
@@ -402,16 +402,16 @@ func (r *reconciler) syncStage(
 		return status, nil
 	}
 
-	nextStateCandidate, _ := status.AvailableStates.Top()
-	if status.CurrentState != nil &&
-		nextStateCandidate.FirstSeen.Before(status.CurrentState.FirstSeen) {
+	nextFreightCandidate, _ := status.AvailableFreight.Top()
+	if status.CurrentFreight != nil &&
+		nextFreightCandidate.FirstSeen.Before(status.CurrentFreight.FirstSeen) {
 		logger.Debug(
-			"newest available state is older than current state; refusing to " +
+			"newest available Freight is older than current Freight; refusing to " +
 				"auto-promote",
 		)
 		return status, nil
 	}
-	nextState := nextStateCandidate
+	nextFreight := nextFreightCandidate
 
 	// If we get to here, we've determined that auto-promotion is a possibility.
 	// See if it's actually allowed...
@@ -449,10 +449,10 @@ func (r *reconciler) syncStage(
 		return status, nil
 	}
 
-	logger = logger.WithField("state", nextState.ID)
+	logger = logger.WithField("freight", nextFreight.ID)
 	logger.Debug("auto-promotion will proceed")
 
-	promo := kargo.NewPromotion(*stage, nextState.ID)
+	promo := kargo.NewPromotion(*stage, nextFreight.ID)
 
 	if err :=
 		r.kargoClient.Create(ctx, &promo, &client.CreateOptions{}); err != nil {
@@ -462,10 +462,10 @@ func (r *reconciler) syncStage(
 		}
 		return status, errors.Wrapf(
 			err,
-			"error creating Promotion of Stage %q in namespace %q to state %q",
+			"error creating Promotion of Stage %q in namespace %q to Freight %q",
 			stage.Name,
 			stage.Namespace,
-			nextState.ID,
+			nextFreight.ID,
 		)
 	}
 	logger.Debug("created Promotion resource")
@@ -500,11 +500,11 @@ func (r *reconciler) hasOutstandingPromotions(
 	return len(promos.Items) > 0, nil
 }
 
-func (r *reconciler) getLatestStateFromRepos(
+func (r *reconciler) getLatestFreightFromRepos(
 	ctx context.Context,
 	namespace string,
 	repoSubs api.RepoSubscriptions,
-) (*api.StageState, error) {
+) (*api.Freight, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	latestCommits, err := r.getLatestCommitsFn(ctx, namespace, repoSubs.Git)
@@ -532,28 +532,28 @@ func (r *reconciler) getLatestStateFromRepos(
 	}
 
 	now := metav1.Now()
-	state := &api.StageState{
+	freight := &api.Freight{
 		FirstSeen: &now,
 		Commits:   latestCommits,
 		Images:    latestImages,
 		Charts:    latestCharts,
 	}
-	state.UpdateStateID()
-	return state, nil
+	freight.UpdateFreightID()
+	return freight, nil
 }
 
 // TODO: Test this
-func (r *reconciler) getAvailableStatesFromUpstreamStages(
+func (r *reconciler) getAvailableFreightFromUpstreamStages(
 	ctx context.Context,
 	namespace string,
 	subs []api.StageSubscription,
-) ([]api.StageState, error) {
+) ([]api.Freight, error) {
 	if len(subs) == 0 {
 		return nil, nil
 	}
 
-	availableStates := []api.StageState{}
-	stateSet := map[string]struct{}{} // We'll use this to de-dupe
+	availableFreight := []api.Freight{}
+	freightSet := map[string]struct{}{} // We'll use this to de-dupe
 	for _, sub := range subs {
 		upstreamStage, err := api.GetStage(
 			ctx,
@@ -578,19 +578,19 @@ func (r *reconciler) getAvailableStatesFromUpstreamStages(
 				namespace,
 			)
 		}
-		for _, state := range upstreamStage.Status.History {
-			if _, ok := stateSet[state.ID]; !ok &&
-				state.Health != nil && state.Health.Status == api.HealthStateHealthy {
-				state.Provenance = upstreamStage.Name
-				for i := range state.Commits {
-					state.Commits[i].HealthCheckCommit = ""
+		for _, freight := range upstreamStage.Status.History {
+			if _, ok := freightSet[freight.ID]; !ok &&
+				freight.Health != nil && freight.Health.Status == api.HealthStateHealthy {
+				freight.Provenance = upstreamStage.Name
+				for i := range freight.Commits {
+					freight.Commits[i].HealthCheckCommit = ""
 				}
-				state.Health = nil
-				availableStates = append(availableStates, state)
-				stateSet[state.ID] = struct{}{}
+				freight.Health = nil
+				availableFreight = append(availableFreight, freight)
+				freightSet[freight.ID] = struct{}{}
 			}
 		}
 	}
 
-	return availableStates, nil
+	return availableFreight, nil
 }

@@ -36,13 +36,13 @@ func validateProjectAndStageNonEmpty(project string, stage string) error {
 	return nil
 }
 
-// validateFreightExists returns the freight with the given ID in the list of freights, otherwise
+// validateFreightExists returns the Freight with the given ID in the list of Freight, otherwise
 // return an error if it doesn't exist
-func validateFreightExists(freight string, freights kubev1alpha1.StageStateStack) (*kubev1alpha1.StageState, error) {
+func validateFreightExists(freight string, freightStack kubev1alpha1.FreightStack) (*kubev1alpha1.Freight, error) {
 	if freight == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("freight should not be empty"))
 	}
-	for _, f := range freights {
+	for _, f := range freightStack {
 		if freight == f.ID {
 			return &f, nil
 		}

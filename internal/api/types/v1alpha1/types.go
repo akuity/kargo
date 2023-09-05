@@ -59,23 +59,23 @@ func FromStageStatusProto(s *v1alpha1.StageStatus) *kubev1alpha1.StageStatus {
 	if s == nil {
 		return nil
 	}
-	availableStates := make(kubev1alpha1.StageStateStack, len(s.GetAvailableStates()))
-	for idx, state := range s.GetAvailableStates() {
-		availableStates[idx] = *FromStageStateProto(state)
+	availableFreight := make(kubev1alpha1.FreightStack, len(s.GetAvailableFreight()))
+	for idx, freight := range s.GetAvailableFreight() {
+		availableFreight[idx] = *FromFreightProto(freight)
 	}
-	history := make(kubev1alpha1.StageStateStack, len(s.GetHistory()))
-	for idx, state := range s.GetHistory() {
-		history[idx] = *FromStageStateProto(state)
+	history := make(kubev1alpha1.FreightStack, len(s.GetHistory()))
+	for idx, freight := range s.GetHistory() {
+		history[idx] = *FromFreightProto(freight)
 	}
 	return &kubev1alpha1.StageStatus{
-		AvailableStates: availableStates,
-		CurrentState:    FromStageStateProto(s.GetCurrentState()),
-		History:         history,
-		Error:           s.GetError(),
+		AvailableFreight: availableFreight,
+		CurrentFreight:   FromFreightProto(s.GetCurrentFreight()),
+		History:          history,
+		Error:            s.GetError(),
 	}
 }
 
-func FromStageStateProto(s *v1alpha1.StageState) *kubev1alpha1.StageState {
+func FromFreightProto(s *v1alpha1.Freight) *kubev1alpha1.Freight {
 	if s == nil {
 		return nil
 	}
@@ -96,7 +96,7 @@ func FromStageStateProto(s *v1alpha1.StageState) *kubev1alpha1.StageState {
 	for idx, chart := range s.GetCharts() {
 		charts[idx] = *FromChartProto(chart)
 	}
-	return &kubev1alpha1.StageState{
+	return &kubev1alpha1.Freight{
 		ID:         s.GetId(),
 		FirstSeen:  firstSeen,
 		Provenance: s.GetProvenance(),
@@ -441,8 +441,8 @@ func FromPromotionSpecProto(s *v1alpha1.PromotionSpec) *kubev1alpha1.PromotionSp
 		return nil
 	}
 	return &kubev1alpha1.PromotionSpec{
-		Stage: s.GetStage(),
-		State: s.GetState(),
+		Stage:   s.GetStage(),
+		Freight: s.GetFreight(),
 	}
 }
 
@@ -477,17 +477,17 @@ func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kubev1alpha1.Promoti
 
 func ToStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
 	// Status
-	availableStates := make([]*v1alpha1.StageState, len(e.Status.AvailableStates))
-	for idx := range e.Status.AvailableStates {
-		availableStates[idx] = ToStageStateProto(e.Status.AvailableStates[idx])
+	availableFreight := make([]*v1alpha1.Freight, len(e.Status.AvailableFreight))
+	for idx := range e.Status.AvailableFreight {
+		availableFreight[idx] = ToFreightProto(e.Status.AvailableFreight[idx])
 	}
-	var currentState *v1alpha1.StageState
-	if e.Status.CurrentState != nil {
-		currentState = ToStageStateProto(*e.Status.CurrentState)
+	var currentFreight *v1alpha1.Freight
+	if e.Status.CurrentFreight != nil {
+		currentFreight = ToFreightProto(*e.Status.CurrentFreight)
 	}
-	history := make([]*v1alpha1.StageState, len(e.Status.History))
+	history := make([]*v1alpha1.Freight, len(e.Status.History))
 	for idx := range e.Status.History {
-		history[idx] = ToStageStateProto(e.Status.History[idx])
+		history[idx] = ToFreightProto(e.Status.History[idx])
 	}
 
 	metadata := e.ObjectMeta.DeepCopy()
@@ -504,10 +504,10 @@ func ToStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
 			PromotionMechanisms: promotionMechanisms,
 		},
 		Status: &v1alpha1.StageStatus{
-			AvailableStates: availableStates,
-			CurrentState:    currentState,
-			History:         history,
-			Error:           e.Status.Error,
+			AvailableFreight: availableFreight,
+			CurrentFreight:   currentFreight,
+			History:          history,
+			Error:            e.Status.Error,
 		},
 	}
 }
@@ -722,7 +722,7 @@ func ToArgoCDHelmImageUpdateProto(a kubev1alpha1.ArgoCDHelmImageUpdate) *v1alpha
 	}
 }
 
-func ToStageStateProto(e kubev1alpha1.StageState) *v1alpha1.StageState {
+func ToFreightProto(e kubev1alpha1.Freight) *v1alpha1.Freight {
 	var firstSeen *timestamppb.Timestamp
 	if e.FirstSeen != nil {
 		firstSeen = timestamppb.New(e.FirstSeen.Time)
@@ -743,7 +743,7 @@ func ToStageStateProto(e kubev1alpha1.StageState) *v1alpha1.StageState {
 	if e.Health != nil {
 		health = ToHealthProto(*e.Health)
 	}
-	return &v1alpha1.StageState{
+	return &v1alpha1.Freight{
 		Id:         e.ID,
 		FirstSeen:  firstSeen,
 		Provenance: proto.String(e.Provenance),
@@ -801,8 +801,8 @@ func ToPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
 	return &v1alpha1.Promotion{
 		Metadata: typesmetav1.ToObjectMetaProto(*metadata),
 		Spec: &v1alpha1.PromotionSpec{
-			Stage: p.Spec.Stage,
-			State: p.Spec.State,
+			Stage:   p.Spec.Stage,
+			Freight: p.Spec.Freight,
 		},
 		Status: &v1alpha1.PromotionStatus{
 			Phase: string(p.Status.Phase),

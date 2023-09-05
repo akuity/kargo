@@ -48,14 +48,14 @@ type kustomizer struct {
 // working directory.
 func (k *kustomizer) apply(
 	update api.GitRepoUpdate,
-	newState api.StageState,
+	newFreight api.Freight,
 	_ string,
 	workingDir string,
 ) ([]string, error) {
 	var changeSummary []string
 	for _, imgUpdate := range update.Kustomize.Images {
 		var tag string
-		for _, img := range newState.Images {
+		for _, img := range newFreight.Images {
 			if img.RepoURL == imgUpdate.Image {
 				tag = img.Tag
 				break

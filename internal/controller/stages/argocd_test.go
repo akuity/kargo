@@ -16,7 +16,7 @@ import (
 func TestCheckHealth(t *testing.T) {
 	testCases := []struct {
 		name             string
-		state            api.StageState
+		freight          api.Freight
 		argoCDAppUpdates []api.ArgoCDAppUpdate
 		getArgoCDAppFn   func(
 			context.Context,
@@ -203,7 +203,7 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App healthy and synced",
-			state: api.StageState{
+			freight: api.Freight{
 				Commits: []api.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -254,7 +254,7 @@ func TestCheckHealth(t *testing.T) {
 			testCase.assertions(
 				reconciler.checkHealth(
 					context.Background(),
-					testCase.state,
+					testCase.freight,
 					testCase.argoCDAppUpdates,
 				),
 			)

@@ -208,8 +208,8 @@ func TestSerializedSync(t *testing.T) {
 			Namespace: "fake-namespace",
 		},
 		Spec: &api.PromotionSpec{
-			Stage: "fake-stage",
-			State: "fake-state",
+			Stage:   "fake-stage",
+			Freight: "fake-freight",
 		},
 		Status: api.PromotionStatus{
 			Phase: api.PromotionPhasePending,
@@ -283,8 +283,8 @@ func TestGetPromo(t *testing.T) {
 						Namespace: "fake-namespace",
 					},
 					Spec: &api.PromotionSpec{
-						Stage: "fake-stage",
-						State: "fake-state",
+						Stage:   "fake-stage",
+						Freight: "fake-freight",
 					},
 				},
 			).Build(),
@@ -295,8 +295,8 @@ func TestGetPromo(t *testing.T) {
 				require.Equal(
 					t,
 					&api.PromotionSpec{
-						Stage: "fake-stage",
-						State: "fake-state",
+						Stage:   "fake-stage",
+						Freight: "fake-freight",
 					},
 					promo.Spec,
 				)

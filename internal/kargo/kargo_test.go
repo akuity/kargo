@@ -86,9 +86,9 @@ func TestNewPromotion(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			promo := NewPromotion(tc.stage, tc.freight)
 			require.True(t, metav1.IsControlledBy(&promo, &tc.stage))
-			require.Equal(t, tc.freight, promo.Spec.State)
+			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.Equal(t, tc.stage.Name, promo.Spec.Stage)
-			require.Equal(t, tc.freight, promo.Spec.State)
+			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.LessOrEqual(t, len(promo.Name), 253)
 			tc.assertions(t, tc.stage, promo)
 		})

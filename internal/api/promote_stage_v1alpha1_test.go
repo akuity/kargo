@@ -25,7 +25,7 @@ func TestPromoteStage(t *testing.T) {
 		errExpected  bool
 		expectedCode connect.Code
 	}{
-		"empty state": {
+		"empty Freight": {
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "kargo-demo",
 				Name:    "test",
@@ -37,25 +37,25 @@ func TestPromoteStage(t *testing.T) {
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "kargo-demo",
 				Name:    "testx",
-				State:   "73024971ee9c6daac0ad78aea87803bf332cfdb7",
+				Freight: "73024971ee9c6daac0ad78aea87803bf332cfdb7",
 			},
 			errExpected:  true,
 			expectedCode: connect.CodeNotFound,
 		},
-		"existing Stage with non-existing state": {
+		"existing Stage with non-existing Freight": {
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "kargo-demo",
 				Name:    "test",
-				State:   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				Freight: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			},
 			errExpected:  true,
 			expectedCode: connect.CodeNotFound,
 		},
-		"existing Stage": {
+		"existing Freight": {
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "kargo-demo",
 				Name:    "test",
-				State:   "73024971ee9c6daac0ad78aea87803bf332cfdb7",
+				Freight: "73024971ee9c6daac0ad78aea87803bf332cfdb7",
 			},
 		},
 	}
@@ -109,7 +109,7 @@ func TestPromoteStage(t *testing.T) {
 
 			require.True(t, strings.HasPrefix(res.Msg.GetPromotion().GetMetadata().GetName(), ts.req.GetName()+"."))
 			require.Equal(t, ts.req.GetName(), res.Msg.GetPromotion().GetSpec().GetStage())
-			require.Equal(t, ts.req.GetState(), res.Msg.GetPromotion().GetSpec().GetState())
+			require.Equal(t, ts.req.GetFreight(), res.Msg.GetPromotion().GetSpec().GetFreight())
 
 			var actual kubev1alpha1.Promotion
 			require.NoError(t, client.Get(ctx, libClient.ObjectKey{
