@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"golang.org/x/exp/slices"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -15,15 +14,8 @@ import (
 const (
 	StagesByArgoCDApplicationsIndexField   = "applications"
 	PromotionsByStageIndexField            = "stage"
-	OutstandingPromotionsByStageIndexField = PromotionPoliciesByStageIndexField
+	NonTerminalPromotionsByStageIndexField = PromotionsByStageIndexField
 	PromotionPoliciesByStageIndexField     = "stage"
-)
-
-var (
-	NonOutstandingPromotionPhases = []kargoapi.PromotionPhase{
-		kargoapi.PromotionPhaseSucceeded,
-		kargoapi.PromotionPhaseErrored,
-	}
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -73,13 +65,14 @@ func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager, predicates ..
 		indexPromotionsByStage(predicates...))
 }
 
-// IndexOutstandingPromotionsByStage creates index for Promotions in non-terminal states by Stage
-func IndexOutstandingPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
-	return IndexPromotionsByStage(ctx, mgr, filterNonOutstandingPromotionPhases)
+// IndexNonTerminalPromotionsByStage indexes Promotions in non-terminal states
+// by Stage
+func IndexNonTerminalPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
+	return IndexPromotionsByStage(ctx, mgr, isPromotionPhaseNonTerminal)
 }
 
-func filterNonOutstandingPromotionPhases(promo *kargoapi.Promotion) bool {
-	return !slices.Contains(NonOutstandingPromotionPhases, promo.GetStatus().Phase)
+func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
+	return !promo.Status.Phase.IsTerminal()
 }
 
 // indexPromotionsByStage indexes Promotion if all the given predicates

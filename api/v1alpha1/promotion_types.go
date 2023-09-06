@@ -30,6 +30,11 @@ const (
 	PromotionPhaseErrored PromotionPhase = "Errored"
 )
 
+// IsTerminal returns true if the PromotionPhase is a terminal one.
+func (p *PromotionPhase) IsTerminal() bool {
+	return *p == PromotionPhaseSucceeded || *p == PromotionPhaseErrored
+}
+
 //+kubebuilder:resource:shortName={promo,promos}
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

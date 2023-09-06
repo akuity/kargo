@@ -39,7 +39,7 @@ type reconciler struct {
 	// The following behaviors are overridable for testing purposes:
 
 	// Loop guard
-	hasOutstandingPromotionsFn func(
+	hasNonTerminalPromotionsFn func(
 		ctx context.Context,
 		stageNamespace string,
 		stageName string,
@@ -126,7 +126,7 @@ func SetupReconcilerWithManager(
 	shardName string,
 ) error {
 	// Index Promotions in non-terminal states by Stage
-	if err := kubeclient.IndexOutstandingPromotionsByStage(ctx, kargoMgr); err != nil {
+	if err := kubeclient.IndexNonTerminalPromotionsByStage(ctx, kargoMgr); err != nil {
 		return errors.Wrap(err, "index non-terminal Promotions by Stage")
 	}
 
@@ -186,7 +186,7 @@ func newReconciler(
 	// The following default behaviors are overridable for testing purposes:
 
 	// Loop guard:
-	r.hasOutstandingPromotionsFn = r.hasOutstandingPromotions
+	r.hasNonTerminalPromotionsFn = r.hasNonTerminalPromotions
 
 	// Common:
 	r.getArgoCDAppFn = libArgoCD.GetApplication
@@ -291,14 +291,15 @@ func (r *reconciler) syncStage(
 	// this Stage in a non-terminal state. The promotion process and this
 	// reconciliation loop BOTH update Stage status, so this check helps us
 	// to avoid race conditions that may otherwise arise.
-	hasOutstandingPromos, err :=
-		r.hasOutstandingPromotionsFn(ctx, stage.Namespace, stage.Name)
+	hasNonTerminalPromos, err :=
+		r.hasNonTerminalPromotionsFn(ctx, stage.Namespace, stage.Name)
 	if err != nil {
 		return status, err
 	}
-	if hasOutstandingPromos {
+	if hasNonTerminalPromos {
 		logger.Debug(
-			"Stage has outstanding Promotions; skipping this reconciliation loop",
+			"Stage has one or more Promotions in a non-terminal phase; skipping " +
+				"this reconciliation loop",
 		)
 		return status, nil
 	}
@@ -473,7 +474,7 @@ func (r *reconciler) syncStage(
 	return status, nil
 }
 
-func (r *reconciler) hasOutstandingPromotions(
+func (r *reconciler) hasNonTerminalPromotions(
 	ctx context.Context,
 	stageNamespace string,
 	stageName string,
@@ -485,13 +486,13 @@ func (r *reconciler) hasOutstandingPromotions(
 		&client.ListOptions{
 			Namespace: stageNamespace,
 			FieldSelector: fields.Set(map[string]string{
-				kubeclient.OutstandingPromotionsByStageIndexField: stageName,
+				kubeclient.NonTerminalPromotionsByStageIndexField: stageName,
 			}).AsSelector(),
 		},
 	); err != nil {
 		return false, errors.Wrapf(
 			err,
-			"error listing outstanding Promotions for Stage %q in "+
+			"error listing Promotions in non-terminal phases for Stage %q in "+
 				"namespace %q",
 			stageNamespace,
 			stageName,
