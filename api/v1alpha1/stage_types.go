@@ -30,10 +30,38 @@ const (
 type HealthState string
 
 const (
-	HealthStateHealthy   HealthState = "Healthy"
+	// HealthStateHealthy denotes a case where a Stage and its current Freight are
+	// healthy as of the last check.
+	HealthStateHealthy HealthState = "Healthy"
+	// HealthStateUnhealthy denotes a case where a Stage and its current Freight
+	// are unhealthy as of the last check. More information will be available in
+	// the Freight's status.
 	HealthStateUnhealthy HealthState = "Unhealthy"
-	HealthStateUnknown   HealthState = "Unknown"
+	// HealthStateNotApplicable denotes a case where the health of a Stage and its
+	// current Freight are unknown specifically because there is no reasonable
+	// method of assessing health. This could happen, for instance, in the case of
+	// a Stage using Git-based promotion mechanisms only and NOT integrating at
+	// all with Argo CD. In such a case there is no insight into the health of the
+	// Stage and its current Freight. For purposes of Freight becoming eligible to
+	// progress to another Stage, NotApplicable is treated as a kind of
+	// pseudo-Healthy.
+	HealthStateNotApplicable HealthState = "NotApplicable"
+	// HealthStateUnknown denotes a case where the health of a Stage and its
+	// current Freight could not be determined as of the last check. More
+	// information will be available in the Freight's status. Note this represents
+	// a FAILURE to assess health and is a different state from NotApplicable,
+	// which denotes a case wherein there was no reasonable method to assess
+	// health. For purposes of Freight becoming eligible to progress to another
+	// Stage, NotApplicable is treated as a kind of pseudo-Unhealthy.
+	HealthStateUnknown HealthState = "Unknown"
 )
+
+// IsHealthyish returns a bool indicating whether or not a HealthState is
+// considered either healthy OR there was no reasonable expectation to begin
+// with of being able to assess health.
+func (h HealthState) IsHealthyish() bool {
+	return h == HealthStateHealthy || h == HealthStateNotApplicable
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
