@@ -139,7 +139,7 @@ func TestIndexPromotionsByStage(t *testing.T) {
 					Stage: "fake-stage",
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseComplete,
+					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 			expected: []string{"fake-stage"},
@@ -161,7 +161,7 @@ func TestIndexPromotionsByStage(t *testing.T) {
 					Stage: "fake-stage",
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseComplete,
+					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 			predicates: []func(*kargoapi.Promotion) bool{

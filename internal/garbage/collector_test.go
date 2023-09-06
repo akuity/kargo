@@ -301,7 +301,7 @@ func TestCleanProject(t *testing.T) {
 						promos.Items,
 						kargoapi.Promotion{
 							Status: kargoapi.PromotionStatus{
-								Phase: kargoapi.PromotionPhaseComplete,
+								Phase: kargoapi.PromotionPhaseSucceeded,
 							},
 						},
 					)
@@ -361,7 +361,7 @@ func TestCleanProject(t *testing.T) {
 						CreationTimestamp: metav1.NewTime(creationTime),
 					},
 					Status: kargoapi.PromotionStatus{
-						Phase: kargoapi.PromotionPhaseComplete,
+						Phase: kargoapi.PromotionPhaseSucceeded,
 					},
 				},
 			)

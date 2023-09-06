@@ -228,7 +228,7 @@ func (c *collector) cleanProject(ctx context.Context, project string) error {
 	for i := c.cfg.MaxRetainedPromotions; i < len(promos.Items); i++ {
 		promo := promos.Items[i]
 		switch promo.Status.Phase {
-		case kargoapi.PromotionPhaseComplete, kargoapi.PromotionPhaseFailed:
+		case kargoapi.PromotionPhaseSucceeded, kargoapi.PromotionPhaseErrored:
 			promoLogger := logger.WithField("promotion", promo.Name)
 			if err := c.deletePromotionFn(ctx, &promo); err != nil {
 				promoLogger.Errorf("error deleting Promotion: %s", err)

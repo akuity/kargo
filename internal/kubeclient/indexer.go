@@ -21,8 +21,8 @@ const (
 
 var (
 	NonOutstandingPromotionPhases = []kargoapi.PromotionPhase{
-		kargoapi.PromotionPhaseComplete,
-		kargoapi.PromotionPhaseFailed,
+		kargoapi.PromotionPhaseSucceeded,
+		kargoapi.PromotionPhaseErrored,
 	}
 )
 

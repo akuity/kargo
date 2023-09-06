@@ -194,7 +194,7 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 	for _, p := range promos.Items {
 		promo := p // This is to sidestep implicit memory aliasing in this for loop
 		switch promo.Status.Phase {
-		case kargoapi.PromotionPhaseComplete, kargoapi.PromotionPhaseFailed:
+		case kargoapi.PromotionPhaseSucceeded, kargoapi.PromotionPhaseErrored:
 			continue
 		case "":
 			if err := kubeclient.PatchStatus(ctx, r.kargoClient, &promo, func(status *kargoapi.PromotionStatus) {
@@ -324,7 +324,7 @@ func (r *reconciler) serializedSync(
 
 				promoCtx := logging.ContextWithLogger(ctx, logger)
 
-				phase := kargoapi.PromotionPhaseComplete
+				phase := kargoapi.PromotionPhaseSucceeded
 				phaseError := ""
 				if err = r.promoteFn(
 					promoCtx,
@@ -332,7 +332,7 @@ func (r *reconciler) serializedSync(
 					promo.Namespace,
 					promo.Spec.Freight,
 				); err != nil {
-					phase = kargoapi.PromotionPhaseFailed
+					phase = kargoapi.PromotionPhaseErrored
 					phaseError = err.Error()
 					logger.Errorf("error executing Promotion: %s", err)
 				}
@@ -344,7 +344,7 @@ func (r *reconciler) serializedSync(
 					logger.Errorf("error updating Promotion status: %s", err)
 				}
 
-				if promo.Status.Phase == kargoapi.PromotionPhaseComplete && err == nil {
+				if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded && err == nil {
 					logger.Debug("completed Promotion")
 				}
 			}
