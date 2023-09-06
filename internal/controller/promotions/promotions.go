@@ -62,6 +62,7 @@ func SetupReconcilerWithManager(
 			For(&kargoapi.Promotion{}).
 			WithEventFilter(predicate.GenerationChangedPredicate{}).
 			WithEventFilter(shardPredicate).
+			WithOptions(controller.CommonOptions()).
 			Complete(
 				newReconciler(
 					kargoMgr.GetClient(),
