@@ -2,6 +2,7 @@ package promotions
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -326,16 +327,26 @@ func (r *reconciler) serializedSync(
 
 				phase := kargoapi.PromotionPhaseSucceeded
 				phaseError := ""
-				if err = r.promoteFn(
-					promoCtx,
-					promo.Spec.Stage,
-					promo.Namespace,
-					promo.Spec.Freight,
-				); err != nil {
-					phase = kargoapi.PromotionPhaseErrored
-					phaseError = err.Error()
-					logger.Errorf("error executing Promotion: %s", err)
-				}
+
+				func() {
+					defer func() {
+						if err := recover(); err != nil {
+							logger.Errorf("Promotion panic: %v", err)
+							phase = kargoapi.PromotionPhaseErrored
+							phaseError = fmt.Sprintf("%v", err)
+						}
+					}()
+					if err = r.promoteFn(
+						promoCtx,
+						promo.Spec.Stage,
+						promo.Namespace,
+						promo.Spec.Freight,
+					); err != nil {
+						phase = kargoapi.PromotionPhaseErrored
+						phaseError = err.Error()
+						logger.Errorf("error executing Promotion: %s", err)
+					}
+				}()
 
 				if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 					status.Phase = phase
