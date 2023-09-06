@@ -48,7 +48,7 @@ func TestNewStageReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestCommitIDFn)
 }
 
-func TestSync(t *testing.T) {
+func TestSyncStage(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
@@ -136,11 +136,50 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "no subscriptions",
+			name: "health checked and no subscriptions",
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{},
+				// Needs to not be nil for a health check to occur
+				PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+			},
+			initialStatus: kargoapi.StageStatus{
+				// Needs to not be nil for a health check to occur
+				CurrentFreight: &kargoapi.Freight{},
+			},
+			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			checkHealthFn: func(
+				context.Context,
+				kargoapi.Freight,
+				[]kargoapi.ArgoCDAppUpdate,
+			) kargoapi.Health {
+				return kargoapi.Health{
+					Status: kargoapi.HealthStateUnhealthy,
+				}
+			},
+			assertions: func(initialStatus, newStatus kargoapi.StageStatus, client client.Client, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.HealthStateUnhealthy,
+					newStatus.CurrentFreight.Health.Status,
+				)
+				require.Len(t, newStatus.History, 1)
+				require.Equal(t, *newStatus.CurrentFreight, newStatus.History[0])
+				// Status should be otherwise unchanged
+				newStatus.CurrentFreight = initialStatus.CurrentFreight
+				newStatus.History = initialStatus.History
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "health not checked and no subscriptions",
 			spec: kargoapi.StageSpec{
 				Subscriptions: &kargoapi.Subscriptions{},
 			},
-			initialStatus:              kargoapi.StageStatus{},
+			initialStatus: kargoapi.StageStatus{
+				CurrentFreight: &kargoapi.Freight{},
+			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
@@ -149,7 +188,17 @@ func TestSync(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				// Status should be returned unchanged
+				// Healthy by default when there are no promotion mechanisms
+				require.Equal(
+					t,
+					kargoapi.HealthStateHealthy,
+					newStatus.CurrentFreight.Health.Status,
+				)
+				require.Len(t, newStatus.History, 1)
+				require.Equal(t, *newStatus.CurrentFreight, newStatus.History[0])
+				// Status should be otherwise unchanged
+				newStatus.CurrentFreight = initialStatus.CurrentFreight
+				newStatus.History = initialStatus.History
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
@@ -273,15 +322,6 @@ func TestSync(t *testing.T) {
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
-			checkHealthFn: func(
-				context.Context,
-				kargoapi.Freight,
-				[]kargoapi.ArgoCDAppUpdate,
-			) kargoapi.Health {
-				return kargoapi.Health{
-					Status: kargoapi.HealthStateHealthy,
-				}
-			},
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
