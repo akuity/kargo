@@ -31,7 +31,7 @@
                     "type": "string"
                   },
                   "appNamespace": {
-                    "description": "AppNamespace specifies the namespace of an Argo CD Application resource to be updated. If left unspecified, the namespace of this Application resource is defaulted to that of the Stage. \n TODO: This should default to Argo CD's namespace instead.",
+                    "description": "AppNamespace specifies the namespace of an Argo CD Application resource to be updated. If left unspecified, the namespace of this Application resource will use the value of ARGOCD_NAMESPACE or \"argocd\"",
                     "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
                     "type": "string"
                   },

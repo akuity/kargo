@@ -41,24 +41,9 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
-	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+func (w *webhook) Default(_ context.Context, _ runtime.Object) error {
 	// Note that defaults are applied BEFORE validation, so we do not have the
 	// luxury of assuming certain required fields must be non-nil.
-	if stage.Spec != nil {
-
-		if stage.Spec.PromotionMechanisms != nil {
-			// Default namespace for Argo CD Applications we update
-			for i := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-				if stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace == "" {
-					stage.Spec.PromotionMechanisms.ArgoCDAppUpdates[i].AppNamespace =
-						stage.Namespace
-				}
-			}
-		}
-
-	}
-
 	return nil
 }
 
