@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
@@ -24,7 +24,7 @@ func (s *server) ListPromotionPolicies(
 		return nil, err
 	}
 
-	var list kubev1alpha1.PromotionPolicyList
+	var list kargoapi.PromotionPolicyList
 	if err := s.client.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

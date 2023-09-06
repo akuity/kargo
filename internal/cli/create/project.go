@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -26,7 +26,7 @@ func createProject(
 	}
 
 	var project unstructured.Unstructured
-	project.SetAPIVersion(kubev1alpha1.GroupVersion.String())
+	project.SetAPIVersion(kargoapi.GroupVersion.String())
 	project.SetKind("Project")
 	project.SetCreationTimestamp(metav1.NewTime(resp.Msg.GetProject().GetCreateTime().AsTime()))
 	project.SetName(resp.Msg.GetProject().GetName())

@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 )
@@ -23,7 +23,7 @@ func TestGetLatestCharts(t *testing.T) {
 			string,
 			*helm.Credentials,
 		) (string, error)
-		assertions func([]api.Chart, error)
+		assertions func([]kargoapi.Chart, error)
 	}{
 		{
 			name: "error getting registry credentials",
@@ -38,7 +38,7 @@ func TestGetLatestCharts(t *testing.T) {
 						errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []api.Chart, err error) {
+			assertions: func(_ []kargoapi.Chart, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -70,7 +70,7 @@ func TestGetLatestCharts(t *testing.T) {
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
-			assertions: func(_ []api.Chart, err error) {
+			assertions: func(_ []kargoapi.Chart, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -102,7 +102,7 @@ func TestGetLatestCharts(t *testing.T) {
 			) (string, error) {
 				return "", nil
 			},
-			assertions: func(_ []api.Chart, err error) {
+			assertions: func(_ []kargoapi.Chart, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "found no suitable version of chart")
 			},
@@ -129,12 +129,12 @@ func TestGetLatestCharts(t *testing.T) {
 			) (string, error) {
 				return "1.0.0", nil
 			},
-			assertions: func(charts []api.Chart, err error) {
+			assertions: func(charts []kargoapi.Chart, err error) {
 				require.NoError(t, err)
 				require.Len(t, charts, 1)
 				require.Equal(
 					t,
-					api.Chart{
+					kargoapi.Chart{
 						RegistryURL: "fake-url",
 						Name:        "fake-chart",
 						Version:     "1.0.0",
@@ -144,7 +144,7 @@ func TestGetLatestCharts(t *testing.T) {
 			},
 		},
 	}
-	testSubs := []api.ChartSubscription{
+	testSubs := []kargoapi.ChartSubscription{
 		{
 			RegistryURL: "fake-url",
 			Name:        "fake-chart",

@@ -7,8 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 )
 
@@ -23,13 +22,13 @@ func TestNewPromotion(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name       string
-		stage      api.Stage
+		stage      kargoapi.Stage
 		freight    string
-		assertions func(*testing.T, api.Stage, kubev1alpha1.Promotion)
+		assertions func(*testing.T, kargoapi.Stage, kargoapi.Promotion)
 	}{
 		{
 			name: "Promote stage",
-			stage: api.Stage{
+			stage: kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       "80b44831-ac8d-4900-9df9-ee95f80c0fae",
 					Name:      "test",
@@ -37,7 +36,7 @@ func TestNewPromotion(t *testing.T) {
 				},
 			},
 			freight: testFreight,
-			assertions: func(t *testing.T, stage api.Stage, promo kubev1alpha1.Promotion) {
+			assertions: func(t *testing.T, stage kargoapi.Stage, promo kargoapi.Promotion) {
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, "test", parts[0])
 				require.Equal(t, testFreight[0:7], parts[2])
@@ -45,7 +44,7 @@ func TestNewPromotion(t *testing.T) {
 		},
 		{
 			name: "Promote stage with shard",
-			stage: api.Stage{
+			stage: kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       "80b44831-ac8d-4900-9df9-ee95f80c0fae",
 					Name:      "test",
@@ -56,7 +55,7 @@ func TestNewPromotion(t *testing.T) {
 				},
 			},
 			freight: testFreight,
-			assertions: func(t *testing.T, stage api.Stage, promo kubev1alpha1.Promotion) {
+			assertions: func(t *testing.T, stage kargoapi.Stage, promo kargoapi.Promotion) {
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, "test", parts[0])
 				require.Equal(t, testFreight[0:7], parts[2])
@@ -65,7 +64,7 @@ func TestNewPromotion(t *testing.T) {
 		},
 		{
 			name: "Promote stage with very long name",
-			stage: api.Stage{
+			stage: kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       "80b44831-ac8d-4900-9df9-ee95f80c0fae",
 					Name:      veryLongResourceName,
@@ -73,7 +72,7 @@ func TestNewPromotion(t *testing.T) {
 				},
 			},
 			freight: testFreight,
-			assertions: func(t *testing.T, stage api.Stage, promo kubev1alpha1.Promotion) {
+			assertions: func(t *testing.T, stage kargoapi.Stage, promo kargoapi.Promotion) {
 				require.Len(t, promo.Name, 253)
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, veryLongResourceName[0:maxStageNamePrefixLength], parts[0])

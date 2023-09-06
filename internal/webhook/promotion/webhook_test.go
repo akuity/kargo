@@ -11,38 +11,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestValidateCreate(t *testing.T) {
 	w := &webhook{
-		authorizeFn: func(context.Context, *api.Promotion, string) error {
+		authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 			return nil // Always authorize
 		},
-		validateProjectFn: func(context.Context, *api.Promotion) error {
+		validateProjectFn: func(context.Context, *kargoapi.Promotion) error {
 			return nil // Skip validation
 		},
 	}
-	require.NoError(t, w.ValidateCreate(context.Background(), &api.Promotion{}))
+	require.NoError(t, w.ValidateCreate(context.Background(), &kargoapi.Promotion{}))
 }
 
 func TestValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name        string
-		setup       func() (*api.Promotion, *api.Promotion)
+		setup       func() (*kargoapi.Promotion, *kargoapi.Promotion)
 		authorizeFn func(
 			ctx context.Context,
-			promo *api.Promotion,
+			promo *kargoapi.Promotion,
 			action string,
 		) error
 		assertions func(error)
 	}{
 		{
 			name: "authorization error",
-			setup: func() (*api.Promotion, *api.Promotion) {
-				return &api.Promotion{}, &api.Promotion{}
+			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
+				return &kargoapi.Promotion{}, &kargoapi.Promotion{}
 			},
-			authorizeFn: func(context.Context, *api.Promotion, string) error {
+			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 				return errors.New("something went wrong")
 			},
 			assertions: func(err error) {
@@ -53,13 +53,13 @@ func TestValidateUpdate(t *testing.T) {
 
 		{
 			name: "attempt to mutate",
-			setup: func() (*api.Promotion, *api.Promotion) {
-				oldPromo := &api.Promotion{
+			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
+				oldPromo := &kargoapi.Promotion{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
-					Spec: &api.PromotionSpec{
+					Spec: &kargoapi.PromotionSpec{
 						Stage:   "fake-stage",
 						Freight: "fake-freight",
 					},
@@ -68,7 +68,7 @@ func TestValidateUpdate(t *testing.T) {
 				newPromo.Spec.Freight = "another-fake-freight"
 				return oldPromo, newPromo
 			},
-			authorizeFn: func(context.Context, *api.Promotion, string) error {
+			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 				return nil
 			},
 			assertions: func(err error) {
@@ -80,13 +80,13 @@ func TestValidateUpdate(t *testing.T) {
 
 		{
 			name: "update without mutation",
-			setup: func() (*api.Promotion, *api.Promotion) {
-				oldPromo := &api.Promotion{
+			setup: func() (*kargoapi.Promotion, *kargoapi.Promotion) {
+				oldPromo := &kargoapi.Promotion{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
-					Spec: &api.PromotionSpec{
+					Spec: &kargoapi.PromotionSpec{
 						Stage:   "fake-stage",
 						Freight: "fake-freight",
 					},
@@ -94,7 +94,7 @@ func TestValidateUpdate(t *testing.T) {
 				newPromo := oldPromo.DeepCopy()
 				return oldPromo, newPromo
 			},
-			authorizeFn: func(context.Context, *api.Promotion, string) error {
+			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 				return nil
 			},
 			assertions: func(err error) {
@@ -106,7 +106,7 @@ func TestValidateUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := &webhook{
 				authorizeFn: testCase.authorizeFn,
-				validateProjectFn: func(context.Context, *api.Promotion) error {
+				validateProjectFn: func(context.Context, *kargoapi.Promotion) error {
 					return nil // Skip validation
 				},
 			}
@@ -120,14 +120,14 @@ func TestValidateUpdate(t *testing.T) {
 
 func TestValidateDelete(t *testing.T) {
 	w := &webhook{
-		authorizeFn: func(context.Context, *api.Promotion, string) error {
+		authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 			return nil // Always authorize
 		},
-		validateProjectFn: func(context.Context, *api.Promotion) error {
+		validateProjectFn: func(context.Context, *kargoapi.Promotion) error {
 			return nil // Skip validation
 		},
 	}
-	require.NoError(t, w.ValidateDelete(context.Background(), &api.Promotion{}))
+	require.NoError(t, w.ValidateDelete(context.Background(), &kargoapi.Promotion{}))
 }
 
 func TestAuthorize(t *testing.T) {
@@ -225,12 +225,12 @@ func TestAuthorize(t *testing.T) {
 			testCase.assertions(
 				w.authorize(
 					context.Background(),
-					&api.Promotion{
+					&kargoapi.Promotion{
 						ObjectMeta: v1.ObjectMeta{
 							Name:      "fake-promotion",
 							Namespace: "fake-namespace",
 						},
-						Spec: &api.PromotionSpec{
+						Spec: &kargoapi.PromotionSpec{
 							Stage: "fake-stage",
 						},
 					},

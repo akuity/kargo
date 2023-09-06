@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/akuity/bookkeeper"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
@@ -58,7 +58,7 @@ func SetupReconcilerWithManager(
 
 	return errors.Wrap(
 		ctrl.NewControllerManagedBy(kargoMgr).
-			For(&api.Promotion{}).
+			For(&kargoapi.Promotion{}).
 			WithEventFilter(predicate.GenerationChangedPredicate{}).
 			WithEventFilter(shardPredicate).
 			Complete(
@@ -162,7 +162,7 @@ func (r *reconciler) Reconcile(
 
 	newStatus := r.syncPromo(ctx, promo)
 
-	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *api.PromotionStatus) {
+	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = newStatus
 	})
 	if updateErr != nil {
@@ -186,7 +186,7 @@ func (r *reconciler) Reconcile(
 // It is also assumed that the caller has already obtained a lock on
 // promoQueuesByStageMu.
 func (r *reconciler) initializeQueues(ctx context.Context) error {
-	promos := api.PromotionList{}
+	promos := kargoapi.PromotionList{}
 	if err := r.kargoClient.List(ctx, &promos); err != nil {
 		return errors.Wrap(err, "error listing promotions")
 	}
@@ -194,11 +194,11 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 	for _, p := range promos.Items {
 		promo := p // This is to sidestep implicit memory aliasing in this for loop
 		switch promo.Status.Phase {
-		case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
+		case kargoapi.PromotionPhaseComplete, kargoapi.PromotionPhaseFailed:
 			continue
 		case "":
-			if err := kubeclient.PatchStatus(ctx, r.kargoClient, &promo, func(status *api.PromotionStatus) {
-				status.Phase = api.PromotionPhasePending
+			if err := kubeclient.PatchStatus(ctx, r.kargoClient, &promo, func(status *kargoapi.PromotionStatus) {
+				status.Phase = kargoapi.PromotionPhasePending
 			}); err != nil {
 				return errors.Wrapf(
 					err,
@@ -243,8 +243,8 @@ func (r *reconciler) initializeQueues(ctx context.Context) error {
 // functions assumes the caller has obtained a lock on promoQueuesByStageMu.
 func (r *reconciler) syncPromo(
 	ctx context.Context,
-	promo *api.Promotion,
-) api.PromotionStatus {
+	promo *kargoapi.Promotion,
+) kargoapi.PromotionStatus {
 	status := *promo.Status.DeepCopy()
 
 	// Only deal with brand new Promotions
@@ -263,7 +263,7 @@ func (r *reconciler) syncPromo(
 		r.promoQueuesByStage[stage] = pq
 	}
 
-	status.Phase = api.PromotionPhasePending
+	status.Phase = kargoapi.PromotionPhasePending
 
 	// Ignore any errors from this operation. Errors can only occur when you
 	// try to push a nil onto the queue and we know we're not doing that.
@@ -293,7 +293,7 @@ func (r *reconciler) serializedSync(
 		}
 		for _, pq := range r.promoQueuesByStage {
 			if popped := pq.Pop(); popped != nil {
-				promo := popped.(*api.Promotion) // nolint: forcetypeassert
+				promo := popped.(*kargoapi.Promotion) // nolint: forcetypeassert
 
 				logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 					"promotion": promo.Name,
@@ -312,7 +312,7 @@ func (r *reconciler) serializedSync(
 					logger.Error("error finding Promotion")
 					continue
 				}
-				if promo == nil || promo.Status.Phase != api.PromotionPhasePending {
+				if promo == nil || promo.Status.Phase != kargoapi.PromotionPhasePending {
 					continue
 				}
 
@@ -324,7 +324,7 @@ func (r *reconciler) serializedSync(
 
 				promoCtx := logging.ContextWithLogger(ctx, logger)
 
-				phase := api.PromotionPhaseComplete
+				phase := kargoapi.PromotionPhaseComplete
 				phaseError := ""
 				if err = r.promoteFn(
 					promoCtx,
@@ -332,19 +332,19 @@ func (r *reconciler) serializedSync(
 					promo.Namespace,
 					promo.Spec.Freight,
 				); err != nil {
-					phase = api.PromotionPhaseFailed
+					phase = kargoapi.PromotionPhaseFailed
 					phaseError = err.Error()
 					logger.Errorf("error executing Promotion: %s", err)
 				}
 
-				if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *api.PromotionStatus) {
+				if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 					status.Phase = phase
 					status.Error = phaseError
 				}); err != nil {
 					logger.Errorf("error updating Promotion status: %s", err)
 				}
 
-				if promo.Status.Phase == api.PromotionPhaseComplete && err == nil {
+				if promo.Status.Phase == kargoapi.PromotionPhaseComplete && err == nil {
 					logger.Debug("completed Promotion")
 				}
 			}
@@ -360,7 +360,7 @@ func (r *reconciler) promote(
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	stage, err := api.GetStage(
+	stage, err := kargoapi.GetStage(
 		ctx,
 		r.kargoClient,
 		types.NamespacedName{
@@ -392,7 +392,7 @@ func (r *reconciler) promote(
 	}
 
 	var targetFreightIndex int
-	var targetFreight *api.Freight
+	var targetFreight *kargoapi.Freight
 	for i, availableFreight := range stage.Status.AvailableFreight {
 		if availableFreight.ID == freightID {
 			targetFreightIndex = i
@@ -417,7 +417,7 @@ func (r *reconciler) promote(
 
 	// The assumption is that controller does not process multiple promotions in one stage
 	// so we are safe from race conditions and can just update the status
-	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *api.StageStatus) {
+	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
 		status.CurrentFreight = &nextFreight
 		status.AvailableFreight[targetFreightIndex] = nextFreight
 		status.History.Push(nextFreight)
@@ -437,8 +437,8 @@ func (r *reconciler) promote(
 func (r *reconciler) getPromo(
 	ctx context.Context,
 	namespacedName types.NamespacedName,
-) (*api.Promotion, error) {
-	promo := api.Promotion{}
+) (*kargoapi.Promotion, error) {
+	promo := kargoapi.Promotion{}
 	if err := r.kargoClient.Get(ctx, namespacedName, &promo); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			logging.LoggerFromContext(ctx).WithFields(log.Fields{

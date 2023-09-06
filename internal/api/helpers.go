@@ -8,13 +8,13 @@ import (
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 )
 
 // getStage is a helper to get a stage by namespace/name
-func getStage(ctx context.Context, kc kubernetes.Client, project string, name string) (*kubev1alpha1.Stage, error) {
-	var stage kubev1alpha1.Stage
+func getStage(ctx context.Context, kc kubernetes.Client, project string, name string) (*kargoapi.Stage, error) {
+	var stage kargoapi.Stage
 	objKey := client.ObjectKey{
 		Namespace: project,
 		Name:      name,

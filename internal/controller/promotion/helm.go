@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	libYAML "github.com/akuity/kargo/internal/yaml"
@@ -33,8 +33,8 @@ func newHelmMechanism(
 }
 
 // selectHelmUpdates returns a subset of the given updates that involve Helm.
-func selectHelmUpdates(updates []api.GitRepoUpdate) []api.GitRepoUpdate {
-	var selectedUpdates []api.GitRepoUpdate
+func selectHelmUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
+	var selectedUpdates []kargoapi.GitRepoUpdate
 	for _, update := range updates {
 		if update.Helm != nil {
 			selectedUpdates = append(selectedUpdates, update)
@@ -47,13 +47,13 @@ func selectHelmUpdates(updates []api.GitRepoUpdate) []api.GitRepoUpdate {
 // functions that are used in the implementation of the apply() function.
 type helmer struct {
 	buildValuesFilesChangesFn func(
-		[]api.Image,
-		[]api.HelmImageUpdate,
+		[]kargoapi.Image,
+		[]kargoapi.HelmImageUpdate,
 	) (map[string]map[string]string, []string)
 	buildChartDependencyChangesFn func(
 		string,
-		[]api.Chart,
-		[]api.HelmChartDependencyUpdate,
+		[]kargoapi.Chart,
+		[]kargoapi.HelmChartDependencyUpdate,
 	) (map[string]map[string]string, []string, error)
 	setStringsInYAMLFileFn    func(file string, changes map[string]string) error
 	updateChartDependenciesFn func(homeDir, chartPath string) error
@@ -62,8 +62,8 @@ type helmer struct {
 // apply uses Helm to carry out the provided update in the specified working
 // directory.
 func (h *helmer) apply(
-	update api.GitRepoUpdate,
-	newFreight api.Freight,
+	update kargoapi.GitRepoUpdate,
+	newFreight kargoapi.Freight,
 	homeDir string,
 	workingDir string,
 ) ([]string, error) {
@@ -119,8 +119,8 @@ func (h *helmer) apply(
 // into a map of maps that indexes new values for each YAML file by file name
 // and key.
 func buildValuesFilesChanges(
-	images []api.Image,
-	imageUpdates []api.HelmImageUpdate,
+	images []kargoapi.Image,
+	imageUpdates []kargoapi.HelmImageUpdate,
 ) (map[string]map[string]string, []string) {
 	tagsByImage := map[string]string{}
 	for _, image := range images {
@@ -130,8 +130,8 @@ func buildValuesFilesChanges(
 	changesByFile := map[string]map[string]string{}
 	changeSummary := []string{}
 	for _, imageUpdate := range imageUpdates {
-		if imageUpdate.Value != api.ImageUpdateValueTypeImage &&
-			imageUpdate.Value != api.ImageUpdateValueTypeTag {
+		if imageUpdate.Value != kargoapi.ImageUpdateValueTypeImage &&
+			imageUpdate.Value != kargoapi.ImageUpdateValueTypeTag {
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
@@ -143,7 +143,7 @@ func buildValuesFilesChanges(
 		if _, found = changesByFile[imageUpdate.ValuesFilePath]; !found {
 			changesByFile[imageUpdate.ValuesFilePath] = map[string]string{}
 		}
-		if imageUpdate.Value == api.ImageUpdateValueTypeImage {
+		if imageUpdate.Value == kargoapi.ImageUpdateValueTypeImage {
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
 				fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 		} else {
@@ -169,8 +169,8 @@ func buildValuesFilesChanges(
 // file name and key.
 func buildChartDependencyChanges(
 	repoDir string,
-	charts []api.Chart,
-	chartUpdates []api.HelmChartDependencyUpdate,
+	charts []kargoapi.Chart,
+	chartUpdates []kargoapi.HelmChartDependencyUpdate,
 ) (map[string]map[string]string, []string, error) {
 	// Build a table of charts --> versions
 	versionsByChart := map[string]string{}

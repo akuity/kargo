@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/bookkeeper/pkg/git"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -21,7 +21,7 @@ func TestGetLatestCommits(t *testing.T) {
 			string,
 			*git.RepoCredentials,
 		) (string, error)
-		assertions func(commits []api.GitCommit, err error)
+		assertions func(commits []kargoapi.GitCommit, err error)
 	}{
 		{
 			name: "error getting repo credentials",
@@ -36,7 +36,7 @@ func TestGetLatestCommits(t *testing.T) {
 						errors.New("something went wrong")
 				},
 			},
-			assertions: func(commits []api.GitCommit, err error) {
+			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -67,7 +67,7 @@ func TestGetLatestCommits(t *testing.T) {
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
-			assertions: func(commits []api.GitCommit, err error) {
+			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -98,12 +98,12 @@ func TestGetLatestCommits(t *testing.T) {
 			) (string, error) {
 				return "fake-commit", nil
 			},
-			assertions: func(commits []api.GitCommit, err error) {
+			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.NoError(t, err)
 				require.Len(t, commits, 1)
 				require.Equal(
 					t,
-					api.GitCommit{
+					kargoapi.GitCommit{
 						RepoURL: "fake-url",
 						ID:      "fake-commit",
 					},
@@ -122,7 +122,7 @@ func TestGetLatestCommits(t *testing.T) {
 				r.getLatestCommits(
 					context.Background(),
 					"fake-namespace",
-					[]api.GitSubscription{
+					[]kargoapi.GitSubscription{
 						{
 							RepoURL: "fake-url",
 						},

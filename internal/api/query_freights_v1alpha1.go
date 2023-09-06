@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	apiv1alpha1 "github.com/akuity/kargo/pkg/api/v1alpha1"
@@ -38,15 +38,15 @@ func (s *server) QueryFreight(
 		return nil, err
 	}
 
-	var stages []kubev1alpha1.Stage
+	var stages []kargoapi.Stage
 	if req.Msg.GetStage() != "" {
 		stage, err := getStage(ctx, s.client, req.Msg.GetProject(), req.Msg.GetStage())
 		if err != nil {
 			return nil, err
 		}
-		stages = []kubev1alpha1.Stage{*stage}
+		stages = []kargoapi.Stage{*stage}
 	} else {
-		var list kubev1alpha1.StageList
+		var list kargoapi.StageList
 		if err := s.client.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
@@ -68,11 +68,11 @@ func (s *server) QueryFreight(
 func addToGroups(
 	req *svcv1alpha1.QueryFreightRequest,
 	groups map[string]*svcv1alpha1.FreightList,
-	stage kubev1alpha1.Stage,
+	stage kargoapi.Stage,
 	seen map[string]bool,
 ) {
 
-	appendToStageGroups := func(stack kubev1alpha1.FreightStack) {
+	appendToStageGroups := func(stack kargoapi.FreightStack) {
 		for _, f := range stack {
 			if seen[f.ID] {
 				continue
@@ -111,7 +111,7 @@ func addToGroups(
 	appendToStageGroups(stage.Status.History)
 }
 
-func appendToFreightList(list *svcv1alpha1.FreightList, f kubev1alpha1.Freight) *svcv1alpha1.FreightList {
+func appendToFreightList(list *svcv1alpha1.FreightList, f kargoapi.Freight) *svcv1alpha1.FreightList {
 	if list == nil {
 		list = &svcv1alpha1.FreightList{}
 	}

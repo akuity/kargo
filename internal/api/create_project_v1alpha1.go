@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -31,7 +31,7 @@ func (s *server) CreateProject(
 			return nil, connect.NewError(connect.CodeInternal,
 				errors.Wrap(err, "get existing namespace"))
 		}
-		if existingNs.GetLabels()[v1alpha1.LabelProjectKey] == v1alpha1.LabelTrueValue {
+		if existingNs.GetLabels()[kargoapi.LabelProjectKey] == kargoapi.LabelTrueValue {
 			return nil, connect.NewError(connect.CodeAlreadyExists,
 				errors.Errorf("project %q already exists", name))
 		}
@@ -42,7 +42,7 @@ func (s *server) CreateProject(
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				v1alpha1.LabelProjectKey: v1alpha1.LabelTrueValue,
+				kargoapi.LabelProjectKey: kargoapi.LabelTrueValue,
 			},
 			Name: name,
 		},

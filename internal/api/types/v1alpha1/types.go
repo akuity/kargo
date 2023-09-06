@@ -6,7 +6,7 @@ import (
 	kubemetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesmetav1 "github.com/akuity/kargo/internal/api/types/metav1"
 	"github.com/akuity/kargo/internal/version"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -18,18 +18,18 @@ func FromProjectProto(p *svcv1alpha1.Project) *unstructured.Unstructured {
 		return nil
 	}
 	u := &unstructured.Unstructured{}
-	u.SetAPIVersion(kubev1alpha1.GroupVersion.String())
+	u.SetAPIVersion(kargoapi.GroupVersion.String())
 	u.SetKind("Project")
 	u.SetCreationTimestamp(kubemetav1.NewTime(p.GetCreateTime().AsTime()))
 	u.SetName(p.GetName())
 	return u
 }
 
-func FromStageProto(s *v1alpha1.Stage) *kubev1alpha1.Stage {
+func FromStageProto(s *v1alpha1.Stage) *kargoapi.Stage {
 	if s == nil {
 		return nil
 	}
-	var status kubev1alpha1.StageStatus
+	var status kargoapi.StageStatus
 	if s.GetStatus() != nil {
 		status = *FromStageStatusProto(s.GetStatus())
 	}
@@ -37,9 +37,9 @@ func FromStageProto(s *v1alpha1.Stage) *kubev1alpha1.Stage {
 	if s.GetMetadata() != nil {
 		objectMeta = *typesmetav1.FromObjectMetaProto(s.GetMetadata())
 	}
-	return &kubev1alpha1.Stage{
+	return &kargoapi.Stage{
 		TypeMeta: kubemetav1.TypeMeta{
-			APIVersion: kubev1alpha1.GroupVersion.String(),
+			APIVersion: kargoapi.GroupVersion.String(),
 			Kind:       "Stage",
 		},
 		ObjectMeta: objectMeta,
@@ -48,26 +48,26 @@ func FromStageProto(s *v1alpha1.Stage) *kubev1alpha1.Stage {
 	}
 }
 
-func FromStageSpecProto(s *v1alpha1.StageSpec) *kubev1alpha1.StageSpec {
-	return &kubev1alpha1.StageSpec{
+func FromStageSpecProto(s *v1alpha1.StageSpec) *kargoapi.StageSpec {
+	return &kargoapi.StageSpec{
 		Subscriptions:       FromSubscriptionsProto(s.GetSubscriptions()),
 		PromotionMechanisms: FromPromotionMechanismsProto(s.GetPromotionMechanisms()),
 	}
 }
 
-func FromStageStatusProto(s *v1alpha1.StageStatus) *kubev1alpha1.StageStatus {
+func FromStageStatusProto(s *v1alpha1.StageStatus) *kargoapi.StageStatus {
 	if s == nil {
 		return nil
 	}
-	availableFreight := make(kubev1alpha1.FreightStack, len(s.GetAvailableFreight()))
+	availableFreight := make(kargoapi.FreightStack, len(s.GetAvailableFreight()))
 	for idx, freight := range s.GetAvailableFreight() {
 		availableFreight[idx] = *FromFreightProto(freight)
 	}
-	history := make(kubev1alpha1.FreightStack, len(s.GetHistory()))
+	history := make(kargoapi.FreightStack, len(s.GetHistory()))
 	for idx, freight := range s.GetHistory() {
 		history[idx] = *FromFreightProto(freight)
 	}
-	return &kubev1alpha1.StageStatus{
+	return &kargoapi.StageStatus{
 		AvailableFreight: availableFreight,
 		CurrentFreight:   FromFreightProto(s.GetCurrentFreight()),
 		History:          history,
@@ -75,7 +75,7 @@ func FromStageStatusProto(s *v1alpha1.StageStatus) *kubev1alpha1.StageStatus {
 	}
 }
 
-func FromFreightProto(s *v1alpha1.Freight) *kubev1alpha1.Freight {
+func FromFreightProto(s *v1alpha1.Freight) *kargoapi.Freight {
 	if s == nil {
 		return nil
 	}
@@ -84,19 +84,19 @@ func FromFreightProto(s *v1alpha1.Freight) *kubev1alpha1.Freight {
 		fs := kubemetav1.NewTime(s.GetFirstSeen().AsTime())
 		firstSeen = &fs
 	}
-	commits := make([]kubev1alpha1.GitCommit, len(s.GetCommits()))
+	commits := make([]kargoapi.GitCommit, len(s.GetCommits()))
 	for idx, commit := range s.GetCommits() {
 		commits[idx] = *FromGitCommitProto(commit)
 	}
-	images := make([]kubev1alpha1.Image, len(s.GetImages()))
+	images := make([]kargoapi.Image, len(s.GetImages()))
 	for idx, image := range s.GetImages() {
 		images[idx] = *FromImageProto(image)
 	}
-	charts := make([]kubev1alpha1.Chart, len(s.GetCharts()))
+	charts := make([]kargoapi.Chart, len(s.GetCharts()))
 	for idx, chart := range s.GetCharts() {
 		charts[idx] = *FromChartProto(chart)
 	}
-	return &kubev1alpha1.Freight{
+	return &kargoapi.Freight{
 		ID:         s.GetId(),
 		FirstSeen:  firstSeen,
 		Provenance: s.GetProvenance(),
@@ -107,11 +107,11 @@ func FromFreightProto(s *v1alpha1.Freight) *kubev1alpha1.Freight {
 	}
 }
 
-func FromGitCommitProto(g *v1alpha1.GitCommit) *kubev1alpha1.GitCommit {
+func FromGitCommitProto(g *v1alpha1.GitCommit) *kargoapi.GitCommit {
 	if g == nil {
 		return nil
 	}
-	return &kubev1alpha1.GitCommit{
+	return &kargoapi.GitCommit{
 		RepoURL:           g.GetRepoUrl(),
 		ID:                g.GetId(),
 		Branch:            g.GetBranch(),
@@ -119,101 +119,101 @@ func FromGitCommitProto(g *v1alpha1.GitCommit) *kubev1alpha1.GitCommit {
 	}
 }
 
-func FromImageProto(i *v1alpha1.Image) *kubev1alpha1.Image {
+func FromImageProto(i *v1alpha1.Image) *kargoapi.Image {
 	if i == nil {
 		return nil
 	}
-	return &kubev1alpha1.Image{
+	return &kargoapi.Image{
 		RepoURL: i.GetRepoUrl(),
 		Tag:     i.GetTag(),
 	}
 }
 
-func FromChartProto(c *v1alpha1.Chart) *kubev1alpha1.Chart {
+func FromChartProto(c *v1alpha1.Chart) *kargoapi.Chart {
 	if c == nil {
 		return nil
 	}
-	return &kubev1alpha1.Chart{
+	return &kargoapi.Chart{
 		RegistryURL: c.GetRegistryUrl(),
 		Name:        c.GetName(),
 		Version:     c.GetVersion(),
 	}
 }
 
-func FromHealthProto(h *v1alpha1.Health) *kubev1alpha1.Health {
+func FromHealthProto(h *v1alpha1.Health) *kargoapi.Health {
 	if h == nil {
 		return nil
 	}
 
-	status := kubev1alpha1.HealthStateUnknown
+	status := kargoapi.HealthStateUnknown
 	switch h.GetStatus() {
 	case v1alpha1.HealthState_HEALTH_STATE_UNKNOWN:
-		status = kubev1alpha1.HealthStateUnknown
+		status = kargoapi.HealthStateUnknown
 	case v1alpha1.HealthState_HEALTH_STATE_HEALTHY:
-		status = kubev1alpha1.HealthStateHealthy
+		status = kargoapi.HealthStateHealthy
 	case v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY:
-		status = kubev1alpha1.HealthStateUnhealthy
+		status = kargoapi.HealthStateUnhealthy
 	}
-	return &kubev1alpha1.Health{
+	return &kargoapi.Health{
 		Status: status,
 		Issues: h.GetIssues(),
 	}
 }
 
-func FromSubscriptionsProto(s *v1alpha1.Subscriptions) *kubev1alpha1.Subscriptions {
+func FromSubscriptionsProto(s *v1alpha1.Subscriptions) *kargoapi.Subscriptions {
 	if s == nil {
 		return nil
 	}
-	upstreamStages := make([]kubev1alpha1.StageSubscription, len(s.GetUpstreamStages()))
+	upstreamStages := make([]kargoapi.StageSubscription, len(s.GetUpstreamStages()))
 	for idx, stage := range s.GetUpstreamStages() {
 		upstreamStages[idx] = *FromStageSubscriptionProto(stage)
 	}
-	return &kubev1alpha1.Subscriptions{
+	return &kargoapi.Subscriptions{
 		Repos:          FromRepoSubscriptionsProto(s.GetRepos()),
 		UpstreamStages: upstreamStages,
 	}
 }
 
-func FromRepoSubscriptionsProto(s *v1alpha1.RepoSubscriptions) *kubev1alpha1.RepoSubscriptions {
+func FromRepoSubscriptionsProto(s *v1alpha1.RepoSubscriptions) *kargoapi.RepoSubscriptions {
 	if s == nil {
 		return nil
 	}
-	gitSubscriptions := make([]kubev1alpha1.GitSubscription, len(s.GetGit()))
+	gitSubscriptions := make([]kargoapi.GitSubscription, len(s.GetGit()))
 	for idx, git := range s.GetGit() {
 		gitSubscriptions[idx] = *FromGitSubscriptionProto(git)
 	}
-	imageSubscriptions := make([]kubev1alpha1.ImageSubscription, len(s.GetImages()))
+	imageSubscriptions := make([]kargoapi.ImageSubscription, len(s.GetImages()))
 	for idx, image := range s.GetImages() {
 		imageSubscriptions[idx] = *FromImageSubscriptionProto(image)
 	}
-	chartSubscriptions := make([]kubev1alpha1.ChartSubscription, len(s.GetCharts()))
+	chartSubscriptions := make([]kargoapi.ChartSubscription, len(s.GetCharts()))
 	for idx, chart := range s.GetCharts() {
 		chartSubscriptions[idx] = *FromChartSubscriptionProto(chart)
 	}
-	return &kubev1alpha1.RepoSubscriptions{
+	return &kargoapi.RepoSubscriptions{
 		Git:    gitSubscriptions,
 		Images: imageSubscriptions,
 		Charts: chartSubscriptions,
 	}
 }
 
-func FromGitSubscriptionProto(s *v1alpha1.GitSubscription) *kubev1alpha1.GitSubscription {
+func FromGitSubscriptionProto(s *v1alpha1.GitSubscription) *kargoapi.GitSubscription {
 	if s == nil {
 		return nil
 	}
-	return &kubev1alpha1.GitSubscription{
+	return &kargoapi.GitSubscription{
 		RepoURL: s.GetRepoUrl(),
 		Branch:  s.GetBranch(),
 	}
 }
 
-func FromImageSubscriptionProto(s *v1alpha1.ImageSubscription) *kubev1alpha1.ImageSubscription {
+func FromImageSubscriptionProto(s *v1alpha1.ImageSubscription) *kargoapi.ImageSubscription {
 	if s == nil {
 		return nil
 	}
-	return &kubev1alpha1.ImageSubscription{
+	return &kargoapi.ImageSubscription{
 		RepoURL:          s.GetRepoUrl(),
-		UpdateStrategy:   kubev1alpha1.ImageUpdateStrategy(s.GetUpdateStrategy()),
+		UpdateStrategy:   kargoapi.ImageUpdateStrategy(s.GetUpdateStrategy()),
 		SemverConstraint: s.GetSemverConstraint(),
 		AllowTags:        s.GetAllowTags(),
 		IgnoreTags:       s.GetIgnoreTags(),
@@ -221,40 +221,40 @@ func FromImageSubscriptionProto(s *v1alpha1.ImageSubscription) *kubev1alpha1.Ima
 	}
 }
 
-func FromChartSubscriptionProto(s *v1alpha1.ChartSubscription) *kubev1alpha1.ChartSubscription {
+func FromChartSubscriptionProto(s *v1alpha1.ChartSubscription) *kargoapi.ChartSubscription {
 	if s == nil {
 		return nil
 	}
-	return &kubev1alpha1.ChartSubscription{
+	return &kargoapi.ChartSubscription{
 		RegistryURL:      s.GetRegistryUrl(),
 		Name:             s.GetName(),
 		SemverConstraint: s.GetSemverConstraint(),
 	}
 }
 
-func FromPromotionMechanismsProto(m *v1alpha1.PromotionMechanisms) *kubev1alpha1.PromotionMechanisms {
+func FromPromotionMechanismsProto(m *v1alpha1.PromotionMechanisms) *kargoapi.PromotionMechanisms {
 	if m == nil {
 		return nil
 	}
-	gitUpdates := make([]kubev1alpha1.GitRepoUpdate, len(m.GetGitRepoUpdates()))
+	gitUpdates := make([]kargoapi.GitRepoUpdate, len(m.GetGitRepoUpdates()))
 	for idx, git := range m.GetGitRepoUpdates() {
 		gitUpdates[idx] = *FromGitRepoUpdateProto(git)
 	}
-	argoUpdates := make([]kubev1alpha1.ArgoCDAppUpdate, len(m.GetArgocdAppUpdates()))
+	argoUpdates := make([]kargoapi.ArgoCDAppUpdate, len(m.GetArgocdAppUpdates()))
 	for idx, argo := range m.GetArgocdAppUpdates() {
 		argoUpdates[idx] = *FromArgoCDAppUpdatesProto(argo)
 	}
-	return &kubev1alpha1.PromotionMechanisms{
+	return &kargoapi.PromotionMechanisms{
 		GitRepoUpdates:   gitUpdates,
 		ArgoCDAppUpdates: argoUpdates,
 	}
 }
 
-func FromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kubev1alpha1.GitRepoUpdate {
+func FromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kargoapi.GitRepoUpdate {
 	if u == nil {
 		return nil
 	}
-	return &kubev1alpha1.GitRepoUpdate{
+	return &kargoapi.GitRepoUpdate{
 		RepoURL:     u.GetRepoUrl(),
 		ReadBranch:  u.GetReadBranch(),
 		WriteBranch: u.GetWriteBranch(),
@@ -266,33 +266,33 @@ func FromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kubev1alpha1.GitRepoUpda
 
 func FromBookkeeperPromotionMechanismProto(
 	m *v1alpha1.BookkeeperPromotionMechanism,
-) *kubev1alpha1.BookkeeperPromotionMechanism {
+) *kargoapi.BookkeeperPromotionMechanism {
 	if m == nil {
 		return nil
 	}
-	return &kubev1alpha1.BookkeeperPromotionMechanism{}
+	return &kargoapi.BookkeeperPromotionMechanism{}
 }
 
 func FromKustomizePromotionMechanismProto(
 	m *v1alpha1.KustomizePromotionMechanism,
-) *kubev1alpha1.KustomizePromotionMechanism {
+) *kargoapi.KustomizePromotionMechanism {
 	if m == nil {
 		return nil
 	}
-	images := make([]kubev1alpha1.KustomizeImageUpdate, len(m.GetImages()))
+	images := make([]kargoapi.KustomizeImageUpdate, len(m.GetImages()))
 	for idx, image := range m.GetImages() {
 		images[idx] = *FromKustomizeImageUpdateProto(image)
 	}
-	return &kubev1alpha1.KustomizePromotionMechanism{
+	return &kargoapi.KustomizePromotionMechanism{
 		Images: images,
 	}
 }
 
-func FromKustomizeImageUpdateProto(u *v1alpha1.KustomizeImageUpdate) *kubev1alpha1.KustomizeImageUpdate {
+func FromKustomizeImageUpdateProto(u *v1alpha1.KustomizeImageUpdate) *kargoapi.KustomizeImageUpdate {
 	if u == nil {
 		return nil
 	}
-	return &kubev1alpha1.KustomizeImageUpdate{
+	return &kargoapi.KustomizeImageUpdate{
 		Image: u.GetImage(),
 		Path:  u.GetPath(),
 	}
@@ -300,69 +300,69 @@ func FromKustomizeImageUpdateProto(u *v1alpha1.KustomizeImageUpdate) *kubev1alph
 
 func FromHelmPromotionMechanismProto(
 	m *v1alpha1.HelmPromotionMechanism,
-) *kubev1alpha1.HelmPromotionMechanism {
+) *kargoapi.HelmPromotionMechanism {
 	if m == nil {
 		return nil
 	}
-	images := make([]kubev1alpha1.HelmImageUpdate, len(m.GetImages()))
+	images := make([]kargoapi.HelmImageUpdate, len(m.GetImages()))
 	for idx, image := range m.GetImages() {
 		images[idx] = *FromHelmImageUpdateProto(image)
 	}
-	charts := make([]kubev1alpha1.HelmChartDependencyUpdate, len(m.GetCharts()))
+	charts := make([]kargoapi.HelmChartDependencyUpdate, len(m.GetCharts()))
 	for idx, chart := range m.GetCharts() {
 		charts[idx] = *FromHelmChartDependencyUpdateProto(chart)
 	}
-	return &kubev1alpha1.HelmPromotionMechanism{
+	return &kargoapi.HelmPromotionMechanism{
 		Images: images,
 		Charts: charts,
 	}
 }
 
-func FromHelmImageUpdateProto(u *v1alpha1.HelmImageUpdate) *kubev1alpha1.HelmImageUpdate {
+func FromHelmImageUpdateProto(u *v1alpha1.HelmImageUpdate) *kargoapi.HelmImageUpdate {
 	if u == nil {
 		return nil
 	}
-	return &kubev1alpha1.HelmImageUpdate{
+	return &kargoapi.HelmImageUpdate{
 		Image:          u.GetImage(),
 		ValuesFilePath: u.GetValuesFilePath(),
 		Key:            u.GetKey(),
-		Value:          kubev1alpha1.ImageUpdateValueType(u.GetValue()),
+		Value:          kargoapi.ImageUpdateValueType(u.GetValue()),
 	}
 }
 
 func FromHelmChartDependencyUpdateProto(
 	u *v1alpha1.HelmChartDependencyUpdate,
-) *kubev1alpha1.HelmChartDependencyUpdate {
+) *kargoapi.HelmChartDependencyUpdate {
 	if u == nil {
 		return nil
 	}
-	return &kubev1alpha1.HelmChartDependencyUpdate{
+	return &kargoapi.HelmChartDependencyUpdate{
 		RegistryURL: u.GetRegistryUrl(),
 		Name:        u.GetName(),
 		ChartPath:   u.GetChartPath(),
 	}
 }
 
-func FromArgoCDAppUpdatesProto(u *v1alpha1.ArgoCDAppUpdate) *kubev1alpha1.ArgoCDAppUpdate {
+func FromArgoCDAppUpdatesProto(u *v1alpha1.ArgoCDAppUpdate) *kargoapi.ArgoCDAppUpdate {
 	if u == nil {
 		return nil
 	}
-	sourceUpdates := make([]kubev1alpha1.ArgoCDSourceUpdate, len(u.GetSourceUpdates()))
+	sourceUpdates := make([]kargoapi.ArgoCDSourceUpdate, len(u.GetSourceUpdates()))
 	for idx, update := range u.GetSourceUpdates() {
 		sourceUpdates[idx] = *FromArgoCDSourceUpdateProto(update)
 	}
-	return &kubev1alpha1.ArgoCDAppUpdate{
+	return &kargoapi.ArgoCDAppUpdate{
 		AppName:       u.GetAppName(),
 		AppNamespace:  u.GetAppNamespace(),
 		SourceUpdates: sourceUpdates,
 	}
 }
 
-func FromArgoCDSourceUpdateProto(u *v1alpha1.ArgoCDSourceUpdate) *kubev1alpha1.ArgoCDSourceUpdate {
+func FromArgoCDSourceUpdateProto(u *v1alpha1.ArgoCDSourceUpdate) *kargoapi.ArgoCDSourceUpdate {
 	if u == nil {
 		return nil
 	}
-	return &kubev1alpha1.ArgoCDSourceUpdate{
+	return &kargoapi.ArgoCDSourceUpdate{
 		RepoURL:              u.GetRepoUrl(),
 		Chart:                u.GetChart(),
 		UpdateTargetRevision: u.GetUpdateTargetRevision(),
@@ -371,53 +371,53 @@ func FromArgoCDSourceUpdateProto(u *v1alpha1.ArgoCDSourceUpdate) *kubev1alpha1.A
 	}
 }
 
-func FromArgoCDKustomizeProto(k *v1alpha1.ArgoCDKustomize) *kubev1alpha1.ArgoCDKustomize {
+func FromArgoCDKustomizeProto(k *v1alpha1.ArgoCDKustomize) *kargoapi.ArgoCDKustomize {
 	if k == nil {
 		return nil
 	}
-	return &kubev1alpha1.ArgoCDKustomize{
+	return &kargoapi.ArgoCDKustomize{
 		Images: k.GetImages(),
 	}
 }
 
-func FromArgoCDHelm(h *v1alpha1.ArgoCDHelm) *kubev1alpha1.ArgoCDHelm {
+func FromArgoCDHelm(h *v1alpha1.ArgoCDHelm) *kargoapi.ArgoCDHelm {
 	if h == nil {
 		return nil
 	}
-	images := make([]kubev1alpha1.ArgoCDHelmImageUpdate, len(h.GetImages()))
+	images := make([]kargoapi.ArgoCDHelmImageUpdate, len(h.GetImages()))
 	for idx, image := range h.GetImages() {
 		images[idx] = *FromArgoCDHelmImageUpdateProto(image)
 	}
-	return &kubev1alpha1.ArgoCDHelm{
+	return &kargoapi.ArgoCDHelm{
 		Images: images,
 	}
 }
 
-func FromArgoCDHelmImageUpdateProto(u *v1alpha1.ArgoCDHelmImageUpdate) *kubev1alpha1.ArgoCDHelmImageUpdate {
+func FromArgoCDHelmImageUpdateProto(u *v1alpha1.ArgoCDHelmImageUpdate) *kargoapi.ArgoCDHelmImageUpdate {
 	if u == nil {
 		return nil
 	}
-	return &kubev1alpha1.ArgoCDHelmImageUpdate{
+	return &kargoapi.ArgoCDHelmImageUpdate{
 		Image: u.GetImage(),
 		Key:   u.GetKey(),
-		Value: kubev1alpha1.ImageUpdateValueType(u.GetValue()),
+		Value: kargoapi.ImageUpdateValueType(u.GetValue()),
 	}
 }
 
-func FromStageSubscriptionProto(s *v1alpha1.StageSubscription) *kubev1alpha1.StageSubscription {
+func FromStageSubscriptionProto(s *v1alpha1.StageSubscription) *kargoapi.StageSubscription {
 	if s == nil {
 		return nil
 	}
-	return &kubev1alpha1.StageSubscription{
+	return &kargoapi.StageSubscription{
 		Name: s.GetName(),
 	}
 }
 
-func FromPromotionProto(p *v1alpha1.Promotion) *kubev1alpha1.Promotion {
+func FromPromotionProto(p *v1alpha1.Promotion) *kargoapi.Promotion {
 	if p == nil {
 		return nil
 	}
-	var status kubev1alpha1.PromotionStatus
+	var status kargoapi.PromotionStatus
 	if p.GetStatus() != nil {
 		status = *FromPromotionStatusProto(p.GetStatus())
 	}
@@ -425,9 +425,9 @@ func FromPromotionProto(p *v1alpha1.Promotion) *kubev1alpha1.Promotion {
 	if p.GetMetadata() != nil {
 		objectMeta = *typesmetav1.FromObjectMetaProto(p.GetMetadata())
 	}
-	return &kubev1alpha1.Promotion{
+	return &kargoapi.Promotion{
 		TypeMeta: kubemetav1.TypeMeta{
-			APIVersion: kubev1alpha1.GroupVersion.String(),
+			APIVersion: kargoapi.GroupVersion.String(),
 			Kind:       "Promotion",
 		},
 		ObjectMeta: objectMeta,
@@ -436,27 +436,27 @@ func FromPromotionProto(p *v1alpha1.Promotion) *kubev1alpha1.Promotion {
 	}
 }
 
-func FromPromotionSpecProto(s *v1alpha1.PromotionSpec) *kubev1alpha1.PromotionSpec {
+func FromPromotionSpecProto(s *v1alpha1.PromotionSpec) *kargoapi.PromotionSpec {
 	if s == nil {
 		return nil
 	}
-	return &kubev1alpha1.PromotionSpec{
+	return &kargoapi.PromotionSpec{
 		Stage:   s.GetStage(),
 		Freight: s.GetFreight(),
 	}
 }
 
-func FromPromotionStatusProto(s *v1alpha1.PromotionStatus) *kubev1alpha1.PromotionStatus {
+func FromPromotionStatusProto(s *v1alpha1.PromotionStatus) *kargoapi.PromotionStatus {
 	if s == nil {
 		return nil
 	}
-	return &kubev1alpha1.PromotionStatus{
-		Phase: kubev1alpha1.PromotionPhase(s.GetPhase()),
+	return &kargoapi.PromotionStatus{
+		Phase: kargoapi.PromotionPhase(s.GetPhase()),
 		Error: s.GetError(),
 	}
 }
 
-func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kubev1alpha1.PromotionPolicy {
+func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kargoapi.PromotionPolicy {
 	if p == nil {
 		return nil
 	}
@@ -464,9 +464,9 @@ func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kubev1alpha1.Promoti
 	if p.GetMetadata() != nil {
 		objectMeta = *typesmetav1.FromObjectMetaProto(p.GetMetadata())
 	}
-	return &kubev1alpha1.PromotionPolicy{
+	return &kargoapi.PromotionPolicy{
 		TypeMeta: kubemetav1.TypeMeta{
-			APIVersion: kubev1alpha1.GroupVersion.String(),
+			APIVersion: kargoapi.GroupVersion.String(),
 			Kind:       "PromotionPolicy",
 		},
 		ObjectMeta:          objectMeta,
@@ -475,7 +475,7 @@ func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kubev1alpha1.Promoti
 	}
 }
 
-func ToStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
+func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	// Status
 	availableFreight := make([]*v1alpha1.Freight, len(e.Status.AvailableFreight))
 	for idx := range e.Status.AvailableFreight {
@@ -512,7 +512,7 @@ func ToStageProto(e kubev1alpha1.Stage) *v1alpha1.Stage {
 	}
 }
 
-func ToSubscriptionsProto(s kubev1alpha1.Subscriptions) *v1alpha1.Subscriptions {
+func ToSubscriptionsProto(s kargoapi.Subscriptions) *v1alpha1.Subscriptions {
 	var repos *v1alpha1.RepoSubscriptions
 	if s.Repos != nil {
 		repos = &v1alpha1.RepoSubscriptions{
@@ -541,14 +541,14 @@ func ToSubscriptionsProto(s kubev1alpha1.Subscriptions) *v1alpha1.Subscriptions 
 	}
 }
 
-func ToGitSubscriptionProto(g kubev1alpha1.GitSubscription) *v1alpha1.GitSubscription {
+func ToGitSubscriptionProto(g kargoapi.GitSubscription) *v1alpha1.GitSubscription {
 	return &v1alpha1.GitSubscription{
 		RepoUrl: g.RepoURL,
 		Branch:  g.Branch,
 	}
 }
 
-func ToImageSubscriptionProto(i kubev1alpha1.ImageSubscription) *v1alpha1.ImageSubscription {
+func ToImageSubscriptionProto(i kargoapi.ImageSubscription) *v1alpha1.ImageSubscription {
 	return &v1alpha1.ImageSubscription{
 		RepoUrl:          i.RepoURL,
 		UpdateStrategy:   string(i.UpdateStrategy),
@@ -559,7 +559,7 @@ func ToImageSubscriptionProto(i kubev1alpha1.ImageSubscription) *v1alpha1.ImageS
 	}
 }
 
-func ToChartSubscriptionProto(c kubev1alpha1.ChartSubscription) *v1alpha1.ChartSubscription {
+func ToChartSubscriptionProto(c kargoapi.ChartSubscription) *v1alpha1.ChartSubscription {
 	return &v1alpha1.ChartSubscription{
 		RegistryUrl:      c.RegistryURL,
 		Name:             proto.String(c.Name),
@@ -567,13 +567,13 @@ func ToChartSubscriptionProto(c kubev1alpha1.ChartSubscription) *v1alpha1.ChartS
 	}
 }
 
-func ToStageSubscriptionProto(e kubev1alpha1.StageSubscription) *v1alpha1.StageSubscription {
+func ToStageSubscriptionProto(e kargoapi.StageSubscription) *v1alpha1.StageSubscription {
 	return &v1alpha1.StageSubscription{
 		Name: e.Name,
 	}
 }
 
-func ToPromotionMechanismsProto(p kubev1alpha1.PromotionMechanisms) *v1alpha1.PromotionMechanisms {
+func ToPromotionMechanismsProto(p kargoapi.PromotionMechanisms) *v1alpha1.PromotionMechanisms {
 	gitRepoUpdates := make([]*v1alpha1.GitRepoUpdate, len(p.GitRepoUpdates))
 	for idx := range p.GitRepoUpdates {
 		gitRepoUpdates[idx] = ToGitRepoUpdateProto(p.GitRepoUpdates[idx])
@@ -588,7 +588,7 @@ func ToPromotionMechanismsProto(p kubev1alpha1.PromotionMechanisms) *v1alpha1.Pr
 	}
 }
 
-func ToGitRepoUpdateProto(g kubev1alpha1.GitRepoUpdate) *v1alpha1.GitRepoUpdate {
+func ToGitRepoUpdateProto(g kargoapi.GitRepoUpdate) *v1alpha1.GitRepoUpdate {
 	var bookkeeper *v1alpha1.BookkeeperPromotionMechanism
 	if g.Bookkeeper != nil {
 		bookkeeper = ToBookkeeperPromotionMechanismProto(*g.Bookkeeper)
@@ -612,13 +612,13 @@ func ToGitRepoUpdateProto(g kubev1alpha1.GitRepoUpdate) *v1alpha1.GitRepoUpdate 
 }
 
 func ToBookkeeperPromotionMechanismProto(
-	_ kubev1alpha1.BookkeeperPromotionMechanism,
+	_ kargoapi.BookkeeperPromotionMechanism,
 ) *v1alpha1.BookkeeperPromotionMechanism {
 	return &v1alpha1.BookkeeperPromotionMechanism{}
 }
 
 func ToKustomizePromotionMechanismProto(
-	k kubev1alpha1.KustomizePromotionMechanism,
+	k kargoapi.KustomizePromotionMechanism,
 ) *v1alpha1.KustomizePromotionMechanism {
 	images := make([]*v1alpha1.KustomizeImageUpdate, len(k.Images))
 	for idx := range k.Images {
@@ -629,14 +629,14 @@ func ToKustomizePromotionMechanismProto(
 	}
 }
 
-func ToKustomizeImageUpdateProto(k kubev1alpha1.KustomizeImageUpdate) *v1alpha1.KustomizeImageUpdate {
+func ToKustomizeImageUpdateProto(k kargoapi.KustomizeImageUpdate) *v1alpha1.KustomizeImageUpdate {
 	return &v1alpha1.KustomizeImageUpdate{
 		Image: k.Image,
 		Path:  k.Path,
 	}
 }
 
-func ToHelmPromotionMechanismProto(h kubev1alpha1.HelmPromotionMechanism) *v1alpha1.HelmPromotionMechanism {
+func ToHelmPromotionMechanismProto(h kargoapi.HelmPromotionMechanism) *v1alpha1.HelmPromotionMechanism {
 	images := make([]*v1alpha1.HelmImageUpdate, len(h.Images))
 	for idx := range h.Images {
 		images[idx] = ToHelmImageUpdateProto(h.Images[idx])
@@ -651,7 +651,7 @@ func ToHelmPromotionMechanismProto(h kubev1alpha1.HelmPromotionMechanism) *v1alp
 	}
 }
 
-func ToHelmImageUpdateProto(h kubev1alpha1.HelmImageUpdate) *v1alpha1.HelmImageUpdate {
+func ToHelmImageUpdateProto(h kargoapi.HelmImageUpdate) *v1alpha1.HelmImageUpdate {
 	return &v1alpha1.HelmImageUpdate{
 		Image:          h.Image,
 		ValuesFilePath: h.ValuesFilePath,
@@ -660,7 +660,7 @@ func ToHelmImageUpdateProto(h kubev1alpha1.HelmImageUpdate) *v1alpha1.HelmImageU
 	}
 }
 
-func ToHelmChartDependencyUpdateProto(h kubev1alpha1.HelmChartDependencyUpdate) *v1alpha1.HelmChartDependencyUpdate {
+func ToHelmChartDependencyUpdateProto(h kargoapi.HelmChartDependencyUpdate) *v1alpha1.HelmChartDependencyUpdate {
 	return &v1alpha1.HelmChartDependencyUpdate{
 		RegistryUrl: h.RegistryURL,
 		Name:        h.Name,
@@ -668,7 +668,7 @@ func ToHelmChartDependencyUpdateProto(h kubev1alpha1.HelmChartDependencyUpdate) 
 	}
 }
 
-func ToArgoCDAppUpdateProto(h kubev1alpha1.ArgoCDAppUpdate) *v1alpha1.ArgoCDAppUpdate {
+func ToArgoCDAppUpdateProto(h kargoapi.ArgoCDAppUpdate) *v1alpha1.ArgoCDAppUpdate {
 	sourceUpdates := make([]*v1alpha1.ArgoCDSourceUpdate, len(h.SourceUpdates))
 	for idx := range h.SourceUpdates {
 		sourceUpdates[idx] = ToArgoCDSourceUpdateProto(h.SourceUpdates[idx])
@@ -680,7 +680,7 @@ func ToArgoCDAppUpdateProto(h kubev1alpha1.ArgoCDAppUpdate) *v1alpha1.ArgoCDAppU
 	}
 }
 
-func ToArgoCDSourceUpdateProto(a kubev1alpha1.ArgoCDSourceUpdate) *v1alpha1.ArgoCDSourceUpdate {
+func ToArgoCDSourceUpdateProto(a kargoapi.ArgoCDSourceUpdate) *v1alpha1.ArgoCDSourceUpdate {
 	var kustomize *v1alpha1.ArgoCDKustomize
 	if a.Kustomize != nil {
 		kustomize = ToArgoCDKustomizeProto(*a.Kustomize)
@@ -698,13 +698,13 @@ func ToArgoCDSourceUpdateProto(a kubev1alpha1.ArgoCDSourceUpdate) *v1alpha1.Argo
 	}
 }
 
-func ToArgoCDKustomizeProto(a kubev1alpha1.ArgoCDKustomize) *v1alpha1.ArgoCDKustomize {
+func ToArgoCDKustomizeProto(a kargoapi.ArgoCDKustomize) *v1alpha1.ArgoCDKustomize {
 	return &v1alpha1.ArgoCDKustomize{
 		Images: a.Images,
 	}
 }
 
-func ToArgoCDHelmProto(a kubev1alpha1.ArgoCDHelm) *v1alpha1.ArgoCDHelm {
+func ToArgoCDHelmProto(a kargoapi.ArgoCDHelm) *v1alpha1.ArgoCDHelm {
 	images := make([]*v1alpha1.ArgoCDHelmImageUpdate, len(a.Images))
 	for idx := range images {
 		images[idx] = ToArgoCDHelmImageUpdateProto(a.Images[idx])
@@ -714,7 +714,7 @@ func ToArgoCDHelmProto(a kubev1alpha1.ArgoCDHelm) *v1alpha1.ArgoCDHelm {
 	}
 }
 
-func ToArgoCDHelmImageUpdateProto(a kubev1alpha1.ArgoCDHelmImageUpdate) *v1alpha1.ArgoCDHelmImageUpdate {
+func ToArgoCDHelmImageUpdateProto(a kargoapi.ArgoCDHelmImageUpdate) *v1alpha1.ArgoCDHelmImageUpdate {
 	return &v1alpha1.ArgoCDHelmImageUpdate{
 		Image: a.Image,
 		Key:   a.Key,
@@ -722,7 +722,7 @@ func ToArgoCDHelmImageUpdateProto(a kubev1alpha1.ArgoCDHelmImageUpdate) *v1alpha
 	}
 }
 
-func ToFreightProto(e kubev1alpha1.Freight) *v1alpha1.Freight {
+func ToFreightProto(e kargoapi.Freight) *v1alpha1.Freight {
 	var firstSeen *timestamppb.Timestamp
 	if e.FirstSeen != nil {
 		firstSeen = timestamppb.New(e.FirstSeen.Time)
@@ -754,7 +754,7 @@ func ToFreightProto(e kubev1alpha1.Freight) *v1alpha1.Freight {
 	}
 }
 
-func ToGitCommitProto(g kubev1alpha1.GitCommit) *v1alpha1.GitCommit {
+func ToGitCommitProto(g kargoapi.GitCommit) *v1alpha1.GitCommit {
 	return &v1alpha1.GitCommit{
 		RepoUrl:           g.RepoURL,
 		Id:                g.ID,
@@ -763,14 +763,14 @@ func ToGitCommitProto(g kubev1alpha1.GitCommit) *v1alpha1.GitCommit {
 	}
 }
 
-func ToImageProto(i kubev1alpha1.Image) *v1alpha1.Image {
+func ToImageProto(i kargoapi.Image) *v1alpha1.Image {
 	return &v1alpha1.Image{
 		RepoUrl: i.RepoURL,
 		Tag:     i.Tag,
 	}
 }
 
-func ToChartProto(c kubev1alpha1.Chart) *v1alpha1.Chart {
+func ToChartProto(c kargoapi.Chart) *v1alpha1.Chart {
 	return &v1alpha1.Chart{
 		RegistryUrl: c.RegistryURL,
 		Name:        c.Name,
@@ -778,14 +778,14 @@ func ToChartProto(c kubev1alpha1.Chart) *v1alpha1.Chart {
 	}
 }
 
-func ToHealthProto(h kubev1alpha1.Health) *v1alpha1.Health {
+func ToHealthProto(h kargoapi.Health) *v1alpha1.Health {
 	status := v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
 	switch h.Status {
-	case kubev1alpha1.HealthStateHealthy:
+	case kargoapi.HealthStateHealthy:
 		status = v1alpha1.HealthState_HEALTH_STATE_HEALTHY
-	case kubev1alpha1.HealthStateUnhealthy:
+	case kargoapi.HealthStateUnhealthy:
 		status = v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY
-	case kubev1alpha1.HealthStateUnknown:
+	case kargoapi.HealthStateUnknown:
 		status = v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
 	}
 	return &v1alpha1.Health{
@@ -794,7 +794,7 @@ func ToHealthProto(h kubev1alpha1.Health) *v1alpha1.Health {
 	}
 }
 
-func ToPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
+func ToPromotionProto(p kargoapi.Promotion) *v1alpha1.Promotion {
 	metadata := p.ObjectMeta.DeepCopy()
 	metadata.SetManagedFields(nil)
 
@@ -811,7 +811,7 @@ func ToPromotionProto(p kubev1alpha1.Promotion) *v1alpha1.Promotion {
 	}
 }
 
-func ToPromotionPolicyProto(p kubev1alpha1.PromotionPolicy) *v1alpha1.PromotionPolicy {
+func ToPromotionPolicyProto(p kargoapi.PromotionPolicy) *v1alpha1.PromotionPolicy {
 	metadata := p.ObjectMeta.DeepCopy()
 	metadata.SetManagedFields(nil)
 

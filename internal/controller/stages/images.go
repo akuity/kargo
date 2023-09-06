@@ -8,7 +8,7 @@ import (
 	"github.com/argoproj/argo-cd/v2/util/git"
 	"github.com/pkg/errors"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/images"
 	"github.com/akuity/kargo/internal/logging"
@@ -17,9 +17,9 @@ import (
 func (r *reconciler) getLatestImages(
 	ctx context.Context,
 	namespace string,
-	subs []api.ImageSubscription,
-) ([]api.Image, error) {
-	imgs := make([]api.Image, len(subs))
+	subs []kargoapi.ImageSubscription,
+) ([]kargoapi.Image, error) {
+	imgs := make([]kargoapi.Image, len(subs))
 	for i, sub := range subs {
 
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
@@ -60,7 +60,7 @@ func (r *reconciler) getLatestImages(
 				sub.RepoURL,
 			)
 		}
-		imgs[i] = api.Image{
+		imgs[i] = kargoapi.Image{
 			RepoURL:    sub.RepoURL,
 			GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, tag),
 			Tag:        tag,

@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/user"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -90,7 +90,7 @@ func TestRefreshStage(t *testing.T) {
 							WithScheme(scheme).
 							WithObjects(
 								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-								mustNewObject[kubev1alpha1.Stage]("testdata/stage.yaml"),
+								mustNewObject[kargoapi.Stage]("testdata/stage.yaml"),
 							).
 							Build(), nil
 					},
@@ -109,7 +109,7 @@ func TestRefreshStage(t *testing.T) {
 			}
 			require.NoError(t, err)
 			stage := res.Msg.GetStage()
-			annotation := stage.Metadata.Annotations[kubev1alpha1.AnnotationKeyRefresh]
+			annotation := stage.Metadata.Annotations[kargoapi.AnnotationKeyRefresh]
 			refreshTime, err := time.Parse(time.RFC3339, annotation)
 			require.NoError(t, err)
 			// Make sure we set timestamp is close to now

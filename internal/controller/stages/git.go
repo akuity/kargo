@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/akuity/bookkeeper/pkg/git"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -14,9 +14,9 @@ import (
 func (r *reconciler) getLatestCommits(
 	ctx context.Context,
 	namespace string,
-	subs []api.GitSubscription,
-) ([]api.GitCommit, error) {
-	latestCommits := make([]api.GitCommit, len(subs))
+	subs []kargoapi.GitSubscription,
+) ([]kargoapi.GitCommit, error) {
+	latestCommits := make([]kargoapi.GitCommit, len(subs))
 	for i, sub := range subs {
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 		creds, ok, err :=
@@ -50,7 +50,7 @@ func (r *reconciler) getLatestCommits(
 		}
 		logger.WithField("commit", commit).
 			Debug("found latest commit from repo")
-		latestCommits[i] = api.GitCommit{
+		latestCommits[i] = kargoapi.GitCommit{
 			RepoURL: sub.RepoURL,
 			ID:      commit,
 			Branch:  sub.Branch,

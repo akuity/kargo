@@ -7,7 +7,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 )
 
@@ -20,7 +20,7 @@ const (
 
 // NewPromotion returns a new Promotion from a given stage and freight with our naming convention.
 // Ensures the owner reference is set to be the stage, and carries over any shard labels
-func NewPromotion(stage kubev1alpha1.Stage, freight string) kubev1alpha1.Promotion {
+func NewPromotion(stage kargoapi.Stage, freight string) kargoapi.Promotion {
 	shortHash := freight
 	if len(shortHash) > 7 {
 		shortHash = freight[0:7]
@@ -34,15 +34,15 @@ func NewPromotion(stage kubev1alpha1.Stage, freight string) kubev1alpha1.Promoti
 	// We just want a unique ID that can be sorted lexicographically
 	promoName := strings.ToLower(fmt.Sprintf("%s.%s.%s", shortStageName, ulid.Make(), shortHash))
 
-	ownerRef := metav1.NewControllerRef(&stage, kubev1alpha1.GroupVersion.WithKind("Stage"))
+	ownerRef := metav1.NewControllerRef(&stage, kargoapi.GroupVersion.WithKind("Stage"))
 
-	promotion := kubev1alpha1.Promotion{
+	promotion := kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            promoName,
 			Namespace:       stage.Namespace,
 			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},
-		Spec: &kubev1alpha1.PromotionSpec{
+		Spec: &kargoapi.PromotionSpec{
 			Stage:   stage.Name,
 			Freight: freight,
 		},

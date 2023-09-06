@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -23,42 +23,42 @@ func TestNewHelmMechanism(t *testing.T) {
 func TestSelectHelmUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
-		updates    []api.GitRepoUpdate
-		assertions func(selectedUpdates []api.GitRepoUpdate)
+		updates    []kargoapi.GitRepoUpdate
+		assertions func(selectedUpdates []kargoapi.GitRepoUpdate)
 	}{
 		{
 			name: "no updates",
-			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
 		{
 			name: "no helm updates",
-			updates: []api.GitRepoUpdate{
+			updates: []kargoapi.GitRepoUpdate{
 				{
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
 		{
 			name: "some helm updates",
-			updates: []api.GitRepoUpdate{
+			updates: []kargoapi.GitRepoUpdate{
 				{
 					RepoURL:   "fake-url",
-					Kustomize: &api.KustomizePromotionMechanism{},
+					Kustomize: &kargoapi.KustomizePromotionMechanism{},
 				},
 				{
 					RepoURL: "fake-url",
-					Helm:    &api.HelmPromotionMechanism{},
+					Helm:    &kargoapi.HelmPromotionMechanism{},
 				},
 				{
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Len(t, selectedUpdates, 1)
 			},
 		},
@@ -85,8 +85,8 @@ func TestHelmerApply(t *testing.T) {
 			name: "error updating values file",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
-					[]api.Image,
-					[]api.HelmImageUpdate,
+					[]kargoapi.Image,
+					[]kargoapi.HelmImageUpdate,
 				) (map[string]map[string]string, []string) {
 					return map[string]map[string]string{
 						testValuesFile: {
@@ -108,8 +108,8 @@ func TestHelmerApply(t *testing.T) {
 			name: "error building chart dependency changes",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
-					[]api.Image,
-					[]api.HelmImageUpdate,
+					[]kargoapi.Image,
+					[]kargoapi.HelmImageUpdate,
 				) (map[string]map[string]string, []string) {
 					// This returns nothing so that the only calls to
 					// setStringsInYAMLFileFn will be for updating subcharts in
@@ -118,8 +118,8 @@ func TestHelmerApply(t *testing.T) {
 				},
 				buildChartDependencyChangesFn: func(
 					string,
-					[]api.Chart,
-					[]api.HelmChartDependencyUpdate,
+					[]kargoapi.Chart,
+					[]kargoapi.HelmChartDependencyUpdate,
 				) (map[string]map[string]string, []string, error) {
 					return nil, nil, errors.New("something went wrong")
 				},
@@ -138,8 +138,8 @@ func TestHelmerApply(t *testing.T) {
 			name: "error updating Chart.yaml",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
-					[]api.Image,
-					[]api.HelmImageUpdate,
+					[]kargoapi.Image,
+					[]kargoapi.HelmImageUpdate,
 				) (map[string]map[string]string, []string) {
 					// This returns nothing so that the only calls to
 					// setStringsInYAMLFileFn will be for updating subcharts in
@@ -148,8 +148,8 @@ func TestHelmerApply(t *testing.T) {
 				},
 				buildChartDependencyChangesFn: func(
 					string,
-					[]api.Chart,
-					[]api.HelmChartDependencyUpdate,
+					[]kargoapi.Chart,
+					[]kargoapi.HelmChartDependencyUpdate,
 				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testChartFile: {
@@ -175,15 +175,15 @@ func TestHelmerApply(t *testing.T) {
 			name: "error running helm chart dep up",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
-					[]api.Image,
-					[]api.HelmImageUpdate,
+					[]kargoapi.Image,
+					[]kargoapi.HelmImageUpdate,
 				) (map[string]map[string]string, []string) {
 					return nil, nil
 				},
 				buildChartDependencyChangesFn: func(
 					string,
-					[]api.Chart,
-					[]api.HelmChartDependencyUpdate,
+					[]kargoapi.Chart,
+					[]kargoapi.HelmChartDependencyUpdate,
 				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testChartFile: {
@@ -212,8 +212,8 @@ func TestHelmerApply(t *testing.T) {
 			name: "success",
 			helmer: &helmer{
 				buildValuesFilesChangesFn: func(
-					[]api.Image,
-					[]api.HelmImageUpdate,
+					[]kargoapi.Image,
+					[]kargoapi.HelmImageUpdate,
 				) (map[string]map[string]string, []string) {
 					return map[string]map[string]string{
 						testValuesFile: {
@@ -223,8 +223,8 @@ func TestHelmerApply(t *testing.T) {
 				},
 				buildChartDependencyChangesFn: func(
 					string,
-					[]api.Chart,
-					[]api.HelmChartDependencyUpdate,
+					[]kargoapi.Chart,
+					[]kargoapi.HelmChartDependencyUpdate,
 				) (map[string]map[string]string, []string, error) {
 					return map[string]map[string]string{
 						testChartFile: {
@@ -249,10 +249,10 @@ func TestHelmerApply(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				testCase.helmer.apply(
-					api.GitRepoUpdate{
-						Helm: &api.HelmPromotionMechanism{},
+					kargoapi.GitRepoUpdate{
+						Helm: &kargoapi.HelmPromotionMechanism{},
 					},
-					api.Freight{}, // The way the tests are structured, this value doesn't matter
+					kargoapi.Freight{}, // The way the tests are structured, this value doesn't matter
 					"",
 					"",
 				),
@@ -262,7 +262,7 @@ func TestHelmerApply(t *testing.T) {
 }
 
 func TestBuildValuesFilesChanges(t *testing.T) {
-	images := []api.Image{
+	images := []kargoapi.Image{
 		{
 			RepoURL: "fake-url",
 			Tag:     "fake-tag",
@@ -272,7 +272,7 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 			Tag:     "another-fake-tag",
 		},
 	}
-	imageUpdates := []api.HelmImageUpdate{
+	imageUpdates := []kargoapi.HelmImageUpdate{
 		{
 			ValuesFilePath: "fake-values.yaml",
 			Image:          "fake-url",
@@ -368,7 +368,7 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	require.NoError(t, err)
 
 	// New charts
-	charts := []api.Chart{
+	charts := []kargoapi.Chart{
 		{
 			RegistryURL: "fake-registry",
 			Name:        "fake-chart",
@@ -382,7 +382,7 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	}
 
 	// Instructions for how to update Chart.yaml files
-	chartUpdates := []api.HelmChartDependencyUpdate{
+	chartUpdates := []kargoapi.HelmChartDependencyUpdate{
 		{
 			RegistryURL: "fake-registry",
 			Name:        "fake-chart",

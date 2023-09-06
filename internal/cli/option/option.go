@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 type Option struct {
@@ -31,7 +31,7 @@ func NewScheme() (*runtime.Scheme, error) {
 	if err := corev1.AddToScheme(scheme); err != nil {
 		return nil, errors.Wrap(err, "add core v1 scheme")
 	}
-	if err := kubev1alpha1.AddToScheme(scheme); err != nil {
+	if err := kargoapi.AddToScheme(scheme); err != nil {
 		return nil, errors.Wrap(err, "add kargo v1alpha1 scheme")
 	}
 	return scheme, nil

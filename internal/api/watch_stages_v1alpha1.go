@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargov1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -33,7 +33,7 @@ func (s *server) WatchStages(
 		if err := s.client.Get(ctx, libClient.ObjectKey{
 			Namespace: req.Msg.GetProject(),
 			Name:      req.Msg.GetName(),
-		}, &kargov1alpha1.Stage{}); err != nil {
+		}, &kargoapi.Stage{}); err != nil {
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
@@ -46,7 +46,7 @@ func (s *server) WatchStages(
 		opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, req.Msg.GetName()).String()
 	}
 	w, err :=
-		s.client.Watch(ctx, &kargov1alpha1.Stage{}, req.Msg.GetProject(), opts)
+		s.client.Watch(ctx, &kargoapi.Stage{}, req.Msg.GetProject(), opts)
 	if err != nil {
 		return errors.Wrap(err, "watch stage")
 	}
@@ -63,7 +63,7 @@ func (s *server) WatchStages(
 			if !ok {
 				return errors.Errorf("unexpected object type %T", e.Object)
 			}
-			var stage *kargov1alpha1.Stage
+			var stage *kargoapi.Stage
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &stage); err != nil {
 				return errors.Wrap(err, "from unstructured")
 			}

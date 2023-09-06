@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/akuity/bookkeeper"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -19,13 +19,13 @@ type bookkeeperMechanism struct {
 	doSingleUpdateFn func(
 		ctx context.Context,
 		namespace string,
-		update api.GitRepoUpdate,
-		newFreight api.Freight,
+		update kargoapi.GitRepoUpdate,
+		newFreight kargoapi.Freight,
 		images []string,
-	) (api.Freight, error)
+	) (kargoapi.Freight, error)
 	getReadRefFn func(
-		update api.GitRepoUpdate,
-		commits []api.GitCommit,
+		update kargoapi.GitRepoUpdate,
+		commits []kargoapi.GitCommit,
 	) (string, int, error)
 	getCredentialsFn func(
 		ctx context.Context,
@@ -61,10 +61,10 @@ func (*bookkeeperMechanism) GetName() string {
 // Promote implements the Mechanism interface.
 func (b *bookkeeperMechanism) Promote(
 	ctx context.Context,
-	stage *api.Stage,
-	newFreight api.Freight,
-) (api.Freight, error) {
-	var updates []api.GitRepoUpdate
+	stage *kargoapi.Stage,
+	newFreight kargoapi.Freight,
+) (kargoapi.Freight, error) {
+	var updates []kargoapi.GitRepoUpdate
 	for _, update := range stage.Spec.PromotionMechanisms.GitRepoUpdates {
 		if update.Bookkeeper != nil {
 			updates = append(updates, update)
@@ -108,10 +108,10 @@ func (b *bookkeeperMechanism) Promote(
 func (b *bookkeeperMechanism) doSingleUpdate(
 	ctx context.Context,
 	namespace string,
-	update api.GitRepoUpdate,
-	newFreight api.Freight,
+	update kargoapi.GitRepoUpdate,
+	newFreight kargoapi.Freight,
 	images []string,
-) (api.Freight, error) {
+) (kargoapi.Freight, error) {
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	readRef, commitIndex, err := b.getReadRefFn(update, newFreight.Commits)

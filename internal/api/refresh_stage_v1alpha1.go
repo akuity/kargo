@@ -6,7 +6,7 @@ import (
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -26,7 +26,7 @@ func (s *server) RefreshStage(
 		Namespace: req.Msg.GetProject(),
 		Name:      req.Msg.GetName(),
 	}
-	stage, err := kubev1alpha1.RefreshStage(ctx, s.client, objKey)
+	stage, err := kargoapi.RefreshStage(ctx, s.client, objKey)
 	if err != nil {
 		return nil, err
 	}

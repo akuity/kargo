@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestPriorityQueue(t *testing.T) {
@@ -24,7 +24,7 @@ func TestPriorityQueue(t *testing.T) {
 	randomNamer := moniker.New()
 	objects := make([]client.Object, 50)
 	for i := range objects {
-		objects[i] = &api.Promotion{
+		objects[i] = &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: randomNamer.NameSep("-"),
 			},
@@ -60,7 +60,7 @@ func TestPriorityQueue(t *testing.T) {
 	// Now push a bunch...
 	for i := 0; i < 50; i++ {
 		err = pq.Push(
-			&api.Promotion{
+			&kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: randomNamer.NameSep("-"),
 				},

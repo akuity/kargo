@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/bookkeeper"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -17,7 +17,7 @@ type Mechanism interface {
 	// Promote consults rules in the provided Stage to perform some portion of the
 	// transition into the specified Freight. It returns the Freight, which may
 	// possibly be updated by the process.
-	Promote(context.Context, *api.Stage, api.Freight) (api.Freight, error)
+	Promote(context.Context, *kargoapi.Stage, kargoapi.Freight) (kargoapi.Freight, error)
 }
 
 // NewMechanisms returns the entrypoint to a hierarchical tree of promotion

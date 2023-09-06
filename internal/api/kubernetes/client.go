@@ -7,20 +7,20 @@ import (
 
 	"github.com/pkg/errors"
 	authv1 "k8s.io/api/authorization/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
+	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -60,15 +60,11 @@ type ClientOptions struct {
 func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	if opts.Scheme == nil {
 		opts.Scheme = runtime.NewScheme()
-		if err := corev1.AddToScheme(opts.Scheme); err != nil {
+		if err := kubescheme.AddToScheme(opts.Scheme); err != nil {
 			return opts,
-				errors.Wrap(err, "error adding Kubernetes core API to scheme")
+				errors.Wrap(err, "error adding Kubernetes API to scheme")
 		}
-		if err := authv1.AddToScheme(opts.Scheme); err != nil {
-			return opts,
-				errors.Wrap(err, "error adding Kubernetes auth API to scheme")
-		}
-		if err := api.AddToScheme(opts.Scheme); err != nil {
+		if err := kargoapi.AddToScheme(opts.Scheme); err != nil {
 			return opts, errors.Wrap(err, "error adding Kargo API to scheme")
 		}
 	}

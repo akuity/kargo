@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
@@ -15,9 +15,9 @@ import (
 func (r *reconciler) getLatestCharts(
 	ctx context.Context,
 	namespace string,
-	subs []api.ChartSubscription,
-) ([]api.Chart, error) {
-	charts := make([]api.Chart, len(subs))
+	subs []kargoapi.ChartSubscription,
+) ([]kargoapi.Chart, error) {
+	charts := make([]kargoapi.Chart, len(subs))
 
 	for i, sub := range subs {
 		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
@@ -73,7 +73,7 @@ func (r *reconciler) getLatestCharts(
 		logger.WithField("version", vers).
 			Debug("found latest suitable chart version")
 
-		charts[i] = api.Chart{
+		charts[i] = kargoapi.Chart{
 			RegistryURL: sub.RegistryURL,
 			Name:        sub.Name,
 			Version:     vers,
