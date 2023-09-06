@@ -109,8 +109,13 @@ api:
     ## false.
     enabled: true
 
-    ## A password for the admin account. It is suggested that you generate this
-    ## using a password manager or a command like
+    ## Bcrypt password hash for the admin account. If specified, will ignore
+    ## password setting
+    passwordHash:
+
+    ## A password for the admin account. Ignored if passwordHash is set.
+    ## It is suggested that you generate this using a password manager or a 
+    # command like
     ## `openssl rand -base64 29 | tr -d "=+/" | cut -c1-25`
     password: <admin password>
 
