@@ -68,7 +68,7 @@ export const AvailableFreight = (props: { stage: Stage; onSuccess?: () => void }
                 avatar={<FontAwesomeIcon icon={faCodeCommit} />}
                 title={
                   <Typography.Link
-                    href={`${commit.healthCheckCommit?.replace('.git', '')}/commit/${commit.id}`}
+                    href={`${commit.repoUrl?.replace('.git', '')}/commit/${commit.id}`}
                     target='_blank'
                   >
                     {commit?.id?.slice(0, 7)}
