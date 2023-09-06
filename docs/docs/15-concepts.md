@@ -312,7 +312,7 @@ spec:
   freight: 404df86560cab5d515e7aa74653e665c1dc96e1c
 ```
 
-`Promotion` resources are simple. Their `spec.environment` and `spec.freight`
+`Promotion` resources are simple. Their `spec.stage` and `spec.freight`
 fields specify a `Stage` by name and one of its available pieces of freight,
 which should be moved into that `Stage`.
 
