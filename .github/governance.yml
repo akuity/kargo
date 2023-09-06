@@ -42,6 +42,8 @@ issue:
         - charts
         - cli
         - controller
+        - crds
+        - garbage-collector
         - ui
         - webhooks
       multiple: true
