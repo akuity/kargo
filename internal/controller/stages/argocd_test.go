@@ -31,7 +31,7 @@ func TestCheckHealth(t *testing.T) {
 			assertions: func(health kargoapi.Health) {
 				require.Equal(t,
 					kargoapi.Health{
-						Status: kargoapi.HealthStateUnknown,
+						Status: kargoapi.HealthStateNotApplicable,
 						Issues: []string{
 							"no spec.promotionMechanisms.argoCDAppUpdates are defined",
 						},
@@ -125,7 +125,7 @@ func TestCheckHealth(t *testing.T) {
 				}, nil
 			},
 			assertions: func(health kargoapi.Health) {
-				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
+				require.Equal(t, kargoapi.HealthStateNotApplicable, health.Status)
 				require.Len(t, health.Issues, 1)
 				require.Contains(
 					t,

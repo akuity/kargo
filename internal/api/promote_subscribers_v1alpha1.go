@@ -34,8 +34,7 @@ func (s *server) PromoteSubscribers(
 	if err != nil {
 		return nil, err
 	}
-	// TODO: this may also need to include Not Applicable if/when that state is introduced
-	if freightToPromote.Health != nil && freightToPromote.Health.Status != kargoapi.HealthStateHealthy {
+	if freightToPromote.Health != nil && !freightToPromote.Health.Status.IsHealthyish() {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
 			fmt.Errorf("Cannot promote freight with health status: %s", freightToPromote.Health.Status))
 	}

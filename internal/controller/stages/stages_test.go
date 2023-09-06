@@ -188,10 +188,10 @@ func TestSyncStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				// Healthy by default when there are no promotion mechanisms
+				// Health NotApplicable by default when there are no promotion mechanisms
 				require.Equal(
 					t,
-					kargoapi.HealthStateHealthy,
+					kargoapi.HealthStateNotApplicable,
 					newStatus.CurrentFreight.Health.Status,
 				)
 				require.Len(t, newStatus.History, 1)
@@ -298,7 +298,7 @@ func TestSyncStage(t *testing.T) {
 						},
 					},
 					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
+						Status: kargoapi.HealthStateNotApplicable,
 					},
 				},
 				History: []kargoapi.Freight{
@@ -316,7 +316,7 @@ func TestSyncStage(t *testing.T) {
 							},
 						},
 						Health: &kargoapi.Health{
-							Status: kargoapi.HealthStateHealthy,
+							Status: kargoapi.HealthStateNotApplicable,
 						},
 					},
 				},

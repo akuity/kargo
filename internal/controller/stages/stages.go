@@ -314,9 +314,9 @@ func (r *reconciler) syncStage(
 				stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 			)
 		} else {
-			// Healthy by default if there are no promotion mechanisms.
+			// Healthyish by default if there are no promotion mechanisms.
 			health = kargoapi.Health{
-				Status: kargoapi.HealthStateHealthy,
+				Status: kargoapi.HealthStateNotApplicable,
 			}
 		}
 		status.CurrentFreight.Health = &health
@@ -580,7 +580,7 @@ func (r *reconciler) getAvailableFreightFromUpstreamStages(
 		}
 		for _, freight := range upstreamStage.Status.History {
 			if _, ok := freightSet[freight.ID]; !ok &&
-				freight.Health != nil && freight.Health.Status == kargoapi.HealthStateHealthy {
+				freight.Health != nil && freight.Health.Status.IsHealthyish() {
 				freight.Provenance = upstreamStage.Name
 				for i := range freight.Commits {
 					freight.Commits[i].HealthCheckCommit = ""

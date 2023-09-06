@@ -15,7 +15,7 @@ func (r *reconciler) checkHealth(
 ) kargoapi.Health {
 	if len(argoCDAppUpdates) == 0 {
 		return kargoapi.Health{
-			Status: kargoapi.HealthStateUnknown,
+			Status: kargoapi.HealthStateNotApplicable,
 			Issues: []string{
 				"no spec.promotionMechanisms.argoCDAppUpdates are defined",
 			},
@@ -32,7 +32,7 @@ func (r *reconciler) checkHealth(
 		app, err :=
 			r.getArgoCDAppFn(ctx, r.argoClient, check.AppNamespace, check.AppName)
 		if err != nil {
-			if health.Status != kargoapi.HealthStateUnhealthy {
+			if health.Status.IsHealthyish() {
 				health.Status = kargoapi.HealthStateUnknown
 			}
 			health.Issues = append(
@@ -45,7 +45,7 @@ func (r *reconciler) checkHealth(
 				),
 			)
 		} else if app == nil {
-			if health.Status != kargoapi.HealthStateUnhealthy {
+			if health.Status.IsHealthyish() {
 				health.Status = kargoapi.HealthStateUnknown
 			}
 			health.Issues = append(
@@ -57,8 +57,8 @@ func (r *reconciler) checkHealth(
 				),
 			)
 		} else if len(app.Spec.Sources) > 0 {
-			if health.Status != kargoapi.HealthStateUnhealthy {
-				health.Status = kargoapi.HealthStateUnknown
+			if health.Status.IsHealthyish() {
+				health.Status = kargoapi.HealthStateNotApplicable
 			}
 			health.Issues = append(
 				health.Issues,

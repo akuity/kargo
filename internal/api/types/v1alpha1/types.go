@@ -147,12 +147,14 @@ func FromHealthProto(h *v1alpha1.Health) *kargoapi.Health {
 
 	status := kargoapi.HealthStateUnknown
 	switch h.GetStatus() {
-	case v1alpha1.HealthState_HEALTH_STATE_UNKNOWN:
-		status = kargoapi.HealthStateUnknown
 	case v1alpha1.HealthState_HEALTH_STATE_HEALTHY:
 		status = kargoapi.HealthStateHealthy
 	case v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY:
 		status = kargoapi.HealthStateUnhealthy
+	case v1alpha1.HealthState_HEALTH_STATE_NOT_APPLICABLE:
+		status = kargoapi.HealthStateNotApplicable
+	case v1alpha1.HealthState_HEALTH_STATE_UNKNOWN:
+		status = kargoapi.HealthStateUnknown
 	}
 	return &kargoapi.Health{
 		Status: status,
@@ -785,6 +787,8 @@ func ToHealthProto(h kargoapi.Health) *v1alpha1.Health {
 		status = v1alpha1.HealthState_HEALTH_STATE_HEALTHY
 	case kargoapi.HealthStateUnhealthy:
 		status = v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY
+	case kargoapi.HealthStateNotApplicable:
+		status = v1alpha1.HealthState_HEALTH_STATE_NOT_APPLICABLE
 	case kargoapi.HealthStateUnknown:
 		status = v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
 	}
