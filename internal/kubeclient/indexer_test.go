@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 )
 
@@ -16,21 +16,21 @@ func TestIndexStagesByApp(t *testing.T) {
 	testCases := []struct {
 		name                string
 		controllerShardName string
-		stage               *api.Stage
+		stage               *kargoapi.Stage
 		assertions          func(*testing.T, []string)
 	}{
 		{
 			name:                "Stage belongs to another shard",
 			controllerShardName: testShardName,
-			stage: &api.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						controller.ShardLabelKey: "another-shard",
 					},
 				},
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
@@ -46,15 +46,15 @@ func TestIndexStagesByApp(t *testing.T) {
 		{
 			name:                "Stage belongs to this shard",
 			controllerShardName: testShardName,
-			stage: &api.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						controller.ShardLabelKey: testShardName,
 					},
 				},
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
@@ -76,10 +76,10 @@ func TestIndexStagesByApp(t *testing.T) {
 		{
 			name:                "Stage is unlabeled and this is not the default controller",
 			controllerShardName: testShardName,
-			stage: &api.Stage{
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
@@ -95,10 +95,10 @@ func TestIndexStagesByApp(t *testing.T) {
 		{
 			name:                "Stage is unlabeled and this is the default controller",
 			controllerShardName: "",
-			stage: &api.Stage{
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
@@ -129,56 +129,56 @@ func TestIndexStagesByApp(t *testing.T) {
 
 func TestIndexPromotionsByStage(t *testing.T) {
 	testCases := map[string]struct {
-		input      *api.Promotion
-		predicates []func(*api.Promotion) bool
+		input      *kargoapi.Promotion
+		predicates []func(*kargoapi.Promotion) bool
 		expected   []string
 	}{
 		"empty predicates/terminal phase": {
-			input: &api.Promotion{
-				Spec: &api.PromotionSpec{
+			input: &kargoapi.Promotion{
+				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
-				Status: api.PromotionStatus{
-					Phase: api.PromotionPhaseComplete,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseComplete,
 				},
 			},
 			expected: []string{"fake-stage"},
 		},
 		"empty predicates/non-terminal phase": {
-			input: &api.Promotion{
-				Spec: &api.PromotionSpec{
+			input: &kargoapi.Promotion{
+				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
-				Status: api.PromotionStatus{
-					Phase: api.PromotionPhasePending,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
 			expected: []string{"fake-stage"},
 		},
 		"filter nonOutstandingPromotionPhase/terminal phase": {
-			input: &api.Promotion{
-				Spec: &api.PromotionSpec{
+			input: &kargoapi.Promotion{
+				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
-				Status: api.PromotionStatus{
-					Phase: api.PromotionPhaseComplete,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseComplete,
 				},
 			},
-			predicates: []func(*api.Promotion) bool{
+			predicates: []func(*kargoapi.Promotion) bool{
 				filterNonOutstandingPromotionPhases,
 			},
 			expected: nil,
 		},
 		"filter nonOutstandingPromotionPhase/non-terminal phase": {
-			input: &api.Promotion{
-				Spec: &api.PromotionSpec{
+			input: &kargoapi.Promotion{
+				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
-				Status: api.PromotionStatus{
-					Phase: api.PromotionPhasePending,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
-			predicates: []func(*api.Promotion) bool{
+			predicates: []func(*kargoapi.Promotion) bool{
 				filterNonOutstandingPromotionPhases,
 			},
 			expected: []string{"fake-stage"},
@@ -198,12 +198,12 @@ func TestIndexPromotionPoliciesByStage(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name       string
-		policy     *api.PromotionPolicy
+		policy     *kargoapi.PromotionPolicy
 		assertions func(*testing.T, []string)
 	}{
 		{
 			name: "promotion policy",
-			policy: &api.PromotionPolicy{
+			policy: &kargoapi.PromotionPolicy{
 				Stage: "fake-stage",
 			},
 			assertions: func(t *testing.T, res []string) {

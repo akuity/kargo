@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 //go:embed testdata/*
@@ -19,7 +19,7 @@ func mustNewScheme() *runtime.Scheme {
 	if err := corev1.AddToScheme(scheme); err != nil {
 		panic(errors.Wrap(err, "add core v1 scheme"))
 	}
-	if err := kubev1alpha1.AddToScheme(scheme); err != nil {
+	if err := kargoapi.AddToScheme(scheme); err != nil {
 		panic(errors.Wrap(err, "add kargo v1alpha1 scheme"))
 	}
 	return scheme

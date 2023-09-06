@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/user"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -72,9 +72,9 @@ func TestListStages(t *testing.T) {
 							WithObjects(
 								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 							).
-							WithLists(&kubev1alpha1.StageList{
-								Items: []kubev1alpha1.Stage{
-									*mustNewObject[kubev1alpha1.Stage]("testdata/stage.yaml"),
+							WithLists(&kargoapi.StageList{
+								Items: []kargoapi.Stage{
+									*mustNewObject[kargoapi.Stage]("testdata/stage.yaml"),
 								},
 							}).
 							Build(), nil

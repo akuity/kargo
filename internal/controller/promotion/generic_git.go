@@ -1,7 +1,7 @@
 package promotion
 
 import (
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -20,8 +20,8 @@ func newGenericGitMechanism(
 
 // selectGenericGitUpdates returns a subset of the given updates that do not
 // involve any configuration management tools.
-func selectGenericGitUpdates(updates []api.GitRepoUpdate) []api.GitRepoUpdate {
-	var selectedUpdates []api.GitRepoUpdate
+func selectGenericGitUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
+	var selectedUpdates []kargoapi.GitRepoUpdate
 	for _, update := range updates {
 		if update.Kustomize == nil &&
 			update.Helm == nil &&

@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -19,7 +19,7 @@ func (s *server) UpdatePromotionPolicy(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdatePromotionPolicyRequest],
 ) (*connect.Response[svcv1alpha1.UpdatePromotionPolicyResponse], error) {
-	var policy kubev1alpha1.PromotionPolicy
+	var policy kargoapi.PromotionPolicy
 	switch {
 	case req.Msg.GetYaml() != "":
 		if err := yaml.Unmarshal([]byte(req.Msg.GetYaml()), &policy); err != nil {
@@ -32,7 +32,7 @@ func (s *server) UpdatePromotionPolicy(
 		if req.Msg.GetTyped().GetName() == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
 		}
-		policy = kubev1alpha1.PromotionPolicy{
+		policy = kargoapi.PromotionPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: req.Msg.GetTyped().GetProject(),
 				Name:      req.Msg.GetTyped().GetName(),
@@ -47,7 +47,7 @@ func (s *server) UpdatePromotionPolicy(
 	if err := s.validateProject(ctx, policy.GetNamespace()); err != nil {
 		return nil, err
 	}
-	var existingPolicy kubev1alpha1.PromotionPolicy
+	var existingPolicy kargoapi.PromotionPolicy
 	if err := s.client.Get(ctx, client.ObjectKeyFromObject(&policy), &existingPolicy); err != nil {
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)

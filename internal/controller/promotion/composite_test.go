@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestNewCompositeMechanism(t *testing.T) {
@@ -41,8 +41,8 @@ func TestCompositePromote(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMech  *compositeMechanism
-		newFreight api.Freight
-		assertions func(newFreightIn, newFreightOut api.Freight, err error)
+		newFreight kargoapi.Freight
+		assertions func(newFreightIn, newFreightOut kargoapi.Freight, err error)
 	}{
 		{
 			name: "error executing child promotion mechanism",
@@ -52,15 +52,15 @@ func TestCompositePromote(t *testing.T) {
 						Name: "fake promotion mechanism",
 						PromoteFn: func(
 							context.Context,
-							*api.Stage,
-							api.Freight,
-						) (api.Freight, error) {
-							return api.Freight{}, errors.New("something went wrong")
+							*kargoapi.Stage,
+							kargoapi.Freight,
+						) (kargoapi.Freight, error) {
+							return kargoapi.Freight{}, errors.New("something went wrong")
 						},
 					},
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
+			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -78,9 +78,9 @@ func TestCompositePromote(t *testing.T) {
 						Name: "fake promotion mechanism",
 						PromoteFn: func(
 							_ context.Context,
-							_ *api.Stage,
-							newFreight api.Freight,
-						) (api.Freight, error) {
+							_ *kargoapi.Stage,
+							newFreight kargoapi.Freight,
+						) (kargoapi.Freight, error) {
 							// This is not a realistic change that a child promotion mechanism
 							// would make, but for testing purposes, this is good enough to
 							// help us assert that the function under test does return all
@@ -91,7 +91,7 @@ func TestCompositePromote(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut api.Freight, err error) {
+			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				// Verify that changes made by child promotion mechanism are returned
 				require.Equal(t, "fake-mutated-id", newFreightOut.ID)
@@ -105,9 +105,9 @@ func TestCompositePromote(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
-				&api.Stage{
-					Spec: &api.StageSpec{
-						PromotionMechanisms: &api.PromotionMechanisms{},
+				&kargoapi.Stage{
+					Spec: &kargoapi.StageSpec{
+						PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					},
 				},
 				testCase.newFreight,

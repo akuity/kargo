@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 )
 
@@ -15,21 +15,21 @@ func TestIndexStagesByApp(t *testing.T) {
 	testCases := []struct {
 		name                string
 		controllerShardName string
-		stage               *api.Stage
+		stage               *kargoapi.Stage
 		assertions          func([]string)
 	}{
 		{
 			name:                "Stage belongs to another shard",
 			controllerShardName: testShardName,
-			stage: &api.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						controller.ShardLabelKey: "another-shard",
 					},
 				},
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
@@ -46,15 +46,15 @@ func TestIndexStagesByApp(t *testing.T) {
 		{
 			name:                "Stage belongs to this shard",
 			controllerShardName: testShardName,
-			stage: &api.Stage{
+			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						controller.ShardLabelKey: testShardName,
 					},
 				},
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
@@ -77,10 +77,10 @@ func TestIndexStagesByApp(t *testing.T) {
 		{
 			name:                "Stage is unlabeled and this is not the default controller",
 			controllerShardName: testShardName,
-			stage: &api.Stage{
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",
@@ -97,10 +97,10 @@ func TestIndexStagesByApp(t *testing.T) {
 		{
 			name:                "Stage is unlabeled and this is the default controller",
 			controllerShardName: "",
-			stage: &api.Stage{
-				Spec: &api.StageSpec{
-					PromotionMechanisms: &api.PromotionMechanisms{
-						ArgoCDAppUpdates: []api.ArgoCDAppUpdate{
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 							{
 								AppNamespace: "fake-namespace",
 								AppName:      "fake-app",

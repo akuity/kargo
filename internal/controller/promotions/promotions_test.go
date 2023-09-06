@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/akuity/bookkeeper"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -33,15 +33,15 @@ func TestNewPromotionReconciler(t *testing.T) {
 
 func TestInitializeQueues(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	r := reconciler{
 		kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&api.Promotion{
+			&kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-promotion",
 					Namespace: "fake-namespace",
 				},
-				Spec: &api.PromotionSpec{
+				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
 			},
@@ -61,7 +61,7 @@ func TestNewPromotionsQueue(t *testing.T) {
 	// The last added should be the first out if our priority logic is correct
 	now := time.Now()
 	for i := 0; i < 100; i++ {
-		err := pq.Push(&api.Promotion{
+		err := pq.Push(&kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				CreationTimestamp: metav1.NewTime(
 					now.Add(-1 * time.Duration(i) * time.Minute),
@@ -78,7 +78,7 @@ func TestNewPromotionsQueue(t *testing.T) {
 		if object == nil {
 			break
 		}
-		promo := object.(*api.Promotion) // nolint: forcetypeassert
+		promo := object.(*kargoapi.Promotion) // nolint: forcetypeassert
 		if lastTime != nil {
 			require.Greater(t, promo.CreationTimestamp.Time, *lastTime)
 		}
@@ -89,10 +89,10 @@ func TestNewPromotionsQueue(t *testing.T) {
 func TestPromotionSync(t *testing.T) {
 	testCases := []struct {
 		name       string
-		promo      *api.Promotion
+		promo      *kargoapi.Promotion
 		pqs        map[types.NamespacedName]runtime.PriorityQueue
 		assertions func(
-			api.PromotionStatus,
+			kargoapi.PromotionStatus,
 			map[types.NamespacedName]runtime.PriorityQueue,
 		)
 	}{
@@ -100,19 +100,19 @@ func TestPromotionSync(t *testing.T) {
 			// Existing promotions are listed at startup. We're only interested in
 			// new ones. They're identifiable by lack of a phase.
 			name: "existing promotion",
-			promo: &api.Promotion{
-				Status: api.PromotionStatus{
-					Phase: api.PromotionPhasePending,
+			promo: &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
 			assertions: func(
-				status api.PromotionStatus,
+				status kargoapi.PromotionStatus,
 				pqs map[types.NamespacedName]runtime.PriorityQueue,
 			) {
 				require.Equal(
 					t,
-					api.PromotionStatus{
-						Phase: api.PromotionPhasePending, // Status should be unchanged
+					kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending, // Status should be unchanged
 					},
 					status,
 				)
@@ -122,12 +122,12 @@ func TestPromotionSync(t *testing.T) {
 
 		{
 			name: "promotion queue already exists",
-			promo: &api.Promotion{
+			promo: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-name",
 					Namespace: "fake-namespace",
 				},
-				Spec: &api.PromotionSpec{
+				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
 			},
@@ -135,13 +135,13 @@ func TestPromotionSync(t *testing.T) {
 				{Namespace: "fake-namespace", Name: "fake-stage"}: newPromotionsQueue(),
 			},
 			assertions: func(
-				status api.PromotionStatus,
+				status kargoapi.PromotionStatus,
 				pqs map[types.NamespacedName]runtime.PriorityQueue,
 			) {
 				require.Equal( // Status should have phase assigned
 					t,
-					api.PromotionStatus{
-						Phase: api.PromotionPhasePending,
+					kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
 					},
 					status,
 				)
@@ -156,24 +156,24 @@ func TestPromotionSync(t *testing.T) {
 
 		{
 			name: "promotion queue does not already exists",
-			promo: &api.Promotion{
+			promo: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-name",
 					Namespace: "fake-namespace",
 				},
-				Spec: &api.PromotionSpec{
+				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
 			},
 			pqs: map[types.NamespacedName]runtime.PriorityQueue{},
 			assertions: func(
-				status api.PromotionStatus,
+				status kargoapi.PromotionStatus,
 				pqs map[types.NamespacedName]runtime.PriorityQueue,
 			) {
 				require.Equal( // Status should have phase assigned
 					t,
-					api.PromotionStatus{
-						Phase: api.PromotionPhasePending,
+					kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
 					},
 					status,
 				)
@@ -202,22 +202,22 @@ func TestPromotionSync(t *testing.T) {
 }
 
 func TestSerializedSync(t *testing.T) {
-	promo := &api.Promotion{
+	promo := &kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake-promo",
 			Namespace: "fake-namespace",
 		},
-		Spec: &api.PromotionSpec{
+		Spec: &kargoapi.PromotionSpec{
 			Stage:   "fake-stage",
 			Freight: "fake-freight",
 		},
-		Status: api.PromotionStatus{
-			Phase: api.PromotionPhasePending,
+		Status: kargoapi.PromotionStatus{
+			Phase: kargoapi.PromotionPhasePending,
 		},
 	}
 
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	kargoClient := fake.NewClientBuilder().
 		WithScheme(scheme).WithObjects(promo).Build()
 
@@ -253,22 +253,22 @@ func TestSerializedSync(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, promo)
-	require.Equal(t, api.PromotionPhaseComplete, promo.Status.Phase)
+	require.Equal(t, kargoapi.PromotionPhaseComplete, promo.Status.Phase)
 }
 
 func TestGetPromo(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*api.Promotion, error)
+		assertions func(*kargoapi.Promotion, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(promo *api.Promotion, err error) {
+			assertions: func(promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Nil(t, promo)
 			},
@@ -277,24 +277,24 @@ func TestGetPromo(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&api.Promotion{
+				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-promotion",
 						Namespace: "fake-namespace",
 					},
-					Spec: &api.PromotionSpec{
+					Spec: &kargoapi.PromotionSpec{
 						Stage:   "fake-stage",
 						Freight: "fake-freight",
 					},
 				},
 			).Build(),
-			assertions: func(promo *api.Promotion, err error) {
+			assertions: func(promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-promotion", promo.Name)
 				require.Equal(t, "fake-namespace", promo.Namespace)
 				require.Equal(
 					t,
-					&api.PromotionSpec{
+					&kargoapi.PromotionSpec{
 						Stage:   "fake-stage",
 						Freight: "fake-freight",
 					},

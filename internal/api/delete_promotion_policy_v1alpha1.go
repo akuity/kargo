@@ -9,7 +9,7 @@ import (
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargov1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -27,7 +27,7 @@ func (s *server) DeletePromotionPolicy(
 		return nil, err
 	}
 
-	var policy kargov1alpha1.PromotionPolicy
+	var policy kargoapi.PromotionPolicy
 	key := client.ObjectKey{
 		Namespace: req.Msg.GetProject(),
 		Name:      req.Msg.GetName(),

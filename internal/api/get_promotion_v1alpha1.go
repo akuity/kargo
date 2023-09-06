@@ -8,7 +8,7 @@ import (
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -27,7 +27,7 @@ func (s *server) GetPromotion(
 		return nil, err
 	}
 
-	var promotion kubev1alpha1.Promotion
+	var promotion kargoapi.Promotion
 	if err := s.client.Get(ctx, client.ObjectKey{
 		Namespace: req.Msg.GetProject(),
 		Name:      req.Msg.GetName(),

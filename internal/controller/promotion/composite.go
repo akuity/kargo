@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -40,9 +40,9 @@ func (c *compositeMechanism) GetName() string {
 // Promote implements the Mechanism interface.
 func (c *compositeMechanism) Promote(
 	ctx context.Context,
-	stage *api.Stage,
-	newFreight api.Freight,
-) (api.Freight, error) {
+	stage *kargoapi.Stage,
+	newFreight kargoapi.Freight,
+) (kargoapi.Freight, error) {
 	if stage.Spec.PromotionMechanisms == nil {
 		return newFreight, nil
 	}

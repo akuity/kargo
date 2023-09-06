@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -18,7 +18,7 @@ func (s *server) ListProjects(
 	_ *connect.Request[svcv1alpha1.ListProjectsRequest],
 ) (*connect.Response[svcv1alpha1.ListProjectsResponse], error) {
 	// Only list namespaces which are labeled as Kargo projects
-	selector := labels.Set{v1alpha1.LabelProjectKey: v1alpha1.LabelTrueValue}.AsSelector()
+	selector := labels.Set{kargoapi.LabelProjectKey: kargoapi.LabelTrueValue}.AsSelector()
 	nsList := &corev1.NamespaceList{}
 	if err := s.client.List(ctx, nsList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)

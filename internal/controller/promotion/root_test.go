@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/akuity/bookkeeper"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -27,9 +27,9 @@ type FakeMechanism struct {
 	Name      string
 	PromoteFn func(
 		context.Context,
-		*api.Stage,
-		api.Freight,
-	) (api.Freight, error)
+		*kargoapi.Stage,
+		kargoapi.Freight,
+	) (kargoapi.Freight, error)
 }
 
 // GetName implements the Mechanism interface.
@@ -40,8 +40,8 @@ func (f *FakeMechanism) GetName() string {
 // Promote implements the Mechanism interface.
 func (f *FakeMechanism) Promote(
 	ctx context.Context,
-	stage *api.Stage,
-	freight api.Freight,
-) (api.Freight, error) {
+	stage *kargoapi.Stage,
+	freight kargoapi.Freight,
+) (kargoapi.Freight, error) {
 	return f.PromoteFn(ctx, stage, freight)
 }

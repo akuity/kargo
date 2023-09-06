@@ -13,7 +13,7 @@ import (
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/user"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -87,9 +87,9 @@ func TestPromoteStage(t *testing.T) {
 							WithObjects(
 								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 							).
-							WithLists(&kubev1alpha1.StageList{
-								Items: []kubev1alpha1.Stage{
-									*mustNewObject[kubev1alpha1.Stage]("testdata/stage.yaml"),
+							WithLists(&kargoapi.StageList{
+								Items: []kargoapi.Stage{
+									*mustNewObject[kargoapi.Stage]("testdata/stage.yaml"),
 								},
 							}).
 							Build(), nil
@@ -111,7 +111,7 @@ func TestPromoteStage(t *testing.T) {
 			require.Equal(t, ts.req.GetName(), res.Msg.GetPromotion().GetSpec().GetStage())
 			require.Equal(t, ts.req.GetFreight(), res.Msg.GetPromotion().GetSpec().GetFreight())
 
-			var actual kubev1alpha1.Promotion
+			var actual kargoapi.Promotion
 			require.NoError(t, client.Get(ctx, libClient.ObjectKey{
 				Namespace: ts.req.GetProject(),
 				Name:      res.Msg.GetPromotion().GetMetadata().GetName(),

@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -25,8 +25,8 @@ type argoCDMechanism struct {
 	doSingleUpdateFn func(
 		ctx context.Context,
 		stageMeta metav1.ObjectMeta,
-		update api.ArgoCDAppUpdate,
-		newFreight api.Freight,
+		update kargoapi.ArgoCDAppUpdate,
+		newFreight kargoapi.Freight,
 	) error
 	getArgoCDAppFn func(
 		ctx context.Context,
@@ -35,8 +35,8 @@ type argoCDMechanism struct {
 	) (*argocd.Application, error)
 	applyArgoCDSourceUpdateFn func(
 		argocd.ApplicationSource,
-		api.Freight,
-		api.ArgoCDSourceUpdate,
+		kargoapi.Freight,
+		kargoapi.ArgoCDSourceUpdate,
 	) (argocd.ApplicationSource, error)
 	argoCDAppPatchFn func(
 		ctx context.Context,
@@ -67,9 +67,9 @@ func (*argoCDMechanism) GetName() string {
 // Promote implements the Mechanism interface.
 func (a *argoCDMechanism) Promote(
 	ctx context.Context,
-	stage *api.Stage,
-	newFreight api.Freight,
-) (api.Freight, error) {
+	stage *kargoapi.Stage,
+	newFreight kargoapi.Freight,
+) (kargoapi.Freight, error) {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
@@ -98,8 +98,8 @@ func (a *argoCDMechanism) Promote(
 func (a *argoCDMechanism) doSingleUpdate(
 	ctx context.Context,
 	stageMeta metav1.ObjectMeta,
-	update api.ArgoCDAppUpdate,
-	newFreight api.Freight,
+	update kargoapi.ArgoCDAppUpdate,
+	newFreight kargoapi.Freight,
 ) error {
 	app, err :=
 		a.getArgoCDAppFn(ctx, update.AppNamespace, update.AppName)
@@ -260,8 +260,8 @@ func authorizeArgoCDAppUpdate(
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
-	newFreight api.Freight,
-	update api.ArgoCDSourceUpdate,
+	newFreight kargoapi.Freight,
+	update kargoapi.ArgoCDSourceUpdate,
 ) (argocd.ApplicationSource, error) {
 	if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
 		return source, nil
@@ -327,7 +327,7 @@ func applyArgoCDSourceUpdate(
 }
 
 func buildKustomizeImagesForArgoCDAppSource(
-	images []api.Image,
+	images []kargoapi.Image,
 	imageUpdates []string,
 ) argocd.KustomizeImages {
 	tagsByImage := map[string]string{}
@@ -352,8 +352,8 @@ func buildKustomizeImagesForArgoCDAppSource(
 }
 
 func buildHelmParamChangesForArgoCDAppSource(
-	images []api.Image,
-	imageUpdates []api.ArgoCDHelmImageUpdate,
+	images []kargoapi.Image,
+	imageUpdates []kargoapi.ArgoCDHelmImageUpdate,
 ) map[string]string {
 	tagsByImage := map[string]string{}
 	for _, image := range images {
@@ -361,8 +361,8 @@ func buildHelmParamChangesForArgoCDAppSource(
 	}
 	changes := map[string]string{}
 	for _, imageUpdate := range imageUpdates {
-		if imageUpdate.Value != api.ImageUpdateValueTypeImage &&
-			imageUpdate.Value != api.ImageUpdateValueTypeTag {
+		if imageUpdate.Value != kargoapi.ImageUpdateValueTypeImage &&
+			imageUpdate.Value != kargoapi.ImageUpdateValueTypeTag {
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
@@ -371,7 +371,7 @@ func buildHelmParamChangesForArgoCDAppSource(
 			// There's no change to make in this case.
 			continue
 		}
-		if imageUpdate.Value == api.ImageUpdateValueTypeImage {
+		if imageUpdate.Value == kargoapi.ImageUpdateValueTypeImage {
 			changes[imageUpdate.Key] = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 		} else {
 			changes[imageUpdate.Key] = tag

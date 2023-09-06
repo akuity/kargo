@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 var (
@@ -25,7 +25,7 @@ func ValidateProject(ctx context.Context, kc client.Client, project string) erro
 		}
 		return errors.Wrap(err, "get project")
 	}
-	if ns.GetLabels()[v1alpha1.LabelProjectKey] != v1alpha1.LabelTrueValue {
+	if ns.GetLabels()[kargoapi.LabelProjectKey] != kargoapi.LabelTrueValue {
 		return field.Invalid(field.NewPath("metadata", "namespace"),
 			project, fmt.Sprintf("namespace %q is not a project", project))
 	}

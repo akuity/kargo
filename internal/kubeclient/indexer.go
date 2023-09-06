@@ -8,7 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 )
 
@@ -20,16 +20,16 @@ const (
 )
 
 var (
-	NonOutstandingPromotionPhases = []api.PromotionPhase{
-		api.PromotionPhaseComplete,
-		api.PromotionPhaseFailed,
+	NonOutstandingPromotionPhases = []kargoapi.PromotionPhase{
+		kargoapi.PromotionPhaseComplete,
+		kargoapi.PromotionPhaseFailed,
 	}
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
-		&api.Stage{},
+		&kargoapi.Stage{},
 		StagesByArgoCDApplicationsIndexField,
 		indexStagesByArgoCDApplications(shardName))
 }
@@ -49,7 +49,7 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 			return nil
 		}
 
-		stage := obj.(*api.Stage) // nolint: forcetypeassert
+		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 		if stage.Spec.PromotionMechanisms == nil ||
 			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 			return nil
@@ -65,10 +65,10 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 
 // IndexPromotionsByStage creates Promotion index by Stage for which
 // all the given predicates returns true for the Promotion.
-func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager, predicates ...func(*api.Promotion) bool) error {
+func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager, predicates ...func(*kargoapi.Promotion) bool) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
-		&api.Promotion{},
+		&kargoapi.Promotion{},
 		PromotionsByStageIndexField,
 		indexPromotionsByStage(predicates...))
 }
@@ -78,15 +78,15 @@ func IndexOutstandingPromotionsByStage(ctx context.Context, mgr ctrl.Manager) er
 	return IndexPromotionsByStage(ctx, mgr, filterNonOutstandingPromotionPhases)
 }
 
-func filterNonOutstandingPromotionPhases(promo *api.Promotion) bool {
+func filterNonOutstandingPromotionPhases(promo *kargoapi.Promotion) bool {
 	return !slices.Contains(NonOutstandingPromotionPhases, promo.GetStatus().Phase)
 }
 
 // indexPromotionsByStage indexes Promotion if all the given predicates
 // returns true for the Promotion.
-func indexPromotionsByStage(predicates ...func(*api.Promotion) bool) client.IndexerFunc {
+func indexPromotionsByStage(predicates ...func(*kargoapi.Promotion) bool) client.IndexerFunc {
 	return func(obj client.Object) []string {
-		promo, ok := obj.(*api.Promotion)
+		promo, ok := obj.(*kargoapi.Promotion)
 		if !ok {
 			return nil
 		}
@@ -102,12 +102,12 @@ func indexPromotionsByStage(predicates ...func(*api.Promotion) bool) client.Inde
 func IndexPromotionPoliciesByStage(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
-		&api.PromotionPolicy{},
+		&kargoapi.PromotionPolicy{},
 		PromotionPoliciesByStageIndexField,
 		indexPromotionPoliciesByStage)
 }
 
 func indexPromotionPoliciesByStage(obj client.Object) []string {
-	policy := obj.(*api.PromotionPolicy) // nolint: forcetypeassert
+	policy := obj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
 	return []string{policy.Stage}
 }

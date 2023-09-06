@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -50,7 +50,7 @@ func TestNewStageReconciler(t *testing.T) {
 
 func TestSync(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, api.SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	noOutstandingPromotionsFn := func(
 		context.Context,
@@ -62,8 +62,8 @@ func TestSync(t *testing.T) {
 
 	testCases := []struct {
 		name                       string
-		spec                       api.StageSpec
-		initialStatus              api.StageStatus
+		spec                       kargoapi.StageSpec
+		initialStatus              kargoapi.StageStatus
 		hasOutstandingPromotionsFn func(
 			ctx context.Context,
 			stageNamespace string,
@@ -71,23 +71,23 @@ func TestSync(t *testing.T) {
 		) (bool, error)
 		checkHealthFn func(
 			context.Context,
-			api.Freight,
-			[]api.ArgoCDAppUpdate,
-		) api.Health
+			kargoapi.Freight,
+			[]kargoapi.ArgoCDAppUpdate,
+		) kargoapi.Health
 		getLatestFreightFromReposFn func(
 			context.Context,
 			string,
-			api.RepoSubscriptions,
-		) (*api.Freight, error)
+			kargoapi.RepoSubscriptions,
+		) (*kargoapi.Freight, error)
 		getAvailableFreightFromUpstreamStagesFn func(
 			ctx context.Context,
 			namespace string,
-			subs []api.StageSubscription,
-		) ([]api.Freight, error)
+			subs []kargoapi.StageSubscription,
+		) ([]kargoapi.Freight, error)
 		kargoClient client.Client
 		assertions  func(
-			initialStatus api.StageStatus,
-			newStatus api.StageStatus,
+			initialStatus kargoapi.StageStatus,
+			newStatus kargoapi.StageStatus,
 			client client.Client,
 			err error,
 		)
@@ -102,8 +102,8 @@ func TestSync(t *testing.T) {
 				return false, errors.New("something went wrong")
 			},
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -124,8 +124,8 @@ func TestSync(t *testing.T) {
 				return true, nil
 			},
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -137,14 +137,14 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no subscriptions",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{},
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{},
 			},
-			initialStatus:              api.StageStatus{},
+			initialStatus:              kargoapi.StageStatus{},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -156,22 +156,22 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "error getting latest Freight from repos",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
-				api.RepoSubscriptions,
-			) (*api.Freight, error) {
+				kargoapi.RepoSubscriptions,
+			) (*kargoapi.Freight, error) {
 				return nil, errors.New("something went wrong")
 			},
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -184,22 +184,22 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no latest Freight from repos",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
-				api.RepoSubscriptions,
-			) (*api.Freight, error) {
+				kargoapi.RepoSubscriptions,
+			) (*kargoapi.Freight, error) {
 				return nil, nil
 			},
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -211,23 +211,23 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "latest Freight from repos isn't new",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					Repos: &kargoapi.RepoSubscriptions{},
 				},
 				// TODO: I'm not sure about this change
-				// HealthChecks: &api.HealthChecks{},
+				// HealthChecks: &kargoapi.HealthChecks{},
 			},
-			initialStatus: api.StageStatus{
-				AvailableFreight: []api.Freight{
+			initialStatus: kargoapi.StageStatus{
+				AvailableFreight: []kargoapi.Freight{
 					{
-						Commits: []api.GitCommit{
+						Commits: []kargoapi.GitCommit{
 							{
 								RepoURL: "fake-url",
 								ID:      "fake-commit",
 							},
 						},
-						Images: []api.Image{
+						Images: []kargoapi.Image{
 							{
 								RepoURL: "fake-url",
 								Tag:     "fake-tag",
@@ -235,39 +235,39 @@ func TestSync(t *testing.T) {
 						},
 					},
 				},
-				CurrentFreight: &api.Freight{
-					Commits: []api.GitCommit{
+				CurrentFreight: &kargoapi.Freight{
+					Commits: []kargoapi.GitCommit{
 						{
 							RepoURL: "fake-url",
 							ID:      "fake-commit",
 						},
 					},
-					Images: []api.Image{
+					Images: []kargoapi.Image{
 						{
 							RepoURL: "fake-url",
 							Tag:     "fake-tag",
 						},
 					},
-					Health: &api.Health{
-						Status: api.HealthStateHealthy,
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateHealthy,
 					},
 				},
-				History: []api.Freight{
+				History: []kargoapi.Freight{
 					{
-						Commits: []api.GitCommit{
+						Commits: []kargoapi.GitCommit{
 							{
 								RepoURL: "fake-url",
 								ID:      "fake-commit",
 							},
 						},
-						Images: []api.Image{
+						Images: []kargoapi.Image{
 							{
 								RepoURL: "fake-url",
 								Tag:     "fake-tag",
 							},
 						},
-						Health: &api.Health{
-							Status: api.HealthStateHealthy,
+						Health: &kargoapi.Health{
+							Status: kargoapi.HealthStateHealthy,
 						},
 					},
 				},
@@ -275,26 +275,26 @@ func TestSync(t *testing.T) {
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			checkHealthFn: func(
 				context.Context,
-				api.Freight,
-				[]api.ArgoCDAppUpdate,
-			) api.Health {
-				return api.Health{
-					Status: api.HealthStateHealthy,
+				kargoapi.Freight,
+				[]kargoapi.ArgoCDAppUpdate,
+			) kargoapi.Health {
+				return kargoapi.Health{
+					Status: kargoapi.HealthStateHealthy,
 				}
 			},
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
-				api.RepoSubscriptions,
-			) (*api.Freight, error) {
-				return &api.Freight{
-					Commits: []api.GitCommit{
+				kargoapi.RepoSubscriptions,
+			) (*kargoapi.Freight, error) {
+				return &kargoapi.Freight{
+					Commits: []kargoapi.GitCommit{
 						{
 							RepoURL: "fake-url",
 							ID:      "fake-commit",
 						},
 					},
-					Images: []api.Image{
+					Images: []kargoapi.Image{
 						{
 							RepoURL: "fake-url",
 							Tag:     "fake-tag",
@@ -303,8 +303,8 @@ func TestSync(t *testing.T) {
 				}, nil
 			},
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -316,9 +316,9 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "error getting available Freight from upstream Stages",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					UpstreamStages: []api.StageSubscription{
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					UpstreamStages: []kargoapi.StageSubscription{
 						{
 							Name: "fake-name",
 						},
@@ -329,13 +329,13 @@ func TestSync(t *testing.T) {
 			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
-				[]api.StageSubscription,
-			) ([]api.Freight, error) {
+				[]kargoapi.StageSubscription,
+			) ([]kargoapi.Freight, error) {
 				return nil, errors.New("something went wrong")
 			},
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -348,9 +348,9 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no latest Freight from upstream Stages",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					UpstreamStages: []api.StageSubscription{
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					UpstreamStages: []kargoapi.StageSubscription{
 						{
 							Name: "fake-name",
 						},
@@ -361,13 +361,13 @@ func TestSync(t *testing.T) {
 			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
-				[]api.StageSubscription,
-			) ([]api.Freight, error) {
+				[]kargoapi.StageSubscription,
+			) ([]kargoapi.Freight, error) {
 				return nil, nil
 			},
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -379,9 +379,9 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "multiple upstream Stages",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					UpstreamStages: []api.StageSubscription{
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					UpstreamStages: []kargoapi.StageSubscription{
 						// Subscribing to multiple upstream Stages should block
 						// auto-promotion
 						{
@@ -397,16 +397,16 @@ func TestSync(t *testing.T) {
 			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
-				[]api.StageSubscription,
-			) ([]api.Freight, error) {
-				return []api.Freight{
+				[]kargoapi.StageSubscription,
+			) ([]kargoapi.Freight, error) {
+				return []kargoapi.Freight{
 					{},
 					{},
 				}, nil
 			},
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				_ client.Client,
 				err error,
 			) {
@@ -415,7 +415,7 @@ func TestSync(t *testing.T) {
 				// unchanged
 				require.Equal(
 					t,
-					api.FreightStack{{}, {}},
+					kargoapi.FreightStack{{}, {}},
 					newStatus.AvailableFreight,
 				)
 				newStatus.AvailableFreight = initialStatus.AvailableFreight
@@ -425,25 +425,25 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no promotion policy found",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
-				api.RepoSubscriptions,
-			) (*api.Freight, error) {
-				return &api.Freight{
-					Commits: []api.GitCommit{
+				kargoapi.RepoSubscriptions,
+			) (*kargoapi.Freight, error) {
+				return &kargoapi.Freight{
+					Commits: []kargoapi.GitCommit{
 						{
 							RepoURL: "fake-url",
 							ID:      "fake-commit",
 						},
 					},
-					Images: []api.Image{
+					Images: []kargoapi.Image{
 						{
 							RepoURL: "fake-url",
 							Tag:     "fake-tag",
@@ -453,8 +453,8 @@ func TestSync(t *testing.T) {
 			},
 			kargoClient: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				client client.Client,
 				err error,
 			) {
@@ -463,15 +463,15 @@ func TestSync(t *testing.T) {
 				// unchanged
 				require.Equal(
 					t,
-					api.FreightStack{
+					kargoapi.FreightStack{
 						{
-							Commits: []api.GitCommit{
+							Commits: []kargoapi.GitCommit{
 								{
 									RepoURL: "fake-url",
 									ID:      "fake-commit",
 								},
 							},
-							Images: []api.Image{
+							Images: []kargoapi.Image{
 								{
 									RepoURL: "fake-url",
 									Tag:     "fake-tag",
@@ -484,7 +484,7 @@ func TestSync(t *testing.T) {
 				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 				// And no Promotion should have been created
-				promos := api.PromotionList{}
+				promos := kargoapi.PromotionList{}
 				err = client.List(context.Background(), &promos)
 				require.NoError(t, err)
 				require.Empty(t, promos.Items)
@@ -493,25 +493,25 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "multiple promotion policies found",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
-				api.RepoSubscriptions,
-			) (*api.Freight, error) {
-				return &api.Freight{
-					Commits: []api.GitCommit{
+				kargoapi.RepoSubscriptions,
+			) (*kargoapi.Freight, error) {
+				return &kargoapi.Freight{
+					Commits: []kargoapi.GitCommit{
 						{
 							RepoURL: "fake-url",
 							ID:      "fake-commit",
 						},
 					},
-					Images: []api.Image{
+					Images: []kargoapi.Image{
 						{
 							RepoURL: "fake-url",
 							Tag:     "fake-tag",
@@ -520,14 +520,14 @@ func TestSync(t *testing.T) {
 				}, nil
 			},
 			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&api.PromotionPolicy{
+				&kargoapi.PromotionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-policy",
 						Namespace: "fake-namespace",
 					},
 					Stage: "fake-stage",
 				},
-				&api.PromotionPolicy{
+				&kargoapi.PromotionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "another-fake-policy",
 						Namespace: "fake-namespace",
@@ -536,8 +536,8 @@ func TestSync(t *testing.T) {
 				},
 			).Build(),
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				client client.Client,
 				err error,
 			) {
@@ -546,15 +546,15 @@ func TestSync(t *testing.T) {
 				// unchanged
 				require.Equal(
 					t,
-					api.FreightStack{
+					kargoapi.FreightStack{
 						{
-							Commits: []api.GitCommit{
+							Commits: []kargoapi.GitCommit{
 								{
 									RepoURL: "fake-url",
 									ID:      "fake-commit",
 								},
 							},
-							Images: []api.Image{
+							Images: []kargoapi.Image{
 								{
 									RepoURL: "fake-url",
 									Tag:     "fake-tag",
@@ -567,7 +567,7 @@ func TestSync(t *testing.T) {
 				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 				// And no Promotion should have been created
-				promos := api.PromotionList{}
+				promos := kargoapi.PromotionList{}
 				err = client.List(context.Background(), &promos)
 				require.NoError(t, err)
 				require.Empty(t, promos.Items)
@@ -576,25 +576,25 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "auto-promotion not enabled",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
-				api.RepoSubscriptions,
-			) (*api.Freight, error) {
-				return &api.Freight{
-					Commits: []api.GitCommit{
+				kargoapi.RepoSubscriptions,
+			) (*kargoapi.Freight, error) {
+				return &kargoapi.Freight{
+					Commits: []kargoapi.GitCommit{
 						{
 							RepoURL: "fake-url",
 							ID:      "fake-commit",
 						},
 					},
-					Images: []api.Image{
+					Images: []kargoapi.Image{
 						{
 							RepoURL: "fake-url",
 							Tag:     "fake-tag",
@@ -603,7 +603,7 @@ func TestSync(t *testing.T) {
 				}, nil
 			},
 			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&api.PromotionPolicy{
+				&kargoapi.PromotionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-policy",
 						Namespace: "fake-namespace",
@@ -612,8 +612,8 @@ func TestSync(t *testing.T) {
 				},
 			).Build(),
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				client client.Client,
 				err error,
 			) {
@@ -622,15 +622,15 @@ func TestSync(t *testing.T) {
 				// unchanged
 				require.Equal(
 					t,
-					api.FreightStack{
+					kargoapi.FreightStack{
 						{
-							Commits: []api.GitCommit{
+							Commits: []kargoapi.GitCommit{
 								{
 									RepoURL: "fake-url",
 									ID:      "fake-commit",
 								},
 							},
-							Images: []api.Image{
+							Images: []kargoapi.Image{
 								{
 									RepoURL: "fake-url",
 									Tag:     "fake-tag",
@@ -643,7 +643,7 @@ func TestSync(t *testing.T) {
 				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 				// And no Promotion should have been created
-				promos := api.PromotionList{}
+				promos := kargoapi.PromotionList{}
 				err = client.List(context.Background(), &promos)
 				require.NoError(t, err)
 				require.Empty(t, promos.Items)
@@ -652,25 +652,25 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "auto-promotion enabled",
-			spec: api.StageSpec{
-				Subscriptions: &api.Subscriptions{
-					Repos: &api.RepoSubscriptions{},
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{
+					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
 			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
-				api.RepoSubscriptions,
-			) (*api.Freight, error) {
-				return &api.Freight{
-					Commits: []api.GitCommit{
+				kargoapi.RepoSubscriptions,
+			) (*kargoapi.Freight, error) {
+				return &kargoapi.Freight{
+					Commits: []kargoapi.GitCommit{
 						{
 							RepoURL: "fake-url",
 							ID:      "fake-commit",
 						},
 					},
-					Images: []api.Image{
+					Images: []kargoapi.Image{
 						{
 							RepoURL: "fake-url",
 							Tag:     "fake-tag",
@@ -679,7 +679,7 @@ func TestSync(t *testing.T) {
 				}, nil
 			},
 			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&api.PromotionPolicy{
+				&kargoapi.PromotionPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-policy",
 						Namespace: "fake-namespace",
@@ -689,8 +689,8 @@ func TestSync(t *testing.T) {
 				},
 			).Build(),
 			assertions: func(
-				initialStatus api.StageStatus,
-				newStatus api.StageStatus,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
 				client client.Client,
 				err error,
 			) {
@@ -699,15 +699,15 @@ func TestSync(t *testing.T) {
 				// unchanged
 				require.Equal(
 					t,
-					api.FreightStack{
+					kargoapi.FreightStack{
 						{
-							Commits: []api.GitCommit{
+							Commits: []kargoapi.GitCommit{
 								{
 									RepoURL: "fake-url",
 									ID:      "fake-commit",
 								},
 							},
-							Images: []api.Image{
+							Images: []kargoapi.Image{
 								{
 									RepoURL: "fake-url",
 									Tag:     "fake-tag",
@@ -720,7 +720,7 @@ func TestSync(t *testing.T) {
 				newStatus.AvailableFreight = initialStatus.AvailableFreight
 				require.Equal(t, initialStatus, newStatus)
 				// And a Promotion should have been created
-				promos := api.PromotionList{}
+				promos := kargoapi.PromotionList{}
 				err = client.List(context.Background(), &promos)
 				require.NoError(t, err)
 				require.Len(t, promos.Items, 1)
@@ -731,7 +731,7 @@ func TestSync(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			testStage := &api.Stage{
+			testStage := &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
@@ -764,30 +764,30 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 		getLatestCommitsFn func(
 			context.Context,
 			string,
-			[]api.GitSubscription,
-		) ([]api.GitCommit, error)
+			[]kargoapi.GitSubscription,
+		) ([]kargoapi.GitCommit, error)
 		getLatestImagesFn func(
 			context.Context,
 			string,
-			[]api.ImageSubscription,
-		) ([]api.Image, error)
+			[]kargoapi.ImageSubscription,
+		) ([]kargoapi.Image, error)
 		getLatestChartsFn func(
 			context.Context,
 			string,
-			[]api.ChartSubscription,
-		) ([]api.Chart, error)
-		assertions func(*api.Freight, error)
+			[]kargoapi.ChartSubscription,
+		) ([]kargoapi.Chart, error)
+		assertions func(*kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting latest git commit",
 			getLatestCommitsFn: func(
 				context.Context,
 				string,
-				[]api.GitSubscription,
-			) ([]api.GitCommit, error) {
+				[]kargoapi.GitSubscription,
+			) ([]kargoapi.GitCommit, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(freight *api.Freight, err error) {
+			assertions: func(freight *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error syncing git repo subscription")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -799,18 +799,18 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 			getLatestCommitsFn: func(
 				context.Context,
 				string,
-				[]api.GitSubscription,
-			) ([]api.GitCommit, error) {
+				[]kargoapi.GitSubscription,
+			) ([]kargoapi.GitCommit, error) {
 				return nil, nil
 			},
 			getLatestImagesFn: func(
 				context.Context,
 				string,
-				[]api.ImageSubscription,
-			) ([]api.Image, error) {
+				[]kargoapi.ImageSubscription,
+			) ([]kargoapi.Image, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(freight *api.Freight, err error) {
+			assertions: func(freight *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -826,25 +826,25 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 			getLatestCommitsFn: func(
 				context.Context,
 				string,
-				[]api.GitSubscription,
-			) ([]api.GitCommit, error) {
+				[]kargoapi.GitSubscription,
+			) ([]kargoapi.GitCommit, error) {
 				return nil, nil
 			},
 			getLatestImagesFn: func(
 				context.Context,
 				string,
-				[]api.ImageSubscription,
-			) ([]api.Image, error) {
+				[]kargoapi.ImageSubscription,
+			) ([]kargoapi.Image, error) {
 				return nil, nil
 			},
 			getLatestChartsFn: func(
 				context.Context,
 				string,
-				[]api.ChartSubscription,
-			) ([]api.Chart, error) {
+				[]kargoapi.ChartSubscription,
+			) ([]kargoapi.Chart, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(freight *api.Freight, err error) {
+			assertions: func(freight *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -860,9 +860,9 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 			getLatestCommitsFn: func(
 				context.Context,
 				string,
-				[]api.GitSubscription,
-			) ([]api.GitCommit, error) {
-				return []api.GitCommit{
+				[]kargoapi.GitSubscription,
+			) ([]kargoapi.GitCommit, error) {
+				return []kargoapi.GitCommit{
 					{
 						RepoURL: "fake-url",
 						ID:      "fake-commit",
@@ -872,9 +872,9 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 			getLatestImagesFn: func(
 				context.Context,
 				string,
-				[]api.ImageSubscription,
-			) ([]api.Image, error) {
-				return []api.Image{
+				[]kargoapi.ImageSubscription,
+			) ([]kargoapi.Image, error) {
+				return []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
 						Tag:     "fake-tag",
@@ -884,9 +884,9 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 			getLatestChartsFn: func(
 				context.Context,
 				string,
-				[]api.ChartSubscription,
-			) ([]api.Chart, error) {
-				return []api.Chart{
+				[]kargoapi.ChartSubscription,
+			) ([]kargoapi.Chart, error) {
+				return []kargoapi.Chart{
 					{
 						RegistryURL: "fake-registry",
 						Name:        "fake-chart",
@@ -894,7 +894,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					},
 				}, nil
 			},
-			assertions: func(freight *api.Freight, err error) {
+			assertions: func(freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				require.NotEmpty(t, freight.ID)
@@ -904,20 +904,20 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				freight.FirstSeen = nil
 				require.Equal(
 					t,
-					&api.Freight{
-						Commits: []api.GitCommit{
+					&kargoapi.Freight{
+						Commits: []kargoapi.GitCommit{
 							{
 								RepoURL: "fake-url",
 								ID:      "fake-commit",
 							},
 						},
-						Images: []api.Image{
+						Images: []kargoapi.Image{
 							{
 								RepoURL: "fake-url",
 								Tag:     "fake-tag",
 							},
 						},
-						Charts: []api.Chart{
+						Charts: []kargoapi.Chart{
 							{
 								RegistryURL: "fake-registry",
 								Name:        "fake-chart",
@@ -941,7 +941,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				testReconciler.getLatestFreightFromRepos(
 					context.Background(),
 					"fake-namespace",
-					api.RepoSubscriptions{},
+					kargoapi.RepoSubscriptions{},
 				),
 			)
 		})

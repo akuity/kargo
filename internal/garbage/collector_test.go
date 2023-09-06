@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -276,9 +276,9 @@ func TestCleanProject(t *testing.T) {
 				objList client.ObjectList,
 				_ ...client.ListOption,
 			) error {
-				promos, ok := objList.(*api.PromotionList)
+				promos, ok := objList.(*kargoapi.PromotionList)
 				require.True(t, ok)
-				promos.Items = []api.Promotion{}
+				promos.Items = []kargoapi.Promotion{}
 				return nil
 			},
 			assertions: func(err error) {
@@ -293,15 +293,15 @@ func TestCleanProject(t *testing.T) {
 				objList client.ObjectList,
 				_ ...client.ListOption,
 			) error {
-				promos, ok := objList.(*api.PromotionList)
+				promos, ok := objList.(*kargoapi.PromotionList)
 				require.True(t, ok)
-				promos.Items = []api.Promotion{}
+				promos.Items = []kargoapi.Promotion{}
 				for i := 0; i < 100; i++ {
 					promos.Items = append(
 						promos.Items,
-						api.Promotion{
-							Status: api.PromotionStatus{
-								Phase: api.PromotionPhaseComplete,
+						kargoapi.Promotion{
+							Status: kargoapi.PromotionStatus{
+								Phase: kargoapi.PromotionPhaseComplete,
 							},
 						},
 					)
@@ -343,7 +343,7 @@ func TestCleanProject(t *testing.T) {
 		const testProject = "fake-project"
 
 		scheme := runtime.NewScheme()
-		err := api.AddToScheme(scheme)
+		err := kargoapi.AddToScheme(scheme)
 		require.NoError(t, err)
 
 		initialPromos := []client.Object{}
@@ -354,14 +354,14 @@ func TestCleanProject(t *testing.T) {
 			creationTime = creationTime.Add(time.Hour)
 			initialPromos = append(
 				initialPromos,
-				&api.Promotion{
+				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              fmt.Sprintf("promotion-%d", i),
 						Namespace:         testProject,
 						CreationTimestamp: metav1.NewTime(creationTime),
 					},
-					Status: api.PromotionStatus{
-						Phase: api.PromotionPhaseComplete,
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseComplete,
 					},
 				},
 			)
@@ -383,7 +383,7 @@ func TestCleanProject(t *testing.T) {
 		err = c.cleanProject(ctx, testProject)
 		require.NoError(t, err)
 
-		promos := api.PromotionList{}
+		promos := kargoapi.PromotionList{}
 		err = kubeClient.List(
 			ctx,
 			&promos,

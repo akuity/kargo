@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/akuity/bookkeeper/pkg/git"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/credentials"
@@ -56,34 +56,34 @@ type reconciler struct {
 	// Health checks:
 	checkHealthFn func(
 		context.Context,
-		api.Freight,
-		[]api.ArgoCDAppUpdate,
-	) api.Health
+		kargoapi.Freight,
+		[]kargoapi.ArgoCDAppUpdate,
+	) kargoapi.Health
 
 	// Syncing:
 	getLatestFreightFromReposFn func(
 		ctx context.Context,
 		namespace string,
-		subs api.RepoSubscriptions,
-	) (*api.Freight, error)
+		subs kargoapi.RepoSubscriptions,
+	) (*kargoapi.Freight, error)
 
 	getAvailableFreightFromUpstreamStagesFn func(
 		ctx context.Context,
 		namespace string,
-		subs []api.StageSubscription,
-	) ([]api.Freight, error)
+		subs []kargoapi.StageSubscription,
+	) ([]kargoapi.Freight, error)
 
 	getLatestCommitsFn func(
 		ctx context.Context,
 		namespace string,
-		subs []api.GitSubscription,
-	) ([]api.GitCommit, error)
+		subs []kargoapi.GitSubscription,
+	) ([]kargoapi.GitCommit, error)
 
 	getLatestImagesFn func(
 		ctx context.Context,
 		namespace string,
-		subs []api.ImageSubscription,
-	) ([]api.Image, error)
+		subs []kargoapi.ImageSubscription,
+	) ([]kargoapi.Image, error)
 
 	getLatestTagFn func(
 		repoURL string,
@@ -98,8 +98,8 @@ type reconciler struct {
 	getLatestChartsFn func(
 		ctx context.Context,
 		namespace string,
-		subs []api.ChartSubscription,
-	) ([]api.Chart, error)
+		subs []kargoapi.ChartSubscription,
+	) ([]kargoapi.Chart, error)
 
 	getLatestChartVersionFn func(
 		ctx context.Context,
@@ -142,7 +142,7 @@ func SetupReconcilerWithManager(
 
 	return errors.Wrap(
 		ctrl.NewControllerManagedBy(kargoMgr).
-			For(&api.Stage{}).
+			For(&kargoapi.Stage{}).
 			WithEventFilter(
 				predicate.Funcs{
 					DeleteFunc: func(event.DeleteEvent) bool {
@@ -229,7 +229,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Stage")
 
 	// Find the Stage
-	stage, err := api.GetStage(ctx, r.kargoClient, req.NamespacedName)
+	stage, err := kargoapi.GetStage(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -241,7 +241,7 @@ func (r *reconciler) Reconcile(
 	}
 	logger.Debug("found Stage")
 
-	var newStatus api.StageStatus
+	var newStatus kargoapi.StageStatus
 	newStatus, err = r.syncStage(ctx, stage)
 	if err != nil {
 		newStatus.Error = err.Error()
@@ -252,13 +252,13 @@ func (r *reconciler) Reconcile(
 		newStatus.Error = ""
 	}
 
-	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *api.StageStatus) {
+	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
 		*status = newStatus
 	})
 	if updateErr != nil {
 		logger.Errorf("error updating Stage status: %s", updateErr)
 	}
-	clearRefreshErr := api.ClearStageRefresh(ctx, r.kargoClient, stage)
+	clearRefreshErr := kargoapi.ClearStageRefresh(ctx, r.kargoClient, stage)
 	if clearRefreshErr != nil {
 		logger.Errorf("error clearing Stage refresh annotation: %s", clearRefreshErr)
 	}
@@ -281,8 +281,8 @@ func (r *reconciler) Reconcile(
 
 func (r *reconciler) syncStage(
 	ctx context.Context,
-	stage *api.Stage,
-) (api.StageStatus, error) {
+	stage *kargoapi.Stage,
+) (kargoapi.StageStatus, error) {
 	status := *stage.Status.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
@@ -306,7 +306,7 @@ func (r *reconciler) syncStage(
 	status.ObservedGeneration = stage.Generation
 	// Only perform health checks if we have a current Freight
 	if status.CurrentFreight != nil {
-		var health api.Health
+		var health kargoapi.Health
 		if stage.Spec.PromotionMechanisms != nil {
 			health = r.checkHealthFn(
 				ctx,
@@ -315,8 +315,8 @@ func (r *reconciler) syncStage(
 			)
 		} else {
 			// Healthy by default if there are no promotion mechanisms.
-			health = api.Health{
-				Status: api.HealthStateHealthy,
+			health = kargoapi.Health{
+				Status: kargoapi.HealthStateHealthy,
 			}
 		}
 		status.CurrentFreight.Health = &health
@@ -358,7 +358,7 @@ func (r *reconciler) syncStage(
 	} else if len(stage.Spec.Subscriptions.UpstreamStages) > 0 {
 
 		// Grab the latest known Freight before we overwrite status.AvailableFreight
-		var latestKnownFreight *api.Freight
+		var latestKnownFreight *kargoapi.Freight
 		if lks, ok := status.AvailableFreight.Top(); ok {
 			latestKnownFreight = &lks
 		}
@@ -415,7 +415,7 @@ func (r *reconciler) syncStage(
 
 	// If we get to here, we've determined that auto-promotion is a possibility.
 	// See if it's actually allowed...
-	policies := api.PromotionPolicyList{}
+	policies := kargoapi.PromotionPolicyList{}
 	if err := r.kargoClient.List(
 		ctx,
 		&policies,
@@ -478,7 +478,7 @@ func (r *reconciler) hasOutstandingPromotions(
 	stageNamespace string,
 	stageName string,
 ) (bool, error) {
-	promos := api.PromotionList{}
+	promos := kargoapi.PromotionList{}
 	if err := r.kargoClient.List(
 		ctx,
 		&promos,
@@ -503,8 +503,8 @@ func (r *reconciler) hasOutstandingPromotions(
 func (r *reconciler) getLatestFreightFromRepos(
 	ctx context.Context,
 	namespace string,
-	repoSubs api.RepoSubscriptions,
-) (*api.Freight, error) {
+	repoSubs kargoapi.RepoSubscriptions,
+) (*kargoapi.Freight, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	latestCommits, err := r.getLatestCommitsFn(ctx, namespace, repoSubs.Git)
@@ -532,7 +532,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 	}
 
 	now := metav1.Now()
-	freight := &api.Freight{
+	freight := &kargoapi.Freight{
 		FirstSeen: &now,
 		Commits:   latestCommits,
 		Images:    latestImages,
@@ -546,16 +546,16 @@ func (r *reconciler) getLatestFreightFromRepos(
 func (r *reconciler) getAvailableFreightFromUpstreamStages(
 	ctx context.Context,
 	namespace string,
-	subs []api.StageSubscription,
-) ([]api.Freight, error) {
+	subs []kargoapi.StageSubscription,
+) ([]kargoapi.Freight, error) {
 	if len(subs) == 0 {
 		return nil, nil
 	}
 
-	availableFreight := []api.Freight{}
+	availableFreight := []kargoapi.Freight{}
 	freightSet := map[string]struct{}{} // We'll use this to de-dupe
 	for _, sub := range subs {
-		upstreamStage, err := api.GetStage(
+		upstreamStage, err := kargoapi.GetStage(
 			ctx,
 			r.kargoClient,
 			types.NamespacedName{
@@ -580,7 +580,7 @@ func (r *reconciler) getAvailableFreightFromUpstreamStages(
 		}
 		for _, freight := range upstreamStage.Status.History {
 			if _, ok := freightSet[freight.ID]; !ok &&
-				freight.Health != nil && freight.Health.Status == api.HealthStateHealthy {
+				freight.Health != nil && freight.Health.Status == kargoapi.HealthStateHealthy {
 				freight.Provenance = upstreamStage.Name
 				for i := range freight.Commits {
 					freight.Commits[i].HealthCheckCommit = ""

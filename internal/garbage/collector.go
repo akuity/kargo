@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -100,7 +100,7 @@ func (c *collector) Run(ctx context.Context) error {
 		&client.ListOptions{
 			LabelSelector: labels.Set(
 				map[string]string{
-					api.LabelProjectKey: "true",
+					kargoapi.LabelProjectKey: "true",
 				},
 			).AsSelector(),
 		},
@@ -206,7 +206,7 @@ func (c *collector) cleanProjects(
 func (c *collector) cleanProject(ctx context.Context, project string) error {
 	logger := logging.LoggerFromContext(ctx).WithField("project", project)
 
-	promos := api.PromotionList{}
+	promos := kargoapi.PromotionList{}
 	if err := c.listPromotionsFn(
 		ctx,
 		&promos,
@@ -228,7 +228,7 @@ func (c *collector) cleanProject(ctx context.Context, project string) error {
 	for i := c.cfg.MaxRetainedPromotions; i < len(promos.Items); i++ {
 		promo := promos.Items[i]
 		switch promo.Status.Phase {
-		case api.PromotionPhaseComplete, api.PromotionPhaseFailed:
+		case kargoapi.PromotionPhaseComplete, kargoapi.PromotionPhaseFailed:
 			promoLogger := logger.WithField("promotion", promo.Name)
 			if err := c.deletePromotionFn(ctx, &promo); err != nil {
 				promoLogger.Errorf("error deleting Promotion: %s", err)
@@ -249,8 +249,8 @@ func (c *collector) cleanProject(ctx context.Context, project string) error {
 	return nil
 }
 
-// byCreation implements sort.Interface for []api.Promotion.
-type byCreation []api.Promotion
+// byCreation implements sort.Interface for []kargoapi.Promotion.
+type byCreation []kargoapi.Promotion
 
 func (b byCreation) Len() int {
 	return len(b)

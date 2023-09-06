@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/akuity/bookkeeper/pkg/git"
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -20,16 +20,16 @@ import (
 type gitMechanism struct {
 	name string
 	// Overridable behaviors:
-	selectUpdatesFn  func([]api.GitRepoUpdate) []api.GitRepoUpdate
+	selectUpdatesFn  func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate
 	doSingleUpdateFn func(
 		ctx context.Context,
 		namespace string,
-		update api.GitRepoUpdate,
-		newFreight api.Freight,
-	) (api.Freight, error)
+		update kargoapi.GitRepoUpdate,
+		newFreight kargoapi.Freight,
+	) (kargoapi.Freight, error)
 	getReadRefFn func(
-		update api.GitRepoUpdate,
-		commits []api.GitCommit,
+		update kargoapi.GitRepoUpdate,
+		commits []kargoapi.GitCommit,
 	) (string, int, error)
 	getCredentialsFn func(
 		ctx context.Context,
@@ -37,15 +37,15 @@ type gitMechanism struct {
 		repoURL string,
 	) (*git.RepoCredentials, error)
 	gitCommitFn func(
-		update api.GitRepoUpdate,
-		newFreight api.Freight,
+		update kargoapi.GitRepoUpdate,
+		newFreight kargoapi.Freight,
 		readRef string,
 		writeBranch string,
 		creds *git.RepoCredentials,
 	) (string, error)
 	applyConfigManagementFn func(
-		update api.GitRepoUpdate,
-		newFreight api.Freight,
+		update kargoapi.GitRepoUpdate,
+		newFreight kargoapi.Freight,
 		homeDir string,
 		workingDir string,
 	) ([]string, error)
@@ -58,10 +58,10 @@ type gitMechanism struct {
 func newGitMechanism(
 	name string,
 	credentialsDB credentials.Database,
-	selectUpdatesFn func([]api.GitRepoUpdate) []api.GitRepoUpdate,
+	selectUpdatesFn func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate,
 	applyConfigManagementFn func(
-		update api.GitRepoUpdate,
-		newFreight api.Freight,
+		update kargoapi.GitRepoUpdate,
+		newFreight kargoapi.Freight,
 		homeDir string,
 		workingDir string,
 	) ([]string, error),
@@ -86,9 +86,9 @@ func (g *gitMechanism) GetName() string {
 // Promote implements the Mechanism interface.
 func (g *gitMechanism) Promote(
 	ctx context.Context,
-	stage *api.Stage,
-	newFreight api.Freight,
-) (api.Freight, error) {
+	stage *kargoapi.Stage,
+	newFreight kargoapi.Freight,
+) (kargoapi.Freight, error) {
 	updates := g.selectUpdatesFn(stage.Spec.PromotionMechanisms.GitRepoUpdates)
 
 	if len(updates) == 0 {
@@ -121,9 +121,9 @@ func (g *gitMechanism) Promote(
 func (g *gitMechanism) doSingleUpdate(
 	ctx context.Context,
 	namespace string,
-	update api.GitRepoUpdate,
-	newFreight api.Freight,
-) (api.Freight, error) {
+	update kargoapi.GitRepoUpdate,
+	newFreight kargoapi.Freight,
+) (kargoapi.Freight, error) {
 	readRef, commitIndex, err := g.getReadRefFn(update, newFreight.Commits)
 	if err != nil {
 		return newFreight, err
@@ -164,8 +164,8 @@ func (g *gitMechanism) doSingleUpdate(
 // branch is the same as the read branch, which would create a subscription
 // loop, and is therefore something we wish to avoid.
 func getReadRef(
-	update api.GitRepoUpdate,
-	commits []api.GitCommit,
+	update kargoapi.GitRepoUpdate,
+	commits []kargoapi.GitCommit,
 ) (string, int, error) {
 	for i, commit := range commits {
 		if commit.RepoURL == update.RepoURL {
@@ -234,8 +234,8 @@ func getRepoCredentialsFn(
 // commit ID of the last commit made to the repository, or an error if any of
 // the above fails.
 func (g *gitMechanism) gitCommit(
-	update api.GitRepoUpdate,
-	newFreight api.Freight,
+	update kargoapi.GitRepoUpdate,
+	newFreight kargoapi.Freight,
 	readRef string,
 	writeBranch string,
 	creds *git.RepoCredentials,

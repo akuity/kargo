@@ -4,27 +4,27 @@ import (
 	"context"
 	"fmt"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
 )
 
 func (r *reconciler) checkHealth(
 	ctx context.Context,
-	currentFreight api.Freight,
-	argoCDAppUpdates []api.ArgoCDAppUpdate,
-) api.Health {
+	currentFreight kargoapi.Freight,
+	argoCDAppUpdates []kargoapi.ArgoCDAppUpdate,
+) kargoapi.Health {
 	if len(argoCDAppUpdates) == 0 {
-		return api.Health{
-			Status: api.HealthStateUnknown,
+		return kargoapi.Health{
+			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{
 				"no spec.promotionMechanisms.argoCDAppUpdates are defined",
 			},
 		}
 	}
 
-	health := api.Health{
+	health := kargoapi.Health{
 		// We'll start healthy and degrade as we find issues
-		Status: api.HealthStateHealthy,
+		Status: kargoapi.HealthStateHealthy,
 		Issues: []string{},
 	}
 
@@ -32,8 +32,8 @@ func (r *reconciler) checkHealth(
 		app, err :=
 			r.getArgoCDAppFn(ctx, r.argoClient, check.AppNamespace, check.AppName)
 		if err != nil {
-			if health.Status != api.HealthStateUnhealthy {
-				health.Status = api.HealthStateUnknown
+			if health.Status != kargoapi.HealthStateUnhealthy {
+				health.Status = kargoapi.HealthStateUnknown
 			}
 			health.Issues = append(
 				health.Issues,
@@ -45,8 +45,8 @@ func (r *reconciler) checkHealth(
 				),
 			)
 		} else if app == nil {
-			if health.Status != api.HealthStateUnhealthy {
-				health.Status = api.HealthStateUnknown
+			if health.Status != kargoapi.HealthStateUnhealthy {
+				health.Status = kargoapi.HealthStateUnknown
 			}
 			health.Issues = append(
 				health.Issues,
@@ -57,8 +57,8 @@ func (r *reconciler) checkHealth(
 				),
 			)
 		} else if len(app.Spec.Sources) > 0 {
-			if health.Status != api.HealthStateUnhealthy {
-				health.Status = api.HealthStateUnknown
+			if health.Status != kargoapi.HealthStateUnhealthy {
+				health.Status = kargoapi.HealthStateUnknown
 			}
 			health.Issues = append(
 				health.Issues,
@@ -92,7 +92,7 @@ func (r *reconciler) checkHealth(
 				app,
 				desiredRevision,
 			); !healthy {
-				health.Status = api.HealthStateUnhealthy
+				health.Status = kargoapi.HealthStateUnhealthy
 				health.Issues = append(health.Issues, reason)
 			}
 		}

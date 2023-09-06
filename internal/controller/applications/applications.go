@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
@@ -55,7 +55,7 @@ func indexStagesByApp(shardName string) func(client.Object) []string {
 			return nil
 		}
 
-		stage := obj.(*api.Stage) // nolint: forcetypeassert
+		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 		if stage.Spec.PromotionMechanisms == nil ||
 			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
 			return nil
@@ -90,7 +90,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Argo CD Application")
 
 	// Find all Stages associated with this Application
-	stages := &api.StageList{}
+	stages := &kargoapi.StageList{}
 	if err := r.kubeClient.List(
 		ctx,
 		stages,
@@ -121,7 +121,7 @@ func (r *reconciler) Reconcile(
 			Namespace: stage.Namespace,
 			Name:      stage.Name,
 		}
-		_, err := api.RefreshStage(ctx, r.kubeClient, objKey)
+		_, err := kargoapi.RefreshStage(ctx, r.kubeClient, objKey)
 		if err != nil {
 			errs = append(errs, err)
 			continue

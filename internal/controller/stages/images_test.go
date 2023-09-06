@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/images"
 )
@@ -26,7 +26,7 @@ func TestGetLatestImages(t *testing.T) {
 			string,
 			*images.Credentials,
 		) (string, error)
-		assertions func([]api.Image, error)
+		assertions func([]kargoapi.Image, error)
 	}{
 		{
 			name: "error getting latest version of an image",
@@ -51,7 +51,7 @@ func TestGetLatestImages(t *testing.T) {
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
-			assertions: func(_ []api.Image, err error) {
+			assertions: func(_ []kargoapi.Image, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -85,12 +85,12 @@ func TestGetLatestImages(t *testing.T) {
 			) (string, error) {
 				return "fake-tag", nil
 			},
-			assertions: func(images []api.Image, err error) {
+			assertions: func(images []kargoapi.Image, err error) {
 				require.NoError(t, err)
 				require.Len(t, images, 1)
 				require.Equal(
 					t,
-					api.Image{
+					kargoapi.Image{
 						RepoURL: "fake-url",
 						Tag:     "fake-tag",
 					},
@@ -101,7 +101,7 @@ func TestGetLatestImages(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testSubs := []api.ImageSubscription{
+			testSubs := []kargoapi.ImageSubscription{
 				{
 					RepoURL: "fake-url",
 				},

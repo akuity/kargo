@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/kustomize"
 )
@@ -28,8 +28,8 @@ func newKustomizeMechanism(
 
 // selectKustomizeUpdates returns a subset of the given updates that involve
 // Kustomize.
-func selectKustomizeUpdates(updates []api.GitRepoUpdate) []api.GitRepoUpdate {
-	var selectedUpdates []api.GitRepoUpdate
+func selectKustomizeUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
+	var selectedUpdates []kargoapi.GitRepoUpdate
 	for _, update := range updates {
 		if update.Kustomize != nil {
 			selectedUpdates = append(selectedUpdates, update)
@@ -47,8 +47,8 @@ type kustomizer struct {
 // apply uses Kustomize to carry out the provided update in the specified
 // working directory.
 func (k *kustomizer) apply(
-	update api.GitRepoUpdate,
-	newFreight api.Freight,
+	update kargoapi.GitRepoUpdate,
+	newFreight kargoapi.Freight,
 	_ string,
 	workingDir string,
 ) ([]string, error) {

@@ -8,12 +8,12 @@ import (
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/logging"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	v1alpha1 "github.com/akuity/kargo/pkg/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
 func (s *server) PromoteSubscribers(
@@ -35,7 +35,7 @@ func (s *server) PromoteSubscribers(
 		return nil, err
 	}
 	// TODO: this may also need to include Not Applicable if/when that state is introduced
-	if freightToPromote.Health != nil && freightToPromote.Health.Status != kubev1alpha1.HealthStateHealthy {
+	if freightToPromote.Health != nil && freightToPromote.Health.Status != kargoapi.HealthStateHealthy {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
 			fmt.Errorf("Cannot promote freight with health status: %s", freightToPromote.Health.Status))
 	}
@@ -77,12 +77,12 @@ func (s *server) PromoteSubscribers(
 
 // findStageSubscribers returns a list of Stages that are subscribed to the given Stage
 // TODO: this could be powered by an index.
-func (s *server) findStageSubscribers(ctx context.Context, stage *kubev1alpha1.Stage) ([]kubev1alpha1.Stage, error) {
-	var allStages kubev1alpha1.StageList
+func (s *server) findStageSubscribers(ctx context.Context, stage *kargoapi.Stage) ([]kargoapi.Stage, error) {
+	var allStages kargoapi.StageList
 	if err := s.client.List(ctx, &allStages, client.InNamespace(stage.Namespace)); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var subscribers []kubev1alpha1.Stage
+	var subscribers []kargoapi.Stage
 	for _, s := range allStages.Items {
 		s := s
 		if s.Spec.Subscriptions == nil {

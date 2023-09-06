@@ -8,16 +8,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestGetShardPredicate(t *testing.T) {
 	const testShardName = "test-shard"
 	unlabeledEvent := event.CreateEvent{
-		Object: &api.Stage{},
+		Object: &kargoapi.Stage{},
 	}
 	labeledEvent := event.CreateEvent{
-		Object: &api.Stage{
+		Object: &kargoapi.Stage{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
 					ShardLabelKey: testShardName,

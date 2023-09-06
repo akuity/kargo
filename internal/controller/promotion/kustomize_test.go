@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	api "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -21,42 +21,42 @@ func TestNewKustomizeMechanism(t *testing.T) {
 func TestSelectKustomizeUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
-		updates    []api.GitRepoUpdate
-		assertions func(selectedUpdates []api.GitRepoUpdate)
+		updates    []kargoapi.GitRepoUpdate
+		assertions func(selectedUpdates []kargoapi.GitRepoUpdate)
 	}{
 		{
 			name: "no updates",
-			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
 		{
 			name: "no kustomize updates",
-			updates: []api.GitRepoUpdate{
+			updates: []kargoapi.GitRepoUpdate{
 				{
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
 		{
 			name: "some kustomize updates",
-			updates: []api.GitRepoUpdate{
+			updates: []kargoapi.GitRepoUpdate{
 				{
 					RepoURL:   "fake-url",
-					Kustomize: &api.KustomizePromotionMechanism{},
+					Kustomize: &kargoapi.KustomizePromotionMechanism{},
 				},
 				{
 					RepoURL: "fake-url",
-					Helm:    &api.HelmPromotionMechanism{},
+					Helm:    &kargoapi.HelmPromotionMechanism{},
 				},
 				{
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []api.GitRepoUpdate) {
+			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Len(t, selectedUpdates, 1)
 			},
 		},
@@ -106,9 +106,9 @@ func TestKustomizerApply(t *testing.T) {
 				(&kustomizer{
 					setImageFn: testCase.setImageFn,
 				}).apply(
-					api.GitRepoUpdate{
-						Kustomize: &api.KustomizePromotionMechanism{
-							Images: []api.KustomizeImageUpdate{
+					kargoapi.GitRepoUpdate{
+						Kustomize: &kargoapi.KustomizePromotionMechanism{
+							Images: []kargoapi.KustomizeImageUpdate{
 								{
 									Image: testImage,
 									Path:  "fake-path",
@@ -116,8 +116,8 @@ func TestKustomizerApply(t *testing.T) {
 							},
 						},
 					},
-					api.Freight{
-						Images: []api.Image{
+					kargoapi.Freight{
+						Images: []kargoapi.Image{
 							{
 								RepoURL: testImage,
 								Tag:     testTag,

@@ -8,7 +8,7 @@ import (
 	pkgerrors "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -37,7 +37,7 @@ func filterStages(
 		}
 
 		var resErr error
-		stages := make(map[string]*kubev1alpha1.Stage, len(resp.Msg.GetStages()))
+		stages := make(map[string]*kargoapi.Stage, len(resp.Msg.GetStages()))
 		for _, s := range resp.Msg.GetStages() {
 			stages[s.GetMetadata().GetName()] = typesv1alpha1.FromStageProto(s)
 		}

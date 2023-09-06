@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	kubev1alpha1 "github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/validation"
 )
 
@@ -38,7 +38,7 @@ func validateProjectAndStageNonEmpty(project string, stage string) error {
 
 // validateFreightExists returns the Freight with the given ID in the list of Freight, otherwise
 // return an error if it doesn't exist
-func validateFreightExists(freight string, freightStack kubev1alpha1.FreightStack) (*kubev1alpha1.Freight, error) {
+func validateFreightExists(freight string, freightStack kargoapi.FreightStack) (*kargoapi.Freight, error) {
 	if freight == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("freight should not be empty"))
 	}
