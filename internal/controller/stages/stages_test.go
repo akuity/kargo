@@ -29,7 +29,7 @@ func TestNewStageReconciler(t *testing.T) {
 	// Assert that all overridable behaviors were initialized to a default:
 
 	// Loop guard:
-	require.NotNil(t, e.hasOutstandingPromotionsFn)
+	require.NotNil(t, e.hasNonTerminalPromotionsFn)
 
 	// Common:
 	require.NotNil(t, e.getArgoCDAppFn)
@@ -52,7 +52,7 @@ func TestSync(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
-	noOutstandingPromotionsFn := func(
+	noNonTerminalPromotionsFn := func(
 		context.Context,
 		string,
 		string,
@@ -64,7 +64,7 @@ func TestSync(t *testing.T) {
 		name                       string
 		spec                       kargoapi.StageSpec
 		initialStatus              kargoapi.StageStatus
-		hasOutstandingPromotionsFn func(
+		hasNonTerminalPromotionsFn func(
 			ctx context.Context,
 			stageNamespace string,
 			stageName string,
@@ -93,8 +93,8 @@ func TestSync(t *testing.T) {
 		)
 	}{
 		{
-			name: "error checking for outstanding promotions",
-			hasOutstandingPromotionsFn: func(
+			name: "error checking for non-terminal promotions",
+			hasNonTerminalPromotionsFn: func(
 				context.Context,
 				string,
 				string,
@@ -115,8 +115,8 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "outstanding promotions found",
-			hasOutstandingPromotionsFn: func(
+			name: "non-terminal promotions found",
+			hasNonTerminalPromotionsFn: func(
 				context.Context,
 				string,
 				string,
@@ -141,7 +141,7 @@ func TestSync(t *testing.T) {
 				Subscriptions: &kargoapi.Subscriptions{},
 			},
 			initialStatus:              kargoapi.StageStatus{},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -161,7 +161,7 @@ func TestSync(t *testing.T) {
 					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
@@ -189,7 +189,7 @@ func TestSync(t *testing.T) {
 					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
@@ -272,7 +272,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			checkHealthFn: func(
 				context.Context,
 				kargoapi.Freight,
@@ -325,7 +325,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
@@ -357,7 +357,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
@@ -393,7 +393,7 @@ func TestSync(t *testing.T) {
 					},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getAvailableFreightFromUpstreamStagesFn: func(
 				context.Context,
 				string,
@@ -430,7 +430,7 @@ func TestSync(t *testing.T) {
 					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
@@ -498,7 +498,7 @@ func TestSync(t *testing.T) {
 					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
@@ -581,7 +581,7 @@ func TestSync(t *testing.T) {
 					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
@@ -657,7 +657,7 @@ func TestSync(t *testing.T) {
 					Repos: &kargoapi.RepoSubscriptions{},
 				},
 			},
-			hasOutstandingPromotionsFn: noOutstandingPromotionsFn,
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			getLatestFreightFromReposFn: func(
 				context.Context,
 				string,
@@ -742,7 +742,7 @@ func TestSync(t *testing.T) {
 			// nolint: lll
 			reconciler := &reconciler{
 				kargoClient:                             tc.kargoClient,
-				hasOutstandingPromotionsFn:              tc.hasOutstandingPromotionsFn,
+				hasNonTerminalPromotionsFn:              tc.hasNonTerminalPromotionsFn,
 				checkHealthFn:                           tc.checkHealthFn,
 				getLatestFreightFromReposFn:             tc.getLatestFreightFromReposFn,
 				getAvailableFreightFromUpstreamStagesFn: tc.getAvailableFreightFromUpstreamStagesFn,

@@ -422,7 +422,7 @@ After creating the `test` `Stage` resource, we should almost immediately see:
 
    ```text
    NAME                                               STAGE   FREIGHT                                    PHASE       AGE
-   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   55s
+   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   55s
    ```
 
 1. Your GitOps repository has a new commit.
@@ -508,8 +508,8 @@ see:
 
    ```
    NAME                                               STAGE   FREIGHT                                    PHASE       AGE
-   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   2m40s
-   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   43s
+   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   2m40s
+   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   43s
    ```
 
 1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-uat`
@@ -590,8 +590,8 @@ After creating the `prod` `Stage` resource, we should almost immediately see:
 
    ```
    NAME                                               STAGE   FREIGHT                                    PHASE       AGE
-   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   4m4s
-   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   2m7s
+   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   4m4s
+   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   2m7s
    ```
 
 1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-prod`
@@ -634,9 +634,9 @@ After a few moments, we should be able to see:
 
    ```text
    NAME                                               STAGE   FREIGHT                                    PHASE       AGE
-   prod-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   prod    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   12s
-   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   8m11s
-   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Completed   6m14ss
+   prod-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   prod    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   12s
+   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   8m11s
+   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   6m14ss
    ```
 
 1. The `prod` `Stage` has now been assigned a current freight:

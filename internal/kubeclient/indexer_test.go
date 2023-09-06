@@ -139,7 +139,7 @@ func TestIndexPromotionsByStage(t *testing.T) {
 					Stage: "fake-stage",
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseComplete,
+					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 			expected: []string{"fake-stage"},
@@ -155,21 +155,21 @@ func TestIndexPromotionsByStage(t *testing.T) {
 			},
 			expected: []string{"fake-stage"},
 		},
-		"filter nonOutstandingPromotionPhase/terminal phase": {
+		"isPromotionPhaseNonTerminal excludes Promotions in terminal phases": {
 			input: &kargoapi.Promotion{
 				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseComplete,
+					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 			predicates: []func(*kargoapi.Promotion) bool{
-				filterNonOutstandingPromotionPhases,
+				isPromotionPhaseNonTerminal,
 			},
 			expected: nil,
 		},
-		"filter nonOutstandingPromotionPhase/non-terminal phase": {
+		"isPromotionPhaseNonTerminal selects Promotions in non-terminal phases": {
 			input: &kargoapi.Promotion{
 				Spec: &kargoapi.PromotionSpec{
 					Stage: "fake-stage",
@@ -179,7 +179,7 @@ func TestIndexPromotionsByStage(t *testing.T) {
 				},
 			},
 			predicates: []func(*kargoapi.Promotion) bool{
-				filterNonOutstandingPromotionPhases,
+				isPromotionPhaseNonTerminal,
 			},
 			expected: []string{"fake-stage"},
 		},

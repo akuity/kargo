@@ -7,11 +7,33 @@ import (
 type PromotionPhase string
 
 const (
-	PromotionPhasePending    PromotionPhase = "Pending"
-	PromotionPhaseInProgress PromotionPhase = "Promoting"
-	PromotionPhaseComplete   PromotionPhase = "Completed"
-	PromotionPhaseFailed     PromotionPhase = "Failed"
+	// PromotionPhasePending denotes a Promotion that has not been executed yet.
+	// i.e. It is currently waiting in a queue. Queues are stage-specific and
+	// prioritized by Promotion creation time.
+	PromotionPhasePending PromotionPhase = "Pending"
+	// PromotionPhaseRunning denotes a Promotion that is actively being executed.
+	//
+	// TODO: "Active" is the operative word here. We are leaving room for the
+	// possibility in the near future that an in-progress Promotion might be
+	// paused/suspended pending some user action.
+	PromotionPhaseRunning PromotionPhase = "Running"
+	// PromotionPhaseSucceeded denotes a Promotion that has been successfully
+	// executed.
+	PromotionPhaseSucceeded PromotionPhase = "Succeeded"
+	// PromotionPhaseErrored denotes a Promotion that has failed for technical
+	// reasons. Further information about the failure can be found in the
+	// Promotion's status.
+	//
+	// TODO: "For technical reasons" is the operative phrase here. We are leaving
+	// room for the possibility in the near future that a Promotion might fail
+	// as a result of some user action.
+	PromotionPhaseErrored PromotionPhase = "Errored"
 )
+
+// IsTerminal returns true if the PromotionPhase is a terminal one.
+func (p *PromotionPhase) IsTerminal() bool {
+	return *p == PromotionPhaseSucceeded || *p == PromotionPhaseErrored
+}
 
 //+kubebuilder:resource:shortName={promo,promos}
 //+kubebuilder:object:root=true
