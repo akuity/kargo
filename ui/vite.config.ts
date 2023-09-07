@@ -6,7 +6,7 @@ import { defineConfig } from 'vite';
 import monacoEditorPlugin from 'vite-plugin-monaco-editor';
 import tsConfigPaths from 'vite-tsconfig-paths';
 
-import { token } from './src/config/theme';
+import { token } from './src/config/themeConfig';
 
 const { defaultAlgorithm, defaultSeed } = theme;
 

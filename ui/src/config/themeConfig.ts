@@ -12,7 +12,7 @@ export const token: Partial<MapToken> = {
   borderRadius: 8
 };
 
-export const theme: ThemeConfig = {
+export const themeConfig: ThemeConfig = {
   // ...token,
   token
 };
