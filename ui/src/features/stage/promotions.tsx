@@ -46,6 +46,7 @@ export const Promotions = () => {
   const columns: ColumnsType<Promotion> = [
     {
       title: '',
+      width: 24,
       render: (_, promotion) => {
         switch (promotion.status?.phase) {
           case 'Succeeded':
