@@ -10,6 +10,7 @@ import "v1alpha1/types.proto";
 
 service KargoService {
   rpc GetVersionInfo(GetVersionInfoRequest) returns (GetVersionInfoResponse);
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
   rpc GetPublicConfig(GetPublicConfigRequest) returns (GetPublicConfigResponse);
 
   rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
@@ -79,6 +80,17 @@ message GetVersionInfoRequest {}
 
 message GetVersionInfoResponse {
   VersionInfo version_info = 1;
+}
+
+message GetConfigRequest {}
+
+message ArgoCDShard {
+  string url = 1;
+  string namespace = 2;
+}
+
+message GetConfigResponse {
+  map<string, ArgoCDShard> argocd_shards = 1;
 }
 
 message GetPublicConfigRequest {}
