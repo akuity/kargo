@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -42,6 +44,7 @@ type ServerConfig struct {
 	OIDCConfig     *oidc.Config
 	AdminConfig    *AdminConfig
 	DexProxyConfig *dex.ProxyConfig
+	ArgoCDConfig   ArgoCDConfig
 }
 
 type StandardConfig struct {
@@ -52,6 +55,7 @@ type StandardConfig struct {
 func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{}
 	envconfig.MustProcess("", &cfg.StandardConfig)
+	envconfig.MustProcess("", &cfg.ArgoCDConfig)
 	if types.MustParseBool(os.GetEnv("ADMIN_ACCOUNT_ENABLED", "false")) {
 		adminCfg := AdminConfigFromEnv()
 		cfg.AdminConfig = &adminCfg
@@ -65,4 +69,33 @@ func ServerConfigFromEnv() ServerConfig {
 		cfg.DexProxyConfig = &dexProxyCfg
 	}
 	return cfg
+}
+
+type ArgoCDURLMap map[string]string
+
+func (a *ArgoCDURLMap) Decode(value string) error {
+	urls := make(map[string]string)
+	if value != "" {
+		pairs := strings.Split(value, ",")
+		for _, pair := range pairs {
+			pair = strings.TrimSpace(pair)
+			if pair == "" {
+				continue
+			}
+			kvpair := strings.SplitN(pair, "=", 2)
+			if len(kvpair) != 2 {
+				return fmt.Errorf("invalid map item: %q. expected <shard>=<URL>", pair)
+			}
+			urls[strings.TrimSpace(kvpair[0])] = strings.TrimSpace(kvpair[1])
+
+		}
+	}
+	*a = ArgoCDURLMap(urls)
+	return nil
+}
+
+type ArgoCDConfig struct {
+	Namespace string `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
+	// URLs is a mapping from shard name to Argo CD URL
+	URLs ArgoCDURLMap `envconfig:"ARGOCD_URLS"`
 }
