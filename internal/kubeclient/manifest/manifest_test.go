@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 )
 
 func TestParser(t *testing.T) {
@@ -131,9 +132,8 @@ metadata:
 		},
 	}
 
-	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
-	require.NoError(t, kargoapi.AddToScheme(scheme))
+	scheme, err := kubeclient.NewAPIScheme()
+	require.NoError(t, err)
 	parseKubernetesManifest := NewParser(scheme)
 
 	for name, tc := range testCases {

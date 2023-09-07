@@ -4,23 +4,19 @@ import (
 	"embed"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 )
 
 //go:embed testdata/*
 var testData embed.FS
 
 func mustNewScheme() *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	if err := corev1.AddToScheme(scheme); err != nil {
-		panic(errors.Wrap(err, "add core v1 scheme"))
-	}
-	if err := kargoapi.AddToScheme(scheme); err != nil {
-		panic(errors.Wrap(err, "add kargo v1alpha1 scheme"))
+	scheme, err := kubeclient.NewAPIScheme()
+	if err != nil {
+		panic(errors.Wrap(err, "new api scheme"))
 	}
 	return scheme
 }

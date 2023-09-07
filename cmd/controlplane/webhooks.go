@@ -4,12 +4,8 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	authzv1 "k8s.io/api/authorization/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
@@ -39,17 +35,10 @@ func newWebhooksServerCommand() *cobra.Command {
 				return errors.Wrap(err, "error getting REST config")
 			}
 
-			scheme := runtime.NewScheme()
-			if err = corev1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add corev1 to scheme")
+			scheme, err := kubeclient.NewWebhooksServerScheme()
+			if err != nil {
+				return errors.Wrap(err, "new webhooks server scheme")
 			}
-			if err = authzv1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add authzv1 to scheme")
-			}
-			if err = kargoapi.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add kargo api to scheme")
-			}
-
 			mgr, err := ctrl.NewManager(
 				restCfg,
 				ctrl.Options{

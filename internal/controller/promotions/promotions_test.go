@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -16,6 +15,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/kubeclient"
 )
 
 func TestNewPromotionReconciler(t *testing.T) {
@@ -32,8 +32,8 @@ func TestNewPromotionReconciler(t *testing.T) {
 }
 
 func TestInitializeQueues(t *testing.T) {
-	scheme := k8sruntime.NewScheme()
-	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+	scheme, err := kubeclient.NewKargoScheme()
+	require.NoError(t, err)
 	r := reconciler{
 		kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			&kargoapi.Promotion{
@@ -48,7 +48,7 @@ func TestInitializeQueues(t *testing.T) {
 		).Build(),
 		promoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
-	err := r.initializeQueues(context.Background())
+	err = r.initializeQueues(context.Background())
 	require.NoError(t, err)
 }
 
@@ -216,13 +216,13 @@ func TestSerializedSync(t *testing.T) {
 		},
 	}
 
-	scheme := k8sruntime.NewScheme()
-	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+	scheme, err := kubeclient.NewKargoScheme()
+	require.NoError(t, err)
 	kargoClient := fake.NewClientBuilder().
 		WithScheme(scheme).WithObjects(promo).Build()
 
 	pq := newPromotionsQueue()
-	err := pq.Push(promo)
+	err = pq.Push(promo)
 	require.NoError(t, err)
 
 	r := reconciler{
@@ -257,8 +257,8 @@ func TestSerializedSync(t *testing.T) {
 }
 
 func TestGetPromo(t *testing.T) {
-	scheme := k8sruntime.NewScheme()
-	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+	scheme, err := kubeclient.NewKargoScheme()
+	require.NoError(t, err)
 
 	testCases := []struct {
 		name       string

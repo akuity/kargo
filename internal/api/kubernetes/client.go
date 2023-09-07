@@ -13,15 +13,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
-	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -59,14 +58,11 @@ type ClientOptions struct {
 // provided ClientOptions struct.
 func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	if opts.Scheme == nil {
-		opts.Scheme = runtime.NewScheme()
-		if err := kubescheme.AddToScheme(opts.Scheme); err != nil {
-			return opts,
-				errors.Wrap(err, "error adding Kubernetes API to scheme")
+		scheme, err := kubeclient.NewKubernetesScheme()
+		if err != nil {
+			return opts, errors.Wrap(err, "new kubernetes scheme")
 		}
-		if err := kargoapi.AddToScheme(opts.Scheme); err != nil {
-			return opts, errors.Wrap(err, "error adding Kargo API to scheme")
-		}
+		opts.Scheme = scheme
 	}
 	if opts.NewInternalClient == nil {
 		opts.NewInternalClient = newDefaultInternalClient

@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -342,8 +342,7 @@ func TestCleanProject(t *testing.T) {
 		const numPromos = 100
 		const testProject = "fake-project"
 
-		scheme := runtime.NewScheme()
-		err := kargoapi.AddToScheme(scheme)
+		scheme, err := kubeclient.NewGarbageCollectorScheme()
 		require.NoError(t, err)
 
 		initialPromos := []client.Object{}

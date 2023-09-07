@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/stage"
+	"github.com/akuity/kargo/internal/kubeclient"
 )
 
 // rootState holds state used internally by the root command.
@@ -81,9 +82,9 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
 	}
-	scheme, err := option.NewScheme()
+	scheme, err := kubeclient.NewCLIScheme()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "new cli scheme")
 	}
 	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
 	option.InsecureTLS(&opt.InsecureTLS)(cmd.PersistentFlags())
