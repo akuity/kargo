@@ -158,6 +158,7 @@ func SetupReconcilerWithManager(
 				),
 			).
 			WithEventFilter(shardPredicate).
+			WithOptions(controller.CommonOptions()).
 			Complete(
 				newReconciler(
 					kargoMgr.GetClient(),
