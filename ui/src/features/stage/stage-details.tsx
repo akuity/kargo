@@ -10,6 +10,7 @@ import { getStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectq
 
 import { AvailableFreight } from './available-freight';
 import { ManifestPreview } from './manifest-preview';
+import { Promotions } from './promotions';
 import { StageActions } from './stage-actions';
 
 export const StageDetails = () => {
@@ -61,6 +62,11 @@ export const StageDetails = () => {
                 },
                 {
                   key: '2',
+                  label: 'Promotions',
+                  children: <Promotions />
+                },
+                {
+                  key: '3',
                   label: 'Live Manifest',
                   children: <ManifestPreview stage={data.stage} />
                 }
