@@ -33,7 +33,7 @@ export const Promotions = () => {
     }
     const cancel = new AbortController();
 
-    const watchStages = async () => {
+    const watchPromotions = async () => {
       const promiseClient = createPromiseClient(KargoService, transport);
       const stream = promiseClient.watchPromotions(
         { project: projectName, stage: stageName },
@@ -62,15 +62,15 @@ export const Promotions = () => {
           }
         }
 
-        // Update Stages list
-        const listStagesQueryKey = listPromotions.getQueryKey({
+        // Update Promotions list
+        const listPromotionsQueryKey = listPromotions.getQueryKey({
           project: projectName,
           stage: stageName
         });
-        client.setQueryData(listStagesQueryKey, { promotions });
+        client.setQueryData(listPromotionsQueryKey, { promotions });
       }
     };
-    watchStages();
+    watchPromotions();
 
     return () => cancel.abort();
   }, [isLoading]);
