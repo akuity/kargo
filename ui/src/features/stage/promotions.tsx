@@ -1,3 +1,4 @@
+import { createPromiseClient } from '@bufbuild/connect';
 import {
   faCircleCheck,
   faCircleExclamation,
@@ -5,22 +6,74 @@ import {
   faCircleQuestion
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Popover, Table, Tooltip, theme } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { transport } from '@ui/config/transport';
 import { listPromotions } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
+import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Promotion } from '@ui/gen/v1alpha1/types_pb';
 
 export const Promotions = () => {
+  const client = useQueryClient();
   const { name: projectName, stageName } = useParams();
   const { data: promotionsResponse, isLoading } = useQuery({
     ...listPromotions.useQuery({ project: projectName, stage: stageName }),
     enabled: !!stageName
   });
+
+  useEffect(() => {
+    if (isLoading || !promotionsResponse) {
+      return;
+    }
+    const cancel = new AbortController();
+
+    const watchStages = async () => {
+      const promiseClient = createPromiseClient(KargoService, transport);
+      const stream = promiseClient.watchPromotions(
+        { project: projectName, stage: stageName },
+        { signal: cancel.signal }
+      );
+
+      let promotions = (promotionsResponse as ListPromotionsResponse).promotions || [];
+
+      for await (const e of stream) {
+        const index = promotions?.findIndex(
+          (item) => item.metadata?.name === e.promotion?.metadata?.name
+        );
+        if (e.type === 'DELETED') {
+          if (index !== -1) {
+            promotions = [...promotions.slice(0, index), ...promotions.slice(index + 1)];
+          }
+        } else {
+          if (index === -1) {
+            promotions = [...promotions, e.promotion as Promotion];
+          } else {
+            promotions = [
+              ...promotions.slice(0, index),
+              e.promotion as Promotion,
+              ...promotions.slice(index + 1)
+            ];
+          }
+        }
+
+        // Update Stages list
+        const listStagesQueryKey = listPromotions.getQueryKey({
+          project: projectName,
+          stage: stageName
+        });
+        client.setQueryData(listStagesQueryKey, { promotions });
+      }
+    };
+    watchStages();
+
+    return () => cancel.abort();
+  }, [isLoading]);
 
   const promotions = React.useMemo(
     () =>
