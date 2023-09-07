@@ -947,17 +947,27 @@ export class KustomizePromotionMechanism extends Message<KustomizePromotionMecha
  */
 export class Promotion extends Message<Promotion> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
+   * @generated from field: string api_version = 1;
+   */
+  apiVersion = "";
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind = "";
+
+  /**
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
    */
   metadata?: ObjectMeta;
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec spec = 2;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec spec = 4;
    */
   spec?: PromotionSpec;
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus status = 3;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus status = 5;
    */
   status?: PromotionStatus;
 
@@ -969,9 +979,11 @@ export class Promotion extends Message<Promotion> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Promotion";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
-    { no: 2, name: "spec", kind: "message", T: PromotionSpec },
-    { no: 3, name: "status", kind: "message", T: PromotionStatus },
+    { no: 1, name: "api_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 4, name: "spec", kind: "message", T: PromotionSpec },
+    { no: 5, name: "status", kind: "message", T: PromotionStatus },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Promotion {
@@ -1082,17 +1094,27 @@ export class PromotionMechanisms extends Message<PromotionMechanisms> {
  */
 export class PromotionPolicy extends Message<PromotionPolicy> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
+   * @generated from field: string api_version = 1;
+   */
+  apiVersion = "";
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind = "";
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
    */
   metadata?: ObjectMeta;
 
   /**
-   * @generated from field: string stage = 2;
+   * @generated from field: string stage = 4;
    */
   stage = "";
 
   /**
-   * @generated from field: bool enable_auto_promotion = 3;
+   * @generated from field: bool enable_auto_promotion = 5;
    */
   enableAutoPromotion = false;
 
@@ -1104,9 +1126,11 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "metadata", kind: "message", T: ObjectMeta },
-    { no: 2, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "enable_auto_promotion", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 1, name: "api_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "metadata", kind: "message", T: ObjectMeta },
+    { no: 4, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "enable_auto_promotion", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionPolicy {
@@ -1309,17 +1333,27 @@ export class RepoSubscriptions extends Message<RepoSubscriptions> {
  */
 export class Stage extends Message<Stage> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
+   * @generated from field: string api_version = 1;
+   */
+  apiVersion = "";
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind = "";
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
    */
   metadata?: ObjectMeta;
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 2;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 4;
    */
   spec?: StageSpec;
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus status = 3;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus status = 5;
    */
   status?: StageStatus;
 
@@ -1331,9 +1365,11 @@ export class Stage extends Message<Stage> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Stage";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "metadata", kind: "message", T: ObjectMeta },
-    { no: 2, name: "spec", kind: "message", T: StageSpec },
-    { no: 3, name: "status", kind: "message", T: StageStatus },
+    { no: 1, name: "api_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "metadata", kind: "message", T: ObjectMeta },
+    { no: 4, name: "spec", kind: "message", T: StageSpec },
+    { no: 5, name: "status", kind: "message", T: StageStatus },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Stage {
