@@ -498,7 +498,9 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 		promotionMechanisms = ToPromotionMechanismsProto(*e.Spec.PromotionMechanisms)
 	}
 	return &v1alpha1.Stage{
-		Metadata: typesmetav1.ToObjectMetaProto(*metadata),
+		ApiVersion: e.APIVersion,
+		Kind:       e.Kind,
+		Metadata:   typesmetav1.ToObjectMetaProto(*metadata),
 		Spec: &v1alpha1.StageSpec{
 			Subscriptions:       ToSubscriptionsProto(*e.Spec.Subscriptions),
 			PromotionMechanisms: promotionMechanisms,
@@ -799,7 +801,9 @@ func ToPromotionProto(p kargoapi.Promotion) *v1alpha1.Promotion {
 	metadata.SetManagedFields(nil)
 
 	return &v1alpha1.Promotion{
-		Metadata: typesmetav1.ToObjectMetaProto(*metadata),
+		ApiVersion: p.APIVersion,
+		Kind:       p.Kind,
+		Metadata:   typesmetav1.ToObjectMetaProto(*metadata),
 		Spec: &v1alpha1.PromotionSpec{
 			Stage:   p.Spec.Stage,
 			Freight: p.Spec.Freight,
@@ -816,6 +820,8 @@ func ToPromotionPolicyProto(p kargoapi.PromotionPolicy) *v1alpha1.PromotionPolic
 	metadata.SetManagedFields(nil)
 
 	return &v1alpha1.PromotionPolicy{
+		ApiVersion:          p.APIVersion,
+		Kind:                p.Kind,
 		Metadata:            typesmetav1.ToObjectMetaProto(*metadata),
 		Stage:               p.Stage,
 		EnableAutoPromotion: p.EnableAutoPromotion,
