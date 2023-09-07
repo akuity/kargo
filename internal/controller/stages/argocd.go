@@ -30,7 +30,7 @@ func (r *reconciler) checkHealth(
 
 	for _, check := range argoCDAppUpdates {
 		app, err :=
-			r.getArgoCDAppFn(ctx, r.argoClient, check.AppNamespace, check.AppName)
+			r.getArgoCDAppFn(ctx, r.argoClient, check.AppNamespaceOrDefault(), check.AppName)
 		if err != nil {
 			if health.Status != kargoapi.HealthStateUnhealthy {
 				health.Status = kargoapi.HealthStateUnknown
@@ -40,7 +40,7 @@ func (r *reconciler) checkHealth(
 				fmt.Sprintf(
 					"error finding Argo CD Application %q in namespace %q: %s",
 					check.AppName,
-					check.AppNamespace,
+					check.AppNamespaceOrDefault(),
 					err,
 				),
 			)
@@ -53,7 +53,7 @@ func (r *reconciler) checkHealth(
 				fmt.Sprintf(
 					"unable to find Argo CD Application %q in namespace %q",
 					check.AppName,
-					check.AppNamespace,
+					check.AppNamespaceOrDefault(),
 				),
 			)
 		} else if len(app.Spec.Sources) > 0 {
@@ -66,7 +66,7 @@ func (r *reconciler) checkHealth(
 					"bugs in Argo CD currently prevent a comprehensive assessment of "+
 						"the health of multi-source Application %q in namespace %q",
 					check.AppName,
-					check.AppNamespace,
+					check.AppNamespaceOrDefault(),
 				),
 			)
 		} else {

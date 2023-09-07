@@ -39,11 +39,6 @@ func TestDefault(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, e.Spec.Subscriptions.UpstreamStages, 1)
 	require.Len(t, e.Spec.PromotionMechanisms.ArgoCDAppUpdates, 1)
-	require.Equal(
-		t,
-		testNamespace,
-		e.Spec.PromotionMechanisms.ArgoCDAppUpdates[0].AppNamespace,
-	)
 }
 
 func TestValidateSpec(t *testing.T) {

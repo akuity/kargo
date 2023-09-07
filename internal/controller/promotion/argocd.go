@@ -102,20 +102,20 @@ func (a *argoCDMechanism) doSingleUpdate(
 	newFreight kargoapi.Freight,
 ) error {
 	app, err :=
-		a.getArgoCDAppFn(ctx, update.AppNamespace, update.AppName)
+		a.getArgoCDAppFn(ctx, update.AppNamespaceOrDefault(), update.AppName)
 	if err != nil {
 		return errors.Wrapf(
 			err,
 			"error finding Argo CD Application %q in namespace %q",
 			update.AppName,
-			update.AppNamespace,
+			update.AppNamespaceOrDefault(),
 		)
 	}
 	if app == nil {
 		return errors.Errorf(
 			"unable to find Argo CD Application %q in namespace %q",
 			update.AppName,
-			update.AppNamespace,
+			update.AppNamespaceOrDefault(),
 		)
 	}
 	// Make sure this is allowed!
@@ -135,7 +135,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 					err,
 					"error updating source of Argo CD Application %q in namespace %q",
 					update.AppName,
-					update.AppNamespace,
+					update.AppNamespaceOrDefault(),
 				)
 			}
 			app.Spec.Source = &source
@@ -150,7 +150,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 					err,
 					"error updating source(s) of Argo CD Application %q in namespace %q",
 					update.AppName,
-					update.AppNamespace,
+					update.AppNamespaceOrDefault(),
 				)
 			}
 			app.Spec.Sources[i] = source

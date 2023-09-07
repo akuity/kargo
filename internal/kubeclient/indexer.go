@@ -49,7 +49,7 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 		apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
 		for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
 			apps[i] =
-				fmt.Sprintf("%s:%s", appCheck.AppNamespace, appCheck.AppName)
+				fmt.Sprintf("%s:%s", appCheck.AppNamespaceOrDefault(), appCheck.AppName)
 		}
 		return apps
 	}

@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"crypto/sha1"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -358,9 +359,7 @@ type ArgoCDAppUpdate struct {
 	AppName string `json:"appName"`
 	// AppNamespace specifies the namespace of an Argo CD Application resource to
 	// be updated. If left unspecified, the namespace of this Application resource
-	// is defaulted to that of the Stage.
-	//
-	// TODO: This should default to Argo CD's namespace instead.
+	// will use the value of ARGOCD_NAMESPACE or "argocd"
 	//
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -368,6 +367,16 @@ type ArgoCDAppUpdate struct {
 	// SourceUpdates describes updates to be applied to various sources of the
 	// specified Argo CD Application resource.
 	SourceUpdates []ArgoCDSourceUpdate `json:"sourceUpdates,omitempty"`
+}
+
+func (a *ArgoCDAppUpdate) AppNamespaceOrDefault() string {
+	if a.AppNamespace != "" {
+		return a.AppNamespace
+	}
+	if envArgocdNs := os.Getenv("ARGOCD_NAMESPACE"); envArgocdNs != "" {
+		return envArgocdNs
+	}
+	return "argocd"
 }
 
 // ArgoCDSourceUpdate describes updates that should be applied to one of an Argo
