@@ -110,10 +110,17 @@ type reconciler struct {
 	) (string, error)
 
 	getLatestCommitIDFn func(
+		ctx context.Context,
 		repoURL string,
 		branch string,
 		creds *git.RepoCredentials,
-	) (string, error)
+	) (*gitMeta, error)
+}
+
+type gitMeta struct {
+	Commit  string
+	Message string
+	Author  string
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Stage resources and

@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -40,7 +41,7 @@ func (r *reconciler) getLatestCommits(
 			logger.Debug("found no credentials for git repo")
 		}
 
-		commit, err := r.getLatestCommitIDFn(sub.RepoURL, sub.Branch, repoCreds)
+		gm, err := r.getLatestCommitIDFn(ctx, sub.RepoURL, sub.Branch, repoCreds)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -48,51 +49,62 @@ func (r *reconciler) getLatestCommits(
 				sub.RepoURL,
 			)
 		}
-		logger.WithField("commit", commit).
+		logger.WithField("commit", gm.Commit).
 			Debug("found latest commit from repo")
 		latestCommits[i] = kargoapi.GitCommit{
 			RepoURL: sub.RepoURL,
-			ID:      commit,
+			ID:      gm.Commit,
 			Branch:  sub.Branch,
+			Message: gm.Message,
 		}
 	}
 	return latestCommits, nil
 }
 
 func getLatestCommitID(
+	ctx context.Context,
 	repoURL string,
 	branch string,
 	creds *git.RepoCredentials,
-) (string, error) {
+) (*gitMeta, error) {
+	logger := logging.LoggerFromContext(ctx).WithField("repo", repoURL)
 	if creds == nil {
 		creds = &git.RepoCredentials{}
 	}
 	repo, err := git.Clone(repoURL, *creds)
 	if err != nil {
-		return "", errors.Wrapf(err, "error cloning git repo %q", repoURL)
+		return nil, errors.Wrapf(err, "error cloning git repo %q", repoURL)
 
 	}
 	if branch != "" {
 		if err = repo.Checkout(branch); err != nil {
-			return "", errors.Wrapf(
+			return nil, errors.Wrapf(
 				err,
 				"error checking out branch %q from git repo",
 				repoURL,
 			)
 		}
 	}
-	commit, err := repo.LastCommitID()
-	if branch != "" {
-		return commit, errors.Wrapf(
+	var gm gitMeta
+	gm.Commit, err = repo.LastCommitID()
+	if err != nil {
+		return nil, errors.Wrapf(
 			err,
-			"error determining last commit ID from branch %q of git repo %q",
-			branch,
+			"error determining last commit ID from git repo %q (branch: %q)",
 			repoURL,
+			branch,
 		)
 	}
-	return commit, errors.Wrapf(
-		err,
-		"error determining last commit ID from default branch of git repo %q",
-		repoURL,
-	)
+	msg, err := repo.CommitMessage(gm.Commit)
+	// Since we currently store commit messages in Stage status, we only capture
+	// the first line of the commit message for brevity
+	gm.Message = strings.Split(strings.TrimSpace(msg), "\n")[0]
+	if err != nil {
+		// This is best effort, so just log the error
+		logger.Warnf("failed to get message from commit %q: %v", gm.Commit, err)
+	}
+	// TODO: support git author
+	//gm.Author, err = repo.Author(gm.Commit)
+
+	return &gm, nil
 }
