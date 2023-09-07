@@ -86,25 +86,27 @@ export const ProjectDetails = () => {
 
   const nodes = React.useMemo(
     () =>
-      data?.stages.flatMap((item) =>
-        item.metadata?.name
-          ? [
-              {
-                id: item.metadata?.name,
-                value: {
-                  title: item.metadata?.name,
-                  items: [
-                    {
-                      text: 'Status',
-                      value: healthStateToString(item.status?.currentFreight?.health?.status),
-                      icon: healthStateToIcon(item.status?.currentFreight?.health?.status)
-                    }
-                  ]
+      data?.stages
+        .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0)
+        .flatMap((item) =>
+          item.metadata?.name
+            ? [
+                {
+                  id: item.metadata?.name,
+                  value: {
+                    title: item.metadata?.name,
+                    items: [
+                      {
+                        text: 'Status',
+                        value: healthStateToString(item.status?.currentFreight?.health?.status),
+                        icon: healthStateToIcon(item.status?.currentFreight?.health?.status)
+                      }
+                    ]
+                  }
                 }
-              }
-            ]
-          : []
-      ) || [],
+              ]
+            : []
+        ) || [],
     [data]
   );
 
