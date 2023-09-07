@@ -25,21 +25,11 @@ export const Promotions = () => {
   const promotions = React.useMemo(
     () =>
       // Immutable sorting
-      [...(promotionsResponse?.promotions || [])].sort((a, b) => {
-        if (!a.metadata?.creationTimestamp?.seconds || !b.metadata?.creationTimestamp?.seconds) {
-          return 0;
-        }
-
-        if (a.metadata?.creationTimestamp?.seconds < b.metadata?.creationTimestamp?.seconds) {
-          return 1;
-        }
-
-        if (a.metadata?.creationTimestamp?.seconds > b.metadata?.creationTimestamp?.seconds) {
-          return -1;
-        }
-
-        return 0;
-      }),
+      [...(promotionsResponse?.promotions || [])].sort(
+        (a, b) =>
+          Number(b.metadata?.creationTimestamp?.seconds || 0) -
+          Number(a.metadata?.creationTimestamp?.seconds || 0)
+      ),
     [promotionsResponse]
   );
 
