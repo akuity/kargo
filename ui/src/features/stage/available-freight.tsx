@@ -34,76 +34,73 @@ export const AvailableFreight = (props: { stage: Stage; onSuccess?: () => void }
   };
 
   return (
-    <div>
-      <Typography.Title level={3}>Available Freight</Typography.Title>
-      <List
-        itemLayout='horizontal'
-        dataSource={stage?.status?.availableFreight || []}
-        renderItem={(freight) => (
-          <List.Item
-            actions={[
-              <Popconfirm
-                key='promote'
-                title='Are you sure to promote to this freight?'
-                onConfirm={() => freight.id && promote(freight.id)}
-                okText='Confirm'
-                placement='left'
-                icon=''
+    <List
+      itemLayout='horizontal'
+      dataSource={stage?.status?.availableFreight || []}
+      renderItem={(freight) => (
+        <List.Item
+          actions={[
+            <Popconfirm
+              key='promote'
+              title='Are you sure to promote to this freight?'
+              onConfirm={() => freight.id && promote(freight.id)}
+              okText='Confirm'
+              placement='left'
+              icon=''
+              disabled={stage.status?.currentFreight?.id === freight.id}
+            >
+              <Button
+                type='primary'
+                icon={<ButtonIcon icon={faArrowTurnUp} size='1x' />}
                 disabled={stage.status?.currentFreight?.id === freight.id}
+                loading={isLoadingPromote && promotingFreightId === freight.id}
               >
-                <Button
-                  type='primary'
-                  icon={<ButtonIcon icon={faArrowTurnUp} size='1x' />}
-                  disabled={stage.status?.currentFreight?.id === freight.id}
-                  loading={isLoadingPromote && promotingFreightId === freight.id}
+                Promote
+              </Button>
+            </Popconfirm>
+          ]}
+        >
+          {freight.commits.map((commit) => (
+            <List.Item.Meta
+              key={commit.id}
+              avatar={<FontAwesomeIcon icon={faCodeCommit} />}
+              title={
+                <Typography.Link
+                  href={`${commit.repoUrl?.replace('.git', '')}/commit/${commit.id}`}
+                  target='_blank'
                 >
-                  Promote
-                </Button>
-              </Popconfirm>
-            ]}
-          >
-            {freight.commits.map((commit) => (
-              <List.Item.Meta
-                key={commit.id}
-                avatar={<FontAwesomeIcon icon={faCodeCommit} />}
-                title={
-                  <Typography.Link
-                    href={`${commit.healthCheckCommit?.replace('.git', '')}/commit/${commit.id}`}
-                    target='_blank'
-                  >
-                    {commit?.id?.slice(0, 7)}
-                    <FontAwesomeIcon icon={faExternalLinkAlt} style={{ marginLeft: '5px' }} />
-                  </Typography.Link>
-                }
-                description={
-                  <Tooltip
-                    title={
-                      freight.firstSeen &&
-                      format(freight.firstSeen.toDate(), "HH:mm:ss 'on' MMM do yyyy")
-                    }
-                  >
-                    {freight.firstSeen && formatRelative(freight.firstSeen?.toDate(), new Date())}
-                  </Tooltip>
-                }
-              />
-            ))}
-            {freight.commits.length === 0 && (
-              <List.Item.Meta
-                avatar={<FontAwesomeIcon icon={faDocker} />}
-                title='Image'
-                description={
-                  <Descriptions size='small' column={1}>
-                    <Descriptions.Item label='Repo URL'>
-                      {freight.images[0]?.repoUrl}
-                    </Descriptions.Item>
-                    <Descriptions.Item label='Tag'>{freight.images[0]?.tag}</Descriptions.Item>
-                  </Descriptions>
-                }
-              />
-            )}
-          </List.Item>
-        )}
-      />
-    </div>
+                  {commit?.id?.slice(0, 7)}
+                  <FontAwesomeIcon icon={faExternalLinkAlt} style={{ marginLeft: '5px' }} />
+                </Typography.Link>
+              }
+              description={
+                <Tooltip
+                  title={
+                    freight.firstSeen &&
+                    format(freight.firstSeen.toDate(), "HH:mm:ss 'on' MMM do yyyy")
+                  }
+                >
+                  {freight.firstSeen && formatRelative(freight.firstSeen?.toDate(), new Date())}
+                </Tooltip>
+              }
+            />
+          ))}
+          {freight.commits.length === 0 && (
+            <List.Item.Meta
+              avatar={<FontAwesomeIcon icon={faDocker} />}
+              title='Image'
+              description={
+                <Descriptions size='small' column={1}>
+                  <Descriptions.Item label='Repo URL'>
+                    {freight.images[0]?.repoUrl}
+                  </Descriptions.Item>
+                  <Descriptions.Item label='Tag'>{freight.images[0]?.tag}</Descriptions.Item>
+                </Descriptions>
+              }
+            />
+          )}
+        </List.Item>
+      )}
+    />
   );
 };

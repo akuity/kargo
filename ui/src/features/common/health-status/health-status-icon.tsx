@@ -11,11 +11,13 @@ import { CSSProperties } from 'react';
 
 import { Health, HealthState } from '@ui/gen/v1alpha1/types_pb';
 
+import { healthStateToString } from './utils';
+
 export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties }) => {
   const { health } = props;
 
   return (
-    <Tooltip title={health?.status}>
+    <Tooltip title={healthStateToString(health?.status)}>
       <FontAwesomeIcon
         icon={iconForHealthStatus(health?.status)}
         style={{

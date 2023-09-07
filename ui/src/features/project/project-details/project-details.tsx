@@ -16,12 +16,13 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
+import { healthStateToString } from '@ui/features/common/health-status/utils';
 import { getStage, listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
-import { healthStateToIcon, healthStateToString } from './utils/health';
+import { healthStateToIcon } from './utils/health';
 
 export const ProjectDetails = () => {
   const { name } = useParams();
