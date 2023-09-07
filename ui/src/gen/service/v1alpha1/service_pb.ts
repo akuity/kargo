@@ -192,6 +192,117 @@ export class GetVersionInfoResponse extends Message<GetVersionInfoResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetConfigRequest
+ */
+export class GetConfigRequest extends Message<GetConfigRequest> {
+  constructor(data?: PartialMessage<GetConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigRequest {
+    return new GetConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetConfigRequest {
+    return new GetConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetConfigRequest {
+    return new GetConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined, b: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined): boolean {
+    return proto3.util.equals(GetConfigRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ArgoCDShard
+ */
+export class ArgoCDShard extends Message<ArgoCDShard> {
+  /**
+   * @generated from field: string url = 1;
+   */
+  url = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<ArgoCDShard>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ArgoCDShard";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDShard {
+    return new ArgoCDShard().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDShard {
+    return new ArgoCDShard().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDShard {
+    return new ArgoCDShard().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ArgoCDShard | PlainMessage<ArgoCDShard> | undefined, b: ArgoCDShard | PlainMessage<ArgoCDShard> | undefined): boolean {
+    return proto3.util.equals(ArgoCDShard, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetConfigResponse
+ */
+export class GetConfigResponse extends Message<GetConfigResponse> {
+  /**
+   * @generated from field: map<string, akuity.io.kargo.service.v1alpha1.ArgoCDShard> argocd_shards = 1;
+   */
+  argocdShards: { [key: string]: ArgoCDShard } = {};
+
+  constructor(data?: PartialMessage<GetConfigResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetConfigResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "argocd_shards", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: ArgoCDShard} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigResponse {
+    return new GetConfigResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetConfigResponse {
+    return new GetConfigResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetConfigResponse {
+    return new GetConfigResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetConfigResponse | PlainMessage<GetConfigResponse> | undefined, b: GetConfigResponse | PlainMessage<GetConfigResponse> | undefined): boolean {
+    return proto3.util.equals(GetConfigResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
  */
 export class GetPublicConfigRequest extends Message<GetPublicConfigRequest> {

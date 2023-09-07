@@ -36,6 +36,8 @@ const (
 	// KargoServiceGetVersionInfoProcedure is the fully-qualified name of the KargoService's
 	// GetVersionInfo RPC.
 	KargoServiceGetVersionInfoProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetVersionInfo"
+	// KargoServiceGetConfigProcedure is the fully-qualified name of the KargoService's GetConfig RPC.
+	KargoServiceGetConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetConfig"
 	// KargoServiceGetPublicConfigProcedure is the fully-qualified name of the KargoService's
 	// GetPublicConfig RPC.
 	KargoServiceGetPublicConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetPublicConfig"
@@ -122,6 +124,7 @@ const (
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
 type KargoServiceClient interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
+	GetConfig(context.Context, *connect.Request[v1alpha1.GetConfigRequest]) (*connect.Response[v1alpha1.GetConfigResponse], error)
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
 	// TODO(devholic): Add ApplyResource API
@@ -168,6 +171,11 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 		getVersionInfo: connect.NewClient[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse](
 			httpClient,
 			baseURL+KargoServiceGetVersionInfoProcedure,
+			opts...,
+		),
+		getConfig: connect.NewClient[v1alpha1.GetConfigRequest, v1alpha1.GetConfigResponse](
+			httpClient,
+			baseURL+KargoServiceGetConfigProcedure,
 			opts...,
 		),
 		getPublicConfig: connect.NewClient[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse](
@@ -316,6 +324,7 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 // kargoServiceClient implements KargoServiceClient.
 type kargoServiceClient struct {
 	getVersionInfo           *connect.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
+	getConfig                *connect.Client[v1alpha1.GetConfigRequest, v1alpha1.GetConfigResponse]
 	getPublicConfig          *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
 	adminLogin               *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
 	createResource           *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
@@ -349,6 +358,11 @@ type kargoServiceClient struct {
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
 func (c *kargoServiceClient) GetVersionInfo(ctx context.Context, req *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error) {
 	return c.getVersionInfo.CallUnary(ctx, req)
+}
+
+// GetConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetConfig.
+func (c *kargoServiceClient) GetConfig(ctx context.Context, req *connect.Request[v1alpha1.GetConfigRequest]) (*connect.Response[v1alpha1.GetConfigResponse], error) {
+	return c.getConfig.CallUnary(ctx, req)
 }
 
 // GetPublicConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig.
@@ -496,6 +510,7 @@ func (c *kargoServiceClient) QueryFreight(ctx context.Context, req *connect.Requ
 // service.
 type KargoServiceHandler interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
+	GetConfig(context.Context, *connect.Request[v1alpha1.GetConfigRequest]) (*connect.Response[v1alpha1.GetConfigResponse], error)
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
 	// TODO(devholic): Add ApplyResource API
@@ -538,6 +553,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServiceGetVersionInfoHandler := connect.NewUnaryHandler(
 		KargoServiceGetVersionInfoProcedure,
 		svc.GetVersionInfo,
+		opts...,
+	)
+	kargoServiceGetConfigHandler := connect.NewUnaryHandler(
+		KargoServiceGetConfigProcedure,
+		svc.GetConfig,
 		opts...,
 	)
 	kargoServiceGetPublicConfigHandler := connect.NewUnaryHandler(
@@ -684,6 +704,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		switch r.URL.Path {
 		case KargoServiceGetVersionInfoProcedure:
 			kargoServiceGetVersionInfoHandler.ServeHTTP(w, r)
+		case KargoServiceGetConfigProcedure:
+			kargoServiceGetConfigHandler.ServeHTTP(w, r)
 		case KargoServiceGetPublicConfigProcedure:
 			kargoServiceGetPublicConfigHandler.ServeHTTP(w, r)
 		case KargoServiceAdminLoginProcedure:
@@ -751,6 +773,10 @@ type UnimplementedKargoServiceHandler struct{}
 
 func (UnimplementedKargoServiceHandler) GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetConfig(context.Context, *connect.Request[v1alpha1.GetConfigRequest]) (*connect.Response[v1alpha1.GetConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetConfig is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error) {
