@@ -253,7 +253,7 @@ func TestSerializedSync(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, promo)
-	require.Equal(t, kargoapi.PromotionPhaseComplete, promo.Status.Phase)
+	require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
 }
 
 func TestGetPromo(t *testing.T) {
