@@ -61,7 +61,7 @@ export const StageDetails = () => {
                 },
                 {
                   key: '2',
-                  label: 'Manifest Preview',
+                  label: 'Live Manifest',
                   children: <ManifestPreview stage={data.stage} />
                 }
               ]}
