@@ -37,6 +37,7 @@ func SetupReconcilerWithManager(
 	}
 	return ctrl.NewControllerManagedBy(argoMgr).
 		For(&argocd.Application{}).
+		WithOptions(controller.CommonOptions()).
 		Complete(newReconciler(kargoMgr.GetClient()))
 }
 
