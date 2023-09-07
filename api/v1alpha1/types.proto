@@ -125,9 +125,11 @@ message KustomizePromotionMechanism {
 }
 
 message Promotion {
-  optional github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
-  PromotionSpec spec = 2;
-  PromotionStatus status = 3;
+  string api_version = 1;
+  string kind = 2;
+  optional github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
+  PromotionSpec spec = 4;
+  PromotionStatus status = 5;
 }
 
 message PromotionList {
@@ -141,9 +143,11 @@ message PromotionMechanisms {
 }
 
 message PromotionPolicy {
-  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
-  string stage = 2;
-  bool enable_auto_promotion = 3;
+  string api_version = 1;
+  string kind = 2;
+  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
+  string stage = 4;
+  bool enable_auto_promotion = 5;
 }
 
 message PromotionPolicyList {
@@ -168,9 +172,11 @@ message RepoSubscriptions {
 }
 
 message Stage {
-  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 1;
-  StageSpec spec = 2;
-  StageStatus status = 3;
+  string api_version = 1;
+  string kind = 2;
+  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
+  StageSpec spec = 4;
+  StageStatus status = 5;
 }
 
 message StageList {
