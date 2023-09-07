@@ -11,7 +11,7 @@ loader.config({ monaco });
 export interface YamlEditorProps {
   value: string;
   disabled?: boolean;
-  onChange(value: string | undefined): void;
+  onChange?(value: string | undefined): void;
   className?: string;
   width?: string;
   height?: string;
@@ -24,7 +24,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
   const { value, disabled, onChange, className, width, height, schema, placeholder } = props;
 
   const handleOnChange = (value: string | undefined) => {
-    onChange(value);
+    onChange?.(value);
   };
 
   useEffect(() => {

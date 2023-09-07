@@ -1,24 +1,19 @@
-import { faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Button, Divider, Drawer, Empty, Space, Typography } from 'antd';
+import { useQuery } from '@tanstack/react-query';
+import { Divider, Drawer, Empty, Tabs, Typography } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { HealthStatusIcon } from '@ui/features/common/health-status-icon/health-status-icon';
-import { AvailableFreight } from '@ui/features/stage/available-freight';
+import { LoadingState } from '@ui/features/common';
+import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { Subscriptions } from '@ui/features/stage/subscriptions';
-import {
-  deleteStage,
-  getStage,
-  refreshStage
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { getStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
-import { ButtonIcon, LoadingState } from '../common';
-import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
+import { AvailableFreight } from './available-freight';
+import { ManifestPreview } from './manifest-preview';
+import { StageActions } from './stage-actions';
 
 export const StageDetails = () => {
   const { name: projectName, stageName } = useParams();
-  const confirm = useConfirmModal();
   const navigate = useNavigate();
 
   const { data, isLoading, refetch } = useQuery({
@@ -27,21 +22,6 @@ export const StageDetails = () => {
   });
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
-
-  const { mutate, isLoading: isLoadingDelete } = useMutation(deleteStage.useMutation());
-  const { mutate: refresh, isLoading: isRefreshLoading } = useMutation(refreshStage.useMutation());
-
-  const onDelete = () => {
-    confirm({
-      onOk: () => {
-        mutate({ name: data?.stage?.metadata?.name, project: projectName });
-        onClose();
-      },
-      title: 'Are you sure you want to delete Stage?'
-    });
-  };
-
-  const onRefresh = () => refresh({ name: stageName, project: projectName });
 
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
@@ -62,28 +42,7 @@ export const StageDetails = () => {
                 <Typography.Text type='secondary'>{projectName}</Typography.Text>
               </div>
             </div>
-            <Space size={16}>
-              <Button
-                type='default'
-                icon={<ButtonIcon icon={faRefresh} size='1x' />}
-                onClick={onRefresh}
-                loading={
-                  isRefreshLoading || !!data.stage.metadata?.annotations['kargo.akuity.io/refresh']
-                }
-              >
-                Refresh
-              </Button>
-              <Button
-                danger
-                type='text'
-                icon={<ButtonIcon icon={faTrash} size='1x' />}
-                onClick={onDelete}
-                loading={isLoadingDelete}
-                size='small'
-              >
-                Delete
-              </Button>
-            </Space>
+            <StageActions stage={data.stage} />
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
@@ -92,7 +51,21 @@ export const StageDetails = () => {
               subscriptions={data.stage.spec?.subscriptions}
               projectName={projectName}
             />
-            <AvailableFreight stage={data.stage} onSuccess={refetch} />
+            <Tabs
+              defaultActiveKey='1'
+              items={[
+                {
+                  key: '1',
+                  label: 'Available Freight',
+                  children: <AvailableFreight stage={data.stage} onSuccess={refetch} />
+                },
+                {
+                  key: '2',
+                  label: 'Live Manifest',
+                  children: <ManifestPreview stage={data.stage} />
+                }
+              ]}
+            />
           </div>
         </>
       )}
