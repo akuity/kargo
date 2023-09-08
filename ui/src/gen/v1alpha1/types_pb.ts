@@ -27,12 +27,18 @@ export enum HealthState {
    * @generated from enum value: HEALTH_STATE_UNHEALTHY = 2;
    */
   UNHEALTHY = 2,
+
+  /**
+   * @generated from enum value: HEALTH_STATE_PROGRESSING = 3;
+   */
+  PROGRESSING = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(HealthState)
 proto3.util.setEnumType(HealthState, "github.com.akuity.kargo.pkg.api.v1alpha1.HealthState", [
   { no: 0, name: "HEALTH_STATE_UNKNOWN" },
   { no: 1, name: "HEALTH_STATE_HEALTHY" },
   { no: 2, name: "HEALTH_STATE_UNHEALTHY" },
+  { no: 3, name: "HEALTH_STATE_PROGRESSING" },
 ]);
 
 /**
