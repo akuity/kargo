@@ -496,23 +496,6 @@
                 "format": "date-time",
                 "type": "string"
               },
-              "health": {
-                "description": "Health is the Freight's last observed health. If this Freight is the Stage's current Freight, this will be continuously re-assessed and updated. If this Freight is a past Freight of the Stage, this field will denote the last observed health state before transitioning into a different Freight.",
-                "properties": {
-                  "issues": {
-                    "description": "Issues clarifies why a Stage in any state other than Healthy is in that state. This field will always be the empty when a Stage is Healthy.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "status": {
-                    "description": "Status describes the health of the Stage.",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
               "id": {
                 "description": "ID is a unique, system-assigned identifier for this Freight.",
                 "type": "string"
@@ -542,6 +525,10 @@
               "provenance": {
                 "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
                 "type": "string"
+              },
+              "qualified": {
+                "description": "Qualified denotes whether this Freight is suitable for promotion to a downstream Stage. This field becomes true when it is the current Freight of a Stage and that Stage is observed to be synced and healthy. Subsequent failures in Stage health evaluation do not disqualify a Freight that is already qualified.",
+                "type": "boolean"
               }
             },
             "type": "object"
@@ -612,23 +599,6 @@
               "format": "date-time",
               "type": "string"
             },
-            "health": {
-              "description": "Health is the Freight's last observed health. If this Freight is the Stage's current Freight, this will be continuously re-assessed and updated. If this Freight is a past Freight of the Stage, this field will denote the last observed health state before transitioning into a different Freight.",
-              "properties": {
-                "issues": {
-                  "description": "Issues clarifies why a Stage in any state other than Healthy is in that state. This field will always be the empty when a Stage is Healthy.",
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
-                },
-                "status": {
-                  "description": "Status describes the health of the Stage.",
-                  "type": "string"
-                }
-              },
-              "type": "object"
-            },
             "id": {
               "description": "ID is a unique, system-assigned identifier for this Freight.",
               "type": "string"
@@ -658,6 +628,10 @@
             "provenance": {
               "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
               "type": "string"
+            },
+            "qualified": {
+              "description": "Qualified denotes whether this Freight is suitable for promotion to a downstream Stage. This field becomes true when it is the current Freight of a Stage and that Stage is observed to be synced and healthy. Subsequent failures in Stage health evaluation do not disqualify a Freight that is already qualified.",
+              "type": "boolean"
             }
           },
           "type": "object"
@@ -665,6 +639,23 @@
         "error": {
           "description": "Error describes any errors that are preventing the Stage controller from assessing Stage health or from polling repositories or upstream Stages to discover new Freight.",
           "type": "string"
+        },
+        "health": {
+          "description": "Health is the Stage's last observed health.",
+          "properties": {
+            "issues": {
+              "description": "Issues clarifies why a Stage in any state other than Healthy is in that state. This field will always be the empty when a Stage is Healthy.",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "status": {
+              "description": "Status describes the health of the Stage.",
+              "type": "string"
+            }
+          },
+          "type": "object"
         },
         "history": {
           "description": "History is a stack of recent Freight, where each Freight is essentially a \"bill of materials\" describing what was deployed to the Stage. By default, the last ten Freight are stored.",
@@ -732,23 +723,6 @@
                 "format": "date-time",
                 "type": "string"
               },
-              "health": {
-                "description": "Health is the Freight's last observed health. If this Freight is the Stage's current Freight, this will be continuously re-assessed and updated. If this Freight is a past Freight of the Stage, this field will denote the last observed health state before transitioning into a different Freight.",
-                "properties": {
-                  "issues": {
-                    "description": "Issues clarifies why a Stage in any state other than Healthy is in that state. This field will always be the empty when a Stage is Healthy.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "status": {
-                    "description": "Status describes the health of the Stage.",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
               "id": {
                 "description": "ID is a unique, system-assigned identifier for this Freight.",
                 "type": "string"
@@ -778,6 +752,10 @@
               "provenance": {
                 "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
                 "type": "string"
+              },
+              "qualified": {
+                "description": "Qualified denotes whether this Freight is suitable for promotion to a downstream Stage. This field becomes true when it is the current Freight of a Stage and that Stage is observed to be synced and healthy. Subsequent failures in Stage health evaluation do not disqualify a Freight that is already qualified.",
+                "type": "boolean"
               }
             },
             "type": "object"
