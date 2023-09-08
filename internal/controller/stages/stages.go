@@ -109,11 +109,18 @@ type reconciler struct {
 		creds *helm.Credentials,
 	) (string, error)
 
-	getLatestCommitIDFn func(
+	getLatestCommitMetaFn func(
+		ctx context.Context,
 		repoURL string,
 		branch string,
 		creds *git.RepoCredentials,
-	) (string, error)
+	) (*gitMeta, error)
+}
+
+type gitMeta struct {
+	Commit  string
+	Message string
+	Author  string
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Stage resources and
@@ -203,7 +210,7 @@ func newReconciler(
 	r.getLatestTagFn = images.GetLatestTag
 	r.getLatestChartsFn = r.getLatestCharts
 	r.getLatestChartVersionFn = helm.GetLatestChartVersion
-	r.getLatestCommitIDFn = getLatestCommitID
+	r.getLatestCommitMetaFn = getLatestCommitMeta
 
 	return r
 }

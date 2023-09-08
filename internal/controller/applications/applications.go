@@ -7,10 +7,14 @@ import (
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
@@ -37,6 +41,7 @@ func SetupReconcilerWithManager(
 	}
 	return ctrl.NewControllerManagedBy(argoMgr).
 		For(&argocd.Application{}).
+		WithEventFilter(AppHealthSyncStatusChangePredicate{}).
 		WithOptions(controller.CommonOptions()).
 		Complete(newReconciler(kargoMgr.GetClient()))
 }
@@ -137,4 +142,42 @@ func (r *reconciler) Reconcile(
 	}
 
 	return result, nil
+}
+
+type AppHealthSyncStatusChangePredicate struct {
+	predicate.Funcs
+}
+
+// Update implements default UpdateEvent filter for checking if application changed
+// health or sync status. What we detect here should agree with what we examine in
+// stages/reconciler.checkHealth()
+func (AppHealthSyncStatusChangePredicate) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil {
+		log.Error(nil, "Update event has no old object to update", "event", e)
+		return false
+	}
+	if e.ObjectNew == nil {
+		log.Error(nil, "Update event has no new object for update", "event", e)
+		return false
+	}
+	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectNew)
+	if err != nil {
+		log.Error(nil, "Failed to convert new app", "event", e.ObjectNew)
+		return false
+	}
+	oldUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectOld)
+	if err != nil {
+		log.Error(nil, "Failed to convert old app", "event", e.ObjectOld)
+		return false
+	}
+	oldHealth, _, _ := unstructured.NestedString(oldUn, "status", "health", "status")
+	newHealth, _, _ := unstructured.NestedString(newUn, "status", "health", "status")
+
+	// TODO: switch from checking sync status to whether or not operation is complete
+	oldSync, _, _ := unstructured.NestedString(oldUn, "status", "sync", "status")
+	newSync, _, _ := unstructured.NestedString(newUn, "status", "sync", "status")
+	//_, oldOp := oldUn["operation"]
+	//_, newOp := newUn["operation"]
+
+	return newHealth != oldHealth || oldSync != newSync
 }

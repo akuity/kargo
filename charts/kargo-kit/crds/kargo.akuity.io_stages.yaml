@@ -558,6 +558,9 @@ spec:
                         description: GitCommit describes a specific commit from a
                           specific Git repository.
                         properties:
+                          author:
+                            description: Author is the git commit author
+                            type: string
                           branch:
                             description: Branch denotes the branch of the repository
                               where this commit was found.
@@ -576,6 +579,9 @@ spec:
                           id:
                             description: ID is the ID of a specific commit in the
                               Git repository specified by RepoURL.
+                            type: string
+                          message:
+                            description: Message is the git commit message
                             type: string
                           repoURL:
                             description: RepoURL is the URL of a Git repository.
@@ -675,6 +681,9 @@ spec:
                       description: GitCommit describes a specific commit from a specific
                         Git repository.
                       properties:
+                        author:
+                          description: Author is the git commit author
+                          type: string
                         branch:
                           description: Branch denotes the branch of the repository
                             where this commit was found.
@@ -692,6 +701,9 @@ spec:
                         id:
                           description: ID is the ID of a specific commit in the Git
                             repository specified by RepoURL.
+                          type: string
+                        message:
+                          description: Message is the git commit message
                           type: string
                         repoURL:
                           description: RepoURL is the URL of a Git repository.
@@ -798,6 +810,9 @@ spec:
                         description: GitCommit describes a specific commit from a
                           specific Git repository.
                         properties:
+                          author:
+                            description: Author is the git commit author
+                            type: string
                           branch:
                             description: Branch denotes the branch of the repository
                               where this commit was found.
@@ -816,6 +831,9 @@ spec:
                           id:
                             description: ID is the ID of a specific commit in the
                               Git repository specified by RepoURL.
+                            type: string
+                          message:
+                            description: Message is the git commit message
                             type: string
                           repoURL:
                             description: RepoURL is the URL of a Git repository.
