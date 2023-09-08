@@ -58,29 +58,32 @@ kargo apply -f stage.yaml
 			// TODO: Current implementation of apply is not the same as `kubectl` does.
 			// It actually "replaces" resource with the given file.
 			// We should provide the same implementation as `kubectl` does.
-			resp, err := kargoSvcCli.UpdateResource(ctx,
-				connect.NewRequest(&kargosvcapi.UpdateResourceRequest{
+			resp, err := kargoSvcCli.CreateOrUpdateResource(ctx,
+				connect.NewRequest(&kargosvcapi.CreateOrUpdateResourceRequest{
 					Manifest: rawManifest,
 				}))
 			if err != nil {
 				return pkgerrors.Wrap(err, "apply resource")
 			}
 
-			var successRes []*kargosvcapi.UpdateResourceResult_UpdatedResourceManifest
-			var updateErrs []error
+			var createdRes []*kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest
+			var updatedRes []*kargosvcapi.CreateOrUpdateResourceResult_UpdatedResourceManifest
+			var errs []error
 			for _, r := range resp.Msg.GetResults() {
 				switch typedRes := r.GetResult().(type) {
-				case *kargosvcapi.UpdateResourceResult_UpdatedResourceManifest:
-					successRes = append(successRes, typedRes)
-				case *kargosvcapi.UpdateResourceResult_Error:
-					updateErrs = append(updateErrs, errors.New(typedRes.Error))
+				case *kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest:
+					createdRes = append(createdRes, typedRes)
+				case *kargosvcapi.CreateOrUpdateResourceResult_UpdatedResourceManifest:
+					updatedRes = append(updatedRes, typedRes)
+				case *kargosvcapi.CreateOrUpdateResourceResult_Error:
+					errs = append(errs, errors.New(typedRes.Error))
 				}
 			}
-			for _, r := range successRes {
+			for _, r := range createdRes {
 				var obj unstructured.Unstructured
-				if err := sigyaml.Unmarshal(r.UpdatedResourceManifest, &obj); err != nil {
+				if err := sigyaml.Unmarshal(r.CreatedResourceManifest, &obj); err != nil {
 					fmt.Fprintf(opt.IOStreams.ErrOut, "%s",
-						pkgerrors.Wrap(err, "Error: unmarshal applied manifest"))
+						pkgerrors.Wrap(err, "Error: unmarshal created manifest"))
 					continue
 				}
 				if printer == nil {
@@ -88,12 +91,29 @@ kargo apply -f stage.yaml
 						Namespace: obj.GetNamespace(),
 						Name:      obj.GetName(),
 					}.String()
-					fmt.Fprintf(opt.IOStreams.Out, "%s Applied: %q\n", obj.GetKind(), name)
+					fmt.Fprintf(opt.IOStreams.Out, "%s Created: %q\n", obj.GetKind(), name)
 					continue
 				}
 				_ = printer.PrintObj(&obj, opt.IOStreams.Out)
 			}
-			return errors.Join(updateErrs...)
+			for _, r := range updatedRes {
+				var obj unstructured.Unstructured
+				if err := sigyaml.Unmarshal(r.UpdatedResourceManifest, &obj); err != nil {
+					fmt.Fprintf(opt.IOStreams.ErrOut, "%s",
+						pkgerrors.Wrap(err, "Error: unmarshal updated manifest"))
+					continue
+				}
+				if printer == nil {
+					name := types.NamespacedName{
+						Namespace: obj.GetNamespace(),
+						Name:      obj.GetName(),
+					}.String()
+					fmt.Fprintf(opt.IOStreams.Out, "%s Updated: %q\n", obj.GetKind(), name)
+					continue
+				}
+				_ = printer.PrintObj(&obj, opt.IOStreams.Out)
+			}
+			return errors.Join(errs...)
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
