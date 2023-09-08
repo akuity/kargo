@@ -31,10 +31,22 @@ const (
 type HealthState string
 
 const (
-	HealthStateHealthy   HealthState = "Healthy"
-	HealthStateUnhealthy HealthState = "Unhealthy"
-	HealthStateUnknown   HealthState = "Unknown"
+	HealthStateHealthy     HealthState = "Healthy"
+	HealthStateUnhealthy   HealthState = "Unhealthy"
+	HealthStateProgressing HealthState = "Progressing"
+	HealthStateUnknown     HealthState = "Unknown"
 )
+
+var stateOrder = map[HealthState]int{
+	HealthStateHealthy:     0,
+	HealthStateProgressing: 1,
+	HealthStateUnknown:     2,
+	HealthStateUnhealthy:   3,
+}
+
+func (h HealthState) LessThan(other HealthState) bool {
+	return stateOrder[h] < stateOrder[other]
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -639,6 +651,15 @@ type Health struct {
 	// Issues clarifies why a Stage in any state other than Healthy is in that
 	// state. This field will always be the empty when a Stage is Healthy.
 	Issues []string `json:"issues,omitempty"`
+}
+
+func (h *Health) Merge(other Health) Health {
+	res := Health{Status: h.Status, Issues: h.Issues}
+	if res.Status.LessThan(other.Status) {
+		res.Status = other.Status
+	}
+	res.Issues = append(res.Issues, other.Issues...)
+	return res
 }
 
 //+kubebuilder:object:root=true

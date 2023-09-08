@@ -2,10 +2,8 @@ package argocd
 
 import (
 	"context"
-	"fmt"
 
 	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -39,30 +37,4 @@ func GetApplication(
 		)
 	}
 	return &app, nil
-}
-
-func IsApplicationHealthyAndSynced(
-	app *argocd.Application,
-	revision string,
-) (bool, string) {
-	if app.Status.Health.Status != health.HealthStatusHealthy {
-		return false, fmt.Sprintf(
-			"Argo CD Application %q in namespace %q has health state %q",
-			app.Name,
-			app.Namespace,
-			app.Status.Health.Status,
-		)
-	}
-
-	if app.Status.Sync.Status != argocd.SyncStatusCodeSynced ||
-		(revision != "" && app.Status.Sync.Revision != revision) {
-		return false, fmt.Sprintf(
-			"Argo CD Application %q in namespace %q is not synced to revision %q",
-			app.Name,
-			app.Namespace,
-			revision,
-		)
-	}
-
-	return true, ""
 }

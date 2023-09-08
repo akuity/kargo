@@ -1,3 +1,4 @@
+import progressingIcon from '@ui/assets/icons/circle-notch.svg';
 import unknownIcon from '@ui/assets/icons/heart-exclamation.svg';
 import healthyIcon from '@ui/assets/icons/heart-green.svg';
 import unhealthyIcon from '@ui/assets/icons/heart-red.svg';
@@ -7,6 +8,8 @@ export const healthStateToIcon = (status?: HealthState) => {
   switch (status) {
     case HealthState.HEALTHY:
       return healthyIcon;
+    case HealthState.PROGRESSING:
+      return progressingIcon;
     case HealthState.UNHEALTHY:
       return unhealthyIcon;
     case HealthState.UNKNOWN:

@@ -160,9 +160,10 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
-				require.Len(t, health.Issues, 1)
+				require.Len(t, health.Issues, 2)
 				require.Contains(t, health.Issues[0], "has health state")
 				require.Contains(t, health.Issues[0], argoHealth.HealthStatusDegraded)
+				require.Contains(t, health.Issues[1], "not synced")
 			},
 		},
 
