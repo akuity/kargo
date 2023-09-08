@@ -314,6 +314,8 @@ func (r *reconciler) syncStage(
 
 	status.ObservedGeneration = stage.Generation
 	status.Health = nil // Reset health
+	status.CurrentPromotion = nil
+
 	// Only perform health checks if we have a current Freight
 	if status.CurrentFreight != nil {
 		if stage.Spec.PromotionMechanisms != nil {
