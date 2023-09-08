@@ -168,6 +168,14 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App not synced",
+			freight: kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "fake-url",
+						ID:      "fake-commit",
+					},
+				},
+			},
 			argoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 				{
 					AppName:      "fake-app",
@@ -182,14 +190,17 @@ func TestCheckHealth(t *testing.T) {
 			) (*argocd.Application, error) {
 				return &argocd.Application{
 					Spec: argocd.ApplicationSpec{
-						Source: &argocd.ApplicationSource{},
+						Source: &argocd.ApplicationSource{
+							RepoURL: "fake-url",
+						},
 					},
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
 							Status: argoHealth.HealthStatusHealthy,
 						},
 						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeOutOfSync,
+							Status:   argocd.SyncStatusCodeSynced,
+							Revision: "not-the-right-commit",
 						},
 					},
 				}, nil
