@@ -17,6 +17,7 @@ import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
 import { healthStateToString } from '@ui/features/common/health-status/utils';
+import { StageDetails } from '@ui/features/stage/stage-details';
 import { getStage, listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
@@ -25,7 +26,7 @@ import { useDocumentEvent } from '@ui/utils/document';
 import { healthStateToIcon } from './utils/health';
 
 export const ProjectDetails = () => {
-  const { name } = useParams();
+  const { name, stageName } = useParams();
   const navigate = useNavigate();
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
   const graphRef = React.useRef<IGraph | undefined>();
@@ -143,6 +144,7 @@ export const ProjectDetails = () => {
   if (isLoading) return <LoadingState />;
 
   if (!data || data.stages.length === 0) return <Empty />;
+  const stage = stageName && data.stages.find((item) => item.metadata?.name === stageName);
 
   return (
     <>
@@ -240,6 +242,7 @@ export const ProjectDetails = () => {
           });
         }}
       />
+      {stage && <StageDetails stage={stage} />}
     </>
   );
 };

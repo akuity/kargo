@@ -630,6 +630,10 @@ type GitCommit struct {
 	// mechanism) wherein the value of this field may differ from the commit ID
 	// found in the ID field.
 	HealthCheckCommit string `json:"healthCheckCommit,omitempty"`
+	// Message is the git commit message
+	Message string `json:"message,omitempty"`
+	// Author is the git commit author
+	Author string `json:"author,omitempty"`
 }
 
 // Equals returns a bool indicating whether two GitCommits are equivalent.

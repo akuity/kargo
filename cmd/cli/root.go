@@ -14,6 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	apiconfig "github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/cli/apply"
 	"github.com/akuity/kargo/internal/cli/create"
 	"github.com/akuity/kargo/internal/cli/delete"
 	"github.com/akuity/kargo/internal/cli/get"
@@ -89,6 +90,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	option.InsecureTLS(&opt.InsecureTLS)(cmd.PersistentFlags())
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
+	cmd.AddCommand(apply.NewCommand(opt))
 	cmd.AddCommand(create.NewCommand(opt))
 	cmd.AddCommand(delete.NewCommand(opt))
 	cmd.AddCommand(get.NewCommand(opt))

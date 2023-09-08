@@ -45,7 +45,7 @@ func TestNewStageReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestTagFn)
 	require.NotNil(t, e.getLatestChartsFn)
 	require.NotNil(t, e.getLatestChartVersionFn)
-	require.NotNil(t, e.getLatestCommitIDFn)
+	require.NotNil(t, e.getLatestCommitMetaFn)
 }
 
 func TestSync(t *testing.T) {
