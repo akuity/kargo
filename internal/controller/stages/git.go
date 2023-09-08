@@ -41,7 +41,7 @@ func (r *reconciler) getLatestCommits(
 			logger.Debug("found no credentials for git repo")
 		}
 
-		gm, err := r.getLatestCommitIDFn(ctx, sub.RepoURL, sub.Branch, repoCreds)
+		gm, err := r.getLatestCommitMetaFn(ctx, sub.RepoURL, sub.Branch, repoCreds)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -61,7 +61,7 @@ func (r *reconciler) getLatestCommits(
 	return latestCommits, nil
 }
 
-func getLatestCommitID(
+func getLatestCommitMeta(
 	ctx context.Context,
 	repoURL string,
 	branch string,

@@ -109,7 +109,7 @@ type reconciler struct {
 		creds *helm.Credentials,
 	) (string, error)
 
-	getLatestCommitIDFn func(
+	getLatestCommitMetaFn func(
 		ctx context.Context,
 		repoURL string,
 		branch string,
@@ -210,7 +210,7 @@ func newReconciler(
 	r.getLatestTagFn = images.GetLatestTag
 	r.getLatestChartsFn = r.getLatestCharts
 	r.getLatestChartVersionFn = helm.GetLatestChartVersion
-	r.getLatestCommitIDFn = getLatestCommitID
+	r.getLatestCommitMetaFn = getLatestCommitMeta
 
 	return r
 }

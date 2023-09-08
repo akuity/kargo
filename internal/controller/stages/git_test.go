@@ -15,9 +15,9 @@ import (
 
 func TestGetLatestCommits(t *testing.T) {
 	testCases := []struct {
-		name                string
-		credentialsDB       credentials.Database
-		getLatestCommitIDFn func(
+		name                  string
+		credentialsDB         credentials.Database
+		getLatestCommitMetaFn func(
 			context.Context,
 			string,
 			string,
@@ -62,7 +62,7 @@ func TestGetLatestCommits(t *testing.T) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
-			getLatestCommitIDFn: func(
+			getLatestCommitMetaFn: func(
 				context.Context,
 				string,
 				string,
@@ -94,7 +94,7 @@ func TestGetLatestCommits(t *testing.T) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
-			getLatestCommitIDFn: func(
+			getLatestCommitMetaFn: func(
 				context.Context,
 				string,
 				string,
@@ -120,8 +120,8 @@ func TestGetLatestCommits(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := reconciler{
-				credentialsDB:       testCase.credentialsDB,
-				getLatestCommitIDFn: testCase.getLatestCommitIDFn,
+				credentialsDB:         testCase.credentialsDB,
+				getLatestCommitMetaFn: testCase.getLatestCommitMetaFn,
 			}
 			testCase.assertions(
 				r.getLatestCommits(
@@ -178,7 +178,7 @@ func TestGetLatestCommitID(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				getLatestCommitID(context.TODO(), testCase.repoURL, testCase.branch, nil),
+				getLatestCommitMeta(context.TODO(), testCase.repoURL, testCase.branch, nil),
 			)
 		})
 	}
