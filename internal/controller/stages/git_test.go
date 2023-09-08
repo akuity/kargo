@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -14,13 +15,14 @@ import (
 
 func TestGetLatestCommits(t *testing.T) {
 	testCases := []struct {
-		name                string
-		credentialsDB       credentials.Database
-		getLatestCommitIDFn func(
+		name                  string
+		credentialsDB         credentials.Database
+		getLatestCommitMetaFn func(
+			context.Context,
 			string,
 			string,
 			*git.RepoCredentials,
-		) (string, error)
+		) (*gitMeta, error)
 		assertions func(commits []kargoapi.GitCommit, err error)
 	}{
 		{
@@ -60,12 +62,13 @@ func TestGetLatestCommits(t *testing.T) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
-			getLatestCommitIDFn: func(
+			getLatestCommitMetaFn: func(
+				context.Context,
 				string,
 				string,
 				*git.RepoCredentials,
-			) (string, error) {
-				return "", errors.New("something went wrong")
+			) (*gitMeta, error) {
+				return nil, errors.New("something went wrong")
 			},
 			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.Error(t, err)
@@ -91,12 +94,13 @@ func TestGetLatestCommits(t *testing.T) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
-			getLatestCommitIDFn: func(
+			getLatestCommitMetaFn: func(
+				context.Context,
 				string,
 				string,
 				*git.RepoCredentials,
-			) (string, error) {
-				return "fake-commit", nil
+			) (*gitMeta, error) {
+				return &gitMeta{Commit: "fake-commit", Message: "message"}, nil
 			},
 			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.NoError(t, err)
@@ -106,6 +110,7 @@ func TestGetLatestCommits(t *testing.T) {
 					kargoapi.GitCommit{
 						RepoURL: "fake-url",
 						ID:      "fake-commit",
+						Message: "message",
 					},
 					commits[0],
 				)
@@ -115,8 +120,8 @@ func TestGetLatestCommits(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := reconciler{
-				credentialsDB:       testCase.credentialsDB,
-				getLatestCommitIDFn: testCase.getLatestCommitIDFn,
+				credentialsDB:         testCase.credentialsDB,
+				getLatestCommitMetaFn: testCase.getLatestCommitMetaFn,
 			}
 			testCase.assertions(
 				r.getLatestCommits(
@@ -138,12 +143,12 @@ func TestGetLatestCommitID(t *testing.T) {
 		name       string
 		repoURL    string
 		branch     string
-		assertions func(string, error)
+		assertions func(*gitMeta, error)
 	}{
 		{
 			name:    "error cloning repo",
 			repoURL: "fake-url", // This should force a failure
-			assertions: func(_ string, err error) {
+			assertions: func(_ *gitMeta, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error cloning git repo")
 			},
@@ -151,9 +156,9 @@ func TestGetLatestCommitID(t *testing.T) {
 
 		{
 			name:    "error checking out branch",
-			repoURL: "https://github.com/argoproj/argo-cd.git",
+			repoURL: "https://github.com/akuity/kargo.git",
 			branch:  "bogus", // This should force a failure
-			assertions: func(_ string, err error) {
+			assertions: func(_ *gitMeta, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error checking out branch")
 			},
@@ -161,17 +166,19 @@ func TestGetLatestCommitID(t *testing.T) {
 
 		{
 			name:    "success",
-			repoURL: "https://github.com/argoproj/argo-cd.git",
-			assertions: func(commit string, err error) {
+			repoURL: "https://github.com/akuity/kargo.git",
+			assertions: func(gm *gitMeta, err error) {
 				require.NoError(t, err)
-				require.NotEmpty(t, commit)
+				require.NotEmpty(t, gm.Commit)
+				require.NotEmpty(t, gm.Message)
+				require.Len(t, strings.Split(gm.Message, "\n"), 1)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				getLatestCommitID(testCase.repoURL, testCase.branch, nil),
+				getLatestCommitMeta(context.TODO(), testCase.repoURL, testCase.branch, nil),
 			)
 		})
 	}
