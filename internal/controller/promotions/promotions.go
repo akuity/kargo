@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/akuity/bookkeeper"
+	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/promotion"
@@ -36,9 +37,7 @@ type reconciler struct {
 	// Overridable for testing:
 	promoteFn func(
 		ctx context.Context,
-		stageName string,
-		stageNamespace string,
-		freightID string,
+		promo v1alpha1.Promotion,
 	) error
 }
 
@@ -339,9 +338,7 @@ func (r *reconciler) serializedSync(
 					}()
 					if err = r.promoteFn(
 						promoCtx,
-						promo.Spec.Stage,
-						promo.Namespace,
-						promo.Spec.Freight,
+						*promo,
 					); err != nil {
 						phase = kargoapi.PromotionPhaseErrored
 						phaseError = err.Error()
@@ -366,11 +363,12 @@ func (r *reconciler) serializedSync(
 
 func (r *reconciler) promote(
 	ctx context.Context,
-	stageName string,
-	stageNamespace string,
-	freightID string,
+	promo v1alpha1.Promotion,
 ) error {
 	logger := logging.LoggerFromContext(ctx)
+	stageName := promo.Spec.Stage
+	stageNamespace := promo.Namespace
+	freightID := promo.Spec.Freight
 
 	stage, err := kargoapi.GetStage(
 		ctx,
@@ -421,6 +419,15 @@ func (r *reconciler) promote(
 			stageNamespace,
 		)
 	}
+	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
+		status.CurrentPromotion = &v1alpha1.PromotionInfo{
+			Name:    promo.Name,
+			Freight: *targetFreight,
+		}
+	})
+	if err != nil {
+		return err
+	}
 
 	nextFreight, err := r.promoMechanisms.Promote(ctx, stage, *targetFreight)
 	if err != nil {
@@ -430,6 +437,7 @@ func (r *reconciler) promote(
 	// The assumption is that controller does not process multiple promotions in one stage
 	// so we are safe from race conditions and can just update the status
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
+		status.CurrentPromotion = nil
 		status.CurrentFreight = &nextFreight
 		status.AvailableFreight[targetFreightIndex] = nextFreight
 		status.History.Push(nextFreight)

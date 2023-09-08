@@ -485,6 +485,8 @@ type StageStatus struct {
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// CurrentPromotion is a reference to the currently Running promotion.
+	CurrentPromotion *PromotionInfo `json:"currentPromotion,omitempty"`
 }
 
 // Freight is a "bill of materials" describing what is, was, or can be deployed
@@ -676,4 +678,11 @@ type StageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Stage `json:"items"`
+}
+
+type PromotionInfo struct {
+	// Name is the name of the Promotion
+	Name string `json:"name"`
+	// Freight is the freight being promoted
+	Freight Freight `json:"freight"`
 }
