@@ -51,7 +51,7 @@ func (h HealthState) LessThan(other HealthState) bool {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.currentFreight.id`
-//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.currentFreight.health.status`
+//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
 //+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Stage is the Kargo API's main type.
@@ -476,6 +476,8 @@ type StageStatus struct {
 	// "bill of materials" describing what was deployed to the Stage. By default,
 	// the last ten Freight are stored.
 	History FreightStack `json:"history,omitempty"`
+	// Health is the Stage's last observed health.
+	Health *Health `json:"health,omitempty"`
 	// Error describes any errors that are preventing the Stage controller
 	// from assessing Stage health or from polling repositories or upstream
 	// Stages to discover new Freight.
@@ -508,11 +510,12 @@ type Freight struct {
 	Images []Image `json:"images,omitempty"`
 	// Charts describes Helm charts that were used in this Freight.
 	Charts []Chart `json:"charts,omitempty"`
-	// Health is the Freight's last observed health. If this Freight is the
-	// Stage's current Freight, this will be continuously re-assessed and updated.
-	// If this Freight is a past Freight of the Stage, this field will denote the
-	// last observed health state before transitioning into a different Freight.
-	Health *Health `json:"health,omitempty"`
+	// Qualified denotes whether this Freight is suitable for promotion to a
+	// downstream Stage. This field becomes true when it is the current Freight of
+	// a Stage and that Stage is observed to be synced and healthy. Subsequent
+	// failures in Stage health evaluation do not disqualify a Freight that is
+	// already qualified.
+	Qualified bool `json:"qualified,omitempty"`
 }
 
 func (f *Freight) UpdateFreightID() {
