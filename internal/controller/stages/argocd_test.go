@@ -160,15 +160,22 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
-				require.Len(t, health.Issues, 2)
+				require.Len(t, health.Issues, 1)
 				require.Contains(t, health.Issues[0], "has health state")
 				require.Contains(t, health.Issues[0], argoHealth.HealthStatusDegraded)
-				require.Contains(t, health.Issues[1], "not synced")
 			},
 		},
 
 		{
 			name: "Argo CD App not synced",
+			freight: kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "fake-url",
+						ID:      "fake-commit",
+					},
+				},
+			},
 			argoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 				{
 					AppName:      "fake-app",
@@ -183,14 +190,17 @@ func TestCheckHealth(t *testing.T) {
 			) (*argocd.Application, error) {
 				return &argocd.Application{
 					Spec: argocd.ApplicationSpec{
-						Source: &argocd.ApplicationSource{},
+						Source: &argocd.ApplicationSource{
+							RepoURL: "fake-url",
+						},
 					},
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
 							Status: argoHealth.HealthStatusHealthy,
 						},
 						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeOutOfSync,
+							Status:   argocd.SyncStatusCodeSynced,
+							Revision: "not-the-right-commit",
 						},
 					},
 				}, nil
