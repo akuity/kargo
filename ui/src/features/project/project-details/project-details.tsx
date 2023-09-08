@@ -16,7 +16,12 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
-import { getStage, listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { Freightline } from '@ui/features/freightline/freightline';
+import {
+  getStage,
+  listStages,
+  queryFreight
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
@@ -27,6 +32,9 @@ export const ProjectDetails = () => {
   const { name } = useParams();
   const navigate = useNavigate();
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
+  const { data: freightData, isLoading: isLoadingFreight } = useQuery(
+    queryFreight.useQuery({ project: name })
+  );
   const graphRef = React.useRef<IGraph | undefined>();
   const client = useQueryClient();
 
@@ -139,12 +147,27 @@ export const ProjectDetails = () => {
     setTimeout(() => graphRef.current?.fitCenter?.(), 0);
   }, [nodes, edges]);
 
-  if (isLoading) return <LoadingState />;
+  const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
+
+  React.useEffect(() => {
+    const stagesPerFreight: { [key: string]: Stage[] } = {};
+    (data?.stages || []).forEach((stage) => {
+      const items = stagesPerFreight[stage.status?.currentFreight?.id || ''] || [];
+      stagesPerFreight[stage.status?.currentFreight?.id || ''] = [...items, stage];
+    });
+    setStagesPerFreight(stagesPerFreight);
+  }, [data, freightData]);
+
+  if (isLoading || isLoadingFreight) return <LoadingState />;
 
   if (!data || data.stages.length === 0) return <Empty />;
 
   return (
     <>
+      <Freightline
+        freight={freightData?.groups['']?.freight || []}
+        stagesPerFreight={stagesPerFreight}
+      />
       <FlowAnalysisGraph
         behaviors={['drag-canvas', 'zoom-canvas']}
         data={{
