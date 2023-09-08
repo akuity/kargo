@@ -24,7 +24,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           <div className='flex items-center justify-between'>
             <div className='flex gap-1 items-start'>
               <HealthStatusIcon
-                health={stage.status?.currentFreight?.health}
+                health={stage.status?.health}
                 style={{ marginRight: '10px', marginTop: '10px' }}
               />
               <div>
