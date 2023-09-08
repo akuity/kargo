@@ -9,7 +9,7 @@ jobs:
 
   publish-image:
     permissions:
-      contents: read
+      contents: write # Used to upload assets
       packages: write # Used to push images to `ghcr.io`
       id-token: write # Needed to create an OIDC token for keyless signing
     runs-on: ubuntu-latest

@@ -124,8 +124,7 @@ func stageHealthForAppHealth(app *argocd.Application) kargoapi.Health {
 }
 
 func stageHealthForAppSync(app *argocd.Application, revision string) kargoapi.Health {
-	if app.Status.Sync.Status != argocd.SyncStatusCodeSynced ||
-		(revision != "" && app.Status.Sync.Revision != revision) {
+	if revision != "" && app.Status.Sync.Revision != revision {
 
 		if app.Operation != nil && app.Operation.Sync != nil {
 			return kargoapi.Health{
