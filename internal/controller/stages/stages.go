@@ -58,7 +58,7 @@ type reconciler struct {
 		context.Context,
 		kargoapi.Freight,
 		[]kargoapi.ArgoCDAppUpdate,
-	) kargoapi.Health
+	) *kargoapi.Health
 
 	// Syncing:
 	getLatestFreightFromReposFn func(
@@ -313,23 +313,17 @@ func (r *reconciler) syncStage(
 	}
 
 	status.ObservedGeneration = stage.Generation
+	status.Health = nil // Reset health
 	// Only perform health checks if we have a current Freight
 	if status.CurrentFreight != nil {
-		var health kargoapi.Health
 		if stage.Spec.PromotionMechanisms != nil {
-			health = r.checkHealthFn(
+			status.Health = r.checkHealthFn(
 				ctx,
 				*status.CurrentFreight,
 				stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 			)
-		} else {
-			// Healthy by default if there are no promotion mechanisms.
-			health = kargoapi.Health{
-				Status: kargoapi.HealthStateHealthy,
-			}
 		}
-		status.Health = &health
-		if health.Status == kargoapi.HealthStateHealthy {
+		if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
 			status.CurrentFreight.Qualified = true
 		}
 		status.History.Pop()

@@ -73,7 +73,7 @@ func TestSync(t *testing.T) {
 			context.Context,
 			kargoapi.Freight,
 			[]kargoapi.ArgoCDAppUpdate,
-		) kargoapi.Health
+		) *kargoapi.Health
 		getLatestFreightFromReposFn func(
 			context.Context,
 			string,
@@ -267,17 +267,14 @@ func TestSync(t *testing.T) {
 						Qualified: true,
 					},
 				},
-				Health: &kargoapi.Health{
-					Status: kargoapi.HealthStateHealthy,
-				},
 			},
 			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 			checkHealthFn: func(
 				context.Context,
 				kargoapi.Freight,
 				[]kargoapi.ArgoCDAppUpdate,
-			) kargoapi.Health {
-				return kargoapi.Health{
+			) *kargoapi.Health {
+				return &kargoapi.Health{
 					Status: kargoapi.HealthStateHealthy,
 				}
 			},
