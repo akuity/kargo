@@ -88,6 +88,12 @@ func (r *reconciler) checkHealth(
 					}
 				}
 			}
+			// TODO: currently an stage relies on the Argo CD app being both Healthy and Synced in
+			// order for the freight to be healthy. But many users run in a mode where apps are in
+			// a perpetual state of drift, and it is unreasonable to expect Sync status will be
+			// Synced. We need to switch to perhaps only considering health, and perhaps
+			// consdiering whether or not an operation is in flight.
+			// See: https://github.com/akuity/kargo/issues/670
 			if healthy, reason := libArgoCD.IsApplicationHealthyAndSynced(
 				app,
 				desiredRevision,
