@@ -26,25 +26,21 @@ status:
     provenance: dev
   currentFreight:
     firstSeen: "2023-08-28T15:18:57Z"
-    health:
-      status: Healthy
     id: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
     images:
     - repoURL: ghcr.io/akuity/guestbook
       tag: v0.0.1
     provenance: dev
+    qualified: true
   history:
   - firstSeen: "2023-08-28T15:18:57Z"
-    health:
-      status: Healthy
     id: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
     images:
     - repoURL: ghcr.io/akuity/guestbook
       tag: v0.0.1
     provenance: dev
+    qualified: true
   - firstSeen: "2023-08-28T15:17:57Z"
-    health:
-      status: Unhealthy
     id: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     images:
     - repoURL: ghcr.io/akuity/guestbook

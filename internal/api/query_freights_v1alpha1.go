@@ -78,7 +78,7 @@ func addToGroups(
 				continue
 			}
 			// clear out stage-specific information
-			f.Health = nil
+			f.Qualified = false // Qualification is WRT a Stage
 			f.Provenance = ""
 			switch req.GetGroupBy() {
 			case GroupByContainerRepository:
