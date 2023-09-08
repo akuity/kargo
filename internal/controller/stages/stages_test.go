@@ -73,7 +73,7 @@ func TestSync(t *testing.T) {
 			context.Context,
 			kargoapi.Freight,
 			[]kargoapi.ArgoCDAppUpdate,
-		) kargoapi.Health
+		) *kargoapi.Health
 		getLatestFreightFromReposFn func(
 			context.Context,
 			string,
@@ -248,9 +248,7 @@ func TestSync(t *testing.T) {
 							Tag:     "fake-tag",
 						},
 					},
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
+					Qualified: true,
 				},
 				History: []kargoapi.Freight{
 					{
@@ -266,9 +264,7 @@ func TestSync(t *testing.T) {
 								Tag:     "fake-tag",
 							},
 						},
-						Health: &kargoapi.Health{
-							Status: kargoapi.HealthStateHealthy,
-						},
+						Qualified: true,
 					},
 				},
 			},
@@ -277,8 +273,8 @@ func TestSync(t *testing.T) {
 				context.Context,
 				kargoapi.Freight,
 				[]kargoapi.ArgoCDAppUpdate,
-			) kargoapi.Health {
-				return kargoapi.Health{
+			) *kargoapi.Health {
+				return &kargoapi.Health{
 					Status: kargoapi.HealthStateHealthy,
 				}
 			},

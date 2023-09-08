@@ -1516,9 +1516,9 @@ export class Freight extends Message<Freight> {
   charts: Chart[] = [];
 
   /**
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Health health = 7;
+   * @generated from field: optional bool qualified = 8;
    */
-  health?: Health;
+  qualified?: boolean;
 
   constructor(data?: PartialMessage<Freight>) {
     super();
@@ -1534,7 +1534,7 @@ export class Freight extends Message<Freight> {
     { no: 4, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 5, name: "images", kind: "message", T: Image, repeated: true },
     { no: 6, name: "charts", kind: "message", T: Chart, repeated: true },
-    { no: 7, name: "health", kind: "message", T: Health, opt: true },
+    { no: 8, name: "qualified", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Freight {
@@ -1578,6 +1578,11 @@ export class StageStatus extends Message<StageStatus> {
    */
   error = "";
 
+  /**
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Health health = 5;
+   */
+  health?: Health;
+
   constructor(data?: PartialMessage<StageStatus>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1590,6 +1595,7 @@ export class StageStatus extends Message<StageStatus> {
     { no: 2, name: "current_freight", kind: "message", T: Freight, opt: true },
     { no: 3, name: "history", kind: "message", T: Freight, repeated: true },
     { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "health", kind: "message", T: Health, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageStatus {

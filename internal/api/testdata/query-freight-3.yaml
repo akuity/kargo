@@ -26,10 +26,9 @@ status:
     provenance: dev
   currentFreight:
     firstSeen: "2023-08-30T15:18:57Z"
-    health:
-      status: Healthy
     id: dddddddddddddddddddddddddddddddddddddddd
     images:
     - repoURL: ghcr.io/akuity/guestbook2
       tag: v0.0.0
     provenance: dev
+    qualified: true
