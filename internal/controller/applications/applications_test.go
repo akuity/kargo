@@ -208,6 +208,42 @@ func TestAppHealthChangePredicate(t *testing.T) {
 			},
 			updated: false,
 		},
+		{
+			name: "revision changed",
+			old: map[string]any{
+				"status": map[string]any{
+					"sync": map[string]any{
+						"revision": "fake-revision",
+					},
+				},
+			},
+			new: map[string]any{
+				"status": map[string]any{
+					"sync": map[string]any{
+						"revision": "different-fake-revision",
+					},
+				},
+			},
+			updated: true,
+		},
+		{
+			name: "revision did not change",
+			old: map[string]any{
+				"status": map[string]any{
+					"sync": map[string]any{
+						"revision": "fake-revision",
+					},
+				},
+			},
+			new: map[string]any{
+				"status": map[string]any{
+					"sync": map[string]any{
+						"revision": "fake-revision",
+					},
+				},
+			},
+			updated: false,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
