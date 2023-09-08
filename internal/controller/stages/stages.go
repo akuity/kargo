@@ -328,7 +328,10 @@ func (r *reconciler) syncStage(
 				Status: kargoapi.HealthStateHealthy,
 			}
 		}
-		status.CurrentFreight.Health = &health
+		status.Health = &health
+		if health.Status == kargoapi.HealthStateHealthy {
+			status.CurrentFreight.Qualified = true
+		}
 		status.History.Pop()
 		status.History.Push(*status.CurrentFreight)
 	} else {
@@ -588,13 +591,12 @@ func (r *reconciler) getAvailableFreightFromUpstreamStages(
 			)
 		}
 		for _, freight := range upstreamStage.Status.History {
-			if _, ok := freightSet[freight.ID]; !ok &&
-				freight.Health != nil && freight.Health.Status == kargoapi.HealthStateHealthy {
+			if _, ok := freightSet[freight.ID]; !ok && freight.Qualified {
 				freight.Provenance = upstreamStage.Name
 				for i := range freight.Commits {
 					freight.Commits[i].HealthCheckCommit = ""
 				}
-				freight.Health = nil
+				freight.Qualified = false
 				availableFreight = append(availableFreight, freight)
 				freightSet[freight.ID] = struct{}{}
 			}

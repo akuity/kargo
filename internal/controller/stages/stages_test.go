@@ -248,9 +248,7 @@ func TestSync(t *testing.T) {
 							Tag:     "fake-tag",
 						},
 					},
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
+					Qualified: true,
 				},
 				History: []kargoapi.Freight{
 					{
@@ -266,10 +264,11 @@ func TestSync(t *testing.T) {
 								Tag:     "fake-tag",
 							},
 						},
-						Health: &kargoapi.Health{
-							Status: kargoapi.HealthStateHealthy,
-						},
+						Qualified: true,
 					},
+				},
+				Health: &kargoapi.Health{
+					Status: kargoapi.HealthStateHealthy,
 				},
 			},
 			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
