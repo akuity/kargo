@@ -29,6 +29,8 @@ import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
 import { healthStateToIcon } from './utils/health';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faDiagramProject } from '@fortawesome/free-solid-svg-icons';
 
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
@@ -171,100 +173,105 @@ export const ProjectDetails = () => {
         freight={freightData?.groups['']?.freight || []}
         stagesPerFreight={stagesPerFreight}
       />
-      <FlowAnalysisGraph
-        behaviors={['drag-canvas', 'zoom-canvas']}
-        data={{
-          nodes,
-          edges
-        }}
-        autoFit={false}
-        animate={false}
-        height={600}
-        edgeCfg={{
-          edgeStateStyles: { hover: { stroke: '#ccc', lineWidth: 1 } },
-          endArrow: { show: true },
-          type: 'polyline'
-        }}
-        markerCfg={{ show: false }}
-        layout={
-          {
-            ranksepFunc: () => 40,
-            nodesepFunc: () => 10
-          } as any // eslint-disable-line @typescript-eslint/no-explicit-any
-        }
-        nodeCfg={{
-          size: [180, 40],
-          hover: {
-            fill: '#ccc',
-            lineWidth: 1
-          },
-          style: { cursor: 'pointer', stroke: '#e8e8e8', radius: 4 },
-          padding: 12,
-          label: { style: { cursor: 'pointer', fontSize: 14 } as LabelStyle },
-          customContent: (item: CardItems, group: IGroup, cfg: CustomCfg) => {
-            const { startX, startY } = cfg;
-
-            if (!item.icon || !item.value) {
-              return;
-            }
-
-            group.addShape('image', {
-              attrs: {
-                x: startX,
-                y: startY,
-                img: item.icon,
-                width: 20,
-                height: 20,
-                cursor: 'pointer'
-              },
-              name: `image-${Math.random()}`
-            });
-
-            group?.addShape('text', {
-              attrs: {
-                textBaseline: 'top',
-                x: (startX || 0) + 28,
-                y: (startY || 0) + 4,
-                text: item.value,
-                fill: '#5a5a5a',
-                cursor: 'pointer',
-                fontSize: 13
-              },
-              name: `text-${Math.random()}`
-            });
-
-            return 26;
-          },
-          title: {
-            style: {
-              cursor: 'pointer',
-              fontSize: 16,
-              y: 8
-            },
-            containerStyle: {
-              radius: 4,
-              cursor: 'pointer',
-              fill: '#254166',
-              y: -4
-            }
-          },
-          nodeStateStyles: {
-            hover: {
-              stroke: '#e8e8e8',
-              fill: '#f5f5f5',
-              lineWidth: 1
-            }
+      <div className='p-6'>
+        <div className='font-semibold flex items-center text-sm'>
+          <FontAwesomeIcon icon={faDiagramProject} className='mr-2' /> STAGE GRAPH
+        </div>
+        <FlowAnalysisGraph
+          behaviors={['drag-canvas', 'zoom-canvas']}
+          data={{
+            nodes,
+            edges
+          }}
+          autoFit={false}
+          animate={false}
+          height={600}
+          edgeCfg={{
+            edgeStateStyles: { hover: { stroke: '#ccc', lineWidth: 1 } },
+            endArrow: { show: true },
+            type: 'polyline'
+          }}
+          markerCfg={{ show: false }}
+          layout={
+            {
+              ranksepFunc: () => 40,
+              nodesepFunc: () => 10
+            } as any // eslint-disable-line @typescript-eslint/no-explicit-any
           }
-        }}
-        toolbarCfg={{ show: true }}
-        onReady={(graph) => {
-          graphRef.current = graph;
-          graph.on('node:click', (evt) => {
-            evt.item?._cfg?.id &&
-              navigate(generatePath(paths.stage, { name, stageName: evt.item?._cfg?.id }));
-          });
-        }}
-      />
+          nodeCfg={{
+            size: [180, 40],
+            hover: {
+              fill: '#ccc',
+              lineWidth: 1
+            },
+            style: { cursor: 'pointer', stroke: '#e8e8e8', radius: 4 },
+            padding: 12,
+            label: { style: { cursor: 'pointer', fontSize: 14 } as LabelStyle },
+            customContent: (item: CardItems, group: IGroup, cfg: CustomCfg) => {
+              const { startX, startY } = cfg;
+
+              if (!item.icon || !item.value) {
+                return;
+              }
+
+              group.addShape('image', {
+                attrs: {
+                  x: startX,
+                  y: startY,
+                  img: item.icon,
+                  width: 20,
+                  height: 20,
+                  cursor: 'pointer'
+                },
+                name: `image-${Math.random()}`
+              });
+
+              group?.addShape('text', {
+                attrs: {
+                  textBaseline: 'top',
+                  x: (startX || 0) + 28,
+                  y: (startY || 0) + 4,
+                  text: item.value,
+                  fill: '#5a5a5a',
+                  cursor: 'pointer',
+                  fontSize: 13
+                },
+                name: `text-${Math.random()}`
+              });
+
+              return 26;
+            },
+            title: {
+              style: {
+                cursor: 'pointer',
+                fontSize: 16,
+                y: 8
+              },
+              containerStyle: {
+                radius: 4,
+                cursor: 'pointer',
+                fill: '#254166',
+                y: -4
+              }
+            },
+            nodeStateStyles: {
+              hover: {
+                stroke: '#e8e8e8',
+                fill: '#f5f5f5',
+                lineWidth: 1
+              }
+            }
+          }}
+          toolbarCfg={{ show: true }}
+          onReady={(graph) => {
+            graphRef.current = graph;
+            graph.on('node:click', (evt) => {
+              evt.item?._cfg?.id &&
+                navigate(generatePath(paths.stage, { name, stageName: evt.item?._cfg?.id }));
+            });
+          }}
+        />
+      </div>
       {stage && <StageDetails stage={stage} />}
     </>
   );

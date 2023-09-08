@@ -1,5 +1,6 @@
+import { Timestamp } from '@bufbuild/protobuf';
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { IconDefinition, faBoxOpen } from '@fortawesome/free-solid-svg-icons';
+import { IconDefinition, faBoxOpen, faTimeline } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import React, { useEffect, useState } from 'react';
@@ -11,22 +12,28 @@ export const Freightline = (props: {
   freight: Freight[];
   stagesPerFreight: { [key: string]: Stage[] };
 }) => {
-  const [completeLine, setCompleteLine] = React.useState<(Freight | null)[]>([]);
   const [selected, setSelected] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    const complete: (Freight | null)[] = [...(props.freight || []).reverse()];
-    for (let i = complete.length; i < 10; i++) {
-      complete.push(null);
-    }
-    setCompleteLine(complete);
-  }, [props.freight, props.stagesPerFreight]);
+  const [orderedFreight, setOrderedFreight] = React.useState(props.freight);
+
+  const getSeconds = (ts?: Timestamp): number => Number(ts?.seconds) || 0;
+
+  useEffect(() => {
+    const ordered = (props.freight || []).sort(
+      (a, b) => getSeconds(b.firstSeen) - getSeconds(a.firstSeen)
+    );
+    setOrderedFreight(ordered);
+  }, [props.freight]);
 
   return (
-    <div className='bg-gray-800 w-full rounded p-4 h-52 flex flex-col'>
-      <div className='mb-4 text-gray-200 text-xs'>FREIGHTLINE</div>
+    <div className='bg-zinc-900 w-full py-4 px-1 h-56 flex flex-col'>
+      <div className='mb-4 text-gray-300 text-sm font-semibold flex items-center ml-12'>
+        <FontAwesomeIcon icon={faTimeline} className='mr-2' />
+        FREIGHTLINE
+      </div>
       <div className='flex w-full h-full items-center'>
-        {(completeLine || []).map((f, i) => {
+        <div className='-rotate-90 text-gray-500 text-sm font-semibold mr-2'>NEW</div>
+        {(orderedFreight || []).map((f, i) => {
           const id = f?.id || `${i}`;
           return (
             <FreightItem
@@ -38,12 +45,13 @@ export const Freightline = (props: {
             />
           );
         })}
+        <div className='rotate-90 text-gray-500 text-sm font-semibold ml-auto'>OLD</div>
       </div>
     </div>
   );
 };
 
-const EmptyFreightLabel = () => <div className='w-full rounded-md bg-gray-700 h-4' />;
+const EmptyFreightLabel = () => <div className='w-full rounded-md bg-zinc-700 h-4' />;
 
 const FreightIcon = (props: { icon: IconDefinition; hasStages?: boolean }) => (
   <FontAwesomeIcon
@@ -66,11 +74,11 @@ const FreightContent = (props: {
     setHasImages((freight?.images || []).length > 0);
   }, [freight]);
 
-  const bg = stage ? getStageBackground(stage) : !hasCommits && !hasImages ? '' : 'bg-gray-700';
+  const bg = stage ? getStageBackground(stage) : !hasCommits && !hasImages ? '' : 'bg-zinc-800';
 
   return (
     <div
-      className={`${bg} w-full my-1 flex-shrink h-full transition-all flex items-center justify-center flex-col ${
+      className={`${bg} w-full my-1 flex-shrink h-full flex items-center justify-center flex-col ${
         selected ? 'w-3 rounded' : 'w-full rounded-md'
       }`}
     >
@@ -79,7 +87,7 @@ const FreightContent = (props: {
           {hasCommits && <FreightIcon icon={faGit} hasStages={hasStages} />}
           {hasImages && <FreightIcon icon={faDocker} hasStages={hasStages} />}
           {!hasStages && !hasCommits && !hasImages && (
-            <FontAwesomeIcon icon={faBoxOpen} size='2x' className='text-gray-600' />
+            <FontAwesomeIcon icon={faBoxOpen} className='text-gray-600 text-2xl' />
           )}
         </>
       )}

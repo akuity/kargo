@@ -1,5 +1,5 @@
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
-import { Button, Typography } from 'antd';
+import { faWandSparkles } from '@fortawesome/free-solid-svg-icons';
+import { Button } from 'antd';
 import { useParams } from 'react-router-dom';
 
 import { ButtonIcon } from '@ui/features/common';
@@ -13,14 +13,21 @@ export const Project = () => {
 
   return (
     <>
-      <Typography.Title level={1}>{name}</Typography.Title>
-      <div className='flex items-center justify-between mb-6'>
-        <Typography.Title level={3} className='!mt-0 !mb-6'>
-          Stages
-        </Typography.Title>
-        <Button type='primary' onClick={() => show()} icon={<ButtonIcon icon={faPlus} size='1x' />}>
-          Create
-        </Button>
+      <div className='p-6'>
+        <div className='flex items-center'>
+          <div className='mr-auto'>
+            <div className='font-semibold mb-1 text-xs text-gray-600'>PROJECT</div>
+            <div className='text-2xl font-semibold'>{name}</div>
+          </div>
+
+          <Button
+            type='primary'
+            onClick={() => show()}
+            icon={<ButtonIcon icon={faWandSparkles} size='1x' />}
+          >
+            Create
+          </Button>
+        </div>
       </div>
       <ProjectDetails />
     </>
