@@ -1,4 +1,4 @@
-import { HealthStatusIcon } from '@ui/features/common/health-status-icon/health-status-icon';
+import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
 import * as styles from './stage-item.module.less';

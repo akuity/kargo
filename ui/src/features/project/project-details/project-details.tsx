@@ -16,7 +16,9 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
+import { healthStateToString } from '@ui/features/common/health-status/utils';
 import { Freightline } from '@ui/features/freightline/freightline';
+import { StageDetails } from '@ui/features/stage/stage-details';
 import {
   getStage,
   listStages,
@@ -26,10 +28,10 @@ import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
-import { healthStateToIcon, healthStateToString } from './utils/health';
+import { healthStateToIcon } from './utils/health';
 
 export const ProjectDetails = () => {
-  const { name } = useParams();
+  const { name, stageName } = useParams();
   const navigate = useNavigate();
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
   const { data: freightData, isLoading: isLoadingFreight } = useQuery(
@@ -161,6 +163,7 @@ export const ProjectDetails = () => {
   if (isLoading || isLoadingFreight) return <LoadingState />;
 
   if (!data || data.stages.length === 0) return <Empty />;
+  const stage = stageName && data.stages.find((item) => item.metadata?.name === stageName);
 
   return (
     <>
@@ -262,6 +265,7 @@ export const ProjectDetails = () => {
           });
         }}
       />
+      {stage && <StageDetails stage={stage} />}
     </>
   );
 };

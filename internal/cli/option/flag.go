@@ -1,8 +1,19 @@
 package option
 
-import "github.com/spf13/pflag"
+import (
+	"fmt"
+
+	"github.com/spf13/pflag"
+)
 
 type FlagFn func(*pflag.FlagSet)
+
+func Filenames(verb string, v *[]string) FlagFn {
+	return func(fs *pflag.FlagSet) {
+		fs.StringSliceVarP(v, "filename", "f", nil,
+			fmt.Sprintf("Filename, directory, or URL to files to use to %s the resource", verb))
+	}
+}
 
 func InsecureTLS(v *bool) FlagFn {
 	return func(fs *pflag.FlagSet) {

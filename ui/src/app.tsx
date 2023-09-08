@@ -9,7 +9,7 @@ import { Project } from '@ui/pages/project';
 
 import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
-import { theme } from './config/theme';
+import { themeConfig } from './config/themeConfig';
 import { AuthContextProvider } from './features/auth/context/auth-context-provider';
 import { ProtectedRoute } from './features/auth/protected-route';
 import { MainLayout } from './features/common/layout/main-layout';
@@ -22,7 +22,7 @@ import 'antd/dist/reset.css';
 export const App = () => (
   <TransportProvider transport={transport}>
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider theme={theme}>
+      <ConfigProvider theme={themeConfig}>
         <ModalContextProvider>
           <AuthContextProvider>
             <BrowserRouter>
