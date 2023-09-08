@@ -7,8 +7,6 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import { ProjectDetails } from '@ui/features/project/project-details/project-details';
 import { CreateStageModal } from '@ui/features/stage/create-stage-modal';
 
-import { StageDetails } from '../features/stage/stage-details';
-
 export const Project = () => {
   const { name } = useParams();
   const { show } = useModal(name ? (p) => <CreateStageModal {...p} project={name} /> : undefined);
@@ -25,7 +23,6 @@ export const Project = () => {
         </Button>
       </div>
       <ProjectDetails />
-      <StageDetails />
     </>
   );
 };
