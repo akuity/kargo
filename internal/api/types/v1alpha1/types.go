@@ -787,6 +787,8 @@ func ToHealthProto(h kargoapi.Health) *v1alpha1.Health {
 		status = v1alpha1.HealthState_HEALTH_STATE_HEALTHY
 	case kargoapi.HealthStateUnhealthy:
 		status = v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY
+	case kargoapi.HealthStateProgressing:
+		status = v1alpha1.HealthState_HEALTH_STATE_PROGRESSING
 	case kargoapi.HealthStateUnknown:
 		status = v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
 	}

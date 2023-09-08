@@ -4,6 +4,8 @@ export const healthStateToString = (status?: HealthState): string => {
   switch (status) {
     case HealthState.HEALTHY:
       return 'Healthy';
+    case HealthState.PROGRESSING:
+      return 'Progressing';
     case HealthState.UNHEALTHY:
       return 'Unhealthy';
     case HealthState.UNKNOWN:
