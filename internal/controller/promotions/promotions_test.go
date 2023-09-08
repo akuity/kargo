@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/akuity/bookkeeper"
+	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
@@ -230,7 +231,7 @@ func TestSerializedSync(t *testing.T) {
 		promoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{
 			{Namespace: "fake-namespace", Name: "fake-stage"}: pq,
 		},
-		promoteFn: func(context.Context, string, string, string) error {
+		promoteFn: func(context.Context, v1alpha1.Promotion) error {
 			return nil
 		},
 	}

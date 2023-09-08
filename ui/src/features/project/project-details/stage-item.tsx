@@ -9,7 +9,7 @@ export const StageItem = (props: { stage: Stage; onClick: () => void }) => {
   return (
     <div key={stage.metadata?.name} onClick={props.onClick} className={styles.item}>
       <HealthStatusIcon
-        health={stage.status?.currentFreight?.health}
+        health={stage.status?.health}
         style={{ marginRight: '12px' }}
       />
       {stage.metadata?.name}

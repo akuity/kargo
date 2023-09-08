@@ -24,3 +24,4 @@ status:
     - repoURL: ghcr.io/akuity/guestbook
       tag: v0.0.4
     provenance: dev
+    qualified: true
