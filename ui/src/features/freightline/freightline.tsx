@@ -151,14 +151,24 @@ const FreightItem = (props: {
         {(selected || pinned) && (
           <div className='flex flex-col justify-center items-start w-full ml-2 font-mono text-sm'>
             {(freight?.commits || []).map((c) => (
-              <div key={c.id} className='flex items center'>
+              <Tooltip
+                key={c.id}
+                className='flex items-center mb-2'
+                title={`${c.repoUrl} (${c.branch})`}
+              >
                 <FontAwesomeIcon icon={faGit} className='w-10' />
-                {c.id.substring(0, 6)}
-              </div>
+                <a
+                  href={`${c.repoUrl.replace('.git', '')}/commit/${c.id}`}
+                  target='_blank'
+                  className='text-blue-200 hover:text-blue-400'
+                >
+                  {c.id.substring(0, 6)}
+                </a>
+              </Tooltip>
             ))}
             {(freight?.images || []).map((i) => (
               <Tooltip
-                className='flex items-center'
+                className='flex items-center mb-2'
                 key={`${i.repoUrl}:${i.tag}`}
                 title={`${i.repoUrl}:${i.tag}`}
               >
@@ -172,7 +182,7 @@ const FreightItem = (props: {
               size='lg'
               className={`${
                 pinned ? 'text-gray-200' : 'text-gray-600'
-              } cursor-pointer mx-auto mt-4 hover:text-gray-300`}
+              } cursor-pointer mx-auto mt-2 hover:text-gray-300`}
             />
           </div>
         )}
