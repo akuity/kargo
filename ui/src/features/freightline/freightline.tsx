@@ -1,6 +1,11 @@
 import { Timestamp } from '@bufbuild/protobuf';
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { IconDefinition, faBoxOpen, faTimeline } from '@fortawesome/free-solid-svg-icons';
+import {
+  IconDefinition,
+  faBoxOpen,
+  faThumbTack,
+  faTimeline
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import React, { useEffect, useState } from 'react';
@@ -113,17 +118,19 @@ const FreightItem = (props: {
 }) => {
   const { freight, selected, stages } = props;
 
+  const [pinned, setPinned] = React.useState(false);
+
   return (
     <div
       className={`transition-all p-2 cursor-pointer h-full mr-5 rounded-lg border-solid border-2 text-white flex flex-col items-center ${
-        selected ? 'w-36 border-gray-400' : 'w-20 border-gray-700 hover:border-gray-500'
-      }`}
+        selected ? 'border-gray-400' : 'border-gray-700 hover:border-gray-500'
+      } ${selected || pinned ? 'w-36' : 'w-20'}`}
       onClick={() => props.setSelected(!selected)}
     >
       <div className='flex w-full h-full mb-1'>
         <div
           className={`flex flex-col align-center h-full ${
-            selected ? 'justify-start' : 'justify-center w-full'
+            selected || pinned ? 'justify-start' : 'justify-center w-full'
           }`}
         >
           {(stages || []).map((s) => (
@@ -131,17 +138,17 @@ const FreightItem = (props: {
               stage={s}
               freight={freight}
               hasStages={true}
-              selected={selected}
+              selected={selected || pinned}
               key={s?.metadata?.uid}
               multi={(stages || []).length > 1}
               stageBackground={props.stageColorMap[s?.metadata?.uid || '']}
             />
           ))}
           {(stages || []).length == 0 && (
-            <FreightContent freight={freight} hasStages={false} selected={selected} />
+            <FreightContent freight={freight} hasStages={false} selected={selected || pinned} />
           )}
         </div>
-        {selected && (
+        {(selected || pinned) && (
           <div className='flex flex-col justify-center items-start w-full ml-2 font-mono text-sm'>
             {(freight?.commits || []).map((c) => (
               <div key={c.id} className='flex items center'>
@@ -159,6 +166,14 @@ const FreightItem = (props: {
                 <div>{i.tag}</div>
               </Tooltip>
             ))}
+            <FontAwesomeIcon
+              onClick={() => setPinned(!pinned)}
+              icon={faThumbTack}
+              size='lg'
+              className={`${
+                pinned ? 'text-gray-200' : 'text-gray-600'
+              } cursor-pointer mx-auto mt-4 hover:text-gray-300`}
+            />
           </div>
         )}
       </div>
