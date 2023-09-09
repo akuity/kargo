@@ -57,7 +57,9 @@ const EmptyFreightLabel = () => <div className='w-full rounded-md bg-zinc-700 h-
 const FreightIcon = (props: { icon: IconDefinition; hasStages?: boolean; className?: string }) => (
   <FontAwesomeIcon
     icon={props.icon}
-    className={`${props.hasStages ? 'text-gray-800 opacity-40' : 'text-gray-400'} text-lg my-auto`}
+    className={`${
+      props.hasStages ? 'text-gray-800 opacity-30' : 'text-gray-400'
+    } text-base my-auto`}
   />
 );
 
@@ -113,8 +115,8 @@ const FreightItem = (props: {
 
   return (
     <div
-      className={`transition-all p-2 cursor-pointer h-full mr-4 rounded-lg border-solid border-4 text-white flex flex-col items-center ${
-        selected ? 'w-36 border-gray-400' : 'w-20 border-gray-600 hover:border-gray-500'
+      className={`transition-all p-2 cursor-pointer h-full mr-5 rounded-lg border-solid border-2 text-white flex flex-col items-center ${
+        selected ? 'w-36 border-gray-400' : 'w-20 border-gray-700 hover:border-gray-500'
       }`}
       onClick={() => props.setSelected(!selected)}
     >
