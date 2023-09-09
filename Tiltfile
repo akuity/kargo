@@ -1,4 +1,5 @@
 trigger_mode(TRIGGER_MODE_MANUAL)
+allow_k8s_contexts('orbstack')
 
 load('ext://namespace', 'namespace_create')
 namespace_create('kargo')

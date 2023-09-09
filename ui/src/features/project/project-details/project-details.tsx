@@ -1,4 +1,6 @@
 import { createPromiseClient } from '@bufbuild/connect';
+import { faDiagramProject } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
 import { graphlib, layout } from 'dagre';
@@ -8,11 +10,18 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
+import { Freightline } from '@ui/features/freightline/freightline';
+import { Palette } from '@ui/features/freightline/palette';
 import { StageDetails } from '@ui/features/stage/stage-details';
-import { getStage, listStages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import {
+  getStage,
+  listStages,
+  queryFreight
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
+import { getStageColors } from '@ui/utils/stages';
 
 import { StageNode } from './stage-node';
 
@@ -20,20 +29,13 @@ const lineThickness = 2;
 const nodeWidth = 144;
 const nodeHeight = 100;
 
-// TODO: replace with real colors
-const colors = [
-  '#0DADEA', // blue
-  '#DE7EAE', // pink
-  '#FF9500', // orange
-  '#4B0082', // purple
-  '#F5d905', // yellow
-  '#964B00' // brown
-];
-
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
   const navigate = useNavigate();
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
+  const { data: freightData, isLoading: isLoadingFreight } = useQuery(
+    queryFreight.useQuery({ project: name })
+  );
   const client = useQueryClient();
 
   const isVisible = useDocumentEvent(
@@ -98,14 +100,16 @@ export const ProjectDetails = () => {
     const g = new graphlib.Graph();
     g.setGraph({ rankdir: 'LR' });
     g.setDefaultEdgeLabel(() => ({}));
-    const colorByStage = new Map<string, string>();
     const stageByName = new Map<string, Stage>();
+    const colorByStage = new Map<string, string>();
     const stages = data.stages
       .slice()
       .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0);
 
-    stages?.forEach((stage, i) => {
-      colorByStage.set(stage.metadata?.name || '', colors[i % colors.length]);
+    const colors = getStageColors(stages);
+    stages?.forEach((stage) => {
+      const curColor = colors[stage?.metadata?.uid || ''];
+      colorByStage.set(stage.metadata?.name || '', curColor);
       stageByName.set(stage.metadata?.name || '', stage);
       g.setNode(stage.metadata?.name || '', {
         label: stage.metadata?.name || '',
@@ -166,66 +170,90 @@ export const ProjectDetails = () => {
     return [nodes, connectors, box];
   }, [data]);
 
-  if (isLoading) return <LoadingState />;
+  const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
+  const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
+
+  React.useEffect(() => {
+    const stagesPerFreight: { [key: string]: Stage[] } = {};
+    setStageColorMap(getStageColors(data?.stages || []));
+    (data?.stages || []).forEach((stage) => {
+      const items = stagesPerFreight[stage.status?.currentFreight?.id || ''] || [];
+      stagesPerFreight[stage.status?.currentFreight?.id || ''] = [...items, stage];
+    });
+    setStagesPerFreight(stagesPerFreight);
+  }, [data, freightData]);
+
+  if (isLoading || isLoadingFreight) return <LoadingState />;
 
   if (!data || data.stages.length === 0) return <Empty />;
   const stage = stageName && data.stages.find((item) => item.metadata?.name === stageName);
 
   return (
     <div>
-      <div
-        className='relative'
-        style={{ width: box?.width, height: box?.height, margin: '0 auto' }}
-      >
-        {nodes?.map((node) => (
-          <div
-            key={node.stage?.metadata?.name}
-            className='absolute cursor-pointer'
-            onClick={() =>
-              navigate(generatePath(paths.stage, { name, stageName: node.stage.metadata?.name }))
-            }
-            style={{
-              left: node.left,
-              top: node.top,
-              width: node.width,
-              height: node.height
-            }}
-          >
-            <StageNode stage={node.stage} color={node.color} />
-          </div>
-        ))}
-        {connectors?.map((connector) =>
-          connector.map((line, i) => (
+      <Freightline
+        freight={freightData?.groups['']?.freight || []}
+        stagesPerFreight={stagesPerFreight}
+        stageColorMap={stageColorMap}
+      />
+      <div className='mb-16 p-6'>
+        <div className='text-sm mb-4'>
+          <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
+          STAGE GRAPH
+        </div>
+        <div
+          className='relative'
+          style={{ width: box?.width, height: box?.height, margin: '0 auto' }}
+        >
+          {nodes?.map((node) => (
             <div
-              className='absolute'
+              key={node.stage?.metadata?.name}
+              className='absolute cursor-pointer'
+              onClick={() =>
+                navigate(generatePath(paths.stage, { name, stageName: node.stage.metadata?.name }))
+              }
               style={{
-                padding: 0,
-                margin: 0,
-                background: 'gray',
-                height: lineThickness,
-                width: line.width,
-                left: line.x,
-                top: line.y,
-                transform: `rotate(${line.angle}deg)`
+                left: node.left,
+                top: node.top,
+                width: node.width,
+                height: node.height
               }}
-              key={i}
             >
-              {i === connector.length - 1 && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: -1,
-                    top: -lineThickness * 4 + 1,
-                    height: 0,
-                    borderTop: `${lineThickness * 4}px solid transparent`,
-                    borderBottom: `${lineThickness * 4}px solid transparent`,
-                    borderRight: `${lineThickness * 4}px solid gray`
-                  }}
-                />
-              )}
+              <StageNode stage={node.stage} color={node.color} />
             </div>
-          ))
-        )}
+          ))}
+          {connectors?.map((connector) =>
+            connector.map((line, i) => (
+              <div
+                className='absolute'
+                style={{
+                  padding: 0,
+                  margin: 0,
+                  background: 'gray',
+                  height: lineThickness,
+                  width: line.width,
+                  left: line.x,
+                  top: line.y,
+                  transform: `rotate(${line.angle}deg)`
+                }}
+                key={i}
+              >
+                {i === connector.length - 1 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: -1,
+                      top: -lineThickness * 4 + 1,
+                      height: 0,
+                      borderTop: `${lineThickness * 4}px solid transparent`,
+                      borderBottom: `${lineThickness * 4}px solid transparent`,
+                      borderRight: `${lineThickness * 4}px solid gray`
+                    }}
+                  />
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
       {stage && <StageDetails stage={stage} />}
     </div>

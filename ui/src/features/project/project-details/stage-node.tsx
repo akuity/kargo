@@ -16,7 +16,9 @@ export const StageNode = ({ stage, color }: { stage: Stage; color: string }) => 
     </h3>
     <div className={styles.body}>
       <h3>Current Freight</h3>
-      <p>{stage.status?.currentFreight?.id?.slice(0, 7) || 'N/A'} </p>
+      <p className='font-mono text-sm font-semibold'>
+        {stage.status?.currentFreight?.id?.slice(0, 7) || 'N/A'}{' '}
+      </p>
     </div>
   </div>
 );
