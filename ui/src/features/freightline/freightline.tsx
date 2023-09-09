@@ -6,7 +6,7 @@ import { Tooltip } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 import { Freight, Stage } from '@ui/gen/v1alpha1/types_pb';
-import { getStageBackground } from '@ui/utils/stages';
+import { getStageColors } from '@ui/utils/stages';
 
 export const Freightline = (props: {
   freight: Freight[];
@@ -53,10 +53,10 @@ export const Freightline = (props: {
 
 const EmptyFreightLabel = () => <div className='w-full rounded-md bg-zinc-700 h-4' />;
 
-const FreightIcon = (props: { icon: IconDefinition; hasStages?: boolean }) => (
+const FreightIcon = (props: { icon: IconDefinition; hasStages?: boolean; className?: string }) => (
   <FontAwesomeIcon
     icon={props.icon}
-    className={`${props.hasStages ? 'text-gray-800 opacity-40' : 'text-gray-100'} text-2xl`}
+    className={`${props.hasStages ? 'text-gray-800 opacity-40' : 'text-gray-400'} text-lg my-auto`}
   />
 );
 
@@ -64,9 +64,9 @@ const FreightContent = (props: {
   freight?: Freight;
   hasStages: boolean;
   selected: boolean;
-  stage?: Stage;
+  stageBackground?: string;
 }) => {
-  const { freight, hasStages, selected, stage } = props;
+  const { freight, hasStages, selected, stageBackground } = props;
   const [hasCommits, setHasCommits] = useState(false);
   const [hasImages, setHasImages] = useState(false);
   useEffect(() => {
@@ -74,11 +74,11 @@ const FreightContent = (props: {
     setHasImages((freight?.images || []).length > 0);
   }, [freight]);
 
-  const bg = stage ? getStageBackground(stage) : !hasCommits && !hasImages ? '' : 'bg-zinc-800';
+  const bg = stageBackground ? stageBackground : !hasCommits && !hasImages ? '' : 'bg-zinc-800';
 
   return (
     <div
-      className={`${bg} w-full my-1 flex-shrink h-full flex items-center justify-center flex-col ${
+      className={`${bg} my-1 flex-shrink h-full flex items-center justify-center flex-col ${
         selected ? 'w-3 rounded' : 'w-full rounded-md'
       }`}
     >
@@ -87,7 +87,7 @@ const FreightContent = (props: {
           {hasCommits && <FreightIcon icon={faGit} hasStages={hasStages} />}
           {hasImages && <FreightIcon icon={faDocker} hasStages={hasStages} />}
           {!hasStages && !hasCommits && !hasImages && (
-            <FontAwesomeIcon icon={faBoxOpen} className='text-gray-600 text-2xl' />
+            <FontAwesomeIcon icon={faBoxOpen} className='text-gray-600 text-lg' />
           )}
         </>
       )}
@@ -102,6 +102,12 @@ const FreightItem = (props: {
   stages: Stage[];
 }) => {
   const { freight, selected, stages } = props;
+
+  const [stageColorMap, setStageColorMap] = useState<{ [key: string]: string }>({});
+
+  useEffect(() => {
+    setStageColorMap(getStageColors(stages));
+  }, [stages]);
 
   return (
     <div
@@ -122,7 +128,7 @@ const FreightItem = (props: {
               hasStages={true}
               selected={selected}
               key={s?.metadata?.uid}
-              stage={s}
+              stageBackground={stageColorMap[s?.metadata?.uid || '']}
             />
           ))}
           {(stages || []).length == 0 && (
@@ -130,9 +136,12 @@ const FreightItem = (props: {
           )}
         </div>
         {selected && (
-          <div className='flex flex-col justify-center items-start w-full ml-4 font-mono text-sm'>
+          <div className='flex flex-col justify-center items-start w-full ml-2 font-mono text-sm'>
             {(freight?.commits || []).map((c) => (
-              <div key={c.id}>{c.id.substring(0, 6)}</div>
+              <div key={c.id} className='flex items center'>
+                <FontAwesomeIcon icon={faGit} className='w-10' />
+                {c.id.substring(0, 6)}
+              </div>
             ))}
             {(freight?.images || []).map((i) => (
               <Tooltip
@@ -140,7 +149,7 @@ const FreightItem = (props: {
                 key={`${i.repoUrl}:${i.tag}`}
                 title={`${i.repoUrl}:${i.tag}`}
               >
-                <FontAwesomeIcon icon={faDocker} className='mr-2' />
+                <FontAwesomeIcon icon={faDocker} className='w-10' />
                 <div>{i.tag}</div>
               </Tooltip>
             ))}

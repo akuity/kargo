@@ -1,36 +1,54 @@
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
-export const getStageKey = (stage: Stage): number => {
-  for (const c of stage?.metadata?.uid?.split('') || []) {
-    if (parseInt(c)) {
-      return parseInt(c);
-    }
+const COLOR_ANNOTATION = 'ui.kargo.akuity.io/color';
+
+export const parseColorAnnotation = (stage: Stage) => {
+  const annotations = stage?.metadata?.annotations;
+  if (!annotations) {
+    return null;
   }
-  return 0;
+  const color = annotations[COLOR_ANNOTATION];
+  if (!color) {
+    return null;
+  }
+  return color;
 };
 
-export const getStageBackground = (stage: Stage) => {
-  const key = getStageKey(stage);
-  switch (key) {
-    case 0:
-      return 'bg-red-400';
-    case 1:
-      return 'bg-orange-400';
-    case 2:
-      return 'bg-amber-400';
-    case 3:
-      return 'bg-yellow-400';
-    case 4:
-      return 'bg-green-400';
-    case 5:
-      return 'bg-teal-400';
-    case 6:
-      return 'bg-blue-400';
-    case 7:
-      return 'bg-indigo-400';
-    case 8:
-      return 'bg-violet-400';
-    case 9:
-      return 'bg-pink-500';
+export const ColorMap = {
+  red: 'bg-red-500',
+  orange: 'bg-orange-400',
+  yellow: 'bg-yellow-400',
+  lime: 'bg-lime-400',
+  green: 'bg-green-400',
+  teal: 'bg-teal-500',
+  cyan: 'bg-cyan-400',
+  sky: 'bg-sky-500',
+  blue: 'bg-blue-500',
+  violet: 'bg-violet-500',
+  purple: 'bg-purple-500',
+  fuchsia: 'bg-fuchsia-500',
+  pink: 'bg-pink-500',
+  rose: 'bg-rose-400'
+};
+
+export const getBackground = (n: number) => {
+  if (n < 0 || n >= Object.keys(ColorMap).length) {
+    return 'bg-gray-500';
   }
+  return Object.values(ColorMap)[n];
+};
+
+export const getStageColors = (stages: Stage[]) => {
+  const colors = Object.values(ColorMap);
+  const map: { [key: string]: string } = {};
+  let i = 0;
+  for (const stage of stages) {
+    const id = stage?.metadata?.uid;
+    if (!id) {
+      continue;
+    }
+    map[id] = colors[i];
+    i = i + (1 % colors.length);
+  }
+  return map;
 };

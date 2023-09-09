@@ -8,6 +8,8 @@ import {
   LabelStyle
 } from '@ant-design/graphs';
 import { createPromiseClient } from '@bufbuild/connect';
+import { faDiagramProject } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
 import React from 'react';
@@ -29,8 +31,7 @@ import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
 import { healthStateToIcon } from './utils/health';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDiagramProject } from '@fortawesome/free-solid-svg-icons';
+import { Palette } from '@ui/features/freightline/palette';
 
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
@@ -169,6 +170,7 @@ export const ProjectDetails = () => {
 
   return (
     <>
+      <Palette />
       <Freightline
         freight={freightData?.groups['']?.freight || []}
         stagesPerFreight={stagesPerFreight}
