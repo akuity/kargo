@@ -71,6 +71,7 @@ func FromStageStatusProto(s *v1alpha1.StageStatus) *kargoapi.StageStatus {
 		AvailableFreight: availableFreight,
 		CurrentFreight:   FromFreightProto(s.GetCurrentFreight()),
 		History:          history,
+		Health:           FromHealthProto(s.GetHealth()),
 		Error:            s.GetError(),
 	}
 }
@@ -103,7 +104,7 @@ func FromFreightProto(s *v1alpha1.Freight) *kargoapi.Freight {
 		Commits:    commits,
 		Images:     images,
 		Charts:     charts,
-		Health:     FromHealthProto(s.GetHealth()),
+		Qualified:  s.GetQualified(),
 	}
 }
 
@@ -489,6 +490,10 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	for idx := range e.Status.History {
 		history[idx] = ToFreightProto(e.Status.History[idx])
 	}
+	var health *v1alpha1.Health
+	if e.Status.Health != nil {
+		health = ToHealthProto(*e.Status.Health)
+	}
 
 	metadata := e.ObjectMeta.DeepCopy()
 	metadata.SetManagedFields(nil)
@@ -509,6 +514,7 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 			AvailableFreight: availableFreight,
 			CurrentFreight:   currentFreight,
 			History:          history,
+			Health:           health,
 			Error:            e.Status.Error,
 		},
 	}
@@ -741,10 +747,6 @@ func ToFreightProto(e kargoapi.Freight) *v1alpha1.Freight {
 	for idx := range e.Charts {
 		charts[idx] = ToChartProto(e.Charts[idx])
 	}
-	var health *v1alpha1.Health
-	if e.Health != nil {
-		health = ToHealthProto(*e.Health)
-	}
 	return &v1alpha1.Freight{
 		Id:         e.ID,
 		FirstSeen:  firstSeen,
@@ -752,7 +754,7 @@ func ToFreightProto(e kargoapi.Freight) *v1alpha1.Freight {
 		Commits:    commits,
 		Images:     images,
 		Charts:     charts,
-		Health:     health,
+		Qualified:  &e.Qualified,
 	}
 }
 
@@ -787,6 +789,8 @@ func ToHealthProto(h kargoapi.Health) *v1alpha1.Health {
 		status = v1alpha1.HealthState_HEALTH_STATE_HEALTHY
 	case kargoapi.HealthStateUnhealthy:
 		status = v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY
+	case kargoapi.HealthStateProgressing:
+		status = v1alpha1.HealthState_HEALTH_STATE_PROGRESSING
 	case kargoapi.HealthStateUnknown:
 		status = v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
 	}

@@ -6,11 +6,11 @@ import { Tooltip } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 import { Freight, Stage } from '@ui/gen/v1alpha1/types_pb';
-import { getStageColors } from '@ui/utils/stages';
 
 export const Freightline = (props: {
   freight: Freight[];
   stagesPerFreight: { [key: string]: Stage[] };
+  stageColorMap: { [key: string]: string };
 }) => {
   const [selected, setSelected] = React.useState<string | null>(null);
 
@@ -42,6 +42,7 @@ export const Freightline = (props: {
               setSelected={(s: boolean) => setSelected(s ? id : null)}
               selected={selected == id}
               stages={props.stagesPerFreight[id] || []}
+              stageColorMap={props.stageColorMap}
             />
           );
         })}
@@ -64,7 +65,9 @@ const FreightContent = (props: {
   freight?: Freight;
   hasStages: boolean;
   selected: boolean;
+  stage?: Stage;
   stageBackground?: string;
+  multi?: boolean;
 }) => {
   const { freight, hasStages, selected, stageBackground } = props;
   const [hasCommits, setHasCommits] = useState(false);
@@ -74,24 +77,28 @@ const FreightContent = (props: {
     setHasImages((freight?.images || []).length > 0);
   }, [freight]);
 
-  const bg = stageBackground ? stageBackground : !hasCommits && !hasImages ? '' : 'bg-zinc-800';
+  const emptyGray = '#2d3748'; // bg-zinc-800
+  const bg = stageBackground ? stageBackground : !hasCommits && !hasImages ? '' : emptyGray;
 
   return (
-    <div
-      className={`${bg} my-1 flex-shrink h-full flex items-center justify-center flex-col ${
-        selected ? 'w-3 rounded' : 'w-full rounded-md'
-      }`}
-    >
-      {!selected && (
-        <>
-          {hasCommits && <FreightIcon icon={faGit} hasStages={hasStages} />}
-          {hasImages && <FreightIcon icon={faDocker} hasStages={hasStages} />}
-          {!hasStages && !hasCommits && !hasImages && (
-            <FontAwesomeIcon icon={faBoxOpen} className='text-gray-600 text-lg' />
-          )}
-        </>
-      )}
-    </div>
+    <Tooltip title={props.stage && !selected ? props.stage.metadata?.name : null} placement='right'>
+      <div
+        className={`my-1 flex-shrink h-full flex items-center justify-center flex-col ${
+          selected ? 'w-3 rounded' : 'w-full rounded-md'
+        }`}
+        style={{ backgroundColor: bg }}
+      >
+        {!selected && (
+          <>
+            {hasCommits && <FreightIcon icon={faGit} hasStages={hasStages} />}
+            {hasImages && <FreightIcon icon={faDocker} hasStages={hasStages} />}
+            {!hasStages && !hasCommits && !hasImages && (
+              <FontAwesomeIcon icon={faBoxOpen} className='text-gray-600 text-lg' />
+            )}
+          </>
+        )}
+      </div>
+    </Tooltip>
   );
 };
 
@@ -100,14 +107,9 @@ const FreightItem = (props: {
   setSelected: (selected: boolean) => void;
   selected: boolean;
   stages: Stage[];
+  stageColorMap: { [key: string]: string };
 }) => {
   const { freight, selected, stages } = props;
-
-  const [stageColorMap, setStageColorMap] = useState<{ [key: string]: string }>({});
-
-  useEffect(() => {
-    setStageColorMap(getStageColors(stages));
-  }, [stages]);
 
   return (
     <div
@@ -124,11 +126,13 @@ const FreightItem = (props: {
         >
           {(stages || []).map((s) => (
             <FreightContent
+              stage={s}
               freight={freight}
               hasStages={true}
               selected={selected}
               key={s?.metadata?.uid}
-              stageBackground={stageColorMap[s?.metadata?.uid || '']}
+              multi={(stages || []).length > 1}
+              stageBackground={props.stageColorMap[s?.metadata?.uid || '']}
             />
           ))}
           {(stages || []).length == 0 && (

@@ -24,20 +24,12 @@ func TestCheckHealth(t *testing.T) {
 			string,
 			string,
 		) (*argocd.Application, error)
-		assertions func(kargoapi.Health)
+		assertions func(*kargoapi.Health)
 	}{
 		{
 			name: "no argoCDAppUpdates are defined",
-			assertions: func(health kargoapi.Health) {
-				require.Equal(t,
-					kargoapi.Health{
-						Status: kargoapi.HealthStateUnknown,
-						Issues: []string{
-							"no spec.promotionMechanisms.argoCDAppUpdates are defined",
-						},
-					},
-					health,
-				)
+			assertions: func(health *kargoapi.Health) {
+				require.Nil(t, health)
 			},
 		},
 		{
@@ -56,7 +48,7 @@ func TestCheckHealth(t *testing.T) {
 			) (*argocd.Application, error) {
 				return nil, errors.New("something went wrong")
 			},
-			assertions: func(health kargoapi.Health) {
+			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 				require.Len(t, health.Issues, 1)
 				require.Contains(
@@ -88,7 +80,7 @@ func TestCheckHealth(t *testing.T) {
 			) (*argocd.Application, error) {
 				return nil, nil
 			},
-			assertions: func(health kargoapi.Health) {
+			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 				require.Len(t, health.Issues, 1)
 				require.Contains(
@@ -124,7 +116,7 @@ func TestCheckHealth(t *testing.T) {
 					},
 				}, nil
 			},
-			assertions: func(health kargoapi.Health) {
+			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 				require.Len(t, health.Issues, 1)
 				require.Contains(
@@ -158,7 +150,7 @@ func TestCheckHealth(t *testing.T) {
 					},
 				}, nil
 			},
-			assertions: func(health kargoapi.Health) {
+			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
 				require.Len(t, health.Issues, 1)
 				require.Contains(t, health.Issues[0], "has health state")
@@ -168,6 +160,14 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App not synced",
+			freight: kargoapi.Freight{
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "fake-url",
+						ID:      "fake-commit",
+					},
+				},
+			},
 			argoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
 				{
 					AppName:      "fake-app",
@@ -182,19 +182,22 @@ func TestCheckHealth(t *testing.T) {
 			) (*argocd.Application, error) {
 				return &argocd.Application{
 					Spec: argocd.ApplicationSpec{
-						Source: &argocd.ApplicationSource{},
+						Source: &argocd.ApplicationSource{
+							RepoURL: "fake-url",
+						},
 					},
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
 							Status: argoHealth.HealthStatusHealthy,
 						},
 						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeOutOfSync,
+							Status:   argocd.SyncStatusCodeSynced,
+							Revision: "not-the-right-commit",
 						},
 					},
 				}, nil
 			},
-			assertions: func(health kargoapi.Health) {
+			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
 				require.Len(t, health.Issues, 1)
 				require.Contains(t, health.Issues[0], "is not synced to revision")
@@ -240,7 +243,7 @@ func TestCheckHealth(t *testing.T) {
 					},
 				}, nil
 			},
-			assertions: func(health kargoapi.Health) {
+			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateHealthy, health.Status)
 				require.Empty(t, health.Issues)
 			},

@@ -179,5 +179,10 @@ func (AppHealthSyncStatusChangePredicate) Update(e event.UpdateEvent) bool {
 	//_, oldOp := oldUn["operation"]
 	//_, newOp := newUn["operation"]
 
-	return newHealth != oldHealth || oldSync != newSync
+	oldRev, _, _ := unstructured.NestedString(oldUn, "status", "sync", "revision")
+	newRev, _, _ := unstructured.NestedString(newUn, "status", "sync", "revision")
+
+	return newHealth != oldHealth ||
+		oldSync != newSync ||
+		oldRev != newRev
 }

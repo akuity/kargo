@@ -1,25 +1,17 @@
-import {
-  CardItems,
-  CustomCfg,
-  FlowAnalysisGraph,
-  FlowGraphEdgeData,
-  IGraph,
-  IGroup,
-  LabelStyle
-} from '@ant-design/graphs';
 import { createPromiseClient } from '@bufbuild/connect';
 import { faDiagramProject } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
+import { graphlib, layout } from 'dagre';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
-import { healthStateToString } from '@ui/features/common/health-status/utils';
 import { Freightline } from '@ui/features/freightline/freightline';
+import { Palette } from '@ui/features/freightline/palette';
 import { StageDetails } from '@ui/features/stage/stage-details';
 import {
   getStage,
@@ -29,9 +21,13 @@ import {
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
+import { getStageColors } from '@ui/utils/stages';
 
-import { healthStateToIcon } from './utils/health';
-import { Palette } from '@ui/features/freightline/palette';
+import { StageNode } from './stage-node';
+
+const lineThickness = 2;
+const nodeWidth = 144;
+const nodeHeight = 100;
 
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
@@ -40,7 +36,6 @@ export const ProjectDetails = () => {
   const { data: freightData, isLoading: isLoadingFreight } = useQuery(
     queryFreight.useQuery({ project: name })
   );
-  const graphRef = React.useRef<IGraph | undefined>();
   const client = useQueryClient();
 
   const isVisible = useDocumentEvent(
@@ -97,65 +92,90 @@ export const ProjectDetails = () => {
     return () => cancel.abort();
   }, [isLoading, isVisible, name]);
 
-  const nodes = React.useMemo(
-    () =>
-      data?.stages
-        .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0)
-        .flatMap((item) =>
-          item.metadata?.name
-            ? [
-                {
-                  id: item.metadata?.name,
-                  value: {
-                    title: item.metadata?.name,
-                    items: [
-                      {
-                        text: 'Status',
-                        value: healthStateToString(item.status?.currentFreight?.health?.status),
-                        icon: healthStateToIcon(item.status?.currentFreight?.health?.status)
-                      }
-                    ]
-                  }
-                }
-              ]
-            : []
-        ) || [],
-    [data]
-  );
+  const [nodes, connectors, box] = React.useMemo(() => {
+    if (!data) {
+      return [[], []];
+    }
 
-  const edges = React.useMemo(
-    () =>
-      data?.stages.reduce<FlowGraphEdgeData[]>((acc, curr) => {
-        if (curr.spec?.subscriptions?.upstreamStages.length) {
-          return [
-            ...acc,
-            ...curr.spec.subscriptions.upstreamStages.flatMap((item) =>
-              item.name && curr.metadata?.name
-                ? [
-                    {
-                      source: item.name,
-                      target: curr.metadata?.name
-                    }
-                  ]
-                : []
-            )
-          ];
-        }
+    const g = new graphlib.Graph();
+    g.setGraph({ rankdir: 'LR' });
+    g.setDefaultEdgeLabel(() => ({}));
+    const stageByName = new Map<string, Stage>();
+    const colorByStage = new Map<string, string>();
+    const stages = data.stages
+      .slice()
+      .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0);
 
-        return acc;
-      }, []) || [],
-    [data]
-  );
+    const colors = getStageColors(stages);
+    stages?.forEach((stage) => {
+      const curColor = colors[stage?.metadata?.uid || ''];
+      colorByStage.set(stage.metadata?.name || '', curColor);
+      stageByName.set(stage.metadata?.name || '', stage);
+      g.setNode(stage.metadata?.name || '', {
+        label: stage.metadata?.name || '',
+        width: nodeWidth,
+        height: nodeHeight
+      });
+    });
+    stages.forEach((stage) => {
+      stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
+        g.setEdge(item.name || '', stage.metadata?.name || '');
+      });
+    });
+    layout(g);
 
-  React.useEffect(() => {
-    // Hacky way to recenter graph after adding a new stage
-    setTimeout(() => graphRef.current?.fitCenter?.(), 0);
-  }, [nodes, edges]);
+    const nodes = g.nodes().map((name) => {
+      const node = g.node(name);
+      return {
+        left: node.x - node.width / 2,
+        top: node.y - node.height / 2,
+        width: node.width,
+        height: node.height,
+        stage: stageByName.get(name) as Stage,
+        color: colorByStage.get(name) as string
+      };
+    });
+
+    const connectors = g.edges().map((name) => {
+      const edge = g.edge(name);
+      const lines = new Array<{ x: number; y: number; width: number; angle: number }>();
+      for (let i = 0; i < edge.points.length - 1; i++) {
+        const start = edge.points[i];
+        const end = edge.points[i + 1];
+        const x1 = start.x;
+        const y1 = start.y;
+        const x2 = end.x;
+        const y2 = end.y;
+
+        const width = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        // center
+        const cx = (x1 + x2) / 2 - width / 2;
+        const cy = (y1 + y2) / 2 - lineThickness / 2;
+
+        const angle = Math.atan2(y1 - y2, x1 - x2) * (180 / Math.PI);
+        lines.push({ x: cx, y: cy, width, angle });
+      }
+      return lines;
+    });
+    const box = nodes.reduce(
+      (acc, node) => ({
+        width: Math.max(acc.width, node.left + node.width),
+        height: Math.max(acc.height, node.top + node.height)
+      }),
+      {
+        width: 0,
+        height: 0
+      }
+    );
+    return [nodes, connectors, box];
+  }, [data]);
 
   const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
+  const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
 
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
+    setStageColorMap(getStageColors(data?.stages || []));
     (data?.stages || []).forEach((stage) => {
       const items = stagesPerFreight[stage.status?.currentFreight?.id || ''] || [];
       stagesPerFreight[stage.status?.currentFreight?.id || ''] = [...items, stage];
@@ -169,112 +189,73 @@ export const ProjectDetails = () => {
   const stage = stageName && data.stages.find((item) => item.metadata?.name === stageName);
 
   return (
-    <>
-      <Palette />
+    <div>
       <Freightline
         freight={freightData?.groups['']?.freight || []}
         stagesPerFreight={stagesPerFreight}
+        stageColorMap={stageColorMap}
       />
-      <div className='p-6'>
-        <div className='font-semibold flex items-center text-sm'>
-          <FontAwesomeIcon icon={faDiagramProject} className='mr-2' /> STAGE GRAPH
+      <div className='mb-16 p-6'>
+        <div className='text-sm mb-4'>
+          <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
+          STAGE GRAPH
         </div>
-        <FlowAnalysisGraph
-          behaviors={['drag-canvas', 'zoom-canvas']}
-          data={{
-            nodes,
-            edges
-          }}
-          autoFit={false}
-          animate={false}
-          height={600}
-          edgeCfg={{
-            edgeStateStyles: { hover: { stroke: '#ccc', lineWidth: 1 } },
-            endArrow: { show: true },
-            type: 'polyline'
-          }}
-          markerCfg={{ show: false }}
-          layout={
-            {
-              ranksepFunc: () => 40,
-              nodesepFunc: () => 10
-            } as any // eslint-disable-line @typescript-eslint/no-explicit-any
-          }
-          nodeCfg={{
-            size: [180, 40],
-            hover: {
-              fill: '#ccc',
-              lineWidth: 1
-            },
-            style: { cursor: 'pointer', stroke: '#e8e8e8', radius: 4 },
-            padding: 12,
-            label: { style: { cursor: 'pointer', fontSize: 14 } as LabelStyle },
-            customContent: (item: CardItems, group: IGroup, cfg: CustomCfg) => {
-              const { startX, startY } = cfg;
-
-              if (!item.icon || !item.value) {
-                return;
+        <div
+          className='relative'
+          style={{ width: box?.width, height: box?.height, margin: '0 auto' }}
+        >
+          {nodes?.map((node) => (
+            <div
+              key={node.stage?.metadata?.name}
+              className='absolute cursor-pointer'
+              onClick={() =>
+                navigate(generatePath(paths.stage, { name, stageName: node.stage.metadata?.name }))
               }
-
-              group.addShape('image', {
-                attrs: {
-                  x: startX,
-                  y: startY,
-                  img: item.icon,
-                  width: 20,
-                  height: 20,
-                  cursor: 'pointer'
-                },
-                name: `image-${Math.random()}`
-              });
-
-              group?.addShape('text', {
-                attrs: {
-                  textBaseline: 'top',
-                  x: (startX || 0) + 28,
-                  y: (startY || 0) + 4,
-                  text: item.value,
-                  fill: '#5a5a5a',
-                  cursor: 'pointer',
-                  fontSize: 13
-                },
-                name: `text-${Math.random()}`
-              });
-
-              return 26;
-            },
-            title: {
-              style: {
-                cursor: 'pointer',
-                fontSize: 16,
-                y: 8
-              },
-              containerStyle: {
-                radius: 4,
-                cursor: 'pointer',
-                fill: '#254166',
-                y: -4
-              }
-            },
-            nodeStateStyles: {
-              hover: {
-                stroke: '#e8e8e8',
-                fill: '#f5f5f5',
-                lineWidth: 1
-              }
-            }
-          }}
-          toolbarCfg={{ show: true }}
-          onReady={(graph) => {
-            graphRef.current = graph;
-            graph.on('node:click', (evt) => {
-              evt.item?._cfg?.id &&
-                navigate(generatePath(paths.stage, { name, stageName: evt.item?._cfg?.id }));
-            });
-          }}
-        />
+              style={{
+                left: node.left,
+                top: node.top,
+                width: node.width,
+                height: node.height
+              }}
+            >
+              <StageNode stage={node.stage} color={node.color} />
+            </div>
+          ))}
+          {connectors?.map((connector) =>
+            connector.map((line, i) => (
+              <div
+                className='absolute'
+                style={{
+                  padding: 0,
+                  margin: 0,
+                  background: 'gray',
+                  height: lineThickness,
+                  width: line.width,
+                  left: line.x,
+                  top: line.y,
+                  transform: `rotate(${line.angle}deg)`
+                }}
+                key={i}
+              >
+                {i === connector.length - 1 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: -1,
+                      top: -lineThickness * 4 + 1,
+                      height: 0,
+                      borderTop: `${lineThickness * 4}px solid transparent`,
+                      borderBottom: `${lineThickness * 4}px solid transparent`,
+                      borderRight: `${lineThickness * 4}px solid gray`
+                    }}
+                  />
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
       {stage && <StageDetails stage={stage} />}
-    </>
+    </div>
   );
 };
