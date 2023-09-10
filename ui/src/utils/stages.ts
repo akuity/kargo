@@ -31,28 +31,11 @@ export const ColorMapHex: { [key: string]: string } = {
   rose: '#F43F5E' // 'bg-rose-400'
 };
 
-export const ColorMap: { [key: string]: string } = {
-  red: 'bg-red-500',
-  orange: 'bg-orange-400',
-  yellow: 'bg-yellow-400',
-  lime: 'bg-lime-400',
-  green: 'bg-green-400',
-  teal: 'bg-teal-500',
-  cyan: 'bg-cyan-400',
-  sky: 'bg-sky-500',
-  blue: 'bg-blue-500',
-  violet: 'bg-violet-500',
-  purple: 'bg-purple-500',
-  fuchsia: 'bg-fuchsia-500',
-  pink: 'bg-pink-500',
-  rose: 'bg-rose-400'
-};
-
 export const getBackground = (n: number) => {
-  if (n < 0 || n >= Object.keys(ColorMap).length) {
+  if (n < 0 || n >= Object.keys(ColorMapHex).length) {
     return 'bg-gray-500';
   }
-  return Object.values(ColorMap)[n];
+  return Object.values(ColorMapHex)[n];
 };
 
 export const getStageColors = (stages: Stage[]) => {
