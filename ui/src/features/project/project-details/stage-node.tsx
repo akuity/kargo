@@ -15,12 +15,13 @@ export const StageNode = ({
   onPromoteSubscribersClick: () => void;
 }) => (
   <div className={styles.node} style={{ backgroundColor: color, position: 'relative' }}>
-    <h3>
-      {stage.metadata?.name}
+    <h3 className='flex items-center text-white'>
+      <div>{stage.metadata?.name}</div>
       {stage.status?.health && (
         <HealthStatusIcon
           health={stage.status?.health}
-          style={{ position: 'absolute', right: '1em' }}
+          style={{ marginLeft: 'auto', fontSize: '14px' }}
+          hideColor={true}
         />
       )}
     </h3>

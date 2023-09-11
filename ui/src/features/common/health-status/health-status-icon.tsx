@@ -14,8 +14,12 @@ import { Health, HealthState } from '@ui/gen/v1alpha1/types_pb';
 
 import { healthStateToString } from './utils';
 
-export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties }) => {
-  const { health } = props;
+export const HealthStatusIcon = (props: {
+  health?: Health;
+  style?: CSSProperties;
+  hideColor?: boolean;
+}) => {
+  const { health, hideColor } = props;
   const reason = health?.issues?.join('; ') ?? '';
 
   return (
@@ -24,7 +28,7 @@ export const HealthStatusIcon = (props: { health?: Health; style?: CSSProperties
         icon={iconForHealthStatus(health?.status)}
         spin={health?.status === HealthState.PROGRESSING}
         style={{
-          color: colorForHealthStatus(health?.status),
+          color: !hideColor ? colorForHealthStatus(health?.status) : undefined,
           fontSize: '18px',
           ...props.style
         }}
