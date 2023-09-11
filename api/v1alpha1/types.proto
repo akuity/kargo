@@ -74,6 +74,25 @@ message GitSubscription {
 message Health {
   string status = 1;
   repeated string issues = 2;
+  repeated ArgoCDAppState argocd_apps = 3;
+}
+
+message ArgoCDAppState {
+  string namespace = 1;
+  string name = 2;
+  ArgoCDAppHealthStatus health_status = 3;
+  ArgoCDAppSyncStatus sync_status = 4;
+}
+
+message ArgoCDAppHealthStatus {
+  string status = 1;
+  string message = 2;
+}
+
+message ArgoCDAppSyncStatus {
+  string status = 1;
+  string revision = 2;
+  repeated string revisions = 3;
 }
 
 message HelmChartDependencyUpdate {
