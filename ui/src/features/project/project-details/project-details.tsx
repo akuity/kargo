@@ -219,7 +219,7 @@ export const ProjectDetails = () => {
         stageColorMap={stageColorMap}
       />
       <div className='mb-16 p-6'>
-        <div className='text-sm mb-4'>
+        <div className='text-sm mb-4 font-semibold'>
           <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
           STAGE GRAPH
         </div>
