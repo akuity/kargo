@@ -94,7 +94,7 @@ through any means you prefer.
 ```shell
 helm install cert-manager cert-manager \
   --repo https://charts.jetstack.io \
-  --version 1.11.0 \
+  --version 1.11.5 \
   --namespace cert-manager \
   --create-namespace \
   --set installCRDs=true \
@@ -111,7 +111,7 @@ this dependency from a required one to a suggested one.
 ```shell
 helm install argocd argo-cd \
   --repo https://argoproj.github.io/argo-helm \
-  --version 5.21.0 \
+  --version 5.46.1 \
   --namespace argocd \
   --create-namespace \
   --set 'configs.secret.argocdServerAdminPassword=$2a$10$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
