@@ -62,13 +62,13 @@ func TestPromoteSubscribers(t *testing.T) {
 			errMsg:       `Stage "downstream1" has no subscribers`,
 			expectedCode: connect.CodeNotFound,
 		},
-		"existing Stage with unhealthy freight": {
+		"existing Stage with unqualified freight": {
 			req: &svcv1alpha1.PromoteSubscribersRequest{
 				Project: "kargo-demo",
 				Stage:   "upstream",
 				Freight: "abc1237ca7af42b38c0cdcfa393b2c552740e547",
 			},
-			errMsg:       "Cannot promote freight with health status: Unhealthy",
+			errMsg:       "Cannot promote unqualified freight",
 			expectedCode: connect.CodeInvalidArgument,
 		},
 		"existing Stage with subscribers": {

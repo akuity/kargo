@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -73,7 +74,7 @@ func TestSync(t *testing.T) {
 			context.Context,
 			kargoapi.Freight,
 			[]kargoapi.ArgoCDAppUpdate,
-		) kargoapi.Health
+		) *kargoapi.Health
 		getLatestFreightFromReposFn func(
 			context.Context,
 			string,
@@ -123,6 +124,12 @@ func TestSync(t *testing.T) {
 			) (bool, error) {
 				return true, nil
 			},
+			initialStatus: v1alpha1.StageStatus{CurrentPromotion: &v1alpha1.PromotionInfo{
+				Name: "dev.abc123.def456",
+				Freight: v1alpha1.Freight{
+					ID: "xyz789",
+				},
+			}},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -132,6 +139,29 @@ func TestSync(t *testing.T) {
 				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name:                       "clear currentPromotion",
+			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+			spec: kargoapi.StageSpec{
+				Subscriptions: &kargoapi.Subscriptions{},
+			},
+			initialStatus: v1alpha1.StageStatus{CurrentPromotion: &v1alpha1.PromotionInfo{
+				Name: "dev.abc123.def456",
+				Freight: v1alpha1.Freight{
+					ID: "xyz789",
+				},
+			}},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				_ client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Nil(t, newStatus.CurrentPromotion)
 			},
 		},
 
@@ -248,9 +278,7 @@ func TestSync(t *testing.T) {
 							Tag:     "fake-tag",
 						},
 					},
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
+					Qualified: true,
 				},
 				History: []kargoapi.Freight{
 					{
@@ -266,9 +294,7 @@ func TestSync(t *testing.T) {
 								Tag:     "fake-tag",
 							},
 						},
-						Health: &kargoapi.Health{
-							Status: kargoapi.HealthStateHealthy,
-						},
+						Qualified: true,
 					},
 				},
 			},
@@ -277,8 +303,8 @@ func TestSync(t *testing.T) {
 				context.Context,
 				kargoapi.Freight,
 				[]kargoapi.ArgoCDAppUpdate,
-			) kargoapi.Health {
-				return kargoapi.Health{
+			) *kargoapi.Health {
+				return &kargoapi.Health{
 					Status: kargoapi.HealthStateHealthy,
 				}
 			},

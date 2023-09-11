@@ -58,7 +58,7 @@ type reconciler struct {
 		context.Context,
 		kargoapi.Freight,
 		[]kargoapi.ArgoCDAppUpdate,
-	) kargoapi.Health
+	) *kargoapi.Health
 
 	// Syncing:
 	getLatestFreightFromReposFn func(
@@ -313,22 +313,21 @@ func (r *reconciler) syncStage(
 	}
 
 	status.ObservedGeneration = stage.Generation
+	status.Health = nil // Reset health
+	status.CurrentPromotion = nil
+
 	// Only perform health checks if we have a current Freight
 	if status.CurrentFreight != nil {
-		var health kargoapi.Health
 		if stage.Spec.PromotionMechanisms != nil {
-			health = r.checkHealthFn(
+			status.Health = r.checkHealthFn(
 				ctx,
 				*status.CurrentFreight,
 				stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 			)
-		} else {
-			// Healthy by default if there are no promotion mechanisms.
-			health = kargoapi.Health{
-				Status: kargoapi.HealthStateHealthy,
-			}
 		}
-		status.CurrentFreight.Health = &health
+		if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
+			status.CurrentFreight.Qualified = true
+		}
 		status.History.Pop()
 		status.History.Push(*status.CurrentFreight)
 	} else {
@@ -588,13 +587,12 @@ func (r *reconciler) getAvailableFreightFromUpstreamStages(
 			)
 		}
 		for _, freight := range upstreamStage.Status.History {
-			if _, ok := freightSet[freight.ID]; !ok &&
-				freight.Health != nil && freight.Health.Status == kargoapi.HealthStateHealthy {
+			if _, ok := freightSet[freight.ID]; !ok && freight.Qualified {
 				freight.Provenance = upstreamStage.Name
 				for i := range freight.Commits {
 					freight.Commits[i].HealthCheckCommit = ""
 				}
-				freight.Health = nil
+				freight.Qualified = false
 				availableFreight = append(availableFreight, freight)
 				freightSet[freight.ID] = struct{}{}
 			}

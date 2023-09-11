@@ -76,6 +76,7 @@ enum HealthState {
   HEALTH_STATE_UNKNOWN = 0;
   HEALTH_STATE_HEALTHY = 1;
   HEALTH_STATE_UNHEALTHY = 2;
+  HEALTH_STATE_PROGRESSING = 3;
 }
 
 message Health {
@@ -196,7 +197,7 @@ message Freight {
   repeated GitCommit commits = 4;
   repeated Image images = 5;
   repeated Chart charts = 6;
-  optional Health health = 7;
+  optional bool qualified = 8;
 }
 
 message StageStatus {
@@ -204,6 +205,7 @@ message StageStatus {
   optional Freight current_freight = 2;
   repeated Freight history = 3;
   string error = 4;
+  optional Health health = 5;
 }
 
 message StageSubscription {

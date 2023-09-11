@@ -15,12 +15,10 @@ export const ProjectsList = () => {
   if (!data || data.projects.length === 0) return <Empty />;
 
   return (
-    <>
-      <div className={styles.list}>
-        {data.projects.map((project) => (
-          <ProjectItem key={project.name} name={project.name} />
-        ))}
-      </div>
-    </>
+    <div className={styles.list}>
+      {data.projects.map((project) => (
+        <ProjectItem key={project.name} name={project.name} />
+      ))}
+    </div>
   );
 };

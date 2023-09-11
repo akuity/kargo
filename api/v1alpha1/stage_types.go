@@ -31,15 +31,27 @@ const (
 type HealthState string
 
 const (
-	HealthStateHealthy   HealthState = "Healthy"
-	HealthStateUnhealthy HealthState = "Unhealthy"
-	HealthStateUnknown   HealthState = "Unknown"
+	HealthStateHealthy     HealthState = "Healthy"
+	HealthStateUnhealthy   HealthState = "Unhealthy"
+	HealthStateProgressing HealthState = "Progressing"
+	HealthStateUnknown     HealthState = "Unknown"
 )
+
+var stateOrder = map[HealthState]int{
+	HealthStateHealthy:     0,
+	HealthStateProgressing: 1,
+	HealthStateUnknown:     2,
+	HealthStateUnhealthy:   3,
+}
+
+func (h HealthState) LessThan(other HealthState) bool {
+	return stateOrder[h] < stateOrder[other]
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.currentFreight.id`
-//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.currentFreight.health.status`
+//+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
 //+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Stage is the Kargo API's main type.
@@ -464,6 +476,8 @@ type StageStatus struct {
 	// "bill of materials" describing what was deployed to the Stage. By default,
 	// the last ten Freight are stored.
 	History FreightStack `json:"history,omitempty"`
+	// Health is the Stage's last observed health.
+	Health *Health `json:"health,omitempty"`
 	// Error describes any errors that are preventing the Stage controller
 	// from assessing Stage health or from polling repositories or upstream
 	// Stages to discover new Freight.
@@ -471,6 +485,8 @@ type StageStatus struct {
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// CurrentPromotion is a reference to the currently Running promotion.
+	CurrentPromotion *PromotionInfo `json:"currentPromotion,omitempty"`
 }
 
 // Freight is a "bill of materials" describing what is, was, or can be deployed
@@ -496,11 +512,12 @@ type Freight struct {
 	Images []Image `json:"images,omitempty"`
 	// Charts describes Helm charts that were used in this Freight.
 	Charts []Chart `json:"charts,omitempty"`
-	// Health is the Freight's last observed health. If this Freight is the
-	// Stage's current Freight, this will be continuously re-assessed and updated.
-	// If this Freight is a past Freight of the Stage, this field will denote the
-	// last observed health state before transitioning into a different Freight.
-	Health *Health `json:"health,omitempty"`
+	// Qualified denotes whether this Freight is suitable for promotion to a
+	// downstream Stage. This field becomes true when it is the current Freight of
+	// a Stage and that Stage is observed to be synced and healthy. Subsequent
+	// failures in Stage health evaluation do not disqualify a Freight that is
+	// already qualified.
+	Qualified bool `json:"qualified,omitempty"`
 }
 
 func (f *Freight) UpdateFreightID() {
@@ -645,6 +662,15 @@ type Health struct {
 	Issues []string `json:"issues,omitempty"`
 }
 
+func (h *Health) Merge(other Health) Health {
+	res := Health{Status: h.Status, Issues: h.Issues}
+	if res.Status.LessThan(other.Status) {
+		res.Status = other.Status
+	}
+	res.Issues = append(res.Issues, other.Issues...)
+	return res
+}
+
 //+kubebuilder:object:root=true
 
 // StageList is a list of Stage resources.
@@ -652,4 +678,11 @@ type StageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Stage `json:"items"`
+}
+
+type PromotionInfo struct {
+	// Name is the name of the Promotion
+	Name string `json:"name"`
+	// Freight is the freight being promoted
+	Freight Freight `json:"freight"`
 }
