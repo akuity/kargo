@@ -56,7 +56,7 @@ type reconciler struct {
 	// Health checks:
 	checkHealthFn func(
 		context.Context,
-		kargoapi.Freight,
+		*kargoapi.Freight,
 		[]kargoapi.ArgoCDAppUpdate,
 	) *kargoapi.Health
 
@@ -316,22 +316,18 @@ func (r *reconciler) syncStage(
 	status.Health = nil // Reset health
 	status.CurrentPromotion = nil
 
-	// Only perform health checks if we have a current Freight
-	if status.CurrentFreight != nil {
-		if stage.Spec.PromotionMechanisms != nil {
-			status.Health = r.checkHealthFn(
-				ctx,
-				*status.CurrentFreight,
-				stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
-			)
-		}
-		if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-			status.CurrentFreight.Qualified = true
-		}
+	if stage.Spec.PromotionMechanisms != nil {
+		status.Health = r.checkHealthFn(
+			ctx,
+			status.CurrentFreight,
+			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
+		)
+	}
+	if status.CurrentFreight != nil &&
+		(status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) {
+		status.CurrentFreight.Qualified = true
 		status.History.Pop()
 		status.History.Push(*status.CurrentFreight)
-	} else {
-		logger.Debug("Stage has no current Freight; skipping health checks")
 	}
 
 	if stage.Spec.Subscriptions.Repos != nil {
