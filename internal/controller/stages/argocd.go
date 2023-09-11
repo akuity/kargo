@@ -12,7 +12,7 @@ import (
 
 func (r *reconciler) checkHealth(
 	ctx context.Context,
-	currentFreight kargoapi.Freight,
+	currentFreight *kargoapi.Freight,
 	argoCDAppUpdates []kargoapi.ArgoCDAppUpdate,
 ) *kargoapi.Health {
 	if len(argoCDAppUpdates) == 0 {
@@ -66,26 +66,32 @@ func (r *reconciler) checkHealth(
 				),
 			)
 		} else {
-			var desiredRevision string
-			for _, commit := range currentFreight.Commits {
-				if commit.RepoURL == app.Spec.Source.RepoURL {
-					if commit.HealthCheckCommit != "" {
-						desiredRevision = commit.HealthCheckCommit
-					} else {
-						desiredRevision = commit.ID
-					}
-				}
-			}
-			if desiredRevision == "" {
-				for _, chart := range currentFreight.Charts {
-					if chart.RegistryURL == app.Spec.Source.RepoURL &&
-						chart.Name == app.Spec.Source.Chart {
-						desiredRevision = chart.Version
-					}
-				}
-			}
 			health = health.Merge(stageHealthForAppHealth(app))
-			health = health.Merge(stageHealthForAppSync(app, desiredRevision))
+			if currentFreight != nil {
+				var desiredRevision string
+				for _, commit := range currentFreight.Commits {
+					if commit.RepoURL == app.Spec.Source.RepoURL {
+						if commit.HealthCheckCommit != "" {
+							desiredRevision = commit.HealthCheckCommit
+						} else {
+							desiredRevision = commit.ID
+						}
+					}
+					break
+				}
+				if desiredRevision == "" {
+					for _, chart := range currentFreight.Charts {
+						if chart.RegistryURL == app.Spec.Source.RepoURL &&
+							chart.Name == app.Spec.Source.Chart {
+							desiredRevision = chart.Version
+							break
+						}
+					}
+				}
+				if desiredRevision != "" {
+					health = health.Merge(stageHealthForAppSync(app, desiredRevision))
+				}
+			}
 		}
 	}
 
