@@ -221,11 +221,11 @@ export const ProjectDetails = () => {
         stageColorMap={stageColorMap}
       />
       <div
-        className='bg-zinc-900 text-gray-300 absolute'
+        className='bg-zinc-900 text-gray-300 absolute text-sm'
         style={{ height: 'calc(100vh - 324px)', top: '324px', width: '300px', right: 0 }}
       >
-        <h3 className='bg-zinc-950 p-6'>
-          <FontAwesomeIcon icon={faDocker} /> IMAGES
+        <h3 className='bg-zinc-950 px-6 pb-3 pt-4 flex items-center'>
+          <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
         </h3>
         <div className='p-6'>
           <Images projectName={name as string} stages={data.stages} />
