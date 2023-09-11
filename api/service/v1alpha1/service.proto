@@ -19,6 +19,7 @@ service KargoService {
   // TODO(devholic): Add ApplyResource API
   // rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
   rpc CreateResource(CreateResourceRequest) returns (CreateResourceResponse);
+  rpc CreateOrUpdateResource(CreateOrUpdateResourceRequest) returns (CreateOrUpdateResourceResponse);
   rpc UpdateResource(UpdateResourceRequest) returns (UpdateResourceResponse);
   rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
 
@@ -134,6 +135,22 @@ message CreateResourceResult {
 
 message CreateResourceResponse {
   repeated CreateResourceResult results = 1;
+}
+
+message CreateOrUpdateResourceRequest {
+  bytes manifest = 1;
+}
+
+message CreateOrUpdateResourceResult {
+  oneof result {
+    bytes created_resource_manifest = 1;
+    bytes updated_resource_manifest = 2;
+    string error = 3;
+  }
+}
+
+message CreateOrUpdateResourceResponse {
+  repeated CreateOrUpdateResourceResult results = 1;
 }
 
 message UpdateResourceRequest {
