@@ -36,7 +36,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
     <>
       {image ? (
         <>
-          <p>
+          <p className='mb-8'>
             <Select
               className='w-full'
               value={imageURL}
@@ -50,8 +50,8 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
           {Array.from(image.entries())
             .sort((a, b) => b[0].localeCompare(a[0]))
             .map(([tag, tagStages]) => (
-              <div key={tag} className='flex mb-2 text-lg'>
-                <div className='mr-10'>{tag}</div>
+              <div key={tag} className='flex items-center mb-2'>
+                <div className='mr-4 font-mono text-sm'>{tag}</div>
                 {stages.map((stage) => (
                   <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
                     <div
