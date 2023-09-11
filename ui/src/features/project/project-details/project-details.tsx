@@ -1,4 +1,5 @@
 import { createPromiseClient } from '@bufbuild/connect';
+import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import { faArrowTurnUp, faCircleNotch, faDiagramProject } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +24,7 @@ import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { getStageColors } from '@ui/utils/stages';
 
+import { Images } from './images';
 import { StageNode } from './stage-node';
 
 const lineThickness = 2;
@@ -218,7 +220,18 @@ export const ProjectDetails = () => {
         stagesPerFreight={stagesPerFreight}
         stageColorMap={stageColorMap}
       />
-      <div className='mb-16 p-6'>
+      <div
+        className='bg-zinc-900 text-gray-300 absolute'
+        style={{ height: 'calc(100vh - 324px)', top: '324px', width: '300px', right: 0 }}
+      >
+        <h3 className='bg-zinc-950 p-6'>
+          <FontAwesomeIcon icon={faDocker} /> IMAGES
+        </h3>
+        <div className='p-6'>
+          <Images projectName={name as string} stages={data.stages} />
+        </div>
+      </div>
+      <div className='mb-16 p-6' style={{ marginRight: '300px' }}>
         <div className='text-sm mb-4 font-semibold'>
           <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
           STAGE GRAPH
