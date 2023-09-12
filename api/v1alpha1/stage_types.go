@@ -44,9 +44,32 @@ var stateOrder = map[HealthState]int{
 	HealthStateUnhealthy:   3,
 }
 
-func (h HealthState) LessThan(other HealthState) bool {
-	return stateOrder[h] < stateOrder[other]
+// Merge returns the more severe of two HealthStates.
+func (h HealthState) Merge(other HealthState) HealthState {
+	if stateOrder[h] > stateOrder[other] {
+		return h
+	}
+	return other
 }
+
+type ArgoCDAppHealthState string
+
+const (
+	ArgoCDAppHealthStateUnknown     ArgoCDAppHealthState = "Unknown"
+	ArgoCDAppHealthStateProgressing ArgoCDAppHealthState = "Progressing"
+	ArgoCDAppHealthStateHealthy     ArgoCDAppHealthState = "Healthy"
+	ArgoCDAppHealthStateSuspended   ArgoCDAppHealthState = "Suspended"
+	ArgoCDAppHealthStateDegraded    ArgoCDAppHealthState = "Degraded"
+	ArgoCDAppHealthStateMissing     ArgoCDAppHealthState = "Missing"
+)
+
+type ArgoCDAppSyncState string
+
+const (
+	ArgoCDAppSyncStateUnknown   ArgoCDAppSyncState = "Unknown"
+	ArgoCDAppSyncStateSynced    ArgoCDAppSyncState = "Synced"
+	ArgoCDAppSyncStateOutOfSync ArgoCDAppSyncState = "OutOfSync"
+)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -660,15 +683,33 @@ type Health struct {
 	// Issues clarifies why a Stage in any state other than Healthy is in that
 	// state. This field will always be the empty when a Stage is Healthy.
 	Issues []string `json:"issues,omitempty"`
+	// ArgoCDApps describes the current state of any related ArgoCD Applications.
+	ArgoCDApps []ArgoCDAppStatus `json:"argoCDApps,omitempty"`
 }
 
-func (h *Health) Merge(other Health) Health {
-	res := Health{Status: h.Status, Issues: h.Issues}
-	if res.Status.LessThan(other.Status) {
-		res.Status = other.Status
-	}
-	res.Issues = append(res.Issues, other.Issues...)
-	return res
+// ArgoCDAppStatus describes the current state of a single ArgoCD Application.
+type ArgoCDAppStatus struct {
+	// Namespace is the namespace of the ArgoCD Application.
+	Namespace string `json:"namespace"`
+	// Name is the name of the ArgoCD Application.
+	Name string `json:"name"`
+	// HealthStatus is the health of the ArgoCD Application.
+	HealthStatus ArgoCDAppHealthStatus `json:"healthStatus,omitempty"`
+	// SyncStatus is the sync status of the ArgoCD Application.
+	SyncStatus ArgoCDAppSyncStatus `json:"syncStatus,omitempty"`
+}
+
+// ArgoCDAppHealthStatus describes the health of an ArgoCD Application.
+type ArgoCDAppHealthStatus struct {
+	Status  ArgoCDAppHealthState `json:"status"`
+	Message string               `json:"message,omitempty"`
+}
+
+// ArgoCDAppSyncStatus describes the sync status of an ArgoCD Application.
+type ArgoCDAppSyncStatus struct {
+	Status    ArgoCDAppSyncState `json:"status"`
+	Revision  string             `json:"revision,omitempty"`
+	Revisions []string           `json:"revisions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
