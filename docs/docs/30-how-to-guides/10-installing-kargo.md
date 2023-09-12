@@ -15,8 +15,8 @@ You will need:
   [Argo CD](https://argo-cd.readthedocs.io) pre-installed. These instructions
   were tested with:
     * Kubernetes: v1.25.3
-    * cert-manager: v1.11.0
-    * Argo CD: v2.6.1
+    * cert-manager: v1.11.5
+    * Argo CD: v2.8.3
 
 :::info
 cert-manager is used for self-signing a certificate used to identify Kargo's
