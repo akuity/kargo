@@ -12,7 +12,7 @@ import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { createStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
-import { getStageYAMLExample } from './stage-yaml-example';
+import { getStageYAMLExample } from './utils/stage-yaml-example';
 
 type Props = ModalComponentProps & {
   project: string;
