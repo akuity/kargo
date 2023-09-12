@@ -548,6 +548,11 @@ export class Health extends Message<Health> {
    */
   issues: string[] = [];
 
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState argocd_apps = 3;
+   */
+  argocdApps: ArgoCDAppState[] = [];
+
   constructor(data?: PartialMessage<Health>) {
     super();
     proto3.util.initPartial(data, this);
@@ -558,6 +563,7 @@ export class Health extends Message<Health> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "argocd_apps", kind: "message", T: ArgoCDAppState, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Health {
@@ -574,6 +580,153 @@ export class Health extends Message<Health> {
 
   static equals(a: Health | PlainMessage<Health> | undefined, b: Health | PlainMessage<Health> | undefined): boolean {
     return proto3.util.equals(Health, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState
+ */
+export class ArgoCDAppState extends Message<ArgoCDAppState> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppHealthStatus health_status = 3;
+   */
+  healthStatus?: ArgoCDAppHealthStatus;
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppSyncStatus sync_status = 4;
+   */
+  syncStatus?: ArgoCDAppSyncStatus;
+
+  constructor(data?: PartialMessage<ArgoCDAppState>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "health_status", kind: "message", T: ArgoCDAppHealthStatus },
+    { no: 4, name: "sync_status", kind: "message", T: ArgoCDAppSyncStatus },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDAppState {
+    return new ArgoCDAppState().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDAppState {
+    return new ArgoCDAppState().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDAppState {
+    return new ArgoCDAppState().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ArgoCDAppState | PlainMessage<ArgoCDAppState> | undefined, b: ArgoCDAppState | PlainMessage<ArgoCDAppState> | undefined): boolean {
+    return proto3.util.equals(ArgoCDAppState, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppHealthStatus
+ */
+export class ArgoCDAppHealthStatus extends Message<ArgoCDAppHealthStatus> {
+  /**
+   * @generated from field: string status = 1;
+   */
+  status = "";
+
+  /**
+   * @generated from field: string message = 2;
+   */
+  message = "";
+
+  constructor(data?: PartialMessage<ArgoCDAppHealthStatus>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppHealthStatus";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDAppHealthStatus {
+    return new ArgoCDAppHealthStatus().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDAppHealthStatus {
+    return new ArgoCDAppHealthStatus().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDAppHealthStatus {
+    return new ArgoCDAppHealthStatus().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ArgoCDAppHealthStatus | PlainMessage<ArgoCDAppHealthStatus> | undefined, b: ArgoCDAppHealthStatus | PlainMessage<ArgoCDAppHealthStatus> | undefined): boolean {
+    return proto3.util.equals(ArgoCDAppHealthStatus, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppSyncStatus
+ */
+export class ArgoCDAppSyncStatus extends Message<ArgoCDAppSyncStatus> {
+  /**
+   * @generated from field: string status = 1;
+   */
+  status = "";
+
+  /**
+   * @generated from field: string revision = 2;
+   */
+  revision = "";
+
+  /**
+   * @generated from field: repeated string revisions = 3;
+   */
+  revisions: string[] = [];
+
+  constructor(data?: PartialMessage<ArgoCDAppSyncStatus>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppSyncStatus";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "revision", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "revisions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDAppSyncStatus {
+    return new ArgoCDAppSyncStatus().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDAppSyncStatus {
+    return new ArgoCDAppSyncStatus().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDAppSyncStatus {
+    return new ArgoCDAppSyncStatus().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ArgoCDAppSyncStatus | PlainMessage<ArgoCDAppSyncStatus> | undefined, b: ArgoCDAppSyncStatus | PlainMessage<ArgoCDAppSyncStatus> | undefined): boolean {
+    return proto3.util.equals(ArgoCDAppSyncStatus, a, b);
   }
 }
 
