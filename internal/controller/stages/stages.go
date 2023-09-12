@@ -14,10 +14,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/akuity/bookkeeper/pkg/git"
+	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
@@ -147,34 +150,54 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "error creating shard predicate")
 	}
 
-	return errors.Wrap(
-		ctrl.NewControllerManagedBy(kargoMgr).
-			For(&kargoapi.Stage{}).
-			WithEventFilter(
-				predicate.Funcs{
-					DeleteFunc: func(event.DeleteEvent) bool {
-						// We're not interested in any deletes
-						return false
-					},
+	c, err := ctrl.NewControllerManagedBy(kargoMgr).
+		For(&kargoapi.Stage{}).
+		WithEventFilter(
+			predicate.Funcs{
+				DeleteFunc: func(event.DeleteEvent) bool {
+					// We're not interested in any deletes
+					return false
 				},
-			).
-			WithEventFilter(
-				predicate.Or(
-					predicate.GenerationChangedPredicate{},
-					predicate.AnnotationChangedPredicate{},
-				),
-			).
-			WithEventFilter(shardPredicate).
-			WithOptions(controller.CommonOptions()).
-			Complete(
-				newReconciler(
-					kargoMgr.GetClient(),
-					argoMgr.GetClient(),
-					credentialsDB,
-				),
+			},
+		).
+		WithEventFilter(
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
 			),
-		"error registering Stage reconciler",
-	)
+		).
+		WithEventFilter(shardPredicate).
+		WithOptions(controller.CommonOptions()).
+		Build(
+			newReconciler(
+				kargoMgr.GetClient(),
+				argoMgr.GetClient(),
+				credentialsDB,
+			),
+		)
+	if err != nil {
+		return errors.Wrap(err, "error building Stage reconciler")
+	}
+
+	logger := logging.LoggerFromContext(ctx)
+	// Watch Promotions that completed and enqueue owning Stage key
+	promoOwnerHandler := &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Stage{}, IsController: true}
+	promoWentTerminal := PromoWentTerminal{
+		logger: logger,
+	}
+	if err := c.Watch(&source.Kind{Type: &v1alpha1.Promotion{}}, promoOwnerHandler, promoWentTerminal); err != nil {
+		return errors.Wrap(err, "unable to watch Promotions")
+	}
+
+	// Watch other upstream Stages and enqueue downstream Stage keys
+	downstreamEvtHandler := &EnqueueDownstreamStagesHandler{
+		kargoClient: kargoMgr.GetClient(),
+		logger:      logger,
+	}
+	if err := c.Watch(&source.Kind{Type: &v1alpha1.Stage{}}, downstreamEvtHandler); err != nil {
+		return errors.Wrap(err, "unable to watch Stages")
+	}
+	return nil
 }
 
 func newReconciler(
