@@ -39,9 +39,10 @@ func SetupReconcilerWithManager(
 	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, shardName); err != nil {
 		return errors.Wrap(err, "index Stages by Argo CD Applications")
 	}
+	logger := logging.LoggerFromContext(ctx)
 	return ctrl.NewControllerManagedBy(argoMgr).
 		For(&argocd.Application{}).
-		WithEventFilter(AppHealthSyncStatusChangePredicate{}).
+		WithEventFilter(AppHealthSyncStatusChangePredicate{logger: logger}).
 		WithOptions(controller.CommonOptions()).
 		Complete(newReconciler(kargoMgr.GetClient()))
 }
@@ -146,28 +147,30 @@ func (r *reconciler) Reconcile(
 
 type AppHealthSyncStatusChangePredicate struct {
 	predicate.Funcs
+
+	logger *log.Entry
 }
 
 // Update implements default UpdateEvent filter for checking if application changed
 // health or sync status. What we detect here should agree with what we examine in
 // stages/reconciler.checkHealth()
-func (AppHealthSyncStatusChangePredicate) Update(e event.UpdateEvent) bool {
+func (a AppHealthSyncStatusChangePredicate) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil {
-		log.Error(nil, "Update event has no old object to update", "event", e)
+		a.logger.Errorf("Update event has no old object to update: %v", e)
 		return false
 	}
 	if e.ObjectNew == nil {
-		log.Error(nil, "Update event has no new object for update", "event", e)
+		a.logger.Errorf("Update event has no new object for update: %v", e)
 		return false
 	}
 	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectNew)
 	if err != nil {
-		log.Error(nil, "Failed to convert new app", "event", e.ObjectNew)
+		a.logger.Errorf("Failed to convert new app: %v", e.ObjectNew)
 		return false
 	}
 	oldUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectOld)
 	if err != nil {
-		log.Error(nil, "Failed to convert old app", "event", e.ObjectOld)
+		a.logger.Errorf("Failed to convert old app: %v", e.ObjectOld)
 		return false
 	}
 	oldHealth, _, _ := unstructured.NestedString(oldUn, "status", "health", "status")
