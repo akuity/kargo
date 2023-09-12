@@ -5,7 +5,8 @@ import (
 )
 
 func CommonOptions() controller.Options {
+	t := true
 	return controller.Options{
-		RecoverPanic: true,
+		RecoverPanic: &t,
 	}
 }

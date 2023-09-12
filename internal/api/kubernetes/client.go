@@ -72,7 +72,9 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 		opts.NewInternalClient = newDefaultInternalClient
 	}
 	if opts.NewInternalDynamicClient == nil {
-		opts.NewInternalDynamicClient = dynamic.NewForConfig
+		opts.NewInternalDynamicClient = func(inConfig *rest.Config) (dynamic.Interface, error) {
+			return dynamic.NewForConfig(inConfig)
+		}
 	}
 	return opts, nil
 }
@@ -370,6 +372,18 @@ func (c *client) RESTMapper() meta.RESTMapper {
 	return c.internalClient.RESTMapper()
 }
 
+func (c *client) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+	return c.internalClient.GroupVersionKindFor(obj)
+}
+
+func (c *client) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	return c.internalClient.IsObjectNamespaced(obj)
+}
+
+func (c *client) SubResource(subResource string) libClient.SubResourceClient {
+	return c.internalClient.SubResource(subResource)
+}
+
 // authorizingStatusWriterWrapper implements libClient.StatusWriter.
 type authorizingStatusWriterWrapper struct {
 	internalClient libClient.Client
@@ -387,7 +401,7 @@ type authorizingStatusWriterWrapper struct {
 func (a *authorizingStatusWriterWrapper) Update(
 	ctx context.Context,
 	obj libClient.Object,
-	opts ...libClient.UpdateOption,
+	opts ...libClient.SubResourceUpdateOption,
 ) error {
 	gvr, key, err := gvrAndKeyFromObj(obj, obj, a.internalClient.Scheme())
 	if err != nil {
@@ -407,11 +421,35 @@ func (a *authorizingStatusWriterWrapper) Update(
 	return client.Status().Update(ctx, obj, opts...)
 }
 
+func (a *authorizingStatusWriterWrapper) Create(
+	ctx context.Context,
+	obj libClient.Object,
+	subResource libClient.Object,
+	opts ...libClient.SubResourceCreateOption,
+) error {
+	gvr, key, err := gvrAndKeyFromObj(obj, obj, a.internalClient.Scheme())
+	if err != nil {
+		return err
+	}
+	client, err := a.getAuthorizedClientFn(
+		ctx,
+		a.internalClient,
+		"create",
+		gvr,
+		"status", // Subresource
+		*key,
+	)
+	if err != nil {
+		return err
+	}
+	return client.Status().Create(ctx, obj, subResource, opts...)
+}
+
 func (a *authorizingStatusWriterWrapper) Patch(
 	ctx context.Context,
 	obj libClient.Object,
 	patch libClient.Patch,
-	opts ...libClient.PatchOption,
+	opts ...libClient.SubResourcePatchOption,
 ) error {
 	gvr, key, err := gvrAndKeyFromObj(obj, obj, a.internalClient.Scheme())
 	if err != nil {
