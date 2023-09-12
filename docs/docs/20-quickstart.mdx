@@ -65,6 +65,8 @@ nodes:
     hostPort: 8082
   - containerPort: 30083 # prod application instance
     hostPort: 8083
+  - containerPort: 30084 # Kargo dashboard
+    hostPort: 8084
 EOF
 ```
 
@@ -75,7 +77,7 @@ EOF
 k3d cluster create kargo-quickstart \
   --no-lb \
   --k3s-arg '--disable=traefik@server:0' \
-  -p '8080-8083:30080-30083@servers:0:direct' \
+  -p '8080-8084:30080-30084@servers:0:direct' \
   --wait
 ```
 
@@ -137,8 +139,16 @@ helm install kargo \
   --version 0.1.0-rc.21 \
   --namespace kargo \
   --create-namespace \
+  --set api.service.type=NodePort \
+  --set api.service.nodePort=30084 \
+  --set 'api.adminAccount.password=admin' \
   --wait
 ```
+
+The Kargo dashboard will be accessible at
+[localhost:8084](http://localhost:8084).
+
+The Admin password is `admin`.
 
 ## Trying it out
 
