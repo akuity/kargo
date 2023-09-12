@@ -4,8 +4,8 @@ import { useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { getStageColors } from '@ui/features/stage/utils';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
-import { getStageColors } from '@ui/utils/stages';
 
 export const Images = ({ projectName, stages }: { projectName: string; stages: Stage[] }) => {
   const [images, colors] = useMemo(() => {

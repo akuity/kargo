@@ -1,30 +1,31 @@
 import { createPromiseClient } from '@bufbuild/connect';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
-import { faArrowTurnUp, faCircleNotch, faDiagramProject } from '@fortawesome/free-solid-svg-icons';
+import { faDiagramProject } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Empty, Modal, Typography, message } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Empty } from 'antd';
 import { graphlib, layout } from 'dagre';
-import React, { useState } from 'react';
+import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
+import { useModal } from '@ui/features/common/modal/use-modal';
 import { Freightline } from '@ui/features/freightline/freightline';
 import { StageDetails } from '@ui/features/stage/stage-details';
+import { getStageColors } from '@ui/features/stage/utils';
 import {
   getStage,
   listStages,
-  promoteSubscribers,
   queryFreight
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
-import { getStageColors } from '@ui/utils/stages';
 
 import { Images } from './images';
+import { PromoteSubscribersModal } from './promote-subscribers-modal';
 import { StageNode } from './stage-node';
 
 const lineThickness = 2;
@@ -39,19 +40,9 @@ export const ProjectDetails = () => {
     queryFreight.useQuery({ project: name })
   );
 
-  const { mutate, isLoading: isLoadingPromoteSubscribers } = useMutation({
-    ...promoteSubscribers.useMutation(),
-    onError: (err) => {
-      message.error(err?.toString());
-    },
-    onSuccess: () => {
-      message.success(`The "${promotingSubscribers?.metadata?.name}" stage has been promoted.`);
-    }
-  });
-
-  const [promotingSubscribers, setPromotingSubscribers] = useState<Stage | null>(null);
-
   const client = useQueryClient();
+
+  const { show: showPromoteSubscribersModal } = useModal();
 
   const isVisible = useDocumentEvent(
     'visibilitychange',
@@ -187,24 +178,15 @@ export const ProjectDetails = () => {
 
   const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
   const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
-  const [subscribersByStage, setSubscribersByStage] = React.useState<{ [key: string]: Stage[] }>(
-    {}
-  );
 
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
-    const subscribersByStage: { [key: string]: Stage[] } = {};
 
     setStageColorMap(getStageColors(data?.stages || []));
     (data?.stages || []).forEach((stage) => {
       const items = stagesPerFreight[stage.status?.currentFreight?.id || ''] || [];
       stagesPerFreight[stage.status?.currentFreight?.id || ''] = [...items, stage];
-      stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
-        const items = subscribersByStage[item.name || ''] || [];
-        subscribersByStage[item.name || ''] = [...items, stage];
-      });
     });
-    setSubscribersByStage(subscribersByStage);
     setStagesPerFreight(stagesPerFreight);
   }, [data, freightData]);
 
@@ -258,7 +240,15 @@ export const ProjectDetails = () => {
                 stage={node.stage}
                 color={node.color}
                 height={node.height}
-                onPromoteSubscribersClick={() => setPromotingSubscribers(node.stage)}
+                onPromoteSubscribersClick={() =>
+                  showPromoteSubscribersModal((p) => (
+                    <PromoteSubscribersModal
+                      {...p}
+                      stages={data.stages}
+                      selectedStage={node.stage}
+                    />
+                  ))
+                }
               />
             </div>
           ))}
@@ -282,62 +272,6 @@ export const ProjectDetails = () => {
         </div>
       </div>
       {stage && <StageDetails stage={stage} />}
-      <Modal
-        visible={promotingSubscribers != null}
-        onCancel={() => navigate(generatePath(paths.project, { name }))}
-        footer={null}
-        width={'500px'}
-        closable={false}
-      >
-        <div className='text-xl font-semibold mb-4'>Promote Subscribers</div>
-        <div>
-          Are you sure you want to promote all subscribers of stage{' '}
-          <div className='flex'>
-            <div className='font-bold mr-1'>{promotingSubscribers?.metadata?.name}</div>?
-          </div>
-        </div>
-        <div className='mt-4'>
-          <div className='mb-2'>
-            This action will promote the following stages to Freight ID{' '}
-            <Typography.Text code>
-              {promotingSubscribers?.status?.currentFreight?.id}
-            </Typography.Text>
-            .
-          </div>
-          {(subscribersByStage[promotingSubscribers?.metadata?.name || ''] || []).map((item) => (
-            <div key={item.metadata?.uid} className='font-bold text-lg'>
-              - {item.metadata?.name}
-            </div>
-          ))}
-        </div>
-        <div className='flex mt-4'>
-          <Button className='mr-2' onClick={() => setPromotingSubscribers(null)}>
-            Cancel
-          </Button>
-          <Button
-            type='primary'
-            icon={
-              <FontAwesomeIcon
-                icon={isLoadingPromoteSubscribers ? faCircleNotch : faArrowTurnUp}
-                spin={isLoadingPromoteSubscribers}
-                className='mr-2'
-              />
-            }
-            onClick={async () => {
-              if (!promotingSubscribers) {
-                return;
-              }
-              mutate({
-                stage: promotingSubscribers.metadata?.name || '',
-                project: promotingSubscribers.metadata?.namespace || '',
-                freight: promotingSubscribers.status?.currentFreight?.id || ''
-              });
-            }}
-          >
-            Promote
-          </Button>
-        </div>
-      </Modal>
     </div>
   );
 };

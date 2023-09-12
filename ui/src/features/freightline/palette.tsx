@@ -1,4 +1,4 @@
-import { ColorMapHex, getBackgroundKey } from '@ui/utils/stages';
+import { ColorMapHex, getBackgroundKey } from '@ui/features/stage/utils';
 
 export const Palette = () => (
   <div className='p-6 bg-zinc-900'>
