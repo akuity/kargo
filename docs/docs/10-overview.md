@@ -25,6 +25,10 @@ In the meantime, breaking changes should be anticipated between pre-GA minor
 releases.
 :::
 
+:::info
+Join us on [Discord](https://discord.gg/dHJBZw6ewT)!
+:::
+
 ## Next steps
 
 To learn more about Kargo, consider checking out our
