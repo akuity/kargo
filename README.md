@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/akuity/kargo/branch/main/graph/badge.svg?token=FGUq4netA6)](https://codecov.io/gh/akuity/kargo)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/c4e62c70-e07d-4ac6-bcf8-d7003c936d19/deploy-status)](https://app.netlify.com/sites/docs-kargo-akuity-io/deploys)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
-![Discord](https://img.shields.io/discord/:1138942074998235187)
+[![Discord](https://img.shields.io/discord/1138942074998235187)](https://discord.gg/dHJBZw6ewT)
 
 
 Kargo is a next-generation continuous delivery and application lifecycle
