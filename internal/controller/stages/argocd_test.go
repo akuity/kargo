@@ -50,6 +50,22 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
+				require.Equal(
+					t,
+					[]kargoapi.ArgoCDAppStatus{
+						{
+							Namespace: "fake-namespace",
+							Name:      "fake-app",
+							HealthStatus: kargoapi.ArgoCDAppHealthStatus{
+								Status: kargoapi.ArgoCDAppHealthStateUnknown,
+							},
+							SyncStatus: kargoapi.ArgoCDAppSyncStatus{
+								Status: kargoapi.ArgoCDAppSyncStateUnknown,
+							},
+						},
+					},
+					health.ArgoCDApps,
+				)
 				require.Len(t, health.Issues, 1)
 				require.Contains(
 					t,
@@ -82,6 +98,22 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
+				require.Equal(
+					t,
+					[]kargoapi.ArgoCDAppStatus{
+						{
+							Namespace: "fake-namespace",
+							Name:      "fake-app",
+							HealthStatus: kargoapi.ArgoCDAppHealthStatus{
+								Status: kargoapi.ArgoCDAppHealthStateUnknown,
+							},
+							SyncStatus: kargoapi.ArgoCDAppSyncStatus{
+								Status: kargoapi.ArgoCDAppSyncStateUnknown,
+							},
+						},
+					},
+					health.ArgoCDApps,
+				)
 				require.Len(t, health.Issues, 1)
 				require.Contains(
 					t,
@@ -114,10 +146,34 @@ func TestCheckHealth(t *testing.T) {
 							{},
 						},
 					},
+					Status: argocd.ApplicationStatus{
+						Health: argocd.HealthStatus{
+							Status: argoHealth.HealthStatusHealthy,
+						},
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeSynced,
+						},
+					},
 				}, nil
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
+				require.Equal(
+					t,
+					[]kargoapi.ArgoCDAppStatus{
+						{
+							Namespace: "fake-namespace",
+							Name:      "fake-app",
+							HealthStatus: kargoapi.ArgoCDAppHealthStatus{
+								Status: kargoapi.ArgoCDAppHealthStateHealthy,
+							},
+							SyncStatus: kargoapi.ArgoCDAppSyncStatus{
+								Status: kargoapi.ArgoCDAppSyncStateSynced,
+							},
+						},
+					},
+					health.ArgoCDApps,
+				)
 				require.Len(t, health.Issues, 1)
 				require.Contains(
 					t,
@@ -147,11 +203,30 @@ func TestCheckHealth(t *testing.T) {
 						Health: argocd.HealthStatus{
 							Status: argoHealth.HealthStatusDegraded,
 						},
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeSynced,
+						},
 					},
 				}, nil
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
+				require.Equal(
+					t,
+					[]kargoapi.ArgoCDAppStatus{
+						{
+							Namespace: "fake-namespace",
+							Name:      "fake-app",
+							HealthStatus: kargoapi.ArgoCDAppHealthStatus{
+								Status: kargoapi.ArgoCDAppHealthStateDegraded,
+							},
+							SyncStatus: kargoapi.ArgoCDAppSyncStatus{
+								Status: kargoapi.ArgoCDAppSyncStateSynced,
+							},
+						},
+					},
+					health.ArgoCDApps,
+				)
 				require.Len(t, health.Issues, 1)
 				require.Contains(t, health.Issues[0], "has health state")
 				require.Contains(t, health.Issues[0], argoHealth.HealthStatusDegraded)
@@ -199,6 +274,23 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
+				require.Equal(
+					t,
+					[]kargoapi.ArgoCDAppStatus{
+						{
+							Namespace: "fake-namespace",
+							Name:      "fake-app",
+							HealthStatus: kargoapi.ArgoCDAppHealthStatus{
+								Status: kargoapi.ArgoCDAppHealthStateHealthy,
+							},
+							SyncStatus: kargoapi.ArgoCDAppSyncStatus{
+								Status:   kargoapi.ArgoCDAppSyncStateSynced,
+								Revision: "not-the-right-commit",
+							},
+						},
+					},
+					health.ArgoCDApps,
+				)
 				require.Len(t, health.Issues, 1)
 				require.Contains(t, health.Issues[0], "is not synced to revision")
 			},
@@ -245,6 +337,23 @@ func TestCheckHealth(t *testing.T) {
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateHealthy, health.Status)
+				require.Equal(
+					t,
+					[]kargoapi.ArgoCDAppStatus{
+						{
+							Namespace: "fake-namespace",
+							Name:      "fake-app",
+							HealthStatus: kargoapi.ArgoCDAppHealthStatus{
+								Status: kargoapi.ArgoCDAppHealthStateHealthy,
+							},
+							SyncStatus: kargoapi.ArgoCDAppSyncStatus{
+								Status:   kargoapi.ArgoCDAppSyncStateSynced,
+								Revision: "fake-commit",
+							},
+						},
+					},
+					health.ArgoCDApps,
+				)
 				require.Empty(t, health.Issues)
 			},
 		},

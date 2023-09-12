@@ -145,10 +145,44 @@ func FromHealthProto(h *v1alpha1.Health) *kargoapi.Health {
 	if h == nil {
 		return nil
 	}
-
+	argocdAppStates := make([]kargoapi.ArgoCDAppStatus, len(h.GetArgocdApps()))
+	for i, argocdAppState := range h.GetArgocdApps() {
+		argocdAppStates[i] = FromArgoCDAppStateProto(argocdAppState)
+	}
 	return &kargoapi.Health{
-		Status: kargoapi.HealthState(h.GetStatus()),
-		Issues: h.GetIssues(),
+		Status:     kargoapi.HealthState(h.GetStatus()),
+		Issues:     h.GetIssues(),
+		ArgoCDApps: argocdAppStates,
+	}
+}
+
+func FromArgoCDAppStateProto(
+	a *v1alpha1.ArgoCDAppState,
+) kargoapi.ArgoCDAppStatus {
+	return kargoapi.ArgoCDAppStatus{
+		Namespace:    a.GetNamespace(),
+		Name:         a.GetName(),
+		HealthStatus: FromArgoCDAppHealthStatusProto(a.GetHealthStatus()),
+		SyncStatus:   FromArgoCDAppSyncStatusProto(a.GetSyncStatus()),
+	}
+}
+
+func FromArgoCDAppHealthStatusProto(
+	a *v1alpha1.ArgoCDAppHealthStatus,
+) kargoapi.ArgoCDAppHealthStatus {
+	return kargoapi.ArgoCDAppHealthStatus{
+		Status:  kargoapi.ArgoCDAppHealthState(a.GetStatus()),
+		Message: a.GetMessage(),
+	}
+}
+
+func FromArgoCDAppSyncStatusProto(
+	a *v1alpha1.ArgoCDAppSyncStatus,
+) kargoapi.ArgoCDAppSyncStatus {
+	return kargoapi.ArgoCDAppSyncStatus{
+		Status:    kargoapi.ArgoCDAppSyncState(a.GetStatus()),
+		Revision:  a.GetRevision(),
+		Revisions: a.GetRevisions(),
 	}
 }
 
@@ -493,6 +527,13 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	if e.Spec.PromotionMechanisms != nil {
 		promotionMechanisms = ToPromotionMechanismsProto(*e.Spec.PromotionMechanisms)
 	}
+	var currentPromotion *v1alpha1.PromotionInfo
+	if e.Status.CurrentPromotion != nil {
+		currentPromotion = &v1alpha1.PromotionInfo{
+			Name:    e.Status.CurrentPromotion.Name,
+			Freight: ToFreightProto(e.Status.CurrentPromotion.Freight),
+		}
+	}
 	return &v1alpha1.Stage{
 		ApiVersion: e.APIVersion,
 		Kind:       e.Kind,
@@ -504,6 +545,7 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 		Status: &v1alpha1.StageStatus{
 			AvailableFreight: availableFreight,
 			CurrentFreight:   currentFreight,
+			CurrentPromotion: currentPromotion,
 			History:          history,
 			Health:           health,
 			Error:            e.Status.Error,
@@ -755,6 +797,8 @@ func ToGitCommitProto(g kargoapi.GitCommit) *v1alpha1.GitCommit {
 		Id:                g.ID,
 		Branch:            g.Branch,
 		HealthCheckCommit: proto.String(g.HealthCheckCommit),
+		Message:           g.Message,
+		Author:            g.Author,
 	}
 }
 
@@ -774,9 +818,44 @@ func ToChartProto(c kargoapi.Chart) *v1alpha1.Chart {
 }
 
 func ToHealthProto(h kargoapi.Health) *v1alpha1.Health {
+	argocdAppStates := make([]*v1alpha1.ArgoCDAppState, len(h.ArgoCDApps))
+	for i, argocdAppState := range h.ArgoCDApps {
+		argocdAppStates[i] = ToArgoCDAppStateProto(argocdAppState)
+	}
 	return &v1alpha1.Health{
-		Status: string(h.Status),
-		Issues: h.Issues,
+		Status:     string(h.Status),
+		Issues:     h.Issues,
+		ArgocdApps: argocdAppStates,
+	}
+}
+
+func ToArgoCDAppStateProto(
+	a kargoapi.ArgoCDAppStatus,
+) *v1alpha1.ArgoCDAppState {
+	return &v1alpha1.ArgoCDAppState{
+		Name:         a.Name,
+		Namespace:    a.Namespace,
+		HealthStatus: ToArgoCDAppHealthStatusProto(a.HealthStatus),
+		SyncStatus:   ToArgoCDAppSyncStatusProto(a.SyncStatus),
+	}
+}
+
+func ToArgoCDAppHealthStatusProto(
+	a kargoapi.ArgoCDAppHealthStatus,
+) *v1alpha1.ArgoCDAppHealthStatus {
+	return &v1alpha1.ArgoCDAppHealthStatus{
+		Status:  string(a.Status),
+		Message: a.Message,
+	}
+}
+
+func ToArgoCDAppSyncStatusProto(
+	a kargoapi.ArgoCDAppSyncStatus,
+) *v1alpha1.ArgoCDAppSyncStatus {
+	return &v1alpha1.ArgoCDAppSyncStatus{
+		Status:    string(a.Status),
+		Revision:  a.Revision,
+		Revisions: a.Revisions,
 	}
 }
 
