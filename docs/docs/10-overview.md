@@ -26,7 +26,7 @@ releases.
 :::
 
 :::info
-Join us on [Discord](https://discord.gg/dHJBZw6ewT)!
+Join the Akuity Community [Discord server](https://discord.gg/dHJBZw6ewT)!
 :::
 
 ## Next steps
