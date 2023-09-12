@@ -17,6 +17,7 @@ export const parseColorAnnotation = (stage: Stage): string | null => {
 export const ColorMapHex: { [key: string]: string } = {
   red: '#EF4444', // 'bg-red-500',
   orange: '#F97316', // 'bg-orange-400',
+  amber: '#F59E0B', // 'bg-amber-400',
   yellow: '#FCD34D', // 'bg-yellow-400',
   lime: '#84CC16', // 'bg-lime-400',
   green: '#22C55E', // 'bg-green-400',
@@ -28,14 +29,15 @@ export const ColorMapHex: { [key: string]: string } = {
   purple: '#A855F7', // 'bg-purple-500',
   fuchsia: '#D946EF', // 'bg-fuchsia-500',
   pink: '#EC4899', // 'bg-pink-500',
-  rose: '#F43F5E' // 'bg-rose-400'
+  rose: '#F43F5E', // 'bg-rose-400'
+  gray: '6a7382' // 'bg-gray-500'
 };
 
-export const getBackground = (n: number) => {
+export const getBackgroundKey = (n: number) => {
   if (n < 0 || n >= Object.keys(ColorMapHex).length) {
-    return 'bg-gray-500';
+    return 'gray';
   }
-  return Object.values(ColorMapHex)[n];
+  return Object.keys(ColorMapHex)[n];
 };
 
 export const getStageColors = (stages: Stage[]) => {

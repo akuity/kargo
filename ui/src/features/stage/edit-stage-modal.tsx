@@ -9,7 +9,10 @@ import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
-import { getStage, updateStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import {
+  listStages,
+  updateStage
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from './stage-yaml-example';
@@ -25,10 +28,8 @@ const formSchema = z.object({
 });
 
 export const EditStageModal = ({ visible, hide, projectName, stageName }: Props) => {
-  const { data: stageRes } = useQuery({
-    ...getStage.useQuery({ project: projectName, name: stageName }),
-    enabled: !!stageName
-  });
+  const { data } = useQuery(listStages.useQuery({ project: projectName }));
+  const stage = data?.stages.find((item) => item.metadata?.name === stageName);
 
   const { mutateAsync, isLoading } = useMutation({
     ...updateStage.useMutation(),
@@ -36,8 +37,8 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
   });
 
   const { control, handleSubmit } = useForm({
-    defaultValues: {
-      value: prepareStageToEdit(stageRes?.stage)
+    values: {
+      value: prepareStageToEdit(stage)
     },
     resolver: zodResolver(formSchema)
   });
@@ -46,7 +47,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
     await mutateAsync({
       stage: {
         case: 'yaml',
-        value: prepareStageToSave(stageRes?.stage, data.value)
+        value: prepareStageToSave(stage, data.value)
       }
     });
   });

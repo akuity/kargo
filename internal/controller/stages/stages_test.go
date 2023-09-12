@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -62,31 +61,10 @@ func TestSync(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name                       string
-		spec                       kargoapi.StageSpec
-		initialStatus              kargoapi.StageStatus
-		hasNonTerminalPromotionsFn func(
-			ctx context.Context,
-			stageNamespace string,
-			stageName string,
-		) (bool, error)
-		checkHealthFn func(
-			context.Context,
-			kargoapi.Freight,
-			[]kargoapi.ArgoCDAppUpdate,
-		) *kargoapi.Health
-		getLatestFreightFromReposFn func(
-			context.Context,
-			string,
-			kargoapi.RepoSubscriptions,
-		) (*kargoapi.Freight, error)
-		getAvailableFreightFromUpstreamStagesFn func(
-			ctx context.Context,
-			namespace string,
-			subs []kargoapi.StageSubscription,
-		) ([]kargoapi.Freight, error)
-		kargoClient client.Client
-		assertions  func(
+		name       string
+		stage      *kargoapi.Stage
+		reconciler *reconciler
+		assertions func(
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
 			client client.Client,
@@ -94,13 +72,16 @@ func TestSync(t *testing.T) {
 		)
 	}{
 		{
-			name: "error checking for non-terminal promotions",
-			hasNonTerminalPromotionsFn: func(
-				context.Context,
-				string,
-				string,
-			) (bool, error) {
-				return false, errors.New("something went wrong")
+			name:  "error checking for non-terminal promotions",
+			stage: &kargoapi.Stage{},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return false, errors.New("something went wrong")
+				},
 			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
@@ -117,19 +98,25 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "non-terminal promotions found",
-			hasNonTerminalPromotionsFn: func(
-				context.Context,
-				string,
-				string,
-			) (bool, error) {
-				return true, nil
-			},
-			initialStatus: v1alpha1.StageStatus{CurrentPromotion: &v1alpha1.PromotionInfo{
-				Name: "dev.abc123.def456",
-				Freight: v1alpha1.Freight{
-					ID: "xyz789",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionInfo{
+						Name: "dev.abc123.def456",
+						Freight: kargoapi.Freight{
+							ID: "xyz789",
+						},
+					},
 				},
-			}},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -143,17 +130,23 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name:                       "clear currentPromotion",
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{},
-			},
-			initialStatus: v1alpha1.StageStatus{CurrentPromotion: &v1alpha1.PromotionInfo{
-				Name: "dev.abc123.def456",
-				Freight: v1alpha1.Freight{
-					ID: "xyz789",
+			name: "no non-terminal promotions found",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{},
 				},
-			}},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionInfo{ // This should get cleared
+						Name: "dev.abc123.def456",
+						Freight: kargoapi.Freight{
+							ID: "xyz789",
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -167,11 +160,14 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no subscriptions",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{},
+				},
 			},
-			initialStatus:              kargoapi.StageStatus{},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -186,18 +182,22 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "error getting latest Freight from repos",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					Repos: &kargoapi.RepoSubscriptions{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Repos: &kargoapi.RepoSubscriptions{},
+					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getLatestFreightFromReposFn: func(
-				context.Context,
-				string,
-				kargoapi.RepoSubscriptions,
-			) (*kargoapi.Freight, error) {
-				return nil, errors.New("something went wrong")
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getLatestFreightFromReposFn: func(
+					context.Context,
+					string,
+					kargoapi.RepoSubscriptions,
+				) (*kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
 			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
@@ -214,18 +214,22 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no latest Freight from repos",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					Repos: &kargoapi.RepoSubscriptions{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Repos: &kargoapi.RepoSubscriptions{},
+					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getLatestFreightFromReposFn: func(
-				context.Context,
-				string,
-				kargoapi.RepoSubscriptions,
-			) (*kargoapi.Freight, error) {
-				return nil, nil
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getLatestFreightFromReposFn: func(
+					context.Context,
+					string,
+					kargoapi.RepoSubscriptions,
+				) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
 			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
@@ -241,47 +245,32 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "latest Freight from repos isn't new",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					Repos: &kargoapi.RepoSubscriptions{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Repos: &kargoapi.RepoSubscriptions{},
+					},
+					// TODO: I'm not sure about this change
+					// HealthChecks: &kargoapi.HealthChecks{},
 				},
-				// TODO: I'm not sure about this change
-				// HealthChecks: &kargoapi.HealthChecks{},
-			},
-			initialStatus: kargoapi.StageStatus{
-				AvailableFreight: []kargoapi.Freight{
-					{
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
+				Status: kargoapi.StageStatus{
+					AvailableFreight: []kargoapi.Freight{
+						{
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL: "fake-url",
+									ID:      "fake-commit",
+								},
+							},
+							Images: []kargoapi.Image{
+								{
+									RepoURL: "fake-url",
+									Tag:     "fake-tag",
+								},
 							},
 						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
 					},
-				},
-				CurrentFreight: &kargoapi.Freight{
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
-						},
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
-						},
-					},
-					Qualified: true,
-				},
-				History: []kargoapi.Freight{
-					{
+					CurrentFreight: &kargoapi.Freight{
 						Commits: []kargoapi.GitCommit{
 							{
 								RepoURL: "fake-url",
@@ -296,37 +285,56 @@ func TestSync(t *testing.T) {
 						},
 						Qualified: true,
 					},
+					History: []kargoapi.Freight{
+						{
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL: "fake-url",
+									ID:      "fake-commit",
+								},
+							},
+							Images: []kargoapi.Image{
+								{
+									RepoURL: "fake-url",
+									Tag:     "fake-tag",
+								},
+							},
+							Qualified: true,
+						},
+					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			checkHealthFn: func(
-				context.Context,
-				kargoapi.Freight,
-				[]kargoapi.ArgoCDAppUpdate,
-			) *kargoapi.Health {
-				return &kargoapi.Health{
-					Status: kargoapi.HealthStateHealthy,
-				}
-			},
-			getLatestFreightFromReposFn: func(
-				context.Context,
-				string,
-				kargoapi.RepoSubscriptions,
-			) (*kargoapi.Freight, error) {
-				return &kargoapi.Freight{
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return &kargoapi.Health{
+						Status: kargoapi.HealthStateHealthy,
+					}
+				},
+				getLatestFreightFromReposFn: func(
+					context.Context,
+					string,
+					kargoapi.RepoSubscriptions,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Commits: []kargoapi.GitCommit{
+							{
+								RepoURL: "fake-url",
+								ID:      "fake-commit",
+							},
 						},
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
+						Images: []kargoapi.Image{
+							{
+								RepoURL: "fake-url",
+								Tag:     "fake-tag",
+							},
 						},
-					},
-				}, nil
+					}, nil
+				},
 			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
@@ -342,22 +350,26 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "error getting available Freight from upstream Stages",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					UpstreamStages: []kargoapi.StageSubscription{
-						{
-							Name: "fake-name",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						UpstreamStages: []kargoapi.StageSubscription{
+							{
+								Name: "fake-name",
+							},
 						},
 					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getAvailableFreightFromUpstreamStagesFn: func(
-				context.Context,
-				string,
-				[]kargoapi.StageSubscription,
-			) ([]kargoapi.Freight, error) {
-				return nil, errors.New("something went wrong")
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getAvailableFreightFromUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
 			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
@@ -374,22 +386,26 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no latest Freight from upstream Stages",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					UpstreamStages: []kargoapi.StageSubscription{
-						{
-							Name: "fake-name",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						UpstreamStages: []kargoapi.StageSubscription{
+							{
+								Name: "fake-name",
+							},
 						},
 					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getAvailableFreightFromUpstreamStagesFn: func(
-				context.Context,
-				string,
-				[]kargoapi.StageSubscription,
-			) ([]kargoapi.Freight, error) {
-				return nil, nil
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getAvailableFreightFromUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
 			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
@@ -405,30 +421,34 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "multiple upstream Stages",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					UpstreamStages: []kargoapi.StageSubscription{
-						// Subscribing to multiple upstream Stages should block
-						// auto-promotion
-						{
-							Name: "fake-name",
-						},
-						{
-							Name: "another-fake-name",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						UpstreamStages: []kargoapi.StageSubscription{
+							// Subscribing to multiple upstream Stages should block
+							// auto-promotion
+							{
+								Name: "fake-name",
+							},
+							{
+								Name: "another-fake-name",
+							},
 						},
 					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getAvailableFreightFromUpstreamStagesFn: func(
-				context.Context,
-				string,
-				[]kargoapi.StageSubscription,
-			) ([]kargoapi.Freight, error) {
-				return []kargoapi.Freight{
-					{},
-					{},
-				}, nil
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getAvailableFreightFromUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{
+						{},
+						{},
+					}, nil
+				},
 			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
@@ -451,33 +471,37 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "no promotion policy found",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					Repos: &kargoapi.RepoSubscriptions{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Repos: &kargoapi.RepoSubscriptions{},
+					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getLatestFreightFromReposFn: func(
-				context.Context,
-				string,
-				kargoapi.RepoSubscriptions,
-			) (*kargoapi.Freight, error) {
-				return &kargoapi.Freight{
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getLatestFreightFromReposFn: func(
+					context.Context,
+					string,
+					kargoapi.RepoSubscriptions,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Commits: []kargoapi.GitCommit{
+							{
+								RepoURL: "fake-url",
+								ID:      "fake-commit",
+							},
 						},
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
+						Images: []kargoapi.Image{
+							{
+								RepoURL: "fake-url",
+								Tag:     "fake-tag",
+							},
 						},
-					},
-				}, nil
+					}, nil
+				},
+				kargoClient: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			},
-			kargoClient: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -519,48 +543,52 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "multiple promotion policies found",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					Repos: &kargoapi.RepoSubscriptions{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Repos: &kargoapi.RepoSubscriptions{},
+					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getLatestFreightFromReposFn: func(
-				context.Context,
-				string,
-				kargoapi.RepoSubscriptions,
-			) (*kargoapi.Freight, error) {
-				return &kargoapi.Freight{
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getLatestFreightFromReposFn: func(
+					context.Context,
+					string,
+					kargoapi.RepoSubscriptions,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Commits: []kargoapi.GitCommit{
+							{
+								RepoURL: "fake-url",
+								ID:      "fake-commit",
+							},
 						},
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
+						Images: []kargoapi.Image{
+							{
+								RepoURL: "fake-url",
+								Tag:     "fake-tag",
+							},
 						},
+					}, nil
+				},
+				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.PromotionPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-policy",
+							Namespace: "fake-namespace",
+						},
+						Stage: "fake-stage",
 					},
-				}, nil
+					&kargoapi.PromotionPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "another-fake-policy",
+							Namespace: "fake-namespace",
+						},
+						Stage: "fake-stage",
+					},
+				).Build(),
 			},
-			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&kargoapi.PromotionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-policy",
-						Namespace: "fake-namespace",
-					},
-					Stage: "fake-stage",
-				},
-				&kargoapi.PromotionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "another-fake-policy",
-						Namespace: "fake-namespace",
-					},
-					Stage: "fake-stage",
-				},
-			).Build(),
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -602,41 +630,45 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "auto-promotion not enabled",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					Repos: &kargoapi.RepoSubscriptions{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Repos: &kargoapi.RepoSubscriptions{},
+					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getLatestFreightFromReposFn: func(
-				context.Context,
-				string,
-				kargoapi.RepoSubscriptions,
-			) (*kargoapi.Freight, error) {
-				return &kargoapi.Freight{
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getLatestFreightFromReposFn: func(
+					context.Context,
+					string,
+					kargoapi.RepoSubscriptions,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Commits: []kargoapi.GitCommit{
+							{
+								RepoURL: "fake-url",
+								ID:      "fake-commit",
+							},
 						},
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
+						Images: []kargoapi.Image{
+							{
+								RepoURL: "fake-url",
+								Tag:     "fake-tag",
+							},
 						},
-					},
-				}, nil
-			},
-			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&kargoapi.PromotionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-policy",
-						Namespace: "fake-namespace",
-					},
-					Stage: "fake-stage",
+					}, nil
 				},
-			).Build(),
+				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.PromotionPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-policy",
+							Namespace: "fake-namespace",
+						},
+						Stage: "fake-stage",
+					},
+				).Build(),
+			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -678,42 +710,46 @@ func TestSync(t *testing.T) {
 
 		{
 			name: "auto-promotion enabled",
-			spec: kargoapi.StageSpec{
-				Subscriptions: &kargoapi.Subscriptions{
-					Repos: &kargoapi.RepoSubscriptions{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Repos: &kargoapi.RepoSubscriptions{},
+					},
 				},
 			},
-			hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			getLatestFreightFromReposFn: func(
-				context.Context,
-				string,
-				kargoapi.RepoSubscriptions,
-			) (*kargoapi.Freight, error) {
-				return &kargoapi.Freight{
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "fake-url",
-							ID:      "fake-commit",
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getLatestFreightFromReposFn: func(
+					context.Context,
+					string,
+					kargoapi.RepoSubscriptions,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Commits: []kargoapi.GitCommit{
+							{
+								RepoURL: "fake-url",
+								ID:      "fake-commit",
+							},
 						},
-					},
-					Images: []kargoapi.Image{
-						{
-							RepoURL: "fake-url",
-							Tag:     "fake-tag",
+						Images: []kargoapi.Image{
+							{
+								RepoURL: "fake-url",
+								Tag:     "fake-tag",
+							},
 						},
-					},
-				}, nil
-			},
-			kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&kargoapi.PromotionPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-policy",
-						Namespace: "fake-namespace",
-					},
-					Stage:               "fake-stage",
-					EnableAutoPromotion: true,
+					}, nil
 				},
-			).Build(),
+				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.PromotionPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-policy",
+							Namespace: "fake-namespace",
+						},
+						Stage:               "fake-stage",
+						EnableAutoPromotion: true,
+					},
+				).Build(),
+			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
@@ -757,27 +793,16 @@ func TestSync(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			testStage := &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-stage",
-					Namespace: "fake-namespace",
-				},
-				Spec:   &tc.spec,
-				Status: tc.initialStatus,
+			tc.stage.ObjectMeta = metav1.ObjectMeta{
+				Name:      "fake-stage",
+				Namespace: "fake-namespace",
 			}
 			// nolint: lll
-			reconciler := &reconciler{
-				kargoClient:                             tc.kargoClient,
-				hasNonTerminalPromotionsFn:              tc.hasNonTerminalPromotionsFn,
-				checkHealthFn:                           tc.checkHealthFn,
-				getLatestFreightFromReposFn:             tc.getLatestFreightFromReposFn,
-				getAvailableFreightFromUpstreamStagesFn: tc.getAvailableFreightFromUpstreamStagesFn,
-			}
-			newStatus, err := reconciler.syncStage(context.Background(), testStage)
+			newStatus, err := tc.reconciler.syncStage(context.Background(), tc.stage)
 			tc.assertions(
-				tc.initialStatus,
+				tc.stage.Status,
 				newStatus,
-				tc.kargoClient,
+				tc.reconciler.kargoClient,
 				err,
 			)
 		})

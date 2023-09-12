@@ -1,16 +1,22 @@
-import { HealthState } from '@ui/gen/v1alpha1/types_pb';
+export enum HealthStatus {
+  HEALTHY = 'Healthy',
+  PROGRESSING = 'Progressing',
+  UNHEALTHY = 'Unhealthy',
+  UNKNOWN = 'Unknown',
+  UNDEFINED = ''
+}
 
-export const healthStateToString = (status?: HealthState): string => {
+export const healthStatusToEnum = (status?: string): HealthStatus => {
   switch (status) {
-    case HealthState.HEALTHY:
-      return 'Healthy';
-    case HealthState.PROGRESSING:
-      return 'Progressing';
-    case HealthState.UNHEALTHY:
-      return 'Unhealthy';
-    case HealthState.UNKNOWN:
-      return 'Unknown';
+    case HealthStatus.HEALTHY:
+      return HealthStatus.HEALTHY;
+    case HealthStatus.PROGRESSING:
+      return HealthStatus.PROGRESSING;
+    case HealthStatus.UNHEALTHY:
+      return HealthStatus.UNHEALTHY;
+    case HealthStatus.UNKNOWN:
+      return HealthStatus.UNKNOWN;
     default:
-      return '';
+      return HealthStatus.UNDEFINED;
   }
 };

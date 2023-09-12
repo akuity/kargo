@@ -146,17 +146,8 @@ func FromHealthProto(h *v1alpha1.Health) *kargoapi.Health {
 		return nil
 	}
 
-	status := kargoapi.HealthStateUnknown
-	switch h.GetStatus() {
-	case v1alpha1.HealthState_HEALTH_STATE_UNKNOWN:
-		status = kargoapi.HealthStateUnknown
-	case v1alpha1.HealthState_HEALTH_STATE_HEALTHY:
-		status = kargoapi.HealthStateHealthy
-	case v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY:
-		status = kargoapi.HealthStateUnhealthy
-	}
 	return &kargoapi.Health{
-		Status: status,
+		Status: kargoapi.HealthState(h.GetStatus()),
 		Issues: h.GetIssues(),
 	}
 }
@@ -783,19 +774,8 @@ func ToChartProto(c kargoapi.Chart) *v1alpha1.Chart {
 }
 
 func ToHealthProto(h kargoapi.Health) *v1alpha1.Health {
-	status := v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
-	switch h.Status {
-	case kargoapi.HealthStateHealthy:
-		status = v1alpha1.HealthState_HEALTH_STATE_HEALTHY
-	case kargoapi.HealthStateUnhealthy:
-		status = v1alpha1.HealthState_HEALTH_STATE_UNHEALTHY
-	case kargoapi.HealthStateProgressing:
-		status = v1alpha1.HealthState_HEALTH_STATE_PROGRESSING
-	case kargoapi.HealthStateUnknown:
-		status = v1alpha1.HealthState_HEALTH_STATE_UNKNOWN
-	}
 	return &v1alpha1.Health{
-		Status: status,
+		Status: string(h.Status),
 		Issues: h.Issues,
 	}
 }

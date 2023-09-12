@@ -46,6 +46,9 @@ const (
 	// KargoServiceCreateResourceProcedure is the fully-qualified name of the KargoService's
 	// CreateResource RPC.
 	KargoServiceCreateResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateResource"
+	// KargoServiceCreateOrUpdateResourceProcedure is the fully-qualified name of the KargoService's
+	// CreateOrUpdateResource RPC.
+	KargoServiceCreateOrUpdateResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateOrUpdateResource"
 	// KargoServiceUpdateResourceProcedure is the fully-qualified name of the KargoService's
 	// UpdateResource RPC.
 	KargoServiceUpdateResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateResource"
@@ -130,6 +133,7 @@ type KargoServiceClient interface {
 	// TODO(devholic): Add ApplyResource API
 	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
 	CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error)
+	CreateOrUpdateResource(context.Context, *connect.Request[v1alpha1.CreateOrUpdateResourceRequest]) (*connect.Response[v1alpha1.CreateOrUpdateResourceResponse], error)
 	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
 	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
 	CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error)
@@ -191,6 +195,11 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 		createResource: connect.NewClient[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse](
 			httpClient,
 			baseURL+KargoServiceCreateResourceProcedure,
+			opts...,
+		),
+		createOrUpdateResource: connect.NewClient[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse](
+			httpClient,
+			baseURL+KargoServiceCreateOrUpdateResourceProcedure,
 			opts...,
 		),
 		updateResource: connect.NewClient[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse](
@@ -328,6 +337,7 @@ type kargoServiceClient struct {
 	getPublicConfig          *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
 	adminLogin               *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
 	createResource           *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
+	createOrUpdateResource   *connect.Client[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse]
 	updateResource           *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
 	deleteResource           *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
 	createStage              *connect.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
@@ -378,6 +388,12 @@ func (c *kargoServiceClient) AdminLogin(ctx context.Context, req *connect.Reques
 // CreateResource calls akuity.io.kargo.service.v1alpha1.KargoService.CreateResource.
 func (c *kargoServiceClient) CreateResource(ctx context.Context, req *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error) {
 	return c.createResource.CallUnary(ctx, req)
+}
+
+// CreateOrUpdateResource calls
+// akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource.
+func (c *kargoServiceClient) CreateOrUpdateResource(ctx context.Context, req *connect.Request[v1alpha1.CreateOrUpdateResourceRequest]) (*connect.Response[v1alpha1.CreateOrUpdateResourceResponse], error) {
+	return c.createOrUpdateResource.CallUnary(ctx, req)
 }
 
 // UpdateResource calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource.
@@ -516,6 +532,7 @@ type KargoServiceHandler interface {
 	// TODO(devholic): Add ApplyResource API
 	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
 	CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error)
+	CreateOrUpdateResource(context.Context, *connect.Request[v1alpha1.CreateOrUpdateResourceRequest]) (*connect.Response[v1alpha1.CreateOrUpdateResourceResponse], error)
 	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
 	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
 	CreateStage(context.Context, *connect.Request[v1alpha1.CreateStageRequest]) (*connect.Response[v1alpha1.CreateStageResponse], error)
@@ -573,6 +590,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServiceCreateResourceHandler := connect.NewUnaryHandler(
 		KargoServiceCreateResourceProcedure,
 		svc.CreateResource,
+		opts...,
+	)
+	kargoServiceCreateOrUpdateResourceHandler := connect.NewUnaryHandler(
+		KargoServiceCreateOrUpdateResourceProcedure,
+		svc.CreateOrUpdateResource,
 		opts...,
 	)
 	kargoServiceUpdateResourceHandler := connect.NewUnaryHandler(
@@ -712,6 +734,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceAdminLoginHandler.ServeHTTP(w, r)
 		case KargoServiceCreateResourceProcedure:
 			kargoServiceCreateResourceHandler.ServeHTTP(w, r)
+		case KargoServiceCreateOrUpdateResourceProcedure:
+			kargoServiceCreateOrUpdateResourceHandler.ServeHTTP(w, r)
 		case KargoServiceUpdateResourceProcedure:
 			kargoServiceUpdateResourceHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteResourceProcedure:
@@ -789,6 +813,10 @@ func (UnimplementedKargoServiceHandler) AdminLogin(context.Context, *connect.Req
 
 func (UnimplementedKargoServiceHandler) CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateResource is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) CreateOrUpdateResource(context.Context, *connect.Request[v1alpha1.CreateOrUpdateResourceRequest]) (*connect.Response[v1alpha1.CreateOrUpdateResourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error) {

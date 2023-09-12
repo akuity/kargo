@@ -18,7 +18,7 @@ export const MainLayout = () => {
       <aside className={styles.sidebar}>
         <div className={styles.logo}>
           <img src='/kargo-icon.png' alt='Kargo Icon' className={styles.icon} />
-          Kargo
+          kargo
         </div>
         <nav className={styles.nav}>
           <NavItem icon={faBoxes} path={paths.projects}>
