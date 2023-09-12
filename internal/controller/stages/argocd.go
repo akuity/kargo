@@ -148,14 +148,6 @@ func stageHealthForAppHealth(
 	app *argocd.Application,
 ) (kargoapi.HealthState, string) {
 	switch app.Status.Health.Status {
-	case argohealth.HealthStatusDegraded, argohealth.HealthStatusUnknown:
-		return kargoapi.HealthStateUnhealthy,
-			fmt.Sprintf(
-				"Argo CD Application %q in namespace %q has health state %q",
-				app.Name,
-				app.Namespace,
-				app.Status.Health.Status,
-			)
 	case argohealth.HealthStatusProgressing, "":
 		return kargoapi.HealthStateProgressing,
 			fmt.Sprintf(
@@ -163,8 +155,17 @@ func stageHealthForAppHealth(
 				app.Name,
 				app.Namespace,
 			)
+	case argohealth.HealthStatusHealthy:
+		return kargoapi.HealthStateHealthy, ""
+	default:
+		return kargoapi.HealthStateUnhealthy,
+			fmt.Sprintf(
+				"Argo CD Application %q in namespace %q has health state %q",
+				app.Name,
+				app.Namespace,
+				app.Status.Health.Status,
+			)
 	}
-	return kargoapi.HealthStateHealthy, ""
 }
 
 func stageHealthForAppSync(
