@@ -1,0 +1,30 @@
+@font-face {
+  font-family: Poppins;
+  src: url(Poppins-Medium.ttf) format('truetype');;
+}
+html {
+  height: 100%;
+}
+body {
+  height: 100%;
+  background: linear-gradient(
+    177deg,
+    rgb(29, 50, 82) 0%,
+    rgb(29, 52, 81) 50%,
+    rgb(19, 36, 64) 77%,
+    rgb(10, 23, 49) 100%
+  );
+}
+.splash {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+}
+.splash p {
+  margin-top: 80px;
+  font-family: Poppins;
+  font-size: 14pt;
+  color: #ffffff;
+}
