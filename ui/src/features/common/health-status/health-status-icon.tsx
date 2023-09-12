@@ -10,9 +10,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import { CSSProperties } from 'react';
 
-import { Health, HealthState } from '@ui/gen/v1alpha1/types_pb';
+import { Health } from '@ui/gen/v1alpha1/types_pb';
 
-import { healthStateToString } from './utils';
+import { HealthStatus, healthStatusToEnum } from './utils';
 
 export const HealthStatusIcon = (props: {
   health?: Health;
@@ -23,12 +23,12 @@ export const HealthStatusIcon = (props: {
   const reason = health?.issues?.join('; ') ?? '';
 
   return (
-    <Tooltip title={healthStateToString(health?.status) + (reason !== '' ? `: ${reason}` : '')}>
+    <Tooltip title={health?.status ?? '' + (reason !== '' ? `: ${reason}` : '')}>
       <FontAwesomeIcon
-        icon={iconForHealthStatus(health?.status)}
-        spin={health?.status === HealthState.PROGRESSING}
+        icon={iconForHealthStatus(health)}
+        spin={healthStatusToEnum(health?.status) === HealthStatus.PROGRESSING}
         style={{
-          color: !hideColor ? colorForHealthStatus(health?.status) : undefined,
+          color: !hideColor ? colorForHealthStatus(health) : undefined,
           fontSize: '18px',
           ...props.style
         }}
@@ -37,30 +37,30 @@ export const HealthStatusIcon = (props: {
   );
 };
 
-const iconForHealthStatus = (status?: HealthState): IconDefinition => {
-  switch (status) {
-    case HealthState.HEALTHY:
+const iconForHealthStatus = (health?: Health): IconDefinition => {
+  switch (healthStatusToEnum(health?.status)) {
+    case HealthStatus.HEALTHY:
       return faHeart;
-    case HealthState.UNHEALTHY:
+    case HealthStatus.UNHEALTHY:
       return faHeartBroken;
-    case HealthState.PROGRESSING:
+    case HealthStatus.PROGRESSING:
       return faCircleNotch;
-    case HealthState.UNKNOWN:
+    case HealthStatus.UNKNOWN:
       return faQuestionCircle;
     default:
       return faCircle;
   }
 };
 
-const colorForHealthStatus = (status?: HealthState): string => {
-  switch (status) {
-    case HealthState.HEALTHY:
+const colorForHealthStatus = (health?: Health): string => {
+  switch (healthStatusToEnum(health?.status)) {
+    case HealthStatus.HEALTHY:
       return '#52c41a';
-    case HealthState.UNHEALTHY:
+    case HealthStatus.UNHEALTHY:
       return '#f5222d';
-    case HealthState.PROGRESSING:
+    case HealthStatus.PROGRESSING:
       return '#0dabea';
-    case HealthState.UNKNOWN:
+    case HealthStatus.UNKNOWN:
       return '#faad14';
     default:
       return '#ccc';
