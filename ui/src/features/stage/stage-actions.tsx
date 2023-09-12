@@ -46,7 +46,7 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
   return (
     <Space size={16}>
       <Button
-        type='text'
+        type='default'
         icon={<ButtonIcon icon={faPen} size='1x' />}
         onClick={() => showEditStageModal()}
       >
