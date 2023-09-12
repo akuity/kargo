@@ -23,7 +23,7 @@ func newJSONCodec(name string) connect.Codec {
 		name: name,
 		m: &protojson.MarshalOptions{
 			UseProtoNames:   true,
-			EmitUnpopulated: true,
+			EmitUnpopulated: false,
 		},
 		um: &protojson.UnmarshalOptions{
 			DiscardUnknown: true,
