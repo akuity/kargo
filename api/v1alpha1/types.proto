@@ -55,6 +55,8 @@ message GitCommit {
   string id = 2;
   string branch = 3;
   optional string health_check_commit = 4;
+  string message = 5;
+  string author = 6;
 }
 
 message GitRepoUpdate {
@@ -144,6 +146,11 @@ message Promotion {
   PromotionStatus status = 5;
 }
 
+message PromotionInfo {
+  string name = 1;
+  Freight freight = 2;
+}
+
 message PromotionList {
   optional github.com.akuity.kargo.pkg.api.metav1.ListMeta metadata = 1;
   repeated Promotion items = 2;
@@ -217,6 +224,7 @@ message StageStatus {
   repeated Freight history = 3;
   string error = 4;
   optional Health health = 5;
+  optional PromotionInfo current_promotion = 6;
 }
 
 message StageSubscription {

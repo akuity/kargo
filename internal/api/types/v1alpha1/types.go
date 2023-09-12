@@ -527,6 +527,13 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	if e.Spec.PromotionMechanisms != nil {
 		promotionMechanisms = ToPromotionMechanismsProto(*e.Spec.PromotionMechanisms)
 	}
+	var currentPromotion *v1alpha1.PromotionInfo
+	if e.Status.CurrentPromotion != nil {
+		currentPromotion = &v1alpha1.PromotionInfo{
+			Name:    e.Status.CurrentPromotion.Name,
+			Freight: ToFreightProto(e.Status.CurrentPromotion.Freight),
+		}
+	}
 	return &v1alpha1.Stage{
 		ApiVersion: e.APIVersion,
 		Kind:       e.Kind,
@@ -538,6 +545,7 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 		Status: &v1alpha1.StageStatus{
 			AvailableFreight: availableFreight,
 			CurrentFreight:   currentFreight,
+			CurrentPromotion: currentPromotion,
 			History:          history,
 			Health:           health,
 			Error:            e.Status.Error,
@@ -789,6 +797,8 @@ func ToGitCommitProto(g kargoapi.GitCommit) *v1alpha1.GitCommit {
 		Id:                g.ID,
 		Branch:            g.Branch,
 		HealthCheckCommit: proto.String(g.HealthCheckCommit),
+		Message:           g.Message,
+		Author:            g.Author,
 	}
 }
 

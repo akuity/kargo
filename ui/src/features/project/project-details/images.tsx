@@ -36,7 +36,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
     <>
       {image ? (
         <>
-          <p className='mb-8'>
+          <div className='mb-8'>
             <Select
               className='w-full'
               value={imageURL}
@@ -46,7 +46,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
                 value: image
               }))}
             />
-          </p>
+          </div>
           {Array.from(image.entries())
             .sort((a, b) => b[0].localeCompare(a[0]))
             .map(([tag, tagStages]) => (

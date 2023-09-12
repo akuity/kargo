@@ -1,3 +1,7 @@
+import { faGear } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Space, Tooltip } from 'antd';
+
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
@@ -17,13 +21,22 @@ export const StageNode = ({
   <div className={styles.node} style={{ backgroundColor: color, position: 'relative' }}>
     <h3 className='flex items-center text-white'>
       <div>{stage.metadata?.name}</div>
-      {stage.status?.health && (
-        <HealthStatusIcon
-          health={stage.status?.health}
-          style={{ marginLeft: 'auto', fontSize: '14px' }}
-          hideColor={true}
-        />
-      )}
+      <Space className='absolute right-1'>
+        {stage.status?.currentPromotion && (
+          <Tooltip
+            title={`Freight ${stage.status?.currentPromotion.freight?.id} is being promoted`}
+          >
+            <FontAwesomeIcon icon={faGear} spin={true} />
+          </Tooltip>
+        )}
+        {stage.status?.health && (
+          <HealthStatusIcon
+            health={stage.status?.health}
+            style={{ marginLeft: 'auto', fontSize: '14px' }}
+            hideColor={true}
+          />
+        )}
+      </Space>
     </h3>
     <div className={styles.body}>
       <h3>Current Freight</h3>
