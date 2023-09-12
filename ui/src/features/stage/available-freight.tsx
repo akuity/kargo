@@ -74,14 +74,23 @@ export const AvailableFreight = (props: { stage: Stage; onSuccess?: () => void }
                 </Typography.Link>
               }
               description={
-                <Tooltip
-                  title={
-                    freight.firstSeen &&
-                    format(freight.firstSeen.toDate(), "HH:mm:ss 'on' MMM do yyyy")
-                  }
-                >
-                  {freight.firstSeen && formatRelative(freight.firstSeen?.toDate(), new Date())}
-                </Tooltip>
+                <>
+                  <Tooltip
+                    placement='topLeft'
+                    title={
+                      freight.firstSeen &&
+                      format(freight.firstSeen.toDate(), "HH:mm:ss 'on' MMM do yyyy")
+                    }
+                  >
+                    <div>
+                      {freight.firstSeen && formatRelative(freight.firstSeen?.toDate(), new Date())}
+                    </div>
+                  </Tooltip>
+                  <div>
+                    {commit.author && `${commit.author} : `}
+                    {commit.message}
+                  </div>
+                </>
               }
             />
           ))}

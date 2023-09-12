@@ -393,6 +393,16 @@ export class GitCommit extends Message<GitCommit> {
    */
   healthCheckCommit?: string;
 
+  /**
+   * @generated from field: string message = 5;
+   */
+  message = "";
+
+  /**
+   * @generated from field: string author = 6;
+   */
+  author = "";
+
   constructor(data?: PartialMessage<GitCommit>) {
     super();
     proto3.util.initPartial(data, this);
@@ -405,6 +415,8 @@ export class GitCommit extends Message<GitCommit> {
     { no: 2, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "health_check_commit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "author", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitCommit {
@@ -972,6 +984,49 @@ export class Promotion extends Message<Promotion> {
 
   static equals(a: Promotion | PlainMessage<Promotion> | undefined, b: Promotion | PlainMessage<Promotion> | undefined): boolean {
     return proto3.util.equals(Promotion, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo
+ */
+export class PromotionInfo extends Message<PromotionInfo> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 2;
+   */
+  freight?: Freight;
+
+  constructor(data?: PartialMessage<PromotionInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "freight", kind: "message", T: Freight },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionInfo {
+    return new PromotionInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionInfo {
+    return new PromotionInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionInfo {
+    return new PromotionInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PromotionInfo | PlainMessage<PromotionInfo> | undefined, b: PromotionInfo | PlainMessage<PromotionInfo> | undefined): boolean {
+    return proto3.util.equals(PromotionInfo, a, b);
   }
 }
 
@@ -1549,6 +1604,11 @@ export class StageStatus extends Message<StageStatus> {
    */
   health?: Health;
 
+  /**
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo current_promotion = 6;
+   */
+  currentPromotion?: PromotionInfo;
+
   constructor(data?: PartialMessage<StageStatus>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1562,6 +1622,7 @@ export class StageStatus extends Message<StageStatus> {
     { no: 3, name: "history", kind: "message", T: Freight, repeated: true },
     { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "health", kind: "message", T: Health, opt: true },
+    { no: 6, name: "current_promotion", kind: "message", T: PromotionInfo, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageStatus {
