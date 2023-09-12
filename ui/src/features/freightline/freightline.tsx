@@ -100,7 +100,32 @@ const FreightContents = (props: {
       }`}
     >
       {(freight?.commits || []).map((c) => (
-        <Tooltip key={c.id} className='flex items-center my-2' title={`${c.repoUrl} (${c.branch})`}>
+        <Tooltip
+          key={c.id}
+          className=''
+          overlay={
+            <div className='grid grid-cols-2'>
+              <div>Repo:</div>
+              <div>
+                <a href={c.repoUrl}>{c.repoUrl}</a>
+              </div>
+              <div>Branch:</div>
+              <div>{c.branch}</div>
+              {c.author && (
+                <>
+                  <div>Author:</div>
+                  <div>{c.author}</div>
+                </>
+              )}
+              {c.message && (
+                <>
+                  <div>Message:</div>
+                  <div>{c.message}</div>
+                </>
+              )}
+            </div>
+          }
+        >
           <Icon icon={faGit} />
           {(selected || pinned) && (
             <a
