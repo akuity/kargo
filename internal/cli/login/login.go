@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
+	"embed"
 	"encoding/base64"
 	"fmt"
 	"math/big"
@@ -38,6 +39,9 @@ const (
 	flagSSO                  = "sso"
 	defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
+
+//go:embed assets
+var assets embed.FS
 
 func NewCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
@@ -355,6 +359,9 @@ func ssoLogin(
 		return "", "", errors.New("no id_token in token response")
 	}
 
+	// Slight delay to allow all assets used by the splash page to be served up
+	<-time.After(2 * time.Second)
+
 	return idToken, token.RefreshToken, nil
 }
 
@@ -370,10 +377,9 @@ func receiveAuthCode(
 	errCh chan<- error,
 ) {
 	mux := http.NewServeMux()
-	srv := &http.Server{
-		Handler:           mux,
-		ReadHeaderTimeout: time.Minute,
-	}
+
+	mux.Handle("/assets/", http.FileServer(http.FS(assets)))
+
 	mux.HandleFunc(
 		"/auth/callback",
 		func(w http.ResponseWriter, r *http.Request) {
@@ -414,13 +420,7 @@ func receiveAuthCode(
 			select {
 			case codeCh <- code:
 				w.WriteHeader(http.StatusOK)
-				// TODO: Return a nicer page
-				_, _ = w.Write(
-					[]byte(
-						"You are now logged in. You may close this window and resume " +
-							"using the Kargo CLI.",
-					),
-				)
+				_, _ = w.Write(splashHTML)
 			case <-r.Context().Done():
 				w.WriteHeader(http.StatusInternalServerError)
 			}
@@ -428,6 +428,10 @@ func receiveAuthCode(
 		},
 	)
 
+	srv := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: time.Minute,
+	}
 	if err := srv.Serve(listener); err != nil {
 		select {
 		case errCh <- errors.Wrap(err, "error running temporary HTTP server"):
@@ -484,3 +488,22 @@ func randStringFromCharset(n int, charset string) (string, error) {
 	}
 	return string(b), nil
 }
+
+var splashHTML = []byte(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Kargo</title>
+  <link rel="shortcut icon" type="image/jpg" href="/assets/favicon.ico"/>
+  <link rel='stylesheet' type='text/css' media='screen' href='/assets/splash.css'>
+</head>
+<body>
+  <div class="splash">
+    <img src="/assets/kargo.png" alt="Kargo" />
+    <p>You are now logged in and may resume using the Kargo CLI.</p>
+  </div>
+</body>
+</html>
+`)
