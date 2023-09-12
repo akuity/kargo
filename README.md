@@ -47,8 +47,7 @@ info on how to get started quickly and easily.
 To report an issue, request a feature, or ask a question, please open an issue
 [here](https://github.com/akuity/kargo/issues).
 
-Please also feel free to join us on our
-[Discord channel](https://discord.gg/dHJBZw6ewT)!
+Please also feel free to join us on [Discord](https://discord.gg/dHJBZw6ewT)!
 
 ## Code of Conduct
 
