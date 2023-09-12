@@ -13,6 +13,7 @@ const { defaultAlgorithm, defaultSeed } = theme;
 const mapToken = defaultAlgorithm(defaultSeed);
 
 export const UI_VERSION = process.env.VERSION || 'development';
+export const API_URL = process.env.API_URL || 'http://localhost:30081';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -43,7 +44,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/akuity.io.kargo.service.v1alpha1.KargoService': {
-        target: 'http://localhost:30081',
+        target: API_URL,
         changeOrigin: true
       }
     },
