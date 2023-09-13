@@ -1,5 +1,6 @@
 .wrapper {
   min-height: 100vh;
+  max-height: 100vh;
   display: flex;
 }
 
@@ -21,6 +22,7 @@
   position: relative;
   flex: 1;
   background-color: rgb(29, 50, 82);
+  overflow: hidden;
 
   &::before {
     content: '';
@@ -35,6 +37,9 @@
 
 .content {
   position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: auto;
 }
 
 .logo {
