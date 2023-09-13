@@ -59,9 +59,9 @@ export const ProjectDetails = () => {
     const watchStages = async () => {
       const promiseClient = createPromiseClient(KargoService, transport);
       const stream = promiseClient.watchStages({ project: name }, { signal: cancel.signal });
+      let stages = data.stages.slice();
 
       for await (const e of stream) {
-        let stages = data.stages.slice();
         const index = stages.findIndex((item) => item.metadata?.name === e.stage?.metadata?.name);
         if (e.type === 'DELETED') {
           if (index !== -1) {
