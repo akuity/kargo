@@ -2,6 +2,8 @@ import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 
+import { urlWithProtocol } from '@ui/utils/url';
+
 import { NodeType, NodesRepoType } from '../types';
 
 import * as styles from './repo-node.module.less';
@@ -45,10 +47,10 @@ const RepoNodeBody = ({ label, value }: { label: string; value: string }) => (
   <>
     <div className={styles.label}>{label}</div>
     <Tooltip title={value}>
-      <div className={styles.value}>
+      <a href={urlWithProtocol(value)} className={styles.value} target='_blanl' rel='noreferrer'>
         {value.length > MAX_CHARS && '...'}
         {value.substring(value.length - MAX_CHARS)}
-      </div>
+      </a>
     </Tooltip>
   </>
 );
