@@ -245,7 +245,7 @@ export const ProjectDetails = () => {
   };
 
   return (
-    <div>
+    <div className='flex flex-col flex-grow'>
       <Freightline
         freight={freightData?.groups['']?.freight || []}
         stagesPerFreight={stagesPerFreight}
@@ -256,7 +256,7 @@ export const ProjectDetails = () => {
         confirmingPromotion={confirmingPromotion}
         setConfirmingPromotion={setConfirmingPromotion}
       />
-      <div className='flex items-stretch w-full h-full'>
+      <div className='flex flex-grow w-full'>
         <div className='overflow-hidden flex-grow w-full'>
           <div className='text-sm mb-4 font-semibold p-6'>
             <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
@@ -305,44 +305,6 @@ export const ProjectDetails = () => {
                   )}
                 </div>
               ))}
-              {/* {nodes?.map((node) => (
-                <div
-                  key={node.stage?.metadata?.name}
-                  className='absolute cursor-pointer'
-                  onClick={() =>
-                    navigate(
-                      generatePath(paths.stage, { name, stageName: node.stage.metadata?.name })
-                    )
-                  }
-                  style={{
-                    left: node.left,
-                    top: node.top,
-                    width: node.width,
-                    height: node.height
-                  }}
-                >
-                  <StageNode
-                    stage={node.stage}
-                    color={node.color}
-                    height={node.height}
-                    faded={isFaded(node.stage)}
-                    onPromoteClick={(type: PromotionType) => {
-                      if (promotingStage?.metadata?.name === node.stage?.metadata?.name) {
-                        setPromotingStage(undefined);
-                      } else {
-                        setPromotingStage(node.stage);
-                        setPromotionType(type);
-                      }
-                      setConfirmingPromotion(undefined);
-                    }}
-                    promoting={
-                      promotingStage?.metadata?.name === node.stage?.metadata?.name
-                        ? promotionType
-                        : undefined
-                    }
-                  />
-                </div>
-              ))} */}
               {connectors?.map((connector) =>
                 connector.map((line, i) => (
                   <div

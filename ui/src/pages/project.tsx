@@ -12,7 +12,7 @@ export const Project = () => {
   const { show } = useModal(name ? (p) => <CreateStageModal {...p} project={name} /> : undefined);
 
   return (
-    <>
+    <div className='h-full flex flex-col'>
       <div className='p-6'>
         <div className='flex items-center'>
           <div className='mr-auto'>
@@ -30,6 +30,6 @@ export const Project = () => {
         </div>
       </div>
       <ProjectDetails />
-    </>
+    </div>
   );
 };
