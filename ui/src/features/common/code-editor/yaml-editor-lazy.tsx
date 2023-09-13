@@ -98,11 +98,13 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
           </p>
         )}
       </div>
-      <div className='mt-1'>
-        <Typography.Text type='secondary'>
-          Press <strong>ctrl + space</strong> to show suggestions
-        </Typography.Text>
-      </div>
+      {!props.disabled && (
+        <div className='mt-1'>
+          <Typography.Text type='secondary'>
+            Press <strong>ctrl + space</strong> to show suggestions
+          </Typography.Text>
+        </div>
+      )}
     </>
   );
 };
