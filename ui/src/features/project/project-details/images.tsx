@@ -25,7 +25,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
         stages.add(stage.metadata?.name as string);
       });
     });
-    return [images, getStageColors(stages)];
+    return [images, getStageColors([...stages])];
   }, [stages]);
 
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
             />
           </div>
           {Array.from(image.entries())
-            .sort((a, b) => b[0].localeCompare(a[0]))
+            .sort((a, b) => b[0].localeCompare(a[0], undefined, { numeric: true }))
             .map(([tag, tagStages]) => (
               <div key={tag} className='flex items-center mb-2'>
                 <Tooltip title={tag}>

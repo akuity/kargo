@@ -199,6 +199,13 @@ export const ProjectDetails = () => {
     return [nodes, connectors, box];
   }, [data]);
 
+  const sortedStages = React.useMemo(() => {
+    return nodes
+      .filter((item) => item.type === NodeType.STAGE)
+      .sort((a, b) => a.left - b.left)
+      .map((item) => item.data) as Stage[];
+  }, [nodes]);
+
   const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
   const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
   const [promotingStage, setPromotingStage] = React.useState<Stage | undefined>();
@@ -336,7 +343,7 @@ export const ProjectDetails = () => {
             <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
           </h3>
           <div className='p-4'>
-            <Images projectName={name as string} stages={data.stages} />
+            <Images projectName={name as string} stages={sortedStages} />
           </div>
         </div>
       </div>
