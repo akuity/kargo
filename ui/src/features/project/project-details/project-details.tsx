@@ -57,23 +57,17 @@ export const ProjectDetails = () => {
       const stream = promiseClient.watchStages({ project: name }, { signal: cancel.signal });
 
       for await (const e of stream) {
-        const index = data.stages.findIndex(
-          (item) => item.metadata?.name === e.stage?.metadata?.name
-        );
-        let stages = data.stages;
+        let stages = data.stages.slice();
+        const index = stages.findIndex((item) => item.metadata?.name === e.stage?.metadata?.name);
         if (e.type === 'DELETED') {
           if (index !== -1) {
-            stages = [...stages.slice(0, index), ...data.stages.slice(index + 1)];
+            stages = [...stages.slice(0, index), ...stages.slice(index + 1)];
           }
         } else {
           if (index === -1) {
             stages = [...stages, e.stage as Stage];
           } else {
-            stages = [
-              ...data.stages.slice(0, index),
-              e.stage as Stage,
-              ...data.stages.slice(index + 1)
-            ];
+            stages = [...stages.slice(0, index), e.stage as Stage, ...stages.slice(index + 1)];
           }
         }
 
