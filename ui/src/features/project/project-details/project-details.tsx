@@ -172,6 +172,14 @@ export const ProjectDetails = () => {
         const upstreamNode = g.node(item.v);
         points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
       }
+      if (points.length > 1) {
+        // replace last point with the right side of the downstream node
+        const upstreamNode = g.node(item.w);
+        points[points.length - 1] = {
+          x: upstreamNode.x - upstreamNode.width / 2,
+          y: upstreamNode.y
+        };
+      }
 
       const lines = new Array<{ x: number; y: number; width: number; angle: number }>();
       for (let i = 0; i < points.length - 1; i++) {
