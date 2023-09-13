@@ -1,11 +1,13 @@
 import { faPen, faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Space } from 'antd';
+import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import {
   deleteStage,
+  queryFreight,
   refreshStage
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
@@ -20,6 +22,9 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
   const { name: projectName, stageName } = useParams();
   const navigate = useNavigate();
   const confirm = useConfirmModal();
+  const queryClient = useQueryClient();
+  const [shouldRefetchFreights, setShouldRefetchFreights] = React.useState(false);
+
   const { mutate, isLoading: isLoadingDelete } = useMutation(deleteStage.useMutation());
   const { mutate: refresh, isLoading: isRefreshLoading } = useMutation(refreshStage.useMutation());
 
@@ -42,6 +47,18 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
       <EditStageModal {...p} stageName={stageName} projectName={projectName} />
     ) : null
   );
+
+  // Once the Refresh process is done, refetch Freigths list
+  React.useEffect(() => {
+    if (stage?.metadata?.annotations['kargo.akuity.io/refresh']) {
+      setShouldRefetchFreights(true);
+    }
+
+    if (!stage?.metadata?.annotations['kargo.akuity.io/refresh'] && shouldRefetchFreights) {
+      queryClient.invalidateQueries({ queryKey: queryFreight.getPartialQueryKey() });
+      setShouldRefetchFreights(false);
+    }
+  }, [stage, shouldRefetchFreights]);
 
   return (
     <Space size={16}>
