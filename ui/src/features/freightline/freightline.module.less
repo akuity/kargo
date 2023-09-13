@@ -1,0 +1,35 @@
+.freightItem {
+    transition: all 0.2s;
+    padding: 0.5rem;
+    cursor: pointer;
+    height: 100%;
+    margin-right: 0.5rem;
+    border-radius: 0.5rem;
+    border: 2px solid #fff;
+    color: white;
+    @apply w-20;
+    @apply border-gray-700 hover:border-gray-500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.promotable {
+    @apply border-gray-300 hover:border-sky-400 bg-zinc-800 hover:bg-sky-700;
+}
+
+.unpromotable {
+    @apply border-gray-800 bg-zinc-900 hover:border-gray-800 text-zinc-500 cursor-default;
+}
+
+.selected {
+    @apply w-40 border-gray-400;
+}
+
+.confirming {
+    @apply w-40 bg-sky-700 border-sky-400 hover:border-sky-400;
+}
+
+.confirmButton {
+    @apply rounded text-white font-semibold p-1 cursor-pointer;
+}

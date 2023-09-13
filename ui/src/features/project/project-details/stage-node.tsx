@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Space, Tooltip } from 'antd';
 
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import { PromotionType } from '@ui/features/freightline/freightline';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
 import * as styles from './stage-node.module.less';
@@ -11,12 +12,12 @@ export const StageNode = ({
   stage,
   color,
   height,
-  onPromoteSubscribersClick
+  onPromoteClick
 }: {
   stage: Stage;
   color: string;
   height: number;
-  onPromoteSubscribersClick: () => void;
+  onPromoteClick: (type: PromotionType) => void;
 }) => (
   <div className={styles.node} style={{ backgroundColor: color, position: 'relative' }}>
     <h3 className='flex items-center text-white'>
@@ -44,7 +45,8 @@ export const StageNode = ({
         {stage.status?.currentFreight?.id?.slice(0, 7) || 'N/A'}{' '}
       </p>
     </div>
-    <Nodule nodeHeight={height} onClick={onPromoteSubscribersClick} />
+    <Nodule begin={true} nodeHeight={height} onClick={() => onPromoteClick('default')} />
+    <Nodule nodeHeight={height} onClick={() => onPromoteClick('subscribers')} />
   </div>
 );
 

@@ -11,8 +11,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
-import { useModal } from '@ui/features/common/modal/use-modal';
-import { Freightline } from '@ui/features/freightline/freightline';
+import { Freightline, PromotionType } from '@ui/features/freightline/freightline';
 import { StageDetails } from '@ui/features/stage/stage-details';
 import { getStageColors } from '@ui/features/stage/utils';
 import {
@@ -25,7 +24,6 @@ import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
 import { Images } from './images';
-import { PromoteSubscribersModal } from './promote-subscribers-modal';
 import { StageNode } from './stage-node';
 
 const lineThickness = 2;
@@ -41,8 +39,6 @@ export const ProjectDetails = () => {
   );
 
   const client = useQueryClient();
-
-  const { show: showPromoteSubscribersModal } = useModal();
 
   const isVisible = useDocumentEvent(
     'visibilitychange',
@@ -178,6 +174,8 @@ export const ProjectDetails = () => {
 
   const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
   const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
+  const [promotingStage, setPromotingStage] = React.useState<Stage | undefined>();
+  const [promotionType, setPromotionType] = React.useState('default' as PromotionType);
 
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
@@ -201,19 +199,22 @@ export const ProjectDetails = () => {
         freight={freightData?.groups['']?.freight || []}
         stagesPerFreight={stagesPerFreight}
         stageColorMap={stageColorMap}
+        promotingStage={promotingStage}
+        setPromotingStage={setPromotingStage}
+        promotionType={promotionType}
       />
       <div
         className='bg-zinc-900 text-gray-300 absolute text-sm'
-        style={{ height: 'calc(100vh - 324px)', top: '324px', width: '300px', right: 0 }}
+        style={{ height: 'calc(100vh - 324px)', top: '324px', width: '400px', right: 0 }}
       >
         <h3 className='bg-zinc-950 px-6 pb-3 pt-4 flex items-center'>
           <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
         </h3>
-        <div className='p-6'>
+        <div className='p-4'>
           <Images projectName={name as string} stages={data.stages} />
         </div>
       </div>
-      <div className='mb-16 p-6' style={{ marginRight: '300px' }}>
+      <div className='mb-16 p-6' style={{ marginRight: '400px' }}>
         <div className='text-sm mb-4 font-semibold'>
           <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
           STAGE GRAPH
@@ -240,15 +241,10 @@ export const ProjectDetails = () => {
                 stage={node.stage}
                 color={node.color}
                 height={node.height}
-                onPromoteSubscribersClick={() =>
-                  showPromoteSubscribersModal((p) => (
-                    <PromoteSubscribersModal
-                      {...p}
-                      stages={data.stages}
-                      selectedStage={node.stage}
-                    />
-                  ))
-                }
+                onPromoteClick={(type: PromotionType) => {
+                  setPromotingStage(node.stage);
+                  setPromotionType(type);
+                }}
               />
             </div>
           ))}
