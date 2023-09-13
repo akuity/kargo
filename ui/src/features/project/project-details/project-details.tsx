@@ -6,9 +6,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
 import { graphlib, layout } from 'dagre';
 import React from 'react';
-import { generatePath, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
 import { transport } from '@ui/config/transport';
 import { LoadingState } from '@ui/features/common';
 import { Freightline, PromotionType } from '@ui/features/freightline/freightline';
@@ -24,7 +23,9 @@ import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
 import { Images } from './images';
-import { StageNode } from './stage-node';
+import { RepoNode } from './nodes/repo-node';
+import { StageNode } from './nodes/stage-node';
+import { NodeType, NodesItemType } from './types';
 
 const lineThickness = 2;
 const nodeWidth = 144;
@@ -32,7 +33,6 @@ const nodeHeight = 100;
 
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
-  const navigate = useNavigate();
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
   const { data: freightData, isLoading: isLoadingFreight } = useQuery(
     queryFreight.useQuery({ project: name })
@@ -55,9 +55,9 @@ export const ProjectDetails = () => {
     const watchStages = async () => {
       const promiseClient = createPromiseClient(KargoService, transport);
       const stream = promiseClient.watchStages({ project: name }, { signal: cancel.signal });
+      let stages = data.stages.slice();
 
       for await (const e of stream) {
-        let stages = data.stages.slice();
         const index = stages.findIndex((item) => item.metadata?.name === e.stage?.metadata?.name);
         if (e.type === 'DELETED') {
           if (index !== -1) {
@@ -96,39 +96,71 @@ export const ProjectDetails = () => {
     const g = new graphlib.Graph();
     g.setGraph({ rankdir: 'LR' });
     g.setDefaultEdgeLabel(() => ({}));
-    const stageByName = new Map<string, Stage>();
-    const colorByStage = new Map<string, string>();
-    const stages = data.stages
-      .slice()
-      .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0);
 
-    const colors = getStageColors(stages);
-    stages?.forEach((stage) => {
-      const curColor = colors[stage?.metadata?.uid || ''];
-      colorByStage.set(stage.metadata?.name || '', curColor);
-      stageByName.set(stage.metadata?.name || '', stage);
-      g.setNode(stage.metadata?.name || '', {
-        label: stage.metadata?.name || '',
+    const colors = getStageColors(data.stages);
+
+    const myNodes = data.stages
+      .slice()
+      .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0)
+      .flatMap((stage) => {
+        return [
+          {
+            data: stage,
+            type: NodeType.STAGE,
+            color: colors[stage?.metadata?.uid || '']
+          },
+          ...(stage.spec?.subscriptions?.repos?.images || []).map((image) => ({
+            data: image,
+            stageName: stage.metadata?.name,
+            type: NodeType.REPO_IMAGE
+          })),
+          ...(stage.spec?.subscriptions?.repos?.git || []).map((git) => ({
+            data: git,
+            stageName: stage.metadata?.name,
+            type: NodeType.REPO_GIT
+          })),
+          ...(stage.spec?.subscriptions?.repos?.charts || []).map((chart) => ({
+            data: chart,
+            stageName: stage.metadata?.name,
+            type: NodeType.REPO_CHART
+          }))
+        ] as NodesItemType[];
+      });
+
+    myNodes.forEach((item, index) => {
+      g.setNode(String(index), {
         width: nodeWidth,
         height: nodeHeight
       });
-    });
-    stages.forEach((stage) => {
-      stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
-        g.setEdge(item.name || '', stage.metadata?.name || '');
-      });
-    });
-    layout(g);
 
-    const nodes = g.nodes().map((name) => {
-      const node = g.node(name);
+      if (item.type === NodeType.STAGE) {
+        item.data?.spec?.subscriptions?.upstreamStages.forEach((upstramStage) => {
+          const subsIndex = myNodes.findIndex((node) => {
+            return node.type === NodeType.STAGE && node.data.metadata?.name === upstramStage.name;
+          });
+
+          g.setEdge(String(subsIndex), String(index));
+        });
+      } else {
+        const subsIndex = myNodes.findIndex((node) => {
+          return node.type === NodeType.STAGE && node.data.metadata?.name === item.stageName;
+        });
+
+        g.setEdge(String(index), String(subsIndex));
+      }
+    });
+
+    layout(g, { lablepos: 'c' });
+
+    const nodes = myNodes.map((node, index) => {
+      const gNode = g.node(String(index));
+
       return {
-        left: node.x - node.width / 2,
-        top: node.y - node.height / 2,
-        width: node.width,
-        height: node.height,
-        stage: stageByName.get(name) as Stage,
-        color: colorByStage.get(name) as string
+        ...node,
+        left: gNode.x - gNode.width / 2,
+        top: gNode.y - gNode.height / 2,
+        width: gNode.width,
+        height: gNode.height
       };
     });
 
@@ -153,6 +185,7 @@ export const ProjectDetails = () => {
       }
       return lines;
     });
+
     const box = nodes.reduce(
       (acc, node) => ({
         width: Math.max(acc.width, node.left + node.width),
@@ -234,7 +267,45 @@ export const ProjectDetails = () => {
               className='relative'
               style={{ width: box?.width, height: box?.height, margin: '0 auto' }}
             >
-              {nodes?.map((node) => (
+              {nodes?.map((node, index) => (
+                <div
+                  key={index}
+                  className='absolute'
+                  style={{
+                    left: node.left,
+                    top: node.top,
+                    width: node.width,
+                    height: node.height
+                  }}
+                >
+                  {node.type === NodeType.STAGE ? (
+                    <StageNode
+                      stage={node.data}
+                      color={node.color}
+                      height={node.height}
+                      projectName={name}
+                      faded={isFaded(node.data)}
+                      onPromoteClick={(type: PromotionType) => {
+                        if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
+                          setPromotingStage(undefined);
+                        } else {
+                          setPromotingStage(node.data);
+                          setPromotionType(type);
+                        }
+                        setConfirmingPromotion(undefined);
+                      }}
+                      promoting={
+                        promotingStage?.metadata?.name === node.data?.metadata?.name
+                          ? promotionType
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <RepoNode nodeData={node} height={node.height} />
+                  )}
+                </div>
+              ))}
+              {/* {nodes?.map((node) => (
                 <div
                   key={node.stage?.metadata?.name}
                   className='absolute cursor-pointer'
@@ -271,7 +342,7 @@ export const ProjectDetails = () => {
                     }
                   />
                 </div>
-              ))}
+              ))} */}
               {connectors?.map((connector) =>
                 connector.map((line, i) => (
                   <div
