@@ -6,7 +6,6 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { Subscriptions } from '@ui/features/stage/subscriptions';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
-import { AvailableFreight } from './available-freight';
 import { ManifestPreview } from './manifest-preview';
 import { Promotions } from './promotions';
 import { StageActions } from './stage-actions';
@@ -45,16 +44,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               items={[
                 {
                   key: '1',
-                  label: 'Available Freight',
-                  children: <AvailableFreight stage={stage} />
-                },
-                {
-                  key: '2',
                   label: 'Promotions',
                   children: <Promotions />
                 },
                 {
-                  key: '3',
+                  key: '2',
                   label: 'Live Manifest',
                   children: <ManifestPreview stage={stage} />
                 }

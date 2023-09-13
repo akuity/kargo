@@ -51,7 +51,9 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
             .sort((a, b) => b[0].localeCompare(a[0]))
             .map(([tag, tagStages]) => (
               <div key={tag} className='flex items-center mb-2'>
-                <div className='mr-4 font-mono text-sm'>{tag}</div>
+                <Tooltip title={tag}>
+                  <div className='mr-4 font-mono text-sm text-right w-20 truncate'>{tag}</div>
+                </Tooltip>
                 {stages.map((stage) => (
                   <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
                     <div
