@@ -164,12 +164,19 @@ export const ProjectDetails = () => {
       };
     });
 
-    const connectors = g.edges().map((name) => {
-      const edge = g.edge(name);
+    const connectors = g.edges().map((item) => {
+      const edge = g.edge(item);
+      const points = edge.points;
+      if (points.length > 0) {
+        // replace first point with the right side of the upstream node
+        const upstreamNode = g.node(item.v);
+        points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
+      }
+
       const lines = new Array<{ x: number; y: number; width: number; angle: number }>();
-      for (let i = 0; i < edge.points.length - 1; i++) {
-        const start = edge.points[i];
-        const end = edge.points[i + 1];
+      for (let i = 0; i < points.length - 1; i++) {
+        const start = points[i];
+        const end = points[i + 1];
         const x1 = start.x;
         const y1 = start.y;
         const x2 = end.x;
