@@ -184,7 +184,7 @@ export class ArgoCDKustomize extends Message<ArgoCDKustomize> {
  */
 export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
   /**
-   * @generated from field: string repo_url = 1;
+   * @generated from field: string repo_url = 1 [json_name = "repoURL"];
    */
   repoUrl = "";
 
@@ -216,7 +216,7 @@ export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "repo_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "chart", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "update_target_revision", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 4, name: "kustomize", kind: "message", T: ArgoCDKustomize, opt: true },
@@ -276,7 +276,7 @@ export class BookkeeperPromotionMechanism extends Message<BookkeeperPromotionMec
  */
 export class Chart extends Message<Chart> {
   /**
-   * @generated from field: string registry_url = 1;
+   * @generated from field: string registry_url = 1 [json_name = "registryURL"];
    */
   registryUrl = "";
 
@@ -298,7 +298,7 @@ export class Chart extends Message<Chart> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Chart";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "registry_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "registry_url", jsonName: "registryURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
@@ -325,7 +325,7 @@ export class Chart extends Message<Chart> {
  */
 export class ChartSubscription extends Message<ChartSubscription> {
   /**
-   * @generated from field: string registry_url = 1;
+   * @generated from field: string registry_url = 1 [json_name = "registryURL"];
    */
   registryUrl = "";
 
@@ -347,7 +347,7 @@ export class ChartSubscription extends Message<ChartSubscription> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "registry_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "registry_url", jsonName: "registryURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "semver_constraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
@@ -374,7 +374,7 @@ export class ChartSubscription extends Message<ChartSubscription> {
  */
 export class GitCommit extends Message<GitCommit> {
   /**
-   * @generated from field: string repo_url = 1;
+   * @generated from field: string repo_url = 1 [json_name = "repoURL"];
    */
   repoUrl = "";
 
@@ -411,7 +411,7 @@ export class GitCommit extends Message<GitCommit> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "repo_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "health_check_commit", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -441,7 +441,7 @@ export class GitCommit extends Message<GitCommit> {
  */
 export class GitRepoUpdate extends Message<GitRepoUpdate> {
   /**
-   * @generated from field: string repo_url = 1;
+   * @generated from field: string repo_url = 1 [json_name = "repoURL"];
    */
   repoUrl = "";
 
@@ -478,7 +478,7 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "repo_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "read_branch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "write_branch", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "bookkeeper", kind: "message", T: BookkeeperPromotionMechanism, opt: true },
@@ -508,7 +508,7 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
  */
 export class GitSubscription extends Message<GitSubscription> {
   /**
-   * @generated from field: string repo_url = 1;
+   * @generated from field: string repo_url = 1 [json_name = "repoURL"];
    */
   repoUrl = "";
 
@@ -525,7 +525,7 @@ export class GitSubscription extends Message<GitSubscription> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "repo_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "branch", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
@@ -561,7 +561,7 @@ export class Health extends Message<Health> {
   issues: string[] = [];
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState argocd_apps = 3;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState argocd_apps = 3 [json_name = "argoCDApps"];
    */
   argocdApps: ArgoCDAppState[] = [];
 
@@ -575,7 +575,7 @@ export class Health extends Message<Health> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "issues", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "argocd_apps", kind: "message", T: ArgoCDAppState, repeated: true },
+    { no: 3, name: "argocd_apps", jsonName: "argoCDApps", kind: "message", T: ArgoCDAppState, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Health {
@@ -747,7 +747,7 @@ export class ArgoCDAppSyncStatus extends Message<ArgoCDAppSyncStatus> {
  */
 export class HelmChartDependencyUpdate extends Message<HelmChartDependencyUpdate> {
   /**
-   * @generated from field: string registry_url = 1;
+   * @generated from field: string registry_url = 1 [json_name = "registryURL"];
    */
   registryUrl = "";
 
@@ -769,7 +769,7 @@ export class HelmChartDependencyUpdate extends Message<HelmChartDependencyUpdate
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.HelmChartDependencyUpdate";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "registry_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "registry_url", jsonName: "registryURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "chart_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
@@ -894,7 +894,7 @@ export class HelmPromotionMechanism extends Message<HelmPromotionMechanism> {
  */
 export class Image extends Message<Image> {
   /**
-   * @generated from field: string repo_url = 1;
+   * @generated from field: string repo_url = 1 [json_name = "repoURL"];
    */
   repoUrl = "";
 
@@ -911,7 +911,7 @@ export class Image extends Message<Image> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Image";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "repo_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
@@ -937,7 +937,7 @@ export class Image extends Message<Image> {
  */
 export class ImageSubscription extends Message<ImageSubscription> {
   /**
-   * @generated from field: string repo_url = 1;
+   * @generated from field: string repo_url = 1 [json_name = "repoURL"];
    */
   repoUrl = "";
 
@@ -974,7 +974,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "repo_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "update_strategy", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "semver_constraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "allow_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -1150,7 +1150,7 @@ export class PromotionInfo extends Message<PromotionInfo> {
   name = "";
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 2;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 2 [json_name = "feight"];
    */
   freight?: Freight;
 
@@ -1163,7 +1163,7 @@ export class PromotionInfo extends Message<PromotionInfo> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "freight", kind: "message", T: Freight },
+    { no: 2, name: "freight", jsonName: "feight", kind: "message", T: Freight },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionInfo {
@@ -1236,7 +1236,7 @@ export class PromotionMechanisms extends Message<PromotionMechanisms> {
   gitRepoUpdates: GitRepoUpdate[] = [];
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate argocd_app_updates = 2;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate argocd_app_updates = 2 [json_name = "argoCDAppUpdates"];
    */
   argocdAppUpdates: ArgoCDAppUpdate[] = [];
 
@@ -1249,7 +1249,7 @@ export class PromotionMechanisms extends Message<PromotionMechanisms> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "git_repo_updates", kind: "message", T: GitRepoUpdate, repeated: true },
-    { no: 2, name: "argocd_app_updates", kind: "message", T: ArgoCDAppUpdate, repeated: true },
+    { no: 2, name: "argocd_app_updates", jsonName: "argoCDAppUpdates", kind: "message", T: ArgoCDAppUpdate, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionMechanisms {
