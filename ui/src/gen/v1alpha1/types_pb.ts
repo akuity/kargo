@@ -1150,7 +1150,7 @@ export class PromotionInfo extends Message<PromotionInfo> {
   name = "";
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 2 [json_name = "feight"];
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 2;
    */
   freight?: Freight;
 
@@ -1163,7 +1163,7 @@ export class PromotionInfo extends Message<PromotionInfo> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "freight", jsonName: "feight", kind: "message", T: Freight },
+    { no: 2, name: "freight", kind: "message", T: Freight },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionInfo {

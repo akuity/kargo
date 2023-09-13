@@ -148,7 +148,7 @@ message Promotion {
 
 message PromotionInfo {
   string name = 1 [json_name = "name"];
-  Freight freight = 2 [json_name = "feight"];
+  Freight freight = 2 [json_name = "freight"];
 }
 
 message PromotionList {
