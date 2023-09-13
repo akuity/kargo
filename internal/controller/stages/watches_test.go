@@ -58,7 +58,7 @@ func TestEnqueueDownstreamStagesHandler(t *testing.T) {
 			enqueued: false,
 		},
 		{
-			name: "new item in history",
+			name: "new item in history, not yet qualified",
 			stages: []*v1alpha1.Stage{
 				&downstreamStage,
 			},
@@ -87,10 +87,43 @@ func TestEnqueueDownstreamStagesHandler(t *testing.T) {
 					},
 				},
 			},
+			enqueued: false,
+		},
+		{
+			name: "new item in history, qualified",
+			stages: []*v1alpha1.Stage{
+				&downstreamStage,
+			},
+			updateEvt: &event.UpdateEvent{
+				ObjectOld: &v1alpha1.Stage{},
+				ObjectNew: &v1alpha1.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "upstream",
+						Namespace: "kargo-test",
+					},
+					Spec: &v1alpha1.StageSpec{
+						Subscriptions: &v1alpha1.Subscriptions{
+							UpstreamStages: []v1alpha1.StageSubscription{
+								{
+									Name: "downstream",
+								},
+							},
+						},
+					},
+					Status: v1alpha1.StageStatus{
+						History: []v1alpha1.Freight{
+							{
+								ID:        "abc123",
+								Qualified: true,
+							},
+						},
+					},
+				},
+			},
 			enqueued: true,
 		},
 		{
-			name: "history changed",
+			name: "history changed, not qualified",
 			stages: []*v1alpha1.Stage{
 				&downstreamStage,
 			},
@@ -140,10 +173,65 @@ func TestEnqueueDownstreamStagesHandler(t *testing.T) {
 					},
 				},
 			},
-			enqueued: true,
+			enqueued: false,
 		},
 		{
-			name: "history did not change",
+			name: "qualified did not change",
+			stages: []*v1alpha1.Stage{
+				&downstreamStage,
+			},
+			updateEvt: &event.UpdateEvent{
+				ObjectOld: &v1alpha1.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "upstream",
+						Namespace: "kargo-test",
+					},
+					Spec: &v1alpha1.StageSpec{
+						Subscriptions: &v1alpha1.Subscriptions{
+							UpstreamStages: []v1alpha1.StageSubscription{
+								{
+									Name: "downstream",
+								},
+							},
+						},
+					},
+					Status: v1alpha1.StageStatus{
+						History: []v1alpha1.Freight{
+							{
+								ID:        "abc123",
+								Qualified: true,
+							},
+						},
+					},
+				},
+				ObjectNew: &v1alpha1.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "upstream",
+						Namespace: "kargo-test",
+					},
+					Spec: &v1alpha1.StageSpec{
+						Subscriptions: &v1alpha1.Subscriptions{
+							UpstreamStages: []v1alpha1.StageSubscription{
+								{
+									Name: "downstream",
+								},
+							},
+						},
+					},
+					Status: v1alpha1.StageStatus{
+						History: []v1alpha1.Freight{
+							{
+								ID:        "abc123",
+								Qualified: true,
+							},
+						},
+					},
+				},
+			},
+			enqueued: false,
+		},
+		{
+			name: "qualified changed",
 			stages: []*v1alpha1.Stage{
 				&downstreamStage,
 			},
@@ -187,13 +275,14 @@ func TestEnqueueDownstreamStagesHandler(t *testing.T) {
 					Status: v1alpha1.StageStatus{
 						History: []v1alpha1.Freight{
 							{
-								ID: "abc123",
+								ID:        "abc123",
+								Qualified: true,
 							},
 						},
 					},
 				},
 			},
-			enqueued: false,
+			enqueued: true,
 		},
 	}
 

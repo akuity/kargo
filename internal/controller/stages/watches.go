@@ -53,20 +53,11 @@ func (e *EnqueueDownstreamStagesHandler) Update(evt event.UpdateEvent, q workque
 		e.logger.Errorf("Failed to convert old stage: %v", evt.ObjectOld)
 		return
 	}
-	var oldFreight, newFreight *v1alpha1.Freight
-	if len(oldStage.Status.History) > 0 {
-		oldFreight = &oldStage.Status.History[0]
-	}
-	if len(newStage.Status.History) > 0 {
-		newFreight = &newStage.Status.History[0]
-	}
-	if newFreight == nil {
+	if !newQualifiedFreight(oldStage, newStage) {
 		return
 	}
-	if oldFreight != nil && oldFreight.ID == newFreight.ID {
-		return
-	}
-	// If we get here, the history of the given Stage has changed.
+
+	// If we get here, we have new qualified freight in the Stage
 	// Find downstream Stages and enqueue them
 	var namespaceStages v1alpha1.StageList
 	inNamespace := client.ListOptions{Namespace: newStage.Namespace}
@@ -91,6 +82,24 @@ func (e *EnqueueDownstreamStagesHandler) Update(evt event.UpdateEvent, q workque
 			}
 		}
 	}
+}
+
+// newQualifiedFreight returns whether or not there is new qualified freight in the Stage history
+func newQualifiedFreight(old, new *v1alpha1.Stage) bool {
+	oldQualified := make(map[string]bool)
+	for _, f := range old.Status.History {
+		if f.Qualified {
+			oldQualified[f.ID] = true
+		}
+	}
+
+	for _, f := range new.Status.History {
+		if f.Qualified && !oldQualified[f.ID] {
+			// something just got qualified
+			return true
+		}
+	}
+	return false
 }
 
 // PromoWentTerminal is a predicate that returns true if a promotion went terminal
