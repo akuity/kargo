@@ -170,6 +170,10 @@ export const ProjectDetails = () => {
   const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
   const [promotingStage, setPromotingStage] = React.useState<Stage | undefined>();
   const [promotionType, setPromotionType] = React.useState('default' as PromotionType);
+  const [confirmingPromotion, setConfirmingPromotion] = React.useState<string | undefined>();
+  const [subscribersByStage, setSubscribersByStage] = React.useState<{ [key: string]: Stage[] }>(
+    {}
+  );
 
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
@@ -178,14 +182,34 @@ export const ProjectDetails = () => {
     (data?.stages || []).forEach((stage) => {
       const items = stagesPerFreight[stage.status?.currentFreight?.id || ''] || [];
       stagesPerFreight[stage.status?.currentFreight?.id || ''] = [...items, stage];
+      stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
+        const items = subscribersByStage[item.name || ''] || [];
+        subscribersByStage[item.name || ''] = [...items, stage];
+      });
     });
     setStagesPerFreight(stagesPerFreight);
+    setSubscribersByStage(subscribersByStage);
   }, [data, freightData]);
 
   if (isLoading || isLoadingFreight) return <LoadingState />;
 
   if (!data || data.stages.length === 0) return <Empty />;
   const stage = stageName && data.stages.find((item) => item.metadata?.name === stageName);
+
+  const isFaded = (stage: Stage): boolean => {
+    if (!promotingStage || !confirmingPromotion) {
+      return false;
+    }
+    if (promotionType === 'default') {
+      return promotingStage?.metadata?.name !== stage?.metadata?.name;
+    }
+    if (promotionType === 'subscribers') {
+      return !subscribersByStage[promotingStage?.metadata?.name || '']?.find(
+        (item) => item.metadata?.name === stage?.metadata?.name
+      );
+    }
+    return false;
+  };
 
   return (
     <div>
@@ -196,69 +220,91 @@ export const ProjectDetails = () => {
         promotingStage={promotingStage}
         setPromotingStage={setPromotingStage}
         promotionType={promotionType}
+        confirmingPromotion={confirmingPromotion}
+        setConfirmingPromotion={setConfirmingPromotion}
       />
-      <div
-        className='bg-zinc-900 text-gray-300 absolute text-sm'
-        style={{ height: 'calc(100vh - 324px)', top: '324px', width: '400px', right: 0 }}
-      >
-        <h3 className='bg-zinc-950 px-6 pb-3 pt-4 flex items-center'>
-          <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
-        </h3>
-        <div className='p-4'>
-          <Images projectName={name as string} stages={data.stages} />
-        </div>
-      </div>
-      <div className='mb-16 p-6' style={{ marginRight: '400px' }}>
-        <div className='text-sm mb-4 font-semibold'>
-          <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
-          STAGE GRAPH
+      <div className='flex items-stretch w-full h-full'>
+        <div className='overflow-hidden flex-grow w-full'>
+          <div className='text-sm mb-4 font-semibold p-6'>
+            <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
+            STAGE GRAPH
+          </div>
+          <div className='overflow-auto p-6'>
+            <div
+              className='relative'
+              style={{ width: box?.width, height: box?.height, margin: '0 auto' }}
+            >
+              {nodes?.map((node) => (
+                <div
+                  key={node.stage?.metadata?.name}
+                  className='absolute cursor-pointer'
+                  onClick={() =>
+                    navigate(
+                      generatePath(paths.stage, { name, stageName: node.stage.metadata?.name })
+                    )
+                  }
+                  style={{
+                    left: node.left,
+                    top: node.top,
+                    width: node.width,
+                    height: node.height
+                  }}
+                >
+                  <StageNode
+                    stage={node.stage}
+                    color={node.color}
+                    height={node.height}
+                    faded={isFaded(node.stage)}
+                    onPromoteClick={(type: PromotionType) => {
+                      if (promotingStage?.metadata?.name === node.stage?.metadata?.name) {
+                        setPromotingStage(undefined);
+                      } else {
+                        setPromotingStage(node.stage);
+                        setPromotionType(type);
+                      }
+                      setConfirmingPromotion(undefined);
+                    }}
+                    promoting={
+                      promotingStage?.metadata?.name === node.stage?.metadata?.name
+                        ? promotionType
+                        : undefined
+                    }
+                  />
+                </div>
+              ))}
+              {connectors?.map((connector) =>
+                connector.map((line, i) => (
+                  <div
+                    className='absolute bg-gray-400'
+                    style={{
+                      padding: 0,
+                      margin: 0,
+                      height: lineThickness,
+                      width: line.width,
+                      left: line.x,
+                      top: line.y,
+                      transform: `rotate(${line.angle}deg)`
+                    }}
+                    key={i}
+                  />
+                ))
+              )}
+            </div>
+          </div>
         </div>
         <div
-          className='relative'
-          style={{ width: box?.width, height: box?.height, margin: '0 auto' }}
+          className='text-gray-300 text-sm'
+          style={{
+            width: '400px',
+            backgroundColor: '#222'
+          }}
         >
-          {nodes?.map((node) => (
-            <div
-              key={node.stage?.metadata?.name}
-              className='absolute cursor-pointer'
-              onClick={() =>
-                navigate(generatePath(paths.stage, { name, stageName: node.stage.metadata?.name }))
-              }
-              style={{
-                left: node.left,
-                top: node.top,
-                width: node.width,
-                height: node.height
-              }}
-            >
-              <StageNode
-                stage={node.stage}
-                color={node.color}
-                height={node.height}
-                onPromoteClick={(type: PromotionType) => {
-                  setPromotingStage(node.stage);
-                  setPromotionType(type);
-                }}
-              />
-            </div>
-          ))}
-          {connectors?.map((connector) =>
-            connector.map((line, i) => (
-              <div
-                className='absolute bg-gray-400'
-                style={{
-                  padding: 0,
-                  margin: 0,
-                  height: lineThickness,
-                  width: line.width,
-                  left: line.x,
-                  top: line.y,
-                  transform: `rotate(${line.angle}deg)`
-                }}
-                key={i}
-              />
-            ))
-          )}
+          <h3 className='bg-black px-6 pb-3 pt-4 flex items-center'>
+            <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
+          </h3>
+          <div className='p-4'>
+            <Images projectName={name as string} stages={data.stages} />
+          </div>
         </div>
       </div>
       {stage && <StageDetails stage={stage} />}

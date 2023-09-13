@@ -1,4 +1,4 @@
-import { faGear } from '@fortawesome/free-solid-svg-icons';
+import { faDiagramProject, faGear, faTurnUp } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Space, Tooltip } from 'antd';
 
@@ -12,14 +12,26 @@ export const StageNode = ({
   stage,
   color,
   height,
-  onPromoteClick
+  faded,
+  onPromoteClick,
+  hasNoSubscribers,
+  promoting
 }: {
   stage: Stage;
   color: string;
   height: number;
+  faded: boolean;
+  hasNoSubscribers?: boolean;
+  promoting?: PromotionType;
   onPromoteClick: (type: PromotionType) => void;
 }) => (
-  <div className={styles.node} style={{ backgroundColor: color, position: 'relative' }}>
+  <div
+    className={`${styles.node} ${faded ? styles.faded : ''}`}
+    style={{
+      backgroundColor: color,
+      position: 'relative'
+    }}
+  >
     <h3 className='flex items-center text-white'>
       <div>{stage.metadata?.name}</div>
       <Space className='absolute right-1'>
@@ -45,13 +57,31 @@ export const StageNode = ({
         {stage.status?.currentFreight?.id?.slice(0, 7) || 'N/A'}{' '}
       </p>
     </div>
-    <Nodule begin={true} nodeHeight={height} onClick={() => onPromoteClick('default')} />
-    <Nodule nodeHeight={height} onClick={() => onPromoteClick('subscribers')} />
+    {!hasNoSubscribers && (
+      <>
+        <Nodule
+          begin={true}
+          nodeHeight={height}
+          onClick={() => onPromoteClick('default')}
+          selected={promoting === 'default'}
+        />
+        <Nodule
+          nodeHeight={height}
+          onClick={() => onPromoteClick('subscribers')}
+          selected={promoting === 'subscribers'}
+        />
+      </>
+    )}
   </div>
 );
 
-const Nodule = (props: { begin?: boolean; nodeHeight: number; onClick?: () => void }) => {
-  const noduleHeight = 16;
+const Nodule = (props: {
+  begin?: boolean;
+  nodeHeight: number;
+  onClick?: () => void;
+  selected?: boolean;
+}) => {
+  const noduleHeight = 25;
   const top = props.nodeHeight / 2 - noduleHeight / 2;
   return (
     <div
@@ -64,11 +94,15 @@ const Nodule = (props: { begin?: boolean; nodeHeight: number; onClick?: () => vo
       style={{
         top: top,
         height: noduleHeight,
-        width: noduleHeight
+        width: noduleHeight,
+        left: props.begin ? -noduleHeight / 2 : 'auto',
+        right: props.begin ? 'auto' : -noduleHeight / 2
       }}
-      className={`z-10 bg-gray-400 hover:bg-blue-400 absolute ${
-        props.begin ? '-left-2' : '-right-2'
-      } rounded-md`}
-    />
+      className={`z-10 flex items-center justify-center hover:text-white border border-sky-300 border-solid hover:bg-blue-400 absolute rounded-lg ${
+        props.selected ? 'text-white bg-blue-400' : 'bg-blue-100 text-blue-400'
+      }`}
+    >
+      <FontAwesomeIcon icon={props.begin ? faTurnUp : faDiagramProject} />
+    </div>
   );
 };
