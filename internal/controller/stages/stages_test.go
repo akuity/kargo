@@ -250,10 +250,14 @@ func TestSync(t *testing.T) {
 					Subscriptions: &kargoapi.Subscriptions{
 						Repos: &kargoapi.RepoSubscriptions{},
 					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					// TODO: I'm not sure about this change
 					// HealthChecks: &kargoapi.HealthChecks{},
 				},
 				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateHealthy,
+					},
 					AvailableFreight: []kargoapi.Freight{
 						{
 							Commits: []kargoapi.GitCommit{
@@ -786,6 +790,59 @@ func TestSync(t *testing.T) {
 				err = client.List(context.Background(), &promos)
 				require.NoError(t, err)
 				require.Len(t, promos.Items, 1)
+			},
+		},
+
+		{
+			name: "control-flow stage",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						UpstreamStages: []kargoapi.StageSubscription{
+							{
+								Name: "upstream",
+							},
+						},
+					},
+					PromotionMechanisms: nil,
+				},
+				Status: kargoapi.StageStatus{
+					AvailableFreight: []kargoapi.Freight{
+						{
+							Commits: []kargoapi.GitCommit{
+								{
+									RepoURL: "fake-url",
+									ID:      "fake-commit",
+								},
+							},
+						},
+					},
+					CurrentFreight: &kargoapi.Freight{},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				getAvailableFreightFromUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				_ client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Nil(t, newStatus.CurrentFreight)
+				require.Len(t, newStatus.History, len(initialStatus.AvailableFreight))
+				for i, f := range newStatus.History {
+					require.Equal(t, initialStatus.AvailableFreight[i].ID, f.ID)
+					require.True(t, f.Qualified)
+				}
 			},
 		},
 	}

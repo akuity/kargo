@@ -438,9 +438,15 @@ func (r *reconciler) promote(
 	// so we are safe from race conditions and can just update the status
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
 		status.CurrentPromotion = nil
-		status.CurrentFreight = &nextFreight
-		status.AvailableFreight[targetFreightIndex] = nextFreight
-		status.History.Push(nextFreight)
+		// control-flow Stage history is maintained in Stage controller.
+		// So we only modify history for normal Stages.
+		// (Technically, we should prevent creating promotion jobs on
+		// control-flow stages in the first place)
+		if stage.Spec.PromotionMechanisms != nil {
+			status.CurrentFreight = &nextFreight
+			status.AvailableFreight[targetFreightIndex] = nextFreight
+			status.History.Push(nextFreight)
+		}
 	})
 
 	return errors.Wrapf(
