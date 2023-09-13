@@ -52,6 +52,7 @@ export const Freightline = (props: {
       message.success(
         `All subscribers of "${promotingStage?.metadata?.name}" stage have been promoted.`
       );
+      setPromotingStage(undefined);
     }
   });
 
@@ -62,6 +63,7 @@ export const Freightline = (props: {
     },
     onSuccess: () => {
       message.success(`Stage "${promotingStage?.metadata?.name}" has been promoted.`);
+      setPromotingStage(undefined);
     }
   });
 
