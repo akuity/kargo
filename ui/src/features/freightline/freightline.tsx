@@ -52,6 +52,7 @@ export const Freightline = (props: {
       message.success(
         `All subscribers of "${promotingStage?.metadata?.name}" stage have been promoted.`
       );
+      setPromotingStage(undefined);
     }
   });
 
@@ -62,6 +63,7 @@ export const Freightline = (props: {
     },
     onSuccess: () => {
       message.success(`Stage "${promotingStage?.metadata?.name}" has been promoted.`);
+      setPromotingStage(undefined);
     }
   });
 
@@ -335,7 +337,7 @@ const FreightItem = (props: {
             confirmingPromotion ? 'text-white' : 'text-gray-400'
           }`}
         >
-          {freight?.id?.substring(0, 6)}
+          {freight?.id?.substring(0, 7)}
         </div>
       </div>
     </div>
