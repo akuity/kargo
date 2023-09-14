@@ -52,7 +52,10 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
   return (
     <>
-      <div style={{ border: '1px solid #d9d9d9' }} className={className}>
+      <div
+        style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
+        className={className}
+      >
         <Editor
           options={{
             readOnly: disabled,

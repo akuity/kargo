@@ -14,5 +14,6 @@ export const ManifestPreview = ({ stage }: { stage: Stage }) => {
     }
     return v;
   });
-  return <YamlEditor value={encodedStage} height='500px' disabled />;
+
+  return <YamlEditor value={encodedStage} height='100%' disabled />;
 };
