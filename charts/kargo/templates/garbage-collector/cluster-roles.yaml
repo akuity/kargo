@@ -15,6 +15,15 @@ rules:
   - get
   - list
   - watch
+# The garbage collector cannot actually carry our promotions because it lacks
+# permission to create Promotion resources, but having the custom promote verb
+# on Stages allows it to delete Promotion resources associated with any Stage.
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote
 - apiGroups:
   - kargo.akuity.io
   resources:
