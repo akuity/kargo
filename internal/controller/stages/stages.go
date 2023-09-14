@@ -345,6 +345,19 @@ func (r *reconciler) syncStage(
 			status.CurrentFreight,
 			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		)
+	} else {
+		// If a Stage has no promotion mechanisms, the stage is being used
+		// as a control-flow. For now, this just means all availableFreight
+		// is automatically & immediately qualified for downstream stages.
+		// In the future, we may have more options before qualifying them
+		// (e.g. require that they were qualified in all our upstreams)
+		status.History = status.AvailableFreight.DeepCopy()
+		for i := range status.History {
+			status.History[i].Qualified = true
+		}
+		// Also, a Stage without promotion mechanisms doesn't have
+		// a "current" freight. Make sure this is empty to avoid confusion
+		status.CurrentFreight = nil
 	}
 	if status.CurrentFreight != nil &&
 		(status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) {

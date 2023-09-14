@@ -164,12 +164,27 @@ export const ProjectDetails = () => {
       };
     });
 
-    const connectors = g.edges().map((name) => {
-      const edge = g.edge(name);
+    const connectors = g.edges().map((item) => {
+      const edge = g.edge(item);
+      const points = edge.points;
+      if (points.length > 0) {
+        // replace first point with the right side of the upstream node
+        const upstreamNode = g.node(item.v);
+        points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
+      }
+      if (points.length > 1) {
+        // replace last point with the right side of the downstream node
+        const upstreamNode = g.node(item.w);
+        points[points.length - 1] = {
+          x: upstreamNode.x - upstreamNode.width / 2,
+          y: upstreamNode.y
+        };
+      }
+
       const lines = new Array<{ x: number; y: number; width: number; angle: number }>();
-      for (let i = 0; i < edge.points.length - 1; i++) {
-        const start = edge.points[i];
-        const end = edge.points[i + 1];
+      for (let i = 0; i < points.length - 1; i++) {
+        const start = points[i];
+        const end = points[i + 1];
         const x1 = start.x;
         const y1 = start.y;
         const x2 = end.x;
@@ -198,6 +213,13 @@ export const ProjectDetails = () => {
     );
     return [nodes, connectors, box];
   }, [data]);
+
+  const sortedStages = React.useMemo(() => {
+    return nodes
+      .filter((item) => item.type === NodeType.STAGE)
+      .sort((a, b) => a.left - b.left)
+      .map((item) => item.data) as Stage[];
+  }, [nodes]);
 
   const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
   const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
@@ -336,7 +358,7 @@ export const ProjectDetails = () => {
             <FontAwesomeIcon icon={faDocker} className='mr-2' /> IMAGES
           </h3>
           <div className='p-4'>
-            <Images projectName={name as string} stages={data.stages} />
+            <Images projectName={name as string} stages={sortedStages} />
           </div>
         </div>
       </div>
