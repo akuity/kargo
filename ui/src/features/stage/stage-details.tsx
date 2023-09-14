@@ -19,7 +19,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
       {stage && (
-        <>
+        <div className='flex flex-col h-full'>
           <div className='flex items-center justify-between'>
             <div className='flex gap-1 items-start'>
               <HealthStatusIcon
@@ -37,10 +37,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           </div>
           <Divider style={{ marginTop: '1em' }} />
 
-          <div className='flex flex-col gap-8'>
+          <div className='flex flex-col gap-8 flex-1'>
             <Subscriptions subscriptions={stage.spec?.subscriptions} projectName={projectName} />
             <Tabs
+              className='flex-1'
               defaultActiveKey='1'
+              style={{ minHeight: '500px' }}
               items={[
                 {
                   key: '1',
@@ -50,12 +52,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: '2',
                   label: 'Live Manifest',
+                  className: 'h-full pb-2',
                   children: <ManifestPreview stage={stage} />
                 }
               ]}
             />
           </div>
-        </>
+        </div>
       )}
     </Drawer>
   );
