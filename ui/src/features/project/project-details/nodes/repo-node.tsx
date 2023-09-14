@@ -47,7 +47,7 @@ const RepoNodeBody = ({ label, value }: { label: string; value: string }) => (
   <>
     <div className={styles.label}>{label}</div>
     <Tooltip title={value}>
-      <a href={urlWithProtocol(value)} className={styles.value} target='_blanl' rel='noreferrer'>
+      <a href={urlWithProtocol(value)} className={styles.value} target='_blank' rel='noreferrer'>
         {value.length > MAX_CHARS && '...'}
         {value.substring(value.length - MAX_CHARS)}
       </a>
