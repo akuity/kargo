@@ -1,4 +1,5 @@
 import Editor, { loader } from '@monaco-editor/react';
+import { Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import * as monaco from 'monaco-editor';
 import { setDiagnosticsOptions } from 'monaco-yaml';
@@ -50,52 +51,61 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
   };
 
   return (
-    <div style={{ border: '1px solid #d9d9d9' }} className={className}>
-      <Editor
-        options={{
-          readOnly: disabled,
-          lineDecorationsWidth: 5,
-          lineNumbersMinChars: 0,
-          glyphMargin: false,
-          folding: false,
-          lineNumbers: 'off',
-          minimap: {
-            enabled: false
-          },
-          fontSize: 11
-        }}
-        width={width}
-        height={height}
-        language='yaml'
-        value={value}
-        onChange={handleOnChange}
-        onMount={handleEditorDidMount}
-      />
-
-      {placeholder && (
-        <p
-          className={`${styles.placeholderWrapper} font-mono`}
-          onClick={() => {
-            editorRef.current?.focus?.();
+    <>
+      <div style={{ border: '1px solid #d9d9d9' }} className={className}>
+        <Editor
+          options={{
+            readOnly: disabled,
+            lineDecorationsWidth: 5,
+            lineNumbersMinChars: 0,
+            glyphMargin: false,
+            folding: false,
+            lineNumbers: 'off',
+            minimap: {
+              enabled: false
+            },
+            fontSize: 11
           }}
-        >
-          {!value &&
-            placeholder
-              ?.trim()
-              ?.split('\n')
-              .map((line, i) => (
-                <React.Fragment key={i}>
-                  {line
-                    .split('')
-                    .map((char, j) =>
-                      char === ' ' ? <React.Fragment key={j}>&nbsp;</React.Fragment> : char
-                    )}
-                  <br />
-                </React.Fragment>
-              ))}
-        </p>
+          width={width}
+          height={height}
+          language='yaml'
+          value={value}
+          onChange={handleOnChange}
+          onMount={handleEditorDidMount}
+        />
+
+        {placeholder && (
+          <p
+            className={`${styles.placeholderWrapper} font-mono`}
+            onClick={() => {
+              editorRef.current?.focus?.();
+            }}
+          >
+            {!value &&
+              placeholder
+                ?.trim()
+                ?.split('\n')
+                .map((line, i) => (
+                  <React.Fragment key={i}>
+                    {line
+                      .split('')
+                      .map((char, j) =>
+                        char === ' ' ? <React.Fragment key={j}>&nbsp;</React.Fragment> : char
+                      )}
+                    <br />
+                  </React.Fragment>
+                ))}
+          </p>
+        )}
+      </div>
+      {!props.disabled && (
+        <div className='mt-1'>
+          <Typography.Text type='secondary'>
+            Press <strong>ctrl + space</strong> to show suggestions
+          </Typography.Text>
+        </div>
       )}
-    </div>
+    </>
   );
 };
 
