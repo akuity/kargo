@@ -337,7 +337,7 @@ const FreightItem = (props: {
             confirmingPromotion ? 'text-white' : 'text-gray-400'
           }`}
         >
-          {freight?.id?.substring(0, 6)}
+          {freight?.id?.substring(0, 7)}
         </div>
       </div>
     </div>
