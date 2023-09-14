@@ -1,4 +1,5 @@
-## Default values for kargo
+## Default values for kargo.
+## A human-readable version can be found in the chart README.
 ## This is a YAML-formatted file.
 ## Declare variables to be passed into your templates.
 
