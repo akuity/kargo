@@ -167,7 +167,7 @@ func (w *webhook) validateImageSubs(
 	f *field.Path,
 	subs []kargoapi.ImageSubscription,
 ) field.ErrorList {
-	errs := make(field.ErrorList, 0, len(subs))
+	var errs field.ErrorList
 	for i, sub := range subs {
 		errs = append(errs, w.validateImageSub(f.Index(i), sub)...)
 	}
@@ -197,7 +197,7 @@ func (w *webhook) validateChartSubs(
 	f *field.Path,
 	subs []kargoapi.ChartSubscription,
 ) field.ErrorList {
-	errs := make(field.ErrorList, 0, len(subs))
+	var errs field.ErrorList
 	for i, sub := range subs {
 		errs = append(errs, w.validateChartSub(f.Index(i), sub)...)
 	}
@@ -250,7 +250,7 @@ func (w *webhook) validateGitRepoUpdates(
 	f *field.Path,
 	updates []kargoapi.GitRepoUpdate,
 ) field.ErrorList {
-	errs := make(field.ErrorList, 0, len(updates))
+	var errs field.ErrorList
 	for i, update := range updates {
 		errs = append(errs, w.validateGitRepoUpdate(f.Index(i), update)...)
 	}

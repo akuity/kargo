@@ -343,7 +343,7 @@ func TestCleanProject(t *testing.T) {
 		err := kargoapi.AddToScheme(scheme)
 		require.NoError(t, err)
 
-		initialPromos := make([]client.Object, 0, numPromos)
+		initialPromos := make([]client.Object, numPromos)
 		creationTime := time.Now()
 		for i := 0; i < numPromos; i++ {
 			// We make each Promotion look newer then the last to ensure the sort
