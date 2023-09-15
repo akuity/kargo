@@ -65,14 +65,17 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
 
   const { data: config } = useQuery(getConfig.useQuery());
   const argoCDAppsLinks = React.useMemo(() => {
-    const shards = Object.values(config?.argocdShards || {});
+    const shardKey = stage?.metadata?.annotations['kargo.akuity.io/shard'] || '';
+    const shard = config?.argocdShards?.[shardKey];
 
-    return shards.flatMap((shard) => {
-      return stage.spec?.promotionMechanisms?.argocdAppUpdates.map((argoCD) => ({
-        label: argoCD.appName,
-        url: `${shard.url}/applications/${shard.namespace}/${argoCD.appName}`
-      }));
-    });
+    if (!shard || !stage.spec?.promotionMechanisms?.argocdAppUpdates.length) {
+      return [];
+    }
+
+    return stage.spec?.promotionMechanisms?.argocdAppUpdates.map((argoCD) => ({
+      label: argoCD.appName,
+      url: `${shard.url}/applications/${shard.namespace}/${argoCD.appName}`
+    }));
   }, [config, stage]);
 
   return (
