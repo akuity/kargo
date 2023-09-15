@@ -13,6 +13,55 @@ import (
 	"github.com/akuity/kargo/internal/types"
 )
 
+type StandardConfig struct {
+	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
+	UIDirectory             string        `envconfig:"UI_DIR" default:"./ui/build"`
+}
+
+type ServerConfig struct {
+	StandardConfig
+	LocalMode      bool
+	TLSConfig      *TLSConfig
+	OIDCConfig     *oidc.Config
+	AdminConfig    *AdminConfig
+	DexProxyConfig *dex.ProxyConfig
+	ArgoCDConfig   ArgoCDConfig
+}
+
+func ServerConfigFromEnv() ServerConfig {
+	cfg := ServerConfig{}
+	envconfig.MustProcess("", &cfg.StandardConfig)
+	if types.MustParseBool(os.GetEnv("TLS_ENABLED", "false")) {
+		tlsCfg := TLSConfigFromEnv()
+		cfg.TLSConfig = &tlsCfg
+	}
+	if types.MustParseBool(os.GetEnv("OIDC_ENABLED", "false")) {
+		oidcCfg := oidc.ConfigFromEnv()
+		cfg.OIDCConfig = &oidcCfg
+	}
+	if types.MustParseBool(os.GetEnv("ADMIN_ACCOUNT_ENABLED", "false")) {
+		adminCfg := AdminConfigFromEnv()
+		cfg.AdminConfig = &adminCfg
+	}
+	if types.MustParseBool(os.GetEnv("DEX_ENABLED", "false")) {
+		dexProxyCfg := dex.ProxyConfigFromEnv()
+		cfg.DexProxyConfig = &dexProxyCfg
+	}
+	envconfig.MustProcess("", &cfg.ArgoCDConfig)
+	return cfg
+}
+
+type TLSConfig struct {
+	CertPath string `envconfig:"TLS_CERT_PATH" required:"true"`
+	KeyPath  string `envconfig:"TLS_KEY_PATH" required:"true"`
+}
+
+func TLSConfigFromEnv() TLSConfig {
+	cfg := TLSConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // AdminConfig represents configuration for an admin account.
 type AdminConfig struct {
 	// HashedPassword is a bcrypt hash of the password for the admin account.
@@ -35,39 +84,6 @@ type AdminConfig struct {
 func AdminConfigFromEnv() AdminConfig {
 	cfg := AdminConfig{}
 	envconfig.MustProcess("", &cfg)
-	return cfg
-}
-
-type ServerConfig struct {
-	StandardConfig
-	LocalMode      bool
-	OIDCConfig     *oidc.Config
-	AdminConfig    *AdminConfig
-	DexProxyConfig *dex.ProxyConfig
-	ArgoCDConfig   ArgoCDConfig
-}
-
-type StandardConfig struct {
-	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
-	UIDirectory             string        `envconfig:"UI_DIR" default:"./ui/build"`
-}
-
-func ServerConfigFromEnv() ServerConfig {
-	cfg := ServerConfig{}
-	envconfig.MustProcess("", &cfg.StandardConfig)
-	envconfig.MustProcess("", &cfg.ArgoCDConfig)
-	if types.MustParseBool(os.GetEnv("ADMIN_ACCOUNT_ENABLED", "false")) {
-		adminCfg := AdminConfigFromEnv()
-		cfg.AdminConfig = &adminCfg
-	}
-	if types.MustParseBool(os.GetEnv("OIDC_ENABLED", "false")) {
-		oidcCfg := oidc.ConfigFromEnv()
-		cfg.OIDCConfig = &oidcCfg
-	}
-	if types.MustParseBool(os.GetEnv("DEX_ENABLED", "false")) {
-		dexProxyCfg := dex.ProxyConfigFromEnv()
-		cfg.DexProxyConfig = &dexProxyCfg
-	}
 	return cfg
 }
 
