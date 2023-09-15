@@ -119,6 +119,7 @@ codegen:
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
+	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:schema
 
 ################################################################################

@@ -1,4 +1,5 @@
 .idea/
+.pnpm-store/
 .vscode/
 bin/
 charts/kargo/*.tgz
