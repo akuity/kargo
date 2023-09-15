@@ -4,6 +4,7 @@ import { IconDefinition, faTimeline } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation } from '@tanstack/react-query';
 import { Tooltip, message } from 'antd';
+import { formatDistance } from 'date-fns';
 import React, { useEffect, useState } from 'react';
 
 import {
@@ -337,7 +338,15 @@ const FreightItem = (props: {
             confirmingPromotion ? 'text-white' : 'text-gray-400'
           }`}
         >
-          {freight?.id?.substring(0, 7)}
+          <Tooltip
+            title={
+              freight?.firstSeen &&
+              formatDistance(freight?.firstSeen?.toDate(), new Date(), { addSuffix: true })
+            }
+            placement='bottom'
+          >
+            {freight?.id?.substring(0, 7)}
+          </Tooltip>
         </div>
       </div>
     </div>
