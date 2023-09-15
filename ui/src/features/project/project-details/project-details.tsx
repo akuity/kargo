@@ -307,6 +307,9 @@ export const ProjectDetails = () => {
                       height={node.height}
                       projectName={name}
                       faded={isFaded(node.data)}
+                      hasNoSubscribers={
+                        (subscribersByStage[node?.data?.metadata?.name || ''] || []).length === 0
+                      }
                       onPromoteClick={(type: PromotionType) => {
                         if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
                           setPromotingStage(undefined);

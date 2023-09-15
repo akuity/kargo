@@ -78,11 +78,13 @@ export const StageNode = ({
               onClick={() => onPromoteClick('default')}
               selected={promoting === 'default'}
             />
-            <Nodule
-              nodeHeight={height}
-              onClick={() => onPromoteClick('subscribers')}
-              selected={promoting === 'subscribers'}
-            />
+            {!hasNoSubscribers && (
+              <Nodule
+                nodeHeight={height}
+                onClick={() => onPromoteClick('subscribers')}
+                selected={promoting === 'subscribers'}
+              />
+            )}
           </>
         )}
       </div>
