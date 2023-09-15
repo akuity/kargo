@@ -125,11 +125,21 @@ func NewCommand(opt *option.Option) *cobra.Command {
 				}
 			}
 
+			if opt.InsecureTLS {
+				// When the user specifies during login that they want to ignore cert
+				// warnings, we will force them to periodically re-assess that choice
+				// by NOT using refresh tokens and requiring them to re-authenticate
+				// instead. Since we plan not to use the refresh token for such a case,
+				// it's more secure to throw it away immediately.
+				refreshToken = ""
+			}
+
 			err = libConfig.SaveCLIConfig(
 				libConfig.CLIConfig{
-					APIAddress:   serverAddress,
-					BearerToken:  bearerToken,
-					RefreshToken: refreshToken,
+					APIAddress:            serverAddress,
+					BearerToken:           bearerToken,
+					RefreshToken:          refreshToken,
+					InsecureSkipTLSVerify: opt.InsecureTLS,
 				},
 			)
 			return errors.Wrap(err, "error persisting configuration")
