@@ -41,11 +41,23 @@ spec:
               protocol: TCP
           livenessProbe:
             exec:
-              command: ["/usr/local/bin/grpc_health_probe", "-addr=:8080"]
+              command:
+                - /usr/local/bin/grpc_health_probe
+                - -addr=:8080
+{{- if .Values.api.tls.enabled }}
+                - -tls
+                - -tls-no-verify
+{{- end }}                
             initialDelaySeconds: 10
           readinessProbe:
             exec:
-              command: ["/usr/local/bin/grpc_health_probe", "-addr=:8080"]
+              command:
+                - /usr/local/bin/grpc_health_probe
+                - -addr=:8080
+{{- if .Values.api.tls.enabled }}
+                - -tls
+                - -tls-no-verify
+{{- end }}
             initialDelaySeconds: 5
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) }}
           volumeMounts:
@@ -54,7 +66,7 @@ spec:
               readOnly: true
 {{- end }}
           resources: {{ toYaml .Values.api.resources }}
-{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) }}
+{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
       volumes:
         - name: config
           projected:
@@ -66,6 +78,15 @@ spec:
                     - key: kubeconfig.yaml
                       path: kubeconfig.yaml
                       mode: 0644
+{{- end }}
+{{- if .Values.api.tls.enabled }}
+              - secret:
+                  name: kargo-api-cert
+                  items:
+                    - key: tls.crt
+                      path: tls.crt
+                    - key: tls.key
+                      path: tls.key
 {{- end }}
 {{- if and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
               - secret:
