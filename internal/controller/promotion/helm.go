@@ -34,7 +34,7 @@ func newHelmMechanism(
 
 // selectHelmUpdates returns a subset of the given updates that involve Helm.
 func selectHelmUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-	var selectedUpdates []kargoapi.GitRepoUpdate
+	selectedUpdates := make([]kargoapi.GitRepoUpdate, 0, len(updates))
 	for _, update := range updates {
 		if update.Helm != nil {
 			selectedUpdates = append(selectedUpdates, update)
@@ -127,8 +127,8 @@ func buildValuesFilesChanges(
 		tagsByImage[image.RepoURL] = image.Tag
 	}
 
-	changesByFile := map[string]map[string]string{}
-	changeSummary := []string{}
+	changesByFile := make(map[string]map[string]string, len(imageUpdates))
+	changeSummary := make([]string, 0, len(imageUpdates))
 	for _, imageUpdate := range imageUpdates {
 		if imageUpdate.Value != kargoapi.ImageUpdateValueTypeImage &&
 			imageUpdate.Value != kargoapi.ImageUpdateValueTypeTag {
@@ -173,21 +173,21 @@ func buildChartDependencyChanges(
 	chartUpdates []kargoapi.HelmChartDependencyUpdate,
 ) (map[string]map[string]string, []string, error) {
 	// Build a table of charts --> versions
-	versionsByChart := map[string]string{}
+	versionsByChart := make(map[string]string, len(charts))
 	for _, chart := range charts {
 		key := fmt.Sprintf("%s:%s", chart.RegistryURL, chart.Name)
 		versionsByChart[key] = chart.Version
 	}
 
 	// Build a de-duped set of paths to affected Charts files
-	chartPaths := map[string]struct{}{}
+	chartPaths := make(map[string]struct{}, len(chartUpdates))
 	for _, chartUpdate := range chartUpdates {
 		chartPaths[chartUpdate.ChartPath] = struct{}{}
 	}
 
 	// For each chart, build the appropriate changes
-	changesByFile := map[string]map[string]string{}
-	changeSummary := []string{}
+	changesByFile := make(map[string]map[string]string)
+	changeSummary := make([]string, 0)
 	for chartPath := range chartPaths {
 		absChartYAMLPath := filepath.Join(repoDir, chartPath, "Chart.yaml")
 		chartYAMLBytes, err := os.ReadFile(absChartYAMLPath)

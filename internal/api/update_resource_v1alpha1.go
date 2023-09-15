@@ -21,7 +21,8 @@ func (s *server) UpdateResource(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}
 
-	var res []*svcv1alpha1.UpdateResourceResult
+	size := len(cluster) + len(namespaced)
+	res := make([]*svcv1alpha1.UpdateResourceResult, 0, size)
 	for _, obj := range cluster {
 		res = append(res, s.updateResource(ctx, obj))
 	}

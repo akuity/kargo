@@ -66,9 +66,10 @@ kargo apply -f stage.yaml
 				return pkgerrors.Wrap(err, "apply resource")
 			}
 
-			var createdRes []*kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest
-			var updatedRes []*kargosvcapi.CreateOrUpdateResourceResult_UpdatedResourceManifest
-			var errs []error
+			resCap := len(resp.Msg.GetResults())
+			createdRes := make([]*kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest, 0, resCap)
+			updatedRes := make([]*kargosvcapi.CreateOrUpdateResourceResult_UpdatedResourceManifest, 0, resCap)
+			errs := make([]error, 0, resCap)
 			for _, r := range resp.Msg.GetResults() {
 				switch typedRes := r.GetResult().(type) {
 				case *kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest:

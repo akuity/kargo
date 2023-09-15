@@ -295,16 +295,13 @@ func TestCleanProject(t *testing.T) {
 			) error {
 				promos, ok := objList.(*kargoapi.PromotionList)
 				require.True(t, ok)
-				promos.Items = []kargoapi.Promotion{}
+				promos.Items = make([]kargoapi.Promotion, 100)
 				for i := 0; i < 100; i++ {
-					promos.Items = append(
-						promos.Items,
-						kargoapi.Promotion{
-							Status: kargoapi.PromotionStatus{
-								Phase: kargoapi.PromotionPhaseSucceeded,
-							},
+					promos.Items[i] = kargoapi.Promotion{
+						Status: kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
 						},
-					)
+					}
 				}
 				return nil
 			},
@@ -346,25 +343,22 @@ func TestCleanProject(t *testing.T) {
 		err := kargoapi.AddToScheme(scheme)
 		require.NoError(t, err)
 
-		initialPromos := []client.Object{}
+		initialPromos := make([]client.Object, 0, numPromos)
 		creationTime := time.Now()
 		for i := 0; i < numPromos; i++ {
 			// We make each Promotion look newer then the last to ensure the sort
 			// isn't a no-op and actually gets covered by this test
 			creationTime = creationTime.Add(time.Hour)
-			initialPromos = append(
-				initialPromos,
-				&kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              fmt.Sprintf("promotion-%d", i),
-						Namespace:         testProject,
-						CreationTimestamp: metav1.NewTime(creationTime),
-					},
-					Status: kargoapi.PromotionStatus{
-						Phase: kargoapi.PromotionPhaseSucceeded,
-					},
+			initialPromos[i] = &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              fmt.Sprintf("promotion-%d", i),
+					Namespace:         testProject,
+					CreationTimestamp: metav1.NewTime(creationTime),
 				},
-			)
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
+				},
+			}
 		}
 
 		kubeClient := fake.NewClientBuilder().
