@@ -53,6 +53,12 @@ type CLIConfig struct {
 	// RefreshToken, if set, is used to refresh the Token, which must, in such a
 	// case, have been issued by an OIDC identity provider.
 	RefreshToken string `json:"refreshToken,omitempty"`
+	// InsecureSkipTLSVerify indicates whether the user indicated during login
+	// that certificate warnings should be ignored. When true, this option will be
+	// applied to all subsequent Kargo commands until the user logs out or
+	// re-authenticates. When true, refresh tokens will not be used, thereby
+	// forcing users to periodically re-assess this choice.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 }
 
 // LoadCLIConfig loads Kargo CLI configuration from a file in the Kargo home

@@ -91,6 +91,33 @@ func TestRefreshToken(t *testing.T) {
 			},
 		},
 		{
+			name: "token is an expired JWT; refresh token present; tls warnings " +
+				"ignored",
+			setup: func() config.CLIConfig {
+				cfg := config.CLIConfig{
+					RefreshToken:          "refresh-token",
+					InsecureSkipTLSVerify: true,
+				}
+				var err error
+				cfg.BearerToken, err = jwt.NewWithClaims(
+					jwt.SigningMethodHS256,
+					jwt.RegisteredClaims{
+						ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+					},
+				).SignedString([]byte("signing key"))
+				require.NoError(t, err)
+				return cfg
+			},
+			assertions: func(_, _ config.CLIConfig, err error) {
+				require.Error(t, err)
+				require.Equal(
+					t,
+					"your token is expired; please use `kargo login` to re-authenticate",
+					err.Error(),
+				)
+			},
+		},
+		{
 			name: "token is an expired JWT; error redeeming refresh token",
 			setup: func() config.CLIConfig {
 				cfg := config.CLIConfig{

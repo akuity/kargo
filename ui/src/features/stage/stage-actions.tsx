@@ -1,6 +1,8 @@
-import { faPen, faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faPen, faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Space } from 'antd';
+import { useQuery } from '@tanstack/react-query';
+import { Button, Dropdown, Space } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -8,6 +10,7 @@ import { paths } from '@ui/config/paths';
 import {
   deleteStage,
   queryFreight,
+  getConfig,
   refreshStage
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
@@ -60,8 +63,54 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
     }
   }, [stage, shouldRefetchFreights]);
 
+  const { data: config } = useQuery(getConfig.useQuery());
+  const argoCDAppsLinks = React.useMemo(() => {
+    const shardKey = stage?.metadata?.annotations['kargo.akuity.io/shard'] || '';
+    const shard = config?.argocdShards?.[shardKey];
+
+    if (!shard || !stage.spec?.promotionMechanisms?.argocdAppUpdates.length) {
+      return [];
+    }
+
+    return stage.spec?.promotionMechanisms?.argocdAppUpdates.map((argoCD) => ({
+      label: argoCD.appName,
+      url: `${shard.url}/applications/${shard.namespace}/${argoCD.appName}`
+    }));
+  }, [config, stage]);
+
   return (
     <Space size={16}>
+      {argoCDAppsLinks.length === 1 && (
+        <Button
+          type='link'
+          onClick={() => window.open(argoCDAppsLinks[0]?.url, '_blank', 'noreferrer')}
+          size='small'
+        >
+          Argo CD
+        </Button>
+      )}
+      {argoCDAppsLinks.length > 1 && (
+        <Dropdown
+          menu={{
+            items: argoCDAppsLinks.map((item, i) => ({
+              label: (
+                <a href={item?.url} target='_blank' rel='noreferrer'>
+                  {item?.label}
+                </a>
+              ),
+              key: i
+            }))
+          }}
+          trigger={['click']}
+        >
+          <Button type='link' size='small'>
+            <Space size={6}>
+              Argo CD
+              <FontAwesomeIcon icon={faChevronDown} />
+            </Space>
+          </Button>
+        </Dropdown>
+      )}
       <Button
         type='default'
         icon={<ButtonIcon icon={faPen} size='1x' />}
