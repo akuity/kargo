@@ -82,7 +82,7 @@ type AdminConfig struct {
 // AdminConfigFromEnv returns an AdminConfig populated from environment
 // variables.
 func AdminConfigFromEnv() AdminConfig {
-	cfg := AdminConfig{}
+	var cfg AdminConfig
 	envconfig.MustProcess("", &cfg)
 	return cfg
 }
