@@ -288,9 +288,9 @@ func TestEnqueueDownstreamStagesHandler(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			var objs []client.Object
-			for _, stage := range testCase.stages {
-				objs = append(objs, stage)
+			objs := make([]client.Object, len(testCase.stages))
+			for i, stage := range testCase.stages {
+				objs[i] = stage
 			}
 			hand := EnqueueDownstreamStagesHandler{
 				logger:      logging.LoggerFromContext(context.TODO()),

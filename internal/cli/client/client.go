@@ -28,11 +28,12 @@ func GetClientFromConfig(ctx context.Context, opt *option.Option) (
 	if err != nil {
 		return nil, err
 	}
+	skipTLSVerify := opt.InsecureTLS || cfg.InsecureSkipTLSVerify
 	if cfg, err =
-		newTokenRefresher().refreshToken(ctx, cfg, opt.InsecureTLS); err != nil {
+		newTokenRefresher().refreshToken(ctx, cfg, skipTLSVerify); err != nil {
 		return nil, errors.Wrap(err, "error refreshing token")
 	}
-	return GetClient(cfg.APIAddress, cfg.BearerToken, opt.InsecureTLS), nil
+	return GetClient(cfg.APIAddress, cfg.BearerToken, skipTLSVerify), nil
 }
 
 // GetClient returns a new client for the Kargo API server located at the

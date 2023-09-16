@@ -153,7 +153,7 @@ func getChartVersionsFromOCIRegistry(
 			},
 		},
 	}
-	versions := []string{}
+	versions := make([]string, 0, rep.TagListPageSize)
 	return versions, errors.Wrapf(
 		rep.Tags(ctx, func(t []string) error {
 			versions = append(versions, t...)

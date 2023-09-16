@@ -36,12 +36,12 @@ func getNewestVersionFromTags(
 		availableTags = sortByName(tagList)
 	}
 
-	considerTags := []string{}
-
 	// It makes no sense to proceed if we have no available tags
 	if len(availableTags) == 0 {
 		return "", nil
 	}
+
+	considerTags := make([]string, 0, len(availableTags))
 
 	// The given constraint MUST match a semver constraint
 	var semverConstraint *semver.Constraints
