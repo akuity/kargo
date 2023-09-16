@@ -24,14 +24,13 @@ func (s *server) ListProjects(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var projects []*svcv1alpha1.Project
-	for _, ns := range nsList.Items {
-		projects = append(projects, &svcv1alpha1.Project{
+	projects := make([]*svcv1alpha1.Project, len(nsList.Items))
+	for i, ns := range nsList.Items {
+		projects[i] = &svcv1alpha1.Project{
 			Name:       ns.Name,
 			CreateTime: timestamppb.New(ns.CreationTimestamp.Time),
-		})
+		}
 	}
-
 	return connect.NewResponse(&svcv1alpha1.ListProjectsResponse{
 		Projects: projects,
 	}), nil

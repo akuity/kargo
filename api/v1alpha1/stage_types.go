@@ -544,7 +544,8 @@ type Freight struct {
 }
 
 func (f *Freight) UpdateFreightID() {
-	materials := []string{}
+	size := len(f.Commits) + len(f.Images) + len(f.Charts)
+	materials := make([]string, 0, size)
 	for _, commit := range f.Commits {
 		materials = append(
 			materials,

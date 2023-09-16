@@ -51,8 +51,8 @@ func (s *server) PromoteSubscribers(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	var promoteErrs []error
-	var createdPromos []*v1alpha1.Promotion
+	promoteErrs := make([]error, 0, len(subscribers))
+	createdPromos := make([]*v1alpha1.Promotion, 0, len(subscribers))
 	for _, subscriber := range subscribers {
 		if _, err := validateFreightExists(req.Msg.GetFreight(), subscriber.Status.AvailableFreight); err != nil {
 			// TODO(JS): currently we create promotions to all of this Stage's

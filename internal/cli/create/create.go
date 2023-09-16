@@ -64,8 +64,9 @@ kargo create project my-project
 				return pkgerrors.Wrap(err, "create resource")
 			}
 
-			var successRes []*kargosvcapi.CreateResourceResult_CreatedResourceManifest
-			var createErrs []error
+			resCap := len(resp.Msg.GetResults())
+			successRes := make([]*kargosvcapi.CreateResourceResult_CreatedResourceManifest, 0, resCap)
+			createErrs := make([]error, 0, resCap)
 			for _, r := range resp.Msg.GetResults() {
 				switch typedRes := r.GetResult().(type) {
 				case *kargosvcapi.CreateResourceResult_CreatedResourceManifest:
