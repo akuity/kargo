@@ -9,6 +9,7 @@ import (
 
 	"connectrpc.com/grpchealth"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
@@ -76,9 +77,21 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 
 	errCh := make(chan error)
-	go func() { errCh <- srv.Serve(l) }()
+	go func() {
+		if s.cfg.TLSConfig != nil {
+			errCh <- srv.ServeTLS(
+				l,
+				s.cfg.TLSConfig.CertPath,
+				s.cfg.TLSConfig.KeyPath,
+			)
+		} else {
+			errCh <- srv.Serve(l)
+		}
+	}()
 
-	log.Infof("Server is listening on %q", l.Addr().String())
+	log.WithFields(logrus.Fields{
+		"tls": s.cfg.TLSConfig != nil,
+	}).Infof("Server is listening on %q", l.Addr().String())
 
 	select {
 	case <-ctx.Done():
