@@ -577,6 +577,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 		Commits:   latestCommits,
 		Images:    latestImages,
 		Charts:    latestCharts,
+		Qualified: true,
 	}
 	freight.UpdateFreightID()
 	return freight, nil
@@ -624,7 +625,6 @@ func (r *reconciler) getAvailableFreightFromUpstreamStages(
 				for i := range freight.Commits {
 					freight.Commits[i].HealthCheckCommit = ""
 				}
-				freight.Qualified = false
 				availableFreight = append(availableFreight, freight)
 				freightSet[freight.ID] = struct{}{}
 			}

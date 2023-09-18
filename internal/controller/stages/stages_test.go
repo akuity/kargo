@@ -1032,6 +1032,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 								Version:     "fake-version",
 							},
 						},
+						Qualified: true,
 					},
 					freight,
 				)
