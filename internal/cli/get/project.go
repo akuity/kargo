@@ -2,10 +2,10 @@ package get
 
 import (
 	"context"
-	"errors"
+	goerrors "errors"
 
 	"connectrpc.com/connect"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -24,7 +24,7 @@ func filterProjects(
 		/* explicitly empty */
 	}))
 	if err != nil {
-		return nil, pkgerrors.Wrap(err, "list projects")
+		return nil, errors.Wrap(err, "list projects")
 	}
 	return func(names ...string) ([]runtime.Object, error) {
 		res := make([]runtime.Object, 0, len(resp.Msg.GetProjects()))
@@ -44,7 +44,7 @@ func filterProjects(
 			if project, ok := projects[name]; ok {
 				res = append(res, project)
 			} else {
-				resErr = errors.Join(err, pkgerrors.Errorf("project %q not found", name))
+				resErr = goerrors.Join(err, errors.Errorf("project %q not found", name))
 			}
 		}
 		return res, resErr

@@ -40,10 +40,10 @@ func newTokenRefresher() *tokenRefresher {
 // the token is not parsable as a JWT, it will assume the token is not something
 // refreshable and return the provided config unmodified. If the token is
 // parsable as a JWT and is not expired, it will return the provided config
-// unmodified. If the token is expired and no refresh token is available, an
-// error is returned indicating that the user must re-authenticate. If a refresh
-// token is available, it will attempt to redeem that token and return updated
-// config.
+// unmodified. If the token is expired and no refresh token is available OR TLS
+// cert verification is disabled, an error is returned indicating that the user
+// must re-authenticate. If a refresh token is available, it will attempt to
+// redeem that token and return updated config.
 func (t *tokenRefresher) refreshToken(
 	ctx context.Context,
 	cfg config.CLIConfig,
@@ -73,9 +73,9 @@ func (t *tokenRefresher) refreshToken(
 
 	// If we get to here, the token is expired.
 
-	if cfg.RefreshToken == "" {
-		// We don't have a refresh token. So all we can do is prompt the user to
-		// re-authenticate.
+	if cfg.InsecureSkipTLSVerify || cfg.RefreshToken == "" {
+		// We don't have a refresh token OR TLS cert verification is disabled. We'll
+		// prompt the user to re-authenticate.
 		return cfg, errors.New(
 			"your token is expired; please use `kargo login` to re-authenticate",
 		)

@@ -1,11 +1,11 @@
 package apply
 
 import (
-	"errors"
+	goerrors "errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,25 +34,25 @@ kargo apply -f stage.yaml
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if len(flag.Filenames) == 0 {
-				return pkgerrors.New("filename is required")
+				return errors.New("filename is required")
 			}
 
 			rawManifest, err := option.ReadManifests(flag.Filenames...)
 			if err != nil {
-				return pkgerrors.Wrap(err, "read manifests")
+				return errors.Wrap(err, "read manifests")
 			}
 
 			var printer printers.ResourcePrinter
 			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") != "" {
 				printer, err = opt.PrintFlags.ToPrinter()
 				if err != nil {
-					return pkgerrors.Wrap(err, "new printer")
+					return errors.Wrap(err, "new printer")
 				}
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return pkgerrors.Wrap(err, "get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 
 			// TODO: Current implementation of apply is not the same as `kubectl` does.
@@ -63,12 +63,13 @@ kargo apply -f stage.yaml
 					Manifest: rawManifest,
 				}))
 			if err != nil {
-				return pkgerrors.Wrap(err, "apply resource")
+				return errors.Wrap(err, "apply resource")
 			}
 
-			var createdRes []*kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest
-			var updatedRes []*kargosvcapi.CreateOrUpdateResourceResult_UpdatedResourceManifest
-			var errs []error
+			resCap := len(resp.Msg.GetResults())
+			createdRes := make([]*kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest, 0, resCap)
+			updatedRes := make([]*kargosvcapi.CreateOrUpdateResourceResult_UpdatedResourceManifest, 0, resCap)
+			errs := make([]error, 0, resCap)
 			for _, r := range resp.Msg.GetResults() {
 				switch typedRes := r.GetResult().(type) {
 				case *kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest:
@@ -83,7 +84,7 @@ kargo apply -f stage.yaml
 				var obj unstructured.Unstructured
 				if err := sigyaml.Unmarshal(r.CreatedResourceManifest, &obj); err != nil {
 					fmt.Fprintf(opt.IOStreams.ErrOut, "%s",
-						pkgerrors.Wrap(err, "Error: unmarshal created manifest"))
+						errors.Wrap(err, "Error: unmarshal created manifest"))
 					continue
 				}
 				if printer == nil {
@@ -100,7 +101,7 @@ kargo apply -f stage.yaml
 				var obj unstructured.Unstructured
 				if err := sigyaml.Unmarshal(r.UpdatedResourceManifest, &obj); err != nil {
 					fmt.Fprintf(opt.IOStreams.ErrOut, "%s",
-						pkgerrors.Wrap(err, "Error: unmarshal updated manifest"))
+						errors.Wrap(err, "Error: unmarshal updated manifest"))
 					continue
 				}
 				if printer == nil {
@@ -113,7 +114,7 @@ kargo apply -f stage.yaml
 				}
 				_ = printer.PrintObj(&obj, opt.IOStreams.Out)
 			}
-			return errors.Join(errs...)
+			return goerrors.Join(errs...)
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)

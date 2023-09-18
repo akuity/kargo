@@ -20,7 +20,8 @@ func (s *server) DeleteResource(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}
 
-	var res []*svcv1alpha1.DeleteResourceResult
+	size := len(namespaced) + len(cluster)
+	res := make([]*svcv1alpha1.DeleteResourceResult, 0, size)
 	for _, obj := range namespaced {
 		if err := s.validateProject(ctx, obj.GetNamespace()); err != nil {
 			res = append(res, &svcv1alpha1.DeleteResourceResult{

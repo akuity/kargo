@@ -2,10 +2,11 @@ package api
 
 import (
 	"context"
-	"errors"
+	goerrors "errors"
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -51,8 +52,8 @@ func (s *server) PromoteSubscribers(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	var promoteErrs []error
-	var createdPromos []*v1alpha1.Promotion
+	promoteErrs := make([]error, 0, len(subscribers))
+	createdPromos := make([]*v1alpha1.Promotion, 0, len(subscribers))
 	for _, subscriber := range subscribers {
 		if _, err := validateFreightExists(req.Msg.GetFreight(), subscriber.Status.AvailableFreight); err != nil {
 			// TODO(JS): currently we create promotions to all of this Stage's
@@ -73,7 +74,7 @@ func (s *server) PromoteSubscribers(
 
 	return connect.NewResponse(&svcv1alpha1.PromoteSubscribersResponse{
 		Promotions: createdPromos,
-	}), errors.Join(promoteErrs...)
+	}), goerrors.Join(promoteErrs...)
 }
 
 // findStageSubscribers returns a list of Stages that are subscribed to the given Stage

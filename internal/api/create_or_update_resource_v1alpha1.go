@@ -21,7 +21,8 @@ func (s *server) CreateOrUpdateResource(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}
 
-	var res []*svcv1alpha1.CreateOrUpdateResourceResult
+	size := len(cluster) + len(namespaced)
+	res := make([]*svcv1alpha1.CreateOrUpdateResourceResult, 0, size)
 	for _, obj := range cluster {
 		res = append(res, s.createOrUpdateResource(ctx, obj))
 	}
