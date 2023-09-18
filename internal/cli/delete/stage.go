@@ -1,11 +1,11 @@
 package delete
 
 import (
-	"errors"
+	goerrors "errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
@@ -27,7 +27,7 @@ kargo delete stage --project=my-project my-stage
 			ctx := cmd.Context()
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return pkgerrors.New("get client from config")
+				return errors.New("get client from config")
 			}
 
 			project := opt.Project.OrElse("")
@@ -41,7 +41,7 @@ kargo delete stage --project=my-project my-stage
 					Project: project,
 					Name:    name,
 				})); err != nil {
-					resErr = errors.Join(resErr, pkgerrors.Wrap(err, "Error"))
+					resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
 					continue
 				}
 				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Stage Deleted: %q\n", name)
