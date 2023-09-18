@@ -2,10 +2,11 @@ package api
 
 import (
 	"context"
-	"errors"
+	goerrors "errors"
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -73,7 +74,7 @@ func (s *server) PromoteSubscribers(
 
 	return connect.NewResponse(&svcv1alpha1.PromoteSubscribersResponse{
 		Promotions: createdPromos,
-	}), errors.Join(promoteErrs...)
+	}), goerrors.Join(promoteErrs...)
 }
 
 // findStageSubscribers returns a list of Stages that are subscribed to the given Stage

@@ -3,7 +3,7 @@ package option
 import (
 	"bytes"
 
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -23,7 +23,7 @@ func ReadManifests(filenames ...string) ([]byte, error) {
 		Do().
 		Infos()
 	if err != nil {
-		return nil, pkgerrors.Wrap(err, "build resources")
+		return nil, errors.Wrap(err, "build resources")
 	}
 
 	var buf bytes.Buffer
@@ -34,10 +34,10 @@ func ReadManifests(filenames ...string) ([]byte, error) {
 	for _, info := range buildRes {
 		u, ok := info.Object.(*unstructured.Unstructured)
 		if !ok {
-			return nil, pkgerrors.Errorf("expected *unstructured.Unstructured, got %T", info.Object)
+			return nil, errors.Errorf("expected *unstructured.Unstructured, got %T", info.Object)
 		}
 		if err := enc.Encode(&u.Object); err != nil {
-			return nil, pkgerrors.Wrap(err, "encode object")
+			return nil, errors.Wrap(err, "encode object")
 		}
 	}
 	return buf.Bytes(), nil
