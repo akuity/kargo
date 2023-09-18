@@ -121,7 +121,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Force associated Stages to reconcile by patching an annotation
-	var errs []error
+	errs := make([]error, 0, len(stages.Items))
 	for _, e := range stages.Items {
 		stage := e // This is to sidestep implicit memory aliasing in this for loop
 		objKey := client.ObjectKey{

@@ -592,7 +592,7 @@ func (r *reconciler) getAvailableFreightFromUpstreamStages(
 		return nil, nil
 	}
 
-	availableFreight := []kargoapi.Freight{}
+	availableFreight := make([]kargoapi.Freight, 0, len(subs))
 	freightSet := map[string]struct{}{} // We'll use this to de-dupe
 	for _, sub := range subs {
 		upstreamStage, err := kargoapi.GetStage(

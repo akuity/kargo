@@ -64,7 +64,7 @@ func (b *bookkeeperMechanism) Promote(
 	stage *kargoapi.Stage,
 	newFreight kargoapi.Freight,
 ) (kargoapi.Freight, error) {
-	var updates []kargoapi.GitRepoUpdate
+	updates := make([]kargoapi.GitRepoUpdate, 0, len(stage.Spec.PromotionMechanisms.GitRepoUpdates))
 	for _, update := range stage.Spec.PromotionMechanisms.GitRepoUpdates {
 		if update.Bookkeeper != nil {
 			updates = append(updates, update)

@@ -1,12 +1,12 @@
 package delete
 
 import (
-	"errors"
+	goerrors "errors"
 	"fmt"
 	"strings"
 
 	"connectrpc.com/connect"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,28 +39,29 @@ kargo delete -f stage.yaml
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if len(flag.Filenames) == 0 {
-				return pkgerrors.New("filename is required")
+				return errors.New("filename is required")
 			}
 
 			manifest, err := option.ReadManifests(flag.Filenames...)
 			if err != nil {
-				return pkgerrors.Wrap(err, "read manifests")
+				return errors.Wrap(err, "read manifests")
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return pkgerrors.Wrap(err, "get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 
 			resp, err := kargoSvcCli.DeleteResource(ctx, connect.NewRequest(&kargosvcapi.DeleteResourceRequest{
 				Manifest: manifest,
 			}))
 			if err != nil {
-				return pkgerrors.Wrap(err, "delete resource")
+				return errors.Wrap(err, "delete resource")
 			}
 
-			var successRes []*kargosvcapi.DeleteResourceResult_DeletedResourceManifest
-			var deleteErrs []error
+			resCap := len(resp.Msg.GetResults())
+			successRes := make([]*kargosvcapi.DeleteResourceResult_DeletedResourceManifest, 0, resCap)
+			deleteErrs := make([]error, 0, resCap)
 			for _, r := range resp.Msg.GetResults() {
 				switch typedRes := r.GetResult().(type) {
 				case *kargosvcapi.DeleteResourceResult_DeletedResourceManifest:
@@ -73,7 +74,7 @@ kargo delete -f stage.yaml
 				var obj unstructured.Unstructured
 				if err := sigyaml.Unmarshal(r.DeletedResourceManifest, &obj); err != nil {
 					fmt.Fprintf(opt.IOStreams.ErrOut, "%s",
-						pkgerrors.Wrap(err, "Error: unmarshal deleted manifest"))
+						errors.Wrap(err, "Error: unmarshal deleted manifest"))
 					continue
 				}
 				name := strings.TrimLeft(types.NamespacedName{
@@ -82,7 +83,7 @@ kargo delete -f stage.yaml
 				}.String(), "/")
 				fmt.Fprintf(opt.IOStreams.Out, "%s Deleted: %q\n", obj.GetKind(), name)
 			}
-			return errors.Join(deleteErrs...)
+			return goerrors.Join(deleteErrs...)
 		},
 	}
 	option.Filenames("delete", &flag.Filenames)(cmd.Flags())

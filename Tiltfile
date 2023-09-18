@@ -47,6 +47,7 @@ k8s_resource(
   ],
   labels = ['kargo'],
   objects = [
+    'kargo-api:certificate',
     'kargo-api:clusterrole',
     'kargo-api:clusterrolebinding',
     'kargo-api:configmap',
@@ -128,7 +129,6 @@ k8s_yaml(
     namespace = 'kargo',
     set = [
       'api.logLevel=DEBUG',
-      'api.protocol=http',
       'api.host=localhost:30081',
       'api.adminAccount.password=admin',
       'api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch',

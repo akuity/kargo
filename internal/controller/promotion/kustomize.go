@@ -29,7 +29,7 @@ func newKustomizeMechanism(
 // selectKustomizeUpdates returns a subset of the given updates that involve
 // Kustomize.
 func selectKustomizeUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-	var selectedUpdates []kargoapi.GitRepoUpdate
+	selectedUpdates := make([]kargoapi.GitRepoUpdate, 0, len(updates))
 	for _, update := range updates {
 		if update.Kustomize != nil {
 			selectedUpdates = append(selectedUpdates, update)
@@ -52,7 +52,7 @@ func (k *kustomizer) apply(
 	_ string,
 	workingDir string,
 ) ([]string, error) {
-	var changeSummary []string
+	changeSummary := make([]string, 0, len(update.Kustomize.Images))
 	for _, imgUpdate := range update.Kustomize.Images {
 		var tag string
 		for _, img := range newFreight.Images {
