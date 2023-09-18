@@ -1,11 +1,11 @@
 package delete
 
 import (
-	"errors"
+	goerrors "errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
@@ -27,7 +27,7 @@ kargo delete project my-project
 			ctx := cmd.Context()
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return pkgerrors.New("get client from config")
+				return errors.New("get client from config")
 			}
 
 			var resErr error
@@ -35,7 +35,7 @@ kargo delete project my-project
 				if _, err := kargoSvcCli.DeleteProject(ctx, connect.NewRequest(&v1alpha1.DeleteProjectRequest{
 					Name: name,
 				})); err != nil {
-					resErr = errors.Join(resErr, pkgerrors.Wrap(err, "Error"))
+					resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
 					continue
 				}
 				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Deleted: %q\n", name)
