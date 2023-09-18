@@ -70,23 +70,21 @@ export const StageNode = ({
             {stage.status?.currentFreight?.id?.slice(0, 7) || 'N/A'}{' '}
           </p>
         </div>
-        {!hasNoSubscribers && (
-          <>
+        <>
+          <Nodule
+            begin={true}
+            nodeHeight={height}
+            onClick={() => onPromoteClick('default')}
+            selected={promoting === 'default'}
+          />
+          {!hasNoSubscribers && (
             <Nodule
-              begin={true}
               nodeHeight={height}
-              onClick={() => onPromoteClick('default')}
-              selected={promoting === 'default'}
+              onClick={() => onPromoteClick('subscribers')}
+              selected={promoting === 'subscribers'}
             />
-            {!hasNoSubscribers && (
-              <Nodule
-                nodeHeight={height}
-                onClick={() => onPromoteClick('subscribers')}
-                selected={promoting === 'subscribers'}
-              />
-            )}
-          </>
-        )}
+          )}
+        </>
       </div>
     </div>
   );
