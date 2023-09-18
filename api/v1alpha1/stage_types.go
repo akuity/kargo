@@ -140,12 +140,13 @@ type GitSubscription struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
 	RepoURL string `json:"repoURL"`
-	// Branch references a particular branch of the repository. This is a required
-	// field.
+	// Branch references a particular branch of the repository. This field is
+	// optional. When not specified, the subscription is implicitly to the
+	// repository's default branch.
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
-	Branch string `json:"branch"`
+	Branch string `json:"branch,omitempty"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -266,16 +267,16 @@ type GitRepoUpdate struct {
 	RepoURL string `json:"repoURL"`
 	// ReadBranch specifies a particular branch of the repository from which to
 	// locate contents that will be written to the branch specified by the
-	// WriteBranch field. This field is optional. In cases where a
-	// StageStage includes a GitCommit, that commit's ID will supersede the
-	// value of this field. Therefore, in practice, this field is only used to
-	// clarify what branch of a repository can be treated as a source of manifests
-	// or other configuration when a Stage has no subscription to that
-	// repository.
+	// WriteBranch field. This field is optional. When not specified, the
+	// ReadBranch is implicitly the repository's default branch AND in cases where
+	// a Freight includes a GitCommit, that commit's ID will supersede the value
+	// of this field. Therefore, in practice, this field is only used to clarify
+	// what branch of a repository can be treated as a source of manifests or
+	// other configuration when a Stage has no subscription to that repository.
 	//
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=`^(\w+([-/]\w+)*)?$`
-	ReadBranch string `json:"readBranch"`
+	ReadBranch string `json:"readBranch,omitempty"`
 	// WriteBranch specifies the particular branch of the repository to be
 	// updated. This is a required field.
 	//
