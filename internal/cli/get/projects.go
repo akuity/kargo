@@ -15,7 +15,7 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newProjectsCommand(opt *option.Option) *cobra.Command {
+func newGetProjectsCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "projects [NAME...]",
 		Aliases: []string{"project"},

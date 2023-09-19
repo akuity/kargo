@@ -23,7 +23,7 @@ type PromotionsFlags struct {
 	Stage option.Optional[string]
 }
 
-func newPromotionsCommand(opt *option.Option) *cobra.Command {
+func newGetPromotionsCommand(opt *option.Option) *cobra.Command {
 	flag := PromotionsFlags{
 		Stage: option.OptionalString(),
 	}

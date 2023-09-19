@@ -18,7 +18,7 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newStagesCommand(opt *option.Option) *cobra.Command {
+func newGetStagesCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "stages --project=project [NAME...]",
 		Aliases: []string{"stage"},
