@@ -29,7 +29,7 @@ func newGetPromotionsCommand(opt *option.Option) *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:     "promotions --project=project [--stage=stage] [NAME...]",
-		Aliases: []string{"promotion"},
+		Aliases: []string{"promotion", "promos", "promo"},
 		Short:   "Display one or many promotions",
 		Example: `
 # List all promotions in the project
