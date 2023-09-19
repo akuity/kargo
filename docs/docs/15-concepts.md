@@ -22,7 +22,7 @@ custom resource type and "stage" in standard typeface when referring to the
 concept.
 :::
 
-## `Stage` resources
+## `Stage` Resources
 
 Like many Kubernetes resource types, the `Stage` resource type is decomposed
 into three main sections:
@@ -128,7 +128,7 @@ status:
       tag: 1.24.0
 ```
 
-### Promotion mechanisms
+### Promotion Mechanisms
 
 The `spec.promotionMechanisms` field is used to describe _how_ to move freight
 into the `Stage`.
@@ -327,7 +327,7 @@ the `Promotion`'s `status` field is updated to reflect the outcome.
 _So, who can create `Promotion` resources? And when does Kargo create them
 automatically?_
 
-## Creating `Promotion`s manually
+## Creating `Promotion`s Manually
 
 As with all resource types in Kubernetes, permissions to perform various actions
 on `Promotion` resources, including creating new ones, are governed by
