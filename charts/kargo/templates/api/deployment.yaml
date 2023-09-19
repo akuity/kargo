@@ -59,7 +59,7 @@ spec:
                 - -tls-no-verify
 {{- end }}
             initialDelaySeconds: 5
-{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) }}
+{{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
           volumeMounts:
             - mountPath: /etc/kargo
               name: config

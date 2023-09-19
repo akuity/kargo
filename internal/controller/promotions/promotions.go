@@ -401,12 +401,11 @@ func (r *reconciler) promote(
 		return nil
 	}
 
-	var targetFreightIndex int
 	var targetFreight *kargoapi.Freight
-	for i, availableFreight := range stage.Status.AvailableFreight {
+	for _, availableFreight := range stage.Status.AvailableFreight {
 		if availableFreight.ID == freightID {
-			targetFreightIndex = i
 			targetFreight = availableFreight.DeepCopy()
+			targetFreight.Qualified = false
 			break
 		}
 	}
@@ -444,7 +443,6 @@ func (r *reconciler) promote(
 		// control-flow stages in the first place)
 		if stage.Spec.PromotionMechanisms != nil {
 			status.CurrentFreight = &nextFreight
-			status.AvailableFreight[targetFreightIndex] = nextFreight
 			status.History.Push(nextFreight)
 		}
 	})

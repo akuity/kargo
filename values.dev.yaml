@@ -1,0 +1,16 @@
+api:
+  logLevel: DEBUG
+  host: localhost:30081
+  adminAccount:
+    password: admin
+    tokenSigningKey: iwishtowashmyirishwristwatch
+  oidc:
+    enabled: true
+    dex:
+      enabled: true
+      connectors:
+      - id: mock
+        name: Example
+        type: mockCallback
+controller:
+  logLevel: DEBUG

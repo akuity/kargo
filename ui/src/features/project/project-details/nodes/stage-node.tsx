@@ -1,6 +1,6 @@
 import { faDiagramProject, faGear, faTurnUp } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Space, Tooltip } from 'antd';
+import { Tooltip } from 'antd';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -45,24 +45,25 @@ export const StageNode = ({
           position: 'relative'
         }}
       >
-        <h3 className='flex items-center text-white'>
-          <div>{stage.metadata?.name}</div>
-          <Space className='absolute right-1'>
-            {stage.status?.currentPromotion && (
-              <Tooltip
-                title={`Freight ${stage.status?.currentPromotion.freight?.id} is being promoted`}
-              >
-                <FontAwesomeIcon icon={faGear} spin={true} />
-              </Tooltip>
-            )}
-            {stage.status?.health && (
+        <h3 className='flex items-center text-white justify-between'>
+          <div className='text-ellipsis whitespace-nowrap overflow-hidden'>
+            {stage.metadata?.name}
+          </div>
+          {stage.status?.currentPromotion ? (
+            <Tooltip
+              title={`Freight ${stage.status?.currentPromotion.freight?.id} is being promoted`}
+            >
+              <FontAwesomeIcon icon={faGear} spin={true} />
+            </Tooltip>
+          ) : (
+            stage.status?.health && (
               <HealthStatusIcon
                 health={stage.status?.health}
-                style={{ marginLeft: 'auto', fontSize: '14px' }}
+                style={{ fontSize: '14px' }}
                 hideColor={true}
               />
-            )}
-          </Space>
+            )
+          )}
         </h3>
         <div className={styles.body}>
           <h3>Current Freight</h3>
@@ -70,23 +71,21 @@ export const StageNode = ({
             {stage.status?.currentFreight?.id?.slice(0, 7) || 'N/A'}{' '}
           </p>
         </div>
-        {!hasNoSubscribers && (
-          <>
+        <>
+          <Nodule
+            begin={true}
+            nodeHeight={height}
+            onClick={() => onPromoteClick('default')}
+            selected={promoting === 'default'}
+          />
+          {!hasNoSubscribers && (
             <Nodule
-              begin={true}
               nodeHeight={height}
-              onClick={() => onPromoteClick('default')}
-              selected={promoting === 'default'}
+              onClick={() => onPromoteClick('subscribers')}
+              selected={promoting === 'subscribers'}
             />
-            {!hasNoSubscribers && (
-              <Nodule
-                nodeHeight={height}
-                onClick={() => onPromoteClick('subscribers')}
-                selected={promoting === 'subscribers'}
-              />
-            )}
-          </>
-        )}
+          )}
+        </>
       </div>
     </div>
   );
