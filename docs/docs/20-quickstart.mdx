@@ -102,7 +102,7 @@ this dependency from a required one to a suggested one.
 ```shell
 helm install argocd argo-cd \
   --repo https://argoproj.github.io/argo-helm \
-  --version 5.46.1 \
+  --version 5.46.6 \
   --namespace argocd \
   --create-namespace \
   --set 'configs.secret.argocdServerAdminPassword=$2a$10$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
@@ -138,6 +138,26 @@ The Kargo dashboard will be accessible at
 [localhost:8084](http://localhost:8084).
 
 The Admin password is `admin`.
+
+:::tip
+```
+Error: INSTALLATION FAILED: failed to authorize: failed to fetch oauth token: unexpected status: 403 Forbidden
+```
+
+If you recieve this error, it's likely because `docker` is configured to
+authenticate with `ghcr.io` using an expired token.
+
+You can confirm this by running:
+```
+docker pull ghcr.io/akuity/kargo:v0.1.0-rc.21
+```
+```
+Error response from daemon: Head "https://ghcr.io/v2/akuity/kargo/manifests/v0.1.0-rc.21": denied: denied
+```
+
+To solve this problem, either remove the invalid credentials for `ghcr.io` by
+running `docker logout ghcr.io` or re-authenticate by running `docker login ghcr.io`
+:::
 
 ## Trying It Out
 
