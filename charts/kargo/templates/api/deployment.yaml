@@ -65,7 +65,10 @@ spec:
               name: config
               readOnly: true
 {{- end }}
-          resources: {{ toYaml .Values.api.resources }}
+          {{- with .Values.api.resources }}
+          resources:
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
       volumes:
         - name: config
