@@ -9,7 +9,7 @@ it is recommended that you have installed the latest stable releases of Go and
 applicable editor/IDE extensions, however, this is not strictly required to be
 successful.
 
-## Running tests
+## Running Tests
 
 In order to minimize the setup required to apply small changes and to reduce the
 incidence of tests passing locally, but failing during the continuous
@@ -36,7 +36,7 @@ make test-unit
 This will require Go to be installed locally.
 :::
 
-## Running linters
+## Running Linters
 
 It is also possible to execute a variety of different linters that perform
 static code analysis, detect code hygiene issues, assert adherence to project
@@ -75,7 +75,7 @@ This will require quite a variety of tools to be installed locally, so we do not
 recommend this if you can avoid it.
 :::
 
-## Executing code generation
+## Executing Code Generation
 
 Anytime the contents of the `api/` directory have been modified, a code
 generation process must be manually executed. As with tests and linters, this
@@ -98,7 +98,7 @@ This will require quite a variety of tools to be installed locally, so we do not
 recommend this if you can avoid it.
 :::
 
-## Building the image
+## Building the Image
 
 To build source into a Docker image that will be tagged as `kargo:dev`,
 execute the following:
@@ -112,7 +112,7 @@ There is seldom a need to do this, as the next section will cover a better
 option for rapidly building and deploying Kargo from source.
 :::
 
-## Iterating quickly
+## Iterating Quickly
 
 This section focuses on the best approaches for gaining rapid feedback on
 changes you make to Kargo's code base.

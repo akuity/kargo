@@ -29,7 +29,7 @@ This guide presents a basic introduction to Kargo. Together, we will:
     * k3d: v5.4.9
 * [Helm](https://helm.sh/docs/): These instructions were tested with v3.11.2.
 
-### Starting a local cluster
+### Starting a Local Cluster
 
 We will start our cluster using options that make it convenient to access the
 Argo CD dashboard and three different instances of our demo application on
@@ -74,10 +74,9 @@ k3d cluster create kargo-quickstart \
 </TabItem>
 </Tabs>
 
-### Installing cert-manager
-
+### Installing `cert-manager`
 :::info
-In its default configuration, Kargo uses cert-manager to provision a self-signed
+In its default configuration, Kargo uses `cert-manager` to provision a self-signed
 certificate for use by Kargo's webhook server. In a more advanced installation,
 you may optionally disregard this dependency by providing a certificate yourself
 through any means you prefer.
@@ -140,9 +139,9 @@ The Kargo dashboard will be accessible at
 
 The Admin password is `admin`.
 
-## Trying it out
+## Trying It Out
 
-### Create a GitOps repository
+### Create a GitOps Repository
 
 In this step, we will create a GitOps repo on GitHub to house variations of our
 application manifests for three different stages: test, UAT, and
@@ -162,7 +161,7 @@ This layout is typical of a GitOps repository using Kustomize and is not at all
 Kargo-specific.
 :::
 
-### Create Argo CD Applications
+### Create Argo CD `Application`s
 
 In this step, we will create three Argo CD `Application` resources that deploy
 the same application at three different stages of its lifecycle, with three
@@ -283,7 +282,7 @@ clusters, we could just as easily have spread our stages across multiple
 clusters/environments.
 :::
 
-### Create and configure a Kargo project
+### Create and Configure a Kargo Project
 
 Up to this point, we haven't done anything with Kargo -- in fact everything
 we've done thus far should be familiar to anyone who's already using Argo CD and
@@ -518,7 +517,7 @@ see:
    The UAT instance of Nginx is visible at
    [localhost:8082](http://localhost:8082).
 
-#### The `prod` `Stage`:
+#### The `prod` `Stage`
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -597,7 +596,7 @@ After creating the `prod` `Stage` resource, we should almost immediately see:
 1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-prod`
    `Application` is _still_ not synced and healthy.
 
-### Trigger a promotion to prod
+### Trigger a Promotion to the `prod` `Stage`
 
 In this step, we will trigger a promotion to transition the new freight into the
 `prod` `Stage` by manually creating a `Promotion` resource.
