@@ -15,6 +15,8 @@ technologies, like [Argo CD](https://argoproj.github.io/cd/), to streamline and
 automate the progressive rollout of changes across the many stages of an
 application's lifecycle.
 
+![Screenshot](docs/static/img/screenshot.png)
+
 > ⚠️&nbsp;&nbsp;Kargo is still undergoing heavy development and is not yet ready
 > for production, but all are invited to join us in improving Kargo to help
 > it get there.
