@@ -31,7 +31,7 @@ releases.
 Join the Akuity Community [Discord server](https://discord.gg/dHJBZw6ewT)!
 :::
 
-## Next steps
+## Next Steps
 
 To learn more about Kargo, consider checking out our
 [concepts doc](./concepts) or get hands-on right away with our

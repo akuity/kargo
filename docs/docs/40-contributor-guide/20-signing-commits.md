@@ -2,7 +2,7 @@
 description: Signing commits
 ---
 
-# Signing commits
+# Signing Commits
 
 All commits merged into Kargo's main branch MUST bear a DCO (Developer
 Certificate of Origin) sign-off. This is a line placed at the end of a commit
