@@ -66,12 +66,6 @@ lint-charts:
 	cd charts/kargo && \
 	helm dep up && \
 	helm lint .
-	cd charts/kargo-kit && \
-	helm dep up && \
-	helm lint .
-	cd charts/argocd-kit && \
-	helm dep up && \
-	helm lint .
 
 .PHONY: test-unit
 test-unit:
@@ -114,8 +108,6 @@ codegen:
 		webhook \
 		paths=./... \
 		output:crd:artifacts:config=charts/kargo/crds
-	rm -rf charts/kargo-kit/crds
-	cp -R charts/kargo/crds charts/kargo-kit/crds
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
