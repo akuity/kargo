@@ -12,16 +12,29 @@ data:
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml
   {{- end }}
+  {{- if .Values.api.tls.enabled }}
+  TLS_ENABLED: "true"
+  TLS_CERT_PATH: /etc/kargo/tls.crt
+  TLS_KEY_PATH: /etc/kargo/tls.key
+  {{- end }}
   {{- if .Values.api.adminAccount.enabled }}
   ADMIN_ACCOUNT_ENABLED: "true"
-  ADMIN_ACCOUNT_TOKEN_ISSUER: {{ .Values.api.protocol }}://{{ .Values.api.host }}
+  {{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) }}
+  ADMIN_ACCOUNT_TOKEN_ISSUER: https://{{ .Values.api.host }}
+  {{- else }}
+  ADMIN_ACCOUNT_TOKEN_ISSUER: http://{{ .Values.api.host }}
+  {{- end }}
   ADMIN_ACCOUNT_TOKEN_AUDIENCE: {{ .Values.api.host }}
   ADMIN_ACCOUNT_TOKEN_TTL: {{ .Values.api.adminAccount.tokenTTL }}
   {{- end }}
   {{- if .Values.api.oidc.enabled }}
   OIDC_ENABLED: "true"
   {{- if .Values.api.oidc.dex.enabled }}
-  OIDC_ISSUER_URL: {{ .Values.api.protocol }}://{{ .Values.api.host }}/dex
+  {{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) }}
+  OIDC_ISSUER_URL: https://{{ .Values.api.host }}/dex
+  {{- else }}
+  OIDC_ISSUER_URL: http://{{ .Values.api.host }}/dex
+  {{- end }}
   OIDC_CLIENT_ID: {{ .Values.api.host }}
   OIDC_CLI_CLIENT_ID: {{ .Values.api.host }}-cli
   DEX_ENABLED: "true"

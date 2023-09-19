@@ -282,7 +282,7 @@ export const ProjectDetails = () => {
         <div className='overflow-hidden flex-grow w-full'>
           <div className='text-sm mb-4 font-semibold p-6'>
             <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
-            STAGE GRAPH
+            PIPELINE
           </div>
           <div className='overflow-auto p-6'>
             <div

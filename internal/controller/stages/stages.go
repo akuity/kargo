@@ -577,6 +577,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 		Commits:   latestCommits,
 		Images:    latestImages,
 		Charts:    latestCharts,
+		Qualified: true,
 	}
 	freight.UpdateFreightID()
 	return freight, nil
@@ -592,7 +593,7 @@ func (r *reconciler) getAvailableFreightFromUpstreamStages(
 		return nil, nil
 	}
 
-	availableFreight := []kargoapi.Freight{}
+	availableFreight := make([]kargoapi.Freight, 0, len(subs))
 	freightSet := map[string]struct{}{} // We'll use this to de-dupe
 	for _, sub := range subs {
 		upstreamStage, err := kargoapi.GetStage(
@@ -624,7 +625,6 @@ func (r *reconciler) getAvailableFreightFromUpstreamStages(
 				for i := range freight.Commits {
 					freight.Commits[i].HealthCheckCommit = ""
 				}
-				freight.Qualified = false
 				availableFreight = append(availableFreight, freight)
 				freightSet[freight.ID] = struct{}{}
 			}

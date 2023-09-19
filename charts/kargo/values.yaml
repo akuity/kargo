@@ -42,9 +42,7 @@ api:
   enabled: true
   ## @param api.replicas The number of API server pods.
   replicas: 1
-  ## @param api.protocol The protocol for Kargo's API server. This is used for (when applicable) generation of a Ingress resource, and the OpenID Connect issuer and callback URLs.
-  protocol: http
-  ## @param api.host The domain name where Kargo's API server will be accessible. Thisis used for (when applicable) generation of a Ingress resource, and the OpenID Connect issuer and callback URLs.
+  ## @param api.host The domain name where Kargo's API server will be accessible. This is used for (when applicable) generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The protocol (http vs https) should not be specified and is automatically inferred from other configuration options.
   host: localhost
   ## @param api.logLevel The log level for the API server.
   logLevel: INFO
@@ -61,6 +59,12 @@ api:
   ## @param api.tolerations Tolerations for api pods.
   tolerations: []
 
+  tls:
+    ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section will be ignored when this is set to `false`.
+    enabled: true
+    ## @param api.tls.selfSignedCert Whether to generate a self-signed certificate for use by the API server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-cert` **must** be provided in the same namespace as Kargo.
+    selfSignedCert: true
+
   ingress:
     ## @param api.ingress.enabled Whether to enable ingress. By default, this is disabled. Enabling ingress is advanced usage.
     enabled: false
@@ -70,7 +74,7 @@ api:
     ## @param api.ingress.ingressClassName From Kubernetes 1.18+, this field is supported if implemented by your ingress controller. When set, you do not need to add the ingress class as annotation.
     ingressClassName:
     tls:
-      ## @param api.ingress.tls.enabled Whether to enable TLS for the ingress.
+      ## @param api.ingress.tls.enabled Whether to enable TLS for the ingress. All other settings in this section will be ignored when this is set to `false`.
       enabled: true
       ## @param api.ingress.tls.selfSignedCert Whether to generate a self-signed certificate for use with the API server's Ingress resource. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-ingress-cert` **must** be provided in the same namespace as Kargo.
       selfSignedCert: true
@@ -134,7 +138,7 @@ api:
       #   config:
       #     clientID: <your client ID>
       #     clientSecret: <your client secret>
-      #     redirectURI: <api.protocol>://<api.host>/dex/callback
+      #     redirectURI: <http(s)>://<api.host>/dex/callback
       ## GitHub Example
       # - id: github
       #   name: GitHub
@@ -142,7 +146,7 @@ api:
       #   config:
       #     clientID: <your client ID>
       #     clientSecret: <your client secret>
-      #     redirectURI: <api.protocol>://<api.host>/dex/callback
+      #     redirectURI: <http(s)>://<api.host>/dex/callback
 
       ## @param api.oidc.dex.resources Resources limits and requests for the Dex server containers.
       resources: {}

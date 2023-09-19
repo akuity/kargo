@@ -1,10 +1,9 @@
 package get
 
 import (
-	"errors"
 	"strings"
 
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,12 +34,12 @@ kargo get stages my-project -o json
 			ctx := cmd.Context()
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return pkgerrors.New("get client from config")
+				return errors.New("get client from config")
 			}
 
 			resource := strings.ToLower(strings.TrimSpace(args[0]))
 			if resource == "" {
-				return pkgerrors.New("resource is required")
+				return errors.New("resource is required")
 			}
 
 			var resErr error
@@ -94,7 +93,7 @@ kargo get stages my-project -o json
 					return resErr
 				}
 			default:
-				return pkgerrors.Errorf("unknown resource %q", resource)
+				return errors.Errorf("unknown resource %q", resource)
 			}
 			_ = printResult(opt, res)
 			return resErr
@@ -111,7 +110,7 @@ func printResult(opt *option.Option, res runtime.Object) error {
 	}
 	printer, err := opt.PrintFlags.ToPrinter()
 	if err != nil {
-		return pkgerrors.Wrap(err, "new printer")
+		return errors.Wrap(err, "new printer")
 	}
 	return printer.PrintObj(res, opt.IOStreams.Out)
 }

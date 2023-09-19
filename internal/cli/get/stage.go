@@ -2,10 +2,10 @@ package get
 
 import (
 	"context"
-	"errors"
+	goerrors "errors"
 
 	"connectrpc.com/connect"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -25,7 +25,7 @@ func filterStages(
 		Project: project,
 	}))
 	if err != nil {
-		return nil, pkgerrors.Wrap(err, "list stages")
+		return nil, errors.Wrap(err, "list stages")
 	}
 	return func(names ...string) ([]runtime.Object, error) {
 		res := make([]runtime.Object, 0, len(resp.Msg.GetStages()))
@@ -45,7 +45,7 @@ func filterStages(
 			if stage, ok := stages[name]; ok {
 				res = append(res, stage)
 			} else {
-				resErr = errors.Join(err, pkgerrors.Errorf("stage %q not found", name))
+				resErr = goerrors.Join(err, errors.Errorf("stage %q not found", name))
 			}
 		}
 		return res, resErr

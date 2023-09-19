@@ -1,11 +1,11 @@
 package create
 
 import (
-	"errors"
+	goerrors "errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,35 +37,36 @@ kargo create project my-project
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if len(flag.Filenames) == 0 {
-				return pkgerrors.New("filename is required")
+				return errors.New("filename is required")
 			}
 
 			manifest, err := option.ReadManifests(flag.Filenames...)
 			if err != nil {
-				return pkgerrors.Wrap(err, "read manifests")
+				return errors.Wrap(err, "read manifests")
 			}
 
 			var printer printers.ResourcePrinter
 			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") != "" {
 				printer, err = opt.PrintFlags.ToPrinter()
 				if err != nil {
-					return pkgerrors.Wrap(err, "new printer")
+					return errors.Wrap(err, "new printer")
 				}
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return pkgerrors.Wrap(err, "get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 			resp, err := kargoSvcCli.CreateResource(ctx, connect.NewRequest(&kargosvcapi.CreateResourceRequest{
 				Manifest: manifest,
 			}))
 			if err != nil {
-				return pkgerrors.Wrap(err, "create resource")
+				return errors.Wrap(err, "create resource")
 			}
 
-			var successRes []*kargosvcapi.CreateResourceResult_CreatedResourceManifest
-			var createErrs []error
+			resCap := len(resp.Msg.GetResults())
+			successRes := make([]*kargosvcapi.CreateResourceResult_CreatedResourceManifest, 0, resCap)
+			createErrs := make([]error, 0, resCap)
 			for _, r := range resp.Msg.GetResults() {
 				switch typedRes := r.GetResult().(type) {
 				case *kargosvcapi.CreateResourceResult_CreatedResourceManifest:
@@ -78,7 +79,7 @@ kargo create project my-project
 				var obj unstructured.Unstructured
 				if err := sigyaml.Unmarshal(r.CreatedResourceManifest, &obj); err != nil {
 					fmt.Fprintf(opt.IOStreams.ErrOut, "%s",
-						pkgerrors.Wrap(err, "Error: unmarshal created manifest"))
+						errors.Wrap(err, "Error: unmarshal created manifest"))
 					continue
 				}
 				if printer == nil {
@@ -91,7 +92,7 @@ kargo create project my-project
 				}
 				_ = printer.PrintObj(&obj, opt.IOStreams.Out)
 			}
-			return errors.Join(createErrs...)
+			return goerrors.Join(createErrs...)
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)

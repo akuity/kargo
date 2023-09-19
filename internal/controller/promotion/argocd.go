@@ -334,7 +334,7 @@ func buildKustomizeImagesForArgoCDAppSource(
 	for _, image := range images {
 		tagsByImage[image.RepoURL] = image.Tag
 	}
-	kustomizeImages := argocd.KustomizeImages{}
+	kustomizeImages := make(argocd.KustomizeImages, 0, len(imageUpdates))
 	for _, imageUpdate := range imageUpdates {
 		tag, found := tagsByImage[imageUpdate]
 		if !found {

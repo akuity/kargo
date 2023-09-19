@@ -2,9 +2,9 @@ package promotion
 
 import (
 	"context"
-	"errors"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/bookkeeper"

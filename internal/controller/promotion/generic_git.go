@@ -21,7 +21,7 @@ func newGenericGitMechanism(
 // selectGenericGitUpdates returns a subset of the given updates that do not
 // involve any configuration management tools.
 func selectGenericGitUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
-	var selectedUpdates []kargoapi.GitRepoUpdate
+	selectedUpdates := make([]kargoapi.GitRepoUpdate, 0, len(updates))
 	for _, update := range updates {
 		if update.Kustomize == nil &&
 			update.Helm == nil &&
