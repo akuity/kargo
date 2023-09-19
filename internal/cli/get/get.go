@@ -31,7 +31,6 @@ kargo get promotions --project=my-project --stage=my-stage
 	cmd.AddCommand(newProjectsCommand(opt))
 	cmd.AddCommand(newStagesCommand(opt))
 	cmd.AddCommand(newPromotionsCommand(opt))
-	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }
 
