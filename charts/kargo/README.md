@@ -12,10 +12,10 @@
 
 ### RBAC
 
-| Name                              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Value  |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `rbac.installClusterRoles`        | Indicates if `ClusterRoles` should be installed. Set to `false` if there is more than one install of Kargo in a given cluster and this is not the first one, otherwise this chart will attempt to create resources that already exist. You may also wish to set this to `false` if you are installing Kargo into one cluster, but configuring it to manage a **different** cluster. In that case, you should use the `kargo-kit` chart to install these resources in the Kargo-managed cluster. | `true` |
-| `rbac.installClusterRoleBindings` | Indicates if `ClusterRoleBindings` should be installed. You may wish to set this to `false` if you are installing Kargo into one cluster, but configuring it to manage a **different** cluster. In that case, you should use the `kargo-kit` chart to install these resources in the Kargo-managed cluster.                                                                                                                                                                                     | `true` |
+| Name                              | Description                                             | Value  |
+| --------------------------------- | ------------------------------------------------------- | ------ |
+| `rbac.installClusterRoles`        | Indicates if `ClusterRoles` should be installed.        | `true` |
+| `rbac.installClusterRoleBindings` | Indicates if `ClusterRoleBindings` should be installed. | `true` |
 
 ### KubeConfigs
 
@@ -89,9 +89,9 @@ In the average case, these settings should be left alone.
 
 ### Webhooks
 
-| Name                | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Value  |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `webhooks.register` | Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources. Since these are installed at a cluster scope, there may be circumstances under which one wishes NOT to install these. An example would be if Kargo were being hosted in one cluster, but managing another cluster. In such a case, the `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources (as well as CRDs) should be installed into the cluster under management using the `kargo-kit` chart. | `true` |
+| Name                | Description                                                                                      | Value  |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ------ |
+| `webhooks.register` | Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources. | `true` |
 
 ### Webhooks Server
 
