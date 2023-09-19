@@ -1,30 +1,26 @@
-## Default values for kargo
+## Default values for kargo.
+## A human-readable version can be found in the chart README.
 ## This is a YAML-formatted file.
 ## Declare variables to be passed into your templates.
 
+## @section Image Parameters
 image:
+  ## @param image.repository Image repository of Kargo
   repository: ghcr.io/akuity/kargo
-  ## tag should only be specified if you want to override Chart.appVersion
-  ## The default tag is the value of .Chart.AppVersion
-  # tag:
+  ## @param image.tag Overrides the image tag. The default tag is the value of `.Chart.AppVersion`
+  tag: ""
+  ## @param image.pullPolicy Image pull policy
   pullPolicy: IfNotPresent
 
+## @section RBAC
 rbac:
-  ## Indicates whether relevant cluster-scoped roles should be installed/updated
-  ## by this chart. Set to false if this is NOT the first install of Kargo in
-  ## a given cluster, otherwise this chart will attempt to create resources that
-  ## already exist. You may also wish to set this to false if you are installing
-  ## Kargo into one cluster, but configuring it to manage a DIFFERENT cluster.
-  ## In that case, you should use the kargo-kit chart to install these resources
-  ## in the Kargo-managed cluster.
+  ## @param rbac.installClusterRoles Indicates if `ClusterRoles` should be installed. Set to `false` if there is more than one install of Kargo in a given cluster and this is not the first one, otherwise this chart will attempt to create resources that already exist. You may also wish to set this to `false` if you are installing Kargo into one cluster, but configuring it to manage a **different** cluster. In that case, you should use the `kargo-kit` chart to install these resources in the Kargo-managed cluster.
   installClusterRoles: true
-  ## Indicates whether relevant ClusterRoleBindings should be installed/updated
-  ## by this chart. You may wish to set this to false if you are installing
-  ## Kargo into one cluster, but configuring it to manage a DIFFERENT cluster.
-  ## In that case, you should use the kargo-kit chart to install these resources
-  ## in the Kargo-managed cluster.
+  ## @param rbac.installClusterRoleBindings Indicates if `ClusterRoleBindings` should be installed. You may wish to set this to `false` if you are installing Kargo into one cluster, but configuring it to manage a **different** cluster. In that case, you should use the `kargo-kit` chart to install these resources in the Kargo-managed cluster.
   installClusterRoleBindings: true
 
+## @section KubeConfigs
+## @descriptionStart
 ## Optionally point to Kubernetes Secrets containing kubeconfig for a remote
 ## Kubernetes cluster hosting Kargo resources and/or a remote Kubernetes cluster
 ## hosting Argo CD resources. This is useful for cases where the Kargo
@@ -32,197 +28,109 @@ rbac:
 ## config for Kargo and Argo CD can be the same, different, or omitted entirely.
 ## When omitted, the controller will fall back on in-cluster configuration.
 ## In the average case, these settings should be left alone.
+## @descriptionEnd
+## @skip kubeconfigSecrets
 kubeconfigSecrets: {}
-  # kargo:
-  # argocd:
+  ## @param kubeconfigSecrets.kargo [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Kargo resources
+  # kargo: ""
+  ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources
+  # argocd: ""
 
-## All settings for the api component.
+## @section API
 api:
-
-  ## Whether the API server is enabled.
-  ##
-  ## All other settings in this section will be ignored when this is set to
-  ## false.
+  ## @param api.enabled Whether the API server is enabled.
   enabled: true
-
-  ## The number of API server pods. (Default: 1)
-  # replicas: 3
-
-  ## The domain name where Kargo's API server will be accessible. This should be
-  ## set accurately for a variety of reasons, including (when applicable)
-  ## generation of a correct Ingress resource and correct OpenID Connect issuer
-  ## and callback URLs.
-  ##
-  ## Note: The protocol (http vs https) should not be specified and is
-  ## automatically inferred by from other configuration options.
+  ## @param api.replicas The number of API server pods.
+  replicas: 1
+  ## @param api.host The domain name where Kargo's API server will be accessible. This is used for (when applicable) generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The protocol (http vs https) should not be specified and is automatically inferred from other configuration options.
   host: localhost
-
+  ## @param api.logLevel The log level for the API server.
   logLevel: INFO
+  ## @param api.resources Resources limits and requests for the api containers.
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  ## @param api.nodeSelector Node selector for api pods.
+  nodeSelector: {}
+  ## @param api.tolerations Tolerations for api pods.
+  tolerations: []
 
   tls:
-    ## Whether to enable TLS directly on the API server. This is helpful if you
-    ## do not intend to use an Ingress controller OR you require TLS end-to-end.
-    ##
-    ## All other settings in this section will be ignored when this is set to
-    ## false.
+    ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section will be ignored when this is set to `false`.
     enabled: true
-    ## Whether to generate a self-signed certificate for use by the API server.
-    ##
-    ## If true, cert-manager CRDs MUST be pre-installed on this cluster.
-    ## Kargo will create and use its own namespaced issuer.
-    ##
-    ## If false, a cert secret named
-    ## kargo-api-cert MUST be provided in the same namespace as Kargo.
+    ## @param api.tls.selfSignedCert Whether to generate a self-signed certificate for use by the API server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-cert` **must** be provided in the same namespace as Kargo.
     selfSignedCert: true
 
   ingress:
-    ## Whether to enable ingress. By default, this is disabled. Enabling ingress
-    ## is advanced usage.
-    ##
-    ## All other settings in this section will be ignored when this is set to
-    ## false.
+    ## @param api.ingress.enabled Whether to enable ingress. By default, this is disabled. Enabling ingress is advanced usage.
     enabled: false
-    ## Optionally use annotations specified by your ingress controller's
-    ## documentation to customize the behavior of the ingress resource.
+    ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the ingress resource.
     annotations:
       # kubernetes.io/ingress.class: nginx
-    ## From Kubernetes 1.18+ this field is supported in case your ingress
-    ## controller supports it. When set, you do not need to add the ingress
-    ## class as annotation.
+    ## @param api.ingress.ingressClassName From Kubernetes 1.18+, this field is supported if implemented by your ingress controller. When set, you do not need to add the ingress class as annotation.
     ingressClassName:
     tls:
-      ## Whether to enable TLS on the Ingress.
-      ##
-      ## All other settings in this section will be ignored when this is set to
-      ## false.
+      ## @param api.ingress.tls.enabled Whether to enable TLS for the ingress. All other settings in this section will be ignored when this is set to `false`.
       enabled: true
-      ## Whether to generate a self-signed certificate for use with the API
-      ## server's Ingress resource.
-      ##
-      ## If true, cert-manager CRDs MUST be pre-installed on this cluster.
-      ## Kargo will create and use its own namespaced issuer.
-      ##
-      ## If false, a cert secret named
-      ## kargo-api-ingress-cert MUST be provided in the same namespace as Kargo.
+      ## @param api.ingress.tls.selfSignedCert Whether to generate a self-signed certificate for use with the API server's Ingress resource. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-ingress-cert` **must** be provided in the same namespace as Kargo.
       selfSignedCert: true
 
   service:
-    ## If you're not going to use an ingress controller, you may want to change
-    ## this value to LoadBalancer for production deployments. If running
-    ## locally, you may want to change it to NodePort OR leave it as ClusterIP
-    ## and use `kubectl port-forward` to map a port on the local network
-    ## interface to the service.
+    ## @param api.service.type If you're not going to use an ingress controller, you may want to change this value to `LoadBalancer` for production deployments. If running locally, you may want to change it to `NodePort` OR leave it as `ClusterIP` and use `kubectl port-forward` to map a port on the local network interface to the service.
     type: ClusterIP
-    ## Host port the service will be mapped to when service type is either
-    ## NodePort or LoadBalancer. If not specified, Kubernetes chooses.
+    ## @param api.service.nodePort [nullable] Host port the `Service` will be mapped to when `type` is either `NodePort` or `LoadBalancer`. If not specified, Kubernetes chooses.
     # nodePort:
 
   adminAccount:
-
-    ## Whether to enable the admin account.
-    ##
-    ## All other settings in this section will be ignored when this is set to
-    ## false.
+    ## @param api.adminAccount.enabled Whether to enable the admin account.
     enabled: true
-
-    ## Bcrypt password hash for the admin account. If specified, will ignore
-    ## password setting
+    ## @param api.adminAccount.passwordHash Bcrypt password hash for the admin account. If specified, will ignore `api.adminAccount.password`.
     passwordHash:
-
-    ## A password for the admin account. Ignored if passwordHash is set.
-    ## It is suggested that you generate this using a password manager or a 
-    # command like
-    ## `openssl rand -base64 29 | tr -d "=+/" | cut -c1-25`
-    password: <admin password>
-
-    ## Key used to sign ID tokens (JWTs) for the admin account. It is suggested
-    ## that you generate this using a password manager or a command like
-    ## `openssl rand -base64 29 | tr -d "=+/" | cut
-    tokenSigningKey: <signing key>
-    ## Specifies how long ID tokens for the admin account are valid. i.e.
-    ## The expiry will be the time of issue plus this duration.
+    ## @param api.adminAccount.password A password for the admin account. Ignored if `passwordHash` is set. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 29 \| tr -d "=+/" \| cut -c1-25`.
+    password: admin
+    ## @param api.adminAccount.tokenSigningKey Key used to sign ID tokens (JWTs) for the admin account. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 29 \| tr -d "=+/" \| cut`
+    tokenSigningKey:
+    ## @param api.adminAccount.tokenTTL Specifies how long ID tokens for the admin account are valid. (i.e. The expiry will be the time of issue plus this duration.)
     tokenTTL: 1h
 
   ## All settings related to enabling OpenID Connect as an authentication
   ## method.
   oidc:
-
-    ## Whether to enable authentication using Open ID Connect.
-    ##
-    ## All other settings in this section will be ignored when this is set to
-    ## false.
+    ## @param api.oidc.enabled Whether to enable authentication using Open ID Connect.
     enabled: false
-    
-    ## The issuer URL for the identity provider.
-    ##
-    ## If Dex is enabled, this value will be ignored and the issuer URL will be
-    ## automatically configured.
-    ##
-    ## If Dex is not enabled, this should be set to the issuer URL provided to
-    ## you by your identity provider.
-    issuerURL: <issuer URL>
-
-    ## The client ID for the OIDC client.
-    ## 
-    ## If Dex is enabled, this value will be ignored and the client ID will be
-    ## automatically configured.
-    ##
-    ## If Dex is not enabled, this should be set to the client ID provided to
-    ## you by your identity provider.
-    clientID: <client ID>
-
-    ## The client ID for the OIDC client used by CLI (optional).
-    ## 
-    ## Needed by some OIDC providers (such as Dex) that require a separate
-    ## Client ID for web app login vs. CLI login (http://localhost).
-    ##
-    ## If Dex is enabled, this value will be ignored and cli client ID will be
-    ## automatically configured.
-    ##
-    ## If Dex is not enabled, and a different client app is configured for
-    ## localhost CLI login, this should be the client ID configured in the IdP.
+    ## @param api.oidc.issuerURL The issuer URL for the identity provider. If Dex is enabled, this value will be ignored and the issuer URL will be automatically configured. If Dex is not enabled, this should be set to the issuer URL provided to you by your identity provider.
+    issuerURL:
+    ## @param api.oidc.clientID The client ID for the OIDC client. If Dex is enabled, this value will be ignored and the client ID will be automatically configured. If Dex is not enabled, this should be set to the client ID provided to you by your identity provider.
+    clientID:
+    ## @param api.oidc.cliClientID The client ID for the OIDC client used by CLI (optional). Needed by some OIDC providers (such as Dex) that require a separate Client ID for web app login vs. CLI login (`http://localhost`). If Dex is enabled, this value will be ignored and cli client ID will be automatically configured. If Dex is not enabled, and a different client app is configured for localhost CLI login, this should be the client ID configured in the IdP.
     cliClientID:
 
     dex:
-
-      ## Whether to enable Dex as the identity provider.
-      ##
-      ## When set to true, the Kargo installation will include a Dex server and
-      ## the Kargo API server will be configured to make the /dex endpoint
-      ## a reverse proxy for the Dex server.
-      ##
-      ## All other settings in this section will be ignored when this is set to
-      ## false.
+      ## @param api.oidc.dex.enabled Whether to enable Dex as the identity provider. When set to true, the Kargo installation will include a Dex server and the Kargo API server will be configured to make the /dex endpoint a reverse proxy for the Dex server.
       enabled: false
 
       image: 
+        ## @param api.oidc.dex.image.repository Image repository of Dex
         repository: ghcr.io/dexidp/dex
+        ## @param api.oidc.dex.image.tag Image tag for Dex.
         tag: v2.37.0
+        ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
 
       tls:
-        ## Whether to generate a self-signed certificate for the Dex server.
-        ##
-        ## If true, cert-manager CRDs MUST be pre-installed on this cluster.
-        ## Kargo will create and use its own namespaced issuer.
-        ##
-        ## If false, a cert secret named kargo-dex-server-cert MUST be provided
-        ## in the same namespace as Kargo.
-        ##
-        ## There is no provision for running Dex without TLS.
+        ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-dex-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
         selfSignedCert: true
-
-      ## Whether to skip Dex's own approval screen. Since upstream identity
-      ## providers will already request user consent, this second approval
-      ## screen from Dex can be both superfluous and confusing.
+      ## @param api.oidc.dex.skipApprovalScreen Whether to skip Dex's own approval screen. Since upstream identity providers will already request user consent, this second approval screen from Dex can be both superfluous and confusing.
       skipApprovalScreen: true
-
-      ## Configure Dex connectors to one or more upstream identity providers.
-      ## See https://dexidp.io/docs/connectors/ for more information.
+      ## @param api.oidc.dex.connectors Configure [Dex connectors](https://dexidp.io/docs/connectors/) to one or more upstream identity providers.
       connectors:
-      - id: mock
-        name: Example
-        type: mockCallback
+      # - id: mock
+      #   name: Example
+      #   type: mockCallback
       ## Google Example
       # - id: google
       #   name: Google
@@ -240,180 +148,114 @@ api:
       #     clientSecret: <your client secret>
       #     redirectURI: <http(s)>://<api.host>/dex/callback
 
+      ## @param api.oidc.dex.resources Resources limits and requests for the Dex server containers.
       resources: {}
-        # We usually recommend not to specify default resources and to leave
-        # this as a conscious choice for the user. This also increases chances
-        # charts run on environments with little resources, such as KinD. If you
-        # do want to specify resources, uncomment the following lines, adjust
-        # them as necessary, and remove the curly braces after 'resources:'.
         # limits:
         #   cpu: 100m
         #   memory: 128Mi
         # requests:
         #   cpu: 100m
         #   memory: 128Mi
-
+      ## @param api.oidc.dex.nodeSelector Node selector for Dex server pods.
       nodeSelector: {}
-
+      ## @param api.oidc.dex.tolerations Tolerations for Dex server pods.
       tolerations: []
 
   argocd:
-    ## Mapping of Argo CD shards names to URLs to support deep links to
-    ## Argo CD URLs. If sharding is not used, map the empty string to the
-    ## single Argo CD URL.
+    ## @param api.argocd.urls Mapping of Argo CD shards names to URLs to support deep links to Argo CD URLs. If sharding is not used, map the empty string to the single Argo CD URL.
     urls:
       # "": https://argocd.example.com
       # "shard2": https://argocd2.example.com
 
-  resources: {}
-    # We usually recommend not to specify default resources and to leave this as
-    # a conscious choice for the user. This also increases chances charts run on
-    # environments with little resources, such as KinD. If you do want to
-    # specify resources, uncomment the following lines, adjust them as
-    # necessary, and remove the curly braces after 'resources:'.
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-  #   memory: 128Mi
-
-  nodeSelector: {}
-
-  tolerations: []
-
+## @section Controller
 ## All settings for the controller component
 controller:
 
-  ## Whether the controller is enabled.
+  ## @param controller.enabled Whether the controller is enabled.
   enabled: true
 
-  ## Set a shard name only if you are running multiple controllers backed by a
-  ## single underlying control plane. Setting a shard name will cause this
-  ## controller to operate ONLY on resources with a matching shard name.
-  ## Leaving the shard name undefined will designate this controller as the
-  ## default controller that is responsible exclusively for resources that
-  ## are NOT assigned to a specific shard. Leaving this undefined is the correct
-  ## choice when you are not using sharding at all. It is also the correct
-  ## setting if you are using sharding and want to designate a controller as the
-  ## default for handling resources not assigned to a specific shard. In most
-  ## cases, this setting should simply be left alone.
+  ## @param controller.shardName [nullable] Set a shard name only if you are running multiple controllers backed by a single underlying control plane. Setting a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving the shard name undefined will designate this controller as the default controller that is responsible exclusively for resources that are **not** assigned to a specific shard. Leaving this undefined is the correct choice when you are not using sharding at all. It is also the correct setting if you are using sharding and want to designate a controller as the default for handling resources not assigned to a specific shard. In most cases, this setting should simply be left alone.
   # shardName:
 
   ## All settings relating to the Argo CD control plane this controller will
   ## integrate with.
   argocd:
-    ## The namespace into which Argo CD is installed.
+    ## @param controller.argocd.namespace The namespace into which Argo CD is installed.
     namespace: argocd
-    ## Specifies whether the reconciler that watches Argo CD Applications for
-    ## the sake of forcing related Stages to reconcile should only watch Argo CD
-    ## Application resources residing in Argo CD's own namespace. Note: Older
-    ## versions of Argo CD only supported Argo CD Application resources in Argo
-    ## CD's own namespace, but newer versions support Argo CD Application
-    ## resources in any namespace. This should usually be left as false.
+    ## @param controller.argocd.watchArgocdNamespaceOnly Specifies whether the reconciler that watches Argo CD Applications for the sake of forcing related Stages to reconcile should only watch Argo CD Application resources residing in Argo CD's own namespace. Note: Older versions of Argo CD only supported Argo CD Application resources in Argo CD's own namespace, but newer versions support Argo CD Application resources in any namespace. This should usually be left as `false`.
     watchArgocdNamespaceOnly: false
-    ## Specifies whether Kargo may borrow repository credentials (specially
-    ## formatted and specially annotated Secrets) from Argo CD.
+    ## @param controller.argocd.enableCredentialBorrowing Specifies whether Kargo may borrow repository credentials (specially formatted and specially annotated Secrets) from Argo CD.
     enableCredentialBorrowing: true
 
+  ## @param controller.logLevel The log level for the controller.
   logLevel: INFO
 
+  ## @param controller.resources Resources limits and requests for the controller containers.
   resources: {}
-    # We usually recommend not to specify default resources and to leave this as
-    # a conscious choice for the user. This also increases chances charts run on
-    # environments with little resources, such as KinD. If you do want to
-    # specify resources, uncomment the following lines, adjust them as
-    # necessary, and remove the curly braces after 'resources:'.
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-
+  ## @param controller.nodeSelector Node selector for controller pods.
   nodeSelector: {}
-
+  ## @param controller.tolerations Tolerations for controller pods.
   tolerations: []
 
+## @section Webhooks
 webhooks:
-  ## Whether to create ValidatingWebhookConfiguration and
-  ## MutatingWebhookConfiguration resources. Since these are installed at a
-  ## cluster scope, there may be circumstances under which one wishes NOT to
-  ## install these. An example would be if Kargo were being hosted in one
-  ## cluster, but managing another cluster. In such a case, the
-  ## ValidatingWebhookConfiguration and MutatingWebhookConfiguration resources
-  ## (as well as CRDs) should be installed into the cluster under management
-  ## using the kargo-kit chart.
+  ## @param webhooks.register Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources. Since these are installed at a cluster scope, there may be circumstances under which one wishes NOT to install these. An example would be if Kargo were being hosted in one cluster, but managing another cluster. In such a case, the `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources (as well as CRDs) should be installed into the cluster under management using the `kargo-kit` chart.
   register: true
 
+## @section Webhooks Server
 webhooksServer:
-
-  ## Whether the webhooks server is enabled.
+  ## @param webhooksServer.enabled Whether the webhooks server is enabled.
   enabled: true
-
-  ## The number of webhooks server pods. (Default: 1)
-  # replicas: 3
-
+  ## @param webhooksServer.replicas The number of webhooks server pods.
+  replicas: 1
+  ## @param webhooksServer.logLevel The log level for the webhooks server.
   logLevel: INFO
 
   tls:
-    ## Whether to generate a self-signed certificate for the controller's
-    ## built-in webhook server. If true, cert-manager CRDs MUST be
-    ## pre-installed on this cluster. Kargo will create and use its own
-    ## namespaced issuer. If false, a cert secret named
-    ## kargo-webhooks-server-cert MUST be provided in the same namespace as
-    ## Kargo.
-    ##
-    ## ## There is no provision for webhooks without TLS.
+    ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.
     selfSignedCert: true
-
+  ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
   resources: {}
-    # We usually recommend not to specify default resources and to leave this as
-    # a conscious choice for the user. This also increases chances charts run on
-    # environments with little resources, such as KinD. If you do want to
-    # specify resources, uncomment the following lines, adjust them as
-    # necessary, and remove the curly braces after 'resources:'.
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-
+  ## @param webhooksServer.nodeSelector Node selector for the webhooks server pods.
   nodeSelector: {}
-
+  ## @param webhooksServer.tolerations Tolerations for the webhooks server pods.
   tolerations: []
 
+## @section Garbage Collector
 garbageCollector:
 
-  ## Whether the garbage collector is enabled.
+  ## @param garbageCollector.enabled Whether the garbage collector is enabled.
   enabled: true
 
-  ## When to run the garbage collector.
+  ## @param garbageCollector.schedule When to run the garbage collector.
   schedule: "0 * * * *"
-  ## The number of concurrent workers to run. Tuning this too low will result in
-  ## slow garbage collection. Tuning this too high will result in too many API
-  ## calls and may result in throttling.
+  ## @param garbageCollector.workers The number of concurrent workers to run. Tuning this too low will result in slow garbage collection. Tuning this too high will result in too many API calls and may result in throttling.
   workers: 3
-  ## The maximum number of Promotions in terminal phases PER PROJECT that may be
-  ## spared by the garbage collector.
+  ## @param garbageCollector.maxRetainedPromotions The maximum number of Promotions in terminal phases PER PROJECT that may be spared by the garbage collector.
   maxRetainedPromotions: 20
-
+  ## @param garbageCollector.logLevel The log level for the garbage collector.
   logLevel: INFO
-
+  ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
   resources: {}
-    # We usually recommend not to specify default resources and to leave this as
-    # a conscious choice for the user. This also increases chances charts run on
-    # environments with little resources, such as KinD. If you do want to
-    # specify resources, uncomment the following lines, adjust them as
-    # necessary, and remove the curly braces after 'resources:'.
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-
+  ## @param garbageCollector.nodeSelector Node selector for the garbage collector pods.
   nodeSelector: {}
-
+  ## @param garbageCollector.tolerations Tolerations for the garbage collector pods.
   tolerations: []

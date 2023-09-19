@@ -121,6 +121,8 @@ codegen:
 		paths=./...
 	pnpm --dir=ui install --dev
 	pnpm --dir=ui run generate:schema
+	npm install -g @bitnami/readme-generator-for-helm
+	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################
 # Hack: Targets to help you hack                                               #
