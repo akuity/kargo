@@ -20,22 +20,6 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func componentVersionsToRuntimeObject(v *svcv1alpha1.ComponentVersions) (runtime.Object, error) {
-	data, err := protojson.Marshal(v)
-	if err != nil {
-		return nil, errors.Wrap(err, "marshal component versions")
-	}
-	var content map[string]interface{}
-	if err := json.Unmarshal(data, &content); err != nil {
-		return nil, errors.Wrap(err, "unmarshal component versions")
-	}
-	u := &unstructured.Unstructured{}
-	u.SetUnstructuredContent(content)
-	u.SetAPIVersion(kargoapi.GroupVersion.String())
-	u.SetKind("ComponentVersions")
-	return u, nil
-}
-
 func newVersionCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "version",
@@ -84,4 +68,20 @@ func newVersionCommand(opt *option.Option) *cobra.Command {
 	}
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
+}
+
+func componentVersionsToRuntimeObject(v *svcv1alpha1.ComponentVersions) (runtime.Object, error) {
+	data, err := protojson.Marshal(v)
+	if err != nil {
+		return nil, errors.Wrap(err, "marshal component versions")
+	}
+	var content map[string]any
+	if err := json.Unmarshal(data, &content); err != nil {
+		return nil, errors.Wrap(err, "unmarshal component versions")
+	}
+	u := &unstructured.Unstructured{}
+	u.SetUnstructuredContent(content)
+	u.SetAPIVersion(kargoapi.GroupVersion.String())
+	u.SetKind("ComponentVersions")
+	return u, nil
 }
