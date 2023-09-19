@@ -127,7 +127,7 @@ api:
       ## @param api.oidc.dex.skipApprovalScreen Whether to skip Dex's own approval screen. Since upstream identity providers will already request user consent, this second approval screen from Dex can be both superfluous and confusing.
       skipApprovalScreen: true
       ## @param api.oidc.dex.connectors Configure [Dex connectors](https://dexidp.io/docs/connectors/) to one or more upstream identity providers.
-      connectors:
+      connectors: []
       # - id: mock
       #   name: Example
       #   type: mockCallback

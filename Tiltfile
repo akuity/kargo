@@ -127,15 +127,6 @@ k8s_yaml(
     './charts/kargo',
     name = 'kargo',
     namespace = 'kargo',
-    set = [
-      'api.logLevel=DEBUG',
-      'api.host=localhost:30081',
-      'api.adminAccount.password=admin',
-      'api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch',
-      'api.oidc.enabled=true',
-      'api.oidc.dex.enabled=true',
-      'api-proxy.logLevel=DEBUG',
-      'controller.logLevel=DEBUG'
-    ]
+    values = 'values.dev.yaml'
   )
 )
