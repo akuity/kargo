@@ -4,7 +4,7 @@ description: Installing Kargo
 
 # Installing Kargo
 
-## Basic installation
+## Basic Installation
 
 Installing Kargo with default configuration is quick and easy.
 
@@ -19,9 +19,9 @@ You will need:
     * Argo CD: v2.8.3
 
 :::info
-cert-manager is used for self-signing a certificate used to identify Kargo's
+`cert-manager` is used for self-signing a certificate used to identify Kargo's
 webhook server to the Kubernetes API server. If you do not wish to use
-cert-manager for this purpose, you may provision your own certificate through
+`cert-manager` for this purpose, you may provision your own certificate through
 other means. Refer to the advanced installation section for more information.
 :::
 
@@ -46,7 +46,7 @@ helm install kargo \
   --wait
 ```
 
-## Advanced installation
+## Advanced Installation
 
 1. Extract the default values from the Helm chart and save it to a convenient
    location. In the example below, we save it to `~/kargo-values.yaml`

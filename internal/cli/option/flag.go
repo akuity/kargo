@@ -32,6 +32,12 @@ func OptionalProject(v Optional[string]) FlagFn {
 	}
 }
 
+func OptionalStage(v Optional[string]) FlagFn {
+	return func(fs *pflag.FlagSet) {
+		fs.Var(v, "stage", "Stage")
+	}
+}
+
 func Freight(v *string) FlagFn {
 	return func(fs *pflag.FlagSet) {
 		fs.StringVar(v, "freight", "", "Freight ID")

@@ -2,7 +2,7 @@
 description: Managing credentials
 ---
 
-# Managing credentials
+# Managing Credentials
 
 To manage the progression of changes from stage to stage, Kargo will
 often require read/write permissions on private GitOps repositories and
@@ -10,7 +10,7 @@ read-only permissions on private container image and/or Helm chart repositories.
 
 This section presents an overview of how these credentials can be managed.
 
-## Credentials as Kubernetes `Secret` resources
+## Credentials as Kubernetes `Secret` Resources
 
 Kargo borrows its general credential-management approach from Argo CD, meaning
 that credentials are stored as Kubernetes `Secret` resources containing
@@ -68,7 +68,7 @@ Only username/password (or personal access token) authentication is
 fully-supported at this time.
 :::
 
-## Borrowing credentials from Argo CD
+## Borrowing Credentials from Argo CD
 
 In many cases, Kargo and Argo CD will _both_ require credentials for the same
 GitOps and/or Helm chart repositories. (Argo CD never has need for container
