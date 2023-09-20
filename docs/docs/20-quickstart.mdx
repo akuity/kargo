@@ -25,6 +25,7 @@ This guide presents a basic introduction to Kargo. Together, we will:
     * kind: v0.17.0
     * k3d: v5.4.9
 * [Helm](https://helm.sh/docs/): These instructions were tested with v3.11.2.
+* The `kargo` CLI: Download it from [the releases page](https://github.com/akuity/kargo/releases/latest).
 
 ### Starting a Local Cluster
 
@@ -90,9 +91,9 @@ At the end of this process:
 
 ### Create a GitOps Repository
 
-In this step, we will create a GitOps repo on GitHub to house variations of our
-application manifests for three different stages: test, UAT, and
-production.
+Let's begin by creating a repository on GitHub to house variations of our
+application manifests for three different stages of a sample application: test,
+UAT, and production.
 
 Visit https://github.com/akuity/kargo-demo and fork the repository into your own
 GitHub account.
@@ -106,18 +107,21 @@ stage-specific configuration.
 :::note
 This layout is typical of a GitOps repository using Kustomize and is not at all
 Kargo-specific.
+
+Kargo also works just as well with Helm and with plain YAML.
 :::
 
-### Create Argo CD `Application`s
+### Create Argo CD `Application` Resources
 
 In this step, we will create three Argo CD `Application` resources that deploy
-the same application at three different stages of its lifecycle, with three
+the sample application at three different stages of its lifecycle, with three
 slightly different configurations, to three different namespaces in our local
 cluster.
 
-To get started, you will require a GitHub [personal access
-token](https://github.com/settings/tokens) with adequate permissions to read
-from and write to the repository you forked in the previous section.
+To get started, you will need a GitHub
+[personal access token](https://github.com/settings/tokens)
+with adequate permissions to read from and write to the repository you forked in
+the previous section.
 
 1. Save the location of your GitOps repository, your GitHub handle, and your
    personal access token in environment variables:
@@ -176,7 +180,7 @@ from and write to the repository you forked in the previous section.
      project: default
      source:
        repoURL: ${GITOPS_REPO_URL}
-       targetRevision: main
+       targetRevision: stage/test
        path: stages/test
      destination:
        server: https://kubernetes.default.svc
@@ -193,7 +197,7 @@ from and write to the repository you forked in the previous section.
      project: default
      source:
        repoURL: ${GITOPS_REPO_URL}
-       targetRevision: main
+       targetRevision: stage/uat
        path: stages/uat
      destination:
        server: https://kubernetes.default.svc
@@ -210,7 +214,7 @@ from and write to the repository you forked in the previous section.
      project: default
      source:
        repoURL: ${GITOPS_REPO_URL}
-       targetRevision: main
+       targetRevision: stage/prod
        path: stages/prod
      destination:
        server: https://kubernetes.default.svc
@@ -218,414 +222,332 @@ from and write to the repository you forked in the previous section.
    EOF
    ```
 
-If you visit [your Argo CD dashboard](http://localhost:8080), you will notice
-all three Argo CD `Application`s have not yet synced because they're not
-configured to do so automatically.
+  If you visit [your Argo CD dashboard](https://localhost:8443), you will notice
+  all three Argo CD `Application`s have not yet synced because they're not
+  configured to do so automatically, and in fact, the branches referenced by their
+  `targetRevision` fields do not even exist yet.
 
-:::info
-Our three stages all existing in a single cluster is for the sake of
-convenience. Because a single Argo CD control plane can manage multiple
-clusters, we could just as easily have spread our stages across multiple
-clusters/environments.
-:::
+  :::info
+  Our three stages all existing in a single cluster is for the sake of
+  expediency. A single Argo CD control plane can manage multiple clusters, so
+  these could also have been spread across multiple clusters.
+  :::
 
-### Create and Configure a Kargo Project
+### Hands on with the Kargo CLI
 
 Up to this point, we haven't done anything with Kargo -- in fact everything
 we've done thus far should be familiar to anyone who's already using Argo CD and
-Kustomize.
+Kustomize. Now it's time to see what Kargo can do!
 
-In this step, we'll create a Kargo project (a specially labeled namespace) and
-three Kargo `Stage` resources. These can be thought of as a layer "above" your
-GitOps repositories and Argo CD `Application`s. Their role is to describe
-subscriptions to different materials (like manifests or container images), the
-process for applying those materials, and the process for asserting whether they
-are properly deployed and healthy. For a simple example, such as ours, this
-means:
+1. Begin by logging into Kargo:
 
-* Watching the `nginx` image repository for new versions.
-* Automating relevant changes to the GitOps repository and affected Argo CD
-  `Application` resources.
-* Monitoring the health and sync state of Argo CD `Application` resources.
+  ```shell
+  kargo login https://localhost:8444 \
+    --admin \
+    --password admin \
+    --insecure-skip-tls-verify
+  ```
 
-We will also create two `PromotionPolicy` resources that will express
-permission for new materials to be deployed _automatically_ to the
-`kargo-demo-test` and `kargo-demo-uat` stages and one `RoleBinding` to grant
-permission for members of the `system:masters` group to promote new materials
-_manually_ to any of the stages. In fact, we will create these `PromotionPolicy`
-and `RoleBinding` resources first:
+1. Next, we'll create a Kargo project (a specially labeled namespace) and three
+   Kargo `Stage` resources. This can be thought of as an orchestration layer for
+   our GitOps repository and Argo CD `Application` resources.
 
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kargo-demo
-  labels:
-    kargo.akuity.io/project: "true"
----
-apiVersion: kargo.akuity.io/v1alpha1
-kind: PromotionPolicy
-metadata:
-  name: test
-  namespace: kargo-demo
-stage: test
-enableAutoPromotion: true
----
-apiVersion: kargo.akuity.io/v1alpha1
-kind: PromotionPolicy
-metadata:
-  name: uat
-  namespace: kargo-demo
-stage: uat
-enableAutoPromotion: true
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: promoters
-  namespace: kargo-demo
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: kargo-promoter
-subjects:
-- kind: Group
-  name: system:masters
-EOF
-```
-
-#### The `test` `Stage`
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: test
-  namespace: kargo-demo
-spec:
-  subscriptions:
-    repos:
-      images:
-      - repoURL: nginx
-        semverConstraint: ^1.24.0
-  promotionMechanisms:
-    gitRepoUpdates:
-    - repoURL: ${GITOPS_REPO_URL}
-      writeBranch: main
-      kustomize:
+  ```shell
+  cat <<EOF | kargo apply -f -
+  apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: kargo-demo
+    labels:
+      kargo.akuity.io/project: "true"
+  ---
+  apiVersion: kargo.akuity.io/v1alpha1
+  kind: Stage
+  metadata:
+    name: test
+    namespace: kargo-demo
+  spec:
+    subscriptions:
+      repos:
         images:
-        - image: nginx
-          path: stages/test
-    argoCDAppUpdates:
-    - appName: kargo-demo-test
-      appNamespace: argocd
-EOF
-```
-
-Dissecting the manifest above, we see the `test` `Stage` subscribes directly to
-the `nginx` image repository. When a new, semantically tagged version of the
-`nginx` container image is discovered, Kargo has discovered new _freight_.
-Because the corresponding `PromotionPolicy` resource permits auto-promotion, the
-discovery of this new freight will immediately result in the creation of a new
-`Promotion` resource that will transition the new piece of freight to the `test`
-`Stage`.
-
-The actual promotion process involves running `kustomize edit set image` on the
-`stages/test` directory of our GitOps repository and committing those changes,
-then forcing the `kargo-demo-test` Argo CD `Application` to refresh and sync.
-
-After creating the `test` `Stage` resource, we should almost immediately see:
-
-1. The `test` `Stage` has been assigned a current freight and is healthy:
-
-   ```text
-   kubectl get stage test --namespace kargo-demo
-   ```
-
-  ```text
-   NAME   CURRENT FREIGHT                            HEALTH    AGE
-   test   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   30s
-   ```
-
-1. The `test` `Stage` resource's `status` field reflects the available freight,
-   the current freight, and the history of freight that has moved through this
-   `Stage`:
-
-   ```text
-   kubectl get stage test \
-     --namespace kargo-demo \
-     --output jsonpath-as-json={.status}
-   ```
-
-1. A `Promotion` resource was also created which was responsible for
-   transitioning the new piece of freight into the `test` `Stage`.
-
-   ```texts
-   kubectl get promotions --namespace kargo-demo
-   ```
-
-   ```text
-   NAME                                               STAGE   FREIGHT                                    PHASE       AGE
-   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   55s
-   ```
-
-1. Your GitOps repository has a new commit.
-
-1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-test`
-   `Application` is synced and healthy.
-
-   The test instance of Nginx is visible at
-   [localhost:8081](http://localhost:8081).
-
-#### The `uat` `Stage`
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: uat
-  namespace: kargo-demo
-spec:
-  subscriptions:
-    upstreamStages:
-    - name: test
-  promotionMechanisms:
-    gitRepoUpdates:
-    - repoURL: ${GITOPS_REPO_URL}
-      writeBranch: main
-      kustomize:
-        images:
-        - image: nginx
-          path: stages/uat
-    argoCDAppUpdates:
-    - appName: kargo-demo-uat
-      appNamespace: argocd
-EOF
-```
-
-Dissecting the manifest above, we see the `uat` `Stage` is somewhat different
-from the `test` `Stage` in that it does not find new freight by subscribing
-directly to an image repository, but discovers freight by monitoring the
-"upstream" `test` `Stage`. Any healthy piece of freight from the `test` `Stage`'s
-`history` field becomes available freight for the `uat` `Stage`. Because the
-corresponding `PromotionPolicy` resource permits auto-promotion, the discovery
-of the `test` `Stage`'s current, healthy freight immediately results in the
-creation of a new `Promotion` resource to move that freight into this `Stage`.
-
-The `promotionMechanisms` for the `uat` `Stage` are not substantially different
-from those for the `test` `Stage`. They involve running `kustomize edit set
-image` on the `stages/uat` directory of our GitOps repository and committing
-those changes, then forcing the `kargo-demo-uat` Argo CD `Application` to
-refresh and sync.
-
-After creating the `uat` `Stage` resource, we should almost immediately
-see:
-
-1. The `uat` `Stage` has been assigned a current freight and is healthy:
-
-   ```shell
-   kubectl get stage uat --namespace kargo-demo
-   ```
-
-   ```text
-   NAME    CURRENT FREIGHT                            HEALTH    AGE
-   stage   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   13s
-   ```
-
-1. The `uat` `Stage` resource's `status` field reflects the available freight,
-   the current freight, and the history of all freight that has moved through
-   this `Stage`:
-
-   ```shell
-   kubectl get stage uat \
-     --namespace kargo-demo \
-     --output jsonpath-as-json={.status}
-   ```
-
-1. A `Promotion` resource was created which was responsible for moving the one
-   available piece of freight into the `uat` `Stage`.
-
-   ```shell
-   kubectl get promotions --namespace kargo-demo
-   ```
-
-   ```
-   NAME                                               STAGE   FREIGHT                                    PHASE       AGE
-   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   2m40s
-   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   43s
-   ```
-
-1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-uat`
-   `Application` is synced and healthy.
-
-   The UAT instance of Nginx is visible at
-   [localhost:8082](http://localhost:8082).
-
-#### The `prod` `Stage`
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Stage
-metadata:
-  name: prod
-  namespace: kargo-demo
-spec:
-  subscriptions:
-    upstreamStages:
-    - name: uat
-  promotionMechanisms:
-    gitRepoUpdates:
-    - repoURL: ${GITOPS_REPO_URL}
-      writeBranch: main
-      kustomize:
-        images:
-        - image: nginx
-          path: stages/prod
-    argoCDAppUpdates:
-    - appName: kargo-demo-prod
-      appNamespace: argocd
-EOF
-```
-
-Dissecting the manifest above, we see the `prod` `Stage` is remarkably similar
-to the `uat` `Stage`. It discovers new freight by monitoring the "upstream"
-`uat` `Stage`. Any healthy freight from the `uat` `Stage`'s `history` field
-becomes available freight for the `prod` `Stage`.
-
-The `promotionMechanisms` for the `prod` `Stage` also are not substantially
-different from those for either the `test` or `uat` `Stage`s. They involve
-running `kustomize edit set image` on the `stages/prod` directory of our GitOps
-repository and committing those changes, then forcing the `kargo-demo-prod` Argo
-CD `Application` to refresh and sync.
-
-Because the corresponding `PromotionPolicy` resource does _not_ permit
-auto-promotion, no `Promotion` resource will be automatically created.
-
-After creating the `prod` `Stage` resource, we should almost immediately see:
-
-1. The `prod` `Stage` has not yet been assigned a current freight:
-
-   ```shell
-   kubectl get stage prod --namespace kargo-demo
-   ```
-
-   ```text
-   NAME   CURRENT FREIGHT   HEALTH   AGE
-   prod                            12s
-   ```
-
-1. The `prod` `Stage` resource's `status` field reflects the one available
-   piece of freight, but shows no current freight or history:
-
-   ```shell
-   kubectl get stage prod \
-     --namespace kargo-demo \
-     --output jsonpath-as-json={.status}
-   ```
-
-1. No `Promotion` resource was automatically created to transition the freight
-   into the `prod` `Stage`.
-
-   ```shell
-   kubectl get promotions --namespace kargo-demo
-   ```
-
-   ```
-   NAME                                               STAGE   FREIGHT                                    PHASE       AGE
-   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   4m4s
-   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   2m7s
-   ```
-
-1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-prod`
-   `Application` is _still_ not synced and healthy.
-
-### Trigger a Promotion to the `prod` `Stage`
-
-In this step, we will trigger a promotion to transition the new freight into the
-`prod` `Stage` by manually creating a `Promotion` resource.
-
-First, copy the ID of the `uat` `Stage`'s current freight and assign it to a
-`FREIGHT_ID` environment variable:
-
-```shell
-export FREIGHT_ID=$(kubectl get stage uat -n kargo-demo -o jsonpath={.status.currentFreight.id})
-```
-
-Then apply the following:
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Promotion
-metadata:
-  name: prod-to-${FREIGHT_ID}
-  namespace: kargo-demo
-spec:
-  stage: prod
-  freight: ${FREIGHT_ID}
-EOF
-```
-
-After a few moments, we should be able to see:
-
-1. The `Promotion` has succeeded:
-
-   ```shell
-   kubectl get promotions --namespace kargo-demo
-   ```
-
-   ```text
-   NAME                                               STAGE   FREIGHT                                    PHASE       AGE
-   prod-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   prod    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   12s
-   test-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686   test    d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   8m11s
-   uat-to-d9a3e3e54b11b3e4a763e7cb8b1098089b567686    uat     d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Succeeded   6m14ss
-   ```
-
-1. The `prod` `Stage` has now been assigned a current freight:
-
-   ```shell
-   kubectl get stage prod --namespace kargo-demo
-   ```
-
-   ```text
-   NAME   CURRENT FREIGHT                            HEALTH    AGE
-   prod   d9a3e3e54b11b3e4a763e7cb8b1098089b567686   Healthy   5m20s
-   ```
-
-1. The `prod` `Stage` resource's `status` field reflects the available freight,
-   the current freight, and the history of all freight that has moved through
-   this `Stage`:
-
-   ```text
-   kubectl get stage prod \
-     --namespace kargo-demo \
-     --output jsonpath-as-json={.status}
-   ```
-
-1. [Your Argo CD dashboard](http://localhost:8080) shows that `kargo-demo-prod`
-   `Application` is now not synced and healthy.
-
-   The prod instance of Nginx is visible at
-   [localhost:8083](http://localhost:8083).
-
-## Summary
-
-At this point, if a new semantically tagged version of the `nginx` image should
-be pushed to Docker Hub, it will _automatically_ be discovered and promoted into
-our test stage, followed shortly thereafter by promotion into our UAT stage.
-Upon reaching the UAT stage, it will become available for manual promotion to
-production.
-
-This has been a "hello world"-level introduction to Kargo, demonstrating only
-the most basic functionality. Much more complex and useful promotion patterns
-are also possible and you are invited to continue exploring the documentation
-to learn more!
+        - repoURL: nginx
+          semverConstraint: ^1.24.0
+    promotionMechanisms:
+      gitRepoUpdates:
+      - repoURL: ${GITOPS_REPO_URL}
+        writeBranch: stage/test
+        kustomize:
+          images:
+          - image: nginx
+            path: stages/test
+      argoCDAppUpdates:
+      - appName: kargo-demo-test
+        appNamespace: argocd
+  ---
+  apiVersion: kargo.akuity.io/v1alpha1
+  kind: Stage
+  metadata:
+    name: uat
+    namespace: kargo-demo
+  spec:
+    subscriptions:
+      upstreamStages:
+      - name: test
+    promotionMechanisms:
+      gitRepoUpdates:
+      - repoURL: ${GITOPS_REPO_URL}
+        writeBranch: stage/uat
+        kustomize:
+          images:
+          - image: nginx
+            path: stages/uat
+      argoCDAppUpdates:
+      - appName: kargo-demo-uat
+        appNamespace: argocd
+  ---
+  apiVersion: kargo.akuity.io/v1alpha1
+  kind: Stage
+  metadata:
+    name: prod
+    namespace: kargo-demo
+  spec:
+    subscriptions:
+      upstreamStages:
+      - name: uat
+    promotionMechanisms:
+      gitRepoUpdates:
+      - repoURL: ${GITOPS_REPO_URL}
+        writeBranch: stage/prod
+        kustomize:
+          images:
+          - image: nginx
+            path: stages/prod
+      argoCDAppUpdates:
+      - appName: kargo-demo-prod
+        appNamespace: argocd
+  EOF
+  ```
+
+  Use the CLI to view the three `Stage` resources in our new project:
+
+  ```shell
+  kargo get stages --project kargo-demo
+  ```
+
+  Sample output:
+
+  ```shell
+  NAME   CURRENT FREIGHT   HEALTH    AGE
+  prod                     Healthy   20s
+  test                     Healthy   20s
+  uat                      Healthy   20s
+  ```
+
+1. Dissecting the manifest from the previous step, we see the `test` `Stage`
+   subscribes directly to the `nginx` image repository. When a new version of
+   the `nginx` container image matching the specified constraints is discovered,
+   Kargo has discovered new `Freight`.
+
+  :::info
+  `Freight` is a set of references to one or more versioned artifacts, which and
+  may include:
+
+    * Container images (from image repositories)
+
+    * Kubernetes manifests (from Git repositories)
+
+    * Helm charts (from chart repositories)
+
+  This introductory example has `Freight` that references only a specific
+  version of the `nginx` container image.
+  :::
+
+  We can query the status of the `test` `Stage` to see the latest `Freight`
+  available to it:
+
+  ```shell
+  kargo get stage test --project kargo-demo --output jsonpath-as-json={.status}
+  ```
+
+  Truncated sample output:
+
+  ```shell
+  [
+      {
+          "availableFreight": [
+              {
+                  "firstSeen": "2023-09-20T18:09:05Z",
+                  "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
+                  "images": [
+                      {
+                          "repoURL": "nginx",
+                          "tag": "1.25.2"
+                      }
+                  ],
+                  "qualified": true
+              }
+          ],
+          ...
+      }
+  ]
+  ```
+
+   Save the ID of the available `Freight` to an environment variable for
+   convenience:
+
+  ```shell
+  export FREIGHT_ID=$(kargo get stage test --project kargo-demo --output jsonpath={.status.availableFreight\[0\].id})
+  ```
+
+  _Promote_ the `Freight` into the `test` `Stage`:
+
+  ```shell
+  kargo stage promote kargo-demo test --freight $FREIGHT_ID
+  ```
+
+  Sample output:
+
+  ```shell
+  Promotion Created: "test.01haswttm2p4qwcenpnn5s1m96.b73f9d1"
+  ```
+
+   Query for `Promotion` resources within our project to see one has been
+   created and is currently pending:
+
+  ```shell
+  kargo get promotions --project kargo-demo
+  ```
+
+  Sample output:
+
+  ```shell
+  NAME                                      STAGE   FREIGHT                                    PHASE     AGE
+  test.01haswttm2p4qwcenpnn5s1m96.b73f9d1   test    b73f9d1afaca87254b64e64e5439557e86dcba79   Pending   7s
+  ```
+
+  We can repeat the command above until our `Promotion` has succeeded.
+
+  Once the `Promotion` has succeeded, we can, again view all `Stage` resources in
+  our project, and at a glance, see that the `test` `Stage` is now either in a
+  `Progressing` or `Healthy` state.
+
+  ```shell
+  kargo get stages --project kargo-demo
+  ```
+
+  Sample output:
+
+  ```shell
+  NAME   CURRENT FREIGHT                            HEALTH        AGE
+  prod                                              Healthy       6m55s
+  test   b73f9d1afaca87254b64e64e5439557e86dcba79   Progressing   6m55s
+  uat                                               Healthy       6m55s
+  ```
+
+  We can repeat the command above until our `Promotion` is in a `Healthy` state.
+
+  We can further validate the success of this entire process by visiting the
+  test instance of our site at [localhost:8081](http://localhost:8081).
+
+  If we once again view the `status` of our `test` `Stage` in more detail, we
+  will see that it now reflects not only `Freight` available to the `Stage`, but
+  also its current `Freight`, and the history of all `Freight` that have passed
+  through this stage. (The collection is ordered most to least recent.)
+
+  ```shell
+  kargo get stage test --project kargo-demo --output jsonpath-as-json={.status}
+  ```
+
+  Truncated sample output:
+
+  ```shell
+  [
+      {
+          "availableFreight": [
+              ...
+          ],
+          "currentFreight": {
+              "firstSeen": "2023-09-20T18:52:12Z",
+              "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
+              "images": [
+                  {
+                      "repoURL": "nginx",
+                      "tag": "1.25.2"
+                  }
+              ],
+              "qualified": true
+          },
+          ...
+          "history": [
+              {
+                  "firstSeen": "2023-09-20T18:52:12Z",
+                  "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
+                  "images": [
+                      {
+                          "repoURL": "nginx",
+                          "tag": "1.25.2"
+                      }
+                  ],
+                  "qualified": true
+              }
+          ]
+      }
+  ]
+  ```
+
+  Importantly, by virtue of the `test` `Stage` having achieved a `Healthy` state
+  with its current `Freight`, the sample output above shows the current
+  `Freight` is now _qualified_, which designates it as eligible for promotion to
+  the next `Stage` -- `uat`.
+
+### Behind the Scenes
+
+So what has Kargo done behind the scenes?
+
+Visiting our fork of https://github.com/akuity/kargo-demo, we will see that
+Kargo has recently created a `stage/test` branch for us. It has taken the latest
+manifests from the `main` branch as a starting point, run `kargo edit set image`
+within the `stages/test/` directory, and written the modified configuration to a
+stage-specific branch -- the same branch referenced by the `test` Argo CD
+`Applicaton`'s `targetRevision` field.
+
+:::info
+Although not strictly required for all cases, using stage-specific branches is a
+suggested practice that enables Kargo to transition each `Stage` into any new or
+previous state, at any time, with a new commit that replaces the entire contents
+of the branch -- all without disrupting the `main` branch.
+:::
+
+### Promote to UAT and then Production
+
+Unlike our `test` `Stage`, which subscribes directly to an image repository,
+our `uat` and `prod` `Stage`s both subscribe to other, _upstream_ `Stage`s,
+thereby forming a _pipeline_:
+
+1. `uat` subscribes to `test`
+1. `prod` subscribes to `uat`.
+
+We leave it as an exercise to the reader to use the `kargo stage promote`
+command to progress the `Freight` from `stage` to `uat` and again from `uat` to
+`prod`.
+
+:::info
+The `uat` and `prod` instances of our site should be accessible at:
+
+* `uat`: [localhost:8082](http://localhost:8082)
+* `prod`: [localhost:8083](http://localhost:8083)
+:::
+
+:::info
+It is possible to automate promotion of new, qualified `Freight` for designated
+`Stage`s and also possible to used RBAC to limit who can trigger manual
+promotions for each `Stage`, however, both these topics are beyond the scope of
+this introduction.
+:::
 
 ## Cleaning up
+
+Congratulations! You've just gotten hands on with Kargo for the first time!
 
 To clean up, we will simply destroy our kind or k3d cluster:
 
