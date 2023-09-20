@@ -65,12 +65,13 @@ Either script should only:
 </Tabs>
 
 :::note
-If installation fails with the error `GET "https://ghcr.io/v2/akuity/kargo-charts/kargo/tags/list": GET "https://ghcr.io/token?scope=repository%3Aakuity%2Fkargo-charts%2Fkargo%3Apull&service=ghcr.io": unexpected status code 403: denied: denied` or `failed to authorize: failed to fetch oauth token: unexpected status: 403 Forbidden`
-it is likely that `docker` is configured to authenticate to `ghcr.io` with an
-expired token.
-To resolve this, either remove the expired credentials by
-running `docker logout ghcr.io` or re-authenticate by running
-`docker login ghcr.io`
+If Kargo installation fails with a `403` it is likely that `docker` is
+configured to authenticate to `ghcr.io` with an expired token.
+
+To resolve this, remove or renew the credentials using one of:
+
+* `docker logout ghcr.io`
+* `docker login ghcr.io`
 :::
 
 At the end of this process:
