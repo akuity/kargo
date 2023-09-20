@@ -9,11 +9,8 @@ import TabItem from '@theme/TabItem';
 
 This guide presents a basic introduction to Kargo. Together, we will:
 
-1. Create a local Kubernetes cluster.
-
-1. Install Kargo's dependencies, including Argo CD.
-
-1. Install Kargo itself with default options.
+1. Create a local Kubernetes cluster with Kargo and its dependencies already
+   installed.
 
 1. Demonstrate how Kargo can progress changes through multiple stages by
    interacting with your GitOps repository and Argo CD `Application` resources.
@@ -31,132 +28,63 @@ This guide presents a basic introduction to Kargo. Together, we will:
 
 ### Starting a Local Cluster
 
-We will start our cluster using options that make it convenient to access the
-Argo CD dashboard and three different instances of our demo application on
-different `localhost` ports:
+With our prerequisites met, we can execute a helper script to launch a 
+kind or k3d cluster and install Kargo along with its dependencies:
 
 <Tabs groupId="cluster-start">
 <TabItem value="kind" label="kind">
 
 ```shell
-kind create cluster \
-  --wait 120s \
-  --config - <<EOF
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-name: kargo-quickstart
-nodes:
-- extraPortMappings:
-  - containerPort: 30080 # Argo CD dashboard
-    hostPort: 8080
-  - containerPort: 30081 # test application instance
-    hostPort: 8081
-  - containerPort: 30082 # UAT application instance
-    hostPort: 8082
-  - containerPort: 30083 # prod application instance
-    hostPort: 8083
-  - containerPort: 30084 # Kargo dashboard
-    hostPort: 8084
-EOF
+curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/kind.sh | sh
 ```
 
 </TabItem>
 <TabItem value="k3d" label="k3d">
 
 ```shell
-k3d cluster create kargo-quickstart \
-  --no-lb \
-  --k3s-arg '--disable=traefik@server:0' \
-  -p '8080-8084:30080-30084@servers:0:direct' \
-  --wait
+curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/k3d.sh | sh
 ```
+
+</TabItem>
+<TabItem value="more-info" label="More Info">
+
+:::info
+If you are averse to piping a downloaded script directly into a shell, please
+feel free to download the applicable script and inspect its contents prior to
+execution.
+
+Either script should only:
+
+1. Launch a kind or k3d cluster
+1. Install cert-manager
+1. Install Argo CD
+1. Install Kargo
+:::
 
 </TabItem>
 </Tabs>
 
-### Installing `cert-manager`
-:::info
-In its default configuration, Kargo uses `cert-manager` to provision a self-signed
-certificate for use by Kargo's webhook server. In a more advanced installation,
-you may optionally disregard this dependency by providing a certificate yourself
-through any means you prefer.
+:::note
+If installation fails with the error `failed to authorize: failed to fetch oauth token: unexpected status: 403 Forbidden`
+it is likely that `docker` is configured to authenticate to `ghcr.io` with an
+expired token.
+
+To resolve this, either remove the expired credentials by
+running `docker logout ghcr.io` or re-authenticate by running
+`docker login ghcr.io`
 :::
 
-```shell
-helm install cert-manager cert-manager \
-  --repo https://charts.jetstack.io \
-  --version 1.11.5 \
-  --namespace cert-manager \
-  --create-namespace \
-  --set installCRDs=true \
-  --wait
-```
+At the end of this process:
 
-### Installing Argo CD
+* The Argo CD dashboard will be accessible at [localhost:8443](https://localhost:8443).
 
-:::info
-Kargo works best when integrated with Argo CD, but we're working on reducing
-this dependency from a required one to a suggested one.
-:::
+  The username and password are both `admin`.
 
-```shell
-helm install argocd argo-cd \
-  --repo https://argoproj.github.io/argo-helm \
-  --version 5.46.6 \
-  --namespace argocd \
-  --create-namespace \
-  --set 'configs.secret.argocdServerAdminPassword=$2a$10$5vm8wXaSdbuff0m9l21JdevzXBzJFPCi8sy6OOnpZMAG.fOXL7jvO' \
-  --set dex.enabled=false \
-  --set notifications.enabled=false \
-  --set server.service.type=NodePort \
-  --set server.service.nodePortHttp=30080 \
-  --wait
-```
+* The Kargo dashboard will be accessible at [localhost:8444](https://localhost:8444).
 
-The Argo CD dashboard will be accessible at
-[localhost:8080](http://localhost:8080).
+  The admin password is `admin`.
 
-You can safely ignore cert errors.
-
-The username and password are both `admin`.
-
-## Installing Kargo
-
-```shell
-helm install kargo \
-  oci://ghcr.io/akuity/kargo-charts/kargo \
-  --namespace kargo \
-  --create-namespace \
-  --set api.service.type=NodePort \
-  --set api.service.nodePort=30084 \
-  --set 'api.adminAccount.password=admin' \
-  --wait
-```
-
-The Kargo dashboard will be accessible at
-[localhost:8084](http://localhost:8084).
-
-The Admin password is `admin`.
-
-:::tip
-```
-Error: INSTALLATION FAILED: failed to authorize: failed to fetch oauth token: unexpected status: 403 Forbidden
-```
-
-If you recieve this error, it's likely because `docker` is configured to
-authenticate with `ghcr.io` using an expired token.
-
-You can confirm this by running:
-```
-docker pull ghcr.io/akuity/kargo:v0.1.0-rc.21
-```
-```
-Error response from daemon: Head "https://ghcr.io/v2/akuity/kargo/manifests/v0.1.0-rc.21": denied: denied
-```
-
-To solve this problem, either remove the invalid credentials for `ghcr.io` by
-running `docker logout ghcr.io` or re-authenticate by running `docker login ghcr.io`
-:::
+* You can safely ignore all cert errors for both of the above.
 
 ## Trying It Out
 
