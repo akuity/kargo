@@ -1,4 +1,4 @@
-import { Select, Tooltip } from 'antd';
+import { Select, Switch, Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
@@ -6,36 +6,133 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { getStageColors } from '@ui/features/stage/utils';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { useLocalStorage } from '@ui/utils/prefs';
+
+interface StagePixelStyle {
+  opacity: number;
+  backgroundColor: string;
+  border?: string;
+}
+
+type StageStyleMap = { [key: string]: StagePixelStyle };
+
+const ImageTagRow = ({
+  tag,
+  stages,
+  stylesByStage,
+  projectName,
+  showHistory
+}: {
+  tag: string;
+  stages: Stage[];
+  stylesByStage: StageStyleMap;
+  projectName: string;
+  showHistory: boolean;
+}) => {
+  const navigate = useNavigate();
+  return (
+    <div className='flex items-center mb-2'>
+      <Tooltip title={tag}>
+        <div className='mr-4 font-mono text-sm text-right w-20 truncate'>{tag}</div>
+      </Tooltip>
+      {stages.map((stage) => {
+        let curStyles: StagePixelStyle | null = stylesByStage[stage.metadata?.name || ''];
+        if (curStyles) {
+          if (!showHistory && curStyles.opacity < 1) {
+            curStyles = null;
+          } else if (showHistory && curStyles.opacity == 1) {
+            curStyles = {
+              ...curStyles,
+              border: '3px solid rgba(255,255,255,0.3)'
+            };
+          }
+        }
+        return (
+          <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
+            <div
+              className={classNames('mr-2 bg-zinc-600', {
+                'cursor-pointer': !!curStyles
+              })}
+              style={{
+                borderRadius: '5px',
+                border: '3px solid transparent',
+                height: '30px',
+                width: '30px',
+                ...curStyles
+              }}
+              onClick={() =>
+                navigate(
+                  generatePath(paths.stage, {
+                    name: projectName,
+                    stageName: stage.metadata?.name
+                  })
+                )
+              }
+            />
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
+};
 
 export const Images = ({ projectName, stages }: { projectName: string; stages: Stage[] }) => {
-  const [images, colors] = useMemo(() => {
-    const images = new Map<string, Map<string, Set<string>>>();
+  const [images] = useMemo(() => {
+    const images = new Map<string, Map<string, StageStyleMap>>();
+    const colors = getStageColors([...stages]);
     stages.forEach((stage) => {
+      const len = stage.status?.history?.length || 0;
+      stage.status?.history?.forEach((freight, i) => {
+        freight.images?.forEach((image) => {
+          let repo = images.get(image.repoUrl);
+          if (!repo) {
+            repo = new Map<string, StageStyleMap>();
+            images.set(image.repoUrl, repo);
+          }
+          let stages = repo.get(image.tag);
+          if (!stages) {
+            stages = {} as StageStyleMap;
+            repo.set(image.tag, stages);
+          }
+          stages[stage.metadata?.name as string] = {
+            opacity: 1 - i / len,
+            backgroundColor: colors[stage.metadata?.uid as string]
+          };
+        });
+      });
+
       stage.status?.currentFreight?.images?.forEach((image) => {
         let repo = images.get(image.repoUrl);
         if (!repo) {
-          repo = new Map<string, Set<string>>();
+          repo = new Map<string, StageStyleMap>();
           images.set(image.repoUrl, repo);
         }
         let stages = repo.get(image.tag);
         if (!stages) {
-          stages = new Set<string>();
+          stages = {} as StageStyleMap;
           repo.set(image.tag, stages);
         }
-        stages.add(stage.metadata?.name as string);
+        stages[stage.metadata?.name as string] = {
+          opacity: 1,
+          backgroundColor: colors[stage.metadata?.uid as string]
+        };
       });
     });
-    return [images, getStageColors([...stages])];
+    return [images];
   }, [stages]);
 
-  const navigate = useNavigate();
   const [imageURL, setImageURL] = useState(images.keys().next().value as string);
   const image = imageURL && images.get(imageURL);
+  const [showHistory, setShowHistory] = useLocalStorage(`${projectName}-show-history`, false);
 
   return (
     <>
       {image ? (
         <>
+          <div className='mb-4 flex items-center'>
+            <Switch onChange={(val) => setShowHistory(val)} checked={showHistory} />
+            <div className='ml-2 font-semibold'>SHOW HISTORY</div>
+          </div>
           <div className='mb-8'>
             <Select
               className='w-full'
@@ -50,36 +147,14 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
           {Array.from(image.entries())
             .sort((a, b) => b[0].localeCompare(a[0], undefined, { numeric: true }))
             .map(([tag, tagStages]) => (
-              <div key={tag} className='flex items-center mb-2'>
-                <Tooltip title={tag}>
-                  <div className='mr-4 font-mono text-sm text-right w-20 truncate'>{tag}</div>
-                </Tooltip>
-                {stages.map((stage) => (
-                  <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
-                    <div
-                      className={classNames('mr-2 bg-zinc-600', {
-                        'cursor-pointer': tagStages.has(stage.metadata?.name || '')
-                      })}
-                      style={{
-                        borderRadius: '5px',
-                        height: '30px',
-                        width: '30px',
-                        backgroundColor: tagStages.has(stage.metadata?.name || '')
-                          ? colors[stage.metadata?.uid || '']
-                          : ''
-                      }}
-                      onClick={() =>
-                        navigate(
-                          generatePath(paths.stage, {
-                            name: projectName,
-                            stageName: stage.metadata?.name
-                          })
-                        )
-                      }
-                    />
-                  </Tooltip>
-                ))}
-              </div>
+              <ImageTagRow
+                key={tag}
+                projectName={projectName}
+                tag={tag}
+                stages={stages}
+                stylesByStage={tagStages}
+                showHistory={showHistory}
+              />
             ))}
         </>
       ) : (
