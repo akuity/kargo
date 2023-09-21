@@ -157,6 +157,23 @@ jobs:
       run: |
         echo "hash-${{ matrix.os }}-${{ matrix.arch }}=$(sha256sum bin/kargo* | awk -F 'bin/' '{print $1 $2}'| base64 -w0)" >> "$GITHUB_OUTPUT"
 
+  push-fig-autocomplete-spec:
+    needs: [publish-cli]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-node@v2
+    - name: Generate the spec
+      run: |
+        curl -L https://github.com/akuity/kargo/releases/download/${{ github.ref_name }}/kargo-linux-amd64 -o kargo
+        chmod 755 kargo
+        kargo fig > kargo-fig-spec.ts
+    - name: Create Autocomplete PR
+      uses: withfig/publish-to-fig-autocomplete@v1
+      with:
+        autocomplete-spec-name: kargo
+        spec-path: kargo-fig-spec.ts
+        integration: cobra
+
   combine_hashes:
     needs: [publish-cli]
     runs-on: ubuntu-latest
