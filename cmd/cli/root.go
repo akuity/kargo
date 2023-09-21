@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -96,6 +97,13 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand(opt))
+	cmd.AddCommand(
+		cobracompletefig.CreateCompletionSpecCommand(
+			cobracompletefig.Opts{
+				Use: "fig",
+			},
+		),
+	)
 	return cmd, nil
 }
 
