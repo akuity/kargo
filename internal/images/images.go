@@ -1,6 +1,7 @@
 package images
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
@@ -41,7 +42,9 @@ func GetLatestTag(
 		Strategy:   img.ParseUpdateStrategy(string(updateStrategy)),
 	}
 	if allowTags != "" {
-		vc.MatchFunc, vc.MatchArgs = img.ParseMatchfunc(allowTags)
+		vc.MatchFunc, vc.MatchArgs = img.ParseMatchfunc(
+			fmt.Sprintf("regexp:%s", allowTags),
+		)
 	}
 	vc.IgnoreList = ignoreTags
 	vc.Options = options.NewManifestOptions()
