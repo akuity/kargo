@@ -9,15 +9,8 @@ import (
 	"github.com/argoproj-labs/argocd-image-updater/pkg/options"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/registry"
 	"github.com/pkg/errors"
-)
 
-type ImageUpdateStrategy string
-
-const (
-	ImageUpdateStrategySemVer ImageUpdateStrategy = "SemVer"
-	ImageUpdateStrategyLatest ImageUpdateStrategy = "Latest"
-	ImageUpdateStrategyName   ImageUpdateStrategy = "Name"
-	ImageUpdateStrategyDigest ImageUpdateStrategy = "Digest"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func init() {
@@ -29,7 +22,7 @@ func init() {
 
 func GetLatestTag(
 	repoURL string,
-	updateStrategy ImageUpdateStrategy,
+	updateStrategy kargoapi.ImageUpdateStrategy,
 	semverConstraint string,
 	allowTags string,
 	ignoreTags []string,
