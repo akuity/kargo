@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -36,17 +37,16 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			ctx := buildRootContext(cmd.Context())
 
-			restCfg, err := config.GetConfig()
-			if err != nil {
-				return errors.Wrap(err, "get REST config")
-			}
-			client, err :=
-				kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{})
-			if err != nil {
-				return errors.Wrap(err, "error creating Kubernetes client")
-			}
-
 			if opt.UseLocalServer {
+				restCfg, err := config.GetConfig()
+				if err != nil {
+					return errors.Wrap(err, "get REST config")
+				}
+				client, err :=
+					kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{})
+				if err != nil {
+					return errors.Wrap(err, "error creating Kubernetes client")
+				}
 				l, err := net.Listen("tcp", "127.0.0.1:0")
 				if err != nil {
 					return errors.Wrap(err, "start local server")
@@ -97,6 +97,13 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand(opt))
+	cmd.AddCommand(
+		cobracompletefig.CreateCompletionSpecCommand(
+			cobracompletefig.Opts{
+				Use: "fig",
+			},
+		),
+	)
 	return cmd, nil
 }
 
