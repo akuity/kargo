@@ -18,8 +18,8 @@ application's lifecycle.
 ![Screenshot](docs/static/img/screenshot.png)
 
 > ⚠️&nbsp;&nbsp;Kargo is undergoing active development and everyone is invited
-> to [join us](https://github.com/akuity/kargo) in the journey to a GA
-> >release (`v1.0.0`)! Please expect breaking changes between pre-GA releases (`v0.x.x`).
+> to join us in the journey to a GA release (`v1.0.0`)! Please expect breaking changes
+> between pre-GA releases (`v0.x.x`).
 
 ## Getting Started
 
