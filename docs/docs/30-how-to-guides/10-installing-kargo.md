@@ -36,15 +36,27 @@ that Kargo is intended to be installed into the same cluster as the Argo CD
 control plane and _not_ into the individual clusters that Argo CD is managing.
 :::
 
-The following command will install Kargo with default configuration:
+The following command will install Kargo with default configuration and a
+user-specified admin password:
 
 ```shell
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
   --namespace kargo \
   --create-namespace \
+  --set api.adminAccount.password=admin \
+  --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
   --wait
 ```
+
+:::caution
+If deploying to an internet-facing cluster, be certain to do one of the
+following:
+
+* Disable the admin account with `--set api.adminAccount.enabled=false`
+
+* Choose your own strong password and signing key. 
+:::
 
 ## Advanced Installation
 

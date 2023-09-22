@@ -33,5 +33,6 @@ helm install kargo \
   --create-namespace \
   --set api.service.type=NodePort \
   --set api.service.nodePort=31444 \
-  --set 'api.adminAccount.password=admin' \
+  --set api.adminAccount.password=admin \
+  --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
   --wait
