@@ -17,12 +17,9 @@ application's lifecycle.
 
 ![Screenshot](docs/static/img/screenshot.png)
 
-> ⚠️&nbsp;&nbsp;Kargo is still undergoing heavy development and is not yet ready
-> for production, but all are invited to join us in improving Kargo to help
-> it get there.
->
-> In the meantime, breaking changes should be anticipated between pre-GA minor
-> releases.
+> ⚠️&nbsp;&nbsp;Kargo is undergoing active development and everyone is invited
+> to [join us](https://github.com/akuity/kargo) in the journey to a GA
+> >release (`v1.0.0`)! Please expect breaking changes between pre-GA releases (`v0.x.x`).
 
 ## Getting Started
 
