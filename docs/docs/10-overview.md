@@ -18,13 +18,7 @@ application's lifecycle.
 Kargo's goal is to provide an intuitive and flexible layer "above" existing GitOps tooling, wherein you can describe the relationships between various application instances deployed to different environments as well as procedures for progressing changes from one application instance's source of truth to the next.
 
 :::caution
-Kargo is still undergoing heavy development and is not yet ready for production,
-but all are invited to
-[join us in improving Kargo](https://github.com/akuity/kargo) to help it get
-there.
-
-In the meantime, breaking changes should be anticipated between pre-GA minor
-releases.
+Kargo is undergoing active development and everyone is invited to [join us in the effort of getting Kargo to a GA release!](https://github.com/akuity/kargo) Expect breaking changes between pre-GA minor releases."
 :::
 
 :::info
