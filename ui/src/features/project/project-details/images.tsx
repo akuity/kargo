@@ -6,7 +6,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { getStageColors } from '@ui/features/stage/utils';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
-import { useLocalStorage } from '@ui/utils/prefs';
+import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 interface StagePixelStyle {
   opacity: number;
@@ -77,7 +77,7 @@ const ImageTagRow = ({
 };
 
 export const Images = ({ projectName, stages }: { projectName: string; stages: Stage[] }) => {
-  const [images] = useMemo(() => {
+  const images = useMemo(() => {
     const images = new Map<string, Map<string, StageStyleMap>>();
     const colors = getStageColors([...stages]);
     stages.forEach((stage) => {
@@ -118,7 +118,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
         };
       });
     });
-    return [images];
+    return images;
   }, [stages]);
 
   const [imageURL, setImageURL] = useState(images.keys().next().value as string);
