@@ -166,9 +166,12 @@ installed, you can be up and running with just a few commands!
    [Argo CD](https://argoproj.github.io/cd/).
 
    :::info
-   The Argo CD dashboard will be exposed at `localhost:30080`.
+   The Argo CD dashboard will be exposed at
+   [localhost:30080](https://localhost:30080).
 
    The username and password are both `admin`.
+
+   You may safely ignore any certificate warnings.
    :::
 
 1. Build and deploy Kargo from source:
@@ -191,18 +194,29 @@ installed, you can be up and running with just a few commands!
    altered. They can be rebuilt and replaced with a single click.
    :::
 
-1. Build executable CLI to test locally:
+1. If necessary, build the CLI from source:
 
    ```shell
    make hack-build-cli
    ```
 
-   Then:
-   
+   This will produce an executable at `bin/kargo-<os>-<arch>`.
+
+   You can log in using:
+
    ```shell
-   cd cmd/cli
-   ./kargo <option> --local-server
+   bin/kargo-<os>-<arch> login https://localhost:30081 \
+     --admin \
+     --password admin \
+     --insecure-skip-tls-verify
    ```
+
+1. If necessary, access the Kargo UI at
+   [localhost:30081](https://localhost:30081).
+
+   The admin account password is `admin`.
+
+   You may safely ignore any certificate warnings.
 
 1. When you are done with Tilt, interrupt the running `tilt up` process with
    `ctrl + c`. Components _will remain running in the cluster_, but Tilt will no
