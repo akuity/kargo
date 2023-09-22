@@ -90,7 +90,7 @@ api:
     enabled: true
     ## @param api.adminAccount.passwordHash Bcrypt password hash for the admin account. If specified, will ignore `password`. A value **must** be provided for either this field or `password`.
     passwordHash:
-    ## @param api.adminAccount.password A password for the admin account. Ignored if `passwordHash` is set. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 29 \| tr -d "=+/" \| cut -c1-25`. A value MUST be provided for either this field or `passwordHash`.
+    ## @param api.adminAccount.password A password for the admin account. Ignored if `passwordHash` is set. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 29 \| tr -d "=+/" \| cut -c1-25`. A value **must** be provided for either this field or `passwordHash`.
     password:
     ## @param api.adminAccount.tokenSigningKey Key used to sign ID tokens (JWTs) for the admin account. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 29 \| tr -d "=+/" \| cut`. A value MUST be provided for this field.
     tokenSigningKey:
