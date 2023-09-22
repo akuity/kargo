@@ -35,4 +35,12 @@ rules:
       - get
       - list
       - watch
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      # Needed for OpenShift
+      - stages/finalizers
+    verbs:
+      - patch
+      - update
 {{- end }}
