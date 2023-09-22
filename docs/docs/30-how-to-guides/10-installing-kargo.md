@@ -50,7 +50,7 @@ helm install kargo \
 ```
 
 :::caution
-If deploying to an internet-connected cluster, be certain to do one of the
+If deploying to an internet-facing cluster, be certain to do one of the
 following:
 
 * Disable the admin account with `--set api.adminAccount.enabled=false`
