@@ -19,6 +19,7 @@ rules:
     - kargo.akuity.io
   resources:
     - promotionpolicies
+    - stages
   verbs:
     - get
     - list

@@ -7,8 +7,10 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,8 +64,39 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w.validateProjectFn = w.validateProject
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Promotion{}).
+		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
+}
+
+func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
+	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
+	stage, err := kargoapi.GetStage(
+		ctx,
+		w.client,
+		types.NamespacedName{
+			Namespace: promo.Namespace,
+			Name:      promo.Spec.Stage,
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"error finding Stage %q in namespace %q",
+			promo.Spec.Stage,
+			promo.Namespace,
+		)
+	}
+	if stage == nil {
+		return errors.Errorf(
+			"could not find Stage %q in namespace %q",
+			promo.Spec.Stage,
+			promo.Namespace,
+		)
+	}
+	ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
+	promo.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+	return nil
 }
 
 func (w *webhook) ValidateCreate(
