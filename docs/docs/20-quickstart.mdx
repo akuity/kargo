@@ -506,7 +506,7 @@ So what has Kargo done behind the scenes?
 
 Visiting our fork of https://github.com/akuity/kargo-demo, we will see that
 Kargo has recently created a `stage/test` branch for us. It has taken the latest
-manifests from the `main` branch as a starting point, run `kargo edit set image`
+manifests from the `main` branch as a starting point, run `kustomize edit set image`
 within the `stages/test/` directory, and written the modified configuration to a
 stage-specific branch -- the same branch referenced by the `test` Argo CD
 `Applicaton`'s `targetRevision` field.
