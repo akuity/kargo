@@ -95,7 +95,7 @@ api:
     ## @param api.adminAccount.tokenSigningKey Key used to sign ID tokens (JWTs) for the admin account. It is suggested that you generate this using a password manager or a command like: `openssl rand -base64 29 \| tr -d "=+/" \| cut`. A value **must** be provided for this field.
     tokenSigningKey: ""
     ## @param api.adminAccount.tokenTTL Specifies how long ID tokens for the admin account are valid. (i.e. The expiry will be the time of issue plus this duration.)
-    tokenTTL: 1h
+    tokenTTL: 24h
 
   ## All settings related to enabling OpenID Connect as an authentication
   ## method.
