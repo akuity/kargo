@@ -10,14 +10,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:validation:Enum={SemVer,Latest,Name,Digest}
+// +kubebuilder:validation:Enum={SemVer,NewestBuild,Alphabetical,Digest}
 type ImageUpdateStrategy string
 
 const (
-	ImageUpdateStrategySemVer ImageUpdateStrategy = "SemVer"
-	ImageUpdateStrategyLatest ImageUpdateStrategy = "Latest"
-	ImageUpdateStrategyName   ImageUpdateStrategy = "Name"
-	ImageUpdateStrategyDigest ImageUpdateStrategy = "Digest"
+	ImageUpdateStrategySemVer       ImageUpdateStrategy = "SemVer"
+	ImageUpdateStrategyNewestBuild  ImageUpdateStrategy = "NewestBuild"
+	ImageUpdateStrategyAlphabetical ImageUpdateStrategy = "Alphabetical"
+	ImageUpdateStrategyDigest       ImageUpdateStrategy = "Digest"
 )
 
 // +kubebuilder:validation:Enum={Image,Tag}

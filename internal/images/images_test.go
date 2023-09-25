@@ -5,6 +5,8 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/stretchr/testify/require"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestGetLatestTag(t *testing.T) {
@@ -63,7 +65,7 @@ func TestGetLatestTag(t *testing.T) {
 			testCase.assertions(
 				GetLatestTag(
 					testCase.repoURL,
-					ImageUpdateStrategySemVer,
+					kargoapi.ImageUpdateStrategySemVer,
 					testCase.semverConstraint,
 					"",
 					nil,

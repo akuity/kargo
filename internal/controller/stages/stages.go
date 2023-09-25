@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/akuity/bookkeeper/pkg/git"
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libArgoCD "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
@@ -90,7 +89,7 @@ type reconciler struct {
 
 	getLatestTagFn func(
 		repoURL string,
-		updateStrategy images.ImageUpdateStrategy,
+		updateStrategy kargoapi.ImageUpdateStrategy,
 		semverConstraint string,
 		allowTags string,
 		ignoreTags []string,
@@ -181,11 +180,11 @@ func SetupReconcilerWithManager(
 
 	logger := logging.LoggerFromContext(ctx)
 	// Watch Promotions that completed and enqueue owning Stage key
-	promoOwnerHandler := &handler.EnqueueRequestForOwner{OwnerType: &v1alpha1.Stage{}, IsController: true}
+	promoOwnerHandler := &handler.EnqueueRequestForOwner{OwnerType: &kargoapi.Stage{}, IsController: true}
 	promoWentTerminal := PromoWentTerminal{
 		logger: logger,
 	}
-	if err := c.Watch(&source.Kind{Type: &v1alpha1.Promotion{}}, promoOwnerHandler, promoWentTerminal); err != nil {
+	if err := c.Watch(&source.Kind{Type: &kargoapi.Promotion{}}, promoOwnerHandler, promoWentTerminal); err != nil {
 		return errors.Wrap(err, "unable to watch Promotions")
 	}
 
@@ -194,7 +193,7 @@ func SetupReconcilerWithManager(
 		kargoClient: kargoMgr.GetClient(),
 		logger:      logger,
 	}
-	if err := c.Watch(&source.Kind{Type: &v1alpha1.Stage{}}, downstreamEvtHandler); err != nil {
+	if err := c.Watch(&source.Kind{Type: &kargoapi.Stage{}}, downstreamEvtHandler); err != nil {
 		return errors.Wrap(err, "unable to watch Stages")
 	}
 	return nil

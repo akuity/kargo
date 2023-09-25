@@ -381,8 +381,8 @@
                         "description": "UpdateStrategy specifies the rules for how to identify the newest version of the image specified by the RepoURL field. This field is optional. When left unspecified, the field is implicitly treated as if its value were \"SemVer\".",
                         "enum": [
                           "SemVer",
-                          "Latest",
-                          "Name",
+                          "NewestBuild",
+                          "Alphabetical",
                           "Digest"
                         ],
                         "type": "string"
