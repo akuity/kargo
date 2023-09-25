@@ -27,6 +27,8 @@ import { RepoNode } from './nodes/repo-node';
 import { StageNode } from './nodes/stage-node';
 import { NodeType, NodesItemType } from './types';
 
+import styles from './project-details.module.less';
+
 const lineThickness = 2;
 const nodeWidth = 144;
 const nodeHeight = 100;
@@ -279,7 +281,7 @@ export const ProjectDetails = () => {
         setConfirmingPromotion={setConfirmingPromotion}
       />
       <div className='flex flex-grow w-full'>
-        <div className='overflow-hidden flex-grow w-full'>
+        <div className={`overflow-hidden flex-grow w-full ${styles.dag}`}>
           <div className='text-sm mb-4 font-semibold p-6'>
             <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
             PIPELINE
