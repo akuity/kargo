@@ -9,15 +9,8 @@ import (
 	"github.com/argoproj-labs/argocd-image-updater/pkg/options"
 	"github.com/argoproj-labs/argocd-image-updater/pkg/registry"
 	"github.com/pkg/errors"
-)
 
-type ImageUpdateStrategy string
-
-const (
-	ImageUpdateStrategySemVer ImageUpdateStrategy = "SemVer"
-	ImageUpdateStrategyLatest ImageUpdateStrategy = "Latest"
-	ImageUpdateStrategyName   ImageUpdateStrategy = "Name"
-	ImageUpdateStrategyDigest ImageUpdateStrategy = "Digest"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func init() {
@@ -29,7 +22,7 @@ func init() {
 
 func GetLatestTag(
 	repoURL string,
-	updateStrategy ImageUpdateStrategy,
+	updateStrategy kargoapi.ImageUpdateStrategy,
 	semverConstraint string,
 	allowTags string,
 	ignoreTags []string,
@@ -92,7 +85,7 @@ func GetLatestTag(
 		)
 	}
 
-	tag, err := getNewestVersionFromTags(img, vc, tags)
+	upImg, err := img.GetNewestVersionFromTags(vc, tags)
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
@@ -100,12 +93,12 @@ func GetLatestTag(
 			repoURL,
 		)
 	}
-	if tag == "" {
+	if upImg == nil {
 		return "", errors.Errorf(
 			"found no suitable version of image %q",
 			repoURL,
 		)
 	}
 
-	return tag, nil
+	return upImg.TagName, nil
 }

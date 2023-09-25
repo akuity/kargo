@@ -492,8 +492,8 @@ spec:
                                 as if its value were "SemVer".
                               enum:
                               - SemVer
-                              - Latest
-                              - Name
+                              - NewestBuild
+                              - Alphabetical
                               - Digest
                               type: string
                           required:
