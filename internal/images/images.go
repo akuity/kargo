@@ -92,7 +92,7 @@ func GetLatestTag(
 		)
 	}
 
-	tag, err := getNewestVersionFromTags(img, vc, tags)
+	upImg, err := img.GetNewestVersionFromTags(vc, tags)
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
@@ -100,12 +100,12 @@ func GetLatestTag(
 			repoURL,
 		)
 	}
-	if tag == "" {
+	if upImg == nil {
 		return "", errors.Errorf(
 			"found no suitable version of image %q",
 			repoURL,
 		)
 	}
 
-	return tag, nil
+	return upImg.TagName, nil
 }
