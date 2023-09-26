@@ -13,7 +13,7 @@ require (
 	// https://github.com/argoproj-labs/argocd-image-updater/pull/456
 	// https://github.com/argoproj-labs/argocd-image-updater/pull/559
 	github.com/argoproj-labs/argocd-image-updater v0.0.0-20230921174511-420bd97b57d2
-	github.com/argoproj/argo-cd/v2 v2.7.9
+	github.com/argoproj/argo-cd/v2 v2.7.14
 	github.com/argoproj/gitops-engine v0.7.1-0.20230607163028-425d65e07695
 	github.com/bacongobbler/browser v1.1.0
 	github.com/coreos/go-oidc/v3 v3.6.0
@@ -31,7 +31,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
-	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	golang.org/x/crypto v0.11.0
 	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de
 	golang.org/x/net v0.12.0
@@ -51,6 +50,8 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.13.6
 	sigs.k8s.io/yaml v1.3.0
 )
+
+require github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 
 require (
 	cloud.google.com/go/compute v1.18.0 // indirect
