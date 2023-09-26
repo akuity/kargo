@@ -25,9 +25,8 @@ import { useDocumentEvent } from '@ui/utils/document';
 import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { StageNode } from './nodes/stage-node';
-import { NodeType, NodesItemType } from './types';
-
 import styles from './project-details.module.less';
+import { NodeType, NodesItemType } from './types';
 
 const lineThickness = 2;
 const nodeWidth = 144;

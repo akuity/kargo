@@ -1,4 +1,4 @@
-import { Select, Switch, Tooltip } from 'antd';
+import { Switch, Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
@@ -50,7 +50,7 @@ const ImageTagRow = ({
         return (
           <Tooltip key={stage.metadata?.name} title={stage.metadata?.name}>
             <div
-              className={classNames('mr-2 bg-zinc-600', {
+              className={classNames('mr-2 bg-zinc-600 ', {
                 'cursor-pointer': !!curStyles
               })}
               style={{
@@ -135,7 +135,6 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
           </div>
           <div className='mb-8'>
             <Select
-              className='w-full'
               value={imageURL}
               onChange={(value) => setImageURL(value as string)}
               options={Array.from(images.keys()).map((image) => ({
@@ -163,3 +162,25 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
     </>
   );
 };
+
+const Select = ({
+  value,
+  onChange,
+  options
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { label?: string; value: string }[];
+}) => (
+  <select
+    className='block border-none w-full text-gray appearance-none p-2 bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-400'
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+  >
+    {options.map((option) => (
+      <option value={option.value} key={option.label}>
+        {option.label}
+      </option>
+    ))}
+  </select>
+);
