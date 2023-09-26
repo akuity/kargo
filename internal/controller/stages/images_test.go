@@ -19,7 +19,7 @@ func TestGetLatestImages(t *testing.T) {
 		credentialsDB  credentials.Database
 		getLatestTagFn func(
 			string,
-			images.ImageUpdateStrategy,
+			kargoapi.ImageUpdateStrategy,
 			string,
 			string,
 			[]string,
@@ -42,7 +42,7 @@ func TestGetLatestImages(t *testing.T) {
 			},
 			getLatestTagFn: func(
 				repoURL string,
-				updateStrategy images.ImageUpdateStrategy,
+				updateStrategy kargoapi.ImageUpdateStrategy,
 				semverConstraint string,
 				allowTags string,
 				ignoreTags []string,
@@ -76,7 +76,7 @@ func TestGetLatestImages(t *testing.T) {
 			},
 			getLatestTagFn: func(
 				repoURL string,
-				updateStrategy images.ImageUpdateStrategy,
+				updateStrategy kargoapi.ImageUpdateStrategy,
 				semverConstraint string,
 				allowTags string,
 				ignoreTags []string,

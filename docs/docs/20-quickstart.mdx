@@ -25,7 +25,14 @@ This guide presents a basic introduction to Kargo. Together, we will:
     * kind: v0.17.0
     * k3d: v5.4.9
 * [Helm](https://helm.sh/docs/): These instructions were tested with v3.11.2.
-* The `kargo` CLI: Download it from [the releases page](https://github.com/akuity/kargo/releases/latest).
+* The `kargo` CLI: To install it, follow these steps.
+
+    1. Visit [the releases page](https://github.com/akuity/kargo/releases/latest) of the Kargo GitHub repository.
+    2. Download the appropriate release package for your operating system (e.g., `kargo-linux-amd64` for Linux).
+    3. Extract the contents of the downloaded package to a directory of your choice.
+    4. Add the directory containing the `kargo` executable to your system's `PATH` environment variable.
+
+    After completing these steps, you should be able to run the `kargo` command in your terminal to interact with Kargo.
 
 ### Starting a Local Cluster
 
@@ -506,7 +513,7 @@ So what has Kargo done behind the scenes?
 
 Visiting our fork of https://github.com/akuity/kargo-demo, we will see that
 Kargo has recently created a `stage/test` branch for us. It has taken the latest
-manifests from the `main` branch as a starting point, run `kargo edit set image`
+manifests from the `main` branch as a starting point, run `kustomize edit set image`
 within the `stages/test/` directory, and written the modified configuration to a
 stage-specific branch -- the same branch referenced by the `test` Argo CD
 `Applicaton`'s `targetRevision` field.
