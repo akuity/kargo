@@ -33,7 +33,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:18.16.1 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.7.0 AS ui-builder
 
 RUN npm install --global pnpm
 WORKDIR /ui
@@ -50,7 +50,7 @@ RUN NODE_ENV='production' pnpm run build
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:7.88.1 as tools
+FROM curlimages/curl:8.3.0 as tools
 
 ARG TARGETOS
 ARG TARGETARCH
