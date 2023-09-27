@@ -12,6 +12,8 @@ This guide presents a basic introduction to Kargo. Together, we will:
 1. Create a local Kubernetes cluster with Kargo and its dependencies already
    installed.
 
+1. Install the Kargo CLI.
+
 1. Demonstrate how Kargo can progress changes through multiple stages by
    interacting with your GitOps repository and Argo CD `Application` resources.
 
@@ -25,15 +27,6 @@ This guide presents a basic introduction to Kargo. Together, we will:
     * kind: v0.17.0
     * k3d: v5.4.9
 * [Helm](https://helm.sh/docs/): These instructions were tested with v3.11.2.
-* The `kargo` CLI: To install it, follow these steps.
-
-    1. Visit [the releases page](https://github.com/akuity/kargo/releases/latest) of the Kargo GitHub repository.
-    1. Download the appropriate release package for your operating system (e.g., `kargo-linux-amd64` for Linux).
-    1. Move the binary to a directory of your choice (e.g. for Linux, consider `/usr/local/bin/`).
-    1. Add the directory containing the `kargo` executable to your system's `PATH` environment variable.
-
-    After completing these steps, you should be able to run the `kargo` command in your terminal to interact with Kargo.
-
 ### Starting a Local Cluster
 
 With our prerequisites met, we can execute a helper script to launch a 
@@ -93,6 +86,36 @@ At the end of this process:
   The admin password is `admin`.
 
 * You can safely ignore all cert errors for both of the above.
+
+### Installing the Kargo CLI
+
+<Tabs groupId="os">
+<TabItem value="general" label="Mac, Linux, or WSL" default>
+
+To download the Kargo CLI:
+
+```shell
+curl -sSL -o kargo https://github.com/akuity/kargo/releases/latest/download/kargo-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+chmod +x kargo
+```
+
+Then move `kargo` to a location in your file system that is included in the
+value of your `PATH` environment variable.
+
+</TabItem>
+<TabItem value="windows" label="Windows Powershell">
+
+To download the Kargo CLI:
+
+```shell
+Invoke-WebRequest -URI https://github.com/akuity/kargo/releases/latest/download/kargo-windows-amd64.exe -OutFile kargo.exe
+```
+
+Then move `kargo.exe` to a location in your file system that is included in the value
+of your `PATH` environment variable.
+
+</TabItem>
+</Tabs>
 
 ## Trying It Out
 
