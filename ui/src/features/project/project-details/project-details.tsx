@@ -25,6 +25,7 @@ import { useDocumentEvent } from '@ui/utils/document';
 import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { StageNode } from './nodes/stage-node';
+import styles from './project-details.module.less';
 import { NodeType, NodesItemType } from './types';
 
 const lineThickness = 2;
@@ -279,7 +280,7 @@ export const ProjectDetails = () => {
         setConfirmingPromotion={setConfirmingPromotion}
       />
       <div className='flex flex-grow w-full'>
-        <div className='overflow-hidden flex-grow w-full'>
+        <div className={`overflow-hidden flex-grow w-full ${styles.dag}`}>
           <div className='text-sm mb-4 font-semibold p-6'>
             <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
             PIPELINE

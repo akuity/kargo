@@ -1,4 +1,4 @@
-import { faDiagramProject, faGear, faTurnUp } from '@fortawesome/free-solid-svg-icons';
+import { faBullseye, faGear, faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import { generatePath, useNavigate } from 'react-router-dom';
@@ -97,7 +97,7 @@ const Nodule = (props: {
   onClick?: () => void;
   selected?: boolean;
 }) => {
-  const noduleHeight = 25;
+  const noduleHeight = 30;
   const top = props.nodeHeight / 2 - noduleHeight / 2;
   return (
     <div
@@ -115,10 +115,10 @@ const Nodule = (props: {
         right: props.begin ? 'auto' : -noduleHeight / 2
       }}
       className={`z-10 flex items-center justify-center hover:text-white border border-sky-300 border-solid hover:bg-blue-400 absolute rounded-lg ${
-        props.selected ? 'text-white bg-blue-400' : 'bg-blue-100 text-blue-400'
+        props.selected ? 'text-white bg-blue-400' : 'bg-white text-blue-500'
       }`}
     >
-      <FontAwesomeIcon icon={props.begin ? faTurnUp : faDiagramProject} />
+      <FontAwesomeIcon icon={props.begin ? faBullseye : faTruckArrowRight} />
     </div>
   );
 };
