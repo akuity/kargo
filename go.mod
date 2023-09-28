@@ -8,7 +8,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver v1.5.0
 	github.com/adrg/xdg v0.4.0
-	github.com/akuity/bookkeeper v0.1.0-rc.19
+	github.com/akuity/bookkeeper v0.1.0-rc.21
 	// These important changes are merged, but not yet released:
 	// https://github.com/argoproj-labs/argocd-image-updater/pull/456
 	// https://github.com/argoproj-labs/argocd-image-updater/pull/559
