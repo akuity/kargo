@@ -1,4 +1,4 @@
-import { faArrowRightFromBracket, faBoxes } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRightFromBracket, faBook, faBoxes } from '@fortawesome/free-solid-svg-icons';
 import { Button } from 'antd';
 import { Outlet } from 'react-router-dom';
 
@@ -23,6 +23,9 @@ export const MainLayout = () => {
         <nav className={styles.nav}>
           <NavItem icon={faBoxes} path={paths.projects}>
             Projects
+          </NavItem>
+          <NavItem icon={faBook} path='https://kargo.akuity.io' target='_blank'>
+            Docs
           </NavItem>
         </nav>
 

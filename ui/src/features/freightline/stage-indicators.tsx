@@ -8,7 +8,9 @@ const StageIndicator = (props: { stage: Stage; backgroundColor: string }) => {
     <Tooltip title={stage ? stage.metadata?.name : null} placement='right'>
       <div
         className={`my-1 flex-shrink h-full flex items-center justify-center flex-col w-full rounded`}
-        style={{ backgroundColor }}
+        style={{
+          background: `linear-gradient(60deg,rgb(255 255 255/0%),rgb(200 200 200/30%)), ${backgroundColor}`
+        }}
       />
     </Tooltip>
   );
