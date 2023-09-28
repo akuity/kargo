@@ -159,9 +159,27 @@ func (a *argoCDMechanism) doSingleUpdate(
 	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] =
 		string(argocd.RefreshTypeHard)
 	app.Operation = &argocd.Operation{
+		InitiatedBy: argocd.OperationInitiator{
+			Username:  "kargo-controller",
+			Automated: true,
+		},
+		Info: []*argocd.Info{
+			{
+				Name:  "Reason",
+				Value: "Promotion triggered a sync of this Application resource.",
+			},
+		},
 		Sync: &argocd.SyncOperation{
 			Revisions: []string{},
 		},
+	}
+	if app.Spec.SyncPolicy != nil {
+		if app.Spec.SyncPolicy.Retry != nil {
+			app.Operation.Retry = *app.Spec.SyncPolicy.Retry
+		}
+		if app.Spec.SyncPolicy.SyncOptions != nil {
+			app.Operation.Sync.SyncOptions = app.Spec.SyncPolicy.SyncOptions
+		}
 	}
 	if app.Spec.Source != nil {
 		app.Operation.Sync.Revisions = []string{app.Spec.Source.TargetRevision}
