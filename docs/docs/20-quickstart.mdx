@@ -168,26 +168,10 @@ the previous section.
    export GITHUB_PAT=<your personal access token>
    ```
 
-1. Create namespaces for each of our three stages, a `Secret` containing
-   repository credentials, and Argo CD `Application` resources for each stage:
+1. Create a `Secret` containing repository credentials, and Argo CD
+   `Application` resources for each stage:
 
    ```shell
-   cat <<EOF | kubectl apply -f -
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: kargo-demo-test
-   ---
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: kargo-demo-uat
-   ---
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: kargo-demo-prod
-   ---
    apiVersion: v1
    kind: Secret
    type: Opaque
@@ -221,6 +205,9 @@ the previous section.
      destination:
        server: https://kubernetes.default.svc
        namespace: kargo-demo-test
+     syncPolicy:
+       syncOptions:
+       - CreateNamespace=true
    ---
    apiVersion: argoproj.io/v1alpha1
    kind: Application
@@ -238,6 +225,9 @@ the previous section.
      destination:
        server: https://kubernetes.default.svc
        namespace: kargo-demo-uat
+     syncPolicy:
+       syncOptions:
+       - CreateNamespace=true
    ---
    apiVersion: argoproj.io/v1alpha1
    kind: Application
@@ -255,6 +245,9 @@ the previous section.
      destination:
        server: https://kubernetes.default.svc
        namespace: kargo-demo-prod
+     syncPolicy:
+       syncOptions:
+       - CreateNamespace=true
    EOF
    ```
 
