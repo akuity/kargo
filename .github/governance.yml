@@ -11,6 +11,7 @@ issue:
         - enhancement
         - question
         - refactor
+        - feature-request
       multiple: true
       needs: true
 
