@@ -1,42 +1,37 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: Bug Report
+about: Report a bug to help us improve
 title: ''
-labels: 'bug'
+labels: 'kind/bug'
 assignees: ''
 ---
 
-<!-- If you are trying to resolve an environment-specific issue or have a one-off question about the edge case that does not require a feature then please consider asking a question in Kargo Discord [channel](https://discord.gg/dHJBZw6ewT). -->
+# Checklist
 
-Checklist:
-
-* [ ] I've searched in the docs and FAQ for my answer: https://kargo.akuity.io/.
+* [ ] I've searched the issue queue to verify this is not a duplicate bug report.
 * [ ] I've included steps to reproduce the bug.
 * [ ] I've pasted the output of `kargo version`.
+* [ ] I've pasted logs, if applicable.
 
-**Describe the bug**
+# Description
 
-<!-- A clear and concise description of what the bug is. -->
+<!-- A clear and concise description of the bug. -->
 
-**To Reproduce**
+# Screenshots
 
-<!-- A list of the steps required to reproduce the issue. Best of all, give us the URL to a repository that exhibits this issue. -->
+<!-- If applicable, add screenshots to help explain the bug. -->
 
-**Expected behavior**
+# Steps to Reproduce
 
-<!-- A clear and concise description of what you expected to happen. -->
+<!-- A list of the steps required to reproduce the issue. -->
 
-**Screenshots**
+# Version
 
-<!-- If applicable, add screenshots to help explain your problem. -->
-
-**Version**
-
-```shell
+```
 Paste the output from `kargo version` here.
 ```
 
-**Logs**
+# Logs
 
 ```
 Paste any relevant application logs here.
