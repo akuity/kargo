@@ -25,7 +25,11 @@ application's lifecycle.
 
 Read more about Kargo in our [docs](https://kargo.akuity.io) or get hands-on
 right away by following our 
-[Quickstart documentation](https://kargo.akuity.io/quickstart)!
+[Quickstart documentation](https://kargo.akuity.io/quickstart) or its webinar video!
+
+<center>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/yaZc0DdeLKk?si=BACwCHp8IKAIa7Ef" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</center>
 
 This documentation is very new, so please open issues against this repository if
 you encounter any difficulties.
