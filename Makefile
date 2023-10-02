@@ -7,7 +7,7 @@ CERT_MANAGER_CHART_VERSION := 1.11.5
 
 VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 
-# default docker , change to podman if you using podman
+# Default to docker, but support alternative container runtimes that are CLI-compatible with Docker
 CONTAINER_RUNTIME = docker
 
 
