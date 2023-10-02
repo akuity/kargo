@@ -1,0 +1,32 @@
+name: 'Close Stale PRs'
+on:
+  schedule:
+    - cron: '32 11 * * 1-5'  # 11:32 UTC / 07:32 EDT / 06:32 EST from Mon-Fri.
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Don't wait 6 hours to cancel workflow if it hangs.
+    steps:
+      - uses: actions/stale@v5
+        with:
+          stale-pr-label: 'stale'
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had any recent activity.
+            This issue will be closed if no further activity occurs but can be reopened if it becomes relevant again.
+          stale-pr-label: 'stale'
+          stale-pr-message: |
+            This PR has been automatically marked as stale because it has not had any recent activity.
+
+            - If this PR is not ready for review or implementation please [mark it as a draft](https://github.blog/changelog/2020-04-08-convert-pull-request-to-draft/).
+            - If this PR is ready for implementation but is intentionally on hold, please comment with a clear indication of why and add the `on hold` label to avoid it being marked as stale.
+
+            This PR will be closed if no further activity occurs but can be reopened if it becomes relevant again.
+          days-before-stale: 30
+          days-before-close: 7
+          exempt-draft-pr: true
+          exempt-pr-labels: 'on hold'
