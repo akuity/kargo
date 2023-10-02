@@ -15,7 +15,7 @@ jobs:
         with:
           stale-issue-label: 'stale'
           stale-issue-message: |
-            This issue has been automatically marked as stale because it has not had any recent activity. It will be closed if no further activity occurs but can be reopened if it becomes relevant again.
+            This issue has been automatically marked as stale because it had no activity for 90 days. It will be closed if no activity occurs in the next 30 days but can be reopened if it becomes relevant again.
           days-before-stale: -1  # Don't stale PRs.
           days-before-issue-stale: 90
           days-before-issue-close: 30
