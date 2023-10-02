@@ -7,6 +7,10 @@ CERT_MANAGER_CHART_VERSION := 1.11.5
 
 VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 
+
+CONTAINER_RUNTIME := $(shell ./check_container.sh)
+
+
 IMAGE_REPO ?= kargo
 IMAGE_TAG ?= dev
 IMAGE_PUSH ?= false
@@ -123,7 +127,7 @@ codegen:
 # that is pre-loaded with required tools.                                      #
 ################################################################################
 
-DOCKER_CMD := docker run \
+DOCKER_CMD := ${CONTAINER_RUNTIME} run \
 	-it \
 	--rm \
 	-v gomodcache:/go/pkg/mod \
@@ -133,7 +137,7 @@ DOCKER_CMD := docker run \
 
 .PHONY: hack-build-dev-tools
 hack-build-dev-tools:
-	docker build -f Dockerfile.dev -t kargo:dev-tools .
+	${CONTAINER_RUNTIME} build -f Dockerfile.dev -t kargo:dev-tools .
 
 .PHONY: hack-lint
 hack-lint: hack-build-dev-tools
@@ -167,11 +171,11 @@ hack-codegen: hack-build-dev-tools
 # Push a multi-arch image to a personal repository (myusername/kargo:latest)
 #   make hack-build IMAGE_REPO=myusername/kargo IMAGE_PUSH=true IMAGE_TAG=latest
 #
-# Build a linux/amd64 image with a docker build option to not re-use docker build cache
+# Build a linux/amd64 image with a ${CONTAINER_RUNTIME} build option to not re-use ${CONTAINER_RUNTIME} build cache
 # 	make hack-build IMAGE_PLATFORMS=linux/amd64 DOCKER_BUILD_OPTS=--no-cache
 .PHONY: hack-build
 hack-build:
-	docker buildx build \
+	${CONTAINER_RUNTIME} buildx build \
 		$(DOCKER_BUILD_OPTS) \
 		--build-arg GIT_COMMIT=$(shell git rev-parse HEAD) \
 		--build-arg GIT_TREE_STATE=$(shell if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi) \
