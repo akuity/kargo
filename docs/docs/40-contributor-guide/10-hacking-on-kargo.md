@@ -18,7 +18,12 @@ execute tests within a container that is maximally similar to those used in CI.
 
 To take advantage of this, you only need to have
 [Docker](https://docs.docker.com/engine/install/) and `make` installed.
-> you can use podman by creating an eenvironment variable *export CONTAINER_RUNTIME=podman*, [How to config podman socket](https://docs.podman.ioen/latest/markdown/podman-system-service.1.html#examples)
+> you can use podman by creating an environment variable
+```bash
+export CONTAINER_RUNTIME=podman
+```
+
+[How to config podman socket](https://docs.podman.ioen/latest/markdown/podman-system-service.1.html#examples)
 
 To run all unit tests:
 
