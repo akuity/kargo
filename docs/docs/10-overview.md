@@ -18,7 +18,7 @@ application's lifecycle.
 Kargo's goal is to provide an intuitive and flexible layer "above" existing GitOps tooling, wherein you can describe the relationships between various application instances deployed to different environments as well as procedures for progressing changes from one application instance's source of truth to the next.
 
 :::info
-If you prefer learning through video, check out the video webinar of this guide!
+Watch the launch webinar with Kelsey Hightower and Jesse Suen to see a live demo and discussion of Kargo!
 
 <center>
 <iframe width="560" height="315" src="https://www.youtube.com/embed/yaZc0DdeLKk?si=BACwCHp8IKAIa7Ef" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
