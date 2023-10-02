@@ -7,7 +7,7 @@ CERT_MANAGER_CHART_VERSION := 1.11.5
 
 VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 
-
+# check which Container Runtime available and set it as Variable
 CONTAINER_RUNTIME := $(shell ./check_container.sh)
 
 
