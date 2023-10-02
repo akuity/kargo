@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/stale@v5
         with:
-          stale-pr-label: 'stale'
+          stale-issue-label: 'stale'
           stale-issue-message: |
             This issue has been automatically marked as stale because it has not had any recent activity.
             This issue will be closed if no further activity occurs but can be reopened if it becomes relevant again.
@@ -28,5 +28,6 @@ jobs:
             This PR will be closed if no further activity occurs but can be reopened if it becomes relevant again.
           days-before-stale: 30
           days-before-close: 7
+          exempt-issue-labels: 'priority/low,priority/normal,priority/high,priority/urgent'
           exempt-draft-pr: true
           exempt-pr-labels: 'on hold'
