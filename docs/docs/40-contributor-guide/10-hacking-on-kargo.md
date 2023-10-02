@@ -130,6 +130,7 @@ The remainder of this section covers the tools we recommend for enabling this.
 You will need:
 
 * [Docker](https://docs.docker.com/engine/install/)
+  > you can use podman by changing the *CONTAINER_RUNTIME_ in the make file from docker to podman, [How to config podman socket](https://docs.podman.io/en/latest/markdown/podman-system-service.1.html#examples)
 
 * [kind](https://kind.sigs.k8s.io/#installation-and-usage) or
   [k3d](https://k3d.io): Runs development-grade Kubernetes clusters within

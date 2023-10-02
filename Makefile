@@ -1,14 +1,14 @@
 SHELL ?= /bin/bash
 
-ARGO_CD_CHART_VERSION := 5.46.6
+ARGO_CD_CHART_VERSION := 5.46.3
 BUF_LINT_ERROR_FORMAT ?= text
 GO_LINT_ERROR_FORMAT ?= colored-line-number
 CERT_MANAGER_CHART_VERSION := 1.11.5
 
 VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 
-# check which Container Runtime available and set it as Variable.
-CONTAINER_RUNTIME := $(shell ./check_container.sh)
+# default docker , change to podman if you using podman
+CONTAINER_RUNTIME = docker
 
 
 IMAGE_REPO ?= kargo
