@@ -18,6 +18,7 @@ execute tests within a container that is maximally similar to those used in CI.
 
 To take advantage of this, you only need to have
 [Docker](https://docs.docker.com/engine/install/) and `make` installed.
+> you can use podman creating an enviormnet variable *CONTAINER_RUNTIME=podman* , [How to config podman socket](https://docs.podman.ioen/latest/markdown/podman-system-service.1.html#examples)
 
 To run all unit tests:
 
@@ -130,7 +131,6 @@ The remainder of this section covers the tools we recommend for enabling this.
 You will need:
 
 * [Docker](https://docs.docker.com/engine/install/)
-  > you can use podman by changing the *CONTAINER_RUNTIME_ in the make file from docker to podman, [How to config podman socket](https://docs.podman.io/en/latest/markdown/podman-system-service.1.html#examples)
 
 * [kind](https://kind.sigs.k8s.io/#installation-and-usage) or
   [k3d](https://k3d.io): Runs development-grade Kubernetes clusters within
@@ -163,7 +163,7 @@ installed, you can be up and running with just a few commands!
    ```
 
    Either of these commands will _also_ install recent, stable versions of
-   [cert-manager](https://cert-manager.io/) and 
+   [cert-manager](https://cert-manager.io/) and
    [Argo CD](https://argoproj.github.io/cd/).
 
    :::info
@@ -220,7 +220,7 @@ installed, you can be up and running with just a few commands!
    You may safely ignore any certificate warnings.
 
 1. When you are done with Tilt, interrupt the running `tilt up` process with
-   `ctrl + c`. Components _will remain running in the cluster_, but Tilt will no
+   `ctrl + c`. Components _will remain running in the cluster, but Tilt will no
    longer be in control. If Tilt is restarted later, it will retake control of
    the already-running components.
 
@@ -255,4 +255,5 @@ installed, you can be up and running with just a few commands!
    ```shell
    docker rm -f kargo-dev-registry
    ```
+
    :::
