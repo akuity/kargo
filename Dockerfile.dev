@@ -6,7 +6,7 @@ ARG BUF_VERSION=v1.26.1
 ARG CONTROLLER_GEN_VERSION=v0.13.0
 ARG GOLANGCI_LINT_VERSION=1.54.2
 ARG HELM_VERSION=v3.12.3
-ARG NODE_VERSION=18.x
+ARG NODE_MAJOR=18
 
 RUN go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
     && go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} \
@@ -15,7 +15,10 @@ RUN go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
         | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}/golangci-lint --strip-components=1 \
     && curl -sSfL https://get.helm.sh/helm-$HELM_VERSION-linux-${TARGETARCH}.tar.gz \
         | tar xvz linux-${TARGETARCH}/helm --strip-components=1 \
-    && curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash \
-    && apt install nodejs \
+    && apt-get install -y ca-certificates curl gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update && apt-get install nodejs -y \
     && curl -fsSL https://get.pnpm.io/install.sh | bash \
     && mv /root/.local/share/pnpm/pnpm /usr/bin
