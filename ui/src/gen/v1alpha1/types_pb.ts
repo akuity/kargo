@@ -1670,11 +1670,6 @@ export class Freight extends Message<Freight> {
   firstSeen?: Timestamp;
 
   /**
-   * @generated from field: optional string provenance = 3;
-   */
-  provenance?: string;
-
-  /**
    * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit commits = 4;
    */
   commits: GitCommit[] = [];
@@ -1704,7 +1699,6 @@ export class Freight extends Message<Freight> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "first_seen", kind: "message", T: Timestamp, opt: true },
-    { no: 3, name: "provenance", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 5, name: "images", kind: "message", T: Image, repeated: true },
     { no: 6, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1732,11 +1726,6 @@ export class Freight extends Message<Freight> {
  * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
  */
 export class StageStatus extends Message<StageStatus> {
-  /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight available_freight = 1;
-   */
-  availableFreight: Freight[] = [];
-
   /**
    * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Freight current_freight = 2;
    */
@@ -1770,7 +1759,6 @@ export class StageStatus extends Message<StageStatus> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "available_freight", kind: "message", T: Freight, repeated: true },
     { no: 2, name: "current_freight", kind: "message", T: Freight, opt: true },
     { no: 3, name: "history", kind: "message", T: Freight, repeated: true },
     { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -1837,14 +1825,14 @@ export class StageSubscription extends Message<StageSubscription> {
  */
 export class Subscriptions extends Message<Subscriptions> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscriptions repos = 1;
-   */
-  repos?: RepoSubscriptions;
-
-  /**
    * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription upstream_stages = 2;
    */
   upstreamStages: StageSubscription[] = [];
+
+  /**
+   * @generated from field: string warehouse = 3;
+   */
+  warehouse = "";
 
   constructor(data?: PartialMessage<Subscriptions>) {
     super();
@@ -1854,8 +1842,8 @@ export class Subscriptions extends Message<Subscriptions> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "repos", kind: "message", T: RepoSubscriptions, opt: true },
     { no: 2, name: "upstream_stages", kind: "message", T: StageSubscription, repeated: true },
+    { no: 3, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscriptions {
