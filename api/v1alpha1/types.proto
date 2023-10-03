@@ -211,7 +211,6 @@ message StageSpec {
 message Freight {
   string id = 1 [json_name = "id"];
   optional google.protobuf.Timestamp first_seen = 2 [json_name = "firstSeen"];
-  optional string provenance = 3 [json_name = "provenance"];
   repeated GitCommit commits = 4 [json_name = "commits"];
   repeated Image images = 5 [json_name = "images"];
   repeated Chart charts = 6 [json_name = "charts"];
@@ -219,7 +218,6 @@ message Freight {
 }
 
 message StageStatus {
-  repeated Freight available_freight = 1 [json_name = "availableFreight"];
   optional Freight current_freight = 2 [json_name = "currentFreight"];
   repeated Freight history = 3 [json_name = "history"];
   string error = 4 [json_name = "error"];
@@ -232,6 +230,6 @@ message StageSubscription {
 }
 
 message Subscriptions {
-  optional RepoSubscriptions repos = 1 [json_name = "repos"];
   repeated StageSubscription upstream_stages = 2 [json_name = "upstreamStages"];
+  string warehouse = 3 [json_name = "warehouse"];
 }
