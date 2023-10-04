@@ -288,8 +288,8 @@ const FreightItem = (props: {
   return (
     <div
       className={`${styles.freightItem} ${conditionalStyles} ${
-        (stages || []).length > 0 && !promoting ? 'w-32 border-gray-500' : ''
-      }`}
+        (stages || []).length > 0 && !confirmingPromotion ? 'w-32' : ''
+      } ${!promoting && (stages || []).length > 0 ? 'border-gray-500' : ''}`}
       onClick={() => {
         if (promoting) {
           if (promotable) {
@@ -301,7 +301,7 @@ const FreightItem = (props: {
       }}
     >
       <div className='flex w-full h-full mb-1 items-center justify-center'>
-        {!promoting && <StageIndicators stages={stages} stageColorMap={props.stageColorMap} />}
+        <StageIndicators stages={stages} stageColorMap={props.stageColorMap} />
         <FreightContents
           highlighted={
             ((stages || []).length > 0 && !promoting) || (promoting && promotable) || false
