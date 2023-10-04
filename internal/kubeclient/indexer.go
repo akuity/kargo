@@ -16,6 +16,9 @@ const (
 	PromotionsByStageIndexField            = "stage"
 	NonTerminalPromotionsByStageIndexField = PromotionsByStageIndexField
 	PromotionPoliciesByStageIndexField     = "stage"
+	FreightByWarehouseIndexField           = "warehouse"
+	FreightByQualifiedStagesIndexField     = "qualifiedStages"
+	StagesByUpstreamStagesIndexField       = "upstreamStages"
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -103,4 +106,68 @@ func IndexPromotionPoliciesByStage(ctx context.Context, mgr ctrl.Manager) error 
 func indexPromotionPoliciesByStage(obj client.Object) []string {
 	policy := obj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
 	return []string{policy.Stage}
+}
+
+func IndexFreightByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		FreightByWarehouseIndexField,
+		indexFreightByWarehouse,
+	)
+}
+
+func indexFreightByWarehouse(obj client.Object) []string {
+	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+	for _, ownerRef := range freight.OwnerReferences {
+		if ownerRef.APIVersion == kargoapi.GroupVersion.String() &&
+			ownerRef.Kind == "Warehouse" {
+			return []string{ownerRef.Name}
+		}
+	}
+	return nil
+}
+
+func IndexFreightByQualifiedStages(
+	ctx context.Context,
+	mgr ctrl.Manager,
+) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		FreightByQualifiedStagesIndexField,
+		indexFreightByQualifiedStages,
+	)
+}
+
+func indexFreightByQualifiedStages(obj client.Object) []string {
+	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+	qualifiedStages := make([]string, len(freight.Status.Qualifications))
+	var i int
+	for qualifiedStage := range freight.Status.Qualifications {
+		qualifiedStages[i] = qualifiedStage
+		i++
+	}
+	return qualifiedStages
+}
+
+func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		StagesByUpstreamStagesIndexField,
+		indexStagesByUpstreamStages,
+	)
+}
+
+func indexStagesByUpstreamStages(obj client.Object) []string {
+	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+	if stage.Spec.Subscriptions.UpstreamStages == nil {
+		return nil
+	}
+	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
+	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
+		upstreamStages[i] = upstreamStage.Name
+	}
+	return upstreamStages
 }
