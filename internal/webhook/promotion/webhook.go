@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	authzv1 "k8s.io/api/authorization/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/validation"
 	"github.com/akuity/kargo/internal/logging"
+	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
 var (
@@ -37,6 +36,19 @@ type webhook struct {
 
 	// The following behaviors are overridable for testing purposes:
 
+	getStageFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.Stage, error)
+
+	validateProjectFn func(
+		context.Context,
+		client.Client,
+		schema.GroupKind,
+		client.Object,
+	) error
+
 	authorizeFn func(
 		ctx context.Context,
 		promo *kargoapi.Promotion,
@@ -50,18 +62,10 @@ type webhook struct {
 		client.Object,
 		...client.CreateOption,
 	) error
-
-	validateProjectFn func(context.Context, *kargoapi.Promotion) error
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := &webhook{
-		client: mgr.GetClient(),
-	}
-	w.authorizeFn = w.authorize
-	w.admissionRequestFromContextFn = admission.RequestFromContext
-	w.createSubjectAccessReviewFn = w.client.Create
-	w.validateProjectFn = w.validateProject
+	w := newWebhook(mgr.GetClient())
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Promotion{}).
 		WithDefaulter(w).
@@ -69,9 +73,21 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
+func newWebhook(kubeClient client.Client) *webhook {
+	w := &webhook{
+		client: kubeClient,
+	}
+	w.getStageFn = kargoapi.GetStage
+	w.validateProjectFn = libWebhook.ValidateProject
+	w.authorizeFn = w.authorize
+	w.admissionRequestFromContextFn = admission.RequestFromContext
+	w.createSubjectAccessReviewFn = w.client.Create
+	return w
+}
+
 func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
-	stage, err := kargoapi.GetStage(
+	stage, err := w.getStageFn(
 		ctx,
 		w.client,
 		types.NamespacedName{
@@ -94,7 +110,8 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
-	ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
+	ownerRef :=
+		metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
 	promo.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 	return nil
 }
@@ -104,7 +121,8 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) error {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
-	if err := w.validateProjectFn(ctx, promo); err != nil {
+	if err :=
+		w.validateProjectFn(ctx, w.client, promotionGroupKind, promo); err != nil {
 		return err
 	}
 	return w.authorizeFn(ctx, promo, "create")
@@ -116,9 +134,6 @@ func (w *webhook) ValidateUpdate(
 	newObj runtime.Object,
 ) error {
 	promo := newObj.(*kargoapi.Promotion) // nolint: forcetypeassert
-	if err := w.validateProjectFn(ctx, promo); err != nil {
-		return err
-	}
 	if err := w.authorizeFn(ctx, promo, "update"); err != nil {
 		return err
 	}
@@ -145,9 +160,6 @@ func (w *webhook) ValidateDelete(
 	obj runtime.Object,
 ) error {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
-	if err := w.validateProjectFn(ctx, promo); err != nil {
-		return err
-	}
 	return w.authorizeFn(ctx, promo, "delete")
 }
 
@@ -210,22 +222,5 @@ func (w *webhook) authorize(
 		)
 	}
 
-	return nil
-}
-
-func (w *webhook) validateProject(ctx context.Context, promo *kargoapi.Promotion) error {
-	if err := validation.ValidateProject(ctx, w.client, promo.GetNamespace()); err != nil {
-		if errors.Is(err, validation.ErrProjectNotFound) {
-			return apierrors.NewNotFound(schema.GroupResource{
-				Group:    corev1.SchemeGroupVersion.Group,
-				Resource: "Namespace",
-			}, promo.GetNamespace())
-		}
-		var fieldErr *field.Error
-		if ok := errors.As(err, &fieldErr); ok {
-			return apierrors.NewInvalid(promotionGroupKind, promo.GetName(), field.ErrorList{fieldErr})
-		}
-		return apierrors.NewInternalError(err)
-	}
 	return nil
 }

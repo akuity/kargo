@@ -2,10 +2,8 @@ package stage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -14,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/validation"
+	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
 var (
@@ -26,69 +24,67 @@ var (
 
 type webhook struct {
 	client client.Client
+
+	// The following behaviors are overridable for testing purposes:
+
+	validateProjectFn func(
+		context.Context,
+		client.Client,
+		schema.GroupKind,
+		client.Object,
+	) error
+
+	validateCreateOrUpdateFn func(*kargoapi.Stage) error
+
+	validateSpecFn func(*field.Path, *kargoapi.StageSpec) field.ErrorList
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := &webhook{
-		client: mgr.GetClient(),
-	}
+	w := newWebhook(mgr.GetClient())
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Stage{}).
-		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
 }
 
-func (w *webhook) Default(_ context.Context, _ runtime.Object) error {
-	// Note that defaults are applied BEFORE validation, so we do not have the
-	// luxury of assuming certain required fields must be non-nil.
-	return nil
+func newWebhook(kubeClient client.Client) *webhook {
+	w := &webhook{
+		client: kubeClient,
+	}
+	w.validateProjectFn = libWebhook.ValidateProject
+	w.validateCreateOrUpdateFn = w.validateCreateOrUpdate
+	w.validateSpecFn = w.validateSpec
+	return w
 }
 
-func (w *webhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (w *webhook) ValidateCreate(
+	ctx context.Context,
+	obj runtime.Object,
+) error {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if err := w.validateProject(ctx, stage); err != nil {
+	if err :=
+		w.validateProjectFn(ctx, w.client, stageGroupKind, stage); err != nil {
 		return err
 	}
-	return w.validateCreateOrUpdate(stage)
+	return w.validateCreateOrUpdateFn(stage)
 }
 
 func (w *webhook) ValidateUpdate(
-	ctx context.Context,
+	_ context.Context,
 	_ runtime.Object,
 	newObj runtime.Object,
 ) error {
 	stage := newObj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if err := w.validateProject(ctx, stage); err != nil {
-		return err
-	}
-	return w.validateCreateOrUpdate(stage)
+	return w.validateCreateOrUpdateFn(stage)
 }
 
-func (w *webhook) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	return w.validateProject(ctx, stage)
-}
-
-func (w *webhook) validateProject(ctx context.Context, stage *kargoapi.Stage) error {
-	if err := validation.ValidateProject(ctx, w.client, stage.GetNamespace()); err != nil {
-		if errors.Is(err, validation.ErrProjectNotFound) {
-			return apierrors.NewNotFound(schema.GroupResource{
-				Group:    corev1.SchemeGroupVersion.Group,
-				Resource: "Namespace",
-			}, stage.GetNamespace())
-		}
-		var fieldErr *field.Error
-		if ok := errors.As(err, &fieldErr); ok {
-			return apierrors.NewInvalid(stageGroupKind, stage.GetName(), field.ErrorList{fieldErr})
-		}
-		return apierrors.NewInternalError(err)
-	}
+func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
+	// No-op
 	return nil
 }
 
 func (w *webhook) validateCreateOrUpdate(e *kargoapi.Stage) error {
-	if errs := w.validateSpec(field.NewPath("spec"), e.Spec); len(errs) > 0 {
+	if errs := w.validateSpecFn(field.NewPath("spec"), e.Spec); len(errs) > 0 {
 		return apierrors.NewInvalid(stageGroupKind, e.Name, errs)
 	}
 	return nil

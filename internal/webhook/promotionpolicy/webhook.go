@@ -5,17 +5,15 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/validation"
 	"github.com/akuity/kargo/internal/kubeclient"
+	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
 var (
@@ -31,69 +29,104 @@ var (
 
 type webhook struct {
 	client client.Client
+
+	// The following behaviors are overridable for testing purposes:
+
+	validateProjectFn func(
+		context.Context,
+		client.Client,
+		schema.GroupKind,
+		client.Object,
+	) error
+
+	validateStageUniquenessFn func(
+		context.Context,
+		*kargoapi.PromotionPolicy,
+	) error
+
+	listPromotionPoliciesFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
+	w := newWebhook(mgr.GetClient())
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.PromotionPolicy{}).
-		WithValidator(&webhook{
-			client: mgr.GetClient(),
-		}).
+		WithValidator(w).
 		Complete()
 }
 
-func (w *webhook) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	policy := obj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
-	if err := w.validateProject(ctx, policy); err != nil {
-		return err
+func newWebhook(kubeClient client.Client) *webhook {
+	w := &webhook{
+		client: kubeClient,
 	}
-	return w.validateStageUniqueness(ctx, policy)
+	w.validateProjectFn = libWebhook.ValidateProject
+	w.validateStageUniquenessFn = w.validateStageUniqueness
+	w.listPromotionPoliciesFn = kubeClient.List
+	return w
 }
 
-func (w *webhook) ValidateUpdate(ctx context.Context, _ runtime.Object, newObj runtime.Object) error {
-	policy := newObj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
-	if err := w.validateProject(ctx, policy); err != nil {
-		return err
-	}
-	return w.validateStageUniqueness(ctx, policy)
-}
-
-func (w *webhook) ValidateDelete(
+func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
 ) error {
 	policy := obj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
-	return w.validateProject(ctx, policy)
+	if err := w.validateProjectFn(
+		ctx,
+		w.client,
+		promotionPolicyGroupKind,
+		policy,
+	); err != nil {
+		return err
+	}
+	return w.validateStageUniquenessFn(ctx, policy)
 }
 
-func (w *webhook) validateProject(ctx context.Context, policy *kargoapi.PromotionPolicy) error {
-	if err := validation.ValidateProject(ctx, w.client, policy.GetNamespace()); err != nil {
-		if errors.Is(err, validation.ErrProjectNotFound) {
-			return apierrors.NewNotFound(schema.GroupResource{
-				Group:    corev1.SchemeGroupVersion.Group,
-				Resource: "Namespace",
-			}, policy.GetNamespace())
-		}
-		var fieldErr *field.Error
-		if ok := errors.As(err, &fieldErr); ok {
-			return apierrors.NewInvalid(promotionPolicyGroupKind, policy.GetName(), field.ErrorList{fieldErr})
-		}
-		return apierrors.NewInternalError(err)
-	}
+func (w *webhook) ValidateUpdate(
+	ctx context.Context,
+	_ runtime.Object,
+	newObj runtime.Object,
+) error {
+	policy := newObj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
+	return w.validateStageUniquenessFn(ctx, policy)
+}
+
+func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
+	// No-op
 	return nil
 }
 
-func (w *webhook) validateStageUniqueness(ctx context.Context, policy *kargoapi.PromotionPolicy) error {
+func (w *webhook) validateStageUniqueness(
+	ctx context.Context,
+	policy *kargoapi.PromotionPolicy,
+) error {
 	var list kargoapi.PromotionPolicyList
-	if err := w.client.List(ctx, &list, client.InNamespace(policy.GetNamespace()), client.MatchingFields{
-		kubeclient.PromotionPoliciesByStageIndexField: policy.Stage,
-	}); err != nil {
-		return apierrors.NewInternalError(errors.Wrap(err, "list promotion policies"))
+	if err := w.listPromotionPoliciesFn(
+		ctx,
+		&list,
+		client.InNamespace(policy.GetNamespace()),
+		client.MatchingFields{
+			kubeclient.PromotionPoliciesByStageIndexField: policy.Stage,
+		},
+	); err != nil {
+		return apierrors.NewInternalError(
+			errors.Wrap(err, "list promotion policies"),
+		)
 	}
 	for _, ep := range list.Items {
 		if policy.Name != ep.Name {
-			return apierrors.NewConflict(promotionPolicyGroupResource, policy.GetName(),
-				fmt.Errorf("policy for stage %q is already exists: %s", policy.Stage, ep.GetName()))
+			return apierrors.NewConflict(
+				promotionPolicyGroupResource,
+				policy.GetName(),
+				fmt.Errorf(
+					"policy for stage %q is already exists: %s",
+					policy.Stage,
+					ep.GetName(),
+				),
+			)
 		}
 	}
 	return nil
