@@ -6,16 +6,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:validation:Enum={SemVer,NewestBuild,Alphabetical,Digest}
-type ImageUpdateStrategy string
-
-const (
-	ImageUpdateStrategySemVer       ImageUpdateStrategy = "SemVer"
-	ImageUpdateStrategyNewestBuild  ImageUpdateStrategy = "NewestBuild"
-	ImageUpdateStrategyAlphabetical ImageUpdateStrategy = "Alphabetical"
-	ImageUpdateStrategyDigest       ImageUpdateStrategy = "Digest"
-)
-
 // +kubebuilder:validation:Enum={Image,Tag}
 type ImageUpdateValueType string
 
@@ -99,132 +89,22 @@ type StageSpec struct {
 	//+kubebuilder:validation:Required
 	Subscriptions *Subscriptions `json:"subscriptions"`
 	// PromotionMechanisms describes how to incorporate Freight into the Stage.
-	// This is an optional field as it is sometimes useful to aggregate Freight
-	// qualified for from multiple upstream Stages without performing any actions.
-	// The utility of this is to allow multiple downstream Stages to subscribe to
-	// a single upstream Stage where they may otherwise have subscribed to
-	// multiple upstream Stages.
+	// This is an optional field as it is sometimes useful to aggregates available
+	// Freight from multiple upstream Stages without performing any actions. The
+	// utility of this is to allow multiple downstream Stages to subscribe to a
+	// single upstream Stage where they may otherwise have subscribed to multiple
+	// upstream Stages.
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty"`
 }
 
 // Subscriptions describes a Stage's sources of Freight.
 type Subscriptions struct {
-	// Repos describes various sorts of repositories a Stage uses as sources of
-	// Freight. This field is mutually exclusive with the UpstreamStages field.
-	Repos *RepoSubscriptions `json:"repos,omitempty"`
+	// Warehouse is a subscription to a Warehouse. This field is mutually
+	// exclusive with the UpstreamStages field.
+	Warehouse string `json:"warehouse,omitempty"`
 	// UpstreamStages identifies other Stages as potential sources of Freight
 	// for this Stage. This field is mutually exclusive with the Repos field.
 	UpstreamStages []StageSubscription `json:"upstreamStages,omitempty"`
-}
-
-// RepoSubscriptions describes various sorts of repositories a Stage uses
-// as sources of Freight.
-type RepoSubscriptions struct {
-	// Git describes subscriptions to Git repositories.
-	Git []GitSubscription `json:"git,omitempty"`
-	// Images describes subscriptions to container image repositories.
-	Images []ImageSubscription `json:"images,omitempty"`
-	// Charts describes subscriptions to Helm charts.
-	Charts []ChartSubscription `json:"charts,omitempty"`
-}
-
-// GitSubscription defines a subscription to a Git repository.
-type GitSubscription struct {
-	// URL is the repository's URL. This is a required field.
-	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
-	RepoURL string `json:"repoURL"`
-	// Branch references a particular branch of the repository. This field is
-	// optional. When not specified, the subscription is implicitly to the
-	// repository's default branch.
-	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
-	Branch string `json:"branch,omitempty"`
-}
-
-// ImageSubscription defines a subscription to an image repository.
-type ImageSubscription struct {
-	// RepoURL specifies the URL of the image repository to subscribe to. The
-	// value in this field MUST NOT include an image tag. This field is required.
-	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
-	RepoURL string `json:"repoURL"`
-	// GitRepoURL optionally specifies the URL of a Git repository that contains
-	// the source code for the image repository referenced by the RepoURL field.
-	// When this is specified, Kargo MAY be able to infer and link to the exact
-	// revision of that source code that was used to build the image.
-	//
-	//+kubebuilder:validation:Optional
-	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
-	GitRepoURL string `json:"gitRepoURL,omitempty"`
-	// UpdateStrategy specifies the rules for how to identify the newest version
-	// of the image specified by the RepoURL field. This field is optional. When
-	// left unspecified, the field is implicitly treated as if its value were
-	// "SemVer".
-	//
-	// +kubebuilder:default=SemVer
-	UpdateStrategy ImageUpdateStrategy `json:"updateStrategy,omitempty"`
-	// SemverConstraint specifies constraints on what new image versions are
-	// permissible. This value in this field only has any effect when the
-	// UpdateStrategy is SemVer or left unspecified (which is implicitly the same
-	// as SemVer). This field is also optional. When left unspecified, (and the
-	// UpdateStrategy is SemVer or unspecified), there will be no constraints,
-	// which means the latest semantically tagged version of an image will always
-	// be used. Care should be taken with leaving this field unspecified, as it
-	// can lead to the unanticipated rollout of breaking changes. Refer to Image
-	// Updater documentation for more details.
-	//
-	//+kubebuilder:validation:Optional
-	SemverConstraint string `json:"semverConstraint,omitempty"`
-	// AllowTags is a regular expression that can optionally be used to limit the
-	// image tags that are considered in determining the newest version of an
-	// image. This field is optional.
-	//
-	//+kubebuilder:validation:Optional
-	AllowTags string `json:"allowTags,omitempty"`
-	// IgnoreTags is a list of tags that must be ignored when determining the
-	// newest version of an image. No regular expressions or glob patterns are
-	// supported yet. This field is optional.
-	//
-	//+kubebuilder:validation:Optional
-	IgnoreTags []string `json:"ignoreTags,omitempty"`
-	// Platform is a string of the form <os>/<arch> that limits the tags that can
-	// be considered when searching for new versions of an image. This field is
-	// optional. When left unspecified, it is implicitly equivalent to the
-	// OS/architecture of the Kargo controller. Care should be taken to set this
-	// value correctly in cases where the image referenced by this
-	// ImageRepositorySubscription will run on a Kubernetes node with a different
-	// OS/architecture than the Kargo controller. At present this is uncommon, but
-	// not unheard of.
-	//
-	//+kubebuilder:validation:Optional
-	Platform string `json:"platform,omitempty"`
-}
-
-// ChartSubscription defines a subscription to a Helm chart repository.
-type ChartSubscription struct {
-	// RegistryURL specifies the URL of a Helm chart registry. It may be a classic
-	// chart registry (using HTTP/S) OR an OCI registry. This field is required.
-	//
-	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$`
-	RegistryURL string `json:"registryURL"`
-	// Name specifies a Helm chart to subscribe to within the Helm chart registry
-	// specified by the RegistryURL field. This field is required.
-	//
-	//+kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-	// SemverConstraint specifies constraints on what new chart versions are
-	// permissible. This field is optional. When left unspecified, there will be
-	// no constraints, which means the latest version of the chart will always be
-	// used. Care should be taken with leaving this field unspecified, as it can
-	// lead to the unanticipated rollout of breaking changes.
-	//
-	//+kubebuilder:validation:Optional
-	SemverConstraint string `json:"semverConstraint,omitempty"`
 }
 
 // StageSubscription defines a subscription to Freight from another Stage.
