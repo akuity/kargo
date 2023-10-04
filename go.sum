@@ -42,8 +42,8 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 connectrpc.com/connect v1.11.0 h1:Av2KQXxSaX4vjqhf5Cl01SX4dqYADQ38eBtr84JSUBk=
 connectrpc.com/connect v1.11.0/go.mod h1:3AGaO6RRGMx5IKFfqbe3hvK1NqLosFNP2BxDYTPmNPo=
-connectrpc.com/grpchealth v1.2.0 h1:aHP33Bki+F2jPNI1mFVSFG7v0qJrgmfbg7X7nOdSj0M=
-connectrpc.com/grpchealth v1.2.0/go.mod h1:fZos12C4p/ZaZC6OwBGZUM+i/fhnRhv75ax/6V/zIeM=
+connectrpc.com/grpchealth v1.3.0 h1:FA3OIwAvuMokQIXQrY5LbIy8IenftksTP/lG4PbYN+E=
+connectrpc.com/grpchealth v1.3.0/go.mod h1:3vpqmX25/ir0gVgW6RdnCPPZRcR6HvqtXX5RNPmDXHM=
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
