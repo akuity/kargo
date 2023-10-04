@@ -59,7 +59,7 @@ func TestValidateSpec(t *testing.T) {
 			spec: &kargoapi.StageSpec{
 				// Has two conflicting types of subs...
 				Subscriptions: &kargoapi.Subscriptions{
-					Repos: &kargoapi.RepoSubscriptions{},
+					Warehouse: "test-warehouse",
 					UpstreamStages: []kargoapi.StageSubscription{
 						{},
 					},
@@ -77,7 +77,7 @@ func TestValidateSpec(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "spec.subscriptions",
 							BadValue: spec.Subscriptions,
-							Detail: "exactly one of spec.subscriptions.repos or " +
+							Detail: "exactly one of spec.subscriptions.warehouse or " +
 								"spec.subscriptions.upstreamStages must be defined",
 						},
 						{
@@ -144,7 +144,7 @@ func TestValidateSubs(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "subscriptions",
 							BadValue: subs,
-							Detail: "exactly one of subscriptions.repos or " +
+							Detail: "exactly one of subscriptions.warehouse or " +
 								"subscriptions.upstreamStages must be defined",
 						},
 					},
@@ -154,9 +154,9 @@ func TestValidateSubs(t *testing.T) {
 		},
 
 		{
-			name: "has repo subs and Stage subs", // Should be "one of"
+			name: "has warehouse sub and Stage subs", // Should be "one of"
 			subs: &kargoapi.Subscriptions{
-				Repos: &kargoapi.RepoSubscriptions{},
+				Warehouse: "test-warehouse",
 				UpstreamStages: []kargoapi.StageSubscription{
 					{},
 				},
@@ -169,12 +169,22 @@ func TestValidateSubs(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "subscriptions",
 							BadValue: subs,
-							Detail: "exactly one of subscriptions.repos or " +
+							Detail: "exactly one of subscriptions.warehouse or " +
 								"subscriptions.upstreamStages must be defined",
 						},
 					},
 					errs,
 				)
+			},
+		},
+
+		{
+			name: "success",
+			subs: &kargoapi.Subscriptions{
+				Warehouse: "test-warehouse",
+			},
+			assertions: func(_ *kargoapi.Subscriptions, errs field.ErrorList) {
+				require.Nil(t, errs)
 			},
 		},
 	}
@@ -186,304 +196,6 @@ func TestValidateSubs(t *testing.T) {
 				w.validateSubs(
 					field.NewPath("subscriptions"),
 					testCase.subs,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateRepoSubs(t *testing.T) {
-	testCases := []struct {
-		name       string
-		subs       *kargoapi.RepoSubscriptions
-		assertions func(*kargoapi.RepoSubscriptions, field.ErrorList)
-	}{
-		{
-			name: "nil",
-			assertions: func(_ *kargoapi.RepoSubscriptions, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-
-		{
-			name: "no subscriptions",
-			subs: &kargoapi.RepoSubscriptions{}, // Has no subs
-			assertions: func(subs *kargoapi.RepoSubscriptions, errs field.ErrorList) {
-				require.Len(t, errs, 1)
-				require.Equal(
-					t,
-					&field.Error{
-						Type:     field.ErrorTypeInvalid,
-						Field:    "repos",
-						BadValue: subs,
-						Detail: "at least one of repos.git, repos.images, or " +
-							"repos.charts must be non-empty",
-					},
-					errs[0],
-				)
-			},
-		},
-
-		{
-			name: "invalid subscriptions",
-			subs: &kargoapi.RepoSubscriptions{
-				Images: []kargoapi.ImageSubscription{
-					{
-						SemverConstraint: "bogus",
-						Platform:         "bogus",
-					},
-				},
-				Charts: []kargoapi.ChartSubscription{
-					{
-						SemverConstraint: "bogus",
-					},
-				},
-			},
-			assertions: func(subs *kargoapi.RepoSubscriptions, errs field.ErrorList) {
-				require.Len(t, errs, 3)
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "repos.images[0].semverConstraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "repos.images[0].platform",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "repos.charts[0].semverConstraint",
-							BadValue: "bogus",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			subs: &kargoapi.RepoSubscriptions{
-				Images: []kargoapi.ImageSubscription{
-					{},
-				},
-			},
-			assertions: func(subs *kargoapi.RepoSubscriptions, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.subs,
-				w.validateRepoSubs(field.NewPath("repos"), testCase.subs),
-			)
-		})
-	}
-}
-
-func TestValidateImageSubs(t *testing.T) {
-	testCases := []struct {
-		name       string
-		sub        kargoapi.ImageSubscription
-		assertions func(field.ErrorList)
-	}{
-		{
-			name: "invalid",
-			sub: kargoapi.ImageSubscription{
-				SemverConstraint: "bogus",
-				Platform:         "bogus",
-			},
-			assertions: func(errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "images[0].semverConstraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "images[0].platform",
-							BadValue: "bogus",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			assertions: func(errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				w.validateImageSubs(
-					field.NewPath("images"),
-					[]kargoapi.ImageSubscription{
-						testCase.sub,
-					},
-				),
-			)
-		})
-	}
-}
-
-func TestValidateImageSub(t *testing.T) {
-	testCases := []struct {
-		name       string
-		sub        kargoapi.ImageSubscription
-		assertions func(field.ErrorList)
-	}{
-		{
-			name: "invalid",
-			sub: kargoapi.ImageSubscription{
-				SemverConstraint: "bogus",
-				Platform:         "bogus",
-			},
-			assertions: func(errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "image.semverConstraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "image.platform",
-							BadValue: "bogus",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			assertions: func(errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				w.validateImageSub(
-					field.NewPath("image"),
-					testCase.sub,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateChartSubs(t *testing.T) {
-	testCases := []struct {
-		name       string
-		sub        kargoapi.ChartSubscription
-		assertions func(field.ErrorList)
-	}{
-		{
-			name: "invalid",
-			sub: kargoapi.ChartSubscription{
-				SemverConstraint: "bogus",
-			},
-			assertions: func(errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "charts[0].semverConstraint",
-							BadValue: "bogus",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			sub:  kargoapi.ChartSubscription{},
-			assertions: func(errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				w.validateChartSubs(
-					field.NewPath("charts"),
-					[]kargoapi.ChartSubscription{
-						testCase.sub,
-					},
-				),
-			)
-		})
-	}
-}
-
-func TestValidateChartSub(t *testing.T) {
-	testCases := []struct {
-		name       string
-		sub        kargoapi.ChartSubscription
-		assertions func(field.ErrorList)
-	}{
-		{
-			name: "invalid",
-			sub: kargoapi.ChartSubscription{
-				SemverConstraint: "bogus",
-			},
-			assertions: func(errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "chart.semverConstraint",
-							BadValue: "bogus",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			sub:  kargoapi.ChartSubscription{},
-			assertions: func(errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				w.validateChartSub(
-					field.NewPath("chart"),
-					testCase.sub,
 				),
 			)
 		})
@@ -725,56 +437,6 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 				w.validateHelmPromotionMechanism(
 					field.NewPath("helm"),
 					testCase.promoMech,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateSemverConstraint(t *testing.T) {
-	testCases := []struct {
-		name             string
-		semverConstraint string
-		assertions       func(error)
-	}{
-		{
-			name: "empty string",
-			assertions: func(err error) {
-				require.Nil(t, err)
-			},
-		},
-
-		{
-			name:             "invalid",
-			semverConstraint: "bogus",
-			assertions: func(err error) {
-				require.NotNil(t, err)
-				require.Equal(
-					t,
-					&field.Error{
-						Type:     field.ErrorTypeInvalid,
-						Field:    "semverConstraint",
-						BadValue: "bogus",
-					},
-					err,
-				)
-			},
-		},
-
-		{
-			name:             "valid",
-			semverConstraint: "^1.0.0",
-			assertions: func(err error) {
-				require.Nil(t, err)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				validateSemverConstraint(
-					field.NewPath("semverConstraint"),
-					testCase.semverConstraint,
 				),
 			)
 		})
