@@ -1,11 +1,7 @@
 package v1alpha1
 
 import (
-	"crypto/sha1"
-	"fmt"
 	"os"
-	"sort"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -81,13 +77,12 @@ const (
 type Stage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// Spec describes the sources of material used by the Stage and how
-	// to incorporate newly observed materials into the Stage.
+	// Spec describes sources of Freight used by the Stage and how to incorporate
+	// Freight into the Stage.
 	//
 	//+kubebuilder:validation:Required
 	Spec *StageSpec `json:"spec"`
-	// Status describes the most recently observed Freight as well as the Stage's
-	// current and recent Freight.
+	// Status describes the Stage's current and recent Freight, health, and more.
 	Status StageStatus `json:"status,omitempty"`
 }
 
@@ -95,35 +90,35 @@ func (s *Stage) GetStatus() *StageStatus {
 	return &s.Status
 }
 
-// StageSpec describes the sources of material used by a Stage and how to
-// incorporate newly observed materials into the Stage.
+// StageSpec describes the sources of Freight used by a Stage and how to
+// incorporate Freight into the Stage.
 type StageSpec struct {
-	// Subscriptions describes the Stage's sources of material. This is a
-	// required field.
+	// Subscriptions describes the Stage's sources of Freight. This is a required
+	// field.
 	//
 	//+kubebuilder:validation:Required
 	Subscriptions *Subscriptions `json:"subscriptions"`
-	// PromotionMechanisms describes how to incorporate newly observed materials
-	// into the Stage. This is an optional field as it is sometimes useful to
-	// aggregates available Freight from multiple upstream Stages without
-	// performing any actions. The utility of this is to allow multiple downstream
-	// Stages to be able to subscribe to a single upstream Stage where they may
-	// otherwise have subscribed to multiple upstream Stages.
+	// PromotionMechanisms describes how to incorporate Freight into the Stage.
+	// This is an optional field as it is sometimes useful to aggregate Freight
+	// qualified for from multiple upstream Stages without performing any actions.
+	// The utility of this is to allow multiple downstream Stages to subscribe to
+	// a single upstream Stage where they may otherwise have subscribed to
+	// multiple upstream Stages.
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty"`
 }
 
-// Subscriptions describes a Stage's sources of material.
+// Subscriptions describes a Stage's sources of Freight.
 type Subscriptions struct {
 	// Repos describes various sorts of repositories a Stage uses as sources of
-	// material. This field is mutually exclusive with the UpstreamStages field.
+	// Freight. This field is mutually exclusive with the UpstreamStages field.
 	Repos *RepoSubscriptions `json:"repos,omitempty"`
-	// UpstreamStages identifies other Stages as potential sources of material
+	// UpstreamStages identifies other Stages as potential sources of Freight
 	// for this Stage. This field is mutually exclusive with the Repos field.
 	UpstreamStages []StageSubscription `json:"upstreamStages,omitempty"`
 }
 
 // RepoSubscriptions describes various sorts of repositories a Stage uses
-// as sources of material.
+// as sources of Freight.
 type RepoSubscriptions struct {
 	// Git describes subscriptions to Git repositories.
 	Git []GitSubscription `json:"git,omitempty"`
@@ -241,24 +236,23 @@ type StageSubscription struct {
 	Name string `json:"name"`
 }
 
-// PromotionMechanisms describes how to incorporate newly observed materials
-// into a Stage.
+// PromotionMechanisms describes how to incorporate Freight into a Stage.
 type PromotionMechanisms struct {
 	// GitRepoUpdates describes updates that should be applied to Git repositories
-	// to incorporate newly observed materials into the Stage. This field is
-	// optional, as such actions are not required in all cases.
+	// to incorporate Freight into the Stage. This field is optional, as such
+	// actions are not required in all cases.
 	GitRepoUpdates []GitRepoUpdate `json:"gitRepoUpdates,omitempty"`
 	// ArgoCDAppUpdates describes updates that should be applied to Argo CD
-	// Application resources to incorporate newly observed materials into the
-	// Stage. This field is optional, as such actions are not required in all
-	// cases. Note that all updates specified by the GitRepoUpdates field, if any,
-	// are applied BEFORE these.
+	// Application resources to incorporate Freight into the Stage. This field is
+	// optional, as such actions are not required in all cases. Note that all
+	// updates specified by the GitRepoUpdates field, if any, are applied BEFORE
+	// these.
 	ArgoCDAppUpdates []ArgoCDAppUpdate `json:"argoCDAppUpdates,omitempty"`
 }
 
 // GitRepoUpdate describes updates that should be applied to a Git repository
-// (using various configuration management tools) to incorporate newly observed
-// materials into a Stage.
+// (using various configuration management tools) to incorporate Freight into a
+// Stage.
 type GitRepoUpdate struct {
 	// RepoURL is the URL of the repository to update. This is a required field.
 	//
@@ -283,26 +277,23 @@ type GitRepoUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	WriteBranch string `json:"writeBranch"`
-	// Bookkeeper describes how to use Bookkeeper to incorporate newly observed
-	// materials into the Stage. This is mutually exclusive with the Kustomize and
-	// Helm fields.
+	// Bookkeeper describes how to use Bookkeeper to incorporate Freight into the
+	// Stage. This is mutually exclusive with the Kustomize and Helm fields.
 	Bookkeeper *BookkeeperPromotionMechanism `json:"bookkeeper,omitempty"`
-	// Kustomize describes how to use Kustomize to incorporate newly observed
-	// materials into the Stage. This is mutually exclusive with the Bookkeeper
-	// and Helm fields.
+	// Kustomize describes how to use Kustomize to incorporate Freight into the
+	// Stage. This is mutually exclusive with the Bookkeeper and Helm fields.
 	Kustomize *KustomizePromotionMechanism `json:"kustomize,omitempty"`
-	// Helm describes how to use Helm to incorporate newly observed materials into
-	// the Stage. This is mutually exclusive with the Bookkeeper and Kustomize
-	// fields.
+	// Helm describes how to use Helm to incorporate Freight into the Stage. This
+	// is mutually exclusive with the Bookkeeper and Kustomize fields.
 	Helm *HelmPromotionMechanism `json:"helm,omitempty"`
 }
 
 // BookkeeperPromotionMechanism describes how to use Bookkeeper to incorporate
-// newly observed materials into a Stage.
+// Freight into a Stage.
 type BookkeeperPromotionMechanism struct{}
 
 // KustomizePromotionMechanism describes how to use Kustomize to incorporate
-// newly observed materials into a Stage.
+// Freight into a Stage.
 type KustomizePromotionMechanism struct {
 	// Images describes images for which `kustomize edit set image` should be
 	// executed and the paths in which those commands should be executed.
@@ -326,8 +317,8 @@ type KustomizeImageUpdate struct {
 	Path string `json:"path"`
 }
 
-// HelmPromotionMechanism describes how to use Helm to incorporate newly
-// observed materials into a Stage.
+// HelmPromotionMechanism describes how to use Helm to incorporate Freight into
+// a Stage.
 type HelmPromotionMechanism struct {
 	// Images describes how specific image versions can be incorporated into Helm
 	// values files.
@@ -385,7 +376,7 @@ type HelmChartDependencyUpdate struct {
 }
 
 // ArgoCDAppUpdate describes updates that should be applied to an Argo CD
-// Application resources to incorporate newly observed materials into a Stage.
+// Application resources to incorporate Freight into a Stage.
 type ArgoCDAppUpdate struct {
 	// AppName specifies the name of an Argo CD Application resource to be
 	// updated.
@@ -446,7 +437,7 @@ type ArgoCDSourceUpdate struct {
 }
 
 // ArgoCDKustomize describes updates to an Argo CD Application source's
-// Kustomize-specific attributes to incorporate newly observed materials into a
+// Kustomize-specific attributes to incorporate newly observed Freight into a
 // Stage.
 type ArgoCDKustomize struct {
 	// Images describes how specific image versions can be incorporated into an
@@ -457,7 +448,7 @@ type ArgoCDKustomize struct {
 }
 
 // ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
-// attributes to incorporate newly observed materials into a Stage.
+// attributes to incorporate newly observed Freight into a Stage.
 type ArgoCDHelm struct {
 	// Images describes how specific image versions can be incorporated into an
 	// Argo CD Application's Helm parameters.
@@ -486,25 +477,19 @@ type ArgoCDHelmImageUpdate struct {
 	Value ImageUpdateValueType `json:"value"`
 }
 
-// StageStatus describes a Stages's most recently observed Freight as well
-// current and recent Freight.
+// StageStatus describes a Stages's current and recent Freight, health, and
+// more.
 type StageStatus struct {
-	// AvailableFreight is a stack of available Freight, where each Freight is
-	// essentially a "bill of materials" describing what can be automatically or
-	// manually deployed to the Stage.
-	AvailableFreight FreightStack `json:"availableFreight,omitempty"`
-	// CurrentFreight is the Stage's current Freight -- a "bill of materials"
-	// describing what is currently deployed to the Stage.
-	CurrentFreight *Freight `json:"currentFreight,omitempty"`
-	// History is a stack of recent Freight, where each Freight is essentially a
-	// "bill of materials" describing what was deployed to the Stage. By default,
-	// the last ten Freight are stored.
-	History FreightStack `json:"history,omitempty"`
+	// CurrentFreight is a simplified representation of the Stage's current
+	// Freight describing what is currently deployed to the Stage.
+	CurrentFreight *SimpleFreight `json:"currentFreight,omitempty"`
+	// History is a stack of recent Freight. By default, the last ten Freight are
+	// stored.
+	History SimpleFreightStack `json:"history,omitempty"`
 	// Health is the Stage's last observed health.
 	Health *Health `json:"health,omitempty"`
 	// Error describes any errors that are preventing the Stage controller
-	// from assessing Stage health or from polling repositories or upstream
-	// Stages to discover new Freight.
+	// from assessing Stage health or from finding new Freight.
 	Error string `json:"error,omitempty"`
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.
@@ -513,96 +498,52 @@ type StageStatus struct {
 	CurrentPromotion *PromotionInfo `json:"currentPromotion,omitempty"`
 }
 
-// Freight is a "bill of materials" describing what is, was, or can be deployed
-// to a Stage.
-type Freight struct {
-	// ID is a unique, system-assigned identifier for this Freight.
+// SimpleFreight is a simplified representation of a piece of Freight -- not a
+// root resource type.
+type SimpleFreight struct {
+	// ID is system-assigned value that is derived deterministically from the
+	// contents of the Freight. i.e. Two pieces of Freight can be compared for
+	// equality by comparing their IDs.
 	ID string `json:"id,omitempty"`
-	// FirstSeen represents the date/time when this Freight first entered the
-	// system. This is useful and important information because it enables the
-	// controller to block auto-promotion of Freight that are older than a
-	// Stages's current Freight, which is a case that can arise if a Stage has
-	// ROLLED BACK to an older Freight whilst a downstream Stage is already on to
-	// a newer Freight.
-	FirstSeen *metav1.Time `json:"firstSeen,omitempty"`
-	// Provenance describes the proximate source of this Freight. i.e. Did it come
-	// directly from upstream repositories? Or an upstream Stage.
-	Provenance string `json:"provenance,omitempty"`
-	// Commits describes specific Git repository commits that were used in this
-	// Freight.
+	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty"`
-	// Images describes container images and versions thereof that were used
-	// in this Freight.
+	// Images describes specific versions of specific container images.
 	Images []Image `json:"images,omitempty"`
-	// Charts describes Helm charts that were used in this Freight.
+	// Charts describes specific versions of specific Helm charts.
 	Charts []Chart `json:"charts,omitempty"`
-	// Qualified denotes whether this Freight is suitable for promotion to a
-	// downstream Stage. This field becomes true when it is the current Freight of
-	// a Stage and that Stage is observed to be synced and healthy. Subsequent
-	// failures in Stage health evaluation do not disqualify a Freight that is
-	// already qualified.
-	Qualified bool `json:"qualified,omitempty"`
 }
 
-func (f *Freight) UpdateFreightID() {
-	size := len(f.Commits) + len(f.Images) + len(f.Charts)
-	materials := make([]string, 0, size)
-	for _, commit := range f.Commits {
-		materials = append(
-			materials,
-			fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
-		)
-	}
-	for _, image := range f.Images {
-		materials = append(
-			materials,
-			fmt.Sprintf("%s:%s", image.RepoURL, image.Tag),
-		)
-	}
-	for _, chart := range f.Charts {
-		materials = append(
-			materials,
-			fmt.Sprintf("%s/%s:%s", chart.RegistryURL, chart.Name, chart.Version),
-		)
-	}
-	sort.Strings(materials)
-	f.ID = fmt.Sprintf(
-		"%x",
-		sha1.Sum([]byte(strings.Join(materials, "|"))),
-	)
+type SimpleFreightStack []SimpleFreight
+
+// Empty returns a bool indicating whether or not the SimpleFreightStack is
+// empty. nil counts as empty.
+func (s SimpleFreightStack) Empty() bool {
+	return len(s) == 0
 }
 
-type FreightStack []Freight
-
-// Empty returns a bool indicating whether or not the FreightStack is empty.
-// nil counts as empty.
-func (f FreightStack) Empty() bool {
-	return len(f) == 0
-}
-
-// Pop removes and returns the leading element from a FreightStack. If the
-// FreightStack is empty, the FreightStack is not modified and a empty Freight
-// is returned instead. A boolean is also returned indicating whether the
-// returned Freight came from the top of the stack (true) or is a zero value for
-// that type (false).
-func (f *FreightStack) Pop() (Freight, bool) {
-	item, ok := f.Top()
+// Pop removes and returns the leading element from a SimpleFreightStack. If the
+// SimpleFreightStack is empty, the SimpleFreightStack is not modified and a
+// empty SimpleFreight is returned instead. A boolean is also returned
+// indicating whether the returned SimpleFreight came from the top of the stack
+// (true) or is a zero value for that type (false).
+func (s *SimpleFreightStack) Pop() (SimpleFreight, bool) {
+	item, ok := s.Top()
 	if ok {
-		*f = (*f)[1:]
+		*s = (*s)[1:]
 	}
 	return item, ok
 }
 
-// Top returns the leading element from a FreightStack without modifying the
-// FreightStack. If the FreightStack is empty, an empty Freight is returned
-// instead. A boolean is also returned indicating whether the returned Freight
-// came from the top of the stack (true) or is a zero value for that type
-// (false).
-func (f FreightStack) Top() (Freight, bool) {
-	if f.Empty() {
-		return Freight{}, false
+// Top returns the leading element from a SimpleFreightStack without modifying
+// the SimpleFreightStack. If the SimpleFreightStack is empty, an empty
+// SimpleFreight is returned instead. A boolean is also returned indicating
+// whether the returned SimpleFreight came from the top of the stack (true) or
+// is a zero value for that type (false).
+func (s SimpleFreightStack) Top() (SimpleFreight, bool) {
+	if s.Empty() {
+		return SimpleFreight{}, false
 	}
-	item := *f[0].DeepCopy()
+	item := *s[0].DeepCopy()
 	return item, true
 }
 
@@ -612,11 +553,11 @@ func (f FreightStack) Top() (Freight, bool) {
 // the element at the top of the stack. If resulting modification grow the depth
 // of the stack beyond 10 elements, the stack is truncated at the bottom. i.e.
 // Modified to contain only the top 10 elements.
-func (f *FreightStack) Push(freight ...Freight) {
-	*f = append(freight, *f...)
+func (s *SimpleFreightStack) Push(freight ...SimpleFreight) {
+	*s = append(freight, *s...)
 	const max = 10
-	if len(*f) > max {
-		*f = (*f)[:max]
+	if len(*s) > max {
+		*s = (*s)[:max]
 	}
 }
 
@@ -641,29 +582,6 @@ type Chart struct {
 	Name string `json:"name,omitempty"`
 	// Version specifies a particular version of the chart.
 	Version string `json:"version,omitempty"`
-}
-
-// GitCommit describes a specific commit from a specific Git repository.
-type GitCommit struct {
-	// RepoURL is the URL of a Git repository.
-	RepoURL string `json:"repoURL,omitempty"`
-	// ID is the ID of a specific commit in the Git repository specified by
-	// RepoURL.
-	ID string `json:"id,omitempty"`
-	// Branch denotes the branch of the repository where this commit was found.
-	Branch string `json:"branch,omitempty"`
-	// HealthCheckCommit is the ID of a specific commit. When specified,
-	// assessments of Stage health will used this value (instead of ID) when
-	// determining if applicable sources of Argo CD Application resources
-	// associated with the Stage are or are not synced to this commit. Note that
-	// there are cases (as in that of Bookkeeper being utilized as a promotion
-	// mechanism) wherein the value of this field may differ from the commit ID
-	// found in the ID field.
-	HealthCheckCommit string `json:"healthCheckCommit,omitempty"`
-	// Message is the git commit message
-	Message string `json:"message,omitempty"`
-	// Author is the git commit author
-	Author string `json:"author,omitempty"`
 }
 
 // Equals returns a bool indicating whether two GitCommits are equivalent.
@@ -727,5 +645,5 @@ type PromotionInfo struct {
 	// Name is the name of the Promotion
 	Name string `json:"name"`
 	// Freight is the freight being promoted
-	Freight Freight `json:"freight"`
+	Freight SimpleFreight `json:"freight"`
 }
