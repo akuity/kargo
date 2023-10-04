@@ -20,9 +20,9 @@ type bookkeeperMechanism struct {
 		ctx context.Context,
 		namespace string,
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.Freight,
+		newFreight kargoapi.SimpleFreight,
 		images []string,
-	) (kargoapi.Freight, error)
+	) (kargoapi.SimpleFreight, error)
 	getReadRefFn func(
 		update kargoapi.GitRepoUpdate,
 		commits []kargoapi.GitCommit,
@@ -62,8 +62,8 @@ func (*bookkeeperMechanism) GetName() string {
 func (b *bookkeeperMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	newFreight kargoapi.Freight,
-) (kargoapi.Freight, error) {
+	newFreight kargoapi.SimpleFreight,
+) (kargoapi.SimpleFreight, error) {
 	updates := make([]kargoapi.GitRepoUpdate, 0, len(stage.Spec.PromotionMechanisms.GitRepoUpdates))
 	for _, update := range stage.Spec.PromotionMechanisms.GitRepoUpdates {
 		if update.Bookkeeper != nil {
@@ -109,9 +109,9 @@ func (b *bookkeeperMechanism) doSingleUpdate(
 	ctx context.Context,
 	namespace string,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.Freight,
+	newFreight kargoapi.SimpleFreight,
 	images []string,
-) (kargoapi.Freight, error) {
+) (kargoapi.SimpleFreight, error) {
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	readRef, commitIndex, err := b.getReadRefFn(update, newFreight.Commits)

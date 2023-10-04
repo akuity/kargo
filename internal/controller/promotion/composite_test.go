@@ -41,8 +41,12 @@ func TestCompositePromote(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMech  *compositeMechanism
-		newFreight kargoapi.Freight
-		assertions func(newFreightIn, newFreightOut kargoapi.Freight, err error)
+		newFreight kargoapi.SimpleFreight
+		assertions func(
+			newFreightIn kargoapi.SimpleFreight,
+			newFreightOut kargoapi.SimpleFreight,
+			err error,
+		)
 	}{
 		{
 			name: "error executing child promotion mechanism",
@@ -53,14 +57,19 @@ func TestCompositePromote(t *testing.T) {
 						PromoteFn: func(
 							context.Context,
 							*kargoapi.Stage,
-							kargoapi.Freight,
-						) (kargoapi.Freight, error) {
-							return kargoapi.Freight{}, errors.New("something went wrong")
+							kargoapi.SimpleFreight,
+						) (kargoapi.SimpleFreight, error) {
+							return kargoapi.SimpleFreight{},
+								errors.New("something went wrong")
 						},
 					},
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -79,8 +88,8 @@ func TestCompositePromote(t *testing.T) {
 						PromoteFn: func(
 							_ context.Context,
 							_ *kargoapi.Stage,
-							newFreight kargoapi.Freight,
-						) (kargoapi.Freight, error) {
+							newFreight kargoapi.SimpleFreight,
+						) (kargoapi.SimpleFreight, error) {
 							// This is not a realistic change that a child promotion mechanism
 							// would make, but for testing purposes, this is good enough to
 							// help us assert that the function under test does return all
@@ -91,7 +100,11 @@ func TestCompositePromote(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.NoError(t, err)
 				// Verify that changes made by child promotion mechanism are returned
 				require.Equal(t, "fake-mutated-id", newFreightOut.ID)

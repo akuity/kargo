@@ -17,7 +17,11 @@ type Mechanism interface {
 	// Promote consults rules in the provided Stage to perform some portion of the
 	// transition into the specified Freight. It returns the Freight, which may
 	// possibly be updated by the process.
-	Promote(context.Context, *kargoapi.Stage, kargoapi.Freight) (kargoapi.Freight, error)
+	Promote(
+		context.Context,
+		*kargoapi.Stage,
+		kargoapi.SimpleFreight,
+	) (kargoapi.SimpleFreight, error)
 }
 
 // NewMechanisms returns the entrypoint to a hierarchical tree of promotion

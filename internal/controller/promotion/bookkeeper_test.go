@@ -34,8 +34,12 @@ func TestBookkeeperPromote(t *testing.T) {
 		name       string
 		promoMech  *bookkeeperMechanism
 		stage      *kargoapi.Stage
-		newFreight kargoapi.Freight
-		assertions func(newFreightIn, newFreightOut kargoapi.Freight, err error)
+		newFreight kargoapi.SimpleFreight
+		assertions func(
+			newFreightIn kargoapi.SimpleFreight,
+			newFreightOut kargoapi.SimpleFreight,
+			err error,
+		)
 	}{
 		{
 			name:      "no updates",
@@ -45,7 +49,11 @@ func TestBookkeeperPromote(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Equal(t, newFreightIn, newFreightOut)
 			},
@@ -57,9 +65,9 @@ func TestBookkeeperPromote(t *testing.T) {
 					_ context.Context,
 					_ string,
 					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.Freight,
+					newFreight kargoapi.SimpleFreight,
 					images []string,
-				) (kargoapi.Freight, error) {
+				) (kargoapi.SimpleFreight, error) {
 					require.Equal(t, []string{"fake-url:fake-tag"}, images)
 					return newFreight, errors.New("something went wrong")
 				},
@@ -75,7 +83,7 @@ func TestBookkeeperPromote(t *testing.T) {
 					},
 				},
 			},
-			newFreight: kargoapi.Freight{
+			newFreight: kargoapi.SimpleFreight{
 				Images: []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
@@ -83,7 +91,11 @@ func TestBookkeeperPromote(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 				require.Equal(t, newFreightIn, newFreightOut)
@@ -96,9 +108,9 @@ func TestBookkeeperPromote(t *testing.T) {
 					_ context.Context,
 					_ string,
 					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.Freight,
+					newFreight kargoapi.SimpleFreight,
 					images []string,
-				) (kargoapi.Freight, error) {
+				) (kargoapi.SimpleFreight, error) {
 					require.Equal(t, []string{"fake-url:fake-tag"}, images)
 					return newFreight, nil
 				},
@@ -114,7 +126,7 @@ func TestBookkeeperPromote(t *testing.T) {
 					},
 				},
 			},
-			newFreight: kargoapi.Freight{
+			newFreight: kargoapi.SimpleFreight{
 				Images: []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
@@ -122,7 +134,11 @@ func TestBookkeeperPromote(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Equal(t, newFreightIn, newFreightOut)
 			},
@@ -146,7 +162,11 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 		name       string
 		promoMech  *bookkeeperMechanism
 		update     kargoapi.GitRepoUpdate
-		assertions func(newFreightIn, newFreightOut kargoapi.Freight, err error)
+		assertions func(
+			newFreightIn kargoapi.SimpleFreight,
+			newFreightOut kargoapi.SimpleFreight,
+			err error,
+		)
 	}{
 		{
 			name: "error getting readref",
@@ -158,7 +178,11 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					return "", 0, errors.New("something went wrong")
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 				require.Equal(t, newFreightIn, newFreightOut)
@@ -184,7 +208,11 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 						errors.New("something went wrong")
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -222,7 +250,11 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					return bookkeeper.RenderResponse{}, errors.New("something went wrong")
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -263,7 +295,11 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -305,7 +341,11 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(newFreightIn, newFreightOut kargoapi.Freight, err error) {
+			assertions: func(
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -320,7 +360,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightIn := kargoapi.Freight{
+			newFreightIn := kargoapi.SimpleFreight{
 				Commits: []kargoapi.GitCommit{{}},
 			}
 			newFreightOut, err := testCase.promoMech.doSingleUpdate(

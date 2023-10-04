@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/akuity/bookkeeper"
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/promotion"
@@ -34,11 +33,9 @@ type reconciler struct {
 	promoQueuesByStageMu sync.Mutex
 	initializeOnce       sync.Once
 
-	// Overridable for testing:
-	promoteFn func(
-		ctx context.Context,
-		promo v1alpha1.Promotion,
-	) error
+	// The following behaviors are overridable for testing purposes:
+
+	promoteFn func(context.Context, kargoapi.Promotion) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -151,7 +148,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
-	promo, err := r.getPromo(ctx, req.NamespacedName)
+	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
@@ -303,8 +300,9 @@ func (r *reconciler) serializedSync(
 
 				// Refresh promo instead of working with something stale
 				var err error
-				if promo, err = r.getPromo(
+				if promo, err = kargoapi.GetPromotion(
 					ctx,
+					r.kargoClient,
 					types.NamespacedName{
 						Namespace: promo.Namespace,
 						Name:      promo.Name,
@@ -363,12 +361,12 @@ func (r *reconciler) serializedSync(
 
 func (r *reconciler) promote(
 	ctx context.Context,
-	promo v1alpha1.Promotion,
+	promo kargoapi.Promotion,
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 	stageName := promo.Spec.Stage
 	stageNamespace := promo.Namespace
-	freightID := promo.Spec.Freight
+	freightName := promo.Spec.Freight
 
 	stage, err := kargoapi.GetStage(
 		ctx,
@@ -395,40 +393,53 @@ func (r *reconciler) promote(
 	}
 	logger.Debug("found associated Stage")
 
-	if currentFreight, ok :=
-		stage.Status.History.Top(); ok && currentFreight.ID == freightID {
-		logger.Debug("Stage is already in desired Freight")
+	if stage.Status.CurrentFreight != nil && stage.Status.CurrentFreight.ID == freightName {
+		logger.Debug("Stage already has the desired Freight")
 		return nil
 	}
 
-	var targetFreight *kargoapi.Freight
-	for _, availableFreight := range stage.Status.AvailableFreight {
-		if availableFreight.ID == freightID {
-			targetFreight = availableFreight.DeepCopy()
-			targetFreight.Qualified = false
-			break
-		}
+	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
+	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
+		upstreamStages[i] = upstreamStage.Name
+	}
+	targetFreight, err := kargoapi.GetQualifiedFreight(
+		ctx,
+		r.kargoClient,
+		types.NamespacedName{
+			Namespace: promo.Namespace,
+			Name:      promo.Spec.Freight,
+		},
+		upstreamStages,
+	)
+	if err != nil {
+		return err
 	}
 	if targetFreight == nil {
 		return errors.Errorf(
-			"target Freight %q not found among available Freight of Stage %q "+
-				"in namespace %q",
-			freightID,
-			stageName,
-			stageNamespace,
+			"no qualified Freight %q found in namespace %q",
+			promo.Spec.Freight,
+			promo.Namespace,
 		)
 	}
+
+	simpleTargetFreight := kargoapi.SimpleFreight{
+		ID:      targetFreight.ID,
+		Commits: targetFreight.Commits,
+		Images:  targetFreight.Images,
+		Charts:  targetFreight.Charts,
+	}
+
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
-		status.CurrentPromotion = &v1alpha1.PromotionInfo{
+		status.CurrentPromotion = &kargoapi.PromotionInfo{
 			Name:    promo.Name,
-			Freight: *targetFreight,
+			Freight: simpleTargetFreight,
 		}
 	})
 	if err != nil {
 		return err
 	}
 
-	nextFreight, err := r.promoMechanisms.Promote(ctx, stage, *targetFreight)
+	nextFreight, err := r.promoMechanisms.Promote(ctx, stage, simpleTargetFreight)
 	if err != nil {
 		return err
 	}
@@ -453,30 +464,4 @@ func (r *reconciler) promote(
 		stageName,
 		stageNamespace,
 	)
-}
-
-// getPromo returns a pointer to the Promotion resource specified by the
-// namespacedName argument. If no such resource is found, nil is returned
-// instead.
-func (r *reconciler) getPromo(
-	ctx context.Context,
-	namespacedName types.NamespacedName,
-) (*kargoapi.Promotion, error) {
-	promo := kargoapi.Promotion{}
-	if err := r.kargoClient.Get(ctx, namespacedName, &promo); err != nil {
-		if err = client.IgnoreNotFound(err); err == nil {
-			logging.LoggerFromContext(ctx).WithFields(log.Fields{
-				"namespace": namespacedName.Namespace,
-				"promotion": namespacedName.Name,
-			}).Warn("Promotion not found")
-			return nil, nil
-		}
-		return nil, errors.Wrapf(
-			err,
-			"error getting Promotion %q in namespace %q",
-			namespacedName.Name,
-			namespacedName.Namespace,
-		)
-	}
-	return &promo, nil
 }
