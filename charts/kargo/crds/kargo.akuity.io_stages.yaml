@@ -340,7 +340,7 @@ spec:
                           description: RepoURL is the URL of the repository to update.
                             This is a required field.
                           minLength: 1
-                          pattern: ^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$
+                          pattern: ^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
                           type: string
                         writeBranch:
                           description: WriteBranch specifies the particular branch
@@ -440,7 +440,7 @@ spec:
                                 field. When this is specified, Kargo MAY be able to
                                 infer and link to the exact revision of that source
                                 code that was used to build the image.
-                              pattern: ^(((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*))?$
+                              pattern: ^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
                               type: string
                             ignoreTags:
                               description: IgnoreTags is a list of tags that must
@@ -467,7 +467,7 @@ spec:
                                 repository to subscribe to. The value in this field
                                 MUST NOT include an image tag. This field is required.
                               minLength: 1
-                              pattern: ^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$
+                              pattern: ^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$
                               type: string
                             semverConstraint:
                               description: SemverConstraint specifies constraints
