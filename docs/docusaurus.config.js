@@ -79,6 +79,11 @@ const config = {
             label: 'GitHub',
             position: 'right',
           },
+          {
+            href: 'https://discord.gg/dHJBZw6ewT',
+            label: 'Discord Community',
+            position: 'right',
+          },
         ],
       },
       footer: {
