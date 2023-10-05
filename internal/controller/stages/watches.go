@@ -4,6 +4,7 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,95 +12,111 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/akuity/kargo/api/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 )
 
-// EnqueueDownstreamStagesHandler is an event handler that enqueues downstream Stages
-// if a Stage's history has been modified, so that those stages can update their
-// availableFreight.
+// EnqueueDownstreamStagesHandler is an event handler that enqueues downstream
+// Stages when a Freight is qualified for a Stage, so that those Stages can
+// reconcile and possibly create a Promotion if auto-promotion is enabled.
 type EnqueueDownstreamStagesHandler struct {
 	logger      *log.Entry
 	kargoClient client.Client
 }
 
 // Create implements EventHandler.
-func (e *EnqueueDownstreamStagesHandler) Create(_ event.CreateEvent, _ workqueue.RateLimitingInterface) {
-	// do nothing
+func (e *EnqueueDownstreamStagesHandler) Create(
+	event.CreateEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
 }
 
 // Delete implements EventHandler.
-func (e *EnqueueDownstreamStagesHandler) Delete(_ event.DeleteEvent, _ workqueue.RateLimitingInterface) {
-	// do nothing
+func (e *EnqueueDownstreamStagesHandler) Delete(
+	event.DeleteEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
 }
 
 // Generic implements EventHandler.
-func (e *EnqueueDownstreamStagesHandler) Generic(_ event.GenericEvent, _ workqueue.RateLimitingInterface) {
-	// do nothing
+func (e *EnqueueDownstreamStagesHandler) Generic(
+	event.GenericEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
 }
 
 // Update implements EventHandler.
-func (e *EnqueueDownstreamStagesHandler) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+func (e *EnqueueDownstreamStagesHandler) Update(
+	evt event.UpdateEvent,
+	wq workqueue.RateLimitingInterface,
+) {
 	if evt.ObjectOld == nil || evt.ObjectNew == nil {
 		e.logger.Errorf("Update event has no old or new object to update: %v", evt)
 		return
 	}
-	newStage, ok := evt.ObjectNew.(*v1alpha1.Stage)
+	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
 	if !ok {
-		e.logger.Errorf("Failed to convert new stage: %v", evt.ObjectNew)
+		e.logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
 		return
 	}
-	oldStage, ok := evt.ObjectOld.(*v1alpha1.Stage)
+	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
 	if !ok {
-		e.logger.Errorf("Failed to convert old stage: %v", evt.ObjectOld)
+		e.logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
 		return
 	}
-	if !newQualifiedFreight(oldStage, newStage) {
-		return
-	}
-
-	// If we get here, we have new qualified freight in the Stage
-	// Find downstream Stages and enqueue them
-	var namespaceStages v1alpha1.StageList
-	inNamespace := client.ListOptions{Namespace: newStage.Namespace}
-	if err := e.kargoClient.List(context.TODO(), &namespaceStages, &inNamespace); err != nil {
-		e.logger.Errorf("Failed to list downstream stages: %v", evt.ObjectOld)
-		return
-	}
-	for _, downstreamStage := range namespaceStages.Items {
-		if downstreamStage.Spec.Subscriptions == nil {
-			continue
+	newlyQualifiedStages := getNewlyQualifiedStages(oldFreight, newFreight)
+	downstreamStages := map[string]struct{}{}
+	for _, newlyQualifiedStage := range newlyQualifiedStages {
+		stages := kargoapi.StageList{}
+		if err := e.kargoClient.List(
+			context.TODO(),
+			&stages,
+			&client.ListOptions{
+				Namespace: newFreight.Namespace,
+				FieldSelector: fields.OneTermEqualSelector(
+					kubeclient.StagesByUpstreamStagesIndexField,
+					newlyQualifiedStage,
+				),
+			},
+		); err != nil {
+			e.logger.Errorf(
+				"Failed list Stages downstream from Stage %v in namespace %q",
+				evt.ObjectOld,
+				newFreight.Namespace,
+			)
+			return
 		}
-		for _, upstreamStg := range downstreamStage.Spec.Subscriptions.UpstreamStages {
-			if upstreamStg.Name == newStage.Name {
-				q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-					Name:      downstreamStage.Name,
-					Namespace: downstreamStage.Namespace,
-				}})
-				e.logger.WithFields(log.Fields{
-					"stage":     downstreamStage.Name,
-					"namespace": downstreamStage.Namespace,
-				}).Debug("enqueued downstream stage")
-			}
+		for _, stage := range stages.Items {
+			downstreamStages[stage.Name] = struct{}{}
 		}
+	}
+	for downStreamStage := range downstreamStages {
+		wq.Add(
+			reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: newFreight.Namespace,
+					Name:      downStreamStage,
+				},
+			},
+		)
+		e.logger.WithFields(log.Fields{
+			"namespace": newFreight.Namespace,
+			"stage":     downStreamStage,
+		}).Debug("enqueued downstream stage")
 	}
 }
 
-// newQualifiedFreight returns whether or not there is new qualified freight in the Stage history
-func newQualifiedFreight(old, new *v1alpha1.Stage) bool {
-	oldQualified := make(map[string]bool)
-	for _, f := range old.Status.History {
-		if f.Qualified {
-			oldQualified[f.ID] = true
+func getNewlyQualifiedStages(old, new *kargoapi.Freight) []string {
+	var stages []string
+	for stage := range new.Status.Qualifications {
+		if _, ok := old.Status.Qualifications[stage]; !ok {
+			stages = append(stages, stage)
 		}
 	}
-
-	for _, f := range new.Status.History {
-		if f.Qualified && !oldQualified[f.ID] {
-			// something just got qualified
-			return true
-		}
-	}
-	return false
+	return stages
 }
 
 // PromoWentTerminal is a predicate that returns true if a promotion went terminal
@@ -113,7 +130,7 @@ func (p PromoWentTerminal) Create(_ event.CreateEvent) bool {
 }
 
 func (p PromoWentTerminal) Delete(e event.DeleteEvent) bool {
-	promo, ok := e.Object.(*v1alpha1.Promotion)
+	promo, ok := e.Object.(*kargoapi.Promotion)
 	// if promo is deleted but was non-terminal, we want to enqueue the
 	// Stage so it can reset status.currentPromotion
 	return ok && !promo.Status.Phase.IsTerminal()
@@ -134,12 +151,12 @@ func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
 		p.logger.Errorf("Update event has no new object for update: %v", e)
 		return false
 	}
-	newPromo, ok := e.ObjectNew.(*v1alpha1.Promotion)
+	newPromo, ok := e.ObjectNew.(*kargoapi.Promotion)
 	if !ok {
 		p.logger.Errorf("Failed to convert new promo: %v", e.ObjectNew)
 		return false
 	}
-	oldPromo, ok := e.ObjectOld.(*v1alpha1.Promotion)
+	oldPromo, ok := e.ObjectOld.(*kargoapi.Promotion)
 	if !ok {
 		p.logger.Errorf("Failed to convert old promo: %v", e.ObjectOld)
 		return false
