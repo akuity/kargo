@@ -138,7 +138,7 @@ type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
+	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL"`
 	// Branch references a particular branch of the repository. This field is
 	// optional. When not specified, the subscription is implicitly to the

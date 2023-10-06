@@ -414,7 +414,7 @@ spec:
                               description: URL is the repository's URL. This is a
                                 required field.
                               minLength: 1
-                              pattern: ^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$
+                              pattern: ^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
                               type: string
                           required:
                           - repoURL
