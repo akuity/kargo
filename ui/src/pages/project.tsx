@@ -22,7 +22,7 @@ export const Project = () => {
             <div className='text-2xl font-semibold'>{name}</div>
           </div>
 
-          <Tooltip title='Reset Stage Colors'>
+          <Tooltip title='Reassign Stage Colors'>
             <Button
               type='default'
               className='mr-2'

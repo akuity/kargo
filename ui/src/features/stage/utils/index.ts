@@ -3,8 +3,6 @@ import { Stage } from '@ui/gen/v1alpha1/types_pb';
 const COLOR_ANNOTATION = 'kargo.akuity.io/color';
 
 export const parseColorAnnotation = (stage: Stage): string | null => {
-  return null;
-
   const annotations = stage?.metadata?.annotations;
   if (!annotations) {
     return null;
@@ -52,17 +50,27 @@ export const getBackgroundKey = (n: number) => {
 export const getStageColors = (project: string, stages: Stage[]): ColorMap => {
   // check local storage
   const colors = localStorage.getItem(`${project}/colors`);
-  // see if new stages have been added
   const count = parseInt(localStorage.getItem(`${project}/stageCount`) || '0');
-  if (colors && count == stages.length) {
-    return JSON.parse(colors);
+  if (colors) {
+    const m = JSON.parse(colors);
+    if (count === stages.length) {
+      for (const stage of stages) {
+        const color = parseColorAnnotation(stage);
+        if (color) {
+          m[stage?.metadata?.uid || ''] = ColorMapHex[color];
+        }
+      }
+      return m;
+    } else {
+      return setStageColors(project, stages, m);
+    }
   } else {
     return setStageColors(project, stages);
   }
 };
 
-export const setStageColors = (project: string, stages: Stage[]): ColorMap => {
-  const colors = generateStageColors(stages);
+export const setStageColors = (project: string, stages: Stage[], prevMap?: ColorMap): ColorMap => {
+  const colors = generateStageColors(stages, prevMap);
   localStorage.setItem(`${project}/colors`, JSON.stringify(colors));
   localStorage.setItem(`${project}/stageCount`, `${stages.length}`);
   return colors;
@@ -73,10 +81,16 @@ export const clearColors = (project: string) => {
   localStorage.removeItem(`${project}/stageCount`);
 };
 
-export const generateStageColors = (sortedStages: Stage[]) => {
-  console.log(sortedStages.map((s) => s?.metadata?.name));
+export const generateStageColors = (sortedStages: Stage[], prevMap?: ColorMap) => {
   const curColors = { ...ColorMapHex };
-  const finalMap: { [key: string]: string } = {};
+  let finalMap: { [key: string]: string } = {};
+
+  if (prevMap) {
+    for (const color of Object.values(prevMap)) {
+      delete curColors[color];
+    }
+    finalMap = { ...prevMap };
+  }
 
   for (const stage of sortedStages) {
     const color = parseColorAnnotation(stage);
