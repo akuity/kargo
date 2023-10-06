@@ -24,7 +24,7 @@ To take advantage of this, you only need to have
 export CONTAINER_RUNTIME=podman
 ```
 
-[How to config podman socket](https://docs.podman.ioen/latest/markdown/podman-system-service.1.html#examples)
+<!-- [How to config podman socket](https://docs.podman.ioen/latest/markdown/podman-system-service.1.html#examples) -->
 
 To run all unit tests:
 
