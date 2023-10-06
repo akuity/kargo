@@ -5,8 +5,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation } from '@tanstack/react-query';
 import { Tooltip, message } from 'antd';
 import { formatDistance } from 'date-fns';
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 
+import { ColorContext } from '@ui/context/colors';
 import {
   promoteStage,
   promoteSubscribers
@@ -21,7 +22,6 @@ import { StageIndicators } from './stage-indicators';
 export const Freightline = (props: {
   freight: Freight[];
   stagesPerFreight: { [key: string]: Stage[] };
-  stageColorMap: { [key: string]: string };
   promotingStage?: Stage;
   setPromotingStage: (stage?: Stage) => void;
   promotionType?: PromotionType;
@@ -31,7 +31,6 @@ export const Freightline = (props: {
   const {
     freight,
     stagesPerFreight,
-    stageColorMap,
     promotingStage,
     setPromotingStage,
     promotionType,
@@ -43,6 +42,8 @@ export const Freightline = (props: {
   const [orderedFreight, setOrderedFreight] = useState(props.freight);
 
   const getSeconds = (ts?: Timestamp): number => Number(ts?.seconds) || 0;
+
+  const stageColorMap = useContext(ColorContext);
 
   const { mutate: promoteSubscribersAction } = useMutation({
     ...promoteSubscribers.useMutation(),
@@ -135,7 +136,6 @@ export const Freightline = (props: {
                 freight={f || undefined}
                 key={id}
                 stages={stagesPerFreight[id] || []}
-                stageColorMap={stageColorMap}
                 promotable={promotionEligible[id]}
                 promoting={promotingStage}
                 promotionType={promotionType || 'default'}
@@ -254,7 +254,6 @@ const FreightContents = (props: {
 const FreightItem = (props: {
   freight?: Freight;
   stages: Stage[];
-  stageColorMap: { [key: string]: string };
   promotable?: boolean;
   promoting?: Stage;
   promotionType?: PromotionType;
@@ -301,7 +300,7 @@ const FreightItem = (props: {
       }}
     >
       <div className='flex w-full h-full mb-1 items-center justify-center'>
-        {!promoting && <StageIndicators stages={stages} stageColorMap={props.stageColorMap} />}
+        {!promoting && <StageIndicators stages={stages} />}
         <FreightContents
           highlighted={
             ((stages || []).length > 0 && !promoting) || (promoting && promotable) || false
