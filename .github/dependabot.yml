@@ -6,7 +6,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
     commit-message:
       prefix: "chore(deps):"
 
@@ -14,6 +15,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "sunday"
     commit-message:
       prefix: "chore(deps):"
 
@@ -21,24 +23,26 @@ updates:
     directory: "/ui"
     versioning-strategy: increase
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
     commit-message:
       prefix: "chore(deps):"
     groups:
-      akp-js-patch:
+      js-patch:
         update-types:
         - "patch"
-      akp-js-minor:
+      js-minor:
         update-types:
         - "minor"
-      akp-js-major:
+      js-major:
         update-types:
         - "major"
 
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
     commit-message:
       prefix: "chore(deps):"
     groups:
