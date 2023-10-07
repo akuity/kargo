@@ -343,7 +343,7 @@ type HelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
+	//+kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
 	Image string `json:"image"`
 	// ValuesFilePath specifies a path to the Helm values file that is to be
 	// updated. This is a required field.

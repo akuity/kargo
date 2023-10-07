@@ -181,7 +181,7 @@
                             "image": {
                               "description": "Image specifies a container image (without tag). This is a required field.",
                               "minLength": 1,
-                              "pattern": "^(([\\w\\d\\.-]+)(:[\\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$",
+                              "pattern": "^(\\w+([\\.-]\\w+)*(:[\\d]+)?/)?(\\w+([\\.-]\\w+)*)(/\\w+([\\.-]\\w+)*)*$",
                               "type": "string"
                             },
                             "key": {
