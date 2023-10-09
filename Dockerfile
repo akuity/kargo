@@ -1,7 +1,7 @@
 ####################################################################################################
 # builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.21.1-bookworm as builder
+FROM --platform=$BUILDPLATFORM golang:1.21.2-bookworm as builder
 
 ARG TARGETOS
 ARG TARGETARCH
