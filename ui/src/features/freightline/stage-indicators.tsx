@@ -1,5 +1,7 @@
 import { Tooltip } from 'antd';
+import { useContext } from 'react';
 
+import { ColorContext } from '@ui/context/colors';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
 const StageIndicator = (props: { stage: Stage; backgroundColor: string }) => {
@@ -16,11 +18,9 @@ const StageIndicator = (props: { stage: Stage; backgroundColor: string }) => {
   );
 };
 
-export const StageIndicators = (props: {
-  stages: Stage[];
-  stageColorMap: { [key: string]: string };
-}) =>
-  (props.stages || []).length > 0 ? (
+export const StageIndicators = (props: { stages: Stage[] }) => {
+  const stageColorMap = useContext(ColorContext);
+  return (props.stages || []).length > 0 ? (
     <div
       className={`flex flex-col align-center h-full justify-center w-full flex-grow mr-2`}
       style={{ width: '80px' }}
@@ -28,7 +28,7 @@ export const StageIndicators = (props: {
       {(props.stages || []).map((s) => (
         <StageIndicator
           stage={s}
-          backgroundColor={props.stageColorMap[s?.metadata?.uid || '']}
+          backgroundColor={stageColorMap[s?.metadata?.uid || '']}
           key={s?.metadata?.uid}
         />
       ))}
@@ -36,3 +36,4 @@ export const StageIndicators = (props: {
   ) : (
     <></>
   );
+};
