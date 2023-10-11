@@ -50,7 +50,11 @@ func newWebhook(kubeClient client.Client) *webhook {
 
 func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+	// Re-calculate ID in case it wasn't set correctly to begin with -- possible
+	// if/when we allow users to create their own Freight.
 	freight.UpdateID()
+	// TODO: For now, we'll force Name to be the same as ID, but be can change
+	// this later if/when we allow users to create their own Freight.
 	freight.Name = freight.ID
 	return nil
 }
