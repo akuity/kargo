@@ -80,7 +80,7 @@ const config = {
             position: 'right',
           },
           {
-            href: 'https://discord.gg/dHJBZw6ewT',
+            href: 'http://akuity.community',
             label: 'Discord Community',
             position: 'right',
           },
