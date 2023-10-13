@@ -7,6 +7,9 @@ CERT_MANAGER_CHART_VERSION := 1.11.5
 
 VERSION_PACKAGE := github.com/akuity/kargo/internal/version
 
+# Default to docker, but support alternative container runtimes that are CLI-compatible with Docker
+CONTAINER_RUNTIME ?= docker
+
 IMAGE_REPO ?= kargo
 IMAGE_TAG ?= dev
 IMAGE_PUSH ?= false
@@ -123,7 +126,7 @@ codegen:
 # that is pre-loaded with required tools.                                      #
 ################################################################################
 
-DOCKER_CMD := docker run \
+DOCKER_CMD := $(CONTAINER_RUNTIME) run \
 	-it \
 	--rm \
 	-v gomodcache:/go/pkg/mod \
@@ -133,7 +136,7 @@ DOCKER_CMD := docker run \
 
 .PHONY: hack-build-dev-tools
 hack-build-dev-tools:
-	docker build -f Dockerfile.dev -t kargo:dev-tools .
+	$(CONTAINER_RUNTIME) build -f Dockerfile.dev -t kargo:dev-tools .
 
 .PHONY: hack-lint
 hack-lint: hack-build-dev-tools
@@ -171,7 +174,7 @@ hack-codegen: hack-build-dev-tools
 # 	make hack-build IMAGE_PLATFORMS=linux/amd64 DOCKER_BUILD_OPTS=--no-cache
 .PHONY: hack-build
 hack-build:
-	docker buildx build \
+	$(CONTAINER_RUNTIME) buildx build \
 		$(DOCKER_BUILD_OPTS) \
 		--build-arg GIT_COMMIT=$(shell git rev-parse HEAD) \
 		--build-arg GIT_TREE_STATE=$(shell if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi) \
