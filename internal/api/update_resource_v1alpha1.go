@@ -16,7 +16,7 @@ func (s *server) UpdateResource(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdateResourceRequest],
 ) (*connect.Response[svcv1alpha1.UpdateResourceResponse], error) {
-	cluster, namespaced, err := s.parseKubernetesManifest(req.Msg.GetManifest())
+	cluster, namespaced, err := s.parseManifestFn(req.Msg.GetManifest())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}

@@ -12,11 +12,15 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/dex"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/option"
+	"github.com/akuity/kargo/internal/api/validation"
 	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/kubeclient/manifest"
 	"github.com/akuity/kargo/internal/logging"
@@ -31,7 +35,67 @@ type server struct {
 	cfg    config.ServerConfig
 	client kubernetes.Client
 
-	parseKubernetesManifest manifest.ParseFunc
+	// The following behaviors are overridable for testing purposes:
+
+	// Common validations:
+	validateProjectFn func(
+		ctx context.Context,
+		project string,
+	) error
+
+	externalValidateProjectFn func(
+		ctx context.Context,
+		client client.Client,
+		project string,
+	) error
+
+	// Common lookups:
+	getStageFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.Stage, error)
+	getQualifiedFreightFn func(
+		ctx context.Context,
+		client client.Client,
+		namespacedName types.NamespacedName,
+		stages []string,
+	) (*kargoapi.Freight, error)
+
+	// Common Promotions:
+	createPromotionFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
+
+	// Promote subscribers:
+	findStageSubscribersFn func(ctx context.Context, stage *kargoapi.Stage) ([]kargoapi.Stage, error)
+
+	// QueryFreight API:
+	listFreightFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+	getAvailableFreightForStageFn func(
+		ctx context.Context,
+		project string,
+		subs kargoapi.Subscriptions,
+	) ([]kargoapi.Freight, error)
+	getFreightFromWarehouseFn func(
+		ctx context.Context,
+		project string,
+		warehouse string,
+	) ([]kargoapi.Freight, error)
+	getFreightQualifiedForUpstreamStagesFn func(
+		ctx context.Context,
+		project string,
+		stageSubs []kargoapi.StageSubscription,
+	) ([]kargoapi.Freight, error)
+
+	// Common manifest parsing:
+	parseManifestFn manifest.ParseFunc
 }
 
 type Server interface {
@@ -40,14 +104,26 @@ type Server interface {
 
 func NewServer(
 	cfg config.ServerConfig,
-	client kubernetes.Client,
-) (Server, error) {
-	return &server{
+	kubeClient kubernetes.Client,
+) Server {
+	s := &server{
 		cfg:    cfg,
-		client: client,
-
-		parseKubernetesManifest: manifest.NewParser(client.Scheme()),
-	}, nil
+		client: kubeClient,
+	}
+	// TODO: KR: Test that these all get set
+	s.validateProjectFn = s.validateProject
+	s.externalValidateProjectFn = validation.ValidateProject
+	s.getStageFn = kargoapi.GetStage
+	s.getQualifiedFreightFn = kargoapi.GetQualifiedFreight
+	s.createPromotionFn = kubeClient.Create
+	s.findStageSubscribersFn = s.findStageSubscribers
+	s.listFreightFn = kubeClient.List
+	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage
+	s.getFreightFromWarehouseFn = s.getFreightFromWarehouse
+	s.getFreightQualifiedForUpstreamStagesFn =
+		s.getFreightQualifiedForUpstreamStages
+	s.parseManifestFn = manifest.NewParser(kubeClient.Scheme())
+	return s
 }
 
 func (s *server) Serve(ctx context.Context, l net.Listener) error {
