@@ -1,10 +1,10 @@
 import { Switch, Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { getStageColors } from '@ui/features/stage/utils';
+import { ColorContext } from '@ui/context/colors';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
@@ -77,9 +77,9 @@ const ImageTagRow = ({
 };
 
 export const Images = ({ projectName, stages }: { projectName: string; stages: Stage[] }) => {
+  const colors = useContext(ColorContext);
   const images = useMemo(() => {
     const images = new Map<string, Map<string, StageStyleMap>>();
-    const colors = getStageColors([...stages]);
     stages.forEach((stage) => {
       const len = stage.status?.history?.length || 0;
       stage.status?.history?.forEach((freight, i) => {

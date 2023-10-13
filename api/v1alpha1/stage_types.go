@@ -138,7 +138,7 @@ type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
+	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL"`
 	// Branch references a particular branch of the repository. This field is
 	// optional. When not specified, the subscription is implicitly to the
@@ -155,7 +155,7 @@ type ImageSubscription struct {
 	// value in this field MUST NOT include an image tag. This field is required.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
+	//+kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
 	RepoURL string `json:"repoURL"`
 	// GitRepoURL optionally specifies the URL of a Git repository that contains
 	// the source code for the image repository referenced by the RepoURL field.
@@ -163,7 +163,7 @@ type ImageSubscription struct {
 	// revision of that source code that was used to build the image.
 	//
 	//+kubebuilder:validation:Optional
-	//+kubebuilder:validation:Pattern=`^(((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*))?$`
+	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	GitRepoURL string `json:"gitRepoURL,omitempty"`
 	// UpdateStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
@@ -263,7 +263,7 @@ type GitRepoUpdate struct {
 	// RepoURL is the URL of the repository to update. This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^((https?://)|([\w-]+@))([\w\d\.]+)(:[\d]+)?/(.*)$`
+	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL"`
 	// ReadBranch specifies a particular branch of the repository from which to
 	// locate contents that will be written to the branch specified by the
@@ -343,7 +343,7 @@ type HelmImageUpdate struct {
 	// Image specifies a container image (without tag). This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(([\w\d\.-]+)(:[\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$`
+	//+kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
 	Image string `json:"image"`
 	// ValuesFilePath specifies a path to the Helm values file that is to be
 	// updated. This is a required field.

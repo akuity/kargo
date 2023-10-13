@@ -14,23 +14,30 @@ export const parseColorAnnotation = (stage: Stage): string | null => {
   return color;
 };
 
+export type ColorMap = { [key: string]: string };
+
 export const ColorMapHex: { [key: string]: string } = {
-  red: '#EF4444', // 'bg-red-500',
-  orange: '#F97316', // 'bg-orange-400',
-  amber: '#F59E0B', // 'bg-amber-400',
-  yellow: '#FCD34D', // 'bg-yellow-400',
-  lime: '#84CC16', // 'bg-lime-400',
-  green: '#22C55E', // 'bg-green-400',
-  teal: '#06B6D4', // 'bg-teal-500',
-  cyan: '#22D3EE', // 'bg-cyan-400',
-  sky: '#60A5FA', // 'bg-sky-500',
-  blue: '#3B82F6', // 'bg-blue-500',
-  violet: '#8B5CF6', // 'bg-violet-500',
-  purple: '#A855F7', // 'bg-purple-500',
-  fuchsia: '#D946EF', // 'bg-fuchsia-500',
-  pink: '#EC4899', // 'bg-pink-500',
-  rose: '#F43F5E', // 'bg-rose-400'
-  gray: '6a7382' // 'bg-gray-500'
+  red: '#ED204E',
+  salmon: '#FD5352',
+  orange: '#FE7537',
+  amber: '#e78a00',
+  yellow: '#DFC546',
+  lime: '#9bce22',
+  avocado: '#84DF75',
+  green: '#1CAC77',
+  teal: '#1bc1a7',
+  cyan: '#1DCECA',
+  sky: '#0DAFD3',
+  blue: '#3882EA',
+  indigo: '#2D5EDC',
+  periwinkle: '#6380E1',
+  violet: '#7851AA',
+  purple: '#A9499D',
+  fuchsia: '#D0469D',
+  pink: '#E573A2',
+  rose: '#f1619b',
+  dragonfruit: '#FE43A3',
+  gray: '#6a7382'
 };
 
 export const getBackgroundKey = (n: number) => {
@@ -40,14 +47,52 @@ export const getBackgroundKey = (n: number) => {
   return Object.keys(ColorMapHex)[n];
 };
 
-export const getStageColors = (stages: Stage[]) => {
-  const curColors = { ...ColorMapHex };
-  const sorted = stages.sort((a, b) => {
-    return (a?.metadata?.name || '') > (b?.metadata?.name || '') ? 1 : -1;
-  });
-  const finalMap: { [key: string]: string } = {};
+export const getStageColors = (project: string, stages: Stage[]): ColorMap => {
+  // check local storage
+  const colors = localStorage.getItem(`${project}/colors`);
+  const count = parseInt(localStorage.getItem(`${project}/stageCount`) || '0');
+  if (colors) {
+    const m = JSON.parse(colors);
+    if (count === stages.length) {
+      for (const stage of stages) {
+        const color = parseColorAnnotation(stage);
+        if (color) {
+          m[stage?.metadata?.uid || ''] = ColorMapHex[color];
+        }
+      }
+      return m;
+    } else {
+      return setStageColors(project, stages, m);
+    }
+  } else {
+    return setStageColors(project, stages);
+  }
+};
 
-  for (const stage of sorted) {
+export const setStageColors = (project: string, stages: Stage[], prevMap?: ColorMap): ColorMap => {
+  const colors = generateStageColors(stages, prevMap);
+  localStorage.setItem(`${project}/colors`, JSON.stringify(colors));
+  localStorage.setItem(`${project}/stageCount`, `${stages.length}`);
+  return colors;
+};
+
+export const clearColors = (project: string) => {
+  localStorage.removeItem(`${project}/colors`);
+  localStorage.removeItem(`${project}/stageCount`);
+};
+
+export const generateStageColors = (sortedStages: Stage[], prevMap?: ColorMap) => {
+  const curColors = { ...ColorMapHex };
+  let finalMap: { [key: string]: string } = {};
+
+  if (prevMap) {
+    for (const color of Object.values(prevMap)) {
+      delete curColors[color];
+    }
+    finalMap = { ...prevMap };
+  }
+
+  for (const stage of sortedStages) {
     const color = parseColorAnnotation(stage);
     if (color) {
       delete curColors[color];
@@ -55,14 +100,18 @@ export const getStageColors = (stages: Stage[]) => {
     }
   }
   const colors = Object.values(curColors);
+  let step = Math.floor(colors.length / sortedStages.length);
+  if (step < 1) {
+    step = 1;
+  }
   let i = 0;
-  for (const stage of sorted) {
+  for (const stage of sortedStages) {
     const id = stage?.metadata?.uid;
     if (!id || finalMap[id]) {
       continue;
     }
     finalMap[id] = colors[i];
-    i = i + (1 % colors.length);
+    i = i + step;
   }
   return finalMap;
 };

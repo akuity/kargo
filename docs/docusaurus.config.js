@@ -79,6 +79,11 @@ const config = {
             label: 'GitHub',
             position: 'right',
           },
+          {
+            href: 'http://akuity.community',
+            label: 'Discord Community',
+            position: 'right',
+          },
         ],
       },
       footer: {

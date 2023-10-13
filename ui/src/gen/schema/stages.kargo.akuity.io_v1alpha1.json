@@ -181,7 +181,7 @@
                             "image": {
                               "description": "Image specifies a container image (without tag). This is a required field.",
                               "minLength": 1,
-                              "pattern": "^(([\\w\\d\\.-]+)(:[\\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$",
+                              "pattern": "^(\\w+([\\.-]\\w+)*(:[\\d]+)?/)?(\\w+([\\.-]\\w+)*)(/\\w+([\\.-]\\w+)*)*$",
                               "type": "string"
                             },
                             "key": {
@@ -260,7 +260,7 @@
                   "repoURL": {
                     "description": "RepoURL is the URL of the repository to update. This is a required field.",
                     "minLength": 1,
-                    "pattern": "^((https?://)|([\\w-]+@))([\\w\\d\\.]+)(:[\\d]+)?/(.*)$",
+                    "pattern": "^https://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
                     "type": "string"
                   },
                   "writeBranch": {
@@ -330,7 +330,7 @@
                       "repoURL": {
                         "description": "URL is the repository's URL. This is a required field.",
                         "minLength": 1,
-                        "pattern": "^((https?://)|([\\w-]+@))([\\w\\d\\.]+)(:[\\d]+)?/(.*)$",
+                        "pattern": "^https://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
                         "type": "string"
                       }
                     },
@@ -352,7 +352,7 @@
                       },
                       "gitRepoURL": {
                         "description": "GitRepoURL optionally specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field. When this is specified, Kargo MAY be able to infer and link to the exact revision of that source code that was used to build the image.",
-                        "pattern": "^(((https?://)|([\\w-]+@))([\\w\\d\\.]+)(:[\\d]+)?/(.*))?$",
+                        "pattern": "^https://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
                         "type": "string"
                       },
                       "ignoreTags": {
@@ -369,7 +369,7 @@
                       "repoURL": {
                         "description": "RepoURL specifies the URL of the image repository to subscribe to. The value in this field MUST NOT include an image tag. This field is required.",
                         "minLength": 1,
-                        "pattern": "^(([\\w\\d\\.-]+)(:[\\d]+)?/)?[a-z0-9-]+(/[a-z0-9-]+)*$",
+                        "pattern": "^(\\w+([\\.-]\\w+)*(:[\\d]+)?/)?(\\w+([\\.-]\\w+)*)(/\\w+([\\.-]\\w+)*)*$",
                         "type": "string"
                       },
                       "semverConstraint": {
