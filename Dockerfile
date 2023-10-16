@@ -33,7 +33,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.7.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.8.0 AS ui-builder
 
 RUN npm install --global pnpm
 WORKDIR /ui
