@@ -8,7 +8,7 @@ Description: Kargo Roadmap
 Kargo does not currently have a regular release cadance. The plan is to do a few releases, and based on the resluts, create a more formal release cadance.
 
 :::caution
-This roadmap is subject to change at any time, for the most up to date information, please see the [GitHub Project](<link goes here>)
+This roadmap is subject to change at any time, for the most up to date information, please see the [GitHub Project](https://github.com/akuity/kargo/projects)
 :::
 
 # v0.2.0
