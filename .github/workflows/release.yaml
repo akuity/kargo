@@ -168,7 +168,7 @@ jobs:
         chmod 755 kargo
         kargo fig > kargo-fig-spec.ts
     - name: Create Autocomplete PR
-      uses: withfig/publish-to-fig-autocomplete@v1
+      uses: withfig/push-to-fig-autocomplete-action@v1
       with:
         autocomplete-spec-name: kargo
         spec-path: kargo-fig-spec.ts
