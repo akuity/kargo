@@ -41,8 +41,8 @@ func (c *compositeMechanism) GetName() string {
 func (c *compositeMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	newFreight kargoapi.Freight,
-) (kargoapi.Freight, error) {
+	newFreight kargoapi.SimpleFreight,
+) (kargoapi.SimpleFreight, error) {
 	if stage.Spec.PromotionMechanisms == nil {
 		return newFreight, nil
 	}

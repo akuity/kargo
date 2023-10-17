@@ -14,9 +14,11 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
+	"github.com/akuity/kargo/internal/webhook/freight"
 	"github.com/akuity/kargo/internal/webhook/promotion"
 	"github.com/akuity/kargo/internal/webhook/promotionpolicy"
 	"github.com/akuity/kargo/internal/webhook/stage"
+	"github.com/akuity/kargo/internal/webhook/warehouse"
 )
 
 func newWebhooksServerCommand() *cobra.Command {
@@ -75,6 +77,12 @@ func newWebhooksServerCommand() *cobra.Command {
 			}
 			if err = promotionpolicy.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "setup PromotionPolicy webhook")
+			}
+			if err = freight.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "setup Freight webhook")
+			}
+			if err = warehouse.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "setup Warehouse webhook")
 			}
 
 			return errors.Wrap(

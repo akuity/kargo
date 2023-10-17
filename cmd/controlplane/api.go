@@ -60,10 +60,7 @@ func newAPICommand() *cobra.Command {
 				}).Info("SSO via OpenID Connect is enabled")
 			}
 
-			srv, err := api.NewServer(cfg, kubeClient)
-			if err != nil {
-				return pkgerrors.Wrap(err, "error creating API server")
-			}
+			srv := api.NewServer(cfg, kubeClient)
 			l, err := net.Listen(
 				"tcp",
 				fmt.Sprintf(
@@ -93,6 +90,14 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 	// Index Promotions by Stage
 	if err := kubeclient.IndexPromotionsByStage(ctx, mgr); err != nil {
 		return nil, pkgerrors.Wrap(err, "index promotions by stage")
+	}
+	// Index Freights by Warehouse
+	if err := kubeclient.IndexFreightByWarehouse(ctx, mgr); err != nil {
+		return nil, pkgerrors.Wrap(err, "index freight by warehouse")
+	}
+	// Index Freights by Qualified Stages
+	if err := kubeclient.IndexFreightByQualifiedStages(ctx, mgr); err != nil {
+		return nil, pkgerrors.Wrap(err, "index freight by qualified stages")
 	}
 	go func() {
 		if err := mgr.Start(ctx); err != nil {

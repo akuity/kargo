@@ -8,22 +8,167 @@ import (
 	"github.com/stretchr/testify/require"
 	authzv1 "k8s.io/api/authorization/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestValidateCreate(t *testing.T) {
-	w := &webhook{
-		authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-			return nil // Always authorize
+func TestNewWebhook(t *testing.T) {
+	kubeClient := fake.NewClientBuilder().Build()
+	w := newWebhook(kubeClient)
+	// Assert that all overridable behaviors were initialized to a default:
+	require.NotNil(t, w.getStageFn)
+	require.NotNil(t, w.validateProjectFn)
+	require.NotNil(t, w.authorizeFn)
+	require.NotNil(t, w.admissionRequestFromContextFn)
+	require.NotNil(t, w.createSubjectAccessReviewFn)
+}
+
+func TestDefault(t *testing.T) {
+	testCases := []struct {
+		name       string
+		webhook    *webhook
+		assertions func(*kargoapi.Promotion, error)
+	}{
+		{
+			name: "error getting stage",
+			webhook: &webhook{
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ *kargoapi.Promotion, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
 		},
-		validateProjectFn: func(context.Context, *kargoapi.Promotion) error {
-			return nil // Skip validation
+		{
+			name: "stage not found",
+			webhook: &webhook{
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(_ *kargoapi.Promotion, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "could not find Stage")
+			},
+		},
+		{
+			name: "success",
+			webhook: &webhook{
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{}, nil
+				},
+			},
+			assertions: func(promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, promo.OwnerReferences)
+			},
 		},
 	}
-	require.NoError(t, w.ValidateCreate(context.Background(), &kargoapi.Promotion{}))
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			promo := &kargoapi.Promotion{
+				Spec: &kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+				},
+			}
+			err := testCase.webhook.Default(context.Background(), promo)
+			testCase.assertions(promo, err)
+		})
+	}
+}
+
+func TestValidateCreate(t *testing.T) {
+	testCases := []struct {
+		name       string
+		webhook    *webhook
+		assertions func(error)
+	}{
+		{
+			name: "error validating project",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+			},
+		},
+		{
+			name: "authorization error",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+			},
+		},
+		{
+			name: "success",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.webhook.ValidateCreate(
+					context.Background(),
+					&kargoapi.Promotion{},
+				),
+			)
+		})
+	}
 }
 
 func TestValidateUpdate(t *testing.T) {
@@ -106,9 +251,6 @@ func TestValidateUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := &webhook{
 				authorizeFn: testCase.authorizeFn,
-				validateProjectFn: func(context.Context, *kargoapi.Promotion) error {
-					return nil // Skip validation
-				},
 			}
 			oldPromo, newPromo := testCase.setup()
 			testCase.assertions(
@@ -119,22 +261,54 @@ func TestValidateUpdate(t *testing.T) {
 }
 
 func TestValidateDelete(t *testing.T) {
-	w := &webhook{
-		authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
-			return nil // Always authorize
+	testCases := []struct {
+		name       string
+		webhook    *webhook
+		assertions func(error)
+	}{
+		{
+			name: "authorization error",
+			webhook: &webhook{
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
 		},
-		validateProjectFn: func(context.Context, *kargoapi.Promotion) error {
-			return nil // Skip validation
+		{
+			name: "success",
+			webhook: &webhook{
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
 		},
 	}
-	require.NoError(t, w.ValidateDelete(context.Background(), &kargoapi.Promotion{}))
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.webhook.ValidateDelete(
+					context.Background(),
+					&kargoapi.Promotion{},
+				),
+			)
+		})
+	}
 }
 
 func TestAuthorize(t *testing.T) {
 	testCases := []struct {
 		name                          string
-		admissionRequestFromContextFn func(context.Context) (admission.Request, error)
-		createSubjectAccessReviewFn   func(
+		admissionRequestFromContextFn func(
+			context.Context,
+		) (admission.Request, error)
+		createSubjectAccessReviewFn func(
 			context.Context,
 			client.Object,
 			...client.CreateOption,

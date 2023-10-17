@@ -116,7 +116,7 @@ func TestKustomizerApply(t *testing.T) {
 							},
 						},
 					},
-					kargoapi.Freight{
+					kargoapi.SimpleFreight{
 						Images: []kargoapi.Image{
 							{
 								RepoURL: testImage,

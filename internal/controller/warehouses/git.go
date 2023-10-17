@@ -1,4 +1,4 @@
-package stages
+package warehouses
 
 import (
 	"context"
@@ -11,6 +11,12 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
+
+type gitMeta struct {
+	Commit  string
+	Message string
+	Author  string
+}
 
 func (r *reconciler) getLatestCommits(
 	ctx context.Context,

@@ -15,7 +15,7 @@ func (s *server) DeleteResource(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteResourceRequest],
 ) (*connect.Response[svcv1alpha1.DeleteResourceResponse], error) {
-	cluster, namespaced, err := s.parseKubernetesManifest(req.Msg.GetManifest())
+	cluster, namespaced, err := s.parseManifestFn(req.Msg.GetManifest())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}

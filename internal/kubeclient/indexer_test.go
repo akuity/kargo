@@ -219,3 +219,124 @@ func TestIndexPromotionPoliciesByStage(t *testing.T) {
 		})
 	}
 }
+
+func TestIndexFreightByWarehouse(t *testing.T) {
+	testCases := []struct {
+		name     string
+		freight  *kargoapi.Freight
+		expected []string
+	}{
+		{
+			name:     "Freight has no ownerRef",
+			freight:  &kargoapi.Freight{},
+			expected: nil,
+		},
+		{
+			name: "Freight has ownerRef",
+			freight: &kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "Warehouse",
+							Name:       "fake-warehouse",
+						},
+					},
+				},
+			},
+			expected: []string{"fake-warehouse"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				indexFreightByWarehouse(testCase.freight),
+			)
+		})
+	}
+}
+
+func TestIndexFreightByQualifiedStages(t *testing.T) {
+	testCases := []struct {
+		name     string
+		freight  *kargoapi.Freight
+		expected []string
+	}{
+		{
+			name:     "Freight has no qualified stages",
+			freight:  &kargoapi.Freight{},
+			expected: []string{},
+		},
+		{
+			name: "Freight has qualified stages",
+			freight: &kargoapi.Freight{
+				Status: kargoapi.FreightStatus{
+					Qualifications: map[string]kargoapi.Qualification{
+						"fake-stage": {},
+					},
+				},
+			},
+			expected: []string{"fake-stage"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Run(testCase.name, func(t *testing.T) {
+				require.Equal(
+					t,
+					testCase.expected,
+					indexFreightByQualifiedStages(testCase.freight),
+				)
+			})
+		})
+	}
+}
+
+func TestIndexStagesByUpstreamStages(t *testing.T) {
+	testCases := []struct {
+		name     string
+		stage    *kargoapi.Stage
+		expected []string
+	}{
+		{
+			name: "Stage has no upstream Stages",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "Stage has upstream stages",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						UpstreamStages: []kargoapi.StageSubscription{
+							{
+								Name: "fake-stage",
+							},
+							{
+								Name: "another-fake-stage",
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"fake-stage", "another-fake-stage"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Run(testCase.name, func(t *testing.T) {
+				require.Equal(
+					t,
+					testCase.expected,
+					indexStagesByUpstreamStages(testCase.stage),
+				)
+			})
+		})
+	}
+}
