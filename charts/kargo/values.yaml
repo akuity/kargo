@@ -101,7 +101,9 @@ api:
   ## method.
   oidc:
     ## @param api.oidc.enabled Whether to enable authentication using Open ID Connect.
-    ## NOTE: the OICD authentication and access feature of Kargo uses Authorization Code Flow with Proof Key for Code Exchange(PKCE) and thus, does not require a client secret. For more information about Authorization Code Flow with PKCE, please visit: https://oauth.net/2/pkce/
+    ## NOTE: the OICD authentication and access feature of Kargo uses Authorization Code Flow with Proof Key for Code Exchange(PKCE) and thus, does not require a client secret. 
+    ## The PKCE created by Kargo is SHA256 hashed. 
+    ## For more information about Authorization Code Flow with PKCE, please visit: https://oauth.net/2/pkce/
     enabled: false
     ## @param api.oidc.issuerURL The issuer URL for the identity provider. If Dex is enabled, this value will be ignored and the issuer URL will be automatically configured. If Dex is not enabled, this should be set to the issuer URL provided to you by your identity provider.
     issuerURL:
