@@ -189,26 +189,14 @@ func FromSubscriptionsProto(s *v1alpha1.Subscriptions) *kargoapi.Subscriptions {
 	}
 }
 
-func FromRepoSubscriptionsProto(s *v1alpha1.RepoSubscriptions) *kargoapi.RepoSubscription {
+func FromRepoSubscriptionProto(s *v1alpha1.RepoSubscription) *kargoapi.RepoSubscription {
 	if s == nil {
 		return nil
 	}
-	gitSubscriptions := make([]kargoapi.GitSubscription, len(s.GetGit()))
-	for idx, git := range s.GetGit() {
-		gitSubscriptions[idx] = *FromGitSubscriptionProto(git)
-	}
-	imageSubscriptions := make([]kargoapi.ImageSubscription, len(s.GetImages()))
-	for idx, image := range s.GetImages() {
-		imageSubscriptions[idx] = *FromImageSubscriptionProto(image)
-	}
-	chartSubscriptions := make([]kargoapi.ChartSubscription, len(s.GetCharts()))
-	for idx, chart := range s.GetCharts() {
-		chartSubscriptions[idx] = *FromChartSubscriptionProto(chart)
-	}
-	return &kargoapi.RepoSubscriptions{
-		Git:    gitSubscriptions,
-		Images: imageSubscriptions,
-		Charts: chartSubscriptions,
+	return &kargoapi.RepoSubscription{
+		Git:   FromGitSubscriptionProto(s.Git),
+		Image: FromImageSubscriptionProto(s.Image),
+		Chart: FromChartSubscriptionProto(s.Chart),
 	}
 }
 
