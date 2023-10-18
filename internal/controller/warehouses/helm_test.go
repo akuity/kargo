@@ -144,12 +144,6 @@ func TestGetLatestCharts(t *testing.T) {
 			},
 		},
 	}
-	testSubs := []kargoapi.ChartSubscription{
-		{
-			RegistryURL: "fake-url",
-			Name:        "fake-chart",
-		},
-	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := reconciler{
@@ -159,7 +153,14 @@ func TestGetLatestCharts(t *testing.T) {
 			testCase.assertions(r.getLatestCharts(
 				context.Background(),
 				"fake-namespace",
-				testSubs,
+				[]kargoapi.RepoSubscription{
+					{
+						Chart: &kargoapi.ChartSubscription{
+							RegistryURL: "fake-url",
+							Name:        "fake-chart",
+						},
+					},
+				},
 			))
 		})
 	}

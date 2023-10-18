@@ -21,10 +21,14 @@ type gitMeta struct {
 func (r *reconciler) getLatestCommits(
 	ctx context.Context,
 	namespace string,
-	subs []kargoapi.GitSubscription,
+	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.GitCommit, error) {
 	latestCommits := make([]kargoapi.GitCommit, len(subs))
-	for i, sub := range subs {
+	for i, s := range subs {
+		if s.Git == nil {
+			continue
+		}
+		sub := s.Git
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 		creds, ok, err :=
 			r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)

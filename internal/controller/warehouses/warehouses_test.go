@@ -42,9 +42,7 @@ func TestSyncWarehouse(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	testWarehouse := &kargoapi.Warehouse{
-		Spec: &kargoapi.WarehouseSpec{
-			Subscriptions: &kargoapi.RepoSubscriptions{},
-		},
+		Spec: &kargoapi.WarehouseSpec{},
 	}
 	testCases := []struct {
 		name       string
@@ -182,12 +180,12 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 		assertions func(*kargoapi.Freight, error)
 	}{
 		{
-			name: "error getting latest git commit",
+			name: "error getting latest git commits",
 			reconciler: &reconciler{
 				getLatestCommitsFn: func(
 					context.Context,
 					string,
-					[]kargoapi.GitSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.GitCommit, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -205,14 +203,14 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				getLatestCommitsFn: func(
 					context.Context,
 					string,
-					[]kargoapi.GitSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.GitCommit, error) {
 					return nil, nil
 				},
 				getLatestImagesFn: func(
 					context.Context,
 					string,
-					[]kargoapi.ImageSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.Image, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -234,21 +232,21 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				getLatestCommitsFn: func(
 					context.Context,
 					string,
-					[]kargoapi.GitSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.GitCommit, error) {
 					return nil, nil
 				},
 				getLatestImagesFn: func(
 					context.Context,
 					string,
-					[]kargoapi.ImageSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.Image, error) {
 					return nil, nil
 				},
 				getLatestChartsFn: func(
 					context.Context,
 					string,
-					[]kargoapi.ChartSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.Chart, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -270,7 +268,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				getLatestCommitsFn: func(
 					context.Context,
 					string,
-					[]kargoapi.GitSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.GitCommit, error) {
 					return []kargoapi.GitCommit{
 						{
@@ -282,7 +280,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				getLatestImagesFn: func(
 					context.Context,
 					string,
-					[]kargoapi.ImageSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.Image, error) {
 					return []kargoapi.Image{
 						{
@@ -294,7 +292,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				getLatestChartsFn: func(
 					context.Context,
 					string,
-					[]kargoapi.ChartSubscription,
+					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.Chart, error) {
 					return []kargoapi.Chart{
 						{
@@ -355,9 +353,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "fake-namespace",
 						},
-						Spec: &kargoapi.WarehouseSpec{
-							Subscriptions: &kargoapi.RepoSubscriptions{},
-						},
+						Spec: &kargoapi.WarehouseSpec{},
 					},
 				),
 			)

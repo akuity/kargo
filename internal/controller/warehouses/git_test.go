@@ -127,9 +127,11 @@ func TestGetLatestCommits(t *testing.T) {
 				r.getLatestCommits(
 					context.Background(),
 					"fake-namespace",
-					[]kargoapi.GitSubscription{
+					[]kargoapi.RepoSubscription{
 						{
-							RepoURL: "fake-url",
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "fake-url",
+							},
 						},
 					},
 				),
