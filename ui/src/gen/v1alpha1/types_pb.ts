@@ -1460,51 +1460,51 @@ export class PromotionStatus extends Message<PromotionStatus> {
 }
 
 /**
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscriptions
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription
  */
-export class RepoSubscriptions extends Message<RepoSubscriptions> {
+export class RepoSubscription extends Message<RepoSubscription> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription git = 1;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription git = 1;
    */
-  git: GitSubscription[] = [];
+  git?: GitSubscription;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription images = 2;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription image = 2;
    */
-  images: ImageSubscription[] = [];
+  image?: ImageSubscription;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription charts = 3;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription chart = 3;
    */
-  charts: ChartSubscription[] = [];
+  chart?: ChartSubscription;
 
-  constructor(data?: PartialMessage<RepoSubscriptions>) {
+  constructor(data?: PartialMessage<RepoSubscription>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscriptions";
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "git", kind: "message", T: GitSubscription, repeated: true },
-    { no: 2, name: "images", kind: "message", T: ImageSubscription, repeated: true },
-    { no: 3, name: "charts", kind: "message", T: ChartSubscription, repeated: true },
+    { no: 1, name: "git", kind: "message", T: GitSubscription, opt: true },
+    { no: 2, name: "image", kind: "message", T: ImageSubscription, opt: true },
+    { no: 3, name: "chart", kind: "message", T: ChartSubscription, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RepoSubscriptions {
-    return new RepoSubscriptions().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RepoSubscription {
+    return new RepoSubscription().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RepoSubscriptions {
-    return new RepoSubscriptions().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RepoSubscription {
+    return new RepoSubscription().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RepoSubscriptions {
-    return new RepoSubscriptions().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RepoSubscription {
+    return new RepoSubscription().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RepoSubscriptions | PlainMessage<RepoSubscriptions> | undefined, b: RepoSubscriptions | PlainMessage<RepoSubscriptions> | undefined): boolean {
-    return proto3.util.equals(RepoSubscriptions, a, b);
+  static equals(a: RepoSubscription | PlainMessage<RepoSubscription> | undefined, b: RepoSubscription | PlainMessage<RepoSubscription> | undefined): boolean {
+    return proto3.util.equals(RepoSubscription, a, b);
   }
 }
 

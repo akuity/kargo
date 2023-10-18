@@ -37,12 +37,14 @@ spec:
               subscriptions:
                 description: Subscriptions describes sources of artifacts to be included
                   in Freight produced by this Warehouse.
-                properties:
-                  charts:
-                    description: Charts describes subscriptions to Helm charts.
-                    items:
-                      description: ChartSubscription defines a subscription to a Helm
-                        chart repository.
+                items:
+                  description: RepoSubscription describes a subscription to ONE OF
+                    a Git repository, a container image repository, or a Helm chart
+                    repository.
+                  properties:
+                    chart:
+                      description: Chart describes a subscription to a Helm chart
+                        repository.
                       properties:
                         name:
                           description: Name specifies a Helm chart to subscribe to
@@ -70,12 +72,8 @@ spec:
                       - name
                       - registryURL
                       type: object
-                    type: array
-                  git:
-                    description: Git describes subscriptions to Git repositories.
-                    items:
-                      description: GitSubscription defines a subscription to a Git
-                        repository.
+                    git:
+                      description: Git describes a subscriptions to a Git repository.
                       properties:
                         branch:
                           description: Branch references a particular branch of the
@@ -94,13 +92,9 @@ spec:
                       required:
                       - repoURL
                       type: object
-                    type: array
-                  images:
-                    description: Images describes subscriptions to container image
-                      repositories.
-                    items:
-                      description: ImageSubscription defines a subscription to an
-                        image repository.
+                    image:
+                      description: Image describes a subscription to container image
+                        repository.
                       properties:
                         allowTags:
                           description: AllowTags is a regular expression that can
@@ -173,8 +167,9 @@ spec:
                       required:
                       - repoURL
                       type: object
-                    type: array
-                type: object
+                  type: object
+                minItems: 1
+                type: array
             required:
             - subscriptions
             type: object

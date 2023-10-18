@@ -189,7 +189,7 @@ func FromSubscriptionsProto(s *v1alpha1.Subscriptions) *kargoapi.Subscriptions {
 	}
 }
 
-func FromRepoSubscriptionsProto(s *v1alpha1.RepoSubscriptions) *kargoapi.RepoSubscriptions {
+func FromRepoSubscriptionsProto(s *v1alpha1.RepoSubscriptions) *kargoapi.RepoSubscription {
 	if s == nil {
 		return nil
 	}
