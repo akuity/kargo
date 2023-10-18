@@ -8,15 +8,15 @@ Description: Kargo Roadmap
 Kargo does not currently have a regular release cadance. The plan is to do a few releases, and based on the resluts, create a more formal release cadance.
 
 :::caution
-This roadmap is subject to change at any time, for the most up to date information, please see the [GitHub Project](https://github.com/akuity/kargo/projects)
+This roadmap is subject to change at any time, for the most up to date information, please see the [GitHub Project](https://github.com/akuity/kargo/milestones)
 :::
 
 # v0.2.0
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| `Freight/Warehouse CRD` | feature | Freight will change from being a property of a `Stage`, to being it's own CRD. A collection of promotable `Freight` will be known as a `Warehouse`. |
-| `Long Lived Promotions` | feature | Support for Pull Requset based promotion, which is indefinite. This will allow the promotion to last as long as the PR is open. |
+| `Freight/Warehouse CRD` | feature | Freight will change from being a property of a `Stage`, to being it's own CRD. The source of where promotable `Freight` comes from will be known as a `Warehouse`. |
+| `GitHub PR-based Promotion` | feature | Support for Pull Requset based promotion, which is indefinite. This will allow the promotion to last as long as the PR is open. |
 | `Kargo Render` | breaking change | `Bookkeeper` to be rebranded as `kargo-render`, a Kargo sub-component for rendering manifests. |
 
 
@@ -24,15 +24,15 @@ This roadmap is subject to change at any time, for the most up to date informati
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| `Analysis` | feature | Run analysis against a metrics provider to determite application health. This will allow assessing Promotion success based on more than just Argo CD Application state. |
-| `Kargo RBAC` | feature | Map SSO user identities to Kubernetes ServiceAccounts. Predefined ServiceAccount/Role/RoleBinding per project based on persona. In this version, it'll mostly be backend work. |
+| `Analysis` | feature | Ability to run Analysis for the purposes of Freight qualification. This enables users to define additional quality gates (in addition to Argo CD Health) to allow/disallow promotion. |
+| `Kargo RBAC` | feature | Map SSO user identities to Kubernetes ServiceAccounts. Predefined ServiceAccount/Role/RoleBinding per project based on persona. |
 | `Freight Production Rules/Filters` | feature | Optionally set up tag-based Git repository subscriptions. Additional options to produce new Freight only under certain conditions. |
 
 # v0.4.0
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| `Project management` | feature | User/group/permissions management via UI and CL. Project CRD + reconciler will relieve API server of its most abusable permissions; reducing the risk profile. Additional `PromotionPolicy` options. Credential management via CLI and UI. |
+| `Project management` | feature | Introduce Project CRD to simplify onboarding and project lifecycle management. Support aggregate information at the project status level.. Additional `PromotionPolicy` options. Credential management via CLI and UI. |
 
 # v0.5.0
 
