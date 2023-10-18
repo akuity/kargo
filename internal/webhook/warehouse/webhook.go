@@ -107,37 +107,49 @@ func (w *webhook) validateSpec(
 
 func (w *webhook) validateSubs(
 	f *field.Path,
-	subs *kargoapi.RepoSubscriptions,
+	subs []kargoapi.RepoSubscription,
 ) field.ErrorList {
-	if subs == nil {
+	if len(subs) == 0 {
 		return nil
 	}
-	// Must subscribe to at least one repo of some sort
-	if len(subs.Git) == 0 && len(subs.Images) == 0 && len(subs.Charts) == 0 {
-		return field.ErrorList{
+	var errs field.ErrorList
+	for i, sub := range subs {
+		errs = append(errs, w.validateSub(f.Index(i), sub)...)
+	}
+	return errs
+}
+
+func (w *webhook) validateSub(
+	f *field.Path,
+	sub kargoapi.RepoSubscription,
+) field.ErrorList {
+	var errs field.ErrorList
+	var repoTypes int
+	if sub.Git != nil {
+		repoTypes++
+	}
+	if sub.Image != nil {
+		repoTypes++
+		errs = append(errs, w.validateImageSub(f.Child("image"), *sub.Image)...)
+	}
+	if sub.Chart != nil {
+		repoTypes++
+		errs = append(errs, w.validateChartSub(f.Child("chart"), *sub.Chart)...)
+	}
+	if repoTypes != 1 {
+		errs = append(
+			errs,
 			field.Invalid(
 				f,
-				subs,
+				sub,
 				fmt.Sprintf(
-					"at least one of %s.git, %s.images, or %s.charts must be non-empty",
+					"exactly one of %s.git, %s.images, or %s.charts must be non-empty",
 					f.String(),
 					f.String(),
 					f.String(),
 				),
 			),
-		}
-	}
-	errs := w.validateImageSubs(f.Child("images"), subs.Images)
-	return append(errs, w.validateChartSubs(f.Child("charts"), subs.Charts)...)
-}
-
-func (w *webhook) validateImageSubs(
-	f *field.Path,
-	subs []kargoapi.ImageSubscription,
-) field.ErrorList {
-	var errs field.ErrorList
-	for i, sub := range subs {
-		errs = append(errs, w.validateImageSub(f.Index(i), sub)...)
+		)
 	}
 	return errs
 }
@@ -157,17 +169,6 @@ func (w *webhook) validateImageSub(
 		if _, _, _, err := image.ParsePlatform(sub.Platform); err != nil {
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
 		}
-	}
-	return errs
-}
-
-func (w *webhook) validateChartSubs(
-	f *field.Path,
-	subs []kargoapi.ChartSubscription,
-) field.ErrorList {
-	var errs field.ErrorList
-	for i, sub := range subs {
-		errs = append(errs, w.validateChartSub(f.Index(i), sub)...)
 	}
 	return errs
 }
