@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/akuity/bookkeeper/pkg/git"
+	"github.com/akuity/kargo-render/pkg/git"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"

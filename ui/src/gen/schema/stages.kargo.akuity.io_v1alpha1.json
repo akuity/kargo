@@ -134,12 +134,8 @@
               "items": {
                 "description": "GitRepoUpdate describes updates that should be applied to a Git repository (using various configuration management tools) to incorporate Freight into a Stage.",
                 "properties": {
-                  "bookkeeper": {
-                    "description": "Bookkeeper describes how to use Bookkeeper to incorporate Freight into the Stage. This is mutually exclusive with the Kustomize and Helm fields.",
-                    "type": "object"
-                  },
                   "helm": {
-                    "description": "Helm describes how to use Helm to incorporate Freight into the Stage. This is mutually exclusive with the Bookkeeper and Kustomize fields.",
+                    "description": "Helm describes how to use Helm to incorporate Freight into the Stage. This is mutually exclusive with the Render and Kustomize fields.",
                     "properties": {
                       "charts": {
                         "description": "Charts describes how specific chart versions can be incorporated into an umbrella chart.",
@@ -218,7 +214,7 @@
                     "type": "object"
                   },
                   "kustomize": {
-                    "description": "Kustomize describes how to use Kustomize to incorporate Freight into the Stage. This is mutually exclusive with the Bookkeeper and Helm fields.",
+                    "description": "Kustomize describes how to use Kustomize to incorporate Freight into the Stage. This is mutually exclusive with the Render and Helm fields.",
                     "properties": {
                       "images": {
                         "description": "Images describes images for which `kustomize edit set image` should be executed and the paths in which those commands should be executed.",
@@ -256,6 +252,10 @@
                     "description": "ReadBranch specifies a particular branch of the repository from which to locate contents that will be written to the branch specified by the WriteBranch field. This field is optional. When not specified, the ReadBranch is implicitly the repository's default branch AND in cases where a Freight includes a GitCommit, that commit's ID will supersede the value of this field. Therefore, in practice, this field is only used to clarify what branch of a repository can be treated as a source of manifests or other configuration when a Stage has no subscription to that repository.",
                     "pattern": "^(\\w+([-/]\\w+)*)?$",
                     "type": "string"
+                  },
+                  "render": {
+                    "description": "Render describes how to use Kargo Render to incorporate Freight into the Stage. This is mutually exclusive with the Kustomize and Helm fields.",
+                    "type": "object"
                   },
                   "repoURL": {
                     "description": "RepoURL is the URL of the repository to update. This is a required field.",
@@ -358,7 +358,7 @@
                     "type": "string"
                   },
                   "healthCheckCommit": {
-                    "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Bookkeeper being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
+                    "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Kargo Render being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
                     "type": "string"
                   },
                   "id": {
@@ -449,7 +449,7 @@
                         "type": "string"
                       },
                       "healthCheckCommit": {
-                        "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Bookkeeper being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
+                        "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Kargo Render being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
                         "type": "string"
                       },
                       "id": {
@@ -629,7 +629,7 @@
                       "type": "string"
                     },
                     "healthCheckCommit": {
-                      "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Bookkeeper being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
+                      "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Kargo Render being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
                       "type": "string"
                     },
                     "id": {

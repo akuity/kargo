@@ -241,33 +241,33 @@ export class ArgoCDSourceUpdate extends Message<ArgoCDSourceUpdate> {
 }
 
 /**
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.BookkeeperPromotionMechanism
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.KargoRenderPromotionMechanism
  */
-export class BookkeeperPromotionMechanism extends Message<BookkeeperPromotionMechanism> {
-  constructor(data?: PartialMessage<BookkeeperPromotionMechanism>) {
+export class KargoRenderPromotionMechanism extends Message<KargoRenderPromotionMechanism> {
+  constructor(data?: PartialMessage<KargoRenderPromotionMechanism>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.BookkeeperPromotionMechanism";
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.KargoRenderPromotionMechanism";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BookkeeperPromotionMechanism {
-    return new BookkeeperPromotionMechanism().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KargoRenderPromotionMechanism {
+    return new KargoRenderPromotionMechanism().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BookkeeperPromotionMechanism {
-    return new BookkeeperPromotionMechanism().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KargoRenderPromotionMechanism {
+    return new KargoRenderPromotionMechanism().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BookkeeperPromotionMechanism {
-    return new BookkeeperPromotionMechanism().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KargoRenderPromotionMechanism {
+    return new KargoRenderPromotionMechanism().fromJsonString(jsonString, options);
   }
 
-  static equals(a: BookkeeperPromotionMechanism | PlainMessage<BookkeeperPromotionMechanism> | undefined, b: BookkeeperPromotionMechanism | PlainMessage<BookkeeperPromotionMechanism> | undefined): boolean {
-    return proto3.util.equals(BookkeeperPromotionMechanism, a, b);
+  static equals(a: KargoRenderPromotionMechanism | PlainMessage<KargoRenderPromotionMechanism> | undefined, b: KargoRenderPromotionMechanism | PlainMessage<KargoRenderPromotionMechanism> | undefined): boolean {
+    return proto3.util.equals(KargoRenderPromotionMechanism, a, b);
   }
 }
 
@@ -456,11 +456,6 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
   writeBranch = "";
 
   /**
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.BookkeeperPromotionMechanism bookkeeper = 4;
-   */
-  bookkeeper?: BookkeeperPromotionMechanism;
-
-  /**
    * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism kustomize = 5;
    */
   kustomize?: KustomizePromotionMechanism;
@@ -469,6 +464,11 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
    * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism helm = 6;
    */
   helm?: HelmPromotionMechanism;
+
+  /**
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.KargoRenderPromotionMechanism render = 7;
+   */
+  render?: KargoRenderPromotionMechanism;
 
   constructor(data?: PartialMessage<GitRepoUpdate>) {
     super();
@@ -481,9 +481,9 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
     { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "read_branch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "write_branch", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "bookkeeper", kind: "message", T: BookkeeperPromotionMechanism, opt: true },
     { no: 5, name: "kustomize", kind: "message", T: KustomizePromotionMechanism, opt: true },
     { no: 6, name: "helm", kind: "message", T: HelmPromotionMechanism, opt: true },
+    { no: 7, name: "render", kind: "message", T: KargoRenderPromotionMechanism, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitRepoUpdate {
