@@ -17,7 +17,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 | ---- | ---- | ----------- |
 | `Freight/Warehouse CRD` | feature | Freight will change from being a property of a `Stage`, to being it's own CRD. A collection of promotable `Freight` will be known as a `Warehouse`. |
 | `Long Lived Promotions` | feature | Support for Pull Requset based promotion, which is indefinite. This will allow the promotion to last as long as the PR is open. |
-| `Kargo Render` | breaking change | `Bookkeeper` to be retooled to be the Kargo specific way to do rendered manifests. |
+| `Kargo Render` | breaking change | `Bookkeeper` to be rebranded as `kargo-render`, a Kargo sub-component for rendering manifests. |
 
 
 # v0.3.0
