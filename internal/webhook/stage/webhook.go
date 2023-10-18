@@ -176,7 +176,7 @@ func (w *webhook) validateGitRepoUpdate(
 	update kargoapi.GitRepoUpdate,
 ) field.ErrorList {
 	var count int
-	if update.Bookkeeper != nil {
+	if update.Render != nil {
 		count++
 	}
 	if update.Kustomize != nil {
@@ -191,7 +191,7 @@ func (w *webhook) validateGitRepoUpdate(
 				f,
 				update,
 				fmt.Sprintf(
-					"no more than one of %s.bookkeeper, or %s.kustomize, or %s.helm may "+
+					"no more than one of %s.render, or %s.kustomize, or %s.helm may "+
 						"be defined",
 					f.String(),
 					f.String(),

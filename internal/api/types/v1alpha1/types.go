@@ -273,19 +273,19 @@ func FromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kargoapi.GitRepoUpdate {
 		RepoURL:     u.GetRepoUrl(),
 		ReadBranch:  u.GetReadBranch(),
 		WriteBranch: u.GetWriteBranch(),
-		Bookkeeper:  FromBookkeeperPromotionMechanismProto(u.GetBookkeeper()),
+		Render:      FromKargoRenderPromotionMechanismProto(u.GetRender()),
 		Kustomize:   FromKustomizePromotionMechanismProto(u.GetKustomize()),
 		Helm:        FromHelmPromotionMechanismProto(u.GetHelm()),
 	}
 }
 
-func FromBookkeeperPromotionMechanismProto(
-	m *v1alpha1.BookkeeperPromotionMechanism,
-) *kargoapi.BookkeeperPromotionMechanism {
+func FromKargoRenderPromotionMechanismProto(
+	m *v1alpha1.KargoRenderPromotionMechanism,
+) *kargoapi.KargoRenderPromotionMechanism {
 	if m == nil {
 		return nil
 	}
-	return &kargoapi.BookkeeperPromotionMechanism{}
+	return &kargoapi.KargoRenderPromotionMechanism{}
 }
 
 func FromKustomizePromotionMechanismProto(
@@ -602,9 +602,9 @@ func ToPromotionMechanismsProto(p kargoapi.PromotionMechanisms) *v1alpha1.Promot
 }
 
 func ToGitRepoUpdateProto(g kargoapi.GitRepoUpdate) *v1alpha1.GitRepoUpdate {
-	var bookkeeper *v1alpha1.BookkeeperPromotionMechanism
-	if g.Bookkeeper != nil {
-		bookkeeper = ToBookkeeperPromotionMechanismProto(*g.Bookkeeper)
+	var render *v1alpha1.KargoRenderPromotionMechanism
+	if g.Render != nil {
+		render = ToKargoRenderPromotionMechanismProto(*g.Render)
 	}
 	var kustomize *v1alpha1.KustomizePromotionMechanism
 	if g.Kustomize != nil {
@@ -618,16 +618,16 @@ func ToGitRepoUpdateProto(g kargoapi.GitRepoUpdate) *v1alpha1.GitRepoUpdate {
 		RepoUrl:     g.RepoURL,
 		ReadBranch:  proto.String(g.ReadBranch),
 		WriteBranch: g.WriteBranch,
-		Bookkeeper:  bookkeeper,
+		Render:      render,
 		Kustomize:   kustomize,
 		Helm:        helm,
 	}
 }
 
-func ToBookkeeperPromotionMechanismProto(
-	_ kargoapi.BookkeeperPromotionMechanism,
-) *v1alpha1.BookkeeperPromotionMechanism {
-	return &v1alpha1.BookkeeperPromotionMechanism{}
+func ToKargoRenderPromotionMechanismProto(
+	_ kargoapi.KargoRenderPromotionMechanism,
+) *v1alpha1.KargoRenderPromotionMechanism {
+	return &v1alpha1.KargoRenderPromotionMechanism{}
 }
 
 func ToKustomizePromotionMechanismProto(

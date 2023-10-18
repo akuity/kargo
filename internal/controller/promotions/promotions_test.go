@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/akuity/bookkeeper"
+	render "github.com/akuity/kargo-render"
 	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/runtime"
@@ -24,7 +24,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 		kubeClient,
 		kubeClient,
 		&credentials.FakeDB{},
-		bookkeeper.NewService(nil),
+		render.NewService(nil),
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.promoQueuesByStage)

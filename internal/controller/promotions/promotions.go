@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/akuity/bookkeeper"
+	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/promotion"
@@ -44,7 +44,7 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
-	bookkeeperService bookkeeper.Service,
+	renderService render.Service,
 	shardName string,
 ) error {
 
@@ -64,7 +64,7 @@ func SetupReconcilerWithManager(
 					kargoMgr.GetClient(),
 					argoMgr.GetClient(),
 					credentialsDB,
-					bookkeeperService,
+					renderService,
 				),
 			),
 		"error registering Promotion reconciler",
@@ -75,7 +75,7 @@ func newReconciler(
 	kargoClient client.Client,
 	argoClient client.Client,
 	credentialsDB credentials.Database,
-	bookkeeperService bookkeeper.Service,
+	renderService render.Service,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:        kargoClient,
@@ -83,7 +83,7 @@ func newReconciler(
 		promoMechanisms: promotion.NewMechanisms(
 			argoClient,
 			credentialsDB,
-			bookkeeperService,
+			renderService,
 		),
 	}
 	r.promoteFn = r.promote
