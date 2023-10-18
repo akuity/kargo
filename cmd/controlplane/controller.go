@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/akuity/bookkeeper"
+	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/applications"
@@ -160,9 +160,9 @@ func newControllerCommand() *cobra.Command {
 				kargoMgr,
 				appMgr,
 				credentialsDB,
-				bookkeeper.NewService(
-					&bookkeeper.ServiceOptions{
-						LogLevel: bookkeeper.LogLevel(logging.LoggerFromContext(ctx).Level),
+				render.NewService(
+					&render.ServiceOptions{
+						LogLevel: render.LogLevel(logging.LoggerFromContext(ctx).Level),
 					},
 				),
 				shardName,

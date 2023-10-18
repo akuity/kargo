@@ -7,32 +7,32 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuity/bookkeeper"
+	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-func TestNewBookkeeperMechanism(t *testing.T) {
-	pm := newBookkeeperMechanism(
+func TestNewKargoRenderMechanism(t *testing.T) {
+	pm := newKargoRenderMechanism(
 		&credentials.FakeDB{},
-		bookkeeper.NewService(nil),
+		render.NewService(nil),
 	)
-	bpm, ok := pm.(*bookkeeperMechanism)
+	krpm, ok := pm.(*kargoRenderMechanism)
 	require.True(t, ok)
-	require.NotNil(t, bpm.doSingleUpdateFn)
-	require.NotNil(t, bpm.getReadRefFn)
-	require.NotNil(t, bpm.getCredentialsFn)
-	require.NotNil(t, bpm.renderManifestsFn)
+	require.NotNil(t, krpm.doSingleUpdateFn)
+	require.NotNil(t, krpm.getReadRefFn)
+	require.NotNil(t, krpm.getCredentialsFn)
+	require.NotNil(t, krpm.renderManifestsFn)
 }
 
-func TestBookkeeperGetName(t *testing.T) {
-	require.NotEmpty(t, (&bookkeeperMechanism{}).GetName())
+func TestKargoRenderGetName(t *testing.T) {
+	require.NotEmpty(t, (&kargoRenderMechanism{}).GetName())
 }
 
-func TestBookkeeperPromote(t *testing.T) {
+func TestKargoRenderPromote(t *testing.T) {
 	testCases := []struct {
 		name       string
-		promoMech  *bookkeeperMechanism
+		promoMech  *kargoRenderMechanism
 		stage      *kargoapi.Stage
 		newFreight kargoapi.SimpleFreight
 		assertions func(
@@ -43,7 +43,7 @@ func TestBookkeeperPromote(t *testing.T) {
 	}{
 		{
 			name:      "no updates",
-			promoMech: &bookkeeperMechanism{},
+			promoMech: &kargoRenderMechanism{},
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
@@ -60,7 +60,7 @@ func TestBookkeeperPromote(t *testing.T) {
 		},
 		{
 			name: "error applying update",
-			promoMech: &bookkeeperMechanism{
+			promoMech: &kargoRenderMechanism{
 				doSingleUpdateFn: func(
 					_ context.Context,
 					_ string,
@@ -77,7 +77,7 @@ func TestBookkeeperPromote(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						GitRepoUpdates: []kargoapi.GitRepoUpdate{
 							{
-								Bookkeeper: &kargoapi.BookkeeperPromotionMechanism{},
+								Render: &kargoapi.KargoRenderPromotionMechanism{},
 							},
 						},
 					},
@@ -103,7 +103,7 @@ func TestBookkeeperPromote(t *testing.T) {
 		},
 		{
 			name: "success",
-			promoMech: &bookkeeperMechanism{
+			promoMech: &kargoRenderMechanism{
 				doSingleUpdateFn: func(
 					_ context.Context,
 					_ string,
@@ -120,7 +120,7 @@ func TestBookkeeperPromote(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{
 						GitRepoUpdates: []kargoapi.GitRepoUpdate{
 							{
-								Bookkeeper: &kargoapi.BookkeeperPromotionMechanism{},
+								Render: &kargoapi.KargoRenderPromotionMechanism{},
 							},
 						},
 					},
@@ -156,11 +156,11 @@ func TestBookkeeperPromote(t *testing.T) {
 	}
 }
 
-func TestBookkeeperDoSingleUpdate(t *testing.T) {
+func TestKargoRenderDoSingleUpdate(t *testing.T) {
 	const testRef = "fake-ref"
 	testCases := []struct {
 		name       string
-		promoMech  *bookkeeperMechanism
+		promoMech  *kargoRenderMechanism
 		update     kargoapi.GitRepoUpdate
 		assertions func(
 			newFreightIn kargoapi.SimpleFreight,
@@ -170,7 +170,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 	}{
 		{
 			name: "error getting readref",
-			promoMech: &bookkeeperMechanism{
+			promoMech: &kargoRenderMechanism{
 				getReadRefFn: func(
 					kargoapi.GitRepoUpdate,
 					[]kargoapi.GitCommit,
@@ -190,7 +190,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 		},
 		{
 			name: "error getting repo credentials",
-			promoMech: &bookkeeperMechanism{
+			promoMech: &kargoRenderMechanism{
 				getReadRefFn: func(
 					kargoapi.GitRepoUpdate,
 					[]kargoapi.GitCommit,
@@ -225,7 +225,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 		},
 		{
 			name: "error rendering manifests",
-			promoMech: &bookkeeperMechanism{
+			promoMech: &kargoRenderMechanism{
 				getReadRefFn: func(
 					kargoapi.GitRepoUpdate,
 					[]kargoapi.GitCommit,
@@ -245,9 +245,9 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 				},
 				renderManifestsFn: func(
 					context.Context,
-					bookkeeper.RenderRequest,
-				) (bookkeeper.RenderResponse, error) {
-					return bookkeeper.RenderResponse{}, errors.New("something went wrong")
+					render.Request,
+				) (render.Response, error) {
+					return render.Response{}, errors.New("something went wrong")
 				},
 			},
 			assertions: func(
@@ -267,7 +267,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 		},
 		{
 			name: "success -- no action",
-			promoMech: &bookkeeperMechanism{
+			promoMech: &kargoRenderMechanism{
 				getReadRefFn: func(
 					kargoapi.GitRepoUpdate,
 					[]kargoapi.GitCommit,
@@ -287,10 +287,10 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 				},
 				renderManifestsFn: func(
 					context.Context,
-					bookkeeper.RenderRequest,
-				) (bookkeeper.RenderResponse, error) {
-					return bookkeeper.RenderResponse{
-						ActionTaken: bookkeeper.ActionTakenNone,
+					render.Request,
+				) (render.Response, error) {
+					return render.Response{
+						ActionTaken: render.ActionTakenNone,
 						CommitID:    "fake-commit-id",
 					}, nil
 				},
@@ -313,7 +313,7 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 		},
 		{
 			name: "success -- commit",
-			promoMech: &bookkeeperMechanism{
+			promoMech: &kargoRenderMechanism{
 				getReadRefFn: func(
 					kargoapi.GitRepoUpdate,
 					[]kargoapi.GitCommit,
@@ -333,10 +333,10 @@ func TestBookkeeperDoSingleUpdate(t *testing.T) {
 				},
 				renderManifestsFn: func(
 					context.Context,
-					bookkeeper.RenderRequest,
-				) (bookkeeper.RenderResponse, error) {
-					return bookkeeper.RenderResponse{
-						ActionTaken: bookkeeper.ActionTakenPushedDirectly,
+					render.Request,
+				) (render.Response, error) {
+					return render.Response{
+						ActionTaken: render.ActionTakenPushedDirectly,
 						CommitID:    "fake-commit-id",
 					}, nil
 				},

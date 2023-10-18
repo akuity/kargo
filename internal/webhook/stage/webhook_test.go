@@ -426,9 +426,9 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 		{
 			name: "more than one config management tool specified",
 			update: kargoapi.GitRepoUpdate{
-				Bookkeeper: &kargoapi.BookkeeperPromotionMechanism{},
-				Kustomize:  &kargoapi.KustomizePromotionMechanism{},
-				Helm:       &kargoapi.HelmPromotionMechanism{},
+				Render:    &kargoapi.KargoRenderPromotionMechanism{},
+				Kustomize: &kargoapi.KustomizePromotionMechanism{},
+				Helm:      &kargoapi.HelmPromotionMechanism{},
 			},
 			assertions: func(update kargoapi.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
@@ -438,7 +438,7 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "gitRepoUpdates[0]",
 							BadValue: update,
-							Detail: "no more than one of gitRepoUpdates[0].bookkeeper, or " +
+							Detail: "no more than one of gitRepoUpdates[0].render, or " +
 								"gitRepoUpdates[0].kustomize, or gitRepoUpdates[0].helm " +
 								"may be defined",
 						},
@@ -483,9 +483,9 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 		{
 			name: "more than one config management tool specified",
 			update: kargoapi.GitRepoUpdate{
-				Bookkeeper: &kargoapi.BookkeeperPromotionMechanism{},
-				Kustomize:  &kargoapi.KustomizePromotionMechanism{},
-				Helm:       &kargoapi.HelmPromotionMechanism{},
+				Render:    &kargoapi.KargoRenderPromotionMechanism{},
+				Kustomize: &kargoapi.KustomizePromotionMechanism{},
+				Helm:      &kargoapi.HelmPromotionMechanism{},
 			},
 			assertions: func(update kargoapi.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
@@ -495,7 +495,7 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "gitRepoUpdate",
 							BadValue: update,
-							Detail: "no more than one of gitRepoUpdate.bookkeeper, or " +
+							Detail: "no more than one of gitRepoUpdate.render, or " +
 								"gitRepoUpdate.kustomize, or gitRepoUpdate.helm may be " +
 								"defined",
 						},

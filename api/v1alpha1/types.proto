@@ -35,7 +35,7 @@ message ArgoCDSourceUpdate {
   optional ArgoCDHelm helm = 5 [json_name = "helm"];
 }
 
-message BookkeeperPromotionMechanism {
+message KargoRenderPromotionMechanism {
 }
 
 message Chart {
@@ -63,9 +63,9 @@ message GitRepoUpdate {
   string repo_url = 1 [json_name = "repoURL"];
   optional string read_branch = 2 [json_name = "readBranch"];
   string write_branch = 3 [json_name = "writeBranch"];
-  optional BookkeeperPromotionMechanism bookkeeper = 4 [json_name = "bookkeeper"];
   optional KustomizePromotionMechanism kustomize = 5 [json_name = "kustomize"];
   optional HelmPromotionMechanism helm = 6 [json_name = "helm"];
+  optional KargoRenderPromotionMechanism render = 7 [json_name = "render"];
 }
 
 message GitSubscription {
