@@ -1,7 +1,7 @@
 ####################################################################################################
 # builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.21.1-bookworm as builder
+FROM --platform=$BUILDPLATFORM golang:1.21.3-bookworm as builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -33,7 +33,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.7.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.8.1 AS ui-builder
 
 RUN npm install --global pnpm
 WORKDIR /ui
