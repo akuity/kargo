@@ -37,19 +37,19 @@ type WarehouseSpec struct {
 	// Subscriptions describes sources of artifacts to be included in Freight
 	// produced by this Warehouse.
 	//
-	//+kubebuilder:validation:Required
-	Subscriptions *RepoSubscriptions `json:"subscriptions"`
+	//+kubebuilder:validation:MinItems=1
+	Subscriptions []RepoSubscription `json:"subscriptions"`
 }
 
-// RepoSubscriptions describes various sorts of repositories a Warehouse uses
-// as sources of versioned artifacts.
-type RepoSubscriptions struct {
-	// Git describes subscriptions to Git repositories.
-	Git []GitSubscription `json:"git,omitempty"`
-	// Images describes subscriptions to container image repositories.
-	Images []ImageSubscription `json:"images,omitempty"`
-	// Charts describes subscriptions to Helm charts.
-	Charts []ChartSubscription `json:"charts,omitempty"`
+// RepoSubscription describes a subscription to ONE OF a Git repository, a
+// container image repository, or a Helm chart repository.
+type RepoSubscription struct {
+	// Git describes a subscriptions to a Git repository.
+	Git *GitSubscription `json:"git,omitempty"`
+	// Image describes a subscription to container image repository.
+	Image *ImageSubscription `json:"image,omitempty"`
+	// Chart describes a subscription to a Helm chart repository.
+	Chart *ChartSubscription `json:"chart,omitempty"`
 }
 
 // GitSubscription defines a subscription to a Git repository.
