@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/akuity/bookkeeper/pkg/git"
+	"github.com/akuity/kargo-render/pkg/git"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
@@ -25,8 +25,8 @@ type gitMechanism struct {
 		ctx context.Context,
 		namespace string,
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.Freight,
-	) (kargoapi.Freight, error)
+		newFreight kargoapi.SimpleFreight,
+	) (kargoapi.SimpleFreight, error)
 	getReadRefFn func(
 		update kargoapi.GitRepoUpdate,
 		commits []kargoapi.GitCommit,
@@ -38,14 +38,14 @@ type gitMechanism struct {
 	) (*git.RepoCredentials, error)
 	gitCommitFn func(
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.Freight,
+		newFreight kargoapi.SimpleFreight,
 		readRef string,
 		writeBranch string,
 		creds *git.RepoCredentials,
 	) (string, error)
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.Freight,
+		newFreight kargoapi.SimpleFreight,
 		homeDir string,
 		workingDir string,
 	) ([]string, error)
@@ -61,7 +61,7 @@ func newGitMechanism(
 	selectUpdatesFn func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate,
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.Freight,
+		newFreight kargoapi.SimpleFreight,
 		homeDir string,
 		workingDir string,
 	) ([]string, error),
@@ -87,8 +87,8 @@ func (g *gitMechanism) GetName() string {
 func (g *gitMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	newFreight kargoapi.Freight,
-) (kargoapi.Freight, error) {
+	newFreight kargoapi.SimpleFreight,
+) (kargoapi.SimpleFreight, error) {
 	updates := g.selectUpdatesFn(stage.Spec.PromotionMechanisms.GitRepoUpdates)
 
 	if len(updates) == 0 {
@@ -122,8 +122,8 @@ func (g *gitMechanism) doSingleUpdate(
 	ctx context.Context,
 	namespace string,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.Freight,
-) (kargoapi.Freight, error) {
+	newFreight kargoapi.SimpleFreight,
+) (kargoapi.SimpleFreight, error) {
 	readRef, commitIndex, err := g.getReadRefFn(update, newFreight.Commits)
 	if err != nil {
 		return newFreight, err
@@ -235,7 +235,7 @@ func getRepoCredentialsFn(
 // the above fails.
 func (g *gitMechanism) gitCommit(
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.Freight,
+	newFreight kargoapi.SimpleFreight,
 	readRef string,
 	writeBranch string,
 	creds *git.RepoCredentials,

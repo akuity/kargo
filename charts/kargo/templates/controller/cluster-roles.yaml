@@ -18,16 +18,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - stages
-  verbs:
-  - get
-  - list
-  - patch
-  - promote
-  - watch
-- apiGroups:
-  - kargo.akuity.io
-  resources:
+  - freights
   - promotions
   verbs:
   - create
@@ -45,8 +36,27 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - stages/status
+  - stages
+  verbs:
+  - get
+  - list
+  - promote
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - warehouses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
   - promotions/status
+  - stages/status
+  - warehouses/status
   verbs:
   - update
   - patch

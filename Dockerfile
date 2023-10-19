@@ -1,7 +1,7 @@
 ####################################################################################################
 # builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.21.1-bookworm as builder
+FROM --platform=$BUILDPLATFORM golang:1.21.3-bookworm as builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -33,7 +33,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.7.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.8.1 AS ui-builder
 
 RUN npm install --global pnpm
 WORKDIR /ui
@@ -50,7 +50,7 @@ RUN NODE_ENV='production' pnpm run build
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.3.0 as tools
+FROM curlimages/curl:8.4.0 as tools
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -64,7 +64,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 ####################################################################################################
 # final
 ####################################################################################################
-FROM ghcr.io/akuity/bookkeeper:v0.1.0-rc.19 as final
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.31 as final
 
 USER root
 

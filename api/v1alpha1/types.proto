@@ -35,7 +35,7 @@ message ArgoCDSourceUpdate {
   optional ArgoCDHelm helm = 5 [json_name = "helm"];
 }
 
-message BookkeeperPromotionMechanism {
+message KargoRenderPromotionMechanism {
 }
 
 message Chart {
@@ -63,9 +63,9 @@ message GitRepoUpdate {
   string repo_url = 1 [json_name = "repoURL"];
   optional string read_branch = 2 [json_name = "readBranch"];
   string write_branch = 3 [json_name = "writeBranch"];
-  optional BookkeeperPromotionMechanism bookkeeper = 4 [json_name = "bookkeeper"];
   optional KustomizePromotionMechanism kustomize = 5 [json_name = "kustomize"];
   optional HelmPromotionMechanism helm = 6 [json_name = "helm"];
+  optional KargoRenderPromotionMechanism render = 7 [json_name = "render"];
 }
 
 message GitSubscription {
@@ -184,10 +184,10 @@ message PromotionStatus {
   string error = 2 [json_name = "error"];
 }
 
-message RepoSubscriptions {
-  repeated GitSubscription git = 1 [json_name = "git"];
-  repeated ImageSubscription images = 2 [json_name = "images"];
-  repeated ChartSubscription charts = 3 [json_name = "charts"];
+message RepoSubscription {
+  optional GitSubscription git = 1 [json_name = "git"];
+  optional ImageSubscription image = 2 [json_name = "image"];
+  optional ChartSubscription chart = 3 [json_name = "chart"];
 }
 
 message Stage {
@@ -211,7 +211,6 @@ message StageSpec {
 message Freight {
   string id = 1 [json_name = "id"];
   optional google.protobuf.Timestamp first_seen = 2 [json_name = "firstSeen"];
-  optional string provenance = 3 [json_name = "provenance"];
   repeated GitCommit commits = 4 [json_name = "commits"];
   repeated Image images = 5 [json_name = "images"];
   repeated Chart charts = 6 [json_name = "charts"];
@@ -219,7 +218,6 @@ message Freight {
 }
 
 message StageStatus {
-  repeated Freight available_freight = 1 [json_name = "availableFreight"];
   optional Freight current_freight = 2 [json_name = "currentFreight"];
   repeated Freight history = 3 [json_name = "history"];
   string error = 4 [json_name = "error"];
@@ -232,6 +230,6 @@ message StageSubscription {
 }
 
 message Subscriptions {
-  optional RepoSubscriptions repos = 1 [json_name = "repos"];
   repeated StageSubscription upstream_stages = 2 [json_name = "upstreamStages"];
+  string warehouse = 3 [json_name = "warehouse"];
 }

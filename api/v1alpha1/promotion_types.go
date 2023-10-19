@@ -72,10 +72,8 @@ type PromotionSpec struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	Stage string `json:"stage"`
-	// Freight specifies the specific Freight into which the Stage referenced by
-	// the Stage field should be transitioned. The Freight MUST be among the Stage's
-	// Status.AvailableFreight or the Promotion will ultimately fail.
-	//
+	// Freight specifies the piece of Freight to be promoted into the Stage
+	// referenced by the Stage field.
 	//
 	//+kubebuilder:validation:MinLength=1
 	Freight string `json:"freight"`

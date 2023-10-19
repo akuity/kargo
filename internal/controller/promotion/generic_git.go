@@ -25,7 +25,7 @@ func selectGenericGitUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRep
 	for _, update := range updates {
 		if update.Kustomize == nil &&
 			update.Helm == nil &&
-			update.Bookkeeper == nil {
+			update.Render == nil {
 			selectedUpdates = append(selectedUpdates, update)
 		}
 	}

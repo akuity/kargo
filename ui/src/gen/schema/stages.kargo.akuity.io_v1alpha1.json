@@ -14,15 +14,15 @@
       "type": "object"
     },
     "spec": {
-      "description": "Spec describes the sources of material used by the Stage and how to incorporate newly observed materials into the Stage.",
+      "description": "Spec describes sources of Freight used by the Stage and how to incorporate Freight into the Stage.",
       "properties": {
         "promotionMechanisms": {
-          "description": "PromotionMechanisms describes how to incorporate newly observed materials into the Stage. This is an optional field as it is sometimes useful to aggregates available Freight from multiple upstream Stages without performing any actions. The utility of this is to allow multiple downstream Stages to be able to subscribe to a single upstream Stage where they may otherwise have subscribed to multiple upstream Stages.",
+          "description": "PromotionMechanisms describes how to incorporate Freight into the Stage. This is an optional field as it is sometimes useful to aggregates available Freight from multiple upstream Stages without performing any actions. The utility of this is to allow multiple downstream Stages to subscribe to a single upstream Stage where they may otherwise have subscribed to multiple upstream Stages.",
           "properties": {
             "argoCDAppUpdates": {
-              "description": "ArgoCDAppUpdates describes updates that should be applied to Argo CD Application resources to incorporate newly observed materials into the Stage. This field is optional, as such actions are not required in all cases. Note that all updates specified by the GitRepoUpdates field, if any, are applied BEFORE these.",
+              "description": "ArgoCDAppUpdates describes updates that should be applied to Argo CD Application resources to incorporate Freight into the Stage. This field is optional, as such actions are not required in all cases. Note that all updates specified by the GitRepoUpdates field, if any, are applied BEFORE these.",
               "items": {
-                "description": "ArgoCDAppUpdate describes updates that should be applied to an Argo CD Application resources to incorporate newly observed materials into a Stage.",
+                "description": "ArgoCDAppUpdate describes updates that should be applied to an Argo CD Application resources to incorporate Freight into a Stage.",
                 "properties": {
                   "appName": {
                     "description": "AppName specifies the name of an Argo CD Application resource to be updated.",
@@ -130,16 +130,12 @@
               "type": "array"
             },
             "gitRepoUpdates": {
-              "description": "GitRepoUpdates describes updates that should be applied to Git repositories to incorporate newly observed materials into the Stage. This field is optional, as such actions are not required in all cases.",
+              "description": "GitRepoUpdates describes updates that should be applied to Git repositories to incorporate Freight into the Stage. This field is optional, as such actions are not required in all cases.",
               "items": {
-                "description": "GitRepoUpdate describes updates that should be applied to a Git repository (using various configuration management tools) to incorporate newly observed materials into a Stage.",
+                "description": "GitRepoUpdate describes updates that should be applied to a Git repository (using various configuration management tools) to incorporate Freight into a Stage.",
                 "properties": {
-                  "bookkeeper": {
-                    "description": "Bookkeeper describes how to use Bookkeeper to incorporate newly observed materials into the Stage. This is mutually exclusive with the Kustomize and Helm fields.",
-                    "type": "object"
-                  },
                   "helm": {
-                    "description": "Helm describes how to use Helm to incorporate newly observed materials into the Stage. This is mutually exclusive with the Bookkeeper and Kustomize fields.",
+                    "description": "Helm describes how to use Helm to incorporate Freight into the Stage. This is mutually exclusive with the Render and Kustomize fields.",
                     "properties": {
                       "charts": {
                         "description": "Charts describes how specific chart versions can be incorporated into an umbrella chart.",
@@ -218,7 +214,7 @@
                     "type": "object"
                   },
                   "kustomize": {
-                    "description": "Kustomize describes how to use Kustomize to incorporate newly observed materials into the Stage. This is mutually exclusive with the Bookkeeper and Helm fields.",
+                    "description": "Kustomize describes how to use Kustomize to incorporate Freight into the Stage. This is mutually exclusive with the Render and Helm fields.",
                     "properties": {
                       "images": {
                         "description": "Images describes images for which `kustomize edit set image` should be executed and the paths in which those commands should be executed.",
@@ -257,6 +253,10 @@
                     "pattern": "^(\\w+([-/]\\w+)*)?$",
                     "type": "string"
                   },
+                  "render": {
+                    "description": "Render describes how to use Kargo Render to incorporate Freight into the Stage. This is mutually exclusive with the Kustomize and Helm fields.",
+                    "type": "object"
+                  },
                   "repoURL": {
                     "description": "RepoURL is the URL of the repository to update. This is a required field.",
                     "minLength": 1,
@@ -282,124 +282,10 @@
           "type": "object"
         },
         "subscriptions": {
-          "description": "Subscriptions describes the Stage's sources of material. This is a required field.",
+          "description": "Subscriptions describes the Stage's sources of Freight. This is a required field.",
           "properties": {
-            "repos": {
-              "description": "Repos describes various sorts of repositories a Stage uses as sources of material. This field is mutually exclusive with the UpstreamStages field.",
-              "properties": {
-                "charts": {
-                  "description": "Charts describes subscriptions to Helm charts.",
-                  "items": {
-                    "description": "ChartSubscription defines a subscription to a Helm chart repository.",
-                    "properties": {
-                      "name": {
-                        "description": "Name specifies a Helm chart to subscribe to within the Helm chart registry specified by the RegistryURL field. This field is required.",
-                        "minLength": 1,
-                        "type": "string"
-                      },
-                      "registryURL": {
-                        "description": "RegistryURL specifies the URL of a Helm chart registry. It may be a classic chart registry (using HTTP/S) OR an OCI registry. This field is required.",
-                        "minLength": 1,
-                        "pattern": "^(((https?)|(oci))://)([\\w\\d\\.]+)(:[\\d]+)?(/.*)*$",
-                        "type": "string"
-                      },
-                      "semverConstraint": {
-                        "description": "SemverConstraint specifies constraints on what new chart versions are permissible. This field is optional. When left unspecified, there will be no constraints, which means the latest version of the chart will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes.",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "name",
-                      "registryURL"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "git": {
-                  "description": "Git describes subscriptions to Git repositories.",
-                  "items": {
-                    "description": "GitSubscription defines a subscription to a Git repository.",
-                    "properties": {
-                      "branch": {
-                        "description": "Branch references a particular branch of the repository. This field is optional. When not specified, the subscription is implicitly to the repository's default branch.",
-                        "minLength": 1,
-                        "pattern": "^\\w+([-/]\\w+)*$",
-                        "type": "string"
-                      },
-                      "repoURL": {
-                        "description": "URL is the repository's URL. This is a required field.",
-                        "minLength": 1,
-                        "pattern": "^https://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "repoURL"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "images": {
-                  "description": "Images describes subscriptions to container image repositories.",
-                  "items": {
-                    "description": "ImageSubscription defines a subscription to an image repository.",
-                    "properties": {
-                      "allowTags": {
-                        "description": "AllowTags is a regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional.",
-                        "type": "string"
-                      },
-                      "gitRepoURL": {
-                        "description": "GitRepoURL optionally specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field. When this is specified, Kargo MAY be able to infer and link to the exact revision of that source code that was used to build the image.",
-                        "pattern": "^https://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
-                        "type": "string"
-                      },
-                      "ignoreTags": {
-                        "description": "IgnoreTags is a list of tags that must be ignored when determining the newest version of an image. No regular expressions or glob patterns are supported yet. This field is optional.",
-                        "items": {
-                          "type": "string"
-                        },
-                        "type": "array"
-                      },
-                      "platform": {
-                        "description": "Platform is a string of the form <os>/<arch> that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image referenced by this ImageRepositorySubscription will run on a Kubernetes node with a different OS/architecture than the Kargo controller. At present this is uncommon, but not unheard of.",
-                        "type": "string"
-                      },
-                      "repoURL": {
-                        "description": "RepoURL specifies the URL of the image repository to subscribe to. The value in this field MUST NOT include an image tag. This field is required.",
-                        "minLength": 1,
-                        "pattern": "^(\\w+([\\.-]\\w+)*(:[\\d]+)?/)?(\\w+([\\.-]\\w+)*)(/\\w+([\\.-]\\w+)*)*$",
-                        "type": "string"
-                      },
-                      "semverConstraint": {
-                        "description": "SemverConstraint specifies constraints on what new image versions are permissible. This value in this field only has any effect when the UpdateStrategy is SemVer or left unspecified (which is implicitly the same as SemVer). This field is also optional. When left unspecified, (and the UpdateStrategy is SemVer or unspecified), there will be no constraints, which means the latest semantically tagged version of an image will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes. Refer to Image Updater documentation for more details.",
-                        "type": "string"
-                      },
-                      "updateStrategy": {
-                        "default": "SemVer",
-                        "description": "UpdateStrategy specifies the rules for how to identify the newest version of the image specified by the RepoURL field. This field is optional. When left unspecified, the field is implicitly treated as if its value were \"SemVer\".",
-                        "enum": [
-                          "SemVer",
-                          "NewestBuild",
-                          "Alphabetical",
-                          "Digest"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "repoURL"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              },
-              "type": "object"
-            },
             "upstreamStages": {
-              "description": "UpstreamStages identifies other Stages as potential sources of material for this Stage. This field is mutually exclusive with the Repos field.",
+              "description": "UpstreamStages identifies other Stages as potential sources of Freight for this Stage. This field is mutually exclusive with the Repos field.",
               "items": {
                 "description": "StageSubscription defines a subscription to Freight from another Stage.",
                 "properties": {
@@ -416,6 +302,10 @@
                 "type": "object"
               },
               "type": "array"
+            },
+            "warehouse": {
+              "description": "Warehouse is a subscription to a Warehouse. This field is mutually exclusive with the UpstreamStages field.",
+              "type": "string"
             }
           },
           "type": "object"
@@ -427,118 +317,13 @@
       "type": "object"
     },
     "status": {
-      "description": "Status describes the most recently observed Freight as well as the Stage's current and recent Freight.",
+      "description": "Status describes the Stage's current and recent Freight, health, and more.",
       "properties": {
-        "availableFreight": {
-          "description": "AvailableFreight is a stack of available Freight, where each Freight is essentially a \"bill of materials\" describing what can be automatically or manually deployed to the Stage.",
-          "items": {
-            "description": "Freight is a \"bill of materials\" describing what is, was, or can be deployed to a Stage.",
-            "properties": {
-              "charts": {
-                "description": "Charts describes Helm charts that were used in this Freight.",
-                "items": {
-                  "description": "Chart describes a specific version of a Helm chart.",
-                  "properties": {
-                    "name": {
-                      "description": "Name specifies the name of the chart.",
-                      "type": "string"
-                    },
-                    "registryURL": {
-                      "description": "RepoURL specifies the remote registry in which this chart is located.",
-                      "type": "string"
-                    },
-                    "version": {
-                      "description": "Version specifies a particular version of the chart.",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "commits": {
-                "description": "Commits describes specific Git repository commits that were used in this Freight.",
-                "items": {
-                  "description": "GitCommit describes a specific commit from a specific Git repository.",
-                  "properties": {
-                    "author": {
-                      "description": "Author is the git commit author",
-                      "type": "string"
-                    },
-                    "branch": {
-                      "description": "Branch denotes the branch of the repository where this commit was found.",
-                      "type": "string"
-                    },
-                    "healthCheckCommit": {
-                      "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Bookkeeper being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
-                      "type": "string"
-                    },
-                    "id": {
-                      "description": "ID is the ID of a specific commit in the Git repository specified by RepoURL.",
-                      "type": "string"
-                    },
-                    "message": {
-                      "description": "Message is the git commit message",
-                      "type": "string"
-                    },
-                    "repoURL": {
-                      "description": "RepoURL is the URL of a Git repository.",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "firstSeen": {
-                "description": "FirstSeen represents the date/time when this Freight first entered the system. This is useful and important information because it enables the controller to block auto-promotion of Freight that are older than a Stages's current Freight, which is a case that can arise if a Stage has ROLLED BACK to an older Freight whilst a downstream Stage is already on to a newer Freight.",
-                "format": "date-time",
-                "type": "string"
-              },
-              "id": {
-                "description": "ID is a unique, system-assigned identifier for this Freight.",
-                "type": "string"
-              },
-              "images": {
-                "description": "Images describes container images and versions thereof that were used in this Freight.",
-                "items": {
-                  "description": "Image describes a specific version of a container image.",
-                  "properties": {
-                    "gitRepoURL": {
-                      "description": "GitRepoURL specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field if Kargo was able to infer it.",
-                      "type": "string"
-                    },
-                    "repoURL": {
-                      "description": "RepoURL describes the repository in which the image can be found.",
-                      "type": "string"
-                    },
-                    "tag": {
-                      "description": "Tag identifies a specific version of the image in the repository specified by RepoURL.",
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "provenance": {
-                "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
-                "type": "string"
-              },
-              "qualified": {
-                "description": "Qualified denotes whether this Freight is suitable for promotion to a downstream Stage. This field becomes true when it is the current Freight of a Stage and that Stage is observed to be synced and healthy. Subsequent failures in Stage health evaluation do not disqualify a Freight that is already qualified.",
-                "type": "boolean"
-              }
-            },
-            "type": "object"
-          },
-          "type": "array"
-        },
         "currentFreight": {
-          "description": "CurrentFreight is the Stage's current Freight -- a \"bill of materials\" describing what is currently deployed to the Stage.",
+          "description": "CurrentFreight is a simplified representation of the Stage's current Freight describing what is currently deployed to the Stage.",
           "properties": {
             "charts": {
-              "description": "Charts describes Helm charts that were used in this Freight.",
+              "description": "Charts describes specific versions of specific Helm charts.",
               "items": {
                 "description": "Chart describes a specific version of a Helm chart.",
                 "properties": {
@@ -560,7 +345,7 @@
               "type": "array"
             },
             "commits": {
-              "description": "Commits describes specific Git repository commits that were used in this Freight.",
+              "description": "Commits describes specific Git repository commits.",
               "items": {
                 "description": "GitCommit describes a specific commit from a specific Git repository.",
                 "properties": {
@@ -573,7 +358,7 @@
                     "type": "string"
                   },
                   "healthCheckCommit": {
-                    "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Bookkeeper being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
+                    "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Kargo Render being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
                     "type": "string"
                   },
                   "id": {
@@ -593,17 +378,12 @@
               },
               "type": "array"
             },
-            "firstSeen": {
-              "description": "FirstSeen represents the date/time when this Freight first entered the system. This is useful and important information because it enables the controller to block auto-promotion of Freight that are older than a Stages's current Freight, which is a case that can arise if a Stage has ROLLED BACK to an older Freight whilst a downstream Stage is already on to a newer Freight.",
-              "format": "date-time",
-              "type": "string"
-            },
             "id": {
-              "description": "ID is a unique, system-assigned identifier for this Freight.",
+              "description": "ID is system-assigned value that is derived deterministically from the contents of the Freight. i.e. Two pieces of Freight can be compared for equality by comparing their IDs.",
               "type": "string"
             },
             "images": {
-              "description": "Images describes container images and versions thereof that were used in this Freight.",
+              "description": "Images describes specific versions of specific container images.",
               "items": {
                 "description": "Image describes a specific version of a container image.",
                 "properties": {
@@ -623,14 +403,6 @@
                 "type": "object"
               },
               "type": "array"
-            },
-            "provenance": {
-              "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
-              "type": "string"
-            },
-            "qualified": {
-              "description": "Qualified denotes whether this Freight is suitable for promotion to a downstream Stage. This field becomes true when it is the current Freight of a Stage and that Stage is observed to be synced and healthy. Subsequent failures in Stage health evaluation do not disqualify a Freight that is already qualified.",
-              "type": "boolean"
             }
           },
           "type": "object"
@@ -642,7 +414,7 @@
               "description": "Freight is the freight being promoted",
               "properties": {
                 "charts": {
-                  "description": "Charts describes Helm charts that were used in this Freight.",
+                  "description": "Charts describes specific versions of specific Helm charts.",
                   "items": {
                     "description": "Chart describes a specific version of a Helm chart.",
                     "properties": {
@@ -664,7 +436,7 @@
                   "type": "array"
                 },
                 "commits": {
-                  "description": "Commits describes specific Git repository commits that were used in this Freight.",
+                  "description": "Commits describes specific Git repository commits.",
                   "items": {
                     "description": "GitCommit describes a specific commit from a specific Git repository.",
                     "properties": {
@@ -677,7 +449,7 @@
                         "type": "string"
                       },
                       "healthCheckCommit": {
-                        "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Bookkeeper being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
+                        "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Kargo Render being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
                         "type": "string"
                       },
                       "id": {
@@ -697,17 +469,12 @@
                   },
                   "type": "array"
                 },
-                "firstSeen": {
-                  "description": "FirstSeen represents the date/time when this Freight first entered the system. This is useful and important information because it enables the controller to block auto-promotion of Freight that are older than a Stages's current Freight, which is a case that can arise if a Stage has ROLLED BACK to an older Freight whilst a downstream Stage is already on to a newer Freight.",
-                  "format": "date-time",
-                  "type": "string"
-                },
                 "id": {
-                  "description": "ID is a unique, system-assigned identifier for this Freight.",
+                  "description": "ID is system-assigned value that is derived deterministically from the contents of the Freight. i.e. Two pieces of Freight can be compared for equality by comparing their IDs.",
                   "type": "string"
                 },
                 "images": {
-                  "description": "Images describes container images and versions thereof that were used in this Freight.",
+                  "description": "Images describes specific versions of specific container images.",
                   "items": {
                     "description": "Image describes a specific version of a container image.",
                     "properties": {
@@ -727,14 +494,6 @@
                     "type": "object"
                   },
                   "type": "array"
-                },
-                "provenance": {
-                  "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
-                  "type": "string"
-                },
-                "qualified": {
-                  "description": "Qualified denotes whether this Freight is suitable for promotion to a downstream Stage. This field becomes true when it is the current Freight of a Stage and that Stage is observed to be synced and healthy. Subsequent failures in Stage health evaluation do not disqualify a Freight that is already qualified.",
-                  "type": "boolean"
                 }
               },
               "type": "object"
@@ -751,7 +510,7 @@
           "type": "object"
         },
         "error": {
-          "description": "Error describes any errors that are preventing the Stage controller from assessing Stage health or from polling repositories or upstream Stages to discover new Freight.",
+          "description": "Error describes any errors that are preventing the Stage controller from assessing Stage health or from finding new Freight.",
           "type": "string"
         },
         "health": {
@@ -830,12 +589,12 @@
           "type": "object"
         },
         "history": {
-          "description": "History is a stack of recent Freight, where each Freight is essentially a \"bill of materials\" describing what was deployed to the Stage. By default, the last ten Freight are stored.",
+          "description": "History is a stack of recent Freight. By default, the last ten Freight are stored.",
           "items": {
-            "description": "Freight is a \"bill of materials\" describing what is, was, or can be deployed to a Stage.",
+            "description": "SimpleFreight is a simplified representation of a piece of Freight -- not a root resource type.",
             "properties": {
               "charts": {
-                "description": "Charts describes Helm charts that were used in this Freight.",
+                "description": "Charts describes specific versions of specific Helm charts.",
                 "items": {
                   "description": "Chart describes a specific version of a Helm chart.",
                   "properties": {
@@ -857,7 +616,7 @@
                 "type": "array"
               },
               "commits": {
-                "description": "Commits describes specific Git repository commits that were used in this Freight.",
+                "description": "Commits describes specific Git repository commits.",
                 "items": {
                   "description": "GitCommit describes a specific commit from a specific Git repository.",
                   "properties": {
@@ -870,7 +629,7 @@
                       "type": "string"
                     },
                     "healthCheckCommit": {
-                      "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Bookkeeper being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
+                      "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Kargo Render being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
                       "type": "string"
                     },
                     "id": {
@@ -890,17 +649,12 @@
                 },
                 "type": "array"
               },
-              "firstSeen": {
-                "description": "FirstSeen represents the date/time when this Freight first entered the system. This is useful and important information because it enables the controller to block auto-promotion of Freight that are older than a Stages's current Freight, which is a case that can arise if a Stage has ROLLED BACK to an older Freight whilst a downstream Stage is already on to a newer Freight.",
-                "format": "date-time",
-                "type": "string"
-              },
               "id": {
-                "description": "ID is a unique, system-assigned identifier for this Freight.",
+                "description": "ID is system-assigned value that is derived deterministically from the contents of the Freight. i.e. Two pieces of Freight can be compared for equality by comparing their IDs.",
                 "type": "string"
               },
               "images": {
-                "description": "Images describes container images and versions thereof that were used in this Freight.",
+                "description": "Images describes specific versions of specific container images.",
                 "items": {
                   "description": "Image describes a specific version of a container image.",
                   "properties": {
@@ -920,14 +674,6 @@
                   "type": "object"
                 },
                 "type": "array"
-              },
-              "provenance": {
-                "description": "Provenance describes the proximate source of this Freight. i.e. Did it come directly from upstream repositories? Or an upstream Stage.",
-                "type": "string"
-              },
-              "qualified": {
-                "description": "Qualified denotes whether this Freight is suitable for promotion to a downstream Stage. This field becomes true when it is the current Freight of a Stage and that Stage is observed to be synced and healthy. Subsequent failures in Stage health evaluation do not disqualify a Freight that is already qualified.",
-                "type": "boolean"
               }
             },
             "type": "object"

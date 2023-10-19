@@ -52,15 +52,12 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 					return errors.Wrap(err, "start local server")
 				}
 				rs.localServerListener = l
-				srv, err := api.NewServer(
+				srv := api.NewServer(
 					apiconfig.ServerConfig{
 						LocalMode: true,
 					},
 					client,
 				)
-				if err != nil {
-					return errors.Wrap(err, "new api server")
-				}
 				go srv.Serve(ctx, l) // nolint: errcheck
 				opt.LocalServerAddress = fmt.Sprintf("http://%s", l.Addr())
 			}

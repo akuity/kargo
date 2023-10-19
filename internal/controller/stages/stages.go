@@ -2,13 +2,13 @@ package stages
 
 import (
 	"context"
+	"sort"
 	"time"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
+	argocdapi "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,13 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/akuity/bookkeeper/pkg/git"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
-	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/images"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
@@ -33,96 +29,106 @@ import (
 
 // reconciler reconciles Stage resources.
 type reconciler struct {
-	kargoClient                client.Client
-	argoClient                 client.Client
-	credentialsDB              credentials.Database
-	imageSourceURLFnsByBaseURL map[string]func(string, string) string
+	kargoClient client.Client
+	argoClient  client.Client
 
 	// The following behaviors are overridable for testing purposes:
 
-	// Loop guard
+	// Loop guard:
+
 	hasNonTerminalPromotionsFn func(
 		ctx context.Context,
 		stageNamespace string,
 		stageName string,
 	) (bool, error)
 
-	// Common:
+	listPromosFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+
+	// Health checks:
+
+	checkHealthFn func(
+		context.Context,
+		kargoapi.SimpleFreight,
+		[]kargoapi.ArgoCDAppUpdate,
+	) *kargoapi.Health
+
 	getArgoCDAppFn func(
 		ctx context.Context,
 		client client.Client,
 		namespace string,
 		name string,
-	) (*argocd.Application, error)
+	) (*argocdapi.Application, error)
 
-	// Health checks:
-	checkHealthFn func(
+	// Freight qualification:
+
+	getFreightFn func(
 		context.Context,
-		*kargoapi.Freight,
-		[]kargoapi.ArgoCDAppUpdate,
-	) *kargoapi.Health
-
-	// Syncing:
-	getLatestFreightFromReposFn func(
-		ctx context.Context,
-		namespace string,
-		subs kargoapi.RepoSubscriptions,
+		client.Client,
+		types.NamespacedName,
 	) (*kargoapi.Freight, error)
 
-	getAvailableFreightFromUpstreamStagesFn func(
+	qualifyFreightFn func(
 		ctx context.Context,
 		namespace string,
-		subs []kargoapi.StageSubscription,
-	) ([]kargoapi.Freight, error)
+		freightName string,
+		stageName string,
+	) error
 
-	getLatestCommitsFn func(
+	patchFreightStatusFn func(
+		ctx context.Context,
+		freight *kargoapi.Freight,
+		newStatus kargoapi.FreightStatus,
+	) error
+
+	// Auto-promotion:
+
+	isAutoPromotionPermittedFn func(
 		ctx context.Context,
 		namespace string,
-		subs []kargoapi.GitSubscription,
-	) ([]kargoapi.GitCommit, error)
+		stageName string,
+	) (bool, error)
 
-	getLatestImagesFn func(
+	listPromoPoliciesFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+
+	createPromotionFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
+
+	// Discovering latest Freight:
+
+	getLatestAvailableFreightFn func(
 		ctx context.Context,
 		namespace string,
-		subs []kargoapi.ImageSubscription,
-	) ([]kargoapi.Image, error)
+		subs kargoapi.Subscriptions,
+	) (*kargoapi.Freight, error)
 
-	getLatestTagFn func(
-		repoURL string,
-		updateStrategy kargoapi.ImageUpdateStrategy,
-		semverConstraint string,
-		allowTags string,
-		ignoreTags []string,
-		platform string,
-		creds *images.Credentials,
-	) (string, error)
-
-	getLatestChartsFn func(
+	getLatestFreightFromWarehouseFn func(
 		ctx context.Context,
 		namespace string,
-		subs []kargoapi.ChartSubscription,
-	) ([]kargoapi.Chart, error)
+		warehouse string,
+	) (*kargoapi.Freight, error)
 
-	getLatestChartVersionFn func(
+	getLatestFreightQualifiedForUpstreamStagesFn func(
 		ctx context.Context,
-		registryURL string,
-		chart string,
-		semverConstraint string,
-		creds *helm.Credentials,
-	) (string, error)
+		namespace string,
+		stageSubs []kargoapi.StageSubscription,
+	) (*kargoapi.Freight, error)
 
-	getLatestCommitMetaFn func(
-		ctx context.Context,
-		repoURL string,
-		branch string,
-		creds *git.RepoCredentials,
-	) (*gitMeta, error)
-}
-
-type gitMeta struct {
-	Commit  string
-	Message string
-	Author  string
+	listFreightFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Stage resources and
@@ -131,7 +137,6 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argoMgr manager.Manager,
-	credentialsDB credentials.Database,
 	shardName string,
 ) error {
 	// Index Promotions in non-terminal states by Stage
@@ -142,6 +147,23 @@ func SetupReconcilerWithManager(
 	// Index PromotionPolicies by Stage
 	if err := kubeclient.IndexPromotionPoliciesByStage(ctx, kargoMgr); err != nil {
 		return errors.Wrap(err, "index PromotionPolicies by Stage")
+	}
+
+	// Index Freight by Warehouse
+	if err := kubeclient.IndexFreightByWarehouse(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index Freight by Warehouse")
+	}
+
+	// Index Freight by qualified Stages
+	if err :=
+		kubeclient.IndexFreightByQualifiedStages(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index Freight by qualified Stages")
+	}
+
+	// Index Stages by upstream Stages
+	if err :=
+		kubeclient.IndexStagesByUpstreamStages(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index Stages by upstream Stages")
 	}
 
 	shardPredicate, err := controller.GetShardPredicate(shardName)
@@ -167,13 +189,7 @@ func SetupReconcilerWithManager(
 		).
 		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions()).
-		Build(
-			newReconciler(
-				kargoMgr.GetClient(),
-				argoMgr.GetClient(),
-				credentialsDB,
-			),
-		)
+		Build(newReconciler(kargoMgr.GetClient(), argoMgr.GetClient()))
 	if err != nil {
 		return errors.Wrap(err, "error building Stage reconciler")
 	}
@@ -188,52 +204,42 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "unable to watch Promotions")
 	}
 
-	// Watch other upstream Stages and enqueue downstream Stage keys
+	// Watch Freight that qualified for a Stage and enqueue downstream Stages
 	downstreamEvtHandler := &EnqueueDownstreamStagesHandler{
 		kargoClient: kargoMgr.GetClient(),
 		logger:      logger,
 	}
-	if err := c.Watch(&source.Kind{Type: &kargoapi.Stage{}}, downstreamEvtHandler); err != nil {
-		return errors.Wrap(err, "unable to watch Stages")
+	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, downstreamEvtHandler); err != nil {
+		return errors.Wrap(err, "unable to watch Freight")
 	}
 	return nil
 }
 
-func newReconciler(
-	kargoClient client.Client,
-	argoClient client.Client,
-	credentialsDB credentials.Database,
-) *reconciler {
+func newReconciler(kargoClient, argoClient client.Client) *reconciler {
 	r := &reconciler{
-		kargoClient:   kargoClient,
-		argoClient:    argoClient,
-		credentialsDB: credentialsDB,
-		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
-			githubURLPrefix: getGithubImageSourceURL,
-		},
+		kargoClient: kargoClient,
+		argoClient:  argoClient,
 	}
-
 	// The following default behaviors are overridable for testing purposes:
-
 	// Loop guard:
 	r.hasNonTerminalPromotionsFn = r.hasNonTerminalPromotions
-
-	// Common:
-	r.getArgoCDAppFn = libArgoCD.GetApplication
-
+	r.listPromosFn = r.kargoClient.List
 	// Health checks:
 	r.checkHealthFn = r.checkHealth
-
-	// Syncing:
-	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
-	r.getAvailableFreightFromUpstreamStagesFn = r.getAvailableFreightFromUpstreamStages
-	r.getLatestCommitsFn = r.getLatestCommits
-	r.getLatestImagesFn = r.getLatestImages
-	r.getLatestTagFn = images.GetLatestTag
-	r.getLatestChartsFn = r.getLatestCharts
-	r.getLatestChartVersionFn = helm.GetLatestChartVersion
-	r.getLatestCommitMetaFn = getLatestCommitMeta
-
+	r.getArgoCDAppFn = argocd.GetApplication
+	// Freight qualification:
+	r.getFreightFn = kargoapi.GetFreight
+	r.qualifyFreightFn = r.qualifyFreight
+	r.patchFreightStatusFn = r.patchFreightStatus
+	// Auto-promotion:
+	r.isAutoPromotionPermittedFn = r.isAutoPromotionPermitted
+	r.listPromoPoliciesFn = r.kargoClient.List
+	r.createPromotionFn = kargoClient.Create
+	// Discovering latest Freight:
+	r.getLatestAvailableFreightFn = r.getLatestAvailableFreight
+	r.getLatestFreightFromWarehouseFn = r.getLatestFreightFromWarehouse
+	r.getLatestFreightQualifiedForUpstreamStagesFn = r.getLatestFreightQualifiedForUpstreamStages
+	r.listFreightFn = r.kargoClient.List
 	return r
 }
 
@@ -321,12 +327,13 @@ func (r *reconciler) syncStage(
 	// this Stage in a non-terminal state. The promotion process and this
 	// reconciliation loop BOTH update Stage status, so this check helps us
 	// to avoid race conditions that may otherwise arise.
-	hasNonTerminalPromos, err :=
-		r.hasNonTerminalPromotionsFn(ctx, stage.Namespace, stage.Name)
-	if err != nil {
+	if hasNonTerminalPromos, err := r.hasNonTerminalPromotionsFn(
+		ctx,
+		stage.Namespace,
+		stage.Name,
+	); err != nil {
 		return status, err
-	}
-	if hasNonTerminalPromos {
+	} else if hasNonTerminalPromos {
 		logger.Debug(
 			"Stage has one or more Promotions in a non-terminal phase; skipping " +
 				"this reconciliation loop",
@@ -338,163 +345,113 @@ func (r *reconciler) syncStage(
 	status.Health = nil // Reset health
 	status.CurrentPromotion = nil
 
-	if stage.Spec.PromotionMechanisms != nil {
-		status.Health = r.checkHealthFn(
-			ctx,
-			status.CurrentFreight,
-			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
-		)
-	} else {
-		// If a Stage has no promotion mechanisms, the stage is being used
-		// as a control-flow. For now, this just means all availableFreight
-		// is automatically & immediately qualified for downstream stages.
-		// In the future, we may have more options before qualifying them
-		// (e.g. require that they were qualified in all our upstreams)
-		status.History = status.AvailableFreight.DeepCopy()
-		for i := range status.History {
-			status.History[i].Qualified = true
-		}
-		// Also, a Stage without promotion mechanisms doesn't have
-		// a "current" freight. Make sure this is empty to avoid confusion
+	if stage.Spec.PromotionMechanisms == nil {
+		// A Stage without promotion mechanisms shouldn't have a currentFreight.
+		// Make sure this is empty to avoid confusion. A reason it could be
+		// non-empty to begin with is that the Stage USED TO have promotion
+		// mechanisms, but they were removed.
 		status.CurrentFreight = nil
 	}
-	if status.CurrentFreight != nil &&
-		(status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) {
-		status.CurrentFreight.Qualified = true
-		status.History.Pop()
-		status.History.Push(*status.CurrentFreight)
-	}
 
-	if stage.Spec.Subscriptions.Repos != nil {
+	if status.CurrentFreight == nil {
+		logger.Debug("Stage has no current Freight; no health checks to perform")
+	} else { //  Check health and qualify current Freight if applicable
+		freightLogger := logger.WithField("freight", status.CurrentFreight.ID)
 
-		latestFreight, err := r.getLatestFreightFromReposFn(
+		// Check health
+		status.Health = r.checkHealthFn(
 			ctx,
-			stage.Namespace,
-			*stage.Spec.Subscriptions.Repos,
+			*status.CurrentFreight,
+			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		)
-		if err != nil {
-			return status, err
-		}
-		if latestFreight == nil {
-			logger.Debug("found no Freight from upstream repositories")
-			return status, nil
-		}
-		logger.Debug("got latest Freight from upstream repositories")
-
-		// latestFreight from upstream repos will always have a shiny new ID. To
-		// determine if this is actually new and needs to be pushed onto the
-		// status.AvailableFreight stack, either that stack needs to be empty or
-		// latestFreight's MATERIALS must differ from what is at the top of the
-		// status.AvailableFreight stack.
-		if topAvailableFreight, ok := status.AvailableFreight.Top(); ok &&
-			latestFreight.ID == topAvailableFreight.ID {
-			logger.Debug("latest Freight is not new")
-			return status, nil
-		}
-		status.AvailableFreight.Push(*latestFreight)
-		logger.Debug("latest Freight is new; added to available Freight")
-
-	} else if len(stage.Spec.Subscriptions.UpstreamStages) > 0 {
-
-		// Grab the latest known Freight before we overwrite status.AvailableFreight
-		var latestKnownFreight *kargoapi.Freight
-		if lks, ok := status.AvailableFreight.Top(); ok {
-			latestKnownFreight = &lks
+		if status.Health != nil {
+			freightLogger.WithField("health", status.Health.Status).
+				Debug("Stage health assessed")
+		} else {
+			freightLogger.Debug("Stage health deemed not applicable")
 		}
 
-		// This returns de-duped, healthy Freight only from all upstream Stages.
-		// There could be up to ten per upstream Stage. This is more than the usual
-		// quantity we permit in status.AvailableFreight, but we'll allow it.
-		var err error
-		if status.AvailableFreight, err = r.getAvailableFreightFromUpstreamStagesFn(
-			ctx,
-			stage.Namespace,
-			stage.Spec.Subscriptions.UpstreamStages,
-		); err != nil {
-			return status, err
-		}
-
-		if status.AvailableFreight.Empty() {
-			logger.Debug("got no available Freight from upstream Stages")
-			return status, nil
-		}
-		logger.Debug("got available Freight from upstream Stages")
-
-		if len(stage.Spec.Subscriptions.UpstreamStages) > 1 {
-			logger.Debug(
-				"auto-promotion cannot proceed due to multiple upstream Stages",
-			)
-			return status, nil
-		}
-
-		if latestKnownFreight != nil {
-			// We already know this stack isn't empty
-			latestAvailableFreight, _ := status.AvailableFreight.Top()
-			if latestKnownFreight.ID == latestAvailableFreight.ID {
-				logger.Debug("latest Freight is not new")
-				return status, nil
+		// If health is not applicable or healthy, qualify the current Freight for
+		// this Stage
+		if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
+			if err := r.qualifyFreightFn(
+				ctx,
+				stage.Namespace,
+				status.CurrentFreight.ID,
+				stage.Name,
+			); err != nil {
+				return status, errors.Wrapf(
+					err,
+					"error qualifying Freight %q in namespace %q for Stage %q",
+					status.CurrentFreight.ID,
+					stage.Namespace,
+					stage.Name,
+				)
 			}
 		}
-	} else {
-		// This should be impossible if validation is working, but out of an
-		// abundance of caution, bail now if this happens somehow.
+	}
+
+	// All of these conditions disqualify auto-promotion
+	if stage.Spec.Subscriptions == nil || // No subs at all
+		(stage.Spec.Subscriptions.Warehouse == "" && len(stage.Spec.Subscriptions.UpstreamStages) == 0) || // No subs at all
+		(stage.Spec.Subscriptions.Warehouse != "" && len(stage.Spec.Subscriptions.UpstreamStages) > 0) || // Ambiguous
+		len(stage.Spec.Subscriptions.UpstreamStages) > 1 { // Ambiguous
+		logger.Debug("Stage is not eligible for auto-promotion")
 		return status, nil
 	}
 
-	nextFreightCandidate, _ := status.AvailableFreight.Top()
-	if status.CurrentFreight != nil &&
-		nextFreightCandidate.FirstSeen.Before(status.CurrentFreight.FirstSeen) {
-		logger.Debug(
-			"newest available Freight is older than current Freight; refusing to " +
-				"auto-promote",
+	// If we get to here, we've determined that auto-promotion is possible.
+	// Now see if it's permitted...
+	logger.Debug(
+		"Stage is eligible for auto-promotion; checking if it is permitted...",
+	)
+	if permitted, err :=
+		r.isAutoPromotionPermittedFn(ctx, stage.Namespace, stage.Name); err != nil {
+		return status, errors.Wrapf(
+			err,
+			"error checking if auto-promotion is permitted for Stage %q in "+
+				"namespace %q",
+			stage.Name,
+			stage.Namespace,
 		)
-		return status, nil
-	}
-	nextFreight := nextFreightCandidate
-
-	// If we get to here, we've determined that auto-promotion is a possibility.
-	// See if it's actually allowed...
-	policies := kargoapi.PromotionPolicyList{}
-	if err := r.kargoClient.List(
-		ctx,
-		&policies,
-		&client.ListOptions{
-			Namespace: stage.Namespace,
-			FieldSelector: fields.Set(map[string]string{
-				kubeclient.PromotionPoliciesByStageIndexField: stage.Name,
-			}).AsSelector(),
-		},
-	); err != nil {
-		return status, err
-	}
-	if len(policies.Items) == 0 {
-		logger.Debug(
-			"no PromotionPolicy exists to enable auto-promotion; auto-promotion " +
-				"will not proceed",
-		)
-		return status, nil
-	}
-	if len(policies.Items) > 1 {
-		logger.Debug("found multiple PromotionPolicies associated with " +
-			"Stage; auto-promotion will not proceed",
-		)
-		return status, nil
-	}
-	if !policies.Items[0].EnableAutoPromotion {
-		logger.Debug(
-			"PromotionPolicy does not enable auto-promotion; auto-promotion " +
-				"will not proceed",
-		)
+	} else if !permitted {
+		logger.Debug("auto-promotion is not permitted for the Stage")
 		return status, nil
 	}
 
-	logger = logger.WithField("freight", nextFreight.ID)
+	// If we get to here, we've determined that auto-promotion is both possible
+	// and permitted. Time to go looking for new Freight...
+
+	latestFreight, err :=
+		r.getLatestAvailableFreightFn(ctx, stage.Namespace, *stage.Spec.Subscriptions)
+	if err != nil {
+		return status, errors.Wrapf(
+			err,
+			"error finding latest Freight for Stage %q in namespace %q",
+			stage.Name,
+			stage.Namespace,
+		)
+	}
+
+	if latestFreight == nil {
+		logger.Debug("no Freight found")
+		return status, nil
+	}
+
+	logger = logger.WithField("freight", latestFreight.Name)
+
+	// Only proceed if nextFreight isn't the one we already have
+	if stage.Status.CurrentFreight != nil &&
+		stage.Status.CurrentFreight.ID == latestFreight.Name {
+		logger.Debug("Stage already has latest qualified Freight")
+		return status, nil
+	}
+
 	logger.Debug("auto-promotion will proceed")
 
-	promo := kargo.NewPromotion(*stage, nextFreight.ID)
-
+	promo := kargo.NewPromotion(*stage, latestFreight.ID)
 	if err :=
-		r.kargoClient.Create(ctx, &promo, &client.CreateOptions{}); err != nil {
+		r.createPromotionFn(ctx, &promo, &client.CreateOptions{}); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			logger.Debug("Promotion resource already exists")
 			return status, nil
@@ -504,10 +461,10 @@ func (r *reconciler) syncStage(
 			"error creating Promotion of Stage %q in namespace %q to Freight %q",
 			stage.Name,
 			stage.Namespace,
-			nextFreight.ID,
+			latestFreight.Name,
 		)
 	}
-	logger.Debug("created Promotion resource")
+	logger.WithField("promotion", promo.Name).Debug("created Promotion resource")
 
 	return status, nil
 }
@@ -518,7 +475,7 @@ func (r *reconciler) hasNonTerminalPromotions(
 	stageName string,
 ) (bool, error) {
 	promos := kargoapi.PromotionList{}
-	if err := r.kargoClient.List(
+	if err := r.listPromosFn(
 		ctx,
 		&promos,
 		&client.ListOptions{
@@ -539,96 +496,255 @@ func (r *reconciler) hasNonTerminalPromotions(
 	return len(promos.Items) > 0, nil
 }
 
-func (r *reconciler) getLatestFreightFromRepos(
+func (r *reconciler) qualifyFreight(
 	ctx context.Context,
 	namespace string,
-	repoSubs kargoapi.RepoSubscriptions,
+	freightName string,
+	stageName string,
+) error {
+	logger := logging.LoggerFromContext(ctx).WithField("freight", freightName)
+
+	// Find the Freight
+	freight, err := r.getFreightFn(
+		ctx,
+		r.kargoClient,
+		types.NamespacedName{
+			Namespace: namespace,
+			Name:      freightName,
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"error finding Freight %q in namespace %q; could not qualify it for "+
+				"Stage %q",
+			freightName,
+			namespace,
+			stageName,
+		)
+	}
+	if freight == nil {
+		return errors.Errorf(
+			"found no Freight %q in namespace %q; could not qualify it for "+
+				"Stage %q",
+			freightName,
+			namespace,
+			stageName,
+		)
+	}
+
+	newStatus := *freight.Status.DeepCopy()
+	if newStatus.Qualifications == nil {
+		newStatus.Qualifications = map[string]kargoapi.Qualification{}
+	}
+
+	// Only try to qualify if not already qualified
+	if _, ok := newStatus.Qualifications[stageName]; ok {
+		logger.Debug("Freight already qualified for Stage")
+		return nil
+	}
+
+	newStatus.Qualifications[stageName] = kargoapi.Qualification{}
+	if err = r.patchFreightStatusFn(ctx, freight, newStatus); err != nil {
+		return err
+	}
+
+	logger.Debug("qualified Freight for Stage")
+	return nil
+}
+
+func (r *reconciler) patchFreightStatus(
+	ctx context.Context,
+	freight *kargoapi.Freight,
+	newStatus kargoapi.FreightStatus,
+) error {
+	err := kubeclient.PatchStatus(
+		ctx,
+		r.kargoClient,
+		freight,
+		func(status *kargoapi.FreightStatus) {
+			*status = newStatus
+		},
+	)
+	return errors.Wrapf(
+		err,
+		"error patching Freight %q status in namespace %q",
+		freight.Name,
+		freight.Namespace,
+	)
+}
+
+func (r *reconciler) isAutoPromotionPermitted(
+	ctx context.Context,
+	namespace string,
+	stageName string,
+) (bool, error) {
+	logger := logging.LoggerFromContext(ctx)
+	policies := kargoapi.PromotionPolicyList{}
+	if err := r.listPromoPoliciesFn(
+		ctx,
+		&policies,
+		&client.ListOptions{
+			Namespace: namespace,
+			FieldSelector: fields.Set(map[string]string{
+				kubeclient.PromotionPoliciesByStageIndexField: stageName,
+			}).AsSelector(),
+		},
+	); err != nil {
+		return false, errors.Wrapf(
+			err,
+			"error listing PromotionPolicies for Stage %q in namespace %q",
+			stageName,
+			namespace,
+		)
+	}
+	if len(policies.Items) == 0 {
+		logger.Debug("no PromotionPolicy is associated with the Stage")
+		return false, nil
+	}
+	if len(policies.Items) > 1 {
+		logger.Debug("multiple PromotionPolicies are associated with the Stage")
+		return false, nil
+	}
+	if !policies.Items[0].EnableAutoPromotion {
+		logger.Debug(
+			"PromotionPolicy does not enable auto-promotion for the Stage",
+		)
+		return false, nil
+	}
+	return true, nil
+}
+
+func (r *reconciler) getLatestAvailableFreight(
+	ctx context.Context,
+	namespace string,
+	subs kargoapi.Subscriptions,
 ) (*kargoapi.Freight, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	latestCommits, err := r.getLatestCommitsFn(ctx, namespace, repoSubs.Git)
-	if err != nil {
-		return nil, errors.Wrap(err, "error syncing git repo subscriptions")
-	}
-	if len(repoSubs.Git) > 0 {
-		logger.Debug("synced git repo subscriptions")
-	}
-
-	latestImages, err := r.getLatestImagesFn(ctx, namespace, repoSubs.Images)
-	if err != nil {
-		return nil, errors.Wrap(err, "error syncing image repo subscriptions")
-	}
-	if len(repoSubs.Images) > 0 {
-		logger.Debug("synced image repo subscriptions")
-	}
-
-	latestCharts, err := r.getLatestChartsFn(ctx, namespace, repoSubs.Charts)
-	if err != nil {
-		return nil, errors.Wrap(err, "error syncing chart repo subscriptions")
-	}
-	if len(repoSubs.Charts) > 0 {
-		logger.Debug("synced chart repo subscriptions")
-	}
-
-	now := metav1.Now()
-	freight := &kargoapi.Freight{
-		FirstSeen: &now,
-		Commits:   latestCommits,
-		Images:    latestImages,
-		Charts:    latestCharts,
-		Qualified: true,
-	}
-	freight.UpdateFreightID()
-	return freight, nil
-}
-
-// TODO: Test this
-func (r *reconciler) getAvailableFreightFromUpstreamStages(
-	ctx context.Context,
-	namespace string,
-	subs []kargoapi.StageSubscription,
-) ([]kargoapi.Freight, error) {
-	if len(subs) == 0 {
-		return nil, nil
-	}
-
-	availableFreight := make([]kargoapi.Freight, 0, len(subs))
-	freightSet := map[string]struct{}{} // We'll use this to de-dupe
-	for _, sub := range subs {
-		upstreamStage, err := kargoapi.GetStage(
+	if subs.Warehouse != "" {
+		latestFreight, err := r.getLatestFreightFromWarehouseFn(
 			ctx,
-			r.kargoClient,
-			types.NamespacedName{
-				Namespace: namespace,
-				Name:      sub.Name,
-			},
+			namespace,
+			subs.Warehouse,
 		)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error finding upstream Stage %q in namespace %q",
-				sub.Name,
+				"error checking Warehouse %q in namespace %q for Freight",
+				subs.Warehouse,
 				namespace,
 			)
 		}
-		if upstreamStage == nil {
-			return nil, errors.Errorf(
-				"found no upstream Stage %q in namespace %q",
-				sub.Name,
-				namespace,
-			)
+		if latestFreight == nil {
+			logger.WithField("warehouse", subs.Warehouse).
+				Debug("no Freight found from Warehouse")
 		}
-		for _, freight := range upstreamStage.Status.History {
-			if _, ok := freightSet[freight.ID]; !ok && freight.Qualified {
-				freight.Provenance = upstreamStage.Name
-				for i := range freight.Commits {
-					freight.Commits[i].HealthCheckCommit = ""
-				}
-				availableFreight = append(availableFreight, freight)
-				freightSet[freight.ID] = struct{}{}
-			}
-		}
+		return latestFreight, nil
 	}
 
-	return availableFreight, nil
+	latestFreight, err := r.getLatestFreightQualifiedForUpstreamStagesFn(
+		ctx,
+		namespace,
+		subs.UpstreamStages,
+	)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"error finding Freight qualified for Stages upstream from "+
+				"Stage %q in namespace %q",
+			subs.UpstreamStages[0].Name,
+			namespace,
+		)
+	}
+	if latestFreight == nil {
+		logger.WithField("upstreamStage", subs.UpstreamStages[0]).
+			Debug("no qualified Freight found for upstream Stage")
+	}
+	return latestFreight, nil
+}
+
+func (r *reconciler) getLatestFreightFromWarehouse(
+	ctx context.Context,
+	namespace string,
+	warehouse string,
+) (*kargoapi.Freight, error) {
+	var freight kargoapi.FreightList
+	if err := r.listFreightFn(
+		ctx,
+		&freight,
+		&client.ListOptions{
+			Namespace: namespace,
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.FreightByWarehouseIndexField,
+				warehouse,
+			),
+		},
+	); err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"error listing Freight for Warehouse %q in namespace %q",
+			warehouse,
+			namespace,
+		)
+	}
+	if len(freight.Items) == 0 {
+		return nil, nil
+	}
+	// Sort by creation timestamp, descending
+	sort.SliceStable(freight.Items, func(i, j int) bool {
+		return freight.Items[j].CreationTimestamp.
+			Before(&freight.Items[i].CreationTimestamp)
+	})
+	return &freight.Items[0], nil
+}
+
+func (r *reconciler) getLatestFreightQualifiedForUpstreamStages(
+	ctx context.Context,
+	namespace string,
+	stageSubs []kargoapi.StageSubscription,
+) (*kargoapi.Freight, error) {
+	// Start by building a de-duped map of Freight qualified for ANY upstream
+	// Stage
+	qualifiedFreight := map[string]kargoapi.Freight{}
+	for _, stageSub := range stageSubs {
+		var freight kargoapi.FreightList
+		if err := r.listFreightFn(
+			ctx,
+			&freight,
+			&client.ListOptions{
+				Namespace: namespace,
+				FieldSelector: fields.OneTermEqualSelector(
+					kubeclient.FreightByQualifiedStagesIndexField,
+					stageSub.Name,
+				),
+			},
+		); err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"error listing Freight qualified for Stage %q in namespace %q",
+				stageSub.Name,
+				namespace,
+			)
+		}
+		for _, freight := range freight.Items {
+			qualifiedFreight[freight.Name] = freight
+		}
+	}
+	if len(qualifiedFreight) == 0 {
+		return nil, nil
+	}
+	// Turn the map to a list
+	qualifiedFreightList := make([]kargoapi.Freight, len(qualifiedFreight))
+	i := 0
+	for _, freight := range qualifiedFreight {
+		qualifiedFreightList[i] = freight
+		i++
+	}
+	// Sort the list by creation timestamp, descending
+	sort.SliceStable(qualifiedFreightList, func(i, j int) bool {
+		return qualifiedFreightList[j].CreationTimestamp.
+			Before(&qualifiedFreightList[i].CreationTimestamp)
+	})
+	return &qualifiedFreightList[0], nil
 }

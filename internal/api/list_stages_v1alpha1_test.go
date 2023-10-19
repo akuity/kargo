@@ -15,6 +15,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/api/validation"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -83,9 +84,11 @@ func TestListStages(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			res, err := (&server{
+			svr := &server{
 				client: client,
-			}).ListStages(ctx, connect.NewRequest(ts.req))
+			}
+			svr.externalValidateProjectFn = validation.ValidateProject
+			res, err := (svr).ListStages(ctx, connect.NewRequest(ts.req))
 			if ts.errExpected {
 				require.Error(t, err)
 				require.Equal(t, ts.expectedCode, connect.CodeOf(err))

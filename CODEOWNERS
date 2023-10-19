@@ -1,6 +1,6 @@
 # This file is described here: https://help.github.com/en/articles/about-code-owners
 
-* @alexmt @devholic @gdsoumya @jessesuen @kencochrane @krancour @rbreeze
+* @akuity/maintainers
 
 # Doc owners
-/docs/ @dhpup @morey-tech
+/docs/ @akuity/maintainers @akuity/doc-maintainers

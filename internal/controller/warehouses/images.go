@@ -1,4 +1,4 @@
-package stages
+package warehouses
 
 import (
 	"context"
@@ -17,10 +17,15 @@ import (
 func (r *reconciler) getLatestImages(
 	ctx context.Context,
 	namespace string,
-	subs []kargoapi.ImageSubscription,
+	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.Image, error) {
 	imgs := make([]kargoapi.Image, len(subs))
-	for i, sub := range subs {
+	for i, s := range subs {
+		if s.Image == nil {
+			continue
+		}
+
+		sub := s.Image
 
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 

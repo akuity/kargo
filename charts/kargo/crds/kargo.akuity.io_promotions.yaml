@@ -53,10 +53,8 @@ spec:
               into a specific Freight.
             properties:
               freight:
-                description: Freight specifies the specific Freight into which the
-                  Stage referenced by the Stage field should be transitioned. The
-                  Freight MUST be among the Stage's Status.AvailableFreight or the
-                  Promotion will ultimately fail.
+                description: Freight specifies the piece of Freight to be promoted
+                  into the Stage referenced by the Stage field.
                 minLength: 1
                 type: string
               stage:

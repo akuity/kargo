@@ -2,28 +2,36 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"connectrpc.com/connect"
 	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/types/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	apiv1alpha1 "github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
 const (
-	GroupByContainerRepository = "container_repo"
-	GroupByGitRepository       = "git_repo"
-	GroupByHelmRepository      = "helm_repo"
+	GroupByImageRepository = "image_repo"
+	GroupByGitRepository   = "git_repo"
+	GroupByChartRepository = "chart_repo"
 
 	OrderByFirstSeen = "first_seen"
 	OrderByTag       = "tag"
+	// TODO: KR: Maybe we should add OrderBySemVer since charts are always
+	// semantically versioned and images sometimes are.
 )
 
+// QueryFreight retrieves and tabulates Freight according to the criteria
+// specified in the request.
 func (s *server) QueryFreight(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.QueryFreightRequest],
@@ -31,33 +39,68 @@ func (s *server) QueryFreight(
 	if req.Msg.GetProject() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
 	}
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
-		return nil, err
+	if err := s.validateProjectFn(ctx, req.Msg.GetProject()); err != nil {
+		return nil, err // This already returns a connect.Error
 	}
 	if err := validateGroupByOrderBy(req.Msg.GetGroup(), req.Msg.GetGroupBy(), req.Msg.GetOrderBy()); err != nil {
-		return nil, err
+		return nil, err // This already returns a connect.Error
 	}
 
-	var stages []kargoapi.Stage
+	var freight []kargoapi.Freight
 	if req.Msg.GetStage() != "" {
-		stage, err := getStage(ctx, s.client, req.Msg.GetProject(), req.Msg.GetStage())
+		stage, err := s.getStageFn(
+			ctx,
+			s.client,
+			types.NamespacedName{
+				Namespace: req.Msg.GetProject(),
+				Name:      req.Msg.GetStage(),
+			},
+		)
 		if err != nil {
-			return nil, err
-		}
-		stages = []kargoapi.Stage{*stage}
-	} else {
-		var list kargoapi.StageList
-		if err := s.client.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		stages = list.Items
+		if stage == nil {
+			return nil, connect.NewError(
+				connect.CodeNotFound,
+				errors.Errorf(
+					"Stage %q not found in namespace %q",
+					req.Msg.GetStage(),
+					req.Msg.GetProject()),
+			)
+		}
+		freight, err = s.getAvailableFreightForStageFn(
+			ctx,
+			req.Msg.GetProject(),
+			*stage.Spec.Subscriptions,
+		)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+	} else {
+		freightList := &kargoapi.FreightList{}
+		// Get ALL Freight in the project/namespace
+		if err := s.listFreightFn(
+			ctx,
+			freightList,
+			client.InNamespace(req.Msg.GetProject()),
+		); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		freight = freightList.Items
 	}
 
-	seen := make(map[string]bool)
-	freightGroups := make(map[string]*svcv1alpha1.FreightList)
-	for _, s := range stages {
-		addToGroups(req.Msg, freightGroups, s, seen)
+	// Split the Freight into groups
+	var freightGroups map[string]*svcv1alpha1.FreightList
+	switch req.Msg.GetGroupBy() {
+	case GroupByImageRepository:
+		freightGroups = groupByImageRepo(freight, req.Msg.GetGroup())
+	case GroupByGitRepository:
+		freightGroups = groupByGitRepo(freight, req.Msg.GetGroup())
+	case GroupByChartRepository:
+		freightGroups = groupByChartRepo(freight, req.Msg.GetGroup())
+	default:
 	}
+
 	sortFreightGroups(req.Msg.GetOrderBy(), req.Msg.GetReverse(), freightGroups)
 
 	return connect.NewResponse(&svcv1alpha1.QueryFreightResponse{
@@ -65,57 +108,151 @@ func (s *server) QueryFreight(
 	}), nil
 }
 
-func addToGroups(
-	req *svcv1alpha1.QueryFreightRequest,
-	groups map[string]*svcv1alpha1.FreightList,
-	stage kargoapi.Stage,
-	seen map[string]bool,
-) {
+func (s *server) getAvailableFreightForStage(
+	ctx context.Context,
+	project string,
+	subs kargoapi.Subscriptions,
+) ([]kargoapi.Freight, error) {
+	if subs.Warehouse != "" {
+		return s.getFreightFromWarehouseFn(ctx, project, subs.Warehouse)
+	}
+	return s.getFreightQualifiedForUpstreamStagesFn(
+		ctx,
+		project,
+		subs.UpstreamStages,
+	)
+}
 
-	appendToStageGroups := func(stack kargoapi.FreightStack) {
-		for _, f := range stack {
-			if seen[f.ID] {
-				continue
-			}
-			// clear out stage-specific information
-			f.Qualified = false // Qualification is WRT a Stage
-			f.Provenance = ""
-			switch req.GetGroupBy() {
-			case GroupByContainerRepository:
-				for _, i := range f.Images {
-					if req.GetGroup() == "" || i.RepoURL == req.GetGroup() {
-						groups[i.RepoURL] = appendToFreightList(groups[i.RepoURL], f)
-					}
-				}
-			case GroupByGitRepository:
-				for _, c := range f.Commits {
-					if req.GetGroup() == "" || c.RepoURL == req.GetGroup() {
-						groups[c.RepoURL] = appendToFreightList(groups[c.RepoURL], f)
-					}
-				}
-			case GroupByHelmRepository:
-				for _, c := range f.Charts {
-					if req.GetGroup() == "" || c.RegistryURL == req.GetGroup() {
-						groups[c.RegistryURL] = appendToFreightList(groups[c.RegistryURL], f)
-					}
-				}
-			default:
-				if req.GetGroup() == "" {
-					groups[""] = appendToFreightList(groups[""], f)
-				}
-			}
-			seen[f.ID] = true
+func (s *server) getFreightFromWarehouse(
+	ctx context.Context,
+	project string,
+	warehouse string,
+) ([]kargoapi.Freight, error) {
+	var freight kargoapi.FreightList
+	err := s.listFreightFn(
+		ctx,
+		&freight,
+		&client.ListOptions{
+			Namespace: project,
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.FreightByWarehouseIndexField,
+				warehouse,
+			),
+		},
+	)
+	return freight.Items, errors.Wrapf(
+		err,
+		"error listing Freight for Warehouse %q in namespace %q",
+		warehouse,
+		project,
+	)
+}
+
+func (s *server) getFreightQualifiedForUpstreamStages(
+	ctx context.Context,
+	project string,
+	stageSubs []kargoapi.StageSubscription,
+) ([]kargoapi.Freight, error) {
+	// Start by building a de-duped map of Freight qualified for ANY upstream
+	// Stage
+	qualifiedFreight := map[string]kargoapi.Freight{}
+	for _, stageSub := range stageSubs {
+		var freight kargoapi.FreightList
+		if err := s.listFreightFn(
+			ctx,
+			&freight,
+			&client.ListOptions{
+				Namespace: project,
+				FieldSelector: fields.OneTermEqualSelector(
+					kubeclient.FreightByQualifiedStagesIndexField,
+					stageSub.Name,
+				),
+			},
+		); err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"error listing Freight qualified for Stage %q in namespace %q",
+				stageSub.Name,
+				project,
+			)
+		}
+		for _, freight := range freight.Items {
+			qualifiedFreight[freight.Name] = freight
 		}
 	}
-	appendToStageGroups(stage.Status.AvailableFreight)
-	appendToStageGroups(stage.Status.History)
+	if len(qualifiedFreight) == 0 {
+		return nil, nil
+	}
+	// Turn the map to a list
+	qualifiedFreightList := make([]kargoapi.Freight, len(qualifiedFreight))
+	i := 0
+	for _, freight := range qualifiedFreight {
+		qualifiedFreightList[i] = freight
+		i++
+	}
+	return qualifiedFreightList, nil
+}
+
+func groupByImageRepo(
+	freight []kargoapi.Freight,
+	group string,
+) map[string]*svcv1alpha1.FreightList {
+	groups := make(map[string]*svcv1alpha1.FreightList)
+	for _, f := range freight {
+		for _, i := range f.Images {
+			if group == "" || i.RepoURL == group {
+				groups[i.RepoURL] = appendToFreightList(groups[i.RepoURL], f)
+			}
+		}
+	}
+	return groups
+}
+
+func groupByGitRepo(
+	freight []kargoapi.Freight,
+	group string,
+) map[string]*svcv1alpha1.FreightList {
+	groups := make(map[string]*svcv1alpha1.FreightList)
+	for _, f := range freight {
+		for _, c := range f.Commits {
+			if group == "" || c.RepoURL == group {
+				groups[c.RepoURL] = appendToFreightList(groups[c.RepoURL], f)
+			}
+		}
+	}
+	return groups
+}
+
+func groupByChartRepo(
+	freight []kargoapi.Freight,
+	group string,
+) map[string]*svcv1alpha1.FreightList {
+	groups := make(map[string]*svcv1alpha1.FreightList)
+	for _, f := range freight {
+		for _, c := range f.Charts {
+			repoURL := fmt.Sprintf("%s/%s", c.RegistryURL, c.Name)
+			if group == "" || repoURL == group {
+				groups[repoURL] = appendToFreightList(groups[repoURL], f)
+			}
+		}
+	}
+	return groups
 }
 
 func appendToFreightList(list *svcv1alpha1.FreightList, f kargoapi.Freight) *svcv1alpha1.FreightList {
 	if list == nil {
 		list = &svcv1alpha1.FreightList{}
 	}
-	list.Freight = append(list.Freight, v1alpha1.ToFreightProto(f))
+	sf := kargoapi.SimpleFreight{
+		ID:      f.ID,
+		Commits: f.Commits,
+		Images:  f.Images,
+		Charts:  f.Charts,
+	}
+	list.Freight = append(
+		list.Freight,
+		v1alpha1.ToFreightProto(sf, &f.CreationTimestamp.Time),
+	)
 	return list
 }
 
@@ -145,6 +282,9 @@ func (a ByFirstSeen) Less(i, j int) bool {
 
 // NOTE: sorting by tag will sort by the first container image we found
 // or the first helm chart we found in the freight.
+//
+// TODO: KR: We might want to think about whether the current sorting behavior
+// is useful at all, given the limitations noted above.
 type ByTag []*apiv1alpha1.Freight
 
 func (a ByTag) Len() int      { return len(a) }
