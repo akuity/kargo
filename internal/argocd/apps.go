@@ -3,9 +3,10 @@ package argocd
 import (
 	"context"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
 // GetApplication returns a pointer to the Argo CD Application resource
