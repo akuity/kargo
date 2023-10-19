@@ -1,12 +1,10 @@
-package argocd
+package v1alpha1
 
 import (
 	"context"
 
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
 // GetApplication returns a pointer to the Argo CD Application resource
@@ -17,8 +15,8 @@ func GetApplication(
 	ctrlRuntimeClient client.Client,
 	namespace string,
 	name string,
-) (*argocd.Application, error) {
-	app := argocd.Application{}
+) (*Application, error) {
+	app := Application{}
 	if err := ctrlRuntimeClient.Get(
 		ctx,
 		client.ObjectKey{
