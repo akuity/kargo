@@ -7,10 +7,11 @@ This section covers important Kargo concepts.
 
 ## What is a `stage`?
 
-To eliminate confusion, Kargo avoids the term "environment" altogether in favor
-of something more precise: _stage_. The important feature of a _stage_ is that its
-name ("test" or "prod," for instance) denotes an application instance's
-_purpose_ and not its _location_. [This blog post](https://akuity.io/blog/kargo-stage-not-environment/) discusses the rationale behind this.
+When you hear the term “environment”, what you envision will depend significantly
+on your perspective. To eliminate confusion, Kargo avoids the term "environment"
+altogether in favor of something more precise: _stage_. The important feature of
+a _stage_ is that its name ("test" or "prod," for instance) denotes an application
+instance's _purpose_ and not its _location_. [This blog post](https://akuity.io/blog/kargo-stage-not-environment/) discusses the rationale behind this.
 
 The progression of new materials from stage-to-stage can be fully automated or
 manually triggered, as called for by your use cases or preferences.
