@@ -15,11 +15,17 @@ import (
 func (r *reconciler) getLatestCharts(
 	ctx context.Context,
 	namespace string,
-	subs []kargoapi.ChartSubscription,
+	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.Chart, error) {
 	charts := make([]kargoapi.Chart, len(subs))
 
-	for i, sub := range subs {
+	for i, s := range subs {
+		if s.Chart == nil {
+			continue
+		}
+
+		sub := s.Chart
+
 		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 			"registry": sub.RegistryURL,
 			"chart":    sub.Name,

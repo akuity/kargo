@@ -184,10 +184,10 @@ message PromotionStatus {
   string error = 2 [json_name = "error"];
 }
 
-message RepoSubscriptions {
-  repeated GitSubscription git = 1 [json_name = "git"];
-  repeated ImageSubscription images = 2 [json_name = "images"];
-  repeated ChartSubscription charts = 3 [json_name = "charts"];
+message RepoSubscription {
+  optional GitSubscription git = 1 [json_name = "git"];
+  optional ImageSubscription image = 2 [json_name = "image"];
+  optional ChartSubscription chart = 3 [json_name = "chart"];
 }
 
 message Stage {
