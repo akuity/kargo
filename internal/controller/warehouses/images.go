@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/images"
 	"github.com/akuity/kargo/internal/logging"
 )

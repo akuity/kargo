@@ -1,7 +1,6 @@
 package git
 
 import (
-	"context"
 	"net/url"
 	"regexp"
 	"strings"
@@ -30,11 +29,11 @@ func NormalizeGitURL(repo string) string {
 	return strings.TrimPrefix(normalized, "ssh://")
 }
 
-var 	sshURLRegex *regexp.Regexp   = regexp.MustCompile("^(ssh://)?([^/:]*?)@[^@]+$")
+var sshURLRegex = regexp.MustCompile("^(ssh://)?([^/:]*?)@[^@]+$")
 
 // IsSSHURL returns true if supplied URL is SSH URL
-func IsSSHURL(url string) (bool, string) {
-	matches := sshURLRegex.FindStringSubmatch(url)
+func IsSSHURL(sshUrl string) (bool, string) {
+	matches := sshURLRegex.FindStringSubmatch(sshUrl)
 	if len(matches) > 2 {
 		return true, matches[2]
 	}
