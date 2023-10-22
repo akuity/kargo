@@ -161,7 +161,7 @@ jobs:
     needs: [publish-cli]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/setup-node@v2
+    - uses: actions/setup-node@v3
     - name: Generate the spec
       run: |
         curl -L https://github.com/akuity/kargo/releases/download/${{ github.ref_name }}/kargo-linux-amd64 -o kargo
