@@ -1,0 +1,7 @@
+[build]
+  base = "docs/"
+  command = "yarn build"
+  publish = "build/"
+  
+[context.deploy-preview]
+  ignore = "git diff --quiet main -- docs"
