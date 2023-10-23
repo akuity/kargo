@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,15 +42,187 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.createPromotionFn)
 	// Discovering latest Freight:
 	require.NotNil(t, e.getLatestAvailableFreightFn)
+	require.NotNil(t, e.getAllFreightFromWarehouseFn)
 	require.NotNil(t, e.getLatestFreightFromWarehouseFn)
+	require.NotNil(t, e.getAllFreightQualifiedForUpstreamStagesFn)
 	require.NotNil(t, e.getLatestFreightQualifiedForUpstreamStagesFn)
 	require.NotNil(t, e.listFreightFn)
 }
 
-func TestSyncStage(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+func TestSyncControlFlowStage(t *testing.T) {
+	testCases := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		reconciler *reconciler
+		assertions func(
+			initialStatus kargoapi.StageStatus,
+			newStatus kargoapi.StageStatus,
+			err error,
+		)
+	}{
+		{
+			name: "error listing Freight from Warehouse",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error finding all Freight from Warehouse",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
+			name: "error listing Freight qualified for upstream Stages",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						UpstreamStages: []kargoapi.StageSubscription{
+							{Name: "fake-stage"},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getAllFreightQualifiedForUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error finding available Freight for Stage",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
+			name: "error qualifying Freight",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{}}, nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error qualifying Freight")
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
+			name: "success",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 42,
+				},
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
+					Health:         &kargoapi.Health{},
+				},
+			},
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{}}, nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
+				require.Nil(t, newStatus.CurrentFreight)                  // Cleared
+				require.Nil(t, newStatus.Health)                          // Cleared
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			newStatus, err := testCase.reconciler.syncControlFlowStage(
+				context.Background(),
+				testCase.stage,
+			)
+			testCase.assertions(testCase.stage.Status, newStatus, err)
+		})
+	}
+}
 
+func TestSyncNormalStage(t *testing.T) {
 	noNonTerminalPromotionsFn := func(
 		context.Context,
 		string,
@@ -594,6 +765,7 @@ func TestSyncStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentPromotion: &kargoapi.PromotionInfo{},
+					CurrentFreight:   &kargoapi.SimpleFreight{},
 				},
 			},
 			reconciler: &reconciler{
@@ -643,19 +815,15 @@ func TestSyncStage(t *testing.T) {
 			) {
 				require.NoError(t, err)
 				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
-				require.NotNil(t, "", newStatus.Health)                   // Set
+				require.NotNil(t, newStatus.Health)                       // Set
 				require.Nil(t, newStatus.CurrentPromotion)                // Cleared
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			// testCase.stage.ObjectMeta = metav1.ObjectMeta{
-			// 	Name:      "fake-stage",
-			// 	Namespace: "fake-namespace",
-			// }
 			newStatus, err :=
-				testCase.reconciler.syncStage(context.Background(), testCase.stage)
+				testCase.reconciler.syncNormalStage(context.Background(), testCase.stage)
 			testCase.assertions(testCase.stage.Status, newStatus, err)
 		})
 	}
@@ -1116,11 +1284,11 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 	}
 }
 
-func TestGetLatestFreightFromWarehouse(t *testing.T) {
+func TestGetAllFreightFromWarehouse(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*kargoapi.Freight, error)
+		assertions func([]kargoapi.Freight, error)
 	}{
 		{
 			name: "error listing Freight",
@@ -1133,7 +1301,7 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.Freight, err error) {
+			assertions: func(_ []kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error listing Freight for Warehouse")
@@ -1150,7 +1318,7 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -1186,10 +1354,98 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 					return nil
 				},
 			},
+			assertions: func(freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, freight, 2)
+				// Be sure they've been sorted
+				require.Equal(t, "newer-freight", freight[0].Name)
+				require.Equal(t, "older-freight", freight[1].Name)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.getAllFreightFromWarehouse(
+					context.Background(),
+					"fake-namespace",
+					"fake-warehouse",
+				),
+			)
+		})
+	}
+}
+
+func TestGetLatestFreightFromWarehouse(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(*kargoapi.Freight, error)
+	}{
+		{
+			name: "error getting all Freight from Warehouse",
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ *kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "no Freight found from Warehouse",
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "newer-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now(),
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "older-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now().Add(-time.Hour),
+								},
+							},
+						},
+					}, nil
+				},
+			},
 			assertions: func(freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
-				// Be sure we got the newest one
+				// Be sure we got the latest
 				require.Equal(t, "newer-freight", freight.Name)
 			},
 		},
@@ -1207,11 +1463,11 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 	}
 }
 
-func TestGetLatestFreightQualifiedForUpstreamStages(t *testing.T) {
+func TestGetAllFreightQualifiedForUpstreamStages(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*kargoapi.Freight, error)
+		assertions func([]kargoapi.Freight, error)
 	}{
 		{
 			name: "error listing Freight",
@@ -1224,7 +1480,7 @@ func TestGetLatestFreightQualifiedForUpstreamStages(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.Freight, err error) {
+			assertions: func(_ []kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -1245,7 +1501,7 @@ func TestGetLatestFreightQualifiedForUpstreamStages(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -1281,10 +1537,102 @@ func TestGetLatestFreightQualifiedForUpstreamStages(t *testing.T) {
 					return nil
 				},
 			},
+			assertions: func(freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight)
+				// Be sure they've been sorted// Be sure we got the newest one
+				require.Equal(t, "newer-freight", freight[0].Name)
+				require.Equal(t, "older-freight", freight[1].Name)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.getAllFreightQualifiedForUpstreamStages(
+					context.Background(),
+					"fake-namespace",
+					[]kargoapi.StageSubscription{
+						{
+							Name: "fake-stage",
+						},
+					},
+				),
+			)
+		})
+	}
+}
+
+func TestGetLatestFreightQualifiedForUpstreamStages(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(*kargoapi.Freight, error)
+	}{
+		{
+			name: "error getting all Freight qualified for upstream Stages",
+			reconciler: &reconciler{
+				getAllFreightQualifiedForUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ *kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "no Freight qualified for upstream Stages",
+			reconciler: &reconciler{
+				getAllFreightQualifiedForUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				getAllFreightQualifiedForUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "newer-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now(),
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "older-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now().Add(-time.Hour),
+								},
+							},
+						},
+					}, nil
+				},
+			},
 			assertions: func(freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
-				// Be sure we got the newest one
+				// Be sure we got the latest
 				require.Equal(t, "newer-freight", freight.Name)
 			},
 		},
@@ -1295,11 +1643,7 @@ func TestGetLatestFreightQualifiedForUpstreamStages(t *testing.T) {
 				testCase.reconciler.getLatestFreightQualifiedForUpstreamStages(
 					context.Background(),
 					"fake-namespace",
-					[]kargoapi.StageSubscription{
-						{
-							Name: "fake-stage",
-						},
-					},
+					[]kargoapi.StageSubscription{},
 				),
 			)
 		})
