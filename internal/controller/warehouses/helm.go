@@ -17,9 +17,9 @@ func (r *reconciler) getLatestCharts(
 	namespace string,
 	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.Chart, error) {
-	charts := make([]kargoapi.Chart, len(subs))
+	charts := make([]kargoapi.Chart, 0, len(subs))
 
-	for i, s := range subs {
+	for _, s := range subs {
 		if s.Chart == nil {
 			continue
 		}
@@ -79,11 +79,14 @@ func (r *reconciler) getLatestCharts(
 		logger.WithField("version", vers).
 			Debug("found latest suitable chart version")
 
-		charts[i] = kargoapi.Chart{
-			RegistryURL: sub.RegistryURL,
-			Name:        sub.Name,
-			Version:     vers,
-		}
+		charts = append(
+			charts,
+			kargoapi.Chart{
+				RegistryURL: sub.RegistryURL,
+				Name:        sub.Name,
+				Version:     vers,
+			},
+		)
 	}
 
 	return charts, nil

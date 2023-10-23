@@ -23,8 +23,8 @@ func (r *reconciler) getLatestCommits(
 	namespace string,
 	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.GitCommit, error) {
-	latestCommits := make([]kargoapi.GitCommit, len(subs))
-	for i, s := range subs {
+	latestCommits := make([]kargoapi.GitCommit, 0, len(subs))
+	for _, s := range subs {
 		if s.Git == nil {
 			continue
 		}
@@ -61,12 +61,15 @@ func (r *reconciler) getLatestCommits(
 		}
 		logger.WithField("commit", gm.Commit).
 			Debug("found latest commit from repo")
-		latestCommits[i] = kargoapi.GitCommit{
-			RepoURL: sub.RepoURL,
-			ID:      gm.Commit,
-			Branch:  sub.Branch,
-			Message: gm.Message,
-		}
+		latestCommits = append(
+			latestCommits,
+			kargoapi.GitCommit{
+				RepoURL: sub.RepoURL,
+				ID:      gm.Commit,
+				Branch:  sub.Branch,
+				Message: gm.Message,
+			},
+		)
 	}
 	return latestCommits, nil
 }

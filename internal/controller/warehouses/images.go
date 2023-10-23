@@ -19,8 +19,8 @@ func (r *reconciler) getLatestImages(
 	namespace string,
 	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.Image, error) {
-	imgs := make([]kargoapi.Image, len(subs))
-	for i, s := range subs {
+	imgs := make([]kargoapi.Image, 0, len(subs))
+	for _, s := range subs {
 		if s.Image == nil {
 			continue
 		}
@@ -65,11 +65,14 @@ func (r *reconciler) getLatestImages(
 				sub.RepoURL,
 			)
 		}
-		imgs[i] = kargoapi.Image{
-			RepoURL:    sub.RepoURL,
-			GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, tag),
-			Tag:        tag,
-		}
+		imgs = append(
+			imgs,
+			kargoapi.Image{
+				RepoURL:    sub.RepoURL,
+				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, tag),
+				Tag:        tag,
+			},
+		)
 		logger.WithField("tag", tag).
 			Debug("found latest suitable image tag")
 	}
