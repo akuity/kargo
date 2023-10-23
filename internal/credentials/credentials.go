@@ -6,10 +6,11 @@ import (
 
 	"github.com/argoproj/argo-cd/v2/applicationset/utils"
 	"github.com/argoproj/argo-cd/v2/common"
-	"github.com/argoproj/argo-cd/v2/util/git"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/internal/git"
 )
 
 const authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
