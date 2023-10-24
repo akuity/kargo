@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/gobwas/glob"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuity/kargo/internal/argocd"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -213,7 +212,7 @@ func getApplicationFn(
 		namespace string,
 		name string,
 	) (*argocd.Application, error) {
-		return libArgoCD.GetApplication(ctx, argoClient, namespace, name)
+		return argocd.GetApplication(ctx, argoClient, namespace, name)
 	}
 }
 
