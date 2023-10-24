@@ -5,7 +5,7 @@ on:
     types: 
     - created
   schedule:
-    - cron: '0 1 * * 1-5' # 6 P.M. PST
+    - cron: '0 13 * * 1-5' # 6 P.M. PST
 
 jobs:
 
