@@ -5,7 +5,7 @@ on:
     types: 
     - created
   schedule:
-    - cron: '0 17 * * 1-5' # 5 P.M. UTC
+    - cron: '0 1 * * 1-5' # 1 AM UTC is 5 PM PST/ 6 PM PDT
 
 jobs:
 
