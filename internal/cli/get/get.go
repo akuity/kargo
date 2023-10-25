@@ -28,9 +28,10 @@ kargo get promotions --project=my-project --stage=my-stage
 `,
 	}
 	// Subcommands
+	cmd.AddCommand(newGetFreightCommand(opt))
 	cmd.AddCommand(newGetProjectsCommand(opt))
-	cmd.AddCommand(newGetStagesCommand(opt))
 	cmd.AddCommand(newGetPromotionsCommand(opt))
+	cmd.AddCommand(newGetStagesCommand(opt))
 	return cmd
 }
 

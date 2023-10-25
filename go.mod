@@ -13,7 +13,7 @@ require (
 	// https://github.com/argoproj-labs/argocd-image-updater/pull/559
 	github.com/argoproj-labs/argocd-image-updater v0.0.0-20230921174511-420bd97b57d2
 	github.com/argoproj/argo-cd/v2 v2.8.4
-	github.com/argoproj/gitops-engine v0.7.1-0.20230607163028-425d65e07695
+	github.com/argoproj/gitops-engine v0.7.1-0.20230607163028-425d65e07695 // indirect
 	github.com/bacongobbler/browser v1.1.0
 	github.com/coreos/go-oidc/v3 v3.6.0
 	github.com/evanphx/json-patch/v5 v5.6.0

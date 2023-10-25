@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	argocdapi "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/gitops-engine/pkg/health"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
 func (r *reconciler) checkHealth(
@@ -144,17 +142,17 @@ func (r *reconciler) checkHealth(
 }
 
 func stageHealthForAppHealth(
-	app *argocdapi.Application,
+	app *argocd.Application,
 ) (kargoapi.HealthState, string) {
 	switch app.Status.Health.Status {
-	case health.HealthStatusProgressing, "":
+	case argocd.HealthStatusProgressing, "":
 		return kargoapi.HealthStateProgressing,
 			fmt.Sprintf(
 				"Argo CD Application %q in namespace %q is progressing",
 				app.Name,
 				app.Namespace,
 			)
-	case health.HealthStatusHealthy:
+	case argocd.HealthStatusHealthy:
 		return kargoapi.HealthStateHealthy, ""
 	default:
 		return kargoapi.HealthStateUnhealthy,
@@ -168,7 +166,7 @@ func stageHealthForAppHealth(
 }
 
 func stageHealthForAppSync(
-	app *argocdapi.Application,
+	app *argocd.Application,
 	revision string,
 ) (kargoapi.HealthState, string) {
 	if revision != "" && app.Status.Sync.Revision != revision {

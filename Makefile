@@ -109,7 +109,7 @@ codegen:
 		rbac:roleName=manager-role \
 		crd \
 		webhook \
-		paths=./... \
+		paths=./api/... \
 		output:crd:artifacts:config=charts/kargo/crds
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
