@@ -24,6 +24,7 @@ export const Freightline = (props: {
   stagesPerFreight: { [key: string]: Stage[] };
   promotingStage?: Stage;
   setPromotingStage: (stage?: Stage) => void;
+  availableFreightForPromotion?: Freight[];
   promotionType?: PromotionType;
   confirmingPromotion?: string;
   setConfirmingPromotion: (confirming?: string) => void;
@@ -35,7 +36,8 @@ export const Freightline = (props: {
     setPromotingStage,
     promotionType,
     confirmingPromotion,
-    setConfirmingPromotion
+    setConfirmingPromotion,
+    availableFreightForPromotion
   } = props;
   const [promotionEligible, setPromotionEligible] = useState<{ [key: string]: boolean }>({});
 
@@ -80,8 +82,8 @@ export const Freightline = (props: {
   useEffect(() => {
     const availableFreight =
       promotionType === 'default'
-        ? promotingStage?.status?.availableFreight
-        : (promotingStage?.status?.history || []).filter((f) => f.qualified);
+        ? availableFreightForPromotion
+        : promotingStage?.status?.history || [];
     const pe: { [key: string]: boolean } = {};
     (availableFreight || []).map((f) => {
       pe[f.id || ''] = true;

@@ -247,6 +247,10 @@ export const ProjectDetails = () => {
     {}
   );
 
+  const { data: availableFreightData, refetch } = useQuery(
+    queryFreight.useQuery({ project: name, stage: promotingStage?.metadata?.name || '' })
+  );
+
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
     (data?.stages || []).forEach((stage) => {
@@ -260,6 +264,13 @@ export const ProjectDetails = () => {
     setStagesPerFreight(stagesPerFreight);
     setSubscribersByStage(subscribersByStage);
   }, [data, freightData]);
+
+  React.useEffect(() => {
+    if (!promotingStage) {
+      return;
+    }
+    refetch();
+  }, [promotingStage, promotionType]);
 
   if (isLoading || isLoadingFreight) return <LoadingState />;
 
@@ -292,6 +303,7 @@ export const ProjectDetails = () => {
           promotionType={promotionType}
           confirmingPromotion={confirmingPromotion}
           setConfirmingPromotion={setConfirmingPromotion}
+          availableFreightForPromotion={availableFreightData?.groups['']?.freight || []}
         />
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full ${styles.dag}`}>
