@@ -229,7 +229,10 @@ export const ProjectDetails = () => {
     const stageColorMap = getStageColors(name || '', sortedStages);
     nodes.forEach((node) => {
       if (node.type === NodeType.STAGE) {
-        node.color = stageColorMap[node.data?.metadata?.uid || ''];
+        const color = stageColorMap[node.data?.metadata?.uid || ''];
+        if (color) {
+          node.color = color;
+        }
       }
     });
 
@@ -313,30 +316,33 @@ export const ProjectDetails = () => {
                     }}
                   >
                     {node.type === NodeType.STAGE ? (
-                      <StageNode
-                        stage={node.data}
-                        color={node.color}
-                        height={node.height}
-                        projectName={name}
-                        faded={isFaded(node.data)}
-                        hasNoSubscribers={
-                          (subscribersByStage[node?.data?.metadata?.name || ''] || []).length === 0
-                        }
-                        onPromoteClick={(type: PromotionType) => {
-                          if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
-                            setPromotingStage(undefined);
-                          } else {
-                            setPromotingStage(node.data);
-                            setPromotionType(type);
+                      <>
+                        <StageNode
+                          stage={node.data}
+                          color={node.color}
+                          height={node.height}
+                          projectName={name}
+                          faded={isFaded(node.data)}
+                          hasNoSubscribers={
+                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length ===
+                            0
                           }
-                          setConfirmingPromotion(undefined);
-                        }}
-                        promoting={
-                          promotingStage?.metadata?.name === node.data?.metadata?.name
-                            ? promotionType
-                            : undefined
-                        }
-                      />
+                          onPromoteClick={(type: PromotionType) => {
+                            if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
+                              setPromotingStage(undefined);
+                            } else {
+                              setPromotingStage(node.data);
+                              setPromotionType(type);
+                            }
+                            setConfirmingPromotion(undefined);
+                          }}
+                          promoting={
+                            promotingStage?.metadata?.name === node.data?.metadata?.name
+                              ? promotionType
+                              : undefined
+                          }
+                        />
+                      </>
                     ) : (
                       <RepoNode nodeData={node} height={node.height} />
                     )}

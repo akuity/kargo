@@ -71,7 +71,8 @@ export const Freightline = (props: {
 
   useEffect(() => {
     const ordered = (freight || []).sort(
-      (a, b) => getSeconds(b.firstSeen) - getSeconds(a.firstSeen)
+      (a, b) =>
+        getSeconds(b.metadata?.creationTimestamp) - getSeconds(a.metadata?.creationTimestamp)
     );
     setOrderedFreight(ordered);
   }, [freight]);
@@ -339,12 +340,14 @@ const FreightItem = (props: {
         >
           <Tooltip
             title={
-              freight?.firstSeen &&
-              formatDistance(freight?.firstSeen?.toDate(), new Date(), { addSuffix: true })
+              freight?.metadata?.creationTimestamp &&
+              formatDistance(freight?.metadata?.creationTimestamp?.toDate(), new Date(), {
+                addSuffix: true
+              })
             }
             placement='bottom'
           >
-            {freight?.id?.substring(0, 7)}
+            {freight?.metadata?.uid?.substring(0, 7)}
           </Tooltip>
         </div>
       </div>

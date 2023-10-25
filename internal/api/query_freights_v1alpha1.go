@@ -89,6 +89,8 @@ func (s *server) QueryFreight(
 		freight = freightList.Items
 	}
 
+	fmt.Println(freight)
+
 	// Split the Freight into groups
 	var freightGroups map[string]*svcv1alpha1.FreightList
 	switch req.Msg.GetGroupBy() {
