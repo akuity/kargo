@@ -5,7 +5,7 @@ Description: Kargo Roadmap
 
 # Roadmap
 
-Kargo does not currently have a regular release cadance. The plan is to do a few releases, and based on the resluts, create a more formal release cadance.
+Kargo does not currently have a regular release cadence. The plan is to do a few releases, and based on the results, create a more formal release cadence.
 
 :::caution
 This roadmap is subject to change at any time, for the most up to date information, please see the [GitHub Project](https://github.com/akuity/kargo/milestones)
