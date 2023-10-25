@@ -9,7 +9,8 @@ export enum NodeType {
   STAGE,
   REPO_IMAGE,
   REPO_GIT,
-  REPO_CHART
+  REPO_CHART,
+  WAREHOUSE
 }
 
 export type NodesRepoType =
@@ -26,6 +27,11 @@ export type NodesRepoType =
   | {
       type: NodeType.REPO_CHART;
       data: ChartSubscription;
+      stageName: string;
+    }
+  | {
+      type: NodeType.WAREHOUSE;
+      data: string;
       stageName: string;
     };
 

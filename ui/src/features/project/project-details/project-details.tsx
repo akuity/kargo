@@ -103,28 +103,33 @@ export const ProjectDetails = () => {
       .slice()
       .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0)
       .flatMap((stage) => {
-        return [
+        const n = [
           {
             data: stage,
             type: NodeType.STAGE,
             color: '#000'
-          },
-          ...(stage.spec?.subscriptions?.repos?.images || []).map((image) => ({
-            data: image,
-            stageName: stage.metadata?.name,
-            type: NodeType.REPO_IMAGE
-          })),
-          ...(stage.spec?.subscriptions?.repos?.git || []).map((git) => ({
-            data: git,
-            stageName: stage.metadata?.name,
-            type: NodeType.REPO_GIT
-          })),
-          ...(stage.spec?.subscriptions?.repos?.charts || []).map((chart) => ({
-            data: chart,
-            stageName: stage.metadata?.name,
-            type: NodeType.REPO_CHART
-          }))
+          }
+          // ...(stage.spec?.subscriptions?.repos?.git || []).map((git) => ({
+          //   data: git,
+          //   stageName: stage.metadata?.name,
+          //   type: NodeType.REPO_GIT
+          // })),
+          // ...(stage.spec?.subscriptions?.repos?.charts || []).map((chart) => ({
+          //   data: chart,
+          //   stageName: stage.metadata?.name,
+          //   type: NodeType.REPO_CHART
+          // }))
         ] as NodesItemType[];
+
+        if (stage.spec?.subscriptions?.warehouse) {
+          n.push({
+            data: stage.spec?.subscriptions?.warehouse || '',
+            stageName: stage.metadata?.name || '',
+            type: NodeType.WAREHOUSE
+          });
+        }
+
+        return n;
       });
 
     myNodes.forEach((item, index) => {
@@ -170,15 +175,19 @@ export const ProjectDetails = () => {
       if (points.length > 0) {
         // replace first point with the right side of the upstream node
         const upstreamNode = g.node(item.v);
-        points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
+        if (upstreamNode) {
+          points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
+        }
       }
       if (points.length > 1) {
         // replace last point with the right side of the downstream node
         const upstreamNode = g.node(item.w);
-        points[points.length - 1] = {
-          x: upstreamNode.x - upstreamNode.width / 2,
-          y: upstreamNode.y
-        };
+        if (upstreamNode) {
+          points[points.length - 1] = {
+            x: upstreamNode.x - upstreamNode.width / 2,
+            y: upstreamNode.y
+          };
+        }
       }
 
       const lines = new Array<{ x: number; y: number; width: number; angle: number }>();
