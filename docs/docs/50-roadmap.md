@@ -52,4 +52,8 @@ This roadmap is subject to change at any time, for the most up to date informati
 
 ## Criteria for 1.0.0 Release
 
-The criteria for a stable v1.0.0 release will be considered when we feel confident in API stability (no breaking changes) and that there are no show-stopping/critial bugs. We will also be looking for a community of users who are successfully using Kargo in production.
+Maintainers will consider cutting a stable v1.0.0 release once:
+
+* Confident in API stability. (No further breaking changes anticipated.)
+* No critical, "show-stopping" bugs remaining in the backlog.
+* Observing evidence of successful community adoption (of beta releases) in production environments
