@@ -48,7 +48,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 | `Improved Microservice Support | feature | Filters for Freightlines (for example, filter by Warehouse). Add the ability to merge parallel Freightlines at a control flow Stages. |
 | `kargo init` | feature | Addition of an `init` sub-command to the Kargo CLI for streamlining project / pipeline creation. |
 | Standalone Image Writeback` | feature | Write back image changes without having to subscribe to an image repository. |
-| `PromotionPolicy improvements` | feature | Add the ability to "freeze" deployments (bascially locks down a `Stage` from being promoted into). |
+| PromotionPolicy Improvements | feature | Add the ability to "freeze" Stages to prevent promotions. |
 
 ## Criteria for 1.0.0 Release
 
