@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/argoproj/argo-cd/v2/applicationset/utils"
@@ -13,7 +14,10 @@ import (
 	"github.com/akuity/kargo/internal/git"
 )
 
-const authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
+const (
+	authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
+	authorizedProjectsRegexPrefix   = "re:"
+)
 
 // Type is a string type used to represent a type of Credentials.
 type Type string
@@ -175,6 +179,12 @@ func (k *kubernetesDatabase) Get(
 	}
 	allowedProjects := strings.Split(allowedProjectsStr, ",")
 	for _, allowedProject := range allowedProjects {
+		if strings.HasPrefix(allowedProject, authorizedProjectsRegexPrefix) {
+			allowedProject = strings.TrimPrefix(allowedProject, authorizedProjectsRegexPrefix)
+			if ok, err := regexp.MatchString(allowedProject, namespace); err == nil && ok {
+				return secretToCreds(secret), true, nil
+			}
+		}
 		if strings.TrimSpace(allowedProject) == namespace {
 			return secretToCreds(secret), true, nil
 		}
