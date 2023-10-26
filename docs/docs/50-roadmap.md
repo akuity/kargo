@@ -38,7 +38,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| `Promotion Extensibility` | feature | User defined promotion mechanisms. |
+| Promotion Mechanism Extensibility | feature | User-defined promotion mechanisms. |
 
 ## v0.6.0 .. v0.n.0
 
