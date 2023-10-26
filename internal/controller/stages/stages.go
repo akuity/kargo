@@ -208,9 +208,7 @@ func SetupReconcilerWithManager(
 	logger := logging.LoggerFromContext(ctx)
 	// Watch Promotions that completed and enqueue owning Stage key
 	promoOwnerHandler := &handler.EnqueueRequestForOwner{OwnerType: &kargoapi.Stage{}, IsController: true}
-	promoWentTerminal := PromoWentTerminal{
-		logger: logger,
-	}
+	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
 	if err := c.Watch(&source.Kind{Type: &kargoapi.Promotion{}}, promoOwnerHandler, promoWentTerminal); err != nil {
 		return errors.Wrap(err, "unable to watch Promotions")
 	}

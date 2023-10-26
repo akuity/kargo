@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -12,11 +13,15 @@ import (
 // runtime.Objects.
 type PriorityQueue interface {
 	// Push adds a copy of the provided client.Object to the priority queue.
-	// Implementations MUST disallow pushing nil objects.
-	Push(client.Object) error
+	// Returns true if the item was added to the queue, false if it already existed
+	// Pushing of nil objects have no effect
+	Push(client.Object) bool
 	// Pop removes the highest priority client.Object from the priority queue and
 	// returns it. Implementations MUST return nil if the priority queue is empty.
 	Pop() client.Object
+	// Peek returns the highest priority client.Object from the priority queue
+	// without removing it.
+	Peek() client.Object
 	// Depth returns the depth of the PriorityQueue.
 	Depth() int
 }
@@ -36,9 +41,14 @@ type priorityQueue struct {
 	// internalQueue is priorityQueue's underlying data structure. It implements
 	// heap.Interface.
 	internalQueue *internalPriorityQueue
+
+	// objectsByNamespaceName is used to deduplicate pushes of the same object
+	// to the queue, allowing Push() to be idempotent
+	objectsByNamespaceName map[types.NamespacedName]bool
+
 	// mu is a mutex used to ensure only a single goroutine is executing critical
 	// sections of code at any time.
-	mu sync.Mutex
+	mu sync.RWMutex
 }
 
 // NewPriorityQueue takes a function for comparing the relative priority of two
@@ -59,36 +69,50 @@ func NewPriorityQueue(
 				"comparison function",
 		)
 	}
-	if objects == nil {
-		objects = []client.Object{}
-	}
+	filteredObjs := []client.Object{}
+	objectsByNamespaceName := make(map[types.NamespacedName]bool)
+	// filter out duplicates and nils
 	for i, object := range objects {
 		if object == nil {
-			return nil, errors.Errorf(
-				"the priority queue was initialized with at least one nil "+
-					"client.Object at position %d",
-				i,
-			)
+			continue
 		}
+		key := types.NamespacedName{
+			Namespace: object.GetNamespace(),
+			Name:      object.GetName(),
+		}
+		if objectsByNamespaceName[key] {
+			continue
+		}
+		objectsByNamespaceName[key] = true
+		filteredObjs = append(filteredObjs, objects[i])
 	}
 	internalQueue := &internalPriorityQueue{
-		objects:  objects,
+		objects:  filteredObjs,
 		higherFn: higherFn,
 	}
 	heap.Init(internalQueue)
 	return &priorityQueue{
-		internalQueue: internalQueue,
+		objectsByNamespaceName: objectsByNamespaceName,
+		internalQueue:          internalQueue,
 	}, nil
 }
 
-func (p *priorityQueue) Push(item client.Object) error {
+func (p *priorityQueue) Push(item client.Object) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if item == nil {
-		return errors.New("a nil client.Object was pushed onto the priority queue")
+		return false
+	}
+	key := types.NamespacedName{
+		Namespace: item.GetNamespace(),
+		Name:      item.GetName(),
+	}
+	if p.objectsByNamespaceName[key] {
+		return false
 	}
 	heap.Push(p.internalQueue, item.DeepCopyObject())
-	return nil
+	p.objectsByNamespaceName[key] = true
+	return true
 }
 
 func (p *priorityQueue) Pop() client.Object {
@@ -97,12 +121,28 @@ func (p *priorityQueue) Pop() client.Object {
 	if p.internalQueue.Len() == 0 {
 		return nil
 	}
-	return heap.Pop(p.internalQueue).(client.Object) // nolint: forcetypeassert
+	obj := heap.Pop(p.internalQueue).(client.Object) // nolint: forcetypeassert
+	key := types.NamespacedName{
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+	}
+	delete(p.objectsByNamespaceName, key)
+	return obj
+}
+
+func (p *priorityQueue) Peek() client.Object {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	n := len(p.internalQueue.objects)
+	if n == 0 {
+		return nil
+	}
+	return p.internalQueue.objects[0]
 }
 
 func (p *priorityQueue) Depth() int {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.internalQueue.Len()
 }
 

@@ -5,7 +5,10 @@ import (
 	"strings"
 
 	"github.com/oklog/ulid/v2"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
@@ -53,4 +56,61 @@ func NewPromotion(stage kargoapi.Stage, freight string) kargoapi.Promotion {
 		}
 	}
 	return promotion
+}
+
+func NewPromoWentTerminalPredicate(logger *log.Entry) PromoWentTerminal {
+	return PromoWentTerminal{
+		logger: logger,
+	}
+}
+
+// PromoWentTerminal is a predicate that returns true if a promotion went terminal.
+// Used by stage reconciler to enqueue a stage when it's associated promo is complete.
+// Also used by promo reconciler to enqueue the next highest priority promotion.
+type PromoWentTerminal struct {
+	predicate.Funcs
+	logger *log.Entry
+}
+
+func (p PromoWentTerminal) Create(_ event.CreateEvent) bool {
+	return false
+}
+
+func (p PromoWentTerminal) Delete(e event.DeleteEvent) bool {
+	promo, ok := e.Object.(*kargoapi.Promotion)
+	// if promo is deleted but was non-terminal, we want to enqueue the
+	// Stage so it can reset status.currentPromotion, as well as the
+	// enqueue the next priority Promo for reconciliation
+	return ok && !promo.Status.Phase.IsTerminal()
+}
+
+func (p PromoWentTerminal) Generic(_ event.GenericEvent) bool {
+	// we should never get here
+	return true
+}
+
+// Update implements default UpdateEvent filter for checking if a promotion went terminal
+func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil {
+		p.logger.Errorf("Update event has no old object to update: %v", e)
+		return false
+	}
+	if e.ObjectNew == nil {
+		p.logger.Errorf("Update event has no new object for update: %v", e)
+		return false
+	}
+	newPromo, ok := e.ObjectNew.(*kargoapi.Promotion)
+	if !ok {
+		p.logger.Errorf("Failed to convert new promo: %v", e.ObjectNew)
+		return false
+	}
+	oldPromo, ok := e.ObjectOld.(*kargoapi.Promotion)
+	if !ok {
+		p.logger.Errorf("Failed to convert old promo: %v", e.ObjectOld)
+		return false
+	}
+	if newPromo.Status.Phase.IsTerminal() && !oldPromo.Status.Phase.IsTerminal() {
+		return true
+	}
+	return false
 }

@@ -157,6 +157,7 @@ func newControllerCommand() *cobra.Command {
 			}
 
 			if err := promotions.SetupReconcilerWithManager(
+				ctx,
 				kargoMgr,
 				appMgr,
 				credentialsDB,

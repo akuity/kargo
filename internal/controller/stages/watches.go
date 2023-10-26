@@ -9,7 +9,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -117,52 +116,4 @@ func getNewlyQualifiedStages(old, new *kargoapi.Freight) []string {
 		}
 	}
 	return stages
-}
-
-// PromoWentTerminal is a predicate that returns true if a promotion went terminal
-type PromoWentTerminal struct {
-	predicate.Funcs
-	logger *log.Entry
-}
-
-func (p PromoWentTerminal) Create(_ event.CreateEvent) bool {
-	return false
-}
-
-func (p PromoWentTerminal) Delete(e event.DeleteEvent) bool {
-	promo, ok := e.Object.(*kargoapi.Promotion)
-	// if promo is deleted but was non-terminal, we want to enqueue the
-	// Stage so it can reset status.currentPromotion
-	return ok && !promo.Status.Phase.IsTerminal()
-}
-
-func (p PromoWentTerminal) Generic(_ event.GenericEvent) bool {
-	// we should never get here
-	return true
-}
-
-// Update implements default UpdateEvent filter for checking if a promotion went terminal
-func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
-	if e.ObjectOld == nil {
-		p.logger.Errorf("Update event has no old object to update: %v", e)
-		return false
-	}
-	if e.ObjectNew == nil {
-		p.logger.Errorf("Update event has no new object for update: %v", e)
-		return false
-	}
-	newPromo, ok := e.ObjectNew.(*kargoapi.Promotion)
-	if !ok {
-		p.logger.Errorf("Failed to convert new promo: %v", e.ObjectNew)
-		return false
-	}
-	oldPromo, ok := e.ObjectOld.(*kargoapi.Promotion)
-	if !ok {
-		p.logger.Errorf("Failed to convert old promo: %v", e.ObjectOld)
-		return false
-	}
-	if newPromo.Status.Phase.IsTerminal() && !oldPromo.Status.Phase.IsTerminal() {
-		return true
-	}
-	return false
 }
