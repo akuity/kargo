@@ -44,7 +44,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| `Freight Enrichment` | feature | Include metadata about freight to help users understand what they’re looking at and decide what they promote. This data will be exposed to the UI and CLI tools. |
+| Freight Enrichment | feature | Enhance Freight metadata for improved insight into Freight contents and the expected result of promoting a piece of Freight to a given environment. This data will be exposed to the UI and CLI tools. |
 | `Improved microservice support` | feature | Filters on Freightlines (for example by `Warehouse`). Add the ability to merge parallel Freightlines at a control flow `Stage` |
 | `kargo init` | feature | Add a `kargo init` subcommand. This subcommand will: Auto-generate namespace, stages, and git repo layout |
 | `Stand-alone image writeback` | feature | Write back image changes without having to subscribe to an image repository. |
