@@ -17,7 +17,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 | ---- | ---- | ----------- |
 | Freight and Warehouse CRDs | feature | Freight will change from being a property of a `Stage`, to being its own CRD. The source of where promotable `Freight` comes from will be known as a `Warehouse`. |
 | GitHub PR-Based Promotion | feature | Support for pull request based promotions, which do not complete until the underlying PR is closed. |
-| `Kargo Render` | breaking change | `Bookkeeper` to be rebranded as `kargo-render`, a Kargo sub-component for rendering manifests. |
+| Kargo Render | breaking change | Bookkeeper to be rebranded as Kargo Render -- a Kargo child project for rendering manifests. |
 
 
 ## v0.3.0
