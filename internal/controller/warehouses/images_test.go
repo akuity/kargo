@@ -101,11 +101,6 @@ func TestGetLatestImages(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testSubs := []kargoapi.ImageSubscription{
-				{
-					RepoURL: "fake-url",
-				},
-			}
 			r := reconciler{
 				credentialsDB:  testCase.credentialsDB,
 				getLatestTagFn: testCase.getLatestTagFn,
@@ -114,7 +109,13 @@ func TestGetLatestImages(t *testing.T) {
 				r.getLatestImages(
 					context.Background(),
 					"fake-namespace",
-					testSubs,
+					[]kargoapi.RepoSubscription{
+						{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fake-url",
+							},
+						},
+					},
 				),
 			)
 		})

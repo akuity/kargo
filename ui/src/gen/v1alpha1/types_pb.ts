@@ -1150,9 +1150,9 @@ export class PromotionInfo extends Message<PromotionInfo> {
   name = "";
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 2;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight freight = 2;
    */
-  freight?: Freight;
+  freight?: SimpleFreight;
 
   constructor(data?: PartialMessage<PromotionInfo>) {
     super();
@@ -1163,7 +1163,7 @@ export class PromotionInfo extends Message<PromotionInfo> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "freight", kind: "message", T: Freight },
+    { no: 2, name: "freight", kind: "message", T: SimpleFreight },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionInfo {
@@ -1460,51 +1460,51 @@ export class PromotionStatus extends Message<PromotionStatus> {
 }
 
 /**
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscriptions
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription
  */
-export class RepoSubscriptions extends Message<RepoSubscriptions> {
+export class RepoSubscription extends Message<RepoSubscription> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription git = 1;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription git = 1;
    */
-  git: GitSubscription[] = [];
+  git?: GitSubscription;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription images = 2;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription image = 2;
    */
-  images: ImageSubscription[] = [];
+  image?: ImageSubscription;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription charts = 3;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription chart = 3;
    */
-  charts: ChartSubscription[] = [];
+  chart?: ChartSubscription;
 
-  constructor(data?: PartialMessage<RepoSubscriptions>) {
+  constructor(data?: PartialMessage<RepoSubscription>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscriptions";
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "git", kind: "message", T: GitSubscription, repeated: true },
-    { no: 2, name: "images", kind: "message", T: ImageSubscription, repeated: true },
-    { no: 3, name: "charts", kind: "message", T: ChartSubscription, repeated: true },
+    { no: 1, name: "git", kind: "message", T: GitSubscription, opt: true },
+    { no: 2, name: "image", kind: "message", T: ImageSubscription, opt: true },
+    { no: 3, name: "chart", kind: "message", T: ChartSubscription, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RepoSubscriptions {
-    return new RepoSubscriptions().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RepoSubscription {
+    return new RepoSubscription().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RepoSubscriptions {
-    return new RepoSubscriptions().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RepoSubscription {
+    return new RepoSubscription().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RepoSubscriptions {
-    return new RepoSubscriptions().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RepoSubscription {
+    return new RepoSubscription().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RepoSubscriptions | PlainMessage<RepoSubscriptions> | undefined, b: RepoSubscriptions | PlainMessage<RepoSubscriptions> | undefined): boolean {
-    return proto3.util.equals(RepoSubscriptions, a, b);
+  static equals(a: RepoSubscription | PlainMessage<RepoSubscription> | undefined, b: RepoSubscription | PlainMessage<RepoSubscription> | undefined): boolean {
+    return proto3.util.equals(RepoSubscription, a, b);
   }
 }
 
@@ -1660,6 +1660,153 @@ export class StageSpec extends Message<StageSpec> {
  */
 export class Freight extends Message<Freight> {
   /**
+   * @generated from field: string api_version = 1;
+   */
+  apiVersion = "";
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind = "";
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * @generated from field: string id = 4;
+   */
+  id = "";
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit commits = 5;
+   */
+  commits: GitCommit[] = [];
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Image images = 6;
+   */
+  images: Image[] = [];
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Chart charts = 7;
+   */
+  charts: Chart[] = [];
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus status = 8;
+   */
+  status?: FreightStatus;
+
+  constructor(data?: PartialMessage<Freight>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Freight";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "api_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "metadata", kind: "message", T: ObjectMeta },
+    { no: 4, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "commits", kind: "message", T: GitCommit, repeated: true },
+    { no: 6, name: "images", kind: "message", T: Image, repeated: true },
+    { no: 7, name: "charts", kind: "message", T: Chart, repeated: true },
+    { no: 8, name: "status", kind: "message", T: FreightStatus },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Freight {
+    return new Freight().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Freight {
+    return new Freight().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Freight {
+    return new Freight().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Freight | PlainMessage<Freight> | undefined, b: Freight | PlainMessage<Freight> | undefined): boolean {
+    return proto3.util.equals(Freight, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus
+ */
+export class FreightStatus extends Message<FreightStatus> {
+  /**
+   * @generated from field: map<string, github.com.akuity.kargo.pkg.api.v1alpha1.Qualification> qualifications = 1;
+   */
+  qualifications: { [key: string]: Qualification } = {};
+
+  constructor(data?: PartialMessage<FreightStatus>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "qualifications", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: Qualification} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightStatus {
+    return new FreightStatus().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FreightStatus {
+    return new FreightStatus().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FreightStatus {
+    return new FreightStatus().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FreightStatus | PlainMessage<FreightStatus> | undefined, b: FreightStatus | PlainMessage<FreightStatus> | undefined): boolean {
+    return proto3.util.equals(FreightStatus, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Qualification
+ */
+export class Qualification extends Message<Qualification> {
+  constructor(data?: PartialMessage<Qualification>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Qualification";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Qualification {
+    return new Qualification().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Qualification {
+    return new Qualification().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Qualification {
+    return new Qualification().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Qualification | PlainMessage<Qualification> | undefined, b: Qualification | PlainMessage<Qualification> | undefined): boolean {
+    return proto3.util.equals(Qualification, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
+ */
+export class SimpleFreight extends Message<SimpleFreight> {
+  /**
    * @generated from field: string id = 1;
    */
   id = "";
@@ -1684,41 +1831,35 @@ export class Freight extends Message<Freight> {
    */
   charts: Chart[] = [];
 
-  /**
-   * @generated from field: optional bool qualified = 8;
-   */
-  qualified?: boolean;
-
-  constructor(data?: PartialMessage<Freight>) {
+  constructor(data?: PartialMessage<SimpleFreight>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Freight";
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "first_seen", kind: "message", T: Timestamp, opt: true },
     { no: 4, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 5, name: "images", kind: "message", T: Image, repeated: true },
     { no: 6, name: "charts", kind: "message", T: Chart, repeated: true },
-    { no: 8, name: "qualified", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Freight {
-    return new Freight().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SimpleFreight {
+    return new SimpleFreight().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Freight {
-    return new Freight().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SimpleFreight {
+    return new SimpleFreight().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Freight {
-    return new Freight().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SimpleFreight {
+    return new SimpleFreight().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Freight | PlainMessage<Freight> | undefined, b: Freight | PlainMessage<Freight> | undefined): boolean {
-    return proto3.util.equals(Freight, a, b);
+  static equals(a: SimpleFreight | PlainMessage<SimpleFreight> | undefined, b: SimpleFreight | PlainMessage<SimpleFreight> | undefined): boolean {
+    return proto3.util.equals(SimpleFreight, a, b);
   }
 }
 
@@ -1727,14 +1868,14 @@ export class Freight extends Message<Freight> {
  */
 export class StageStatus extends Message<StageStatus> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Freight current_freight = 2;
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight current_freight = 2;
    */
-  currentFreight?: Freight;
+  currentFreight?: SimpleFreight;
 
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight history = 3;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight history = 3;
    */
-  history: Freight[] = [];
+  history: SimpleFreight[] = [];
 
   /**
    * @generated from field: string error = 4;
@@ -1759,8 +1900,8 @@ export class StageStatus extends Message<StageStatus> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 2, name: "current_freight", kind: "message", T: Freight, opt: true },
-    { no: 3, name: "history", kind: "message", T: Freight, repeated: true },
+    { no: 2, name: "current_freight", kind: "message", T: SimpleFreight, opt: true },
+    { no: 3, name: "history", kind: "message", T: SimpleFreight, repeated: true },
     { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "health", kind: "message", T: Health, opt: true },
     { no: 6, name: "current_promotion", kind: "message", T: PromotionInfo, opt: true },

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/argoproj/argo-cd/v2/util/git"
 	"github.com/pkg/errors"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/images"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -17,10 +17,15 @@ import (
 func (r *reconciler) getLatestImages(
 	ctx context.Context,
 	namespace string,
-	subs []kargoapi.ImageSubscription,
+	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.Image, error) {
-	imgs := make([]kargoapi.Image, len(subs))
-	for i, sub := range subs {
+	imgs := make([]kargoapi.Image, 0, len(subs))
+	for _, s := range subs {
+		if s.Image == nil {
+			continue
+		}
+
+		sub := s.Image
 
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 
@@ -60,11 +65,14 @@ func (r *reconciler) getLatestImages(
 				sub.RepoURL,
 			)
 		}
-		imgs[i] = kargoapi.Image{
-			RepoURL:    sub.RepoURL,
-			GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, tag),
-			Tag:        tag,
-		}
+		imgs = append(
+			imgs,
+			kargoapi.Image{
+				RepoURL:    sub.RepoURL,
+				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, tag),
+				Tag:        tag,
+			},
+		)
 		logger.WithField("tag", tag).
 			Debug("found latest suitable image tag")
 	}

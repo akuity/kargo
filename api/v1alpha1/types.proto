@@ -148,7 +148,7 @@ message Promotion {
 
 message PromotionInfo {
   string name = 1 [json_name = "name"];
-  Freight freight = 2 [json_name = "freight"];
+  SimpleFreight freight = 2 [json_name = "freight"];
 }
 
 message PromotionList {
@@ -184,10 +184,10 @@ message PromotionStatus {
   string error = 2 [json_name = "error"];
 }
 
-message RepoSubscriptions {
-  repeated GitSubscription git = 1 [json_name = "git"];
-  repeated ImageSubscription images = 2 [json_name = "images"];
-  repeated ChartSubscription charts = 3 [json_name = "charts"];
+message RepoSubscription {
+  optional GitSubscription git = 1 [json_name = "git"];
+  optional ImageSubscription image = 2 [json_name = "image"];
+  optional ChartSubscription chart = 3 [json_name = "chart"];
 }
 
 message Stage {
@@ -209,17 +209,34 @@ message StageSpec {
 }
 
 message Freight {
+  string api_version = 1 [json_name = "apiVersion"];
+  string kind = 2 [json_name = "kind"];
+  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3 [json_name = "metadata"];
+  string id = 4 [json_name = "id"];
+  repeated GitCommit commits = 5 [json_name = "commits"];
+  repeated Image images = 6 [json_name = "images"];
+  repeated Chart charts = 7 [json_name = "charts"];
+  FreightStatus status = 8 [json_name = "status"];
+}
+
+message FreightStatus {
+  map<string, Qualification> qualifications = 1;
+}
+
+message Qualification {
+}
+
+message SimpleFreight {
   string id = 1 [json_name = "id"];
   optional google.protobuf.Timestamp first_seen = 2 [json_name = "firstSeen"];
   repeated GitCommit commits = 4 [json_name = "commits"];
   repeated Image images = 5 [json_name = "images"];
   repeated Chart charts = 6 [json_name = "charts"];
-  optional bool qualified = 8 [json_name = "qualified"];
 }
 
 message StageStatus {
-  optional Freight current_freight = 2 [json_name = "currentFreight"];
-  repeated Freight history = 3 [json_name = "history"];
+  optional SimpleFreight current_freight = 2 [json_name = "currentFreight"];
+  repeated SimpleFreight history = 3 [json_name = "history"];
   string error = 4 [json_name = "error"];
   optional Health health = 5 [json_name = "health"];
   optional PromotionInfo current_promotion = 6 [json_name = "currentPromotion"];

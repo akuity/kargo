@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	svcv1meta1 "github.com/akuity/kargo/pkg/api/metav1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
@@ -824,18 +825,30 @@ func TestSortFreightGroups(t *testing.T) {
 			groups: map[string]*svcv1alpha1.FreightList{
 				"": {
 					Freight: []*v1alpha1.Freight{
-						{FirstSeen: timestamppb.New(now)},
-						{FirstSeen: timestamppb.New(now.Add(time.Hour))},
-						{FirstSeen: timestamppb.New(now.Add(-time.Hour))},
+						{
+							Metadata: &svcv1meta1.ObjectMeta{
+								CreationTimestamp: timestamppb.New(now),
+							},
+						},
+						{
+							Metadata: &svcv1meta1.ObjectMeta{
+								CreationTimestamp: timestamppb.New(now.Add(time.Hour)),
+							},
+						},
+						{
+							Metadata: &svcv1meta1.ObjectMeta{
+								CreationTimestamp: timestamppb.New(now.Add(-time.Hour)),
+							},
+						},
 					},
 				},
 			},
 			orderBy: OrderByFirstSeen,
 			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups[""].Freight, 3)
-				require.Equal(t, now.Add(-time.Hour), groups[""].Freight[0].FirstSeen.AsTime())
-				require.Equal(t, now, groups[""].Freight[1].FirstSeen.AsTime())
-				require.Equal(t, now.Add(time.Hour), groups[""].Freight[2].FirstSeen.AsTime())
+				require.Equal(t, now.Add(-time.Hour), groups[""].Freight[0].Metadata.CreationTimestamp.AsTime())
+				require.Equal(t, now, groups[""].Freight[1].Metadata.CreationTimestamp.AsTime())
+				require.Equal(t, now.Add(time.Hour), groups[""].Freight[2].Metadata.CreationTimestamp.AsTime())
 			},
 		},
 		{
@@ -843,9 +856,21 @@ func TestSortFreightGroups(t *testing.T) {
 			groups: map[string]*svcv1alpha1.FreightList{
 				"": {
 					Freight: []*v1alpha1.Freight{
-						{FirstSeen: timestamppb.New(now)},
-						{FirstSeen: timestamppb.New(now.Add(time.Hour))},
-						{FirstSeen: timestamppb.New(now.Add(-time.Hour))},
+						{
+							Metadata: &svcv1meta1.ObjectMeta{
+								CreationTimestamp: timestamppb.New(now),
+							},
+						},
+						{
+							Metadata: &svcv1meta1.ObjectMeta{
+								CreationTimestamp: timestamppb.New(now.Add(time.Hour)),
+							},
+						},
+						{
+							Metadata: &svcv1meta1.ObjectMeta{
+								CreationTimestamp: timestamppb.New(now.Add(-time.Hour)),
+							},
+						},
 					},
 				},
 			},
@@ -853,9 +878,9 @@ func TestSortFreightGroups(t *testing.T) {
 			reverse: true,
 			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups[""].Freight, 3)
-				require.Equal(t, now.Add(time.Hour), groups[""].Freight[0].FirstSeen.AsTime())
-				require.Equal(t, now, groups[""].Freight[1].FirstSeen.AsTime())
-				require.Equal(t, now.Add(-time.Hour), groups[""].Freight[2].FirstSeen.AsTime())
+				require.Equal(t, now.Add(time.Hour), groups[""].Freight[0].Metadata.CreationTimestamp.AsTime())
+				require.Equal(t, now, groups[""].Freight[1].Metadata.CreationTimestamp.AsTime())
+				require.Equal(t, now.Add(-time.Hour), groups[""].Freight[2].Metadata.CreationTimestamp.AsTime())
 			},
 		},
 	}

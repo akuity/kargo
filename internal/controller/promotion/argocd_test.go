@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
 func TestNewArgoCDMechanism(t *testing.T) {
