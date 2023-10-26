@@ -26,7 +26,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 | ---- | ---- | ----------- |
 | Analysis | feature | Ability to execute user-defined analysis steps to qualify or disqualify Freight for further promotion. |
 | Improved RBAC | feature | Map SSO user identities to Kubernetes ServiceAccounts. Predefined ServiceAccount/Role/RoleBinding per project based on persona. |
-| `Freight Production Rules/Filters` | feature | Optionally set up tag-based Git repository subscriptions. Additional options to produce new Freight only under certain conditions. |
+| Freight Production Rules/Filters | feature | Git repository subscriptions options to constrain conditions under which new Freight is produced. |
 
 ## v0.4.0
 
