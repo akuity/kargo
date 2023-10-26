@@ -2,7 +2,7 @@ import { Timestamp } from '@bufbuild/protobuf';
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
 import { IconDefinition, faTimeline } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Tooltip, message } from 'antd';
 import { formatDistance } from 'date-fns';
 import React, { useContext, useEffect, useState } from 'react';
@@ -10,7 +10,8 @@ import React, { useContext, useEffect, useState } from 'react';
 import { ColorContext } from '@ui/context/colors';
 import {
   promoteStage,
-  promoteSubscribers
+  promoteSubscribers,
+  queryFreight
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, GitCommit, Stage } from '@ui/gen/v1alpha1/types_pb';
 
@@ -24,10 +25,10 @@ export const Freightline = (props: {
   stagesPerFreight: { [key: string]: Stage[] };
   promotingStage?: Stage;
   setPromotingStage: (stage?: Stage) => void;
-  availableFreightForPromotion?: Freight[];
   promotionType?: PromotionType;
   confirmingPromotion?: string;
   setConfirmingPromotion: (confirming?: string) => void;
+  project: string;
 }) => {
   const {
     freight,
@@ -37,7 +38,7 @@ export const Freightline = (props: {
     promotionType,
     confirmingPromotion,
     setConfirmingPromotion,
-    availableFreightForPromotion
+    project
   } = props;
   const [promotionEligible, setPromotionEligible] = useState<{ [key: string]: boolean }>({});
 
@@ -46,6 +47,12 @@ export const Freightline = (props: {
   const getSeconds = (ts?: Timestamp): number => Number(ts?.seconds) || 0;
 
   const stageColorMap = useContext(ColorContext);
+
+  const {
+    data: availableFreightData,
+    refetch,
+    isLoading
+  } = useQuery(queryFreight.useQuery({ project, stage: promotingStage?.metadata?.name || '' }));
 
   const { mutate: promoteSubscribersAction } = useMutation({
     ...promoteSubscribers.useMutation(),
@@ -80,16 +87,22 @@ export const Freightline = (props: {
   }, [freight]);
 
   useEffect(() => {
-    const availableFreight =
-      promotionType === 'default'
-        ? availableFreightForPromotion
-        : promotingStage?.status?.history || [];
-    const pe: { [key: string]: boolean } = {};
-    (availableFreight || []).map((f) => {
-      pe[f.id || ''] = true;
-    });
-    setPromotionEligible(pe);
+    refetch();
   }, [promotingStage, freight, promotionType]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      const availableFreight =
+        promotionType === 'default'
+          ? availableFreightData?.groups['']?.freight || []
+          : promotingStage?.status?.history || [];
+      const pe: { [key: string]: boolean } = {};
+      ((availableFreight as Freight[]) || []).map((f: Freight) => {
+        pe[f?.metadata?.uid || ''] = true;
+      });
+      setPromotionEligible(pe);
+    }
+  }, [availableFreightData]);
 
   return (
     <div
@@ -133,7 +146,7 @@ export const Freightline = (props: {
         </div>
         <div className='flex items-center h-full overflow-x-auto'>
           {(orderedFreight || []).map((f, i) => {
-            const id = f?.id || `${i}`;
+            const id = f?.metadata?.uid || `${i}`;
             return (
               <FreightItem
                 freight={f || undefined}
