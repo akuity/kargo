@@ -282,7 +282,7 @@ export const ProjectDetails = () => {
           promotionType={promotionType}
           confirmingPromotion={confirmingPromotion}
           setConfirmingPromotion={setConfirmingPromotion}
-          project={name}
+          project={name || ''}
         />
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full ${styles.dag}`}>

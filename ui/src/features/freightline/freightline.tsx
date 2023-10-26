@@ -98,7 +98,7 @@ export const Freightline = (props: {
           : promotingStage?.status?.history || [];
       const pe: { [key: string]: boolean } = {};
       ((availableFreight as Freight[]) || []).map((f: Freight) => {
-        pe[f?.metadata?.uid || ''] = true;
+        pe[f?.metadata?.name || ''] = true;
       });
       setPromotionEligible(pe);
     }
@@ -146,7 +146,7 @@ export const Freightline = (props: {
         </div>
         <div className='flex items-center h-full overflow-x-auto'>
           {(orderedFreight || []).map((f, i) => {
-            const id = f?.metadata?.uid || `${i}`;
+            const id = f?.metadata?.name || `${i}`;
             return (
               <FreightItem
                 freight={f || undefined}
@@ -362,7 +362,7 @@ const FreightItem = (props: {
             }
             placement='bottom'
           >
-            {freight?.metadata?.uid?.substring(0, 7)}
+            {freight?.metadata?.name?.substring(0, 7)}
           </Tooltip>
         </div>
       </div>
