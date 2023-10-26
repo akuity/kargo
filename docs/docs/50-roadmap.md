@@ -24,7 +24,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| `Analysis` | feature | Ability to run Analysis for the purposes of Freight qualification. This enables users to define additional quality gates (in addition to Argo CD Health) to allow/disallow promotion. |
+| Analysis | feature | Ability to execute user-defined analysis steps to qualify or disqualify Freight for further promotion. |
 | `Kargo RBAC` | feature | Map SSO user identities to Kubernetes ServiceAccounts. Predefined ServiceAccount/Role/RoleBinding per project based on persona. |
 | `Freight Production Rules/Filters` | feature | Optionally set up tag-based Git repository subscriptions. Additional options to produce new Freight only under certain conditions. |
 
