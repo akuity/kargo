@@ -32,7 +32,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| `Project management` | feature | Introduce Project CRD to simplify onboarding and project lifecycle management. Support aggregate information at the project status level.. Additional `PromotionPolicy` options. Credential management via CLI and UI. |
+| Project Management | feature | Introduce Project CRD to simplify onboarding and project lifecycle management. Support aggregate information at the project status level. Additional `PromotionPolicy` options. Credential management via CLI and UI. |
 
 ## v0.5.0
 
