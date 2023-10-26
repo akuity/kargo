@@ -787,6 +787,7 @@ func ToFreightProto(f kargoapi.Freight) *v1alpha1.Freight {
 	return &v1alpha1.Freight{
 		ApiVersion: f.APIVersion,
 		Kind:       f.Kind,
+		Id:         f.ID,
 		Images:     images,
 		Charts:     charts,
 		Commits:    commits,
