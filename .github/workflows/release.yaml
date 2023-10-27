@@ -202,6 +202,9 @@ jobs:
 
   publish-unstable-cli:
     needs: publish-image
+    permissions:
+      id-token: write
+      contents: read
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
