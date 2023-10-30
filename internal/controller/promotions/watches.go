@@ -41,7 +41,7 @@ func (e *EnqueueHighestPriorityPromotionHandler) Delete(
 			Namespace: promo.Namespace,
 			Name:      promo.Spec.Stage,
 		}
-		e.pqs.deactivate(e.ctx, stageKey, promo.Name)
+		e.pqs.conclude(e.ctx, stageKey, promo.Name)
 		e.enqueueNext(stageKey, wq)
 	}
 }
@@ -76,7 +76,7 @@ func (e *EnqueueHighestPriorityPromotionHandler) Update(
 		}
 		// This promo just went terminal. Deactivate it and enqueue
 		// the next highest priority promo for reconciliation
-		e.pqs.deactivate(e.ctx, stageKey, promo.Name)
+		e.pqs.conclude(e.ctx, stageKey, promo.Name)
 		e.enqueueNext(stageKey, wq)
 	}
 }
@@ -115,9 +115,9 @@ func (e *EnqueueHighestPriorityPromotionHandler) enqueueNext(
 			e.logger.Errorf("Failed to get next highest priority Promotion (%s) for enqueue: %v", firstKey, err)
 			return
 		}
-		if promo == nil {
-			// Found a promotion in the pending queue that no longer exists.
-			// Pop it and loop to the next item in the queue
+		if promo == nil || promo.Status.Phase.IsTerminal() {
+			// Found a promotion in the pending queue that no longer exists
+			// or terminal. Pop it and loop to the next item in the queue
 			_ = pq.Pop()
 			continue
 		}

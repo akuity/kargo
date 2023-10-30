@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -128,7 +127,7 @@ func TestNewPromotionsQueue(t *testing.T) {
 	}
 }
 
-func TestTryActivate(t *testing.T) {
+func TestTryBegin(t *testing.T) {
 	pqs := promoQueues{
 		activePromoByStage:        map[types.NamespacedName]string{},
 		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
@@ -138,25 +137,35 @@ func TestTryActivate(t *testing.T) {
 	ctx := context.TODO()
 
 	// 1. nil promotion
-	assert.False(t, pqs.tryActivate(ctx, nil))
+	require.False(t, pqs.tryBegin(ctx, nil))
 
 	// 2. invalid promotion
-	assert.False(t, pqs.tryActivate(ctx, &kargoapi.Promotion{}))
+	require.False(t, pqs.tryBegin(ctx, &kargoapi.Promotion{}))
 
-	// 3. Try to activate promos not first in queue
+	// 3. Try to begin promos not first in queue
 	for _, promoName := range []string{"b", "c", "d"} {
-		assert.False(t, pqs.tryActivate(ctx, newPromo(testNamespace, promoName, "foo", "", now)))
-		assert.Equal(t, "", pqs.activePromoByStage[fooStageKey])
-		assert.Equal(t, 4, pqs.pendingPromoQueuesByStage[fooStageKey].Depth())
+		require.False(t, pqs.tryBegin(ctx, newPromo(testNamespace, promoName, "foo", "", now)))
+		require.Equal(t, "", pqs.activePromoByStage[fooStageKey])
+		require.Equal(t, 4, pqs.pendingPromoQueuesByStage[fooStageKey].Depth())
 	}
 
-	// 4. Now try to activate highest priority. this should succeed
-	assert.True(t, pqs.tryActivate(ctx, newPromo(testNamespace, "a", "foo", "", now)))
-	assert.Equal(t, "a", pqs.activePromoByStage[fooStageKey])
-	assert.Equal(t, 3, pqs.pendingPromoQueuesByStage[fooStageKey].Depth())
+	// 4. Now try to begin highest priority. this should succeed
+	require.True(t, pqs.tryBegin(ctx, newPromo(testNamespace, "a", "foo", "", now)))
+	require.Equal(t, "a", pqs.activePromoByStage[fooStageKey])
+	require.Equal(t, 3, pqs.pendingPromoQueuesByStage[fooStageKey].Depth())
+
+	// 5. Begin an already active promo, this should be a no-op
+	require.True(t, pqs.tryBegin(ctx, newPromo(testNamespace, "a", "foo", "", now)))
+	require.Equal(t, "a", pqs.activePromoByStage[fooStageKey])
+	require.Equal(t, 3, pqs.pendingPromoQueuesByStage[fooStageKey].Depth())
+
+	// 5. Begin a promo with something else active, this should be a no-op
+	require.False(t, pqs.tryBegin(ctx, newPromo(testNamespace, "b", "foo", "", now)))
+	require.Equal(t, "a", pqs.activePromoByStage[fooStageKey])
+	require.Equal(t, 3, pqs.pendingPromoQueuesByStage[fooStageKey].Depth())
 }
 
-func TestDeactivate(t *testing.T) {
+func TestConclude(t *testing.T) {
 	pqs := promoQueues{
 		activePromoByStage:        map[types.NamespacedName]string{},
 		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
@@ -166,13 +175,17 @@ func TestDeactivate(t *testing.T) {
 	ctx := context.TODO()
 
 	// Test setup
-	assert.True(t, pqs.tryActivate(ctx, newPromo(testNamespace, "a", "foo", "", now)))
+	require.True(t, pqs.tryBegin(ctx, newPromo(testNamespace, "a", "foo", "", now)))
 
-	// 1. deactivate something not even active. it should be a no-op
-	pqs.deactivate(ctx, fooStageKey, "not-active")
-	assert.Equal(t, "a", pqs.activePromoByStage[fooStageKey])
+	// 1. conclude something not even active. it should be a no-op
+	pqs.conclude(ctx, fooStageKey, "not-active")
+	require.Equal(t, "a", pqs.activePromoByStage[fooStageKey])
 
-	// 2. Deactivate the active one
-	pqs.deactivate(ctx, fooStageKey, "a")
-	assert.Equal(t, "", pqs.activePromoByStage[fooStageKey])
+	// 2. Conclude the active one
+	pqs.conclude(ctx, fooStageKey, "a")
+	require.Equal(t, "", pqs.activePromoByStage[fooStageKey])
+
+	// 3. Conclude the same key, should be a noop
+	pqs.conclude(ctx, fooStageKey, "a")
+	require.Equal(t, "", pqs.activePromoByStage[fooStageKey])
 }

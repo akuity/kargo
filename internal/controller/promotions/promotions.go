@@ -174,9 +174,9 @@ func (r *reconciler) Reconcile(
 		// if promo is already finished, nothing to do
 		return result, nil
 	} else {
-		// promo is Pending. Try to activate it.
-		if !r.pqs.tryActivate(ctx, promo) {
-			// It wasn't our turn. Mark this promo as pending (if it wasn't already)
+		// promo is Pending. Try to begin it.
+		if !r.pqs.tryBegin(ctx, promo) {
+			// It wasn't our turn. Mark this promo as Pending (if it wasn't already)
 			if promo.Status.Phase != v1alpha1.PromotionPhasePending {
 				err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 					status.Phase = v1alpha1.PromotionPhasePending
@@ -193,7 +193,8 @@ func (r *reconciler) Reconcile(
 	})
 	logger.Debug("executing Promotion")
 
-	// Update promo status as Running to give visibility in UI
+	// Update promo status as Running to give visibility in UI. Also, a promo which
+	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != v1alpha1.PromotionPhaseRunning {
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = v1alpha1.PromotionPhaseRunning
@@ -207,6 +208,9 @@ func (r *reconciler) Reconcile(
 	phase := kargoapi.PromotionPhaseSucceeded
 	phaseError := ""
 
+	// Wrap the promoteFn() call in an anonymous function to recover() any panics, so
+	// we can update the promo's phase with Error if it does. This breaks an infinite
+	// cycle of a bad promo continuously failing to reconcile, and surfaces the error.
 	func() {
 		defer func() {
 			if err := recover(); err != nil {

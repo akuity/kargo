@@ -86,10 +86,10 @@ func (pqs *promoQueues) initializeQueues(ctx context.Context, promos kargoapi.Pr
 	}
 }
 
-// tryActivate tries to mark the given Pending promotion as the active one so it can reconcile.
+// tryBegin tries to mark the given Pending promotion as the active one so it can reconcile.
 // Returns true if the promo is already active or became active as a result of this call.
 // Returns false if it should not reconcile (another promo is active, or next in line).
-func (pqs *promoQueues) tryActivate(ctx context.Context, promo *kargoapi.Promotion) bool {
+func (pqs *promoQueues) tryBegin(ctx context.Context, promo *kargoapi.Promotion) bool {
 	if promo == nil || promo.Spec == nil {
 		return false
 	}
@@ -109,40 +109,36 @@ func (pqs *promoQueues) tryActivate(ctx context.Context, promo *kargoapi.Promoti
 		pqs.pendingPromoQueuesByStage[stageKey] = pq
 	}
 
+	activePromoName := pqs.activePromoByStage[stageKey]
+	if activePromoName == promo.Name {
+		// This promo is already active
+		return true
+	}
+
 	// Push this promo to the queue in case it doesn't exist in the queue. Note that we
 	// deduplicate pushes on the same object, so this is safe to call repeatedly
 	if pq.Push(promo) {
 		logger.Debug("promo added to priority queue")
 	}
-
-	if activePromoName := pqs.activePromoByStage[stageKey]; activePromoName != "" {
-		// There is already an active promo. It's either this promo or someone else.
-		return activePromoName == promo.Name
-	}
-
-	// If we get here, the Stage does not have any Promotions Running against it.
-	// Now check if it this promo is the one that should run next.
-	first := pq.Peek()
-	if first == nil {
-		// This promo exists but nothing exists in the PriorityQueue. This should not happen.
-		// But since there appears to be no other promos, allow this one to become the active one.
-		pqs.activePromoByStage[stageKey] = promo.Name
-		logger.Debug("activated promo (empty queue)")
-		return true
-	}
-	if first.GetNamespace() == promo.Namespace && first.GetName() == promo.Name {
-		// This promo is the first in the queue. Mark it as active and pop it off the pending queue.
-		popped := pq.Pop()
-		pqs.activePromoByStage[stageKey] = popped.GetName()
-		logger.Debug("activated promo")
-		return true
+	if activePromoName == "" {
+		// If we get here, the Stage does not have any active Promotions Running against it.
+		// Now check if it this promo is the one that should run next.
+		// NOTE: first will never be empty because of the push call above
+		first := pq.Peek()
+		if first.GetNamespace() == promo.Namespace && first.GetName() == promo.Name {
+			// This promo is the first in the queue. Mark it as active and pop it off the pending queue.
+			popped := pq.Pop()
+			pqs.activePromoByStage[stageKey] = popped.GetName()
+			logger.Debug("begin promo")
+			return true
+		}
 	}
 	return false
 }
 
-// deactivate removes the active entry for the given stage key.
+// conclude removes the given active promotion entry for the given stage key.
 // This should only be called after the active promotion has become terminal.
-func (pqs *promoQueues) deactivate(ctx context.Context, stageKey types.NamespacedName, promoName string) {
+func (pqs *promoQueues) conclude(ctx context.Context, stageKey types.NamespacedName, promoName string) {
 	pqs.promoQueuesByStageMu.RLock()
 	defer pqs.promoQueuesByStageMu.RUnlock()
 	if pqs.activePromoByStage[stageKey] == promoName {
@@ -151,6 +147,6 @@ func (pqs *promoQueues) deactivate(ctx context.Context, stageKey types.Namespace
 			"promotion": promoName,
 		})
 		delete(pqs.activePromoByStage, stageKey)
-		logger.Debug("deactivated promo")
+		logger.Debug("conclude promo")
 	}
 }
