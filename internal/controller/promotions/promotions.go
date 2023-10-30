@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -13,13 +12,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	render "github.com/akuity/kargo-render"
+	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -29,9 +31,8 @@ type reconciler struct {
 	kargoClient     client.Client
 	promoMechanisms promotion.Mechanism
 
-	promoQueuesByStage   map[types.NamespacedName]runtime.PriorityQueue
-	promoQueuesByStageMu sync.Mutex
-	initializeOnce       sync.Once
+	pqs            *promoQueues
+	initializeOnce sync.Once
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -41,6 +42,7 @@ type reconciler struct {
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
 // and registers it with the provided Manager.
 func SetupReconcilerWithManager(
+	ctx context.Context,
 	kargoMgr manager.Manager,
 	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
@@ -53,22 +55,42 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "error creating shard selector predicate")
 	}
 
-	return errors.Wrap(
-		ctrl.NewControllerManagedBy(kargoMgr).
-			For(&kargoapi.Promotion{}).
-			WithEventFilter(predicate.GenerationChangedPredicate{}).
-			WithEventFilter(shardPredicate).
-			WithOptions(controller.CommonOptions()).
-			Complete(
-				newReconciler(
-					kargoMgr.GetClient(),
-					argoMgr.GetClient(),
-					credentialsDB,
-					renderService,
-				),
-			),
-		"error registering Promotion reconciler",
+	reconciler := newReconciler(
+		kargoMgr.GetClient(),
+		argoMgr.GetClient(),
+		credentialsDB,
+		renderService,
 	)
+
+	changePredicate := predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)
+
+	c, err := ctrl.NewControllerManagedBy(kargoMgr).
+		For(&kargoapi.Promotion{}).
+		WithEventFilter(changePredicate).
+		WithEventFilter(shardPredicate).
+		WithOptions(controller.CommonOptions()).
+		Build(reconciler)
+	if err != nil {
+		return errors.Wrap(err, "error building Promotion reconciler")
+	}
+
+	logger := logging.LoggerFromContext(ctx)
+	// Watch Promotions that complete and enqueue the next highest promotion key
+	priorityQueueHandler := &EnqueueHighestPriorityPromotionHandler{
+		ctx:         ctx,
+		logger:      logger,
+		kargoClient: reconciler.kargoClient,
+		pqs:         reconciler.pqs,
+	}
+	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
+	if err := c.Watch(&source.Kind{Type: &kargoapi.Promotion{}}, priorityQueueHandler, promoWentTerminal); err != nil {
+		return errors.Wrap(err, "unable to watch Promotions")
+	}
+
+	return nil
 }
 
 func newReconciler(
@@ -77,9 +99,13 @@ func newReconciler(
 	credentialsDB credentials.Database,
 	renderService render.Service,
 ) *reconciler {
+	pqs := promoQueues{
+		activePromoByStage:        map[types.NamespacedName]string{},
+		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
+	}
 	r := &reconciler{
-		kargoClient:        kargoClient,
-		promoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
+		kargoClient: kargoClient,
+		pqs:         &pqs,
 		promoMechanisms: promotion.NewMechanisms(
 			argoClient,
 			credentialsDB,
@@ -90,29 +116,12 @@ func newReconciler(
 	return r
 }
 
-func newPromotionsQueue() runtime.PriorityQueue {
-	// We can safely ignore errors here because the only error that can happen
-	// involves initializing the queue with a nil priority function, which we
-	// know we aren't doing.
-	pq, _ := runtime.NewPriorityQueue(func(left, right client.Object) bool {
-		return left.GetCreationTimestamp().Time.
-			Before(right.GetCreationTimestamp().Time)
-	})
-	return pq
-}
-
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	// We count all of Reconcile() as a critical section of code to ensure we
-	// don't start reconciling a second Promotion before lazy initialization
-	// completes upon reconciliation of the FIRST promotion.
-	r.promoQueuesByStageMu.Lock()
-	defer r.promoQueuesByStageMu.Unlock()
-
 	result := ctrl.Result{
 		// Note: If there is a failure, controller runtime ignores this and uses
 		// progressive backoff instead. So this value only prevents requeueing
@@ -127,14 +136,15 @@ func (r *reconciler) Reconcile(
 	// to list Promotions prior to that point.
 	var err error
 	r.initializeOnce.Do(func() {
-		if err = r.initializeQueues(ctx); err == nil {
+		promos := kargoapi.PromotionList{}
+		if err = r.kargoClient.List(ctx, &promos); err != nil {
+			err = errors.Wrap(err, "error listing promotions")
+		} else {
+			r.pqs.initializeQueues(ctx, promos)
 			logger.Debug(
-				"initialized Stage-specific Promotion queues from list of " +
-					"existing Promotions",
+				"initialized Stage-specific Promotion queues from list of existing Promotions",
 			)
 		}
-		// TODO: Do not hardcode this interval
-		go r.serializedSync(ctx, 10*time.Second)
 	})
 	if err != nil {
 		return result, errors.Wrap(err, "error initializing Promotion queues")
@@ -158,205 +168,81 @@ func (r *reconciler) Reconcile(
 		return result, nil
 	}
 
-	newStatus := r.syncPromo(ctx, promo)
+	if promo.Status.Phase == v1alpha1.PromotionPhaseRunning {
+		// anything we've already marked Running, we allow it to continue to reconcile
+	} else if promo.Status.Phase.IsTerminal() {
+		// if promo is already finished, nothing to do
+		return result, nil
+	} else {
+		// promo is Pending. Try to begin it.
+		if !r.pqs.tryBegin(ctx, promo) {
+			// It wasn't our turn. Mark this promo as Pending (if it wasn't already)
+			if promo.Status.Phase != v1alpha1.PromotionPhasePending {
+				err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+					status.Phase = v1alpha1.PromotionPhasePending
+				})
+				return result, err
+			}
+			return result, nil
+		}
+	}
 
-	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-		*status = newStatus
+	logger = logger.WithFields(log.Fields{
+		"stage":   promo.Spec.Stage,
+		"freight": promo.Spec.Freight,
 	})
-	if updateErr != nil {
-		logger.Errorf("error updating Promotion status: %s", updateErr)
+	logger.Debug("executing Promotion")
+
+	// Update promo status as Running to give visibility in UI. Also, a promo which
+	// has already entered Running status will be allowed to continue to reconcile.
+	if promo.Status.Phase != v1alpha1.PromotionPhaseRunning {
+		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+			status.Phase = v1alpha1.PromotionPhaseRunning
+		}); err != nil {
+			return result, err
+		}
 	}
 
-	// If we had no error, but couldn't update, then we DO have an error. But we
-	// do it this way so that a failure to update is never counted as THE failure
-	// when something else more serious occurred first.
-	if err == nil {
-		err = updateErr
+	promoCtx := logging.ContextWithLogger(ctx, logger)
+
+	phase := kargoapi.PromotionPhaseSucceeded
+	phaseError := ""
+
+	// Wrap the promoteFn() call in an anonymous function to recover() any panics, so
+	// we can update the promo's phase with Error if it does. This breaks an infinite
+	// cycle of a bad promo continuously failing to reconcile, and surfaces the error.
+	func() {
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Errorf("Promotion panic: %v", err)
+				phase = kargoapi.PromotionPhaseErrored
+				phaseError = fmt.Sprintf("%v", err)
+			}
+		}()
+		if err = r.promoteFn(
+			promoCtx,
+			*promo,
+		); err != nil {
+			phase = kargoapi.PromotionPhaseErrored
+			phaseError = err.Error()
+			logger.Errorf("error executing Promotion: %s", err)
+		}
+	}()
+
+	if phase.IsTerminal() {
+		logger.Debugf("promotion %s", phase)
 	}
 
-	// Controller runtime automatically gives us a progressive backoff if err is
-	// not nil
+	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		status.Phase = phase
+		status.Error = phaseError
+	})
+	if err != nil {
+		logger.Errorf("error updating Promotion status: %s", err)
+	}
+
+	// Controller runtime automatically gives us a progressive backoff if err is not nil
 	return result, err
-}
-
-// initializeQueues lists all Promotions and adds them to relevant priority
-// queues. This is intended to be invoked ONCE and the caller MUST ensure that.
-// It is also assumed that the caller has already obtained a lock on
-// promoQueuesByStageMu.
-func (r *reconciler) initializeQueues(ctx context.Context) error {
-	promos := kargoapi.PromotionList{}
-	if err := r.kargoClient.List(ctx, &promos); err != nil {
-		return errors.Wrap(err, "error listing promotions")
-	}
-	logger := logging.LoggerFromContext(ctx)
-	for _, p := range promos.Items {
-		promo := p // This is to sidestep implicit memory aliasing in this for loop
-		if promo.Status.Phase.IsTerminal() {
-			continue
-		}
-		if promo.Status.Phase == "" {
-			if err := kubeclient.PatchStatus(ctx, r.kargoClient, &promo, func(status *kargoapi.PromotionStatus) {
-				status.Phase = kargoapi.PromotionPhasePending
-			}); err != nil {
-				return errors.Wrapf(
-					err,
-					"error updating status of Promotion %q in namespace %q",
-					promo.Name,
-					promo.Namespace,
-				)
-			}
-		}
-		stage := types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      promo.Spec.Stage,
-		}
-		pq, ok := r.promoQueuesByStage[stage]
-		if !ok {
-			pq = newPromotionsQueue()
-			r.promoQueuesByStage[stage] = pq
-		}
-		// The only error that can occur here happens when you push a nil and we
-		// know we're not doing that.
-		pq.Push(&promo) // nolint: errcheck
-		logger.WithFields(log.Fields{
-			"promotion": promo.Name,
-			"namespace": promo.Namespace,
-			"stage":     promo.Spec.Stage,
-			"phase":     promo.Status.Phase,
-		}).Debug("pushed Promotion onto Stage-specific Promotion queue")
-	}
-	if logger.Logger.IsLevelEnabled(log.DebugLevel) {
-		for stage, pq := range r.promoQueuesByStage {
-			logger.WithFields(log.Fields{
-				"stage":     stage.Name,
-				"namespace": stage.Namespace,
-				"depth":     pq.Depth(),
-			}).Debug("Stage-specific Promotion queue initialized")
-		}
-	}
-	return nil
-}
-
-// syncPromo enqueues Promotion requests to a Stage-specific priority queue. This
-// functions assumes the caller has obtained a lock on promoQueuesByStageMu.
-func (r *reconciler) syncPromo(
-	ctx context.Context,
-	promo *kargoapi.Promotion,
-) kargoapi.PromotionStatus {
-	status := *promo.Status.DeepCopy()
-
-	// Only deal with brand new Promotions
-	if promo.Status.Phase != "" {
-		return status
-	}
-
-	stage := types.NamespacedName{
-		Namespace: promo.Namespace,
-		Name:      promo.Spec.Stage,
-	}
-
-	pq, ok := r.promoQueuesByStage[stage]
-	if !ok {
-		pq = newPromotionsQueue()
-		r.promoQueuesByStage[stage] = pq
-	}
-
-	status.Phase = kargoapi.PromotionPhasePending
-
-	// Ignore any errors from this operation. Errors can only occur when you
-	// try to push a nil onto the queue and we know we're not doing that.
-	pq.Push(promo) // nolint: errcheck
-
-	logging.LoggerFromContext(ctx).WithField("depth", pq.Depth()).
-		Infof("pushed Promotion %q to Queue for Stage %q in namespace %q ",
-			promo.Name,
-			promo.Spec.Stage,
-			promo.Namespace,
-		)
-
-	return status
-}
-
-func (r *reconciler) serializedSync(
-	ctx context.Context,
-	interval time.Duration,
-) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-		case <-ctx.Done():
-			return
-		}
-		for _, pq := range r.promoQueuesByStage {
-			if popped := pq.Pop(); popped != nil {
-				promo := popped.(*kargoapi.Promotion) // nolint: forcetypeassert
-
-				logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-					"promotion": promo.Name,
-					"namespace": promo.Namespace,
-				})
-
-				// Refresh promo instead of working with something stale
-				var err error
-				if promo, err = kargoapi.GetPromotion(
-					ctx,
-					r.kargoClient,
-					types.NamespacedName{
-						Namespace: promo.Namespace,
-						Name:      promo.Name,
-					},
-				); err != nil {
-					logger.Error("error finding Promotion")
-					continue
-				}
-				if promo == nil || promo.Status.Phase != kargoapi.PromotionPhasePending {
-					continue
-				}
-
-				logger = logger.WithFields(log.Fields{
-					"stage":   promo.Spec.Stage,
-					"freight": promo.Spec.Freight,
-				})
-				logger.Debug("executing Promotion")
-
-				promoCtx := logging.ContextWithLogger(ctx, logger)
-
-				phase := kargoapi.PromotionPhaseSucceeded
-				phaseError := ""
-
-				func() {
-					defer func() {
-						if err := recover(); err != nil {
-							logger.Errorf("Promotion panic: %v", err)
-							phase = kargoapi.PromotionPhaseErrored
-							phaseError = fmt.Sprintf("%v", err)
-						}
-					}()
-					if err = r.promoteFn(
-						promoCtx,
-						*promo,
-					); err != nil {
-						phase = kargoapi.PromotionPhaseErrored
-						phaseError = err.Error()
-						logger.Errorf("error executing Promotion: %s", err)
-					}
-				}()
-
-				if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-					status.Phase = phase
-					status.Error = phaseError
-				}); err != nil {
-					logger.Errorf("error updating Promotion status: %s", err)
-				}
-
-				if promo.Status.Phase == kargoapi.PromotionPhaseSucceeded && err == nil {
-					logger.Debug("Promotion succeeded")
-				}
-			}
-		}
-	}
 }
 
 func (r *reconciler) promote(
