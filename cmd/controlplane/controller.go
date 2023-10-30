@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -140,6 +141,7 @@ func newControllerCommand() *cobra.Command {
 				argoClientForCreds = appMgr.GetClient()
 			}
 			credentialsDB := credentials.NewKubernetesDatabase(
+				strings.Split(os.GetEnv("KARGO_SHARED_CREDENTIALS_NAMESPACES", ""), ","),
 				os.GetEnv("ARGOCD_NAMESPACE", "argocd"),
 				kargoMgr.GetClient(),
 				argoClientForCreds,

@@ -6,11 +6,10 @@ import (
 
 	"github.com/argoproj/argo-cd/v2/applicationset/utils"
 	"github.com/argoproj/argo-cd/v2/common"
+	"github.com/argoproj/argo-cd/v2/util/git"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/akuity/kargo/internal/git"
 )
 
 const authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
@@ -56,9 +55,10 @@ type Database interface {
 // utilizes a Kubernetes controller runtime client to index and retrieve
 // credentials stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	argoCDNamespace string
-	kargoClient     client.Client
-	argoClient      client.Client
+	sharedCredentialsNamespaces []string
+	argoCDNamespace             string
+	kargoClient                 client.Client
+	argoClient                  client.Client
 }
 
 // NewKubernetesDatabase initializes and returns an implementation of the
@@ -67,14 +67,19 @@ type kubernetesDatabase struct {
 // carries out the important task of indexing Credentials stored in Kubernetes
 // Secrets by repository type + URL.
 func NewKubernetesDatabase(
+	sharedCredentialsNamespaces []string,
 	argoCDNamespace string,
 	kargoClient client.Client,
 	argoClient client.Client,
 ) Database {
+	if sharedCredentialsNamespaces == nil {
+		sharedCredentialsNamespaces = make([]string, 0)
+	}
 	return &kubernetesDatabase{
-		argoCDNamespace: argoCDNamespace,
-		kargoClient:     kargoClient,
-		argoClient:      argoClient,
+		sharedCredentialsNamespaces: sharedCredentialsNamespaces,
+		argoCDNamespace:             argoCDNamespace,
+		kargoClient:                 kargoClient,
+		argoClient:                  argoClient,
 	}
 }
 
@@ -118,6 +123,39 @@ func (k *kubernetesDatabase) Get(
 			true, // repoURL is a prefix
 		); err != nil {
 			return creds, false, err
+		}
+
+		if secret == nil {
+			for _, sharedCredsNamespace := range k.sharedCredentialsNamespaces {
+				// Check shared creds namespace for credentials
+				if secret, err = getCredentialsSecret(
+					ctx,
+					k.kargoClient,
+					sharedCredsNamespace,
+					labels.Set(map[string]string{
+						kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
+					}).AsSelector(),
+					credType,
+					repoURL,
+					false, // repoURL is not a prefix
+				); err != nil {
+					return creds, false, err
+				}
+				// Check shared creds namespace for credentials template
+				if secret, err = getCredentialsSecret(
+					ctx,
+					k.kargoClient,
+					sharedCredsNamespace,
+					labels.Set(map[string]string{
+						kargoSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
+					}).AsSelector(),
+					credType,
+					repoURL,
+					true, // repoURL is a prefix
+				); err != nil {
+					return creds, false, err
+				}
+			}
 		}
 	}
 
