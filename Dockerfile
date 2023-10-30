@@ -64,7 +64,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 ####################################################################################################
 # final
 ####################################################################################################
-FROM ghcr.io/akuity/bookkeeper:v0.1.0-rc.19 as final
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.31 as final
 
 USER root
 

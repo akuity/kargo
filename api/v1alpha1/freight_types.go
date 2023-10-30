@@ -77,7 +77,7 @@ type GitCommit struct {
 	// assessments of Stage health will used this value (instead of ID) when
 	// determining if applicable sources of Argo CD Application resources
 	// associated with the Stage are or are not synced to this commit. Note that
-	// there are cases (as in that of Bookkeeper being utilized as a promotion
+	// there are cases (as in that of Kargo Render being utilized as a promotion
 	// mechanism) wherein the value of this field may differ from the commit ID
 	// found in the ID field.
 	HealthCheckCommit string `json:"healthCheckCommit,omitempty"`

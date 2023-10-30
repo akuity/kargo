@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/akuity/bookkeeper/pkg/git"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -21,10 +21,14 @@ type gitMeta struct {
 func (r *reconciler) getLatestCommits(
 	ctx context.Context,
 	namespace string,
-	subs []kargoapi.GitSubscription,
+	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.GitCommit, error) {
-	latestCommits := make([]kargoapi.GitCommit, len(subs))
-	for i, sub := range subs {
+	latestCommits := make([]kargoapi.GitCommit, 0, len(subs))
+	for _, s := range subs {
+		if s.Git == nil {
+			continue
+		}
+		sub := s.Git
 		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 		creds, ok, err :=
 			r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
@@ -57,12 +61,15 @@ func (r *reconciler) getLatestCommits(
 		}
 		logger.WithField("commit", gm.Commit).
 			Debug("found latest commit from repo")
-		latestCommits[i] = kargoapi.GitCommit{
-			RepoURL: sub.RepoURL,
-			ID:      gm.Commit,
-			Branch:  sub.Branch,
-			Message: gm.Message,
-		}
+		latestCommits = append(
+			latestCommits,
+			kargoapi.GitCommit{
+				RepoURL: sub.RepoURL,
+				ID:      gm.Commit,
+				Branch:  sub.Branch,
+				Message: gm.Message,
+			},
+		)
 	}
 	return latestCommits, nil
 }

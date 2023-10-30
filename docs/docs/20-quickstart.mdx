@@ -26,7 +26,8 @@ This guide presents a basic introduction to Kargo. Together, we will:
   instructions were tested with:
     * kind: v0.17.0
     * k3d: v5.4.9
-* [Helm](https://helm.sh/docs/): These instructions were tested with v3.11.2.
+* [Helm](https://helm.sh/docs/) v3.13.1 or greater
+
 ### Starting a Local Cluster
 
 With our prerequisites met, we can execute a helper script to launch a 
@@ -66,13 +67,16 @@ Either script should only:
 </Tabs>
 
 :::note
-If Kargo installation fails with a `403` it is likely that `docker` is
-configured to authenticate to `ghcr.io` with an expired token.
+If Kargo installation fails with a `401`, verify that you are using Helm v3.13.1
+or greater.
 
-To resolve this, remove or renew the credentials using one of:
+If Kargo installation fails with a `403`, it is likely that Docker is configured
+to authenticate to `ghcr.io` with an expired token. The Kargo chart and images
+are accessible anonymously, so this issue can be resolved simply by logging out:
 
-* `docker logout ghcr.io`
-* `docker login ghcr.io`
+```shell
+docker logout ghcr.io
+```
 :::
 
 At the end of this process:

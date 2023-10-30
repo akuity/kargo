@@ -194,15 +194,10 @@ spec:
                         applied to a Git repository (using various configuration management
                         tools) to incorporate Freight into a Stage.
                       properties:
-                        bookkeeper:
-                          description: Bookkeeper describes how to use Bookkeeper
-                            to incorporate Freight into the Stage. This is mutually
-                            exclusive with the Kustomize and Helm fields.
-                          type: object
                         helm:
                           description: Helm describes how to use Helm to incorporate
                             Freight into the Stage. This is mutually exclusive with
-                            the Bookkeeper and Kustomize fields.
+                            the Render and Kustomize fields.
                           properties:
                             charts:
                               description: Charts describes how specific chart versions
@@ -287,7 +282,7 @@ spec:
                         kustomize:
                           description: Kustomize describes how to use Kustomize to
                             incorporate Freight into the Stage. This is mutually exclusive
-                            with the Bookkeeper and Helm fields.
+                            with the Render and Helm fields.
                           properties:
                             images:
                               description: Images describes images for which `kustomize
@@ -332,6 +327,11 @@ spec:
                             to that repository.
                           pattern: ^(\w+([-/]\w+)*)?$
                           type: string
+                        render:
+                          description: Render describes how to use Kargo Render to
+                            incorporate Freight into the Stage. This is mutually exclusive
+                            with the Kustomize and Helm fields.
+                          type: object
                         repoURL:
                           description: RepoURL is the URL of the repository to update.
                             This is a required field.
@@ -426,7 +426,7 @@ spec:
                             this value (instead of ID) when determining if applicable
                             sources of Argo CD Application resources associated with
                             the Stage are or are not synced to this commit. Note that
-                            there are cases (as in that of Bookkeeper being utilized
+                            there are cases (as in that of Kargo Render being utilized
                             as a promotion mechanism) wherein the value of this field
                             may differ from the commit ID found in the ID field.
                           type: string
@@ -518,7 +518,7 @@ spec:
                                 if applicable sources of Argo CD Application resources
                                 associated with the Stage are or are not synced to
                                 this commit. Note that there are cases (as in that
-                                of Bookkeeper being utilized as a promotion mechanism)
+                                of Kargo Render being utilized as a promotion mechanism)
                                 wherein the value of this field may differ from the
                                 commit ID found in the ID field.
                               type: string
@@ -677,10 +677,10 @@ spec:
                               will used this value (instead of ID) when determining
                               if applicable sources of Argo CD Application resources
                               associated with the Stage are or are not synced to this
-                              commit. Note that there are cases (as in that of Bookkeeper
-                              being utilized as a promotion mechanism) wherein the
-                              value of this field may differ from the commit ID found
-                              in the ID field.
+                              commit. Note that there are cases (as in that of Kargo
+                              Render being utilized as a promotion mechanism) wherein
+                              the value of this field may differ from the commit ID
+                              found in the ID field.
                             type: string
                           id:
                             description: ID is the ID of a specific commit in the

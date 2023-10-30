@@ -99,6 +99,7 @@ func (s *server) QueryFreight(
 	case GroupByChartRepository:
 		freightGroups = groupByChartRepo(freight, req.Msg.GetGroup())
 	default:
+		freightGroups = noGroupBy(freight)
 	}
 
 	sortFreightGroups(req.Msg.GetOrderBy(), req.Msg.GetReverse(), freightGroups)
@@ -239,19 +240,23 @@ func groupByChartRepo(
 	return groups
 }
 
+func noGroupBy(freight []kargoapi.Freight) map[string]*svcv1alpha1.FreightList {
+	freightList := &svcv1alpha1.FreightList{}
+	for _, f := range freight {
+		freightList = appendToFreightList(freightList, f)
+	}
+	return map[string]*svcv1alpha1.FreightList{
+		"": freightList,
+	}
+}
+
 func appendToFreightList(list *svcv1alpha1.FreightList, f kargoapi.Freight) *svcv1alpha1.FreightList {
 	if list == nil {
 		list = &svcv1alpha1.FreightList{}
 	}
-	sf := kargoapi.SimpleFreight{
-		ID:      f.ID,
-		Commits: f.Commits,
-		Images:  f.Images,
-		Charts:  f.Charts,
-	}
 	list.Freight = append(
 		list.Freight,
-		v1alpha1.ToFreightProto(sf, &f.CreationTimestamp.Time),
+		v1alpha1.ToFreightProto(f),
 	)
 	return list
 }
@@ -277,7 +282,8 @@ type ByFirstSeen []*apiv1alpha1.Freight
 func (a ByFirstSeen) Len() int      { return len(a) }
 func (a ByFirstSeen) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByFirstSeen) Less(i, j int) bool {
-	return a[i].FirstSeen.AsTime().Before(a[j].FirstSeen.AsTime())
+	return a[i].GetMetadata().GetCreationTimestamp().AsTime().
+		Before(a[j].GetMetadata().GetCreationTimestamp().AsTime())
 }
 
 // NOTE: sorting by tag will sort by the first container image we found
@@ -301,7 +307,8 @@ func (a ByTag) Less(i, j int) bool {
 		return iTag < jTag
 	}
 	// They are not comparable. Fallback to firstSeen
-	return a[i].FirstSeen.AsTime().Before(a[j].FirstSeen.AsTime())
+	return a[i].GetMetadata().GetCreationTimestamp().AsTime().
+		Before(a[j].GetMetadata().GetCreationTimestamp().AsTime())
 }
 
 func getRepoAndTag(s *apiv1alpha1.Freight) (string, string, *semver.Version) {

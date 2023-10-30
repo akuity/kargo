@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/akuity/bookkeeper"
+	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -16,7 +16,7 @@ func TestNewMechanisms(t *testing.T) {
 	promoMechs := NewMechanisms(
 		fake.NewClientBuilder().Build(),
 		credentials.NewKubernetesDatabase("", nil, nil),
-		bookkeeper.NewService(nil),
+		render.NewService(nil),
 	)
 	require.IsType(t, &compositeMechanism{}, promoMechs)
 }

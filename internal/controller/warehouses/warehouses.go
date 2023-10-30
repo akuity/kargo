@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/akuity/bookkeeper/pkg/git"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
+	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/images"
@@ -39,13 +39,13 @@ type reconciler struct {
 	getLatestCommitsFn func(
 		ctx context.Context,
 		namespace string,
-		subs []kargoapi.GitSubscription,
+		subs []kargoapi.RepoSubscription,
 	) ([]kargoapi.GitCommit, error)
 
 	getLatestImagesFn func(
 		ctx context.Context,
 		namespace string,
-		subs []kargoapi.ImageSubscription,
+		subs []kargoapi.RepoSubscription,
 	) ([]kargoapi.Image, error)
 
 	getLatestTagFn func(
@@ -61,7 +61,7 @@ type reconciler struct {
 	getLatestChartsFn func(
 		ctx context.Context,
 		namespace string,
-		subs []kargoapi.ChartSubscription,
+		subs []kargoapi.RepoSubscription,
 	) ([]kargoapi.Chart, error)
 
 	getLatestChartVersionFn func(
@@ -254,44 +254,35 @@ func (r *reconciler) getLatestFreightFromRepos(
 ) (*kargoapi.Freight, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	var latestCommits []kargoapi.GitCommit
-	if warehouse.Spec.Subscriptions.Git == nil {
-		var err error
-		if latestCommits, err = r.getLatestCommitsFn(
-			ctx,
-			warehouse.Namespace,
-			warehouse.Spec.Subscriptions.Git,
-		); err != nil {
-			return nil, errors.Wrap(err, "error syncing git repo subscriptions")
-		}
-		if len(warehouse.Spec.Subscriptions.Git) > 0 {
-			logger.Debug("synced git repo subscriptions")
-		}
+	latestCommits, err := r.getLatestCommitsFn(
+		ctx,
+		warehouse.Namespace,
+		warehouse.Spec.Subscriptions,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error syncing git repo subscriptions")
 	}
+	logger.Debug("synced git repo subscriptions")
 
 	latestImages, err := r.getLatestImagesFn(
 		ctx,
 		warehouse.Namespace,
-		warehouse.Spec.Subscriptions.Images,
+		warehouse.Spec.Subscriptions,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing image repo subscriptions")
 	}
-	if len(warehouse.Spec.Subscriptions.Images) > 0 {
-		logger.Debug("synced image repo subscriptions")
-	}
+	logger.Debug("synced image repo subscriptions")
 
 	latestCharts, err := r.getLatestChartsFn(
 		ctx,
 		warehouse.Namespace,
-		warehouse.Spec.Subscriptions.Charts,
+		warehouse.Spec.Subscriptions,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error syncing chart repo subscriptions")
 	}
-	if len(warehouse.Spec.Subscriptions.Charts) > 0 {
-		logger.Debug("synced chart repo subscriptions")
-	}
+	logger.Debug("synced chart repo subscriptions")
 
 	ownerRef := metav1.NewControllerRef(
 		warehouse,

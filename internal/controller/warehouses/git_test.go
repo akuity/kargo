@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuity/bookkeeper/pkg/git"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -127,9 +127,11 @@ func TestGetLatestCommits(t *testing.T) {
 				r.getLatestCommits(
 					context.Background(),
 					"fake-namespace",
-					[]kargoapi.GitSubscription{
+					[]kargoapi.RepoSubscription{
 						{
-							RepoURL: "fake-url",
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "fake-url",
+							},
 						},
 					},
 				),

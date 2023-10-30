@@ -157,20 +157,20 @@ type GitRepoUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	WriteBranch string `json:"writeBranch"`
-	// Bookkeeper describes how to use Bookkeeper to incorporate Freight into the
+	// Render describes how to use Kargo Render to incorporate Freight into the
 	// Stage. This is mutually exclusive with the Kustomize and Helm fields.
-	Bookkeeper *BookkeeperPromotionMechanism `json:"bookkeeper,omitempty"`
+	Render *KargoRenderPromotionMechanism `json:"render,omitempty"`
 	// Kustomize describes how to use Kustomize to incorporate Freight into the
-	// Stage. This is mutually exclusive with the Bookkeeper and Helm fields.
+	// Stage. This is mutually exclusive with the Render and Helm fields.
 	Kustomize *KustomizePromotionMechanism `json:"kustomize,omitempty"`
 	// Helm describes how to use Helm to incorporate Freight into the Stage. This
-	// is mutually exclusive with the Bookkeeper and Kustomize fields.
+	// is mutually exclusive with the Render and Kustomize fields.
 	Helm *HelmPromotionMechanism `json:"helm,omitempty"`
 }
 
-// BookkeeperPromotionMechanism describes how to use Bookkeeper to incorporate
-// Freight into a Stage.
-type BookkeeperPromotionMechanism struct{}
+// KargoRenderPromotionMechanism describes how to use Kargo Render to
+// incorporate Freight into a Stage.
+type KargoRenderPromotionMechanism struct{}
 
 // KustomizePromotionMechanism describes how to use Kustomize to incorporate
 // Freight into a Stage.
