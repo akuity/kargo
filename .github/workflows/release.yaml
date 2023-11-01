@@ -38,7 +38,7 @@ jobs:
         NEW_VERSION=$(awk 'BEGIN {FS=OFS="."} {$3++; print}' <<< "${LATEST_VERSION}")
         echo "unstable-version=${NEW_VERSION}-unstable-$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - name: Install Cosign
