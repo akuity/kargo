@@ -1,4 +1,5 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
+import { faBuilding } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 
@@ -18,12 +19,14 @@ type Props = {
 const name = {
   [NodeType.REPO_IMAGE]: 'Image',
   [NodeType.REPO_GIT]: 'Git',
-  [NodeType.REPO_CHART]: 'Chart'
+  [NodeType.REPO_CHART]: 'Chart',
+  [NodeType.WAREHOUSE]: 'Warehouse'
 };
 
 const ico = {
   [NodeType.REPO_IMAGE]: faDocker,
-  [NodeType.REPO_GIT]: faGit
+  [NodeType.REPO_GIT]: faGit,
+  [NodeType.WAREHOUSE]: faBuilding
 };
 
 export const RepoNode = ({ nodeData, height }: Props) => (
@@ -39,13 +42,16 @@ export const RepoNode = ({ nodeData, height }: Props) => (
       {nodeData.type === NodeType.REPO_CHART && (
         <RepoNodeBody label='Registry URL' value={nodeData.data.registryUrl} />
       )}
+      {nodeData.type === NodeType.WAREHOUSE && (
+        <div className='text-center font-semibold mt-4'>{nodeData.data as string}</div>
+      )}
     </div>
   </div>
 );
 
 const RepoNodeBody = ({ label, value }: { label: string; value: string }) => (
   <>
-    <div className={styles.label}>{label}</div>
+    <div>{label}</div>
     <Tooltip title={value}>
       <a href={urlWithProtocol(value)} className={styles.value} target='_blank' rel='noreferrer'>
         {value.length > MAX_CHARS && '...'}

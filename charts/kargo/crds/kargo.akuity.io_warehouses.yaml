@@ -1,0 +1,195 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  name: warehouses.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: Warehouse
+    listKind: WarehouseList
+    plural: warehouses
+    singular: warehouse
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Warehouse is a source of Freight.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec describes sources of artifacts.
+            properties:
+              subscriptions:
+                description: Subscriptions describes sources of artifacts to be included
+                  in Freight produced by this Warehouse.
+                items:
+                  description: RepoSubscription describes a subscription to ONE OF
+                    a Git repository, a container image repository, or a Helm chart
+                    repository.
+                  properties:
+                    chart:
+                      description: Chart describes a subscription to a Helm chart
+                        repository.
+                      properties:
+                        name:
+                          description: Name specifies a Helm chart to subscribe to
+                            within the Helm chart registry specified by the RegistryURL
+                            field. This field is required.
+                          minLength: 1
+                          type: string
+                        registryURL:
+                          description: RegistryURL specifies the URL of a Helm chart
+                            registry. It may be a classic chart registry (using HTTP/S)
+                            OR an OCI registry. This field is required.
+                          minLength: 1
+                          pattern: ^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$
+                          type: string
+                        semverConstraint:
+                          description: SemverConstraint specifies constraints on what
+                            new chart versions are permissible. This field is optional.
+                            When left unspecified, there will be no constraints, which
+                            means the latest version of the chart will always be used.
+                            Care should be taken with leaving this field unspecified,
+                            as it can lead to the unanticipated rollout of breaking
+                            changes.
+                          type: string
+                      required:
+                      - name
+                      - registryURL
+                      type: object
+                    git:
+                      description: Git describes a subscriptions to a Git repository.
+                      properties:
+                        branch:
+                          description: Branch references a particular branch of the
+                            repository. This field is optional. When not specified,
+                            the subscription is implicitly to the repository's default
+                            branch.
+                          minLength: 1
+                          pattern: ^\w+([-/]\w+)*$
+                          type: string
+                        repoURL:
+                          description: URL is the repository's URL. This is a required
+                            field.
+                          minLength: 1
+                          pattern: ^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
+                          type: string
+                      required:
+                      - repoURL
+                      type: object
+                    image:
+                      description: Image describes a subscription to container image
+                        repository.
+                      properties:
+                        allowTags:
+                          description: AllowTags is a regular expression that can
+                            optionally be used to limit the image tags that are considered
+                            in determining the newest version of an image. This field
+                            is optional.
+                          type: string
+                        gitRepoURL:
+                          description: GitRepoURL optionally specifies the URL of
+                            a Git repository that contains the source code for the
+                            image repository referenced by the RepoURL field. When
+                            this is specified, Kargo MAY be able to infer and link
+                            to the exact revision of that source code that was used
+                            to build the image.
+                          pattern: ^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
+                          type: string
+                        ignoreTags:
+                          description: IgnoreTags is a list of tags that must be ignored
+                            when determining the newest version of an image. No regular
+                            expressions or glob patterns are supported yet. This field
+                            is optional.
+                          items:
+                            type: string
+                          type: array
+                        platform:
+                          description: Platform is a string of the form <os>/<arch>
+                            that limits the tags that can be considered when searching
+                            for new versions of an image. This field is optional.
+                            When left unspecified, it is implicitly equivalent to
+                            the OS/architecture of the Kargo controller. Care should
+                            be taken to set this value correctly in cases where the
+                            image referenced by this ImageRepositorySubscription will
+                            run on a Kubernetes node with a different OS/architecture
+                            than the Kargo controller. At present this is uncommon,
+                            but not unheard of.
+                          type: string
+                        repoURL:
+                          description: RepoURL specifies the URL of the image repository
+                            to subscribe to. The value in this field MUST NOT include
+                            an image tag. This field is required.
+                          minLength: 1
+                          pattern: ^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$
+                          type: string
+                        semverConstraint:
+                          description: SemverConstraint specifies constraints on what
+                            new image versions are permissible. This value in this
+                            field only has any effect when the UpdateStrategy is SemVer
+                            or left unspecified (which is implicitly the same as SemVer).
+                            This field is also optional. When left unspecified, (and
+                            the UpdateStrategy is SemVer or unspecified), there will
+                            be no constraints, which means the latest semantically
+                            tagged version of an image will always be used. Care should
+                            be taken with leaving this field unspecified, as it can
+                            lead to the unanticipated rollout of breaking changes.
+                            Refer to Image Updater documentation for more details.
+                          type: string
+                        updateStrategy:
+                          default: SemVer
+                          description: UpdateStrategy specifies the rules for how
+                            to identify the newest version of the image specified
+                            by the RepoURL field. This field is optional. When left
+                            unspecified, the field is implicitly treated as if its
+                            value were "SemVer".
+                          enum:
+                          - SemVer
+                          - NewestBuild
+                          - Alphabetical
+                          - Digest
+                          type: string
+                      required:
+                      - repoURL
+                      type: object
+                  type: object
+                minItems: 1
+                type: array
+            required:
+            - subscriptions
+            type: object
+          status:
+            description: Status describes the Warehouse's most recently observed state.
+            properties:
+              error:
+                description: Error describes any errors that are preventing the Warehouse
+                  controller from polling repositories to discover new Freight.
+                type: string
+              observedGeneration:
+                description: ObservedGeneration represents the .metadata.generation
+                  that this Warehouse was reconciled against.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

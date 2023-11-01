@@ -6,23 +6,23 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/akuity/bookkeeper"
+	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
 
-// bookkeeperMechanism is an implementation of the Mechanism interface that uses
-// Bookkeeper to update configuration in a Git repository.
-type bookkeeperMechanism struct {
+// kargoRenderMechanism is an implementation of the Mechanism interface that
+// uses Kargo Render to update configuration in a Git repository.
+type kargoRenderMechanism struct {
 	// Overridable behaviors:
 	doSingleUpdateFn func(
 		ctx context.Context,
 		namespace string,
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.Freight,
+		newFreight kargoapi.SimpleFreight,
 		images []string,
-	) (kargoapi.Freight, error)
+	) (kargoapi.SimpleFreight, error)
 	getReadRefFn func(
 		update kargoapi.GitRepoUpdate,
 		commits []kargoapi.GitCommit,
@@ -35,38 +35,38 @@ type bookkeeperMechanism struct {
 	) (credentials.Credentials, bool, error)
 	renderManifestsFn func(
 		context.Context,
-		bookkeeper.RenderRequest,
-	) (bookkeeper.RenderResponse, error)
+		render.Request,
+	) (render.Response, error)
 }
 
-// newBookkeeperMechanism returns an implementation of the Mechanism interface
-// that uses Bookkeeper to update configuration in a Git repository.
-func newBookkeeperMechanism(
+// newKargoRenderMechanism returns an implementation of the Mechanism interface
+// that uses Kargo Render to update configuration in a Git repository.
+func newKargoRenderMechanism(
 	credentialsDB credentials.Database,
-	bookkeeperService bookkeeper.Service,
+	renderService render.Service,
 ) Mechanism {
-	b := &bookkeeperMechanism{}
+	b := &kargoRenderMechanism{}
 	b.doSingleUpdateFn = b.doSingleUpdate
 	b.getReadRefFn = getReadRef
 	b.getCredentialsFn = credentialsDB.Get
-	b.renderManifestsFn = bookkeeperService.RenderManifests
+	b.renderManifestsFn = renderService.RenderManifests
 	return b
 }
 
 // GetName implements the Mechanism interface.
-func (*bookkeeperMechanism) GetName() string {
-	return "Bookkeeper promotion mechanisms"
+func (*kargoRenderMechanism) GetName() string {
+	return "Kargo Render promotion mechanisms"
 }
 
 // Promote implements the Mechanism interface.
-func (b *bookkeeperMechanism) Promote(
+func (b *kargoRenderMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	newFreight kargoapi.Freight,
-) (kargoapi.Freight, error) {
+	newFreight kargoapi.SimpleFreight,
+) (kargoapi.SimpleFreight, error) {
 	updates := make([]kargoapi.GitRepoUpdate, 0, len(stage.Spec.PromotionMechanisms.GitRepoUpdates))
 	for _, update := range stage.Spec.PromotionMechanisms.GitRepoUpdates {
-		if update.Bookkeeper != nil {
+		if update.Render != nil {
 			updates = append(updates, update)
 		}
 	}
@@ -78,7 +78,7 @@ func (b *bookkeeperMechanism) Promote(
 	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Debug("executing Bookkeeper-based promotion mechanisms")
+	logger.Debug("executing Kargo Render-based promotion mechanisms")
 
 	images := make([]string, len(newFreight.Images))
 	for i, image := range newFreight.Images {
@@ -98,20 +98,20 @@ func (b *bookkeeperMechanism) Promote(
 		}
 	}
 
-	logger.Debug("done executing Bookkeeper-based promotion mechanisms")
+	logger.Debug("done executing Kargo Render-based promotion mechanisms")
 
 	return newFreight, nil
 }
 
 // doSingleUpdateFn updates configuration in a single Git repository using
-// Bookkeeper.
-func (b *bookkeeperMechanism) doSingleUpdate(
+// Kargo Render.
+func (b *kargoRenderMechanism) doSingleUpdate(
 	ctx context.Context,
 	namespace string,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.Freight,
+	newFreight kargoapi.SimpleFreight,
 	images []string,
-) (kargoapi.Freight, error) {
+) (kargoapi.SimpleFreight, error) {
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	readRef, commitIndex, err := b.getReadRefFn(update, newFreight.Commits)
@@ -132,7 +132,7 @@ func (b *bookkeeperMechanism) doSingleUpdate(
 			update.RepoURL,
 		)
 	}
-	repoCreds := bookkeeper.RepoCredentials{}
+	repoCreds := render.RepoCredentials{}
 	if ok {
 		repoCreds.Username = creds.Username
 		repoCreds.Password = creds.Password
@@ -142,7 +142,7 @@ func (b *bookkeeperMechanism) doSingleUpdate(
 		logger.Debug("found no credentials for git repo")
 	}
 
-	req := bookkeeper.RenderRequest{
+	req := render.Request{
 		RepoURL:      update.RepoURL,
 		RepoCreds:    repoCreds,
 		Ref:          readRef,
@@ -154,19 +154,19 @@ func (b *bookkeeperMechanism) doSingleUpdate(
 	if err != nil {
 		return newFreight, errors.Wrapf(
 			err,
-			"error rendering manifests for git repo %q via Bookkeeper",
+			"error rendering manifests for git repo %q via Kargo Render",
 			update.RepoURL,
 		)
 	}
 	switch res.ActionTaken {
-	case bookkeeper.ActionTakenPushedDirectly:
+	case render.ActionTakenPushedDirectly:
 		logger.WithField("commit", res.CommitID).
-			Debug("pushed new commit to repo via Bookkeeper")
+			Debug("pushed new commit to repo via Kargo Render")
 		if commitIndex > -1 {
 			newFreight.Commits[commitIndex].HealthCheckCommit = res.CommitID
 		}
-	case bookkeeper.ActionTakenNone:
-		logger.Debug("Bookkeeper made no changes to repo")
+	case render.ActionTakenNone:
+		logger.Debug("Kargo Render made no changes to repo")
 		if commitIndex > -1 {
 			newFreight.Commits[commitIndex].HealthCheckCommit = res.CommitID
 		}

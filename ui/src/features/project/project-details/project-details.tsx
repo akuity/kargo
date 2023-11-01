@@ -103,28 +103,23 @@ export const ProjectDetails = () => {
       .slice()
       .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0)
       .flatMap((stage) => {
-        return [
+        const n = [
           {
             data: stage,
             type: NodeType.STAGE,
             color: '#000'
-          },
-          ...(stage.spec?.subscriptions?.repos?.images || []).map((image) => ({
-            data: image,
-            stageName: stage.metadata?.name,
-            type: NodeType.REPO_IMAGE
-          })),
-          ...(stage.spec?.subscriptions?.repos?.git || []).map((git) => ({
-            data: git,
-            stageName: stage.metadata?.name,
-            type: NodeType.REPO_GIT
-          })),
-          ...(stage.spec?.subscriptions?.repos?.charts || []).map((chart) => ({
-            data: chart,
-            stageName: stage.metadata?.name,
-            type: NodeType.REPO_CHART
-          }))
+          }
         ] as NodesItemType[];
+
+        if (stage.spec?.subscriptions?.warehouse) {
+          n.push({
+            data: stage.spec?.subscriptions?.warehouse || '',
+            stageName: stage.metadata?.name || '',
+            type: NodeType.WAREHOUSE
+          });
+        }
+
+        return n;
       });
 
     myNodes.forEach((item, index) => {
@@ -170,15 +165,19 @@ export const ProjectDetails = () => {
       if (points.length > 0) {
         // replace first point with the right side of the upstream node
         const upstreamNode = g.node(item.v);
-        points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
+        if (upstreamNode) {
+          points[0] = { x: upstreamNode.x + upstreamNode.width / 2, y: upstreamNode.y };
+        }
       }
       if (points.length > 1) {
         // replace last point with the right side of the downstream node
         const upstreamNode = g.node(item.w);
-        points[points.length - 1] = {
-          x: upstreamNode.x - upstreamNode.width / 2,
-          y: upstreamNode.y
-        };
+        if (upstreamNode) {
+          points[points.length - 1] = {
+            x: upstreamNode.x - upstreamNode.width / 2,
+            y: upstreamNode.y
+          };
+        }
       }
 
       const lines = new Array<{ x: number; y: number; width: number; angle: number }>();
@@ -220,7 +219,10 @@ export const ProjectDetails = () => {
     const stageColorMap = getStageColors(name || '', sortedStages);
     nodes.forEach((node) => {
       if (node.type === NodeType.STAGE) {
-        node.color = stageColorMap[node.data?.metadata?.uid || ''];
+        const color = stageColorMap[node.data?.metadata?.uid || ''];
+        if (color) {
+          node.color = color;
+        }
       }
     });
 
@@ -280,6 +282,7 @@ export const ProjectDetails = () => {
           promotionType={promotionType}
           confirmingPromotion={confirmingPromotion}
           setConfirmingPromotion={setConfirmingPromotion}
+          project={name || ''}
         />
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full ${styles.dag}`}>
@@ -304,30 +307,33 @@ export const ProjectDetails = () => {
                     }}
                   >
                     {node.type === NodeType.STAGE ? (
-                      <StageNode
-                        stage={node.data}
-                        color={node.color}
-                        height={node.height}
-                        projectName={name}
-                        faded={isFaded(node.data)}
-                        hasNoSubscribers={
-                          (subscribersByStage[node?.data?.metadata?.name || ''] || []).length === 0
-                        }
-                        onPromoteClick={(type: PromotionType) => {
-                          if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
-                            setPromotingStage(undefined);
-                          } else {
-                            setPromotingStage(node.data);
-                            setPromotionType(type);
+                      <>
+                        <StageNode
+                          stage={node.data}
+                          color={node.color}
+                          height={node.height}
+                          projectName={name}
+                          faded={isFaded(node.data)}
+                          hasNoSubscribers={
+                            (subscribersByStage[node?.data?.metadata?.name || ''] || []).length ===
+                            0
                           }
-                          setConfirmingPromotion(undefined);
-                        }}
-                        promoting={
-                          promotingStage?.metadata?.name === node.data?.metadata?.name
-                            ? promotionType
-                            : undefined
-                        }
-                      />
+                          onPromoteClick={(type: PromotionType) => {
+                            if (promotingStage?.metadata?.name === node.data?.metadata?.name) {
+                              setPromotingStage(undefined);
+                            } else {
+                              setPromotingStage(node.data);
+                              setPromotionType(type);
+                            }
+                            setConfirmingPromotion(undefined);
+                          }}
+                          promoting={
+                            promotingStage?.metadata?.name === node.data?.metadata?.name
+                              ? promotionType
+                              : undefined
+                          }
+                        />
+                      </>
                     ) : (
                       <RepoNode nodeData={node} height={node.height} />
                     )}

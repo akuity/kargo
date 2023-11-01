@@ -4,19 +4,18 @@ import (
 	"context"
 	"testing"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	argoHealth "github.com/argoproj/gitops-engine/pkg/health"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
 func TestCheckHealth(t *testing.T) {
 	testCases := []struct {
 		name             string
-		freight          *kargoapi.Freight
+		freight          kargoapi.SimpleFreight
 		argoCDAppUpdates []kargoapi.ArgoCDAppUpdate
 		getArgoCDAppFn   func(
 			context.Context,
@@ -148,7 +147,7 @@ func TestCheckHealth(t *testing.T) {
 					},
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
-							Status: argoHealth.HealthStatusHealthy,
+							Status: argocd.HealthStatusHealthy,
 						},
 						Sync: argocd.SyncStatus{
 							Status: argocd.SyncStatusCodeSynced,
@@ -201,7 +200,7 @@ func TestCheckHealth(t *testing.T) {
 				return &argocd.Application{
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
-							Status: argoHealth.HealthStatusDegraded,
+							Status: argocd.HealthStatusDegraded,
 						},
 						Sync: argocd.SyncStatus{
 							Status: argocd.SyncStatusCodeSynced,
@@ -229,13 +228,13 @@ func TestCheckHealth(t *testing.T) {
 				)
 				require.Len(t, health.Issues, 1)
 				require.Contains(t, health.Issues[0], "has health state")
-				require.Contains(t, health.Issues[0], argoHealth.HealthStatusDegraded)
+				require.Contains(t, health.Issues[0], argocd.HealthStatusDegraded)
 			},
 		},
 
 		{
 			name: "Argo CD App not synced",
-			freight: &kargoapi.Freight{
+			freight: kargoapi.SimpleFreight{
 				Commits: []kargoapi.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -263,7 +262,7 @@ func TestCheckHealth(t *testing.T) {
 					},
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
-							Status: argoHealth.HealthStatusHealthy,
+							Status: argocd.HealthStatusHealthy,
 						},
 						Sync: argocd.SyncStatus{
 							Status:   argocd.SyncStatusCodeSynced,
@@ -298,7 +297,7 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App healthy and synced",
-			freight: &kargoapi.Freight{
+			freight: kargoapi.SimpleFreight{
 				Commits: []kargoapi.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -326,7 +325,7 @@ func TestCheckHealth(t *testing.T) {
 					},
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
-							Status: argoHealth.HealthStatusHealthy,
+							Status: argocd.HealthStatusHealthy,
 						},
 						Sync: argocd.SyncStatus{
 							Status:   argocd.SyncStatusCodeSynced,

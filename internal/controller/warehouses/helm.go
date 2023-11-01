@@ -1,4 +1,4 @@
-package stages
+package warehouses
 
 import (
 	"context"
@@ -15,11 +15,17 @@ import (
 func (r *reconciler) getLatestCharts(
 	ctx context.Context,
 	namespace string,
-	subs []kargoapi.ChartSubscription,
+	subs []kargoapi.RepoSubscription,
 ) ([]kargoapi.Chart, error) {
-	charts := make([]kargoapi.Chart, len(subs))
+	charts := make([]kargoapi.Chart, 0, len(subs))
 
-	for i, sub := range subs {
+	for _, s := range subs {
+		if s.Chart == nil {
+			continue
+		}
+
+		sub := s.Chart
+
 		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 			"registry": sub.RegistryURL,
 			"chart":    sub.Name,
@@ -73,11 +79,14 @@ func (r *reconciler) getLatestCharts(
 		logger.WithField("version", vers).
 			Debug("found latest suitable chart version")
 
-		charts[i] = kargoapi.Chart{
-			RegistryURL: sub.RegistryURL,
-			Name:        sub.Name,
-			Version:     vers,
-		}
+		charts = append(
+			charts,
+			kargoapi.Chart{
+				RegistryURL: sub.RegistryURL,
+				Name:        sub.Name,
+				Version:     vers,
+			},
+		)
 	}
 
 	return charts, nil

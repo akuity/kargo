@@ -3,55 +3,226 @@ package stages
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 )
 
-func TestNewStageReconciler(t *testing.T) {
+func TestNewReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	e := newReconciler(
 		kubeClient,
 		kubeClient,
-		&credentials.FakeDB{},
 	)
 	require.NotNil(t, e.kargoClient)
 	require.NotNil(t, e.argoClient)
-	require.NotNil(t, e.credentialsDB)
-
 	// Assert that all overridable behaviors were initialized to a default:
-
 	// Loop guard:
 	require.NotNil(t, e.hasNonTerminalPromotionsFn)
-
-	// Common:
-	require.NotNil(t, e.getArgoCDAppFn)
-
+	require.NotNil(t, e.listPromosFn)
 	// Health checks:
 	require.NotNil(t, e.checkHealthFn)
-
-	// Syncing:
-	require.NotNil(t, e.getLatestFreightFromReposFn)
-	require.NotNil(t, e.getAvailableFreightFromUpstreamStagesFn)
-	require.NotNil(t, e.getLatestCommitsFn)
-	require.NotNil(t, e.getLatestImagesFn)
-	require.NotNil(t, e.getLatestTagFn)
-	require.NotNil(t, e.getLatestChartsFn)
-	require.NotNil(t, e.getLatestChartVersionFn)
-	require.NotNil(t, e.getLatestCommitMetaFn)
+	require.NotNil(t, e.getArgoCDAppFn)
+	// Freight qualification:
+	require.NotNil(t, e.getFreightFn)
+	require.NotNil(t, e.qualifyFreightFn)
+	require.NotNil(t, e.patchFreightStatusFn)
+	// Auto-promotion:
+	require.NotNil(t, e.isAutoPromotionPermittedFn)
+	require.NotNil(t, e.listPromoPoliciesFn)
+	require.NotNil(t, e.createPromotionFn)
+	// Discovering latest Freight:
+	require.NotNil(t, e.getLatestAvailableFreightFn)
+	require.NotNil(t, e.getAllFreightFromWarehouseFn)
+	require.NotNil(t, e.getLatestFreightFromWarehouseFn)
+	require.NotNil(t, e.getAllFreightQualifiedForUpstreamStagesFn)
+	require.NotNil(t, e.getLatestFreightQualifiedForUpstreamStagesFn)
+	require.NotNil(t, e.listFreightFn)
 }
 
-func TestSync(t *testing.T) {
-	scheme := k8sruntime.NewScheme()
-	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+func TestSyncControlFlowStage(t *testing.T) {
+	testCases := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		reconciler *reconciler
+		assertions func(
+			initialStatus kargoapi.StageStatus,
+			newStatus kargoapi.StageStatus,
+			err error,
+		)
+	}{
+		{
+			name: "error listing Freight from Warehouse",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error finding all Freight from Warehouse",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
+			name: "error listing Freight qualified for upstream Stages",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						UpstreamStages: []kargoapi.StageSubscription{
+							{Name: "fake-stage"},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getAllFreightQualifiedForUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error finding available Freight for Stage",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
+			name: "error qualifying Freight",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{}}, nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error qualifying Freight")
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
+			name: "success",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 42,
+				},
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
+					Health:         &kargoapi.Health{},
+				},
+			},
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{{}}, nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
+				require.Nil(t, newStatus.CurrentFreight)                  // Cleared
+				require.Nil(t, newStatus.Health)                          // Cleared
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			newStatus, err := testCase.reconciler.syncControlFlowStage(
+				context.Background(),
+				testCase.stage,
+			)
+			testCase.assertions(testCase.stage.Status, newStatus, err)
+		})
+	}
+}
 
+func TestSyncNormalStage(t *testing.T) {
 	noNonTerminalPromotionsFn := func(
 		context.Context,
 		string,
@@ -67,7 +238,6 @@ func TestSync(t *testing.T) {
 		assertions func(
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
-			client client.Client,
 			err error,
 		)
 	}{
@@ -86,7 +256,6 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
-				_ client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -97,17 +266,8 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "non-terminal promotions found",
-			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					CurrentPromotion: &kargoapi.PromotionInfo{
-						Name: "dev.abc123.def456",
-						Freight: kargoapi.Freight{
-							ID: "xyz789",
-						},
-					},
-				},
-			},
+			name:  "non-terminal promotions found",
+			stage: &kargoapi.Stage{},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: func(
 					context.Context,
@@ -120,7 +280,6 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
-				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -130,71 +289,211 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "no non-terminal promotions found",
+			name: "error qualifying Freight",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentPromotion: &kargoapi.PromotionInfo{ // This should get cleared
-						Name: "dev.abc123.def456",
-						Freight: kargoapi.Freight{
-							ID: "xyz789",
-						},
-					},
+					CurrentFreight: &kargoapi.SimpleFreight{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				_ client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.Nil(t, newStatus.CurrentPromotion)
-			},
-		},
-
-		{
-			name: "no subscriptions",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{},
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return errors.New("something went wrong")
 				},
 			},
-			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-			},
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
-				_ client.Client,
 				err error,
 			) {
-				require.NoError(t, err)
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error qualifying Freight")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
 
 		{
-			name: "error getting latest Freight from repos",
+			name: "auto-promotion not possible",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
 					Subscriptions: &kargoapi.Subscriptions{
-						Repos: &kargoapi.RepoSubscriptions{},
+						UpstreamStages: []kargoapi.StageSubscription{
+							{Name: "fake-stage"},
+							{Name: "another-fake-stage"},
+						},
 					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getLatestFreightFromReposFn: func(
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "error checking if auto-promotion is permitted",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+				isAutoPromotionPermittedFn: func(
 					context.Context,
 					string,
-					kargoapi.RepoSubscriptions,
+					string,
+				) (bool, error) {
+					return false, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(
+					t,
+					err.Error(),
+					"error checking if auto-promotion is permitted",
+				)
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "auto-promotion is not permitted",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+				isAutoPromotionPermittedFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return false, nil
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "error getting latest Freight",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+				isAutoPromotionPermittedFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+				getLatestAvailableFreightFn: func(
+					context.Context,
+					string,
+					kargoapi.Subscriptions,
 				) (*kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -202,31 +501,56 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
-				_ client.Client,
 				err error,
 			) {
 				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
-				// Status should be unchanged
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(
+					t,
+					err.Error(),
+					"error finding latest Freight for Stage",
+				)
+				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
 
 		{
-			name: "no latest Freight from repos",
+			name: "no Freight found",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
 					Subscriptions: &kargoapi.Subscriptions{
-						Repos: &kargoapi.RepoSubscriptions{},
+						Warehouse: "fake-warehouse",
 					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getLatestFreightFromReposFn: func(
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+				isAutoPromotionPermittedFn: func(
 					context.Context,
 					string,
-					kargoapi.RepoSubscriptions,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+				getLatestAvailableFreightFn: func(
+					context.Context,
+					string,
+					kargoapi.Subscriptions,
 				) (*kargoapi.Freight, error) {
 					return nil, nil
 				},
@@ -234,7 +558,6 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
-				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -244,67 +567,17 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "latest Freight from repos isn't new",
+			name: "Stage already has latest Freight",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
 					Subscriptions: &kargoapi.Subscriptions{
-						Repos: &kargoapi.RepoSubscriptions{},
+						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-					// TODO: I'm not sure about this change
-					// HealthChecks: &kargoapi.HealthChecks{},
 				},
 				Status: kargoapi.StageStatus{
-					Health: &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					},
-					AvailableFreight: []kargoapi.Freight{
-						{
-							Commits: []kargoapi.GitCommit{
-								{
-									RepoURL: "fake-url",
-									ID:      "fake-commit",
-								},
-							},
-							Images: []kargoapi.Image{
-								{
-									RepoURL: "fake-url",
-									Tag:     "fake-tag",
-								},
-							},
-						},
-					},
-					CurrentFreight: &kargoapi.Freight{
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
-							},
-						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
-						Qualified: true,
-					},
-					History: []kargoapi.Freight{
-						{
-							Commits: []kargoapi.GitCommit{
-								{
-									RepoURL: "fake-url",
-									ID:      "fake-commit",
-								},
-							},
-							Images: []kargoapi.Image{
-								{
-									RepoURL: "fake-url",
-									Tag:     "fake-tag",
-								},
-							},
-							Qualified: true,
-						},
+					CurrentFreight: &kargoapi.SimpleFreight{
+						ID: "fake-freight-id",
 					},
 				},
 			},
@@ -312,30 +585,29 @@ func TestSync(t *testing.T) {
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					*kargoapi.Freight,
+					kargoapi.SimpleFreight,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
-					return &kargoapi.Health{
-						Status: kargoapi.HealthStateHealthy,
-					}
+					return nil
 				},
-				getLatestFreightFromReposFn: func(
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+				isAutoPromotionPermittedFn: func(
 					context.Context,
 					string,
-					kargoapi.RepoSubscriptions,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+				getLatestAvailableFreightFn: func(
+					context.Context,
+					string,
+					kargoapi.Subscriptions,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
-							},
-						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
 						},
 					}, nil
 				},
@@ -343,7 +615,6 @@ func TestSync(t *testing.T) {
 			assertions: func(
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
-				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -353,21 +624,955 @@ func TestSync(t *testing.T) {
 		},
 
 		{
-			name: "error getting available Freight from upstream Stages",
+			name: "Promotion already exists",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
 					Subscriptions: &kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							{
-								Name: "fake-name",
-							},
-						},
+						Warehouse: "fake-warehouse",
 					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getAvailableFreightFromUpstreamStagesFn: func(
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+				isAutoPromotionPermittedFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+				getLatestAvailableFreightFn: func(
+					context.Context,
+					string,
+					kargoapi.Subscriptions,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+					}, nil
+				},
+				createPromotionFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(
+						schema.GroupResource{
+							Group:    kargoapi.GroupVersion.Group,
+							Resource: "Promotion",
+						},
+						"",
+					)
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "other error creating Promotion",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+				isAutoPromotionPermittedFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+				getLatestAvailableFreightFn: func(
+					context.Context,
+					string,
+					kargoapi.Subscriptions,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+					}, nil
+				},
+				createPromotionFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error creating Promotion of Stage")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "success",
+			// Note: In this final case, we will also assert than anything that should
+			// have been cleared or modified in the Stage's status was.
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 42,
+				},
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentPromotion: &kargoapi.PromotionInfo{},
+					CurrentFreight:   &kargoapi.SimpleFreight{},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return &kargoapi.Health{
+						Status: kargoapi.HealthStateHealthy,
+					}
+				},
+				qualifyFreightFn: func(context.Context, string, string, string) error {
+					return nil
+				},
+				isAutoPromotionPermittedFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return true, nil
+				},
+				getLatestAvailableFreightFn: func(
+					context.Context,
+					string,
+					kargoapi.Subscriptions,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+					}, nil
+				},
+				createPromotionFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
+				require.NotNil(t, newStatus.Health)                       // Set
+				require.Nil(t, newStatus.CurrentPromotion)                // Cleared
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			newStatus, err :=
+				testCase.reconciler.syncNormalStage(context.Background(), testCase.stage)
+			testCase.assertions(testCase.stage.Status, newStatus, err)
+		})
+	}
+}
+
+func TestHasNonTerminalPromotions(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(bool, error)
+	}{
+		{
+			name: "error listing Promotions",
+			reconciler: &reconciler{
+				listPromosFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ bool, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "has non-terminal Promotions",
+			reconciler: &reconciler{
+				listPromosFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					promos, ok := objList.(*kargoapi.PromotionList)
+					require.True(t, ok)
+					promos.Items = []kargoapi.Promotion{{}}
+					return nil
+				},
+			},
+			assertions: func(result bool, err error) {
+				require.NoError(t, err)
+				require.True(t, result)
+			},
+		},
+		{
+			name: "does not have non-terminal Promotions",
+			reconciler: &reconciler{
+				listPromosFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					promos, ok := objList.(*kargoapi.PromotionList)
+					require.True(t, ok)
+					promos.Items = []kargoapi.Promotion{}
+					return nil
+				},
+			},
+			assertions: func(result bool, err error) {
+				require.NoError(t, err)
+				require.False(t, result)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := testCase.reconciler.hasNonTerminalPromotions(
+				context.Background(),
+				"fake-namespace",
+				"fake-stage",
+			)
+			testCase.assertions(result, err)
+		})
+	}
+}
+
+func TestQualifyFreight(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(error)
+	}{
+		{
+			name: "error getting Freight",
+			reconciler: &reconciler{
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error finding Freight")
+			},
+		},
+		{
+			name: "Freight not found",
+			reconciler: &reconciler{
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "found no Freight")
+			},
+		},
+		{
+			name: "Freight already qualified for Stage",
+			reconciler: &reconciler{
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						Status: kargoapi.FreightStatus{
+							Qualifications: map[string]kargoapi.Qualification{
+								"fake-stage": {},
+							},
+						},
+					}, nil
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "error Patching Freight status",
+			reconciler: &reconciler{
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.qualifyFreight(
+					context.Background(),
+					"fake-namespace",
+					"fake-freight",
+					"fake-stage",
+				),
+			)
+		})
+	}
+}
+
+func TestIsAutoPromotionPermitted(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(bool, error)
+	}{
+		{
+			name: "error listing PromotionPolicies",
+			reconciler: &reconciler{
+				listPromoPoliciesFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ bool, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(
+					t,
+					err.Error(),
+					"error listing PromotionPolicies for Stage",
+				)
+			},
+		},
+		{
+			name: "no PromotionPolicies found",
+			reconciler: &reconciler{
+				listPromoPoliciesFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					policies, ok := objList.(*kargoapi.PromotionPolicyList)
+					require.True(t, ok)
+					policies.Items = []kargoapi.PromotionPolicy{}
+					return nil
+				},
+			},
+			assertions: func(result bool, err error) {
+				require.NoError(t, err)
+				require.False(t, result)
+			},
+		},
+		{
+			name: "more than one PromotionPolicy found",
+			reconciler: &reconciler{
+				listPromoPoliciesFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					policies, ok := objList.(*kargoapi.PromotionPolicyList)
+					require.True(t, ok)
+					policies.Items = []kargoapi.PromotionPolicy{{}, {}}
+					return nil
+				},
+			},
+			assertions: func(result bool, err error) {
+				require.NoError(t, err)
+				require.False(t, result)
+			},
+		},
+		{
+			name: "not permitted",
+			reconciler: &reconciler{
+				listPromoPoliciesFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					policies, ok := objList.(*kargoapi.PromotionPolicyList)
+					require.True(t, ok)
+					policies.Items = []kargoapi.PromotionPolicy{{}}
+					return nil
+				},
+			},
+			assertions: func(result bool, err error) {
+				require.NoError(t, err)
+				require.False(t, result)
+			},
+		},
+		{
+			name: "permitted",
+			reconciler: &reconciler{
+				listPromoPoliciesFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					policies, ok := objList.(*kargoapi.PromotionPolicyList)
+					require.True(t, ok)
+					policies.Items = []kargoapi.PromotionPolicy{
+						{
+							EnableAutoPromotion: true,
+						},
+					}
+					return nil
+				},
+			},
+			assertions: func(result bool, err error) {
+				require.NoError(t, err)
+				require.True(t, result)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.isAutoPromotionPermitted(
+					context.Background(),
+					"fake-namespace",
+					"fake-stage",
+				),
+			)
+		})
+	}
+}
+
+func TestGetLatestAvailableFreight(t *testing.T) {
+	testCases := []struct {
+		name       string
+		subs       kargoapi.Subscriptions
+		reconciler *reconciler
+		assertions func(*kargoapi.Freight, error)
+	}{
+		{
+			name: "error getting latest Freight from Warehouse",
+			subs: kargoapi.Subscriptions{
+				Warehouse: "fake-warehouse",
+			},
+			reconciler: &reconciler{
+				getLatestFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) (*kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ *kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error checking Warehouse")
+			},
+		},
+		{
+			name: "found no Freight from Warehouse",
+			subs: kargoapi.Subscriptions{
+				Warehouse: "fake-warehouse",
+			},
+			reconciler: &reconciler{
+				getLatestFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "success getting latest Freight from Warehouse",
+			subs: kargoapi.Subscriptions{
+				Warehouse: "fake-warehouse",
+			},
+			reconciler: &reconciler{
+				getLatestFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+			},
+			assertions: func(freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight)
+			},
+		},
+		{
+			name: "error getting latest qualified Freight for Stage",
+			subs: kargoapi.Subscriptions{
+				UpstreamStages: []kargoapi.StageSubscription{{}},
+			},
+			reconciler: &reconciler{
+				getLatestFreightQualifiedForUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) (*kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ *kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(
+					t,
+					err.Error(),
+					"error finding Freight qualified for Stage",
+				)
+			},
+		},
+		{
+			name: "found no qualified Freight for Stage",
+			subs: kargoapi.Subscriptions{
+				UpstreamStages: []kargoapi.StageSubscription{{}},
+			},
+			reconciler: &reconciler{
+				getLatestFreightQualifiedForUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "success getting latest qualified Freight for Stage",
+			subs: kargoapi.Subscriptions{
+				UpstreamStages: []kargoapi.StageSubscription{{}},
+			},
+			reconciler: &reconciler{
+				getLatestFreightQualifiedForUpstreamStagesFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+			},
+			assertions: func(freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.getLatestAvailableFreight(
+					context.Background(),
+					"fake-namespace",
+					testCase.subs,
+				),
+			)
+		})
+	}
+}
+
+func TestGetAllFreightFromWarehouse(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func([]kargoapi.Freight, error)
+	}{
+		{
+			name: "error listing Freight",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ []kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error listing Freight for Warehouse")
+			},
+		},
+		{
+			name: "no Freight found",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "older-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now().Add(-time.Hour),
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "newer-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now(),
+								},
+							},
+						},
+					}
+					return nil
+				},
+			},
+			assertions: func(freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, freight, 2)
+				// Be sure they've been sorted
+				require.Equal(t, "newer-freight", freight[0].Name)
+				require.Equal(t, "older-freight", freight[1].Name)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.getAllFreightFromWarehouse(
+					context.Background(),
+					"fake-namespace",
+					"fake-warehouse",
+				),
+			)
+		})
+	}
+}
+
+func TestGetLatestFreightFromWarehouse(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(*kargoapi.Freight, error)
+	}{
+		{
+			name: "error getting all Freight from Warehouse",
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ *kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "no Freight found from Warehouse",
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				getAllFreightFromWarehouseFn: func(
+					context.Context,
+					string,
+					string,
+				) ([]kargoapi.Freight, error) {
+					return []kargoapi.Freight{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "newer-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now(),
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "older-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now().Add(-time.Hour),
+								},
+							},
+						},
+					}, nil
+				},
+			},
+			assertions: func(freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight)
+				// Be sure we got the latest
+				require.Equal(t, "newer-freight", freight.Name)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.getLatestFreightFromWarehouse(
+					context.Background(),
+					"fake-namespace",
+					"fake-warehouse",
+				),
+			)
+		})
+	}
+}
+
+func TestGetAllFreightQualifiedForUpstreamStages(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func([]kargoapi.Freight, error)
+	}{
+		{
+			name: "error listing Freight",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(_ []kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(
+					t,
+					err.Error(),
+					"error listing Freight qualified for Stage",
+				)
+			},
+		},
+		{
+			name: "no Freight found",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Nil(t, freight)
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "older-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now().Add(-time.Hour),
+								},
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "newer-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now(),
+								},
+							},
+						},
+					}
+					return nil
+				},
+			},
+			assertions: func(freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, freight)
+				// Be sure they've been sorted// Be sure we got the newest one
+				require.Equal(t, "newer-freight", freight[0].Name)
+				require.Equal(t, "older-freight", freight[1].Name)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.getAllFreightQualifiedForUpstreamStages(
+					context.Background(),
+					"fake-namespace",
+					[]kargoapi.StageSubscription{
+						{
+							Name: "fake-stage",
+						},
+					},
+				),
+			)
+		})
+	}
+}
+
+func TestGetLatestFreightQualifiedForUpstreamStages(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(*kargoapi.Freight, error)
+	}{
+		{
+			name: "error getting all Freight qualified for upstream Stages",
+			reconciler: &reconciler{
+				getAllFreightQualifiedForUpstreamStagesFn: func(
 					context.Context,
 					string,
 					[]kargoapi.StageSubscription,
@@ -375,35 +1580,15 @@ func TestSync(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				_ client.Client,
-				err error,
-			) {
+			assertions: func(_ *kargoapi.Freight, err error) {
 				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
-				// Status should be unchanged
-				require.Equal(t, initialStatus, newStatus)
+				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
-
 		{
-			name: "no latest Freight from upstream Stages",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							{
-								Name: "fake-name",
-							},
-						},
-					},
-				},
-			},
+			name: "no Freight qualified for upstream Stages",
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getAvailableFreightFromUpstreamStagesFn: func(
+				getAllFreightQualifiedForUpstreamStagesFn: func(
 					context.Context,
 					string,
 					[]kargoapi.StageSubscription,
@@ -411,646 +1596,54 @@ func TestSync(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				_ client.Client,
-				err error,
-			) {
+			assertions: func(freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
-				// Status should be unchanged
-				require.Equal(t, initialStatus, newStatus)
+				require.Nil(t, freight)
 			},
 		},
-
 		{
-			name: "multiple upstream Stages",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							// Subscribing to multiple upstream Stages should block
-							// auto-promotion
-							{
-								Name: "fake-name",
-							},
-							{
-								Name: "another-fake-name",
-							},
-						},
-					},
-				},
-			},
+			name: "success",
 			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getAvailableFreightFromUpstreamStagesFn: func(
+				getAllFreightQualifiedForUpstreamStagesFn: func(
 					context.Context,
 					string,
 					[]kargoapi.StageSubscription,
 				) ([]kargoapi.Freight, error) {
 					return []kargoapi.Freight{
-						{},
-						{},
-					}, nil
-				},
-			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				_ client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-				// Status should have updated AvailableFreight and otherwise be
-				// unchanged
-				require.Equal(
-					t,
-					kargoapi.FreightStack{{}, {}},
-					newStatus.AvailableFreight,
-				)
-				newStatus.AvailableFreight = initialStatus.AvailableFreight
-				require.Equal(t, initialStatus, newStatus)
-			},
-		},
-
-		{
-			name: "no promotion policy found",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
-						Repos: &kargoapi.RepoSubscriptions{},
-					},
-				},
-			},
-			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getLatestFreightFromReposFn: func(
-					context.Context,
-					string,
-					kargoapi.RepoSubscriptions,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "newer-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now(),
+								},
 							},
 						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "older-freight",
+								CreationTimestamp: metav1.Time{
+									Time: time.Now().Add(-time.Hour),
+								},
 							},
 						},
 					}, nil
 				},
-				kargoClient: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				client client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-				// Status should have updated AvailableFreight and otherwise be
-				// unchanged
-				require.Equal(
-					t,
-					kargoapi.FreightStack{
-						{
-							Commits: []kargoapi.GitCommit{
-								{
-									RepoURL: "fake-url",
-									ID:      "fake-commit",
-								},
-							},
-							Images: []kargoapi.Image{
-								{
-									RepoURL: "fake-url",
-									Tag:     "fake-tag",
-								},
-							},
-						},
-					},
-					newStatus.AvailableFreight,
-				)
-				newStatus.AvailableFreight = initialStatus.AvailableFreight
-				require.Equal(t, initialStatus, newStatus)
-				// And no Promotion should have been created
-				promos := kargoapi.PromotionList{}
-				err = client.List(context.Background(), &promos)
-				require.NoError(t, err)
-				require.Empty(t, promos.Items)
-			},
-		},
-
-		{
-			name: "multiple promotion policies found",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
-						Repos: &kargoapi.RepoSubscriptions{},
-					},
-				},
-			},
-			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getLatestFreightFromReposFn: func(
-					context.Context,
-					string,
-					kargoapi.RepoSubscriptions,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
-							},
-						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
-					}, nil
-				},
-				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					&kargoapi.PromotionPolicy{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-policy",
-							Namespace: "fake-namespace",
-						},
-						Stage: "fake-stage",
-					},
-					&kargoapi.PromotionPolicy{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "another-fake-policy",
-							Namespace: "fake-namespace",
-						},
-						Stage: "fake-stage",
-					},
-				).Build(),
-			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				client client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-				// Status should have updated AvailableFreight and otherwise be
-				// unchanged
-				require.Equal(
-					t,
-					kargoapi.FreightStack{
-						{
-							Commits: []kargoapi.GitCommit{
-								{
-									RepoURL: "fake-url",
-									ID:      "fake-commit",
-								},
-							},
-							Images: []kargoapi.Image{
-								{
-									RepoURL: "fake-url",
-									Tag:     "fake-tag",
-								},
-							},
-						},
-					},
-					newStatus.AvailableFreight,
-				)
-				newStatus.AvailableFreight = initialStatus.AvailableFreight
-				require.Equal(t, initialStatus, newStatus)
-				// And no Promotion should have been created
-				promos := kargoapi.PromotionList{}
-				err = client.List(context.Background(), &promos)
-				require.NoError(t, err)
-				require.Empty(t, promos.Items)
-			},
-		},
-
-		{
-			name: "auto-promotion not enabled",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
-						Repos: &kargoapi.RepoSubscriptions{},
-					},
-				},
-			},
-			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getLatestFreightFromReposFn: func(
-					context.Context,
-					string,
-					kargoapi.RepoSubscriptions,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
-							},
-						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
-					}, nil
-				},
-				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					&kargoapi.PromotionPolicy{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-policy",
-							Namespace: "fake-namespace",
-						},
-						Stage: "fake-stage",
-					},
-				).Build(),
-			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				client client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-				// Status should have updated AvailableFreight and otherwise be
-				// unchanged
-				require.Equal(
-					t,
-					kargoapi.FreightStack{
-						{
-							Commits: []kargoapi.GitCommit{
-								{
-									RepoURL: "fake-url",
-									ID:      "fake-commit",
-								},
-							},
-							Images: []kargoapi.Image{
-								{
-									RepoURL: "fake-url",
-									Tag:     "fake-tag",
-								},
-							},
-						},
-					},
-					newStatus.AvailableFreight,
-				)
-				newStatus.AvailableFreight = initialStatus.AvailableFreight
-				require.Equal(t, initialStatus, newStatus)
-				// And no Promotion should have been created
-				promos := kargoapi.PromotionList{}
-				err = client.List(context.Background(), &promos)
-				require.NoError(t, err)
-				require.Empty(t, promos.Items)
-			},
-		},
-
-		{
-			name: "auto-promotion enabled",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
-						Repos: &kargoapi.RepoSubscriptions{},
-					},
-				},
-			},
-			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getLatestFreightFromReposFn: func(
-					context.Context,
-					string,
-					kargoapi.RepoSubscriptions,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
-							},
-						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
-					}, nil
-				},
-				kargoClient: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					&kargoapi.PromotionPolicy{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-policy",
-							Namespace: "fake-namespace",
-						},
-						Stage:               "fake-stage",
-						EnableAutoPromotion: true,
-					},
-				).Build(),
-			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				client client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-				// Status should have updated AvailableFreight and otherwise be
-				// unchanged
-				require.Equal(
-					t,
-					kargoapi.FreightStack{
-						{
-							Commits: []kargoapi.GitCommit{
-								{
-									RepoURL: "fake-url",
-									ID:      "fake-commit",
-								},
-							},
-							Images: []kargoapi.Image{
-								{
-									RepoURL: "fake-url",
-									Tag:     "fake-tag",
-								},
-							},
-						},
-					},
-					newStatus.AvailableFreight,
-				)
-				newStatus.AvailableFreight = initialStatus.AvailableFreight
-				require.Equal(t, initialStatus, newStatus)
-				// And a Promotion should have been created
-				promos := kargoapi.PromotionList{}
-				err = client.List(context.Background(), &promos)
-				require.NoError(t, err)
-				require.Len(t, promos.Items, 1)
-			},
-		},
-
-		{
-			name: "control-flow stage",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							{
-								Name: "upstream",
-							},
-						},
-					},
-					PromotionMechanisms: nil,
-				},
-				Status: kargoapi.StageStatus{
-					AvailableFreight: []kargoapi.Freight{
-						{
-							Commits: []kargoapi.GitCommit{
-								{
-									RepoURL: "fake-url",
-									ID:      "fake-commit",
-								},
-							},
-						},
-					},
-					CurrentFreight: &kargoapi.Freight{},
-				},
-			},
-			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				getAvailableFreightFromUpstreamStagesFn: func(
-					context.Context,
-					string,
-					[]kargoapi.StageSubscription,
-				) ([]kargoapi.Freight, error) {
-					return nil, nil
-				},
-			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				_ client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.Nil(t, newStatus.CurrentFreight)
-				require.Len(t, newStatus.History, len(initialStatus.AvailableFreight))
-				for i, f := range newStatus.History {
-					require.Equal(t, initialStatus.AvailableFreight[i].ID, f.ID)
-					require.True(t, f.Qualified)
-				}
-			},
-		},
-	}
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			tc.stage.ObjectMeta = metav1.ObjectMeta{
-				Name:      "fake-stage",
-				Namespace: "fake-namespace",
-			}
-			// nolint: lll
-			newStatus, err := tc.reconciler.syncStage(context.Background(), tc.stage)
-			tc.assertions(
-				tc.stage.Status,
-				newStatus,
-				tc.reconciler.kargoClient,
-				err,
-			)
-		})
-	}
-}
-
-func TestGetLatestFreightFromRepos(t *testing.T) {
-	testCases := []struct {
-		name               string
-		getLatestCommitsFn func(
-			context.Context,
-			string,
-			[]kargoapi.GitSubscription,
-		) ([]kargoapi.GitCommit, error)
-		getLatestImagesFn func(
-			context.Context,
-			string,
-			[]kargoapi.ImageSubscription,
-		) ([]kargoapi.Image, error)
-		getLatestChartsFn func(
-			context.Context,
-			string,
-			[]kargoapi.ChartSubscription,
-		) ([]kargoapi.Chart, error)
-		assertions func(*kargoapi.Freight, error)
-	}{
-		{
-			name: "error getting latest git commit",
-			getLatestCommitsFn: func(
-				context.Context,
-				string,
-				[]kargoapi.GitSubscription,
-			) ([]kargoapi.GitCommit, error) {
-				return nil, errors.New("something went wrong")
-			},
-			assertions: func(freight *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error syncing git repo subscription")
-				require.Contains(t, err.Error(), "something went wrong")
-			},
-		},
-
-		{
-			name: "error getting latest images",
-			getLatestCommitsFn: func(
-				context.Context,
-				string,
-				[]kargoapi.GitSubscription,
-			) ([]kargoapi.GitCommit, error) {
-				return nil, nil
-			},
-			getLatestImagesFn: func(
-				context.Context,
-				string,
-				[]kargoapi.ImageSubscription,
-			) ([]kargoapi.Image, error) {
-				return nil, errors.New("something went wrong")
-			},
-			assertions: func(freight *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error syncing image repo subscriptions",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
-			},
-		},
-
-		{
-			name: "error getting latest charts",
-			getLatestCommitsFn: func(
-				context.Context,
-				string,
-				[]kargoapi.GitSubscription,
-			) ([]kargoapi.GitCommit, error) {
-				return nil, nil
-			},
-			getLatestImagesFn: func(
-				context.Context,
-				string,
-				[]kargoapi.ImageSubscription,
-			) ([]kargoapi.Image, error) {
-				return nil, nil
-			},
-			getLatestChartsFn: func(
-				context.Context,
-				string,
-				[]kargoapi.ChartSubscription,
-			) ([]kargoapi.Chart, error) {
-				return nil, errors.New("something went wrong")
-			},
-			assertions: func(freight *kargoapi.Freight, err error) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error syncing chart repo subscriptions",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
-			},
-		},
-
-		{
-			name: "success",
-			getLatestCommitsFn: func(
-				context.Context,
-				string,
-				[]kargoapi.GitSubscription,
-			) ([]kargoapi.GitCommit, error) {
-				return []kargoapi.GitCommit{
-					{
-						RepoURL: "fake-url",
-						ID:      "fake-commit",
-					},
-				}, nil
-			},
-			getLatestImagesFn: func(
-				context.Context,
-				string,
-				[]kargoapi.ImageSubscription,
-			) ([]kargoapi.Image, error) {
-				return []kargoapi.Image{
-					{
-						RepoURL: "fake-url",
-						Tag:     "fake-tag",
-					},
-				}, nil
-			},
-			getLatestChartsFn: func(
-				context.Context,
-				string,
-				[]kargoapi.ChartSubscription,
-			) ([]kargoapi.Chart, error) {
-				return []kargoapi.Chart{
-					{
-						RegistryURL: "fake-registry",
-						Name:        "fake-chart",
-						Version:     "fake-version",
-					},
-				}, nil
 			},
 			assertions: func(freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
-				require.NotEmpty(t, freight.ID)
-				require.NotNil(t, freight.FirstSeen)
-				// All other fields should have a predictable value
-				freight.ID = ""
-				freight.FirstSeen = nil
-				require.Equal(
-					t,
-					&kargoapi.Freight{
-						Commits: []kargoapi.GitCommit{
-							{
-								RepoURL: "fake-url",
-								ID:      "fake-commit",
-							},
-						},
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-url",
-								Tag:     "fake-tag",
-							},
-						},
-						Charts: []kargoapi.Chart{
-							{
-								RegistryURL: "fake-registry",
-								Name:        "fake-chart",
-								Version:     "fake-version",
-							},
-						},
-						Qualified: true,
-					},
-					freight,
-				)
+				// Be sure we got the latest
+				require.Equal(t, "newer-freight", freight.Name)
 			},
 		},
 	}
 	for _, testCase := range testCases {
-		testReconciler := &reconciler{
-			getLatestCommitsFn: testCase.getLatestCommitsFn,
-			getLatestImagesFn:  testCase.getLatestImagesFn,
-			getLatestChartsFn:  testCase.getLatestChartsFn,
-		}
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testReconciler.getLatestFreightFromRepos(
+				testCase.reconciler.getLatestFreightQualifiedForUpstreamStages(
 					context.Background(),
 					"fake-namespace",
-					kargoapi.RepoSubscriptions{},
+					[]kargoapi.StageSubscription{},
 				),
 			)
 		})

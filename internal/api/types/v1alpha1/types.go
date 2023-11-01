@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"time"
+
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	kubemetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,31 +61,62 @@ func FromStageStatusProto(s *v1alpha1.StageStatus) *kargoapi.StageStatus {
 	if s == nil {
 		return nil
 	}
-	availableFreight := make(kargoapi.FreightStack, len(s.GetAvailableFreight()))
-	for idx, freight := range s.GetAvailableFreight() {
-		availableFreight[idx] = *FromFreightProto(freight)
-	}
-	history := make(kargoapi.FreightStack, len(s.GetHistory()))
+	history := make(kargoapi.SimpleFreightStack, len(s.GetHistory()))
 	for idx, freight := range s.GetHistory() {
-		history[idx] = *FromFreightProto(freight)
+		history[idx] = *FromSimpleFreightProto(freight)
 	}
 	return &kargoapi.StageStatus{
-		AvailableFreight: availableFreight,
-		CurrentFreight:   FromFreightProto(s.GetCurrentFreight()),
-		History:          history,
-		Health:           FromHealthProto(s.GetHealth()),
-		Error:            s.GetError(),
+		CurrentFreight: FromSimpleFreightProto(s.GetCurrentFreight()),
+		History:        history,
+		Health:         FromHealthProto(s.GetHealth()),
+		Error:          s.GetError(),
 	}
 }
 
-func FromFreightProto(s *v1alpha1.Freight) *kargoapi.Freight {
-	if s == nil {
+func FromFreightProto(f *v1alpha1.Freight) *kargoapi.Freight {
+	if f == nil {
 		return nil
 	}
-	var firstSeen *kubemetav1.Time
-	if s.GetFirstSeen() != nil {
-		fs := kubemetav1.NewTime(s.GetFirstSeen().AsTime())
-		firstSeen = &fs
+	var objectMeta kubemetav1.ObjectMeta
+	if f.GetMetadata() != nil {
+		objectMeta = *typesmetav1.FromObjectMetaProto(f.GetMetadata())
+	}
+	commits := make([]kargoapi.GitCommit, len(f.GetCommits()))
+	for idx, commit := range f.GetCommits() {
+		commits[idx] = *FromGitCommitProto(commit)
+	}
+	images := make([]kargoapi.Image, len(f.GetImages()))
+	for idx, image := range f.GetImages() {
+		images[idx] = *FromImageProto(image)
+	}
+	charts := make([]kargoapi.Chart, len(f.GetCharts()))
+	for idx, chart := range f.GetCharts() {
+		charts[idx] = *FromChartProto(chart)
+	}
+	qualifications :=
+		make(map[string]kargoapi.Qualification, len(f.Status.Qualifications))
+	for stageName := range f.Status.Qualifications {
+		qualifications[stageName] = kargoapi.Qualification{}
+	}
+	return &kargoapi.Freight{
+		TypeMeta: kubemetav1.TypeMeta{
+			APIVersion: kargoapi.GroupVersion.String(),
+			Kind:       "Freight",
+		},
+		ObjectMeta: objectMeta,
+		ID:         f.GetId(),
+		Commits:    commits,
+		Images:     images,
+		Charts:     charts,
+		Status: kargoapi.FreightStatus{
+			Qualifications: qualifications,
+		},
+	}
+}
+
+func FromSimpleFreightProto(s *v1alpha1.SimpleFreight) *kargoapi.SimpleFreight {
+	if s == nil {
+		return nil
 	}
 	commits := make([]kargoapi.GitCommit, len(s.GetCommits()))
 	for idx, commit := range s.GetCommits() {
@@ -97,14 +130,11 @@ func FromFreightProto(s *v1alpha1.Freight) *kargoapi.Freight {
 	for idx, chart := range s.GetCharts() {
 		charts[idx] = *FromChartProto(chart)
 	}
-	return &kargoapi.Freight{
-		ID:         s.GetId(),
-		FirstSeen:  firstSeen,
-		Provenance: s.GetProvenance(),
-		Commits:    commits,
-		Images:     images,
-		Charts:     charts,
-		Qualified:  s.GetQualified(),
+	return &kargoapi.SimpleFreight{
+		ID:      s.GetId(),
+		Commits: commits,
+		Images:  images,
+		Charts:  charts,
 	}
 }
 
@@ -195,31 +225,19 @@ func FromSubscriptionsProto(s *v1alpha1.Subscriptions) *kargoapi.Subscriptions {
 		upstreamStages[idx] = *FromStageSubscriptionProto(stage)
 	}
 	return &kargoapi.Subscriptions{
-		Repos:          FromRepoSubscriptionsProto(s.GetRepos()),
+		Warehouse:      s.GetWarehouse(),
 		UpstreamStages: upstreamStages,
 	}
 }
 
-func FromRepoSubscriptionsProto(s *v1alpha1.RepoSubscriptions) *kargoapi.RepoSubscriptions {
+func FromRepoSubscriptionProto(s *v1alpha1.RepoSubscription) *kargoapi.RepoSubscription {
 	if s == nil {
 		return nil
 	}
-	gitSubscriptions := make([]kargoapi.GitSubscription, len(s.GetGit()))
-	for idx, git := range s.GetGit() {
-		gitSubscriptions[idx] = *FromGitSubscriptionProto(git)
-	}
-	imageSubscriptions := make([]kargoapi.ImageSubscription, len(s.GetImages()))
-	for idx, image := range s.GetImages() {
-		imageSubscriptions[idx] = *FromImageSubscriptionProto(image)
-	}
-	chartSubscriptions := make([]kargoapi.ChartSubscription, len(s.GetCharts()))
-	for idx, chart := range s.GetCharts() {
-		chartSubscriptions[idx] = *FromChartSubscriptionProto(chart)
-	}
-	return &kargoapi.RepoSubscriptions{
-		Git:    gitSubscriptions,
-		Images: imageSubscriptions,
-		Charts: chartSubscriptions,
+	return &kargoapi.RepoSubscription{
+		Git:   FromGitSubscriptionProto(s.Git),
+		Image: FromImageSubscriptionProto(s.Image),
+		Chart: FromChartSubscriptionProto(s.Chart),
 	}
 }
 
@@ -284,19 +302,19 @@ func FromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kargoapi.GitRepoUpdate {
 		RepoURL:     u.GetRepoUrl(),
 		ReadBranch:  u.GetReadBranch(),
 		WriteBranch: u.GetWriteBranch(),
-		Bookkeeper:  FromBookkeeperPromotionMechanismProto(u.GetBookkeeper()),
+		Render:      FromKargoRenderPromotionMechanismProto(u.GetRender()),
 		Kustomize:   FromKustomizePromotionMechanismProto(u.GetKustomize()),
 		Helm:        FromHelmPromotionMechanismProto(u.GetHelm()),
 	}
 }
 
-func FromBookkeeperPromotionMechanismProto(
-	m *v1alpha1.BookkeeperPromotionMechanism,
-) *kargoapi.BookkeeperPromotionMechanism {
+func FromKargoRenderPromotionMechanismProto(
+	m *v1alpha1.KargoRenderPromotionMechanism,
+) *kargoapi.KargoRenderPromotionMechanism {
 	if m == nil {
 		return nil
 	}
-	return &kargoapi.BookkeeperPromotionMechanism{}
+	return &kargoapi.KargoRenderPromotionMechanism{}
 }
 
 func FromKustomizePromotionMechanismProto(
@@ -503,17 +521,13 @@ func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kargoapi.PromotionPo
 
 func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	// Status
-	availableFreight := make([]*v1alpha1.Freight, len(e.Status.AvailableFreight))
-	for idx := range e.Status.AvailableFreight {
-		availableFreight[idx] = ToFreightProto(e.Status.AvailableFreight[idx])
-	}
-	var currentFreight *v1alpha1.Freight
+	var currentFreight *v1alpha1.SimpleFreight
 	if e.Status.CurrentFreight != nil {
-		currentFreight = ToFreightProto(*e.Status.CurrentFreight)
+		currentFreight = ToSimpleFreightProto(*e.Status.CurrentFreight, nil)
 	}
-	history := make([]*v1alpha1.Freight, len(e.Status.History))
+	history := make([]*v1alpha1.SimpleFreight, len(e.Status.History))
 	for idx := range e.Status.History {
-		history[idx] = ToFreightProto(e.Status.History[idx])
+		history[idx] = ToSimpleFreightProto(e.Status.History[idx], nil)
 	}
 	var health *v1alpha1.Health
 	if e.Status.Health != nil {
@@ -529,9 +543,15 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	}
 	var currentPromotion *v1alpha1.PromotionInfo
 	if e.Status.CurrentPromotion != nil {
+		sf := kargoapi.SimpleFreight{
+			ID:      e.Status.CurrentPromotion.Freight.ID,
+			Commits: e.Status.CurrentPromotion.Freight.Commits,
+			Images:  e.Status.CurrentPromotion.Freight.Images,
+			Charts:  e.Status.CurrentPromotion.Freight.Charts,
+		}
 		currentPromotion = &v1alpha1.PromotionInfo{
 			Name:    e.Status.CurrentPromotion.Name,
-			Freight: ToFreightProto(e.Status.CurrentPromotion.Freight),
+			Freight: ToSimpleFreightProto(sf, nil),
 		}
 	}
 	return &v1alpha1.Stage{
@@ -543,7 +563,6 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 			PromotionMechanisms: promotionMechanisms,
 		},
 		Status: &v1alpha1.StageStatus{
-			AvailableFreight: availableFreight,
 			CurrentFreight:   currentFreight,
 			CurrentPromotion: currentPromotion,
 			History:          history,
@@ -554,30 +573,12 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 }
 
 func ToSubscriptionsProto(s kargoapi.Subscriptions) *v1alpha1.Subscriptions {
-	var repos *v1alpha1.RepoSubscriptions
-	if s.Repos != nil {
-		repos = &v1alpha1.RepoSubscriptions{
-			Git:    make([]*v1alpha1.GitSubscription, len(s.Repos.Git)),
-			Images: make([]*v1alpha1.ImageSubscription, len(s.Repos.Images)),
-			Charts: make([]*v1alpha1.ChartSubscription, len(s.Repos.Charts)),
-		}
-		for idx := range s.Repos.Git {
-			repos.Git[idx] = ToGitSubscriptionProto(s.Repos.Git[idx])
-		}
-		for idx := range s.Repos.Images {
-			repos.Images[idx] = ToImageSubscriptionProto(s.Repos.Images[idx])
-		}
-		for idx := range s.Repos.Charts {
-			repos.Charts[idx] = ToChartSubscriptionProto(s.Repos.Charts[idx])
-		}
-	}
-
 	upstreamStages := make([]*v1alpha1.StageSubscription, len(s.UpstreamStages))
 	for idx := range s.UpstreamStages {
 		upstreamStages[idx] = ToStageSubscriptionProto(s.UpstreamStages[idx])
 	}
 	return &v1alpha1.Subscriptions{
-		Repos:          repos,
+		Warehouse:      s.Warehouse,
 		UpstreamStages: upstreamStages,
 	}
 }
@@ -630,9 +631,9 @@ func ToPromotionMechanismsProto(p kargoapi.PromotionMechanisms) *v1alpha1.Promot
 }
 
 func ToGitRepoUpdateProto(g kargoapi.GitRepoUpdate) *v1alpha1.GitRepoUpdate {
-	var bookkeeper *v1alpha1.BookkeeperPromotionMechanism
-	if g.Bookkeeper != nil {
-		bookkeeper = ToBookkeeperPromotionMechanismProto(*g.Bookkeeper)
+	var render *v1alpha1.KargoRenderPromotionMechanism
+	if g.Render != nil {
+		render = ToKargoRenderPromotionMechanismProto(*g.Render)
 	}
 	var kustomize *v1alpha1.KustomizePromotionMechanism
 	if g.Kustomize != nil {
@@ -646,16 +647,16 @@ func ToGitRepoUpdateProto(g kargoapi.GitRepoUpdate) *v1alpha1.GitRepoUpdate {
 		RepoUrl:     g.RepoURL,
 		ReadBranch:  proto.String(g.ReadBranch),
 		WriteBranch: g.WriteBranch,
-		Bookkeeper:  bookkeeper,
+		Render:      render,
 		Kustomize:   kustomize,
 		Helm:        helm,
 	}
 }
 
-func ToBookkeeperPromotionMechanismProto(
-	_ kargoapi.BookkeeperPromotionMechanism,
-) *v1alpha1.BookkeeperPromotionMechanism {
-	return &v1alpha1.BookkeeperPromotionMechanism{}
+func ToKargoRenderPromotionMechanismProto(
+	_ kargoapi.KargoRenderPromotionMechanism,
+) *v1alpha1.KargoRenderPromotionMechanism {
+	return &v1alpha1.KargoRenderPromotionMechanism{}
 }
 
 func ToKustomizePromotionMechanismProto(
@@ -763,31 +764,63 @@ func ToArgoCDHelmImageUpdateProto(a kargoapi.ArgoCDHelmImageUpdate) *v1alpha1.Ar
 	}
 }
 
-func ToFreightProto(e kargoapi.Freight) *v1alpha1.Freight {
-	var firstSeen *timestamppb.Timestamp
-	if e.FirstSeen != nil {
-		firstSeen = timestamppb.New(e.FirstSeen.Time)
+func ToFreightProto(f kargoapi.Freight) *v1alpha1.Freight {
+	metadata := f.ObjectMeta.DeepCopy()
+	metadata.SetManagedFields(nil)
+	commits := make([]*v1alpha1.GitCommit, len(f.Commits))
+	for idx := range f.Commits {
+		commits[idx] = ToGitCommitProto(f.Commits[idx])
 	}
-	commits := make([]*v1alpha1.GitCommit, len(e.Commits))
-	for idx := range e.Commits {
-		commits[idx] = ToGitCommitProto(e.Commits[idx])
+	images := make([]*v1alpha1.Image, len(f.Images))
+	for idx := range f.Images {
+		images[idx] = ToImageProto(f.Images[idx])
 	}
-	images := make([]*v1alpha1.Image, len(e.Images))
-	for idx := range e.Images {
-		images[idx] = ToImageProto(e.Images[idx])
+	charts := make([]*v1alpha1.Chart, len(f.Charts))
+	for idx := range f.Charts {
+		charts[idx] = ToChartProto(f.Charts[idx])
 	}
-	charts := make([]*v1alpha1.Chart, len(e.Charts))
-	for idx := range e.Charts {
-		charts[idx] = ToChartProto(e.Charts[idx])
+	qualifications :=
+		make(map[string]*v1alpha1.Qualification, len(f.Status.Qualifications))
+	for stageName := range f.Status.Qualifications {
+		qualifications[stageName] = &v1alpha1.Qualification{}
 	}
 	return &v1alpha1.Freight{
-		Id:         e.ID,
-		FirstSeen:  firstSeen,
-		Provenance: proto.String(e.Provenance),
-		Commits:    commits,
+		ApiVersion: f.APIVersion,
+		Kind:       f.Kind,
+		Id:         f.ID,
 		Images:     images,
 		Charts:     charts,
-		Qualified:  &e.Qualified,
+		Commits:    commits,
+		Metadata:   typesmetav1.ToObjectMetaProto(*metadata),
+		Status: &v1alpha1.FreightStatus{
+			Qualifications: qualifications,
+		},
+	}
+}
+
+func ToSimpleFreightProto(s kargoapi.SimpleFreight, firstSeen *time.Time) *v1alpha1.SimpleFreight {
+	var firstSeenProto *timestamppb.Timestamp
+	if firstSeen != nil {
+		firstSeenProto = timestamppb.New(*firstSeen)
+	}
+	commits := make([]*v1alpha1.GitCommit, len(s.Commits))
+	for idx := range s.Commits {
+		commits[idx] = ToGitCommitProto(s.Commits[idx])
+	}
+	images := make([]*v1alpha1.Image, len(s.Images))
+	for idx := range s.Images {
+		images[idx] = ToImageProto(s.Images[idx])
+	}
+	charts := make([]*v1alpha1.Chart, len(s.Charts))
+	for idx := range s.Charts {
+		charts[idx] = ToChartProto(s.Charts[idx])
+	}
+	return &v1alpha1.SimpleFreight{
+		Id:        s.ID,
+		FirstSeen: firstSeenProto,
+		Commits:   commits,
+		Images:    images,
+		Charts:    charts,
 	}
 }
 

@@ -1,9 +1,8 @@
-package argocd
+package v1alpha1
 
 import (
 	"context"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -16,8 +15,8 @@ func GetApplication(
 	ctrlRuntimeClient client.Client,
 	namespace string,
 	name string,
-) (*argocd.Application, error) {
-	app := argocd.Application{}
+) (*Application, error) {
+	app := Application{}
 	if err := ctrlRuntimeClient.Get(
 		ctx,
 		client.ObjectKey{

@@ -4,6 +4,8 @@ on:
   release:
     types: 
     - created
+  schedule:
+    - cron: '0 1 * * 1-5' # 1 AM UTC is 5 PM PST/ 6 PM PDT
 
 jobs:
 
@@ -15,7 +17,26 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image-digest: ${{ steps.image.outputs.digest }}
+      kargo-repo: ${{ steps.repo.outputs.repo }}
+      unstable-version: ${{ steps.unstable-version.outputs.unstable-version }}
     steps:
+    - name: Determine which repository to use for images
+      id: repo
+      run: |
+        REPO=ghcr.io/akuity/kargo
+        if ${{ github.event_name != 'release' }}
+        then
+          REPO=ghcr.io/akuity/kargo-unstable
+        fi
+        echo "Repository is set to: $REPO"
+        echo "repo=$REPO" >> $GITHUB_OUTPUT
+    - name: Set version for unstable builds
+      id: unstable-version
+      run: |
+        set -xue
+        LATEST_VERSION=$(go list -f {{.Version}} -mod=mod -m github.com/akuity/kargo@main | cut -f1 -d'-')
+        NEW_VERSION=$(awk 'BEGIN {FS=OFS="."} {$3++; print}' <<< "${LATEST_VERSION}")
+        echo "unstable-version=${NEW_VERSION}-unstable-$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
     - name: Set up Docker Buildx
@@ -36,9 +57,11 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: ghcr.io/akuity/kargo
+        images: ${{ steps.repo.outputs.repo }}
         flavor: latest=false
-        tags: type=semver,pattern={{raw}}
+        tags: |
+          type=semver,pattern={{raw}}
+          type=raw,value=${{ steps.unstable-version.outputs.unstable-version }},enable=${{ github.event_name != 'release'}}
     - name: Build and push
       id: image
       uses: docker/build-push-action@v5
@@ -55,16 +78,15 @@ jobs:
         provenance: false
         sbom: false
     - name: Sign image
-      env:
-        TAGS: ${{ steps.meta.outputs.tags }}
       run: |
           cosign sign \
           -a "repo=${{ github.repository }}" \
           -a "workflow=${{ github.workflow }}" \
           -a "sha=${{ github.sha }}" \
           --yes \
-          ghcr.io/akuity/kargo@${{ steps.image.outputs.digest}}
+          ${{ steps.repo.outputs.repo}}@${{ steps.image.outputs.digest}}
     - name: Publish SBOM
+      if: github.event_name == 'release'
       uses: anchore/sbom-action@v0
       with:
         image: ${{ steps.meta.outputs.tags }}
@@ -79,7 +101,7 @@ jobs:
     # Must be refernced by a tag. https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/container/README.md#referencing-the-slsa-generator
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.8.0
     with:
-      image: ghcr.io/akuity/kargo
+      image: ${{ needs.publish-image.outputs.kargo-repo }}
       digest: ${{ needs.publish-image.outputs.image-digest }}
     secrets:
       registry-username: ${{ github.actor }}
@@ -89,6 +111,26 @@ jobs:
     needs: publish-image
     runs-on: ubuntu-latest
     steps:
+    - name: Determine which repository to use
+      id: chart_repo
+      run: |
+        REPO=ghcr.io/akuity/kargo-charts
+        if ${{ github.event_name != 'release' }}
+        then
+        REPO=ghcr.io/akuity/kargo-charts-unstable
+        fi
+        echo "Repository is set to: $REPO"
+        echo "chart_repo=$REPO" >> $GITHUB_OUTPUT
+    - name: Determine Version
+      id: version
+      run: |
+        VERSION=${{ github.ref_name }}
+        if ${{ github.event_name != 'release' }}
+        then
+        VERSION=${{ needs.publish-image.outputs.unstable-version }}
+        fi
+        echo "VERSION is set to: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: Set up Helm
       uses: azure/setup-helm@v3
       with:
@@ -104,8 +146,8 @@ jobs:
     - name: Publish chart
       env:
         HELM_EXPERIMENTAL_OCI: '1'
-        KARGO_CHARTS_REPO: ghcr.io/akuity/kargo-charts
-        VERSION: ${{ github.ref_name }}
+        KARGO_CHARTS_REPO: ${{ steps.chart_repo.outputs.chart_repo }}
+        VERSION: ${{ steps.version.outputs.version }}
       run: |
         CHART_VERSION=$(echo $VERSION | cut -c 2-)
         cd charts/kargo
@@ -114,9 +156,10 @@ jobs:
         helm push kargo-${CHART_VERSION}.tgz oci://${KARGO_CHARTS_REPO}
 
   publish-cli:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.0-bookworm
+      image: golang:1.21.3-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -157,8 +200,52 @@ jobs:
       run: |
         echo "hash-${{ matrix.os }}-${{ matrix.arch }}=$(sha256sum bin/kargo* | awk -F 'bin/' '{print $1 $2}'| base64 -w0)" >> "$GITHUB_OUTPUT"
 
+  publish-unstable-cli:
+    needs: publish-image
+    permissions:
+      id-token: write
+      contents: read
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.21.3-bookworm
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: /go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Build CLI
+      env:
+        GOFLAGS: -buildvcs=false
+        VERSION: ${{ needs.publish-image.outputs.unstable-version }}
+        GIT_COMMIT: ${{ github.sha }}
+        GIT_TREE_STATE: clean
+      run: make nightly-cli
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE }}
+        aws-region: us-west-2
+    - name: Push binaries
+      env:
+        CF_DISTRIBUTION_ID: ${{ secrets.CF_DISTRIBUTION_ID }}
+        VERSION: ${{ needs.publish-image.outputs.unstable-version }}
+      run: |
+        aws s3 sync "./bin/kargo-cli/${VERSION}" "s3://kargo-release/kargo-cli/${VERSION}" --acl public-read
+
+        printf "${VERSION}" > ./bin/kargo-cli/unstable.txt
+        aws s3 cp ./bin/kargo-cli/unstable.txt s3://kargo-release/kargo-cli/unstable.txt --acl public-read
+        aws cloudfront create-invalidation \
+          --distribution-id="${CF_DISTRIBUTION_ID}" \
+          --paths "/kargo-cli/unstable.txt"
+
   push-fig-autocomplete-spec:
     needs: [publish-cli]
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/setup-node@v2
@@ -176,6 +263,7 @@ jobs:
 
   combine_hashes:
     needs: [publish-cli]
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.hashes.outputs.hashes }}
@@ -189,6 +277,7 @@ jobs:
 
   provenance:
     needs: [combine_hashes]
+    if: github.event_name == 'release'
     permissions:
       actions: read # To read the workflow path.
       id-token: write # To sign the provenance.

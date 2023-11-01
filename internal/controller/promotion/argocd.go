@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	argocd "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/gobwas/glob"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libArgoCD "github.com/akuity/kargo/internal/argocd"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -26,7 +25,7 @@ type argoCDMechanism struct {
 		ctx context.Context,
 		stageMeta metav1.ObjectMeta,
 		update kargoapi.ArgoCDAppUpdate,
-		newFreight kargoapi.Freight,
+		newFreight kargoapi.SimpleFreight,
 	) error
 	getArgoCDAppFn func(
 		ctx context.Context,
@@ -35,7 +34,7 @@ type argoCDMechanism struct {
 	) (*argocd.Application, error)
 	applyArgoCDSourceUpdateFn func(
 		argocd.ApplicationSource,
-		kargoapi.Freight,
+		kargoapi.SimpleFreight,
 		kargoapi.ArgoCDSourceUpdate,
 	) (argocd.ApplicationSource, error)
 	argoCDAppPatchFn func(
@@ -68,8 +67,8 @@ func (*argoCDMechanism) GetName() string {
 func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	newFreight kargoapi.Freight,
-) (kargoapi.Freight, error) {
+	newFreight kargoapi.SimpleFreight,
+) (kargoapi.SimpleFreight, error) {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
@@ -99,7 +98,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 	ctx context.Context,
 	stageMeta metav1.ObjectMeta,
 	update kargoapi.ArgoCDAppUpdate,
-	newFreight kargoapi.Freight,
+	newFreight kargoapi.SimpleFreight,
 ) error {
 	app, err :=
 		a.getArgoCDAppFn(ctx, update.AppNamespaceOrDefault(), update.AppName)
@@ -213,7 +212,7 @@ func getApplicationFn(
 		namespace string,
 		name string,
 	) (*argocd.Application, error) {
-		return libArgoCD.GetApplication(ctx, argoClient, namespace, name)
+		return argocd.GetApplication(ctx, argoClient, namespace, name)
 	}
 }
 
@@ -278,7 +277,7 @@ func authorizeArgoCDAppUpdate(
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
-	newFreight kargoapi.Freight,
+	newFreight kargoapi.SimpleFreight,
 	update kargoapi.ArgoCDSourceUpdate,
 ) (argocd.ApplicationSource, error) {
 	if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
