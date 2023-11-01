@@ -248,7 +248,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/setup-node@v2
+    - uses: actions/setup-node@v4
     - name: Generate the spec
       run: |
         curl -L https://github.com/akuity/kargo/releases/download/${{ github.ref_name }}/kargo-linux-amd64 -o kargo
