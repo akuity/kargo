@@ -138,6 +138,52 @@ func FromSimpleFreightProto(s *v1alpha1.SimpleFreight) *kargoapi.SimpleFreight {
 	}
 }
 
+func FromWarehouseProto(w *v1alpha1.Warehouse) *kargoapi.Warehouse {
+	if w == nil {
+		return nil
+	}
+	var objectMeta kubemetav1.ObjectMeta
+	if w.GetMetadata() != nil {
+		objectMeta = *typesmetav1.FromObjectMetaProto(w.GetMetadata())
+	}
+	var status kargoapi.WarehouseStatus
+	if w.GetStatus() != nil {
+		status = *FromWarehouseStatusProto(w.GetStatus())
+	}
+	return &kargoapi.Warehouse{
+		TypeMeta: kubemetav1.TypeMeta{
+			APIVersion: kargoapi.GroupVersion.String(),
+			Kind:       "Warehouse",
+		},
+		ObjectMeta: objectMeta,
+		Spec:       FromWarehouseSpecProto(w.GetSpec()),
+		Status:     status,
+	}
+}
+
+func FromWarehouseSpecProto(s *v1alpha1.WarehouseSpec) *kargoapi.WarehouseSpec {
+	if s == nil {
+		return nil
+	}
+	subscriptions := make([]kargoapi.RepoSubscription, 0, len(s.GetSubscriptions()))
+	for _, subscription := range s.GetSubscriptions() {
+		if subscription == nil {
+			continue
+		}
+		subscriptions = append(subscriptions, *FromRepoSubscriptionProto(subscription))
+	}
+	return &kargoapi.WarehouseSpec{
+		Subscriptions: subscriptions,
+	}
+}
+
+func FromWarehouseStatusProto(s *v1alpha1.WarehouseStatus) *kargoapi.WarehouseStatus {
+	if s == nil {
+		return nil
+	}
+	return &kargoapi.WarehouseStatus{}
+}
+
 func FromGitCommitProto(g *v1alpha1.GitCommit) *kargoapi.GitCommit {
 	if g == nil {
 		return nil
@@ -572,6 +618,26 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	}
 }
 
+func ToRepoSubscriptionProto(s kargoapi.RepoSubscription) *v1alpha1.RepoSubscription {
+	var git *v1alpha1.GitSubscription
+	if s.Git != nil {
+		git = ToGitSubscriptionProto(*s.Git)
+	}
+	var image *v1alpha1.ImageSubscription
+	if s.Image != nil {
+		image = ToImageSubscriptionProto(*s.Image)
+	}
+	var chart *v1alpha1.ChartSubscription
+	if s.Chart != nil {
+		chart = ToChartSubscriptionProto(*s.Chart)
+	}
+	return &v1alpha1.RepoSubscription{
+		Git:   git,
+		Image: image,
+		Chart: chart,
+	}
+}
+
 func ToSubscriptionsProto(s kargoapi.Subscriptions) *v1alpha1.Subscriptions {
 	upstreamStages := make([]*v1alpha1.StageSubscription, len(s.UpstreamStages))
 	for idx := range s.UpstreamStages {
@@ -821,6 +887,29 @@ func ToSimpleFreightProto(s kargoapi.SimpleFreight, firstSeen *time.Time) *v1alp
 		Commits:   commits,
 		Images:    images,
 		Charts:    charts,
+	}
+}
+
+func ToWarehouseProto(w kargoapi.Warehouse) *v1alpha1.Warehouse {
+	subscriptions := make([]*v1alpha1.RepoSubscription, len(w.Spec.Subscriptions))
+	for idx, subscription := range w.Spec.Subscriptions {
+		subscriptions[idx] = ToRepoSubscriptionProto(subscription)
+	}
+	var status *v1alpha1.WarehouseStatus
+	if w.GetStatus() != nil {
+		status = &v1alpha1.WarehouseStatus{
+			Error:              w.GetStatus().Error,
+			ObservedGeneration: w.GetStatus().ObservedGeneration,
+		}
+	}
+	return &v1alpha1.Warehouse{
+		ApiVersion: w.APIVersion,
+		Kind:       w.Kind,
+		Metadata:   typesmetav1.ToObjectMetaProto(w.ObjectMeta),
+		Spec: &v1alpha1.WarehouseSpec{
+			Subscriptions: subscriptions,
+		},
+		Status: status,
 	}
 }
 
