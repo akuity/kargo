@@ -94,7 +94,7 @@ jobs:
         version: 8
         run_install: false
     - name: Install nodejs
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: "18.16.1"
         cache: "pnpm"
@@ -126,9 +126,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
     - name: Build
       uses: docker/build-push-action@v5
       with:
