@@ -64,9 +64,8 @@ service KargoService {
 
   rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
   rpc GetWarehouse(GetWarehouseRequest) returns (GetWarehouseResponse);
-  // TODO(devholic): https://github.com/akuity/kargo/issues/977
-  // rpc CreateWarehouse(CreateWarehouseRequest) returns (CreateWarehouseResponse);
-  // rpc UpdateWarehouse(UpdateWarehouseRequest) returns (UpdateWarehouseResponse);
+  rpc CreateWarehouse(CreateWarehouseRequest) returns (CreateWarehouseResponse);
+  rpc UpdateWarehouse(UpdateWarehouseRequest) returns (UpdateWarehouseResponse);
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
 }
 
@@ -441,6 +440,34 @@ message GetWarehouseRequest {
 }
 
 message GetWarehouseResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+}
+
+message TypedWarehouseSpec {
+  string project = 1;
+  string name = 2;
+  github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec spec = 3;
+}
+
+message CreateWarehouseRequest {
+  oneof warehouse {
+    TypedWarehouseSpec typed = 1;
+    string yaml = 2;
+  }
+}
+
+message CreateWarehouseResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+}
+
+message UpdateWarehouseRequest {
+  oneof warehouse {
+    TypedWarehouseSpec typed = 1;
+    string yaml = 2;
+  }
+}
+
+message UpdateWarehouseResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
 }
 
