@@ -60,6 +60,14 @@ service KargoService {
 
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
 
+  /* Warehouse APIs */
+
+  rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
+  rpc GetWarehouse(GetWarehouseRequest) returns (GetWarehouseResponse);
+  // TODO(devholic): https://github.com/akuity/kargo/issues/977
+  // rpc CreateWarehouse(CreateWarehouseRequest) returns (CreateWarehouseResponse);
+  // rpc UpdateWarehouse(UpdateWarehouseRequest) returns (UpdateWarehouseResponse);
+  // rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
 }
 
 message ComponentVersions {
@@ -417,4 +425,21 @@ message QueryFreightResponse {
 
 message FreightList {
   repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
+}
+
+message ListWarehousesRequest {
+  string project = 1;
+}
+
+message ListWarehousesResponse {
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouses = 1;
+}
+
+message GetWarehouseRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message GetWarehouseResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
 }
