@@ -25,12 +25,6 @@ func (s *server) CreateWarehouse(
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "invalid yaml"))
 		}
 	case req.Msg.GetTyped() != nil:
-		if err := validateProjectAndWarehouseName(
-			req.Msg.GetTyped().GetProject(),
-			req.Msg.GetTyped().GetName(),
-		); err != nil {
-			return nil, err
-		}
 		warehouse = kargoapi.Warehouse{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: req.Msg.GetTyped().GetProject(),
@@ -42,6 +36,9 @@ func (s *server) CreateWarehouse(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("warehouse should not be empty"))
 	}
 
+	if err := validateProjectAndWarehouseName(warehouse.GetNamespace(), warehouse.GetName()); err != nil {
+		return nil, err
+	}
 	if err := s.validateProject(ctx, warehouse.GetNamespace()); err != nil {
 		return nil, err
 	}
