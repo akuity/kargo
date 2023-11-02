@@ -43,17 +43,16 @@ func RefreshStage(
 	c client.Client,
 	namespacedName types.NamespacedName,
 ) (*Stage, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
-	stage := Stage{}
-	stage.Name = namespacedName.Name
-	stage.Namespace = namespacedName.Namespace
-	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":"%s"}}}`, AnnotationKeyRefresh, now))
-	patch := client.RawPatch(types.MergePatchType, patchBytes)
-	err := c.Patch(ctx, &stage, patch)
-	if err != nil {
-		return nil, err
+	stage := &Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespacedName.Namespace,
+			Name:      namespacedName.Name,
+		},
 	}
-	return &stage, nil
+	if err := refreshObject(ctx, c, stage, time.Now); err != nil {
+		return nil, errors.Wrap(err, "refresh")
+	}
+	return stage, nil
 }
 
 // ClearStageRefresh is called by the Stage controller to clear the refresh

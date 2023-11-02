@@ -67,6 +67,7 @@ service KargoService {
   rpc CreateWarehouse(CreateWarehouseRequest) returns (CreateWarehouseResponse);
   rpc UpdateWarehouse(UpdateWarehouseRequest) returns (UpdateWarehouseResponse);
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
+  rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 }
 
 message ComponentVersions {
@@ -478,4 +479,13 @@ message DeleteWarehouseRequest {
 
 message DeleteWarehouseResponse {
   /* explicitly empty */
+}
+
+message RefreshWarehouseRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message RefreshWarehouseResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
 }
