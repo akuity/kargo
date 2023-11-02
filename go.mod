@@ -51,7 +51,7 @@ require (
 )
 
 require (
-	github.com/akuity/kargo-render v0.1.0-rc.31
+	github.com/akuity/kargo-render v0.1.0-rc.33
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 )
 

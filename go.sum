@@ -107,8 +107,8 @@ github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ
 github.com/acomagu/bufpipe v1.0.4/go.mod h1:mxdxdup/WdsKVreO5GpW4+M/1CE2sMG4jeGJ2sYmHc4=
 github.com/adrg/xdg v0.4.0 h1:RzRqFcjH4nE5C6oTAxhBtoE2IRyjBSa62SCbyPidvls=
 github.com/adrg/xdg v0.4.0/go.mod h1:N6ag73EX4wyxeaoeHctc1mas01KZgsj5tYiAIwqJE/E=
-github.com/akuity/kargo-render v0.1.0-rc.31 h1:XyjWqnwddb/enmoQCFfH27QKxVgYDBHeukOAqOElqXs=
-github.com/akuity/kargo-render v0.1.0-rc.31/go.mod h1:OW5AOo64mxS/bkshKE5iv9mOOnj7ShaYU8TWaYrWPyE=
+github.com/akuity/kargo-render v0.1.0-rc.33 h1:iPKQ5uGEoMvfhYNqSXS4JXcV+KUX3qNwONYtx9xQHIA=
+github.com/akuity/kargo-render v0.1.0-rc.33/go.mod h1:OW5AOo64mxS/bkshKE5iv9mOOnj7ShaYU8TWaYrWPyE=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
