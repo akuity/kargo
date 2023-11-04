@@ -122,7 +122,7 @@ message Image {
 
 message ImageSubscription {
   string repo_url = 1 [json_name = "repoURL"];
-  string update_strategy = 2 [json_name = "updateStrategy"];
+  string tag_selection_strategy = 2 [json_name = "imageTagSelectionStrategy"];
   optional string semver_constraint = 3 [json_name = "semverConstraint"];
   optional string allow_tags = 4 [json_name = "allowTags"];
   repeated string ignore_tags = 5 [json_name = "ignoreTags"];
