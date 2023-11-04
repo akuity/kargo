@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
-	"github.com/argoproj-labs/argocd-image-updater/pkg/image"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -14,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/image"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -166,7 +166,7 @@ func (w *webhook) validateImageSub(
 		errs = field.ErrorList{err}
 	}
 	if sub.Platform != "" {
-		if _, _, _, err := image.ParsePlatform(sub.Platform); err != nil {
+		if !image.ValidatePlatformConstraint(sub.Platform) {
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
 		}
 	}
