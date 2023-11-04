@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Empty } from 'antd';
 import { graphlib, layout } from 'dagre';
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { transport } from '@ui/config/transport';
@@ -17,10 +17,11 @@ import { getStageColors } from '@ui/features/stage/utils';
 import {
   getStage,
   listStages,
+  listWarehouses,
   queryFreight
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Stage, Warehouse } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
 import { Images } from './images';
@@ -38,6 +39,11 @@ export const ProjectDetails = () => {
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
   const { data: freightData, isLoading: isLoadingFreight } = useQuery(
     queryFreight.useQuery({ project: name })
+  );
+
+  const [warehouseMap, setWarehouseMap] = useState<{ [key: string]: Warehouse }>({});
+  const { data: warehouseData, isLoading: isLoadingWarehouses } = useQuery(
+    listWarehouses.useQuery({ project: name })
   );
 
   const client = useQueryClient();
@@ -90,6 +96,16 @@ export const ProjectDetails = () => {
     return () => cancel.abort();
   }, [isLoading, isVisible, name]);
 
+  React.useEffect(() => {
+    if (!isLoadingWarehouses) {
+      const wm = {} as { [key: string]: Warehouse };
+      (warehouseData?.warehouses || []).forEach((w: Warehouse) => {
+        wm[w?.metadata?.name || ''] = w;
+      });
+      setWarehouseMap(wm);
+    }
+  }, [warehouseData, isLoadingWarehouses]);
+
   const [nodes, connectors, box, sortedStages] = React.useMemo(() => {
     if (!data) {
       return [[], []];
@@ -111,9 +127,10 @@ export const ProjectDetails = () => {
           }
         ] as NodesItemType[];
 
-        if (stage.spec?.subscriptions?.warehouse) {
+        const warehouseName = stage.spec?.subscriptions?.warehouse;
+        if (warehouseName) {
           n.push({
-            data: stage.spec?.subscriptions?.warehouse || '',
+            data: warehouseMap[warehouseName],
             stageName: stage.metadata?.name || '',
             type: NodeType.WAREHOUSE
           });
