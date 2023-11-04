@@ -2,14 +2,14 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// +kubebuilder:validation:Enum={SemVer,NewestBuild,Alphabetical,Digest}
-type ImageUpdateStrategy string
+// +kubebuilder:validation:Enum={Digest,Lexical,NewestBuild,SemVer}
+type ImageTagSelectionStrategy string
 
 const (
-	ImageUpdateStrategySemVer       ImageUpdateStrategy = "SemVer"
-	ImageUpdateStrategyNewestBuild  ImageUpdateStrategy = "NewestBuild"
-	ImageUpdateStrategyAlphabetical ImageUpdateStrategy = "Alphabetical"
-	ImageUpdateStrategyDigest       ImageUpdateStrategy = "Digest"
+	ImageTagSelectionStrategyDigest      ImageTagSelectionStrategy = "Digest"
+	ImageTagSelectionStrategyLexical     ImageTagSelectionStrategy = "Lexical"
+	ImageTagSelectionStrategyNewestBuild ImageTagSelectionStrategy = "NewestBuild"
+	ImageTagSelectionStrategySemVer      ImageTagSelectionStrategy = "SemVer"
 )
 
 //+kubebuilder:object:root=true
@@ -84,22 +84,22 @@ type ImageSubscription struct {
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	GitRepoURL string `json:"gitRepoURL,omitempty"`
-	// UpdateStrategy specifies the rules for how to identify the newest version
+	// TagSelectionStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
 	//
 	// +kubebuilder:default=SemVer
-	UpdateStrategy ImageUpdateStrategy `json:"updateStrategy,omitempty"`
+	TagSelectionStrategy ImageTagSelectionStrategy `json:"tagSelectionStrategy,omitempty"`
 	// SemverConstraint specifies constraints on what new image versions are
-	// permissible. This value in this field only has any effect when the
-	// UpdateStrategy is SemVer or left unspecified (which is implicitly the same
-	// as SemVer). This field is also optional. When left unspecified, (and the
-	// UpdateStrategy is SemVer or unspecified), there will be no constraints,
-	// which means the latest semantically tagged version of an image will always
-	// be used. Care should be taken with leaving this field unspecified, as it
-	// can lead to the unanticipated rollout of breaking changes. Refer to Image
-	// Updater documentation for more details.
+	// permissible. The value in this field only has any effect when the
+	// TagSelectionStrategy is SemVer or left unspecified (which is implicitly the
+	// same as SemVer). This field is also optional. When left unspecified, (and
+	// the TagSelectionStrategy is SemVer or unspecified), there will be no
+	// constraints, which means the latest semantically tagged version of an image
+	// will always be used. Care should be taken with leaving this field
+	// unspecified, as it can lead to the unanticipated rollout of breaking
+	// changes. Refer to Image Updater documentation for more details.
 	//
 	//+kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty"`
