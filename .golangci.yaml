@@ -1,5 +1,8 @@
 run:
   go: "1.20"
+  build-tags:
+    - dockerhub
+    - ghcr
   deadline: 10m
   skip-files:
     - api/.*/*_types.go
