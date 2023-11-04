@@ -5,7 +5,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -29,14 +28,13 @@ type Mechanism interface {
 func NewMechanisms(
 	argoClient client.Client,
 	credentialsDB credentials.Database,
-	renderService render.Service,
 ) Mechanism {
 	return newCompositeMechanism(
 		"promotion mechanisms",
 		newCompositeMechanism(
 			"Git-based promotion mechanisms",
 			newGenericGitMechanism(credentialsDB),
-			newKargoRenderMechanism(credentialsDB, renderService),
+			newKargoRenderMechanism(credentialsDB),
 			newKustomizeMechanism(credentialsDB),
 			newHelmMechanism(credentialsDB),
 		),

@@ -6,9 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	render "github.com/akuity/kargo/internal/kargo-render"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -33,23 +34,20 @@ type kargoRenderMechanism struct {
 		credType credentials.Type,
 		repo string,
 	) (credentials.Credentials, bool, error)
-	renderManifestsFn func(
-		context.Context,
-		render.Request,
-	) (render.Response, error)
+	renderManifestsFn func(render.Request) (render.Response, error)
 }
 
 // newKargoRenderMechanism returns an implementation of the Mechanism interface
 // that uses Kargo Render to update configuration in a Git repository.
 func newKargoRenderMechanism(
 	credentialsDB credentials.Database,
-	renderService render.Service,
 ) Mechanism {
 	b := &kargoRenderMechanism{}
 	b.doSingleUpdateFn = b.doSingleUpdate
 	b.getReadRefFn = getReadRef
 	b.getCredentialsFn = credentialsDB.Get
-	b.renderManifestsFn = renderService.RenderManifests
+	// TODO: KR: Refactor this
+	b.renderManifestsFn = render.RenderManifests
 	return b
 }
 
@@ -132,7 +130,7 @@ func (b *kargoRenderMechanism) doSingleUpdate(
 			update.RepoURL,
 		)
 	}
-	repoCreds := render.RepoCredentials{}
+	repoCreds := git.RepoCredentials{}
 	if ok {
 		repoCreds.Username = creds.Username
 		repoCreds.Password = creds.Password
@@ -150,7 +148,7 @@ func (b *kargoRenderMechanism) doSingleUpdate(
 		TargetBranch: update.WriteBranch,
 	}
 
-	res, err := b.renderManifestsFn(ctx, req)
+	res, err := b.renderManifestsFn(req)
 	if err != nil {
 		return newFreight, errors.Wrapf(
 			err,

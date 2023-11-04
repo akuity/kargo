@@ -14,8 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	render "github.com/akuity/kargo-render"
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/promotion"
@@ -46,7 +44,6 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argoMgr manager.Manager,
 	credentialsDB credentials.Database,
-	renderService render.Service,
 	shardName string,
 ) error {
 
@@ -59,7 +56,6 @@ func SetupReconcilerWithManager(
 		kargoMgr.GetClient(),
 		argoMgr.GetClient(),
 		credentialsDB,
-		renderService,
 	)
 
 	changePredicate := predicate.Or(
@@ -97,7 +93,6 @@ func newReconciler(
 	kargoClient client.Client,
 	argoClient client.Client,
 	credentialsDB credentials.Database,
-	renderService render.Service,
 ) *reconciler {
 	pqs := promoQueues{
 		activePromoByStage:        map[types.NamespacedName]string{},
@@ -109,7 +104,6 @@ func newReconciler(
 		promoMechanisms: promotion.NewMechanisms(
 			argoClient,
 			credentialsDB,
-			renderService,
 		),
 	}
 	r.promoteFn = r.promote
@@ -168,7 +162,7 @@ func (r *reconciler) Reconcile(
 		return result, nil
 	}
 
-	if promo.Status.Phase == v1alpha1.PromotionPhaseRunning {
+	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
 		// anything we've already marked Running, we allow it to continue to reconcile
 	} else if promo.Status.Phase.IsTerminal() {
 		// if promo is already finished, nothing to do
@@ -177,9 +171,9 @@ func (r *reconciler) Reconcile(
 		// promo is Pending. Try to begin it.
 		if !r.pqs.tryBegin(ctx, promo) {
 			// It wasn't our turn. Mark this promo as Pending (if it wasn't already)
-			if promo.Status.Phase != v1alpha1.PromotionPhasePending {
+			if promo.Status.Phase != kargoapi.PromotionPhasePending {
 				err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-					status.Phase = v1alpha1.PromotionPhasePending
+					status.Phase = kargoapi.PromotionPhasePending
 				})
 				return result, err
 			}
@@ -195,9 +189,9 @@ func (r *reconciler) Reconcile(
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
-	if promo.Status.Phase != v1alpha1.PromotionPhaseRunning {
+	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-			status.Phase = v1alpha1.PromotionPhaseRunning
+			status.Phase = kargoapi.PromotionPhaseRunning
 		}); err != nil {
 			return result, err
 		}
