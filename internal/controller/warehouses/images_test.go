@@ -10,7 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/images"
+	"github.com/akuity/kargo/internal/image"
 )
 
 func TestGetLatestImages(t *testing.T) {
@@ -18,13 +18,14 @@ func TestGetLatestImages(t *testing.T) {
 		name           string
 		credentialsDB  credentials.Database
 		getLatestTagFn func(
+			context.Context,
 			string,
-			kargoapi.ImageUpdateStrategy,
+			kargoapi.ImageTagSelectionStrategy,
 			string,
 			string,
 			[]string,
 			string,
-			*images.Credentials,
+			*image.Credentials,
 		) (string, error)
 		assertions func([]kargoapi.Image, error)
 	}{
@@ -41,13 +42,14 @@ func TestGetLatestImages(t *testing.T) {
 				},
 			},
 			getLatestTagFn: func(
-				repoURL string,
-				updateStrategy kargoapi.ImageUpdateStrategy,
-				semverConstraint string,
-				allowTags string,
-				ignoreTags []string,
-				platform string,
-				creds *images.Credentials,
+				context.Context,
+				string,
+				kargoapi.ImageTagSelectionStrategy,
+				string,
+				string,
+				[]string,
+				string,
+				*image.Credentials,
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
@@ -75,13 +77,14 @@ func TestGetLatestImages(t *testing.T) {
 				},
 			},
 			getLatestTagFn: func(
-				repoURL string,
-				updateStrategy kargoapi.ImageUpdateStrategy,
-				semverConstraint string,
-				allowTags string,
-				ignoreTags []string,
-				platform string,
-				creds *images.Credentials,
+				context.Context,
+				string,
+				kargoapi.ImageTagSelectionStrategy,
+				string,
+				string,
+				[]string,
+				string,
+				*image.Credentials,
 			) (string, error) {
 				return "fake-tag", nil
 			},

@@ -19,7 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/images"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -51,13 +51,14 @@ type reconciler struct {
 	) ([]kargoapi.Image, error)
 
 	getLatestTagFn func(
+		ctx context.Context,
 		repoURL string,
-		updateStrategy kargoapi.ImageUpdateStrategy,
+		tagSelectionStrategy kargoapi.ImageTagSelectionStrategy,
 		semverConstraint string,
-		allowTags string,
+		allowTagsRegex string,
 		ignoreTags []string,
 		platform string,
-		creds *images.Credentials,
+		creds *image.Credentials,
 	) (string, error)
 
 	getLatestChartsFn func(
@@ -142,7 +143,7 @@ func newReconciler(
 	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
 	r.getLatestCommitsFn = r.getLatestCommits
 	r.getLatestImagesFn = r.getLatestImages
-	r.getLatestTagFn = images.GetLatestTag
+	r.getLatestTagFn = getLatestTag
 	r.getLatestChartsFn = r.getLatestCharts
 	r.getLatestChartVersionFn = helm.GetLatestChartVersion
 	r.getLatestCommitMetaFn = getLatestCommitMeta
