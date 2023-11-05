@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/applications"
@@ -21,7 +20,6 @@ import (
 	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -161,11 +159,6 @@ func newControllerCommand() *cobra.Command {
 				kargoMgr,
 				appMgr,
 				credentialsDB,
-				render.NewService(
-					&render.ServiceOptions{
-						LogLevel: render.LogLevel(logging.LoggerFromContext(ctx).Level),
-					},
-				),
 				shardName,
 			); err != nil {
 				return errors.Wrap(err, "error setting up Promotions reconciler")

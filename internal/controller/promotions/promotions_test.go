@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	render "github.com/akuity/kargo-render"
 	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -24,7 +23,6 @@ func TestNewPromotionReconciler(t *testing.T) {
 		kubeClient,
 		kubeClient,
 		&credentials.FakeDB{},
-		render.NewService(nil),
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.pqs.pendingPromoQueuesByStage)
@@ -40,7 +38,6 @@ func newFakeReconciler(t *testing.T, objects ...client.Object) *reconciler {
 		kargoClient,
 		kubeClient,
 		&credentials.FakeDB{},
-		render.NewService(nil),
 	)
 }
 
