@@ -1,5 +1,5 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { faBuilding } from '@fortawesome/free-solid-svg-icons';
+import { faAnchor, faBuilding } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 
@@ -26,7 +26,8 @@ const name = {
 const ico = {
   [NodeType.REPO_IMAGE]: faDocker,
   [NodeType.REPO_GIT]: faGit,
-  [NodeType.WAREHOUSE]: faBuilding
+  [NodeType.WAREHOUSE]: faBuilding,
+  [NodeType.REPO_CHART]: faAnchor
 };
 
 export const RepoNode = ({ nodeData, height }: Props) => (
@@ -43,20 +44,55 @@ export const RepoNode = ({ nodeData, height }: Props) => (
         <RepoNodeBody label='Registry URL' value={nodeData.data.registryUrl} />
       )}
       {nodeData.type === NodeType.WAREHOUSE && (
-        <div className='text-center font-semibold mt-4'>{nodeData.data as string}</div>
+        <div className='text-center font-semibold mt-2'>
+          {(nodeData?.data?.spec?.subscriptions || []).map((sub, i) => {
+            return (
+              <div key={`${nodeData.data.metadata?.name}-${i}`}>
+                {sub.chart && (
+                  <RepoNodeBody
+                    label='Registry URL'
+                    value={sub.chart.registryUrl}
+                    type={NodeType.REPO_CHART}
+                  />
+                )}
+                {sub.image && (
+                  <RepoNodeBody
+                    label='Repo URL'
+                    value={sub.image.repoUrl}
+                    type={NodeType.REPO_IMAGE}
+                  />
+                )}
+                {sub.git && (
+                  <RepoNodeBody label='Repo URL' value={sub.git.repoUrl} type={NodeType.REPO_GIT} />
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   </div>
 );
 
-const RepoNodeBody = ({ label, value }: { label: string; value: string }) => (
-  <>
-    <div>{label}</div>
+const RepoNodeBody = ({
+  label,
+  value,
+  type
+}: {
+  label: string;
+  value: string;
+  type?: NodeType;
+}) => (
+  <div className='mb-2'>
+    <div>
+      {type && <FontAwesomeIcon icon={ico[type]} className='mr-2' />}
+      {label}
+    </div>
     <Tooltip title={value}>
       <a href={urlWithProtocol(value)} className={styles.value} target='_blank' rel='noreferrer'>
         {value.length > MAX_CHARS && '...'}
         {value.substring(value.length - MAX_CHARS)}
       </a>
     </Tooltip>
-  </>
+  </div>
 );
