@@ -3,5 +3,8 @@
   command = "yarn build"
   publish = "build/"
   
+[build.environment]
+  NODE_VERSION = "20.8.1"
+  
 [context.deploy-preview]
   ignore = "git diff --quiet main -- docs"

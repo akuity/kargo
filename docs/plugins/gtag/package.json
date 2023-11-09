@@ -8,19 +8,19 @@
     "watch": "tsc --build --watch"
   },
   "dependencies": {
-    "@docusaurus/core": "2.1.0",
-    "@docusaurus/types": "2.1.0",
-    "@docusaurus/utils-validation": "2.1.0",
-    "tslib": "^2.4.0"
+    "@docusaurus/core": "^3.0.0",
+    "@docusaurus/types": "^3.0.0",
+    "@docusaurus/utils-validation": "3.0.0",
+    "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "typescript": "~4.7.4"
+    "typescript": "~5.2.2"
   },
   "peerDependencies": {
-    "react": "^16.8.4 || ^17.0.0",
-    "react-dom": "^16.8.4 || ^17.0.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "engines": {
-    "node": ">=16.14"
+    "node": ">=18.0"
   }
 }
