@@ -5,7 +5,7 @@
     "composite": true,
     "incremental": true,
     "tsBuildInfoFile": "./lib/.tsbuildinfo-client",
-    "module": "esnext",
+    "module": "NodeNext",
     "target": "esnext",
     "rootDir": "src",
     "outDir": "lib"
