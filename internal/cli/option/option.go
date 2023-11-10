@@ -14,15 +14,16 @@ type Option struct {
 	LocalServerAddress string
 	UseLocalServer     bool
 
-	Project Optional[string]
-
-	IOStreams  *genericclioptions.IOStreams
-	PrintFlags *genericclioptions.PrintFlags
+	Project     Optional[string]
+	AllProjects bool
+	IOStreams   *genericclioptions.IOStreams
+	PrintFlags  *genericclioptions.PrintFlags
 }
 
 func NewOption() *Option {
 	return &Option{
-		Project: OptionalString(),
+		Project:     OptionalString(),
+		AllProjects: func() bool { return false }(),
 	}
 }
 

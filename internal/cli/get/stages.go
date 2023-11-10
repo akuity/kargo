@@ -37,48 +37,71 @@ kargo get stages --project=my-project my-stage
 			ctx := cmd.Context()
 
 			project := opt.Project.OrElse("")
-			if project == "" {
-				return errors.New("project is required")
+			if project == "" && !opt.AllProjects {
+				return errors.New("project or all-projects is required")
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
 				return errors.New("get client from config")
 			}
-			resp, err := kargoSvcCli.ListStages(ctx, connect.NewRequest(&v1alpha1.ListStagesRequest{
-				Project: project,
-			}))
-			if err != nil {
-				return errors.Wrap(err, "list stages")
+
+			var allProjects []string
+
+			if opt.AllProjects {
+				respProj, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
+				if err != nil {
+					return errors.Wrap(err, "list projects")
+				}
+				for _, p := range respProj.Msg.GetProjects() {
+					allProjects = append(allProjects, p.Name)
+				}
+			} else {
+				allProjects = append(allProjects, project)
+			}
+
+			var allStages []*kargoapi.Stage
+
+			for _, p := range allProjects {
+				resp, err := kargoSvcCli.ListStages(ctx, connect.NewRequest(&v1alpha1.ListStagesRequest{
+					Project: p,
+				}))
+				if err != nil {
+					return errors.Wrap(err, "list stages")
+				}
+				for _, s := range resp.Msg.GetStages() {
+					allStages = append(allStages, typesv1alpha1.FromStageProto(s))
+				}
 			}
 
 			names := slices.Compact(args)
-			res := make([]*kargoapi.Stage, 0, len(resp.Msg.GetStages()))
+
 			var resErr error
-			if len(names) == 0 {
-				for _, s := range resp.Msg.GetStages() {
-					res = append(res, typesv1alpha1.FromStageProto(s))
+			if len(names) > 0 {
+				stagesByName := make(map[string]*kargoapi.Stage, len(allStages))
+				for _, s := range allStages {
+					stagesByName[s.Name+"-"+s.Namespace] = s
 				}
-			} else {
-				stagesByName := make(map[string]*kargoapi.Stage, len(resp.Msg.GetStages()))
-				for _, s := range resp.Msg.GetStages() {
-					stagesByName[s.GetMetadata().GetName()] = typesv1alpha1.FromStageProto(s)
-				}
+				res := make([]*kargoapi.Stage, 0, len(stagesByName))
 				for _, name := range names {
-					if stage, ok := stagesByName[name]; ok {
-						res = append(res, stage)
-					} else {
-						resErr = goerrors.Join(err, errors.Errorf("stage %q not found", name))
+					for _, proj := range allProjects {
+						if stage, ok := stagesByName[name+"-"+proj]; ok {
+							res = append(res, stage)
+						} else {
+							resErr = goerrors.Join(err, errors.Errorf("stage %q not found in project %q", name, proj))
+						}
 					}
 				}
+				allStages = res
 			}
-			if err := printObjects(opt, res); err != nil {
+			if err := printObjects(opt, allStages); err != nil {
 				return err
 			}
 			return resErr
 		},
 	}
 	option.OptionalProject(opt.Project)(cmd.Flags())
+	option.AllProjects(&opt.AllProjects)(cmd.Flags())
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }
@@ -101,6 +124,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 				currentFreightID,
 				health,
 				duration.HumanDuration(time.Since(stage.CreationTimestamp.Time)),
+				stage.Namespace,
 			},
 			Object: list.Items[i],
 		}
@@ -111,6 +135,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 			{Name: "Current Freight", Type: "string"},
 			{Name: "Health", Type: "string"},
 			{Name: "Age", Type: "string"},
+			{Name: "Project", Type: "string"},
 		},
 		Rows: rows,
 	}

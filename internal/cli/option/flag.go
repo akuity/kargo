@@ -32,6 +32,12 @@ func OptionalProject(v Optional[string]) FlagFn {
 	}
 }
 
+func AllProjects(v *bool) FlagFn {
+	return func(fs *pflag.FlagSet) {
+		fs.BoolVarP(v, "all-projects", "P", false, "Get in all kargo projects")
+	}
+}
+
 func OptionalStage(v Optional[string]) FlagFn {
 	return func(fs *pflag.FlagSet) {
 		fs.Var(v, "stage", "Stage")
