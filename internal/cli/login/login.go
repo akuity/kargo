@@ -46,7 +46,7 @@ var assets embed.FS
 func NewCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "login server-address",
-		Args:    cobra.ExactArgs(1),
+		Args:    option.ExactArgs(1),
 		Short:   "Log in to a Kargo API server",
 		Example: "kargo login https://kargo.example.com --sso",
 		RunE: func(cmd *cobra.Command, args []string) error {

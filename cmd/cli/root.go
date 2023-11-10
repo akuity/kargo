@@ -22,6 +22,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/stage"
+	"github.com/akuity/kargo/internal/cli/warehouse"
 )
 
 // rootState holds state used internally by the root command.
@@ -93,6 +94,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	cmd.AddCommand(get.NewCommand(opt))
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
+	cmd.AddCommand(warehouse.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand(opt))
 	cmd.AddCommand(
 		cobracompletefig.CreateCompletionSpecCommand(

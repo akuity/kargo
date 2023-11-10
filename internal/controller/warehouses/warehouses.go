@@ -188,6 +188,9 @@ func (r *reconciler) Reconcile(
 	if updateErr != nil {
 		logger.Errorf("error updating Warehouse status: %s", updateErr)
 	}
+	if clearRefreshErr := kargoapi.ClearWarehouseRefresh(ctx, r.client, warehouse); clearRefreshErr != nil {
+		logger.Errorf("error clearing Warehouse refresh annotation: %s", clearRefreshErr)
+	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
 	// do it this way so that a failure to update is never counted as THE failure
