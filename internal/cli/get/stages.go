@@ -62,6 +62,7 @@ kargo get stages --project=my-project my-stage
 
 			var allStages []*kargoapi.Stage
 
+			// get all stages in project/all projects into a big slice
 			for _, p := range allProjects {
 				resp, err := kargoSvcCli.ListStages(ctx, connect.NewRequest(&v1alpha1.ListStagesRequest{
 					Project: p,
@@ -77,25 +78,27 @@ kargo get stages --project=my-project my-stage
 			names := slices.Compact(args)
 
 			var resErr error
+			// if stage names were provided in cli - remove unneeded stages from the big slice
 			if len(names) > 0 {
-				stagesByName := make(map[string]*kargoapi.Stage, len(allStages))
-				for _, s := range allStages {
-					stagesByName[s.Name+"-"+s.Namespace] = s
-				}
-				res := make([]*kargoapi.Stage, 0, len(stagesByName))
-				for _, name := range names {
-					for _, proj := range allProjects {
-						if stage, ok := stagesByName[name+"-"+proj]; ok {
-							res = append(res, stage)
-						} else {
-							resErr = goerrors.Join(err, errors.Errorf("stage %q not found in project %q", name, proj))
-						}
+				i := 0
+				for _, x := range allStages {
+					if slices.Contains(names, x.Name) {
+						allStages[i] = x
+						i++
 					}
 				}
-				allStages = res
+				// Prevent memory leak by erasing truncated pointers
+				for j := i; j < len(allStages); j++ {
+					allStages[j] = nil
+				}
+				allStages = allStages[:i]
 			}
-			if err := printObjects(opt, allStages); err != nil {
-				return err
+			if len(allStages) == 0 {
+				resErr = goerrors.Join(err, errors.Errorf("No stages found"))
+			} else {
+				if err := printObjects(opt, allStages); err != nil {
+					return err
+				}
 			}
 			return resErr
 		},
