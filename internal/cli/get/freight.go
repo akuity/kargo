@@ -2,11 +2,14 @@ package get
 
 import (
 	goerrors "errors"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/duration"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
@@ -14,6 +17,8 @@ import (
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
+
+const aliasLabelKey = "kargo.akuity.com/alias"
 
 func newGetFreightCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
@@ -60,14 +65,28 @@ kargo get freight --project=my-project my-freight
 				}
 			} else {
 				freightByName := make(map[string]*kargoapi.Freight, len(freight.Freight))
+				freightByAlias := make(map[string]*kargoapi.Freight, len(freight.Freight))
 				for _, f := range freight.Freight {
-					freightByName[f.GetMetadata().GetName()] = typesv1alpha1.FromFreightProto(f)
+					fr := typesv1alpha1.FromFreightProto(f)
+					freightByName[f.GetMetadata().GetName()] = fr
+					if f.GetMetadata().GetLabels() != nil {
+						freightByAlias[f.GetMetadata().GetLabels()[aliasLabelKey]] = fr
+					}
 				}
+				selectedFreight := make(map[string]struct{}, len(names))
 				for _, name := range names {
-					if f, ok := freightByName[name]; ok {
-						res = append(res, f)
+					f, ok := freightByName[name]
+					if !ok {
+						f, ok = freightByAlias[name]
+					}
+					if ok {
+						if _, selected := selectedFreight[f.Name]; !selected {
+							res = append(res, f)
+							selectedFreight[f.Name] = struct{}{}
+						}
 					} else {
-						resErr = goerrors.Join(err, errors.Errorf("freight %q not found", name))
+						resErr =
+							goerrors.Join(err, errors.Errorf("freight %q not found", name))
 					}
 				}
 			}
@@ -80,4 +99,31 @@ kargo get freight --project=my-project my-freight
 	option.OptionalProject(opt.Project)(cmd.Flags())
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
+}
+
+func newFreightTable(list *metav1.List) *metav1.Table {
+	rows := make([]metav1.TableRow, len(list.Items))
+	for i, item := range list.Items {
+		freight := item.Object.(*kargoapi.Freight) // nolint: forcetypeassert
+		var alias string
+		if freight.Labels != nil {
+			alias = freight.Labels[aliasLabelKey]
+		}
+		rows[i] = metav1.TableRow{
+			Cells: []any{
+				freight.Name,
+				alias,
+				duration.HumanDuration(time.Since(freight.CreationTimestamp.Time)),
+			},
+			Object: list.Items[i],
+		}
+	}
+	return &metav1.Table{
+		ColumnDefinitions: []metav1.TableColumnDefinition{
+			{Name: "Name/ID", Type: "string"},
+			{Name: "Alias", Type: "string"},
+			{Name: "Age", Type: "string"},
+		},
+		Rows: rows,
+	}
 }
