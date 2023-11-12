@@ -42,7 +42,7 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v3.1.2
+      uses: sigstore/cosign-installer@v3.2.0
       with:
         cosign-release: 'v2.1.1' # optional
     - name: Login to GHCR
