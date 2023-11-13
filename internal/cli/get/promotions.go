@@ -48,52 +48,80 @@ kargo get promotions --project=my-project some-promotion
 			ctx := cmd.Context()
 
 			project := opt.Project.OrElse("")
-			if project == "" {
-				return errors.New("project is required")
-			}
-			req := &v1alpha1.ListPromotionsRequest{
-				Project: project,
-			}
-			if stage, ok := flag.Stage.Get(); ok {
-				req.Stage = proto.String(stage)
+			if project == "" && !opt.AllProjects {
+				return errors.New("project or all-projects is required")
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
 				return errors.New("get client from config")
 			}
-			resp, err := kargoSvcCli.ListPromotions(ctx, connect.NewRequest(req))
-			if err != nil {
-				return errors.Wrap(err, "list promotions")
+
+			var allProjects []string
+
+			if opt.AllProjects {
+				respProj, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
+				if err != nil {
+					return errors.Wrap(err, "list projects")
+				}
+				for _, p := range respProj.Msg.GetProjects() {
+					allProjects = append(allProjects, p.Name)
+				}
+			} else {
+				allProjects = append(allProjects, project)
+			}
+
+			var allPromotions []*kargoapi.Promotion
+
+			// get all promotions in project/all projects into a big slice
+			for _, p := range allProjects {
+
+				req := &v1alpha1.ListPromotionsRequest{
+					Project: p,
+				}
+				if stage, ok := flag.Stage.Get(); ok {
+					req.Stage = proto.String(stage)
+				}
+
+				resp, err := kargoSvcCli.ListPromotions(ctx, connect.NewRequest(req))
+				if err != nil {
+					return errors.Wrap(err, "list promotions")
+				}
+				for _, s := range resp.Msg.GetPromotions() {
+					allPromotions = append(allPromotions, typesv1alpha1.FromPromotionProto(s))
+				}
 			}
 
 			names := slices.Compact(args)
-			res := make([]*kargoapi.Promotion, 0, len(resp.Msg.GetPromotions()))
+
 			var resErr error
-			if len(names) == 0 {
-				for _, p := range resp.Msg.GetPromotions() {
-					res = append(res, typesv1alpha1.FromPromotionProto(p))
-				}
-			} else {
-				promotionsByName := make(map[string]*kargoapi.Promotion, len(resp.Msg.GetPromotions()))
-				for _, p := range resp.Msg.GetPromotions() {
-					promotionsByName[p.GetMetadata().GetName()] = typesv1alpha1.FromPromotionProto(p)
-				}
-				for _, name := range names {
-					if promo, ok := promotionsByName[name]; ok {
-						res = append(res, promo)
-					} else {
-						resErr = goerrors.Join(err, errors.Errorf("promotion %q not found", name))
+			// if promotion names were provided in cli - remove unneeded ones from the big slice
+			if len(names) > 0 {
+				i := 0
+				for _, x := range allPromotions {
+					if slices.Contains(names, x.Name) {
+						allPromotions[i] = x
+						i++
 					}
 				}
+				// Prevent memory leak by erasing truncated pointers
+				for j := i; j < len(allPromotions); j++ {
+					allPromotions[j] = nil
+				}
+				allPromotions = allPromotions[:i]
 			}
-			if err := printObjects(opt, res); err != nil {
-				return err
+			if len(allPromotions) == 0 {
+				resErr = goerrors.Join(err, errors.Errorf("No promotions found"))
+			} else {
+				if err := printObjects(opt, allPromotions); err != nil {
+					return err
+				}
 			}
 			return resErr
 		},
 	}
 	option.OptionalProject(opt.Project)(cmd.Flags())
+	option.AllProjects(&opt.AllProjects)(cmd.Flags())
 	option.OptionalStage(flag.Stage)(cmd.Flags())
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
@@ -110,6 +138,7 @@ func newPromotionTable(list *metav1.List) *metav1.Table {
 				promo.Spec.Freight,
 				promo.GetStatus().Phase,
 				duration.HumanDuration(time.Since(promo.CreationTimestamp.Time)),
+				promo.Namespace,
 			},
 			Object: list.Items[i],
 		}
@@ -121,6 +150,7 @@ func newPromotionTable(list *metav1.List) *metav1.Table {
 			{Name: "Freight", Type: "string"},
 			{Name: "Phase", Type: "string"},
 			{Name: "Age", Type: "string"},
+			{Name: "Project", Type: "string"},
 		},
 		Rows: rows,
 	}
