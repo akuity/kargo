@@ -155,6 +155,11 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "index non-terminal Promotions by Stage")
 	}
 
+	// Index Promotions by Freight
+	if err := kubeclient.IndexPromotionsByFreight(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index Promotions by Freight")
+	}
+
 	// Index PromotionPolicies by Stage
 	if err := kubeclient.IndexPromotionPoliciesByStage(ctx, kargoMgr); err != nil {
 		return errors.Wrap(err, "index PromotionPolicies by Stage")
