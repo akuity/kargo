@@ -51,3 +51,15 @@ func ExactArgs(n int) cobra.PositionalArgs {
 		return nil
 	}
 }
+
+// MinimumNArgs is a wrapper around cobra.MinimumNArgs to additionally print usage string
+func MinimumNArgs(n int) cobra.PositionalArgs {
+	minNArgs := cobra.MinimumNArgs(n)
+	return func(cmd *cobra.Command, args []string) error {
+		if err := minNArgs(cmd, args); err != nil {
+			fmt.Println(cmd.UsageString())
+			return err
+		}
+		return nil
+	}
+}
