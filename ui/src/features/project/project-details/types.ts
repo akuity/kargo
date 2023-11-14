@@ -2,8 +2,7 @@ import {
   ChartSubscription,
   GitSubscription,
   ImageSubscription,
-  Stage,
-  Warehouse
+  Stage
 } from '@ui/gen/v1alpha1/types_pb';
 
 export enum NodeType {
@@ -19,21 +18,19 @@ export type NodesRepoType =
       type: NodeType.REPO_IMAGE;
       data: ImageSubscription;
       stageName: string;
+      warehouseName: string;
     }
   | {
       type: NodeType.REPO_GIT;
       data: GitSubscription;
       stageName: string;
+      warehouseName: string;
     }
   | {
       type: NodeType.REPO_CHART;
       data: ChartSubscription;
       stageName: string;
-    }
-  | {
-      type: NodeType.WAREHOUSE;
-      data: Warehouse;
-      stageName: string;
+      warehouseName: string;
     };
 
 export type NodesItemType =
