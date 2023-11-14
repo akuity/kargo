@@ -33,51 +33,76 @@ kargo get freight --project=my-project my-freight
 			ctx := cmd.Context()
 
 			project := opt.Project.OrElse("")
-			if project == "" {
-				return errors.New("project is required")
+			if project == "" && !opt.AllProjects {
+				return errors.New("project or all-projects is required")
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
 				return errors.New("get client from config")
 			}
-			resp, err := kargoSvcCli.QueryFreight(ctx, connect.NewRequest(&v1alpha1.QueryFreightRequest{
-				Project: project,
-			}))
-			if err != nil {
-				return errors.Wrap(err, "query freight")
+
+			var allProjects []string
+
+			if opt.AllProjects {
+				respProj, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
+				if err != nil {
+					return errors.Wrap(err, "list projects")
+				}
+				for _, p := range respProj.Msg.GetProjects() {
+					allProjects = append(allProjects, p.Name)
+				}
+			} else {
+				allProjects = append(allProjects, project)
+			}
+
+			var allFreight []*kargoapi.Freight
+
+			// get all freight in project/all projects into a big slice
+			for _, p := range allProjects {
+				resp, err := kargoSvcCli.QueryFreight(ctx, connect.NewRequest(&v1alpha1.QueryFreightRequest{
+					Project: p,
+				}))
+				if err != nil {
+					return errors.Wrap(err, "list freight")
+				}
+				freight := resp.Msg.GetGroups()[""]
+				for _, f := range freight.Freight {
+					allFreight = append(allFreight, typesv1alpha1.FromFreightProto(f))
+				}
 			}
 
 			names := slices.Compact(args)
 			// We didn't specify any groupBy, so there should be one group with an
 			// empty key
-			freight := resp.Msg.GetGroups()[""]
-			res := make([]*kargoapi.Freight, 0, len(freight.Freight))
+
 			var resErr error
-			if len(names) == 0 {
-				for _, f := range freight.Freight {
-					res = append(res, typesv1alpha1.FromFreightProto(f))
-				}
-			} else {
-				freightByName := make(map[string]*kargoapi.Freight, len(freight.Freight))
-				for _, f := range freight.Freight {
-					freightByName[f.GetMetadata().GetName()] = typesv1alpha1.FromFreightProto(f)
-				}
-				for _, name := range names {
-					if f, ok := freightByName[name]; ok {
-						res = append(res, f)
-					} else {
-						resErr = goerrors.Join(err, errors.Errorf("freight %q not found", name))
+			if len(names) > 0 {
+				i := 0
+				for _, x := range allFreight {
+					if slices.Contains(names, x.Name) {
+						allFreight[i] = x
+						i++
 					}
 				}
+				// Prevent memory leak by erasing truncated pointers
+				for j := i; j < len(allFreight); j++ {
+					allFreight[j] = nil
+				}
+				allFreight = allFreight[:i]
 			}
-			if err := printObjects(opt, res); err != nil {
-				return err
+			if len(allFreight) == 0 {
+				resErr = goerrors.Join(err, errors.Errorf("No freight found"))
+			} else {
+				if err := printObjects(opt, allFreight); err != nil {
+					return err
+				}
 			}
 			return resErr
 		},
 	}
 	option.OptionalProject(opt.Project)(cmd.Flags())
+	option.AllProjects(&opt.AllProjects)(cmd.Flags())
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }
