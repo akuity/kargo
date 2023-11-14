@@ -32,6 +32,7 @@ kargo get promotions --project=my-project --stage=my-stage
 	cmd.AddCommand(newGetProjectsCommand(opt))
 	cmd.AddCommand(newGetPromotionsCommand(opt))
 	cmd.AddCommand(newGetStagesCommand(opt))
+	cmd.AddCommand(newGetWarehousesCommand(opt))
 	return cmd
 }
 
