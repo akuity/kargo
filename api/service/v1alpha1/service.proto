@@ -64,6 +64,7 @@ service KargoService {
 
   rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
   rpc GetWarehouse(GetWarehouseRequest) returns (GetWarehouseResponse);
+  rpc WatchWarehouses(WatchWarehousesRequest) returns (stream WatchWarehousesResponse);
   rpc CreateWarehouse(CreateWarehouseRequest) returns (CreateWarehouseResponse);
   rpc UpdateWarehouse(UpdateWarehouseRequest) returns (UpdateWarehouseResponse);
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
@@ -442,6 +443,16 @@ message GetWarehouseRequest {
 
 message GetWarehouseResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+}
+
+message WatchWarehousesRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message WatchWarehousesResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  string type = 2;
 }
 
 message TypedWarehouseSpec {

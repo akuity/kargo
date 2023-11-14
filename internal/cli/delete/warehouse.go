@@ -18,7 +18,7 @@ func newWarehouseCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "warehouse [NAME]...",
 		Short: "Delete warehouse by name",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  option.MinimumNArgs(1),
 		Example: `
 # Delete warehouse
 kargo delete warehouse --project=my-project my-warehouse

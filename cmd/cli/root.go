@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/get"
 	"github.com/akuity/kargo/internal/cli/login"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/refresh"
 	"github.com/akuity/kargo/internal/cli/stage"
 )
 
@@ -93,6 +94,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	cmd.AddCommand(get.NewCommand(opt))
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(stage.NewCommand(opt))
+	cmd.AddCommand(refresh.NewCommand(opt))
 	cmd.AddCommand(newVersionCommand(opt))
 	cmd.AddCommand(
 		cobracompletefig.CreateCompletionSpecCommand(
