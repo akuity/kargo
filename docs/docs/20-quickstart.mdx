@@ -131,143 +131,109 @@ Let's begin by creating a repository on GitHub to house variations of our
 application manifests for three different stages of a sample application: test,
 UAT, and production.
 
-Visit https://github.com/akuity/kargo-demo and fork the repository into your own
-GitHub account.
+1. Visit https://github.com/akuity/kargo-demo and fork the repository into your
+   own GitHub account.
 
-You can explore the repository and see that the `main` branch contains common
-configuration in a `base/` directory as well as stage-specific overlays in
-paths of the form `stages/<stage name>/`. [Kustomize](https://kustomize.io/)
-is used as a configuration management tool that combines base configuration with
-stage-specific configuration.
+1. You can explore the repository and see that the `main` branch contains common
+   configuration in a `base/` directory as well as stage-specific overlays in
+   paths of the form `stages/<stage name>/`.
 
-:::note
-This layout is typical of a GitOps repository using Kustomize and is not at all
-Kargo-specific.
+    :::note
+    This layout is typical of a GitOps repository using
+    [Kustomize](https://kustomize.io/) for configuration management and is not
+    at all Kargo-specific.
 
-Kargo also works just as well with Helm and with plain YAML.
-:::
+    Kargo also works just as well with [Helm](https://helm.sh).
+    :::
+
+1. We'll be using it later, so save the location of your GitOps repository in an
+   environment variable:
+
+   ```shell
+   export GITOPS_REPO_URL=<your repo URL, starting with https://>
+   ```
 
 ### Create Argo CD `Application` Resources
 
 In this step, we will create three Argo CD `Application` resources that deploy
 the sample application at three different stages of its lifecycle, with three
 slightly different configurations, to three different namespaces in our local
-cluster.
+cluster:
 
-To get started, you will need a GitHub
-[personal access token](https://github.com/settings/tokens)
-with adequate permissions to read from and write to the repository you forked in
-the previous section.
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo-demo-test
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-demo:test
+spec:
+  project: default
+  source:
+    repoURL: ${GITOPS_REPO_URL}
+    targetRevision: stage/test
+    path: stages/test
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kargo-demo-test
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo-demo-uat
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-demo:uat
+spec:
+  project: default
+  source:
+    repoURL: ${GITOPS_REPO_URL}
+    targetRevision: stage/uat
+    path: stages/uat
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kargo-demo-uat
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo-demo-prod
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-demo:prod
+spec:
+  project: default
+  source:
+    repoURL: ${GITOPS_REPO_URL}
+    targetRevision: stage/prod
+    path: stages/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kargo-demo-prod
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
+EOF
+```
 
-1. Save the location of your GitOps repository, your GitHub handle, and your
-   personal access token in environment variables:
+If you visit [your Argo CD dashboard](https://localhost:8443), you will notice
+all three Argo CD `Application`s have not yet synced because they're not
+configured to do so automatically, and in fact, the branches referenced by their
+`targetRevision` fields do not even exist yet.
 
-   ```shell
-   export GITOPS_REPO_URL=<your repo URL, starting with https://>
-   export GITHUB_USERNAME=<your github handle>
-   export GITHUB_PAT=<your personal access token>
-   ```
-
-1. Create namespaces for each of our three stages, a `Secret` containing
-   repository credentials, and Argo CD `Application` resources for each stage:
-
-   ```shell
-   cat <<EOF | kubectl apply -f -
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: kargo-demo-test
-   ---
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: kargo-demo-uat
-   ---
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: kargo-demo-prod
-   ---
-   apiVersion: v1
-   kind: Secret
-   type: Opaque
-   metadata:
-     name: kargo-demo-repo
-     namespace: argocd
-     labels:
-       argocd.argoproj.io/secret-type: repository
-     annotations:
-       kargo.akuity.io/authorized-projects: kargo-demo
-   stringData:
-     type: git
-     project: default
-     url: ${GITOPS_REPO_URL}
-     username: ${GITHUB_USERNAME}
-     password: ${GITHUB_PAT}
-   ---
-   apiVersion: argoproj.io/v1alpha1
-   kind: Application
-   metadata:
-     name: kargo-demo-test
-     namespace: argocd
-     annotations:
-       kargo.akuity.io/authorized-stage: kargo-demo:test
-   spec:
-     project: default
-     source:
-       repoURL: ${GITOPS_REPO_URL}
-       targetRevision: stage/test
-       path: stages/test
-     destination:
-       server: https://kubernetes.default.svc
-       namespace: kargo-demo-test
-   ---
-   apiVersion: argoproj.io/v1alpha1
-   kind: Application
-   metadata:
-     name: kargo-demo-uat
-     namespace: argocd
-     annotations:
-       kargo.akuity.io/authorized-stage: kargo-demo:uat
-   spec:
-     project: default
-     source:
-       repoURL: ${GITOPS_REPO_URL}
-       targetRevision: stage/uat
-       path: stages/uat
-     destination:
-       server: https://kubernetes.default.svc
-       namespace: kargo-demo-uat
-   ---
-   apiVersion: argoproj.io/v1alpha1
-   kind: Application
-   metadata:
-     name: kargo-demo-prod
-     namespace: argocd
-     annotations:
-       kargo.akuity.io/authorized-stage: kargo-demo:prod
-   spec:
-     project: default
-     source:
-       repoURL: ${GITOPS_REPO_URL}
-       targetRevision: stage/prod
-       path: stages/prod
-     destination:
-       server: https://kubernetes.default.svc
-       namespace: kargo-demo-prod
-   EOF
-   ```
-
-  If you visit [your Argo CD dashboard](https://localhost:8443), you will notice
-  all three Argo CD `Application`s have not yet synced because they're not
-  configured to do so automatically, and in fact, the branches referenced by their
-  `targetRevision` fields do not even exist yet.
-
-  :::info
-  Our three stages all existing in a single cluster is for the sake of
-  expediency. A single Argo CD control plane can manage multiple clusters, so
-  these could also have been spread across multiple clusters.
-  :::
+:::info
+Our three stages all existing in a single cluster is for the sake of expediency.
+A single Argo CD control plane can manage multiple clusters, so these could just
+as easily have been spread across multiple clusters.
+:::
 
 ### Hands on with the Kargo CLI
 
@@ -275,266 +241,312 @@ Up to this point, we haven't done anything with Kargo -- in fact everything
 we've done thus far should be familiar to anyone who's already using Argo CD and
 Kustomize. Now it's time to see what Kargo can do!
 
-1. Begin by logging into Kargo:
+To get started, you will need a GitHub
+[personal access token](https://github.com/settings/tokens)
+with adequate permissions to read from and write to the repository you forked in
+the previous section.
 
-  ```shell
-  kargo login https://localhost:8444 \
-    --admin \
-    --password admin \
-    --insecure-skip-tls-verify
-  ```
+1. Save your GitHub handle and your personal access token in environment
+   variables:
 
-1. Next, we'll create a Kargo project (a specially labeled namespace) and three
-   Kargo `Stage` resources. This can be thought of as an orchestration layer for
-   our GitOps repository and Argo CD `Application` resources.
+   ```shell
+   export GITHUB_USERNAME=<your github handle>
+   export GITHUB_PAT=<your personal access token>
+   ```
 
-  ```shell
-  cat <<EOF | kargo apply -f -
-  apiVersion: v1
-  kind: Namespace
-  metadata:
-    name: kargo-demo
-    labels:
-      kargo.akuity.io/project: "true"
-  ---
-  apiVersion: kargo.akuity.io/v1alpha1
-  kind: Stage
-  metadata:
-    name: test
-    namespace: kargo-demo
-  spec:
-    subscriptions:
-      repos:
-        images:
-        - repoURL: nginx
+1. Then, log into Kargo:
+
+    ```shell
+    kargo login https://localhost:8444 \
+      --admin \
+      --password admin \
+      --insecure-skip-tls-verify
+    ```
+
+1. Next, we'll create a Kargo project, which is really a specially labeled
+   Kubernetes `Namespace`:
+
+    ```shell
+    kargo create project kargo-demo
+    ```
+
+1. To create some credentials (a Kubernetes `Secret`) for writing to our GitOps
+   repository, we will fall back on `kubectl`:
+
+    ```shell
+    cat <<EOF | kubectl apply -f -
+    apiVersion: v1
+    kind: Secret
+    type: Opaque
+    metadata:
+      name: kargo-demo-repo
+      namespace: kargo-demo
+      labels:
+        kargo.akuity.io/secret-type: repository
+    stringData:
+      type: git
+      project: default
+      url: ${GITOPS_REPO_URL}
+      username: ${GITHUB_USERNAME}
+      password: ${GITHUB_PAT}
+    EOF
+    ```
+
+    :::info
+    Falling back on `kubectl` for credential management is necessary at this
+    time because the Kargo API server lacks sufficient permissions to manage
+    Kubernetes `Secret` resources.
+
+    This will be addressed in future versions.
+    :::
+
+1. Next, returning to the `kargo` CLI, we create a `Warehouse` and three Kargo
+   `Stage` resources. All of this his can be thought of as an orchestration
+   layer for our GitOps repository and Argo CD `Application` resources.
+
+    ```shell
+    cat <<EOF | kargo apply -f -
+    apiVersion: kargo.akuity.io/v1alpha1
+    kind: Warehouse
+    metadata:
+      name: kargo-demo
+      namespace: kargo-demo
+    spec:
+      subscriptions:
+      - image:
+          repoURL: nginx
           semverConstraint: ^1.24.0
-    promotionMechanisms:
-      gitRepoUpdates:
-      - repoURL: ${GITOPS_REPO_URL}
-        writeBranch: stage/test
-        kustomize:
-          images:
-          - image: nginx
-            path: stages/test
-      argoCDAppUpdates:
-      - appName: kargo-demo-test
-        appNamespace: argocd
-  ---
-  apiVersion: kargo.akuity.io/v1alpha1
-  kind: Stage
-  metadata:
-    name: uat
-    namespace: kargo-demo
-  spec:
-    subscriptions:
-      upstreamStages:
-      - name: test
-    promotionMechanisms:
-      gitRepoUpdates:
-      - repoURL: ${GITOPS_REPO_URL}
-        writeBranch: stage/uat
-        kustomize:
-          images:
-          - image: nginx
-            path: stages/uat
-      argoCDAppUpdates:
-      - appName: kargo-demo-uat
-        appNamespace: argocd
-  ---
-  apiVersion: kargo.akuity.io/v1alpha1
-  kind: Stage
-  metadata:
-    name: prod
-    namespace: kargo-demo
-  spec:
-    subscriptions:
-      upstreamStages:
-      - name: uat
-    promotionMechanisms:
-      gitRepoUpdates:
-      - repoURL: ${GITOPS_REPO_URL}
-        writeBranch: stage/prod
-        kustomize:
-          images:
-          - image: nginx
-            path: stages/prod
-      argoCDAppUpdates:
-      - appName: kargo-demo-prod
-        appNamespace: argocd
-  EOF
-  ```
+    ---
+    apiVersion: kargo.akuity.io/v1alpha1
+    kind: Stage
+    metadata:
+      name: test
+      namespace: kargo-demo
+    spec:
+      subscriptions:
+        warehouse: kargo-demo
+      promotionMechanisms:
+        gitRepoUpdates:
+        - repoURL: ${GITOPS_REPO_URL}
+          writeBranch: stage/test
+          kustomize:
+            images:
+            - image: nginx
+              path: stages/test
+        argoCDAppUpdates:
+        - appName: kargo-demo-test
+          appNamespace: argocd
+    ---
+    apiVersion: kargo.akuity.io/v1alpha1
+    kind: Stage
+    metadata:
+      name: uat
+      namespace: kargo-demo
+    spec:
+      subscriptions:
+        upstreamStages:
+        - name: test
+      promotionMechanisms:
+        gitRepoUpdates:
+        - repoURL: ${GITOPS_REPO_URL}
+          writeBranch: stage/uat
+          kustomize:
+            images:
+            - image: nginx
+              path: stages/uat
+        argoCDAppUpdates:
+        - appName: kargo-demo-uat
+          appNamespace: argocd
+    ---
+    apiVersion: kargo.akuity.io/v1alpha1
+    kind: Stage
+    metadata:
+      name: prod
+      namespace: kargo-demo
+    spec:
+      subscriptions:
+        upstreamStages:
+        - name: uat
+      promotionMechanisms:
+        gitRepoUpdates:
+        - repoURL: ${GITOPS_REPO_URL}
+          writeBranch: stage/prod
+          kustomize:
+            images:
+            - image: nginx
+              path: stages/prod
+        argoCDAppUpdates:
+        - appName: kargo-demo-prod
+          appNamespace: argocd
+    EOF
+    ```
 
-  Use the CLI to view the three `Stage` resources in our new project:
+1. Use the CLI to view our `Warehouse` resource:
 
-  ```shell
-  kargo get stages --project kargo-demo
-  ```
+    ```shell
+    kargo get warehouses --project kargo-demo
+    ```
 
-  Sample output:
+    Sample output:
 
-  ```shell
-  NAME   CURRENT FREIGHT   HEALTH    AGE
-  prod                     Healthy   20s
-  test                     Healthy   20s
-  uat                      Healthy   20s
-  ```
+    ```shell
+    NAME         AGE
+    kargo-demo   13s
+    ```
 
-1. Dissecting the manifest from the previous step, we see the `test` `Stage`
-   subscribes directly to the `nginx` image repository. When a new version of
-   the `nginx` container image matching the specified constraints is discovered,
-   Kargo has discovered new `Freight`.
+1. Use the CLI to view our three `Stage` resources:
 
-  :::info
-  `Freight` is a set of references to one or more versioned artifacts, which and
-  may include:
+    ```shell
+    kargo get stages --project kargo-demo
+    ```
 
-    * Container images (from image repositories)
+    Sample output:
 
-    * Kubernetes manifests (from Git repositories)
+    ```shell
+    NAME   CURRENT FREIGHT   HEALTH    AGE
+    prod                     Healthy   20s
+    test                     Healthy   20s
+    uat                      Healthy   20s
+    ```
 
-    * Helm charts (from chart repositories)
+1. Our `Warehouse`, which subscribes to the `nginx` image repository, also
+   should have already produced `Freight`:
 
-  This introductory example has `Freight` that references only a specific
-  version of the `nginx` container image.
-  :::
+    ```shell
+    kargo get freight --project kargo-demo
+    ```
 
-  We can query the status of the `test` `Stage` to see the latest `Freight`
-  available to it:
+    Sample output:
 
-  ```shell
-  kargo get stage test --project kargo-demo --output jsonpath-as-json={.status}
-  ```
+    ```shell
+    NAME                                       AGE
+    47b33c0c92b54439e5eb7fb80ecc83f8626fe390   5m49s
+    ```
+    :::info
+    `Freight` is a set of references to one or more versioned artifacts, which
+    may include:
 
-  Truncated sample output:
+      * Container images (from image repositories)
 
-  ```shell
-  [
-      {
-          "availableFreight": [
-              {
-                  "firstSeen": "2023-09-20T18:09:05Z",
-                  "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
-                  "images": [
-                      {
-                          "repoURL": "nginx",
-                          "tag": "1.25.2"
-                      }
-                  ],
-                  "qualified": true
-              }
-          ],
-          ...
-      }
-  ]
-  ```
+      * Kubernetes manifests (from Git repositories)
 
-   Save the ID of the available `Freight` to an environment variable for
-   convenience:
+      * Helm charts (from chart repositories)
 
-  ```shell
-  export FREIGHT_ID=$(kargo get stage test --project kargo-demo --output jsonpath={.status.availableFreight\[0\].id})
-  ```
+    This introductory example has `Freight` that references only a specific
+    version of the `nginx` container image.
+    :::
 
-  _Promote_ the `Freight` into the `test` `Stage`:
+1. We'll use it later, so save the ID of the `Freight` to an environment
+   variable:
 
-  ```shell
-  kargo stage promote kargo-demo test --freight $FREIGHT_ID
-  ```
+    ```shell
+    export FREIGHT_ID=$(kargo get freight --project kargo-demo --output jsonpath={.id})
+    ```
 
-  Sample output:
+1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
-  ```shell
-  Promotion Created: "test.01haswttm2p4qwcenpnn5s1m96.b73f9d1"
-  ```
+    ```shell
+    kargo stage promote kargo-demo test --freight $FREIGHT_ID
+    ```
 
-   Query for `Promotion` resources within our project to see one has been
-   created and is currently pending:
+    Sample output:
 
-  ```shell
-  kargo get promotions --project kargo-demo
-  ```
+    ```shell
+    Promotion Created: "test.01haswttm2p4qwcenpnn5s1m96.b73f9d1"
+    ```
 
-  Sample output:
+    Query for `Promotion` resources within our project to see one has been
+    created:
 
-  ```shell
-  NAME                                      STAGE   FREIGHT                                    PHASE     AGE
-  test.01haswttm2p4qwcenpnn5s1m96.b73f9d1   test    b73f9d1afaca87254b64e64e5439557e86dcba79   Pending   7s
-  ```
+    ```shell
+    kargo get promotions --project kargo-demo
+    ```
 
-  We can repeat the command above until our `Promotion` has succeeded.
+    Our `Promotion` may briefly appear to be in a `Pending` phase, but more than
+    likely, it will almost immediately be `Running`, or even `Succeeded`:
 
-  Once the `Promotion` has succeeded, we can, again view all `Stage` resources in
-  our project, and at a glance, see that the `test` `Stage` is now either in a
-  `Progressing` or `Healthy` state.
+    ```shell
+    NAME                                      STAGE   FREIGHT                                    PHASE     AGE
+    test.01haswttm2p4qwcenpnn5s1m96.b73f9d1   test    b73f9d1afaca87254b64e64e5439557e86dcba79   Running   7s
+    ```
 
-  ```shell
-  kargo get stages --project kargo-demo
-  ```
+    Once the `Promotion` has succeeded, we can again view all `Stage` resources
+    in our project, and at a glance, see that the `test` `Stage` is now either
+    in a `Progressing` or `Healthy` state.
 
-  Sample output:
+    ```shell
+    kargo get stages --project kargo-demo
+    ```
 
-  ```shell
-  NAME   CURRENT FREIGHT                            HEALTH        AGE
-  prod                                              Healthy       6m55s
-  test   b73f9d1afaca87254b64e64e5439557e86dcba79   Progressing   6m55s
-  uat                                               Healthy       6m55s
-  ```
+    Sample output:
 
-  We can repeat the command above until our `Promotion` is in a `Healthy` state.
+    ```shell
+    NAME   CURRENT FREIGHT                            HEALTH        AGE
+    prod                                              Healthy       6m55s
+    test   b73f9d1afaca87254b64e64e5439557e86dcba79   Progressing   6m55s
+    uat                                               Healthy       6m55s
+    ```
 
-  We can further validate the success of this entire process by visiting the
-  test instance of our site at [localhost:8081](http://localhost:8081).
+    We can repeat the command above until our `Promotion` is in a `Healthy`
+    state and we can further validate the success of this entire process by
+    visiting the test instance of our site at
+    [localhost:8081](http://localhost:8081).
 
-  If we once again view the `status` of our `test` `Stage` in more detail, we
-  will see that it now reflects not only `Freight` available to the `Stage`, but
-  also its current `Freight`, and the history of all `Freight` that have passed
-  through this stage. (The collection is ordered most to least recent.)
+    If we once again view the `status` of our `test` `Stage` in more detail, we
+    will see that it now reflects its current `Freight`, and the history of all
+    `Freight` that have passed through this stage. (The collection is ordered
+    most to least recent.)
 
-  ```shell
-  kargo get stage test --project kargo-demo --output jsonpath-as-json={.status}
-  ```
+    ```shell
+    kargo get stage test --project kargo-demo --output jsonpath-as-json={.status}
+    ```
 
-  Truncated sample output:
+    Truncated sample output:
 
-  ```shell
-  [
-      {
-          "availableFreight": [
-              ...
-          ],
-          "currentFreight": {
-              "firstSeen": "2023-09-20T18:52:12Z",
-              "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
-              "images": [
-                  {
-                      "repoURL": "nginx",
-                      "tag": "1.25.2"
-                  }
-              ],
-              "qualified": true
-          },
-          ...
-          "history": [
-              {
-                  "firstSeen": "2023-09-20T18:52:12Z",
-                  "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
-                  "images": [
-                      {
-                          "repoURL": "nginx",
-                          "tag": "1.25.2"
-                      }
-                  ],
-                  "qualified": true
-              }
-          ]
-      }
-  ]
-  ```
+    ```shell
+    {
+        "currentFreight": {
+            "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
+            "images": [
+                {
+                    "repoURL": "nginx",
+                    "tag": "1.25.3"
+                }
+            ],
+        },
+        ...
+        "history": [
+            {
+                "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
+                "images": [
+                    {
+                        "repoURL": "nginx",
+                        "tag": "1.25.3"
+                    }
+                ],
+            }
+        ]
+    }
+    ```
 
-  Importantly, by virtue of the `test` `Stage` having achieved a `Healthy` state
-  with its current `Freight`, the sample output above shows the current
-  `Freight` is now _qualified_, which designates it as eligible for promotion to
-  the next `Stage` -- `uat`.
+1. If we look at our `Freight` in greater detail, we'll see that by virtue of
+   the `test` `Stage` having achieved a `Healthy` state, the `Freight` is now
+   _qualified_ in `test`, which designates it as eligible for promotion to the
+   next `Stage` -- in our case, `uat`.
+
+    ```shell
+    kargo get freight $FREIGHT_ID --project kargo-demo --output jsonpath-as-json={.status}
+    ```
+
+    Sample output:
+
+    ```shell
+    {
+        "qualifications": {
+            "test": {}
+        }
+    }
+    ```
 
 ### Behind the Scenes
 
