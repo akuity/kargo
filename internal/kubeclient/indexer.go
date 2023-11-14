@@ -12,13 +12,18 @@ import (
 )
 
 const (
-	StagesByArgoCDApplicationsIndexField   = "applications"
-	PromotionsByStageIndexField            = "stage"
-	NonTerminalPromotionsByStageIndexField = PromotionsByStageIndexField
+	FreightByQualifiedStagesIndexField = "qualifiedStages"
+	FreightByWarehouseIndexField       = "warehouse"
+	PromotionsByFreightIndexField      = "freight"
+	PromotionsByStageIndexField        = "stage"
+
+	// Note: These two do not conflict with one another, because these two
+	// indices are used by different components.
+	NonTerminalPromotionsByStageIndexField = "stage"
 	PromotionPoliciesByStageIndexField     = "stage"
-	FreightByWarehouseIndexField           = "warehouse"
-	FreightByQualifiedStagesIndexField     = "qualifiedStages"
-	StagesByUpstreamStagesIndexField       = "upstreamStages"
+
+	StagesByArgoCDApplicationsIndexField = "applications"
+	StagesByUpstreamStagesIndexField     = "upstreamStages"
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -56,6 +61,21 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 		}
 		return apps
 	}
+}
+
+// IndexPromotionsByFreight indexes Promotions by the Freight they reference.
+func IndexPromotionsByFreight(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		PromotionsByFreightIndexField,
+		indexPromotionsByFreight,
+	)
+}
+
+func indexPromotionsByFreight(obj client.Object) []string {
+	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
+	return []string{promo.Spec.Freight}
 }
 
 // IndexPromotionsByStage creates Promotion index by Stage for which
