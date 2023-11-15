@@ -50,6 +50,7 @@ rules:
   verbs:
   - get
   - list
+  - patch
   - watch
 - apiGroups:
   - kargo.akuity.io
