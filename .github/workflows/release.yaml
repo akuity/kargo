@@ -210,6 +210,9 @@ jobs:
     container:
       image: golang:1.21.3-bookworm
     steps:
+    - name: Install awscli
+      run: |
+        apt update && apt install awscli -y
     - name: Checkout code
       uses: actions/checkout@v4
     - uses: actions/cache@v3
