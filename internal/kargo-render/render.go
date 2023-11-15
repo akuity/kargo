@@ -3,6 +3,7 @@ package render
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/pkg/errors"
@@ -100,7 +101,7 @@ func buildRenderCmd(req Request) *exec.Cmd {
 	}
 	cmd := exec.Command(cmdTokens[0], cmdTokens[1:]...) // nolint: gosec
 	cmd.Env = append(
-		cmd.Env,
+		os.Environ(),
 		fmt.Sprintf("KARGO_RENDER_REPO_PASSWORD=%s", req.RepoCreds.Password),
 	)
 	return cmd
