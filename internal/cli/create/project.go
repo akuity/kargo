@@ -21,7 +21,7 @@ func newProjectCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project (NAME)",
 		Short: "Create a project",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  option.MinimumNArgs(1),
 		Example: `
 # Create project
 kargo create project my-project

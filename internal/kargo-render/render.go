@@ -2,6 +2,8 @@ package render
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/pkg/errors"
@@ -91,13 +93,16 @@ func buildRenderCmd(req Request) *exec.Cmd {
 		req.TargetBranch,
 		"--repo-username",
 		req.RepoCreds.Username,
-		"--repo-password",
-		req.RepoCreds.Password,
 		"--output",
 		"json",
 	}
 	for _, image := range req.Images {
 		cmdTokens = append(cmdTokens, "--image", image)
 	}
-	return exec.Command(cmdTokens[0], cmdTokens[1:]...) // nolint: gosec
+	cmd := exec.Command(cmdTokens[0], cmdTokens[1:]...) // nolint: gosec
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("KARGO_RENDER_REPO_PASSWORD=%s", req.RepoCreds.Password),
+	)
+	return cmd
 }

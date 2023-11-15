@@ -18,7 +18,7 @@ func newStageCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stage [NAME]...",
 		Short: "Delete stage by name",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  option.MinimumNArgs(1),
 		Example: `
 # Delete stage
 kargo delete stage --project=my-project my-stage

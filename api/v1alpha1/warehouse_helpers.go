@@ -53,3 +53,27 @@ func RefreshWarehouse(
 	}
 	return warehouse, nil
 }
+
+// ClearWarehouseRefresh is called by the Warehouse controller to clear the refresh
+// annotation on the Warehouse (if present). A client (e.g. UI) who requested a
+// Warehouse refresh, can wait until the annotation is cleared, to understand that
+// the controller successfully reconciled the Warehouse after the refresh request.
+func ClearWarehouseRefresh(
+	ctx context.Context,
+	c client.Client,
+	wh *Warehouse,
+) error {
+	if wh.Annotations == nil {
+		return nil
+	}
+	if _, ok := wh.Annotations[AnnotationKeyRefresh]; !ok {
+		return nil
+	}
+	newWh := Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      wh.Name,
+			Namespace: wh.Namespace,
+		},
+	}
+	return clearRefreshObject(ctx, c, &newWh)
+}

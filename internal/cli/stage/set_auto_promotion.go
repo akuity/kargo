@@ -19,7 +19,7 @@ import (
 func newEnableAutoPromotion(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "enable-auto-promotion",
-		Args:    cobra.ExactArgs(2),
+		Args:    option.ExactArgs(2),
 		Example: "kargo stage enable-auto-promotion (PROJECT) (STAGE)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -42,7 +42,7 @@ func newEnableAutoPromotion(opt *option.Option) *cobra.Command {
 func newDisableAutoPromotion(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "disable-auto-promotion",
-		Args:    cobra.ExactArgs(2),
+		Args:    option.ExactArgs(2),
 		Example: "kargo stage disable-auto-promotion (PROJECT) (STAGE)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
