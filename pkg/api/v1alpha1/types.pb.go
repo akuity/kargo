@@ -2587,6 +2587,187 @@ func (x *Subscriptions) GetWarehouse() string {
 	return ""
 }
 
+type Warehouse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ApiVersion string             `protobuf:"bytes,1,opt,name=api_version,json=apiVersion,proto3" json:"api_version,omitempty"`
+	Kind       string             `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Metadata   *metav1.ObjectMeta `protobuf:"bytes,3,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Spec       *WarehouseSpec     `protobuf:"bytes,4,opt,name=spec,proto3" json:"spec,omitempty"`
+	Status     *WarehouseStatus   `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+}
+
+func (x *Warehouse) Reset() {
+	*x = Warehouse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1alpha1_types_proto_msgTypes[41]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Warehouse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Warehouse) ProtoMessage() {}
+
+func (x *Warehouse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_types_proto_msgTypes[41]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Warehouse.ProtoReflect.Descriptor instead.
+func (*Warehouse) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *Warehouse) GetApiVersion() string {
+	if x != nil {
+		return x.ApiVersion
+	}
+	return ""
+}
+
+func (x *Warehouse) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *Warehouse) GetMetadata() *metav1.ObjectMeta {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+func (x *Warehouse) GetSpec() *WarehouseSpec {
+	if x != nil {
+		return x.Spec
+	}
+	return nil
+}
+
+func (x *Warehouse) GetStatus() *WarehouseStatus {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+type WarehouseSpec struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Subscriptions []*RepoSubscription `protobuf:"bytes,1,rep,name=subscriptions,proto3" json:"subscriptions,omitempty"`
+}
+
+func (x *WarehouseSpec) Reset() {
+	*x = WarehouseSpec{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1alpha1_types_proto_msgTypes[42]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WarehouseSpec) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WarehouseSpec) ProtoMessage() {}
+
+func (x *WarehouseSpec) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_types_proto_msgTypes[42]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WarehouseSpec.ProtoReflect.Descriptor instead.
+func (*WarehouseSpec) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *WarehouseSpec) GetSubscriptions() []*RepoSubscription {
+	if x != nil {
+		return x.Subscriptions
+	}
+	return nil
+}
+
+type WarehouseStatus struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Error              string `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
+	ObservedGeneration int64  `protobuf:"varint,2,opt,name=observed_generation,json=observedGeneration,proto3" json:"observed_generation,omitempty"`
+}
+
+func (x *WarehouseStatus) Reset() {
+	*x = WarehouseStatus{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1alpha1_types_proto_msgTypes[43]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WarehouseStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WarehouseStatus) ProtoMessage() {}
+
+func (x *WarehouseStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_types_proto_msgTypes[43]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WarehouseStatus.ProtoReflect.Descriptor instead.
+func (*WarehouseStatus) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *WarehouseStatus) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *WarehouseStatus) GetObservedGeneration() int64 {
+	if x != nil {
+		return x.ObservedGeneration
+	}
+	return 0
+}
+
 var File_v1alpha1_types_proto protoreflect.FileDescriptor
 
 var file_v1alpha1_types_proto_rawDesc = []byte{
@@ -3068,7 +3249,39 @@ var file_v1alpha1_types_proto_rawDesc = []byte{
 	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0e, 0x75, 0x70, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x53, 0x74,
 	0x61, 0x67, 0x65, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x77, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73,
 	0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x77, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75,
-	0x73, 0x65, 0x42, 0xad, 0x02, 0x0a, 0x2c, 0x63, 0x6f, 0x6d, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75,
+	0x73, 0x65, 0x22, 0xb0, 0x02, 0x0a, 0x09, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65,
+	0x12, 0x1f, 0x0a, 0x0b, 0x61, 0x70, 0x69, 0x5f, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x61, 0x70, 0x69, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f,
+	0x6e, 0x12, 0x12, 0x0a, 0x04, 0x6b, 0x69, 0x6e, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x04, 0x6b, 0x69, 0x6e, 0x64, 0x12, 0x4e, 0x0a, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74,
+	0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x32, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
+	0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67,
+	0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x6d, 0x65, 0x74, 0x61, 0x76, 0x31,
+	0x2e, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x4d, 0x65, 0x74, 0x61, 0x52, 0x08, 0x6d, 0x65, 0x74,
+	0x61, 0x64, 0x61, 0x74, 0x61, 0x12, 0x4b, 0x0a, 0x04, 0x73, 0x70, 0x65, 0x63, 0x18, 0x04, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x37, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b,
+	0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57,
+	0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x53, 0x70, 0x65, 0x63, 0x52, 0x04, 0x73, 0x70,
+	0x65, 0x63, 0x12, 0x51, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x05, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x39, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e,
+	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67,
+	0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61,
+	0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73,
+	0x74, 0x61, 0x74, 0x75, 0x73, 0x22, 0x71, 0x0a, 0x0d, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75,
+	0x73, 0x65, 0x53, 0x70, 0x65, 0x63, 0x12, 0x60, 0x0a, 0x0d, 0x73, 0x75, 0x62, 0x73, 0x63, 0x72,
+	0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x3a, 0x2e,
+	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
+	0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x70, 0x6f, 0x53, 0x75, 0x62,
+	0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0d, 0x73, 0x75, 0x62, 0x73, 0x63,
+	0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x58, 0x0a, 0x0f, 0x57, 0x61, 0x72, 0x65,
+	0x68, 0x6f, 0x75, 0x73, 0x65, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x65,
+	0x72, 0x72, 0x6f, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f,
+	0x72, 0x12, 0x2f, 0x0a, 0x13, 0x6f, 0x62, 0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x5f, 0x67, 0x65,
+	0x6e, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x03, 0x52, 0x12,
+	0x6f, 0x62, 0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x69,
+	0x6f, 0x6e, 0x42, 0xad, 0x02, 0x0a, 0x2c, 0x63, 0x6f, 0x6d, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75,
 	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72,
 	0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
 	0x68, 0x61, 0x31, 0x42, 0x0a, 0x54, 0x79, 0x70, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50,
@@ -3102,7 +3315,7 @@ func file_v1alpha1_types_proto_rawDescGZIP() []byte {
 	return file_v1alpha1_types_proto_rawDescData
 }
 
-var file_v1alpha1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
+var file_v1alpha1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
 var file_v1alpha1_types_proto_goTypes = []interface{}{
 	(*ArgoCDAppUpdate)(nil),               // 0: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
 	(*ArgoCDHelm)(nil),                    // 1: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelm
@@ -3145,10 +3358,13 @@ var file_v1alpha1_types_proto_goTypes = []interface{}{
 	(*StageStatus)(nil),                   // 38: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
 	(*StageSubscription)(nil),             // 39: github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription
 	(*Subscriptions)(nil),                 // 40: github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions
-	nil,                                   // 41: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.QualificationsEntry
-	(*metav1.ObjectMeta)(nil),             // 42: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	(*metav1.ListMeta)(nil),               // 43: github.com.akuity.kargo.pkg.api.metav1.ListMeta
-	(*timestamppb.Timestamp)(nil),         // 44: google.protobuf.Timestamp
+	(*Warehouse)(nil),                     // 41: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse
+	(*WarehouseSpec)(nil),                 // 42: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec
+	(*WarehouseStatus)(nil),               // 43: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseStatus
+	nil,                                   // 44: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.QualificationsEntry
+	(*metav1.ObjectMeta)(nil),             // 45: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	(*metav1.ListMeta)(nil),               // 46: github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	(*timestamppb.Timestamp)(nil),         // 47: google.protobuf.Timestamp
 }
 var file_v1alpha1_types_proto_depIdxs = []int32{
 	4,  // 0: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate.source_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate
@@ -3164,34 +3380,34 @@ var file_v1alpha1_types_proto_depIdxs = []int32{
 	16, // 10: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmImageUpdate
 	15, // 11: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmChartDependencyUpdate
 	20, // 12: github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.KustomizeImageUpdate
-	42, // 13: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	45, // 13: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
 	28, // 14: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec
 	29, // 15: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus
 	37, // 16: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo.freight:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
-	43, // 17: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	46, // 17: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
 	22, // 18: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
 	9,  // 19: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms.git_repo_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate
 	0,  // 20: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms.argocd_app_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
-	42, // 21: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	43, // 22: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	45, // 21: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	46, // 22: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
 	26, // 23: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
 	10, // 24: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.git:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription
 	19, // 25: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.image:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription
 	7,  // 26: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.chart:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription
-	42, // 27: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	45, // 27: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
 	33, // 28: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
 	38, // 29: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
-	43, // 30: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	46, // 30: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
 	31, // 31: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
 	40, // 32: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.subscriptions:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions
 	25, // 33: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.promotion_mechanisms:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms
-	42, // 34: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	45, // 34: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
 	8,  // 35: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.commits:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
 	18, // 36: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Image
 	6,  // 37: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Chart
 	35, // 38: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus
-	41, // 39: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.qualifications:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.QualificationsEntry
-	44, // 40: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.first_seen:type_name -> google.protobuf.Timestamp
+	44, // 39: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.qualifications:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.QualificationsEntry
+	47, // 40: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.first_seen:type_name -> google.protobuf.Timestamp
 	8,  // 41: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.commits:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
 	18, // 42: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Image
 	6,  // 43: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Chart
@@ -3200,12 +3416,16 @@ var file_v1alpha1_types_proto_depIdxs = []int32{
 	11, // 46: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.health:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Health
 	23, // 47: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.current_promotion:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo
 	39, // 48: github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions.upstream_stages:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription
-	36, // 49: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.QualificationsEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Qualification
-	50, // [50:50] is the sub-list for method output_type
-	50, // [50:50] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	45, // 49: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	42, // 50: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec
+	43, // 51: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseStatus
+	30, // 52: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec.subscriptions:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription
+	36, // 53: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.QualificationsEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Qualification
+	54, // [54:54] is the sub-list for method output_type
+	54, // [54:54] is the sub-list for method input_type
+	54, // [54:54] is the sub-list for extension type_name
+	54, // [54:54] is the sub-list for extension extendee
+	0,  // [0:54] is the sub-list for field type_name
 }
 
 func init() { file_v1alpha1_types_proto_init() }
@@ -3706,6 +3926,42 @@ func file_v1alpha1_types_proto_init() {
 				return nil
 			}
 		}
+		file_v1alpha1_types_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Warehouse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1alpha1_types_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WarehouseSpec); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1alpha1_types_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WarehouseStatus); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	file_v1alpha1_types_proto_msgTypes[0].OneofWrappers = []interface{}{}
 	file_v1alpha1_types_proto_msgTypes[4].OneofWrappers = []interface{}{}
@@ -3724,7 +3980,7 @@ func file_v1alpha1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_v1alpha1_types_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   42,
+			NumMessages:   45,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

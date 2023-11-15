@@ -1,26 +1,28 @@
 import { createPromiseClient } from '@bufbuild/connect';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
-import { faDiagramProject } from '@fortawesome/free-solid-svg-icons';
+import { faDiagramProject, faRefresh } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Empty } from 'antd';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button, Empty, message } from 'antd';
 import { graphlib, layout } from 'dagre';
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { transport } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
-import { LoadingState } from '@ui/features/common';
+import { ButtonIcon, LoadingState } from '@ui/features/common';
 import { Freightline, PromotionType } from '@ui/features/freightline/freightline';
 import { StageDetails } from '@ui/features/stage/stage-details';
 import { getStageColors } from '@ui/features/stage/utils';
 import {
   getStage,
   listStages,
-  queryFreight
+  listWarehouses,
+  queryFreight,
+  refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Stage, Warehouse } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
 import { Images } from './images';
@@ -33,11 +35,19 @@ const lineThickness = 2;
 const nodeWidth = 144;
 const nodeHeight = 100;
 
+const warehouseNodeWidth = 180;
+const warehouseNodeHeight = 140;
+
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
   const { data: freightData, isLoading: isLoadingFreight } = useQuery(
     queryFreight.useQuery({ project: name })
+  );
+
+  const [warehouseMap, setWarehouseMap] = useState<{ [key: string]: Warehouse }>({});
+  const { data: warehouseData, isLoading: isLoadingWarehouses } = useQuery(
+    listWarehouses.useQuery({ project: name })
   );
 
   const client = useQueryClient();
@@ -46,6 +56,17 @@ export const ProjectDetails = () => {
     'visibilitychange',
     () => document.visibilityState === 'visible'
   );
+
+  const { mutate: refreshWarehouseAction } = useMutation({
+    ...refreshWarehouse.useMutation(),
+    onError: (err) => {
+      message.error(err?.toString());
+    },
+    onSuccess: () => {
+      message.success('Warehouse successfully refreshed');
+      setPromotingStage(undefined);
+    }
+  });
 
   React.useEffect(() => {
     if (!data || !isVisible) {
@@ -90,6 +111,16 @@ export const ProjectDetails = () => {
     return () => cancel.abort();
   }, [isLoading, isVisible, name]);
 
+  React.useEffect(() => {
+    if (!isLoadingWarehouses) {
+      const wm = {} as { [key: string]: Warehouse };
+      (warehouseData?.warehouses || []).forEach((w: Warehouse) => {
+        wm[w?.metadata?.name || ''] = w;
+      });
+      setWarehouseMap(wm);
+    }
+  }, [warehouseData, isLoadingWarehouses]);
+
   const [nodes, connectors, box, sortedStages] = React.useMemo(() => {
     if (!data) {
       return [[], []];
@@ -111,11 +142,21 @@ export const ProjectDetails = () => {
           }
         ] as NodesItemType[];
 
-        if (stage.spec?.subscriptions?.warehouse) {
-          n.push({
-            data: stage.spec?.subscriptions?.warehouse || '',
-            stageName: stage.metadata?.name || '',
-            type: NodeType.WAREHOUSE
+        const warehouseName = stage.spec?.subscriptions?.warehouse;
+        if (warehouseName) {
+          const cur = warehouseMap[warehouseName];
+          cur?.spec?.subscriptions?.forEach((sub) => {
+            const type = sub.chart
+              ? NodeType.REPO_CHART
+              : sub.image
+              ? NodeType.REPO_IMAGE
+              : NodeType.REPO_GIT;
+            n.push({
+              data: sub.chart || sub.image || sub.git || ({} as any),
+              stageName: stage.metadata?.name || '',
+              warehouseName: cur.metadata?.name || '',
+              type
+            });
           });
         }
 
@@ -123,12 +164,11 @@ export const ProjectDetails = () => {
       });
 
     myNodes.forEach((item, index) => {
-      g.setNode(String(index), {
-        width: nodeWidth,
-        height: nodeHeight
-      });
-
       if (item.type === NodeType.STAGE) {
+        g.setNode(String(index), {
+          width: nodeWidth,
+          height: nodeHeight
+        });
         item.data?.spec?.subscriptions?.upstreamStages.forEach((upstramStage) => {
           const subsIndex = myNodes.findIndex((node) => {
             return node.type === NodeType.STAGE && node.data.metadata?.name === upstramStage.name;
@@ -137,6 +177,10 @@ export const ProjectDetails = () => {
           g.setEdge(String(subsIndex), String(index));
         });
       } else {
+        g.setNode(String(index), {
+          width: warehouseNodeWidth,
+          height: warehouseNodeHeight
+        });
         const subsIndex = myNodes.findIndex((node) => {
           return node.type === NodeType.STAGE && node.data.metadata?.name === item.stageName;
         });
@@ -335,7 +379,20 @@ export const ProjectDetails = () => {
                         />
                       </>
                     ) : (
-                      <RepoNode nodeData={node} height={node.height} />
+                      <RepoNode nodeData={node} height={node.height}>
+                        <div className='flex w-full'>
+                          <Button
+                            onClick={() =>
+                              refreshWarehouseAction({ name: node.warehouseName, project: name })
+                            }
+                            icon={<ButtonIcon icon={faRefresh} />}
+                            size='small'
+                            className='mt-1 ml-auto'
+                          >
+                            Refresh
+                          </Button>
+                        </div>
+                      </RepoNode>
                     )}
                   </div>
                 ))}

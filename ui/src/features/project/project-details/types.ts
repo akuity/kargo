@@ -18,21 +18,19 @@ export type NodesRepoType =
       type: NodeType.REPO_IMAGE;
       data: ImageSubscription;
       stageName: string;
+      warehouseName: string;
     }
   | {
       type: NodeType.REPO_GIT;
       data: GitSubscription;
       stageName: string;
+      warehouseName: string;
     }
   | {
       type: NodeType.REPO_CHART;
       data: ChartSubscription;
       stageName: string;
-    }
-  | {
-      type: NodeType.WAREHOUSE;
-      data: string;
-      stageName: string;
+      warehouseName: string;
     };
 
 export type NodesItemType =

@@ -7,16 +7,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	render "github.com/akuity/kargo-render"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	render "github.com/akuity/kargo/internal/kargo-render"
 )
 
 func TestNewKargoRenderMechanism(t *testing.T) {
-	pm := newKargoRenderMechanism(
-		&credentials.FakeDB{},
-		render.NewService(nil),
-	)
+	pm := newKargoRenderMechanism(&credentials.FakeDB{})
 	krpm, ok := pm.(*kargoRenderMechanism)
 	require.True(t, ok)
 	require.NotNil(t, krpm.doSingleUpdateFn)
@@ -243,10 +240,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 						Password: "fake-personal-access-token",
 					}, true, nil
 				},
-				renderManifestsFn: func(
-					context.Context,
-					render.Request,
-				) (render.Response, error) {
+				renderManifestsFn: func(render.Request) (render.Response, error) {
 					return render.Response{}, errors.New("something went wrong")
 				},
 			},
@@ -285,10 +279,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 						Password: "fake-personal-access-token",
 					}, true, nil
 				},
-				renderManifestsFn: func(
-					context.Context,
-					render.Request,
-				) (render.Response, error) {
+				renderManifestsFn: func(render.Request) (render.Response, error) {
 					return render.Response{
 						ActionTaken: render.ActionTakenNone,
 						CommitID:    "fake-commit-id",
@@ -331,10 +322,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 						Password: "fake-personal-access-token",
 					}, true, nil
 				},
-				renderManifestsFn: func(
-					context.Context,
-					render.Request,
-				) (render.Response, error) {
+				renderManifestsFn: func(render.Request) (render.Response, error) {
 					return render.Response{
 						ActionTaken: render.ActionTakenPushedDirectly,
 						CommitID:    "fake-commit-id",

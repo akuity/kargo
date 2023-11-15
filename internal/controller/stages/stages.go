@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -153,6 +152,11 @@ func SetupReconcilerWithManager(
 	// Index Promotions in non-terminal states by Stage
 	if err := kubeclient.IndexNonTerminalPromotionsByStage(ctx, kargoMgr); err != nil {
 		return errors.Wrap(err, "index non-terminal Promotions by Stage")
+	}
+
+	// Index Promotions by Stage + Freight
+	if err := kubeclient.IndexPromotionsByStageAndFreight(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index Promotions by Stage and Freight")
 	}
 
 	// Index PromotionPolicies by Stage
@@ -525,15 +529,40 @@ func (r *reconciler) syncNormalStage(
 		return status, nil
 	}
 
+	// If a promotion already exists for this Stage + Freight, then we're
+	// disqualified from auto-promotion.
+	promos := kargoapi.PromotionList{}
+	if err := r.listPromosFn(
+		ctx,
+		&promos,
+		&client.ListOptions{
+			Namespace: stage.Namespace,
+			FieldSelector: fields.Set(
+				map[string]string{
+					kubeclient.PromotionsByStageAndFreightIndexField: kubeclient.
+						StageAndFreightKey(stage.Name, latestFreight.Name),
+				},
+			).AsSelector(),
+		},
+	); err != nil {
+		return status, errors.Wrapf(
+			err,
+			"error listing existing Promotions for Freight %q in namespace %q",
+			latestFreight.Name,
+			stage.Namespace,
+		)
+	}
+
+	if len(promos.Items) > 0 {
+		logger.Debug("Promotion already exists for Freight")
+		return status, nil
+	}
+
 	logger.Debug("auto-promotion will proceed")
 
 	promo := kargo.NewPromotion(*stage, latestFreight.ID)
 	if err :=
 		r.createPromotionFn(ctx, &promo, &client.CreateOptions{}); err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			logger.Debug("Promotion resource already exists")
-			return status, nil
-		}
 		return status, errors.Wrapf(
 			err,
 			"error creating Promotion of Stage %q in namespace %q to Freight %q",

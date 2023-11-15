@@ -32,6 +32,7 @@ rules:
     resources:
       - promotionpolicies
       - stages
+      - warehouses
     verbs:
       - "*"
   - apiGroups:

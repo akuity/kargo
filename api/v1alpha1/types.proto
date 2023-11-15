@@ -250,3 +250,20 @@ message Subscriptions {
   repeated StageSubscription upstream_stages = 2 [json_name = "upstreamStages"];
   string warehouse = 3 [json_name = "warehouse"];
 }
+
+message Warehouse {
+  string api_version = 1 [json_name = "apiVersion"];
+  string kind = 2 [json_name = "kind"];
+  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3 [json_name = "metadata"];
+  WarehouseSpec spec = 4 [json_name = "spec"];
+  WarehouseStatus status = 5 [json_name = "status"];
+}
+
+message WarehouseSpec {
+  repeated RepoSubscription subscriptions = 1 [json_name = "subscriptions"];
+}
+
+message WarehouseStatus {
+  string error = 1 [json_name = "error"];
+  int64 observed_generation = 2 [json_name = "observedGeneration"];
+}

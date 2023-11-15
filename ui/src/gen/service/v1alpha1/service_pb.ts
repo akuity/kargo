@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Freight, Promotion, PromotionPolicy, Stage, StageSpec } from "../../v1alpha1/types_pb.js";
+import { Freight, Promotion, PromotionPolicy, Stage, StageSpec, Warehouse, WarehouseSpec } from "../../v1alpha1/types_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -3071,6 +3071,625 @@ export class FreightList extends Message<FreightList> {
 
   static equals(a: FreightList | PlainMessage<FreightList> | undefined, b: FreightList | PlainMessage<FreightList> | undefined): boolean {
     return proto3.util.equals(FreightList, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
+ */
+export class ListWarehousesRequest extends Message<ListWarehousesRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  constructor(data?: PartialMessage<ListWarehousesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListWarehousesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListWarehousesRequest {
+    return new ListWarehousesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListWarehousesRequest {
+    return new ListWarehousesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListWarehousesRequest {
+    return new ListWarehousesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListWarehousesRequest | PlainMessage<ListWarehousesRequest> | undefined, b: ListWarehousesRequest | PlainMessage<ListWarehousesRequest> | undefined): boolean {
+    return proto3.util.equals(ListWarehousesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
+ */
+export class ListWarehousesResponse extends Message<ListWarehousesResponse> {
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouses = 1;
+   */
+  warehouses: Warehouse[] = [];
+
+  constructor(data?: PartialMessage<ListWarehousesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListWarehousesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "warehouses", kind: "message", T: Warehouse, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListWarehousesResponse {
+    return new ListWarehousesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListWarehousesResponse {
+    return new ListWarehousesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListWarehousesResponse {
+    return new ListWarehousesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListWarehousesResponse | PlainMessage<ListWarehousesResponse> | undefined, b: ListWarehousesResponse | PlainMessage<ListWarehousesResponse> | undefined): boolean {
+    return proto3.util.equals(ListWarehousesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
+ */
+export class GetWarehouseRequest extends Message<GetWarehouseRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetWarehouseRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetWarehouseRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWarehouseRequest {
+    return new GetWarehouseRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetWarehouseRequest {
+    return new GetWarehouseRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetWarehouseRequest {
+    return new GetWarehouseRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetWarehouseRequest | PlainMessage<GetWarehouseRequest> | undefined, b: GetWarehouseRequest | PlainMessage<GetWarehouseRequest> | undefined): boolean {
+    return proto3.util.equals(GetWarehouseRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
+ */
+export class GetWarehouseResponse extends Message<GetWarehouseResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   */
+  warehouse?: Warehouse;
+
+  constructor(data?: PartialMessage<GetWarehouseResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetWarehouseResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "warehouse", kind: "message", T: Warehouse },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWarehouseResponse {
+    return new GetWarehouseResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetWarehouseResponse {
+    return new GetWarehouseResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetWarehouseResponse {
+    return new GetWarehouseResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetWarehouseResponse | PlainMessage<GetWarehouseResponse> | undefined, b: GetWarehouseResponse | PlainMessage<GetWarehouseResponse> | undefined): boolean {
+    return proto3.util.equals(GetWarehouseResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
+ */
+export class WatchWarehousesRequest extends Message<WatchWarehousesRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<WatchWarehousesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WatchWarehousesRequest {
+    return new WatchWarehousesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WatchWarehousesRequest {
+    return new WatchWarehousesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WatchWarehousesRequest {
+    return new WatchWarehousesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WatchWarehousesRequest | PlainMessage<WatchWarehousesRequest> | undefined, b: WatchWarehousesRequest | PlainMessage<WatchWarehousesRequest> | undefined): boolean {
+    return proto3.util.equals(WatchWarehousesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
+ */
+export class WatchWarehousesResponse extends Message<WatchWarehousesResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   */
+  warehouse?: Warehouse;
+
+  /**
+   * @generated from field: string type = 2;
+   */
+  type = "";
+
+  constructor(data?: PartialMessage<WatchWarehousesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "warehouse", kind: "message", T: Warehouse },
+    { no: 2, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WatchWarehousesResponse {
+    return new WatchWarehousesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WatchWarehousesResponse {
+    return new WatchWarehousesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WatchWarehousesResponse {
+    return new WatchWarehousesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WatchWarehousesResponse | PlainMessage<WatchWarehousesResponse> | undefined, b: WatchWarehousesResponse | PlainMessage<WatchWarehousesResponse> | undefined): boolean {
+    return proto3.util.equals(WatchWarehousesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.TypedWarehouseSpec
+ */
+export class TypedWarehouseSpec extends Message<TypedWarehouseSpec> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec spec = 3;
+   */
+  spec?: WarehouseSpec;
+
+  constructor(data?: PartialMessage<TypedWarehouseSpec>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.TypedWarehouseSpec";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "spec", kind: "message", T: WarehouseSpec },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypedWarehouseSpec {
+    return new TypedWarehouseSpec().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypedWarehouseSpec {
+    return new TypedWarehouseSpec().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypedWarehouseSpec {
+    return new TypedWarehouseSpec().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TypedWarehouseSpec | PlainMessage<TypedWarehouseSpec> | undefined, b: TypedWarehouseSpec | PlainMessage<TypedWarehouseSpec> | undefined): boolean {
+    return proto3.util.equals(TypedWarehouseSpec, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateWarehouseRequest
+ */
+export class CreateWarehouseRequest extends Message<CreateWarehouseRequest> {
+  /**
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.CreateWarehouseRequest.warehouse
+   */
+  warehouse: {
+    /**
+     * @generated from field: akuity.io.kargo.service.v1alpha1.TypedWarehouseSpec typed = 1;
+     */
+    value: TypedWarehouseSpec;
+    case: "typed";
+  } | {
+    /**
+     * @generated from field: string yaml = 2;
+     */
+    value: string;
+    case: "yaml";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<CreateWarehouseRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateWarehouseRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "typed", kind: "message", T: TypedWarehouseSpec, oneof: "warehouse" },
+    { no: 2, name: "yaml", kind: "scalar", T: 9 /* ScalarType.STRING */, oneof: "warehouse" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateWarehouseRequest {
+    return new CreateWarehouseRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateWarehouseRequest {
+    return new CreateWarehouseRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateWarehouseRequest {
+    return new CreateWarehouseRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateWarehouseRequest | PlainMessage<CreateWarehouseRequest> | undefined, b: CreateWarehouseRequest | PlainMessage<CreateWarehouseRequest> | undefined): boolean {
+    return proto3.util.equals(CreateWarehouseRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.CreateWarehouseResponse
+ */
+export class CreateWarehouseResponse extends Message<CreateWarehouseResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   */
+  warehouse?: Warehouse;
+
+  constructor(data?: PartialMessage<CreateWarehouseResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateWarehouseResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "warehouse", kind: "message", T: Warehouse },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateWarehouseResponse {
+    return new CreateWarehouseResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateWarehouseResponse {
+    return new CreateWarehouseResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateWarehouseResponse {
+    return new CreateWarehouseResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateWarehouseResponse | PlainMessage<CreateWarehouseResponse> | undefined, b: CreateWarehouseResponse | PlainMessage<CreateWarehouseResponse> | undefined): boolean {
+    return proto3.util.equals(CreateWarehouseResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateWarehouseRequest
+ */
+export class UpdateWarehouseRequest extends Message<UpdateWarehouseRequest> {
+  /**
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.UpdateWarehouseRequest.warehouse
+   */
+  warehouse: {
+    /**
+     * @generated from field: akuity.io.kargo.service.v1alpha1.TypedWarehouseSpec typed = 1;
+     */
+    value: TypedWarehouseSpec;
+    case: "typed";
+  } | {
+    /**
+     * @generated from field: string yaml = 2;
+     */
+    value: string;
+    case: "yaml";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<UpdateWarehouseRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateWarehouseRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "typed", kind: "message", T: TypedWarehouseSpec, oneof: "warehouse" },
+    { no: 2, name: "yaml", kind: "scalar", T: 9 /* ScalarType.STRING */, oneof: "warehouse" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateWarehouseRequest {
+    return new UpdateWarehouseRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateWarehouseRequest {
+    return new UpdateWarehouseRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateWarehouseRequest {
+    return new UpdateWarehouseRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateWarehouseRequest | PlainMessage<UpdateWarehouseRequest> | undefined, b: UpdateWarehouseRequest | PlainMessage<UpdateWarehouseRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateWarehouseRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateWarehouseResponse
+ */
+export class UpdateWarehouseResponse extends Message<UpdateWarehouseResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   */
+  warehouse?: Warehouse;
+
+  constructor(data?: PartialMessage<UpdateWarehouseResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateWarehouseResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "warehouse", kind: "message", T: Warehouse },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateWarehouseResponse {
+    return new UpdateWarehouseResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateWarehouseResponse {
+    return new UpdateWarehouseResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateWarehouseResponse {
+    return new UpdateWarehouseResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateWarehouseResponse | PlainMessage<UpdateWarehouseResponse> | undefined, b: UpdateWarehouseResponse | PlainMessage<UpdateWarehouseResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateWarehouseResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
+ */
+export class DeleteWarehouseRequest extends Message<DeleteWarehouseRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteWarehouseRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteWarehouseRequest {
+    return new DeleteWarehouseRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteWarehouseRequest {
+    return new DeleteWarehouseRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteWarehouseRequest {
+    return new DeleteWarehouseRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteWarehouseRequest | PlainMessage<DeleteWarehouseRequest> | undefined, b: DeleteWarehouseRequest | PlainMessage<DeleteWarehouseRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteWarehouseRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
+ */
+export class DeleteWarehouseResponse extends Message<DeleteWarehouseResponse> {
+  constructor(data?: PartialMessage<DeleteWarehouseResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteWarehouseResponse {
+    return new DeleteWarehouseResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteWarehouseResponse {
+    return new DeleteWarehouseResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteWarehouseResponse {
+    return new DeleteWarehouseResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteWarehouseResponse | PlainMessage<DeleteWarehouseResponse> | undefined, b: DeleteWarehouseResponse | PlainMessage<DeleteWarehouseResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteWarehouseResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
+ */
+export class RefreshWarehouseRequest extends Message<RefreshWarehouseRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<RefreshWarehouseRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RefreshWarehouseRequest {
+    return new RefreshWarehouseRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RefreshWarehouseRequest {
+    return new RefreshWarehouseRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RefreshWarehouseRequest {
+    return new RefreshWarehouseRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RefreshWarehouseRequest | PlainMessage<RefreshWarehouseRequest> | undefined, b: RefreshWarehouseRequest | PlainMessage<RefreshWarehouseRequest> | undefined): boolean {
+    return proto3.util.equals(RefreshWarehouseRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
+ */
+export class RefreshWarehouseResponse extends Message<RefreshWarehouseResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   */
+  warehouse?: Warehouse;
+
+  constructor(data?: PartialMessage<RefreshWarehouseResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "warehouse", kind: "message", T: Warehouse },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RefreshWarehouseResponse {
+    return new RefreshWarehouseResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RefreshWarehouseResponse {
+    return new RefreshWarehouseResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RefreshWarehouseResponse {
+    return new RefreshWarehouseResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RefreshWarehouseResponse | PlainMessage<RefreshWarehouseResponse> | undefined, b: RefreshWarehouseResponse | PlainMessage<RefreshWarehouseResponse> | undefined): boolean {
+    return proto3.util.equals(RefreshWarehouseResponse, a, b);
   }
 }
 

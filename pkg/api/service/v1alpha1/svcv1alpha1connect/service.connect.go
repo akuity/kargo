@@ -122,6 +122,27 @@ const (
 	// KargoServiceQueryFreightProcedure is the fully-qualified name of the KargoService's QueryFreight
 	// RPC.
 	KargoServiceQueryFreightProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/QueryFreight"
+	// KargoServiceListWarehousesProcedure is the fully-qualified name of the KargoService's
+	// ListWarehouses RPC.
+	KargoServiceListWarehousesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListWarehouses"
+	// KargoServiceGetWarehouseProcedure is the fully-qualified name of the KargoService's GetWarehouse
+	// RPC.
+	KargoServiceGetWarehouseProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetWarehouse"
+	// KargoServiceWatchWarehousesProcedure is the fully-qualified name of the KargoService's
+	// WatchWarehouses RPC.
+	KargoServiceWatchWarehousesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchWarehouses"
+	// KargoServiceCreateWarehouseProcedure is the fully-qualified name of the KargoService's
+	// CreateWarehouse RPC.
+	KargoServiceCreateWarehouseProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateWarehouse"
+	// KargoServiceUpdateWarehouseProcedure is the fully-qualified name of the KargoService's
+	// UpdateWarehouse RPC.
+	KargoServiceUpdateWarehouseProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateWarehouse"
+	// KargoServiceDeleteWarehouseProcedure is the fully-qualified name of the KargoService's
+	// DeleteWarehouse RPC.
+	KargoServiceDeleteWarehouseProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteWarehouse"
+	// KargoServiceRefreshWarehouseProcedure is the fully-qualified name of the KargoService's
+	// RefreshWarehouse RPC.
+	KargoServiceRefreshWarehouseProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshWarehouse"
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
@@ -160,6 +181,13 @@ type KargoServiceClient interface {
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
+	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
+	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
+	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchWarehousesResponse], error)
+	CreateWarehouse(context.Context, *connect.Request[v1alpha1.CreateWarehouseRequest]) (*connect.Response[v1alpha1.CreateWarehouseResponse], error)
+	UpdateWarehouse(context.Context, *connect.Request[v1alpha1.UpdateWarehouseRequest]) (*connect.Response[v1alpha1.UpdateWarehouseResponse], error)
+	DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error)
+	RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error)
 }
 
 // NewKargoServiceClient constructs a client for the akuity.io.kargo.service.v1alpha1.KargoService
@@ -327,6 +355,41 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceQueryFreightProcedure,
 			opts...,
 		),
+		listWarehouses: connect.NewClient[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse](
+			httpClient,
+			baseURL+KargoServiceListWarehousesProcedure,
+			opts...,
+		),
+		getWarehouse: connect.NewClient[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse](
+			httpClient,
+			baseURL+KargoServiceGetWarehouseProcedure,
+			opts...,
+		),
+		watchWarehouses: connect.NewClient[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse](
+			httpClient,
+			baseURL+KargoServiceWatchWarehousesProcedure,
+			opts...,
+		),
+		createWarehouse: connect.NewClient[v1alpha1.CreateWarehouseRequest, v1alpha1.CreateWarehouseResponse](
+			httpClient,
+			baseURL+KargoServiceCreateWarehouseProcedure,
+			opts...,
+		),
+		updateWarehouse: connect.NewClient[v1alpha1.UpdateWarehouseRequest, v1alpha1.UpdateWarehouseResponse](
+			httpClient,
+			baseURL+KargoServiceUpdateWarehouseProcedure,
+			opts...,
+		),
+		deleteWarehouse: connect.NewClient[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteWarehouseProcedure,
+			opts...,
+		),
+		refreshWarehouse: connect.NewClient[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse](
+			httpClient,
+			baseURL+KargoServiceRefreshWarehouseProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -363,6 +426,13 @@ type kargoServiceClient struct {
 	listProjects             *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
 	deleteProject            *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
 	queryFreight             *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
+	listWarehouses           *connect.Client[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse]
+	getWarehouse             *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
+	watchWarehouses          *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
+	createWarehouse          *connect.Client[v1alpha1.CreateWarehouseRequest, v1alpha1.CreateWarehouseResponse]
+	updateWarehouse          *connect.Client[v1alpha1.UpdateWarehouseRequest, v1alpha1.UpdateWarehouseResponse]
+	deleteWarehouse          *connect.Client[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse]
+	refreshWarehouse         *connect.Client[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse]
 }
 
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
@@ -522,6 +592,41 @@ func (c *kargoServiceClient) QueryFreight(ctx context.Context, req *connect.Requ
 	return c.queryFreight.CallUnary(ctx, req)
 }
 
+// ListWarehouses calls akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses.
+func (c *kargoServiceClient) ListWarehouses(ctx context.Context, req *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error) {
+	return c.listWarehouses.CallUnary(ctx, req)
+}
+
+// GetWarehouse calls akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse.
+func (c *kargoServiceClient) GetWarehouse(ctx context.Context, req *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error) {
+	return c.getWarehouse.CallUnary(ctx, req)
+}
+
+// WatchWarehouses calls akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses.
+func (c *kargoServiceClient) WatchWarehouses(ctx context.Context, req *connect.Request[v1alpha1.WatchWarehousesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchWarehousesResponse], error) {
+	return c.watchWarehouses.CallServerStream(ctx, req)
+}
+
+// CreateWarehouse calls akuity.io.kargo.service.v1alpha1.KargoService.CreateWarehouse.
+func (c *kargoServiceClient) CreateWarehouse(ctx context.Context, req *connect.Request[v1alpha1.CreateWarehouseRequest]) (*connect.Response[v1alpha1.CreateWarehouseResponse], error) {
+	return c.createWarehouse.CallUnary(ctx, req)
+}
+
+// UpdateWarehouse calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateWarehouse.
+func (c *kargoServiceClient) UpdateWarehouse(ctx context.Context, req *connect.Request[v1alpha1.UpdateWarehouseRequest]) (*connect.Response[v1alpha1.UpdateWarehouseResponse], error) {
+	return c.updateWarehouse.CallUnary(ctx, req)
+}
+
+// DeleteWarehouse calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse.
+func (c *kargoServiceClient) DeleteWarehouse(ctx context.Context, req *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error) {
+	return c.deleteWarehouse.CallUnary(ctx, req)
+}
+
+// RefreshWarehouse calls akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse.
+func (c *kargoServiceClient) RefreshWarehouse(ctx context.Context, req *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error) {
+	return c.refreshWarehouse.CallUnary(ctx, req)
+}
+
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
 // service.
 type KargoServiceHandler interface {
@@ -559,6 +664,13 @@ type KargoServiceHandler interface {
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
+	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
+	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
+	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest], *connect.ServerStream[v1alpha1.WatchWarehousesResponse]) error
+	CreateWarehouse(context.Context, *connect.Request[v1alpha1.CreateWarehouseRequest]) (*connect.Response[v1alpha1.CreateWarehouseResponse], error)
+	UpdateWarehouse(context.Context, *connect.Request[v1alpha1.UpdateWarehouseRequest]) (*connect.Response[v1alpha1.UpdateWarehouseResponse], error)
+	DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error)
+	RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error)
 }
 
 // NewKargoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -722,6 +834,41 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		svc.QueryFreight,
 		opts...,
 	)
+	kargoServiceListWarehousesHandler := connect.NewUnaryHandler(
+		KargoServiceListWarehousesProcedure,
+		svc.ListWarehouses,
+		opts...,
+	)
+	kargoServiceGetWarehouseHandler := connect.NewUnaryHandler(
+		KargoServiceGetWarehouseProcedure,
+		svc.GetWarehouse,
+		opts...,
+	)
+	kargoServiceWatchWarehousesHandler := connect.NewServerStreamHandler(
+		KargoServiceWatchWarehousesProcedure,
+		svc.WatchWarehouses,
+		opts...,
+	)
+	kargoServiceCreateWarehouseHandler := connect.NewUnaryHandler(
+		KargoServiceCreateWarehouseProcedure,
+		svc.CreateWarehouse,
+		opts...,
+	)
+	kargoServiceUpdateWarehouseHandler := connect.NewUnaryHandler(
+		KargoServiceUpdateWarehouseProcedure,
+		svc.UpdateWarehouse,
+		opts...,
+	)
+	kargoServiceDeleteWarehouseHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteWarehouseProcedure,
+		svc.DeleteWarehouse,
+		opts...,
+	)
+	kargoServiceRefreshWarehouseHandler := connect.NewUnaryHandler(
+		KargoServiceRefreshWarehouseProcedure,
+		svc.RefreshWarehouse,
+		opts...,
+	)
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KargoServiceGetVersionInfoProcedure:
@@ -786,6 +933,20 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteProjectHandler.ServeHTTP(w, r)
 		case KargoServiceQueryFreightProcedure:
 			kargoServiceQueryFreightHandler.ServeHTTP(w, r)
+		case KargoServiceListWarehousesProcedure:
+			kargoServiceListWarehousesHandler.ServeHTTP(w, r)
+		case KargoServiceGetWarehouseProcedure:
+			kargoServiceGetWarehouseHandler.ServeHTTP(w, r)
+		case KargoServiceWatchWarehousesProcedure:
+			kargoServiceWatchWarehousesHandler.ServeHTTP(w, r)
+		case KargoServiceCreateWarehouseProcedure:
+			kargoServiceCreateWarehouseHandler.ServeHTTP(w, r)
+		case KargoServiceUpdateWarehouseProcedure:
+			kargoServiceUpdateWarehouseHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteWarehouseProcedure:
+			kargoServiceDeleteWarehouseHandler.ServeHTTP(w, r)
+		case KargoServiceRefreshWarehouseProcedure:
+			kargoServiceRefreshWarehouseHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -917,4 +1078,32 @@ func (UnimplementedKargoServiceHandler) DeleteProject(context.Context, *connect.
 
 func (UnimplementedKargoServiceHandler) QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest], *connect.ServerStream[v1alpha1.WatchWarehousesResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) CreateWarehouse(context.Context, *connect.Request[v1alpha1.CreateWarehouseRequest]) (*connect.Response[v1alpha1.CreateWarehouseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateWarehouse is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) UpdateWarehouse(context.Context, *connect.Request[v1alpha1.UpdateWarehouseRequest]) (*connect.Response[v1alpha1.UpdateWarehouseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateWarehouse is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse is not implemented"))
 }

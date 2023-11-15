@@ -1,7 +1,7 @@
 ####################################################################################################
 # builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.21.3-bookworm as builder
+FROM --platform=$BUILDPLATFORM golang:1.21.4-bookworm as builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -64,7 +64,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 ####################################################################################################
 # final
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.31 as final
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.33 as final
 
 USER root
 

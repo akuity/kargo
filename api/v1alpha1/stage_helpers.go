@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -43,17 +42,16 @@ func RefreshStage(
 	c client.Client,
 	namespacedName types.NamespacedName,
 ) (*Stage, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
-	stage := Stage{}
-	stage.Name = namespacedName.Name
-	stage.Namespace = namespacedName.Namespace
-	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":"%s"}}}`, AnnotationKeyRefresh, now))
-	patch := client.RawPatch(types.MergePatchType, patchBytes)
-	err := c.Patch(ctx, &stage, patch)
-	if err != nil {
-		return nil, err
+	stage := &Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespacedName.Namespace,
+			Name:      namespacedName.Name,
+		},
 	}
-	return &stage, nil
+	if err := refreshObject(ctx, c, stage, time.Now); err != nil {
+		return nil, errors.Wrap(err, "refresh")
+	}
+	return stage, nil
 }
 
 // ClearStageRefresh is called by the Stage controller to clear the refresh
@@ -71,13 +69,11 @@ func ClearStageRefresh(
 	if _, ok := stage.Annotations[AnnotationKeyRefresh]; !ok {
 		return nil
 	}
-	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, AnnotationKeyRefresh))
-	patch := client.RawPatch(types.MergePatchType, patchBytes)
 	newStage := Stage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      stage.Name,
 			Namespace: stage.Namespace,
 		},
 	}
-	return c.Patch(ctx, &newStage, patch)
+	return clearRefreshObject(ctx, c, &newStage)
 }

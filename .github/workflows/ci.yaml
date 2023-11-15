@@ -13,10 +13,10 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.3-bookworm
+      image: golang:1.21.4-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - uses: actions/cache@v3
       with:
         path: /go/pkg/mod
@@ -33,10 +33,10 @@ jobs:
   lint-go:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.3-bookworm
+      image: golang:1.21.4-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Install linter
       env:
         GOLANGCI_LINT_VERSION: 1.54.2
@@ -54,10 +54,10 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.3-bookworm
+      image: golang:1.21.4-bookworm
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install linter
         run: |
           cd /usr/local/bin
@@ -69,10 +69,10 @@ jobs:
   lint-proto:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.3-bookworm
+      image: golang:1.21.4-bookworm
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install linter
         uses: bufbuild/buf-setup-action@v1
         with:
@@ -85,16 +85,16 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.3-bookworm
+      image: golang:1.21.4-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - uses: pnpm/action-setup@v2
       with:
         version: 8
         run_install: false
     - name: Install nodejs
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: "18.16.1"
         cache: "pnpm"
@@ -126,9 +126,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@v3
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
     - name: Build
       uses: docker/build-push-action@v5
       with:
@@ -141,10 +141,10 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.3-bookworm
+      image: golang:1.21.4-bookworm
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - uses: actions/cache@v3
       with:
         path: /go/pkg/mod

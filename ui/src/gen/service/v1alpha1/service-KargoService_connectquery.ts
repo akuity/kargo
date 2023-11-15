@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { AdminLoginRequest, AdminLoginResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateResourceRequest, CreateResourceResponse, CreateStageRequest, CreateStageResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, GetConfigRequest, GetConfigResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateStageRequest, UpdateStageResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateResourceRequest, CreateResourceResponse, CreateStageRequest, CreateStageResponse, CreateWarehouseRequest, CreateWarehouseResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateStageRequest, UpdateStageResponse, UpdateWarehouseRequest, UpdateWarehouseResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -489,3 +489,105 @@ export const queryFreight = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).queryFreight;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses
+ */
+export const listWarehouses = createQueryService({
+  service: {
+    methods: {
+      listWarehouses: {
+        name: "ListWarehouses",
+        kind: MethodKind.Unary,
+        I: ListWarehousesRequest,
+        O: ListWarehousesResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).listWarehouses;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse
+ */
+export const getWarehouse = createQueryService({
+  service: {
+    methods: {
+      getWarehouse: {
+        name: "GetWarehouse",
+        kind: MethodKind.Unary,
+        I: GetWarehouseRequest,
+        O: GetWarehouseResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).getWarehouse;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateWarehouse
+ */
+export const createWarehouse = createQueryService({
+  service: {
+    methods: {
+      createWarehouse: {
+        name: "CreateWarehouse",
+        kind: MethodKind.Unary,
+        I: CreateWarehouseRequest,
+        O: CreateWarehouseResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).createWarehouse;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateWarehouse
+ */
+export const updateWarehouse = createQueryService({
+  service: {
+    methods: {
+      updateWarehouse: {
+        name: "UpdateWarehouse",
+        kind: MethodKind.Unary,
+        I: UpdateWarehouseRequest,
+        O: UpdateWarehouseResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).updateWarehouse;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse
+ */
+export const deleteWarehouse = createQueryService({
+  service: {
+    methods: {
+      deleteWarehouse: {
+        name: "DeleteWarehouse",
+        kind: MethodKind.Unary,
+        I: DeleteWarehouseRequest,
+        O: DeleteWarehouseResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).deleteWarehouse;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse
+ */
+export const refreshWarehouse = createQueryService({
+  service: {
+    methods: {
+      refreshWarehouse: {
+        name: "RefreshWarehouse",
+        kind: MethodKind.Unary,
+        I: RefreshWarehouseRequest,
+        O: RefreshWarehouseResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).refreshWarehouse;

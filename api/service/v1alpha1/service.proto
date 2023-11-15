@@ -60,6 +60,15 @@ service KargoService {
 
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
 
+  /* Warehouse APIs */
+
+  rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
+  rpc GetWarehouse(GetWarehouseRequest) returns (GetWarehouseResponse);
+  rpc WatchWarehouses(WatchWarehousesRequest) returns (stream WatchWarehousesResponse);
+  rpc CreateWarehouse(CreateWarehouseRequest) returns (CreateWarehouseResponse);
+  rpc UpdateWarehouse(UpdateWarehouseRequest) returns (UpdateWarehouseResponse);
+  rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
+  rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 }
 
 message ComponentVersions {
@@ -417,4 +426,77 @@ message QueryFreightResponse {
 
 message FreightList {
   repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
+}
+
+message ListWarehousesRequest {
+  string project = 1;
+}
+
+message ListWarehousesResponse {
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouses = 1;
+}
+
+message GetWarehouseRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message GetWarehouseResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+}
+
+message WatchWarehousesRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message WatchWarehousesResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  string type = 2;
+}
+
+message TypedWarehouseSpec {
+  string project = 1;
+  string name = 2;
+  github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec spec = 3;
+}
+
+message CreateWarehouseRequest {
+  oneof warehouse {
+    TypedWarehouseSpec typed = 1;
+    string yaml = 2;
+  }
+}
+
+message CreateWarehouseResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+}
+
+message UpdateWarehouseRequest {
+  oneof warehouse {
+    TypedWarehouseSpec typed = 1;
+    string yaml = 2;
+  }
+}
+
+message UpdateWarehouseResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+}
+
+message DeleteWarehouseRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteWarehouseResponse {
+  /* explicitly empty */
+}
+
+message RefreshWarehouseRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message RefreshWarehouseResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
 }

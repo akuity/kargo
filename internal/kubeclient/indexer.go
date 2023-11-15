@@ -12,13 +12,18 @@ import (
 )
 
 const (
-	StagesByArgoCDApplicationsIndexField   = "applications"
+	FreightByQualifiedStagesIndexField    = "qualifiedStages"
+	FreightByWarehouseIndexField          = "warehouse"
+	PromotionsByStageAndFreightIndexField = "stageAndFreight"
+
+	// Note: These two do not conflict with one another, because these two
+	// indices are used by different components.
 	PromotionsByStageIndexField            = "stage"
-	NonTerminalPromotionsByStageIndexField = PromotionsByStageIndexField
-	PromotionPoliciesByStageIndexField     = "stage"
-	FreightByWarehouseIndexField           = "warehouse"
-	FreightByQualifiedStagesIndexField     = "qualifiedStages"
-	StagesByUpstreamStagesIndexField       = "upstreamStages"
+	NonTerminalPromotionsByStageIndexField = "stage"
+
+	PromotionPoliciesByStageIndexField   = "stage"
+	StagesByArgoCDApplicationsIndexField = "applications"
+	StagesByUpstreamStagesIndexField     = "upstreamStages"
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -60,18 +65,24 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 
 // IndexPromotionsByStage creates Promotion index by Stage for which
 // all the given predicates returns true for the Promotion.
-func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager, predicates ...func(*kargoapi.Promotion) bool) error {
+func IndexPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Promotion{},
 		PromotionsByStageIndexField,
-		indexPromotionsByStage(predicates...))
+		indexPromotionsByStage(),
+	)
 }
 
 // IndexNonTerminalPromotionsByStage indexes Promotions in non-terminal states
 // by Stage
 func IndexNonTerminalPromotionsByStage(ctx context.Context, mgr ctrl.Manager) error {
-	return IndexPromotionsByStage(ctx, mgr, isPromotionPhaseNonTerminal)
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		NonTerminalPromotionsByStageIndexField,
+		indexPromotionsByStage(isPromotionPhaseNonTerminal),
+	)
 }
 
 func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
@@ -93,6 +104,31 @@ func indexPromotionsByStage(predicates ...func(*kargoapi.Promotion) bool) client
 		}
 		return []string{promo.Spec.Stage}
 	}
+}
+
+// IndexPromotionsByStageAndFreight indexes Promotions by the Freight + Stage
+// they reference.
+func IndexPromotionsByStageAndFreight(
+	ctx context.Context,
+	mgr ctrl.Manager,
+) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		PromotionsByStageAndFreightIndexField,
+		indexPromotionsByStageAndFreight,
+	)
+}
+
+func indexPromotionsByStageAndFreight(obj client.Object) []string {
+	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
+	return []string{
+		StageAndFreightKey(promo.Spec.Stage, promo.Spec.Freight),
+	}
+}
+
+func StageAndFreightKey(stage, freight string) string {
+	return fmt.Sprintf("%s:%s", stage, freight)
 }
 
 func IndexPromotionPoliciesByStage(ctx context.Context, mgr ctrl.Manager) error {

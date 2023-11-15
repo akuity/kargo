@@ -18,7 +18,7 @@ func newProjectCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project [NAME]...",
 		Short: "Delete project by name",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  option.MinimumNArgs(1),
 		Example: `
 # Delete project
 kargo delete project my-project

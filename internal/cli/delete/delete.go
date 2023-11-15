@@ -91,5 +91,6 @@ kargo delete -f stage.yaml
 	// Subcommands
 	cmd.AddCommand(newProjectCommand(opt))
 	cmd.AddCommand(newStageCommand(opt))
+	cmd.AddCommand(newWarehouseCommand(opt))
 	return cmd
 }
