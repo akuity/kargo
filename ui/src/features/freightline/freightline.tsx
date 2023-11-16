@@ -98,7 +98,8 @@ export const Freightline = (props: {
           : promotingStage?.status?.history || [];
       const pe: { [key: string]: boolean } = {};
       ((availableFreight as Freight[]) || []).map((f: Freight) => {
-        pe[f?.metadata?.name || ''] = true;
+        const name = promotionType === 'default' ? f?.metadata?.name : f?.id;
+        pe[name || ''] = true;
       });
       setPromotionEligible(pe);
     }
