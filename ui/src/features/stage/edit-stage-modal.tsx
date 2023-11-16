@@ -31,7 +31,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
   const { data } = useQuery(listStages.useQuery({ project: projectName }));
   const stage = data?.stages.find((item) => item.metadata?.name === stageName);
 
-  const { mutateAsync, isLoading } = useMutation({
+  const { mutateAsync, isPending } = useMutation({
     ...updateStage.useMutation(),
     onSuccess: () => hide()
   });
@@ -69,7 +69,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
           </Typography.Link>
           <Space>
             <Button onClick={hide}>Cancel</Button>
-            <Button type='primary' onClick={onSubmit} loading={isLoading}>
+            <Button type='primary' onClick={onSubmit} loading={isPending}>
               Update
             </Button>
           </Space>

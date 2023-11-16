@@ -2,7 +2,7 @@ import Editor, { loader } from '@monaco-editor/react';
 import { Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import * as monaco from 'monaco-editor';
-import { setDiagnosticsOptions } from 'monaco-yaml';
+import { configureMonacoYaml } from 'monaco-yaml';
 import React, { FC, useEffect, useRef } from 'react';
 
 import styles from './yaml-editor.module.less';
@@ -29,7 +29,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
   };
 
   useEffect(() => {
-    setDiagnosticsOptions({
+    configureMonacoYaml(monaco, {
       enableSchemaRequest: true,
       hover: true,
       completion: true,

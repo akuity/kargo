@@ -1,11 +1,10 @@
 import { faArrowRightFromBracket, faBook, faBoxes } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button } from 'antd';
 import { Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
-
-import { ButtonIcon } from '../button-icon/button-icon';
 
 import * as styles from './main-layout.module.less';
 import { NavItem } from './nav-item/nav-item';
@@ -33,7 +32,7 @@ export const MainLayout = () => {
           className={styles.logout}
           onClick={logout}
           type='text'
-          icon={<ButtonIcon icon={faArrowRightFromBracket} />}
+          icon={<FontAwesomeIcon icon={faArrowRightFromBracket} />}
         >
           Logout
         </Button>
