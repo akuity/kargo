@@ -154,9 +154,9 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "index non-terminal Promotions by Stage")
 	}
 
-	// Index Promotions by Freight
-	if err := kubeclient.IndexPromotionsByFreight(ctx, kargoMgr); err != nil {
-		return errors.Wrap(err, "index Promotions by Freight")
+	// Index Promotions by Stage + Freight
+	if err := kubeclient.IndexPromotionsByStageAndFreight(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index Promotions by Stage and Freight")
 	}
 
 	// Index PromotionPolicies by Stage
@@ -529,17 +529,20 @@ func (r *reconciler) syncNormalStage(
 		return status, nil
 	}
 
-	// If a promotion already exists for this Freight, then we're disqualified
-	// from auto-promotion.
+	// If a promotion already exists for this Stage + Freight, then we're
+	// disqualified from auto-promotion.
 	promos := kargoapi.PromotionList{}
 	if err := r.listPromosFn(
 		ctx,
 		&promos,
 		&client.ListOptions{
 			Namespace: stage.Namespace,
-			FieldSelector: fields.Set(map[string]string{
-				kubeclient.PromotionsByFreightIndexField: latestFreight.Name,
-			}).AsSelector(),
+			FieldSelector: fields.Set(
+				map[string]string{
+					kubeclient.PromotionsByStageAndFreightIndexField: kubeclient.
+						StageAndFreightKey(stage.Name, latestFreight.Name),
+				},
+			).AsSelector(),
 		},
 	); err != nil {
 		return status, errors.Wrapf(
