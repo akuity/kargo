@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func TestPriorityQueue(t *testing.T) {
 	)
 
 	randomNamer := moniker.New()
-	objects := make([]client.Object, 50)
+	objects := make([]client.Object, 100)
 	for i := range objects {
 		objects[i] = &api.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -31,6 +32,8 @@ func TestPriorityQueue(t *testing.T) {
 		}
 	}
 	objects[0] = nil // This should be invalid
+
+	fmt.Println("adding a line to push the offending line down")
 
 	_, err = NewPriorityQueue(
 		func(client.Object, client.Object) bool {
@@ -58,7 +61,7 @@ func TestPriorityQueue(t *testing.T) {
 	require.NoError(t, err)
 
 	// Now push a bunch...
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 200; i++ {
 		err = pq.Push(
 			&api.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
