@@ -95,6 +95,19 @@ type repo struct {
 	currentBranch string
 }
 
+// CloneOptions represents options for cloning a git repository.
+type CloneOptions struct {
+	// Branch is the name of the branch to clone. If not specified, the default
+	// branch will be cloned.
+	Branch string
+	// SingleBranch indicates whether the clone should be a single-branch clone.
+	SingleBranch bool
+	// Shallow indicates whether the clone should be with a depth of 1. This is
+	// useful for speeding up the cloning process when all we care about is the
+	// latest commit from a single branch.
+	Shallow bool
+}
+
 // Clone produces a local clone of the remote git repository at the specified
 // URL and returns an implementation of the Repo interface that is stateful and
 // NOT suitable for use across multiple goroutines. This function will also
@@ -103,6 +116,7 @@ type repo struct {
 func Clone(
 	repoURL string,
 	repoCreds RepoCredentials,
+	opts *CloneOptions,
 ) (Repo, error) {
 	homeDir, err := os.MkdirTemp("", "")
 	if err != nil {
@@ -120,7 +134,7 @@ func Clone(
 	if err = r.setupAuth(repoCreds); err != nil {
 		return nil, err
 	}
-	return r, r.clone()
+	return r, r.clone(opts)
 }
 
 func (r *repo) AddAll() error {
@@ -140,9 +154,25 @@ func (r *repo) Clean() error {
 	return errors.Wrapf(err, "error cleaning branch %q", r.currentBranch)
 }
 
-func (r *repo) clone() error {
-	r.currentBranch = "HEAD"
-	cmd := r.buildCommand("clone", "--no-tags", r.url, r.dir)
+func (r *repo) clone(opts *CloneOptions) error {
+	if opts == nil {
+		opts = &CloneOptions{}
+	}
+	args := []string{"clone", "--no-tags"}
+	if opts.Branch != "" {
+		args = append(args, "--branch", opts.Branch)
+		r.currentBranch = opts.Branch
+	} else {
+		r.currentBranch = "HEAD"
+	}
+	if opts.SingleBranch {
+		args = append(args, "--single-branch")
+	}
+	if opts.Shallow {
+		args = append(args, "--depth=1")
+	}
+	args = append(args, r.url, r.dir)
+	cmd := r.buildCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
 	_, err := libExec.Exec(cmd)
 	return errors.Wrapf(

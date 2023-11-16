@@ -42,7 +42,7 @@ api:
   enabled: true
   ## @param api.replicas The number of API server pods.
   replicas: 1
-  ## @param api.host The domain name where Kargo's API server will be accessible. This is used for (when applicable) generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The protocol (http vs https) should not be specified and is automatically inferred from other configuration options.
+  ## @param api.host The domain name where Kargo's API server will be accessible. When applicable, this is used for generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
   ## @param api.logLevel The log level for the API server.
   logLevel: INFO
