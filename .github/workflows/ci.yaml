@@ -4,9 +4,13 @@ on:
   pull_request:
     branches:
     - main
+    - v*.x
+    - v*.*.x
   push:
     branches:
     - main
+    - v*.x
+    - v*.*.x
 
 jobs:
 
