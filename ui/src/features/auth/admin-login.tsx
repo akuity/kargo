@@ -17,7 +17,7 @@ const formSchema = z.object({
 
 export const AdminLogin = () => {
   const { login } = useAuthContext();
-  const { mutate, isLoading } = useMutation({
+  const { mutate, isPending } = useMutation({
     ...adminLogin.useMutation(),
     onSuccess: (response) => login(response.idToken)
   });
@@ -38,7 +38,7 @@ export const AdminLogin = () => {
       <FieldContainer label='Password' name='password' control={control}>
         {({ field }) => <Input {...field} type='password' />}
       </FieldContainer>
-      <Button htmlType='submit' loading={isLoading} type='primary' block className='mt-2'>
+      <Button htmlType='submit' loading={isPending} type='primary' block className='mt-2'>
         Login
       </Button>
     </form>

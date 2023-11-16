@@ -15,7 +15,6 @@ import {
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/v1alpha1/types_pb';
 
-import { ButtonIcon } from '../common';
 import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
 import { useModal } from '../common/modal/use-modal';
 
@@ -113,14 +112,14 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
       )}
       <Button
         type='default'
-        icon={<ButtonIcon icon={faPen} size='1x' />}
+        icon={<FontAwesomeIcon icon={faPen} size='1x' />}
         onClick={() => showEditStageModal()}
       >
         Edit
       </Button>
       <Button
         type='default'
-        icon={<ButtonIcon icon={faRefresh} size='1x' />}
+        icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
         onClick={onRefresh}
         loading={isRefreshLoading || !!stage?.metadata?.annotations['kargo.akuity.io/refresh']}
       >
@@ -129,7 +128,7 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
       <Button
         danger
         type='text'
-        icon={<ButtonIcon icon={faTrash} size='1x' />}
+        icon={<FontAwesomeIcon icon={faTrash} size='1x' />}
         onClick={onDelete}
         loading={isLoadingDelete}
         size='small'
