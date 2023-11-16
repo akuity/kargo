@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Tooltip } from 'antd';
 import { useParams } from 'react-router-dom';
 
+import { ButtonIcon } from '@ui/features/common';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { ProjectDetails } from '@ui/features/project/project-details/project-details';
 import { CreateStageModal } from '@ui/features/stage/create-stage-modal';
@@ -36,7 +37,7 @@ export const Project = () => {
           <Button
             type='primary'
             onClick={() => show()}
-            icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}
+            icon={<ButtonIcon icon={faWandSparkles} size='1x' />}
           >
             Create
           </Button>
