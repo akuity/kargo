@@ -47,35 +47,6 @@ func SetupReconcilerWithManager(
 		Complete(newReconciler(kargoMgr.GetClient()))
 }
 
-func indexStagesByApp(shardName string) func(client.Object) []string {
-	return func(obj client.Object) []string {
-		// Return early if:
-		//
-		// 1. This is the default controller, but the object is labeled for a
-		//    specific shard.
-		//
-		// 2. This is a shard-specific controller, but the object is not labeled for
-		//    this shard.
-		objShardName, labeled := obj.GetLabels()[controller.ShardLabelKey]
-		if (shardName == "" && labeled) ||
-			(shardName != "" && shardName != objShardName) {
-			return nil
-		}
-
-		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-		if stage.Spec.PromotionMechanisms == nil ||
-			len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates) == 0 {
-			return nil
-		}
-		apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
-		for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-			apps[i] =
-				fmt.Sprintf("%s:%s", appCheck.AppNamespaceOrDefault(), appCheck.AppName)
-		}
-		return apps
-	}
-}
-
 func newReconciler(kubeClient client.Client) *reconciler {
 	return &reconciler{
 		kubeClient: kubeClient,
