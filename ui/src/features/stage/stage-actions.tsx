@@ -28,8 +28,8 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
   const queryClient = useQueryClient();
   const [shouldRefetchFreights, setShouldRefetchFreights] = React.useState(false);
 
-  const { mutate, isLoading: isLoadingDelete } = useMutation(deleteStage.useMutation());
-  const { mutate: refresh, isLoading: isRefreshLoading } = useMutation(refreshStage.useMutation());
+  const { mutate, isPending: isLoadingDelete } = useMutation(deleteStage.useMutation());
+  const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshStage.useMutation());
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
 
