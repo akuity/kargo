@@ -2,15 +2,11 @@ name: CI
 
 on:
   pull_request:
-    branches:
-    - main
-    - v*.x
-    - v*.*.x
+  merge_group:
   push:
     branches:
     - main
-    - v*.x
-    - v*.*.x
+    - release-*
 
 jobs:
 
