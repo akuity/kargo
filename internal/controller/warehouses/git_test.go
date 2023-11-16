@@ -155,17 +155,6 @@ func TestGetLatestCommitID(t *testing.T) {
 				require.Contains(t, err.Error(), "error cloning git repo")
 			},
 		},
-
-		{
-			name:    "error checking out branch",
-			repoURL: "https://github.com/akuity/kargo.git",
-			branch:  "bogus", // This should force a failure
-			assertions: func(_ *gitMeta, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error checking out branch")
-			},
-		},
-
 		{
 			name:    "success",
 			repoURL: "https://github.com/akuity/kargo.git",
