@@ -10,7 +10,7 @@ import { useParams } from 'react-router-dom';
 
 import { transport } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
-import { LoadingState } from '@ui/features/common';
+import { ButtonIcon, LoadingState } from '@ui/features/common';
 import { Freightline, PromotionType } from '@ui/features/freightline/freightline';
 import { StageDetails } from '@ui/features/stage/stage-details';
 import { getStageColors } from '@ui/features/stage/utils';
@@ -149,8 +149,8 @@ export const ProjectDetails = () => {
             const type = sub.chart
               ? NodeType.REPO_CHART
               : sub.image
-                ? NodeType.REPO_IMAGE
-                : NodeType.REPO_GIT;
+              ? NodeType.REPO_IMAGE
+              : NodeType.REPO_GIT;
             n.push({
               data: sub.chart || sub.image || sub.git || ({} as any),
               stageName: stage.metadata?.name || '',
@@ -385,7 +385,7 @@ export const ProjectDetails = () => {
                             onClick={() =>
                               refreshWarehouseAction({ name: node.warehouseName, project: name })
                             }
-                            icon={<FontAwesomeIcon icon={faRefresh} />}
+                            icon={<ButtonIcon icon={faRefresh} />}
                             size='small'
                             className='mt-1 ml-auto'
                           >

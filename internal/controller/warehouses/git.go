@@ -84,17 +84,19 @@ func getLatestCommitMeta(
 	if creds == nil {
 		creds = &git.RepoCredentials{}
 	}
-	repo, err := git.Clone(
-		repoURL,
-		*creds,
-		&git.CloneOptions{
-			Branch:       branch,
-			SingleBranch: true,
-			Shallow:      true,
-		},
-	)
+	repo, err := git.Clone(repoURL, *creds)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error cloning git repo %q", repoURL)
+
+	}
+	if branch != "" {
+		if err = repo.Checkout(branch); err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"error checking out branch %q from git repo",
+				repoURL,
+			)
+		}
 	}
 	var gm gitMeta
 	gm.Commit, err = repo.LastCommitID()
