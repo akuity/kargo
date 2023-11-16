@@ -173,15 +173,12 @@ func newControllerCommand() *cobra.Command {
 				return errors.Wrap(err, "error setting up Applications reconciler")
 			}
 
-			// No shard name == default controller. This is the only controller that
-			// should reconcile Warehouses.
-			if shardName == "" {
-				if err := warehouses.SetupReconcilerWithManager(
-					kargoMgr,
-					credentialsDB,
-				); err != nil {
-					return errors.Wrap(err, "error setting up Warehouses reconciler")
-				}
+			if err := warehouses.SetupReconcilerWithManager(
+				kargoMgr,
+				credentialsDB,
+				shardName,
+			); err != nil {
+				return errors.Wrap(err, "error setting up Warehouses reconciler")
 			}
 
 			var errChan = make(chan error)
