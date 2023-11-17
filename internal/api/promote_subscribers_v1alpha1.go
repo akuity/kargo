@@ -53,25 +53,31 @@ func (s *server) PromoteSubscribers(
 		)
 	}
 
-	// Get the specified Freight, but only if it has qualified for this Stage.
-	// Expect a nil if it is either not found or is not qualified . Errors are
-	// internal problems.
+	// Get the specified Freight, but only if it is verified in this Stage.
+	// Merely being approved FOR this Stage is not enough. If Freight is only
+	// approved FOR this Stage, that is because someone manually did that. This
+	// does not speak to its suitability for promotion downstream. If a user
+	// desires to promote Freight downstream that is not verified in this
+	// Stage, then they should approve the Freight for the downstream Stage(s).
+	// Expect a nil if the specified Freight is not found or doesn't meet these
+	// conditions. Errors are indicative only of internal problems.
 	var freight *kargoapi.Freight
-	if freight, err = s.getQualifiedFreightFn(
+	if freight, err = s.getAvailableFreightFn(
 		ctx,
 		s.client,
 		types.NamespacedName{
 			Namespace: req.Msg.GetProject(),
 			Name:      req.Msg.GetFreight(),
 		},
-		[]string{req.Msg.GetStage()},
+		[]string{req.Msg.GetStage()}, // verified in
+		"",                           // approved for not considered
 	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	} else if freight == nil {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			errors.Errorf(
-				"no qualified Freight %q found in namespace %q",
+				"no available Freight %q found in namespace %q",
 				req.Msg.GetFreight(),
 				req.Msg.GetProject(),
 			),

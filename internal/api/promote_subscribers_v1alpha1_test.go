@@ -119,7 +119,7 @@ func TestPromoteSubscribers(t *testing.T) {
 			},
 		},
 		{
-			name: "error getting qualified Freight",
+			name: "error getting available Freight",
 			req: &svcv1alpha1.PromoteSubscribersRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
@@ -146,11 +146,12 @@ func TestPromoteSubscribers(t *testing.T) {
 						},
 					}, nil
 				},
-				getQualifiedFreightFn: func(
+				getAvailableFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 					[]string,
+					string,
 				) (*kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -167,7 +168,7 @@ func TestPromoteSubscribers(t *testing.T) {
 			},
 		},
 		{
-			name: "Freight not found or is not qualified for the specified Stage",
+			name: "available Freight not found",
 			req: &svcv1alpha1.PromoteSubscribersRequest{
 				Project: "fake-project",
 				Stage:   "fake-stage",
@@ -194,11 +195,12 @@ func TestPromoteSubscribers(t *testing.T) {
 						},
 					}, nil
 				},
-				getQualifiedFreightFn: func(
+				getAvailableFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 					[]string,
+					string,
 				) (*kargoapi.Freight, error) {
 					return nil, nil
 				},
@@ -211,7 +213,7 @@ func TestPromoteSubscribers(t *testing.T) {
 				connErr, ok := err.(*connect.Error)
 				require.True(t, ok)
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
-				require.Contains(t, connErr.Message(), "no qualified Freight")
+				require.Contains(t, connErr.Message(), "no available Freight")
 				require.Contains(t, connErr.Message(), "found in namespace")
 			},
 		},
@@ -243,11 +245,12 @@ func TestPromoteSubscribers(t *testing.T) {
 						},
 					}, nil
 				},
-				getQualifiedFreightFn: func(
+				getAvailableFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 					[]string,
+					string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
@@ -297,11 +300,12 @@ func TestPromoteSubscribers(t *testing.T) {
 						},
 					}, nil
 				},
-				getQualifiedFreightFn: func(
+				getAvailableFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 					[]string,
+					string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
@@ -352,11 +356,12 @@ func TestPromoteSubscribers(t *testing.T) {
 						},
 					}, nil
 				},
-				getQualifiedFreightFn: func(
+				getAvailableFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 					[]string,
+					string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
@@ -413,11 +418,12 @@ func TestPromoteSubscribers(t *testing.T) {
 						},
 					}, nil
 				},
-				getQualifiedFreightFn: func(
+				getAvailableFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
 					[]string,
+					string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},

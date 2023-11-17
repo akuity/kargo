@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	pkgerrors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,13 +38,13 @@ func newAPICommand() *cobra.Command {
 
 			restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 			if err != nil {
-				return pkgerrors.Wrap(err, "error loading REST config")
+				return errors.Wrap(err, "error loading REST config")
 			}
 			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{
 				NewInternalClient: newClientForAPI,
 			})
 			if err != nil {
-				return pkgerrors.Wrap(err, "error creating Kubernetes client")
+				return errors.Wrap(err, "error creating Kubernetes client")
 			}
 
 			cfg := config.ServerConfigFromEnv()
@@ -70,11 +70,11 @@ func newAPICommand() *cobra.Command {
 				),
 			)
 			if err != nil {
-				return pkgerrors.Wrap(err, "error creating listener")
+				return errors.Wrap(err, "error creating listener")
 			}
 			defer l.Close()
 
-			return pkgerrors.Wrap(srv.Serve(ctx, l), "serve")
+			return errors.Wrap(srv.Serve(ctx, l), "serve")
 		},
 	}
 }
@@ -85,24 +85,37 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 		MetricsBindAddress: "0",
 	})
 	if err != nil {
-		return nil, pkgerrors.Wrap(err, "new manager")
+		return nil, errors.Wrap(err, "new manager")
 	}
+
 	// Index Promotions by Stage
 	if err := kubeclient.IndexPromotionsByStage(ctx, mgr); err != nil {
-		return nil, pkgerrors.Wrap(err, "index promotions by stage")
+		return nil, errors.Wrap(err, "index promotions by stage")
 	}
-	// Index Freights by Warehouse
+
+	// Index Freight by Warehouse
 	if err := kubeclient.IndexFreightByWarehouse(ctx, mgr); err != nil {
-		return nil, pkgerrors.Wrap(err, "index freight by warehouse")
+		return nil, errors.Wrap(err, "index freight by warehouse")
 	}
-	// Index Freights by Qualified Stages
-	if err := kubeclient.IndexFreightByQualifiedStages(ctx, mgr); err != nil {
-		return nil, pkgerrors.Wrap(err, "index freight by qualified stages")
+
+	// Index Freight by Stages in which it has been verified
+	if err := kubeclient.IndexFreightByVerifiedStages(ctx, mgr); err != nil {
+		return nil,
+			errors.Wrap(err, "index Freight by Stages in which it has been verified")
 	}
+
+	// Index Freight by Stages for which it is approved
+	if err :=
+		kubeclient.IndexFreightByApprovedStages(ctx, mgr); err != nil {
+		return nil,
+			errors.Wrap(err, "index Freight by Stages for which it has been approved")
+	}
+
 	go func() {
 		if err := mgr.Start(ctx); err != nil {
-			panic(pkgerrors.Wrap(err, "start manager"))
+			panic(errors.Wrap(err, "start manager"))
 		}
 	}()
+
 	return mgr.GetClient(), nil
 }
