@@ -29,7 +29,6 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
-	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	golang.org/x/crypto v0.14.0
 	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de
 	golang.org/x/net v0.17.0
