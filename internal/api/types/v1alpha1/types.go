@@ -93,10 +93,15 @@ func FromFreightProto(f *v1alpha1.Freight) *kargoapi.Freight {
 	for idx, chart := range f.GetCharts() {
 		charts[idx] = *FromChartProto(chart)
 	}
-	qualifications :=
-		make(map[string]kargoapi.Qualification, len(f.Status.Qualifications))
-	for stageName := range f.Status.Qualifications {
-		qualifications[stageName] = kargoapi.Qualification{}
+	verifiedIn :=
+		make(map[string]kargoapi.VerifiedStage, len(f.Status.VerifiedIn))
+	for stage := range f.Status.VerifiedIn {
+		verifiedIn[stage] = kargoapi.VerifiedStage{}
+	}
+	approvedFor :=
+		make(map[string]kargoapi.ApprovedStage, len(f.Status.ApprovedFor))
+	for stage := range f.Status.ApprovedFor {
+		approvedFor[stage] = kargoapi.ApprovedStage{}
 	}
 	return &kargoapi.Freight{
 		TypeMeta: kubemetav1.TypeMeta{
@@ -109,7 +114,8 @@ func FromFreightProto(f *v1alpha1.Freight) *kargoapi.Freight {
 		Images:     images,
 		Charts:     charts,
 		Status: kargoapi.FreightStatus{
-			Qualifications: qualifications,
+			VerifiedIn:  verifiedIn,
+			ApprovedFor: approvedFor,
 		},
 	}
 }
@@ -845,10 +851,15 @@ func ToFreightProto(f kargoapi.Freight) *v1alpha1.Freight {
 	for idx := range f.Charts {
 		charts[idx] = ToChartProto(f.Charts[idx])
 	}
-	qualifications :=
-		make(map[string]*v1alpha1.Qualification, len(f.Status.Qualifications))
-	for stageName := range f.Status.Qualifications {
-		qualifications[stageName] = &v1alpha1.Qualification{}
+	verifiedIn :=
+		make(map[string]*v1alpha1.VerifiedStage, len(f.Status.VerifiedIn))
+	for stage := range f.Status.VerifiedIn {
+		verifiedIn[stage] = &v1alpha1.VerifiedStage{}
+	}
+	approvedFor :=
+		make(map[string]*v1alpha1.ApprovedStage, len(f.Status.ApprovedFor))
+	for stage := range f.Status.ApprovedFor {
+		approvedFor[stage] = &v1alpha1.ApprovedStage{}
 	}
 	return &v1alpha1.Freight{
 		ApiVersion: f.APIVersion,
@@ -859,7 +870,8 @@ func ToFreightProto(f kargoapi.Freight) *v1alpha1.Freight {
 		Commits:    commits,
 		Metadata:   typesmetav1.ToObjectMetaProto(*metadata),
 		Status: &v1alpha1.FreightStatus{
-			Qualifications: qualifications,
+			VerifiedIn:  verifiedIn,
+			ApprovedFor: approvedFor,
 		},
 	}
 }
