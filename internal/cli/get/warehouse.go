@@ -34,56 +34,75 @@ kargo get warehouses --project=my-project my-warehouse
 			ctx := cmd.Context()
 
 			project := opt.Project.OrElse("")
-			if project == "" {
-				return errors.New("project is required")
+			if project == "" && !opt.AllProjects {
+				return errors.New("project or all-projects is required")
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
 				return errors.New("get client from config")
 			}
-			resp, err := kargoSvcCli.ListWarehouses(
-				ctx,
-				connect.NewRequest(
-					&v1alpha1.ListWarehousesRequest{
-						Project: project,
-					},
-				),
-			)
-			if err != nil {
-				return errors.Wrap(err, "list warehouses")
+
+			var allProjects []string
+
+			if opt.AllProjects {
+				respProj, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
+				if err != nil {
+					return errors.Wrap(err, "list projects")
+				}
+				for _, p := range respProj.Msg.GetProjects() {
+					allProjects = append(allProjects, p.Name)
+				}
+			} else {
+				allProjects = append(allProjects, project)
+			}
+
+			var allWarehouses []*kargoapi.Warehouse
+
+			// get all warehouses in project/all projects into a big slice
+			for _, p := range allProjects {
+				resp, err := kargoSvcCli.ListWarehouses(ctx, connect.NewRequest(&v1alpha1.ListWarehousesRequest{
+					Project: p,
+				}))
+				if err != nil {
+					return errors.Wrap(err, "list warehouse")
+				}
+
+				for _, w := range resp.Msg.GetWarehouses() {
+					allWarehouses = append(allWarehouses, typesv1alpha1.FromWarehouseProto(w))
+				}
 			}
 
 			names := slices.Compact(args)
-			res := make([]*kargoapi.Warehouse, 0, len(resp.Msg.GetWarehouses()))
+
 			var resErr error
-			if len(names) == 0 {
-				for _, w := range resp.Msg.GetWarehouses() {
-					res = append(res, typesv1alpha1.FromWarehouseProto(w))
-				}
-			} else {
-				warehousesByName :=
-					make(map[string]*kargoapi.Warehouse, len(resp.Msg.GetWarehouses()))
-				for _, w := range resp.Msg.GetWarehouses() {
-					warehousesByName[w.GetMetadata().GetName()] =
-						typesv1alpha1.FromWarehouseProto(w)
-				}
-				for _, name := range names {
-					if warehouse, ok := warehousesByName[name]; ok {
-						res = append(res, warehouse)
-					} else {
-						resErr =
-							goerrors.Join(err, errors.Errorf("warehouse %q not found", name))
+			// if warehouse names were provided in cli - remove unneeded ones from the big slice
+			if len(names) > 0 {
+				i := 0
+				for _, x := range allWarehouses {
+					if slices.Contains(names, x.Name) {
+						allWarehouses[i] = x
+						i++
 					}
 				}
+				// Prevent memory leak by erasing truncated pointers
+				for j := i; j < len(allWarehouses); j++ {
+					allWarehouses[j] = nil
+				}
+				allWarehouses = allWarehouses[:i]
 			}
-			if err := printObjects(opt, res); err != nil {
-				return err
+			if len(allWarehouses) == 0 {
+				resErr = goerrors.Join(err, errors.Errorf("No warehouses found"))
+			} else {
+				if err := printObjects(opt, allWarehouses); err != nil {
+					return err
+				}
 			}
 			return resErr
 		},
 	}
 	option.OptionalProject(opt.Project)(cmd.Flags())
+	option.AllProjects(&opt.AllProjects)(cmd.Flags())
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }
