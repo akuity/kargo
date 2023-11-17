@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	FreightByQualifiedStagesIndexField    = "qualifiedStages"
+	FreightByVerifiedStagesIndexField     = "verifiedIn"
+	FreightApprovedForStagesIndexField    = "approvedFor"
 	FreightByWarehouseIndexField          = "warehouse"
 	PromotionsByStageAndFreightIndexField = "stageAndFreight"
 
@@ -164,27 +165,54 @@ func indexFreightByWarehouse(obj client.Object) []string {
 	return nil
 }
 
-func IndexFreightByQualifiedStages(
+// IndexFreightByVerifiedStages indexes Freight by the Stages in which it has
+// been verified.
+func IndexFreightByVerifiedStages(
 	ctx context.Context,
 	mgr ctrl.Manager,
 ) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Freight{},
-		FreightByQualifiedStagesIndexField,
-		indexFreightByQualifiedStages,
+		FreightByVerifiedStagesIndexField,
+		indexFreightByVerifiedStages,
 	)
 }
 
-func indexFreightByQualifiedStages(obj client.Object) []string {
+func indexFreightByVerifiedStages(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-	qualifiedStages := make([]string, len(freight.Status.Qualifications))
+	verifiedStages := make([]string, len(freight.Status.VerifiedIn))
 	var i int
-	for qualifiedStage := range freight.Status.Qualifications {
-		qualifiedStages[i] = qualifiedStage
+	for stage := range freight.Status.VerifiedIn {
+		verifiedStages[i] = stage
 		i++
 	}
-	return qualifiedStages
+	return verifiedStages
+}
+
+// IndexFreightByApprovedStages indexes Freight by the Stages for which it has
+// been (manually) approved.
+func IndexFreightByApprovedStages(
+	ctx context.Context,
+	mgr ctrl.Manager,
+) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		FreightApprovedForStagesIndexField,
+		indexFreightByApprovedStages,
+	)
+}
+
+func indexFreightByApprovedStages(obj client.Object) []string {
+	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+	approvedStages := make([]string, len(freight.Status.ApprovedFor))
+	var i int
+	for stages := range freight.Status.ApprovedFor {
+		approvedStages[i] = stages
+		i++
+	}
+	return approvedStages
 }
 
 func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {

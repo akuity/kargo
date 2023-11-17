@@ -258,22 +258,22 @@ func TestIndexFreightByWarehouse(t *testing.T) {
 	}
 }
 
-func TestIndexFreightByQualifiedStages(t *testing.T) {
+func TestIndexFreightByVerifiedStages(t *testing.T) {
 	testCases := []struct {
 		name     string
 		freight  *kargoapi.Freight
 		expected []string
 	}{
 		{
-			name:     "Freight has no qualified stages",
+			name:     "Freight is not verified in any Stages",
 			freight:  &kargoapi.Freight{},
 			expected: []string{},
 		},
 		{
-			name: "Freight has qualified stages",
+			name: "Freight is verified in a Stage",
 			freight: &kargoapi.Freight{
 				Status: kargoapi.FreightStatus{
-					Qualifications: map[string]kargoapi.Qualification{
+					VerifiedIn: map[string]kargoapi.VerifiedStage{
 						"fake-stage": {},
 					},
 				},
@@ -287,7 +287,43 @@ func TestIndexFreightByQualifiedStages(t *testing.T) {
 				require.Equal(
 					t,
 					testCase.expected,
-					indexFreightByQualifiedStages(testCase.freight),
+					indexFreightByVerifiedStages(testCase.freight),
+				)
+			})
+		})
+	}
+}
+
+func TestIndexFreightByApprovedStages(t *testing.T) {
+	testCases := []struct {
+		name     string
+		freight  *kargoapi.Freight
+		expected []string
+	}{
+		{
+			name:     "Freight is not approved for any Stages",
+			freight:  &kargoapi.Freight{},
+			expected: []string{},
+		},
+		{
+			name: "Freight is approved for a Stage",
+			freight: &kargoapi.Freight{
+				Status: kargoapi.FreightStatus{
+					ApprovedFor: map[string]kargoapi.ApprovedStage{
+						"fake-stage": {},
+					},
+				},
+			},
+			expected: []string{"fake-stage"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Run(testCase.name, func(t *testing.T) {
+				require.Equal(
+					t,
+					testCase.expected,
+					indexFreightByApprovedStages(testCase.freight),
 				)
 			})
 		})
