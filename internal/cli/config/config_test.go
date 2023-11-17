@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ghodss/yaml"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 )
 
 func TestLoadCLIConfig(t *testing.T) {
