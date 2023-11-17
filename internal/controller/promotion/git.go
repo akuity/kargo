@@ -243,7 +243,7 @@ func (g *gitMechanism) gitCommit(
 	if creds == nil {
 		creds = &git.RepoCredentials{}
 	}
-	repo, err := git.Clone(update.RepoURL, *creds)
+	repo, err := git.Clone(update.RepoURL, *creds, nil)
 	if err != nil {
 		return "", errors.Wrapf(err, "error cloning git repo %q", update.RepoURL)
 	}

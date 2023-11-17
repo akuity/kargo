@@ -23,7 +23,7 @@ const formSchema = z.object({
 });
 
 export const CreateStageModal = ({ visible, hide, project }: Props) => {
-  const { mutateAsync, isLoading } = useMutation({
+  const { mutateAsync, isPending } = useMutation({
     ...createStage.useMutation(),
     onSuccess: () => hide()
   });
@@ -61,7 +61,7 @@ export const CreateStageModal = ({ visible, hide, project }: Props) => {
           </Typography.Link>
           <Space>
             <Button onClick={hide}>Cancel</Button>
-            <Button type='primary' onClick={onSubmit} loading={isLoading}>
+            <Button type='primary' onClick={onSubmit} loading={isPending}>
               Create
             </Button>
           </Space>

@@ -91,7 +91,14 @@ type reconciler struct {
 func SetupReconcilerWithManager(
 	mgr manager.Manager,
 	credentialsDB credentials.Database,
+	shardName string,
 ) error {
+
+	shardPredicate, err := controller.GetShardPredicate(shardName)
+	if err != nil {
+		return errors.Wrap(err, "error creating shard selector predicate")
+	}
+
 	return errors.Wrap(
 		ctrl.NewControllerManagedBy(mgr).
 			For(&kargoapi.Warehouse{}).
@@ -109,6 +116,7 @@ func SetupReconcilerWithManager(
 					predicate.AnnotationChangedPredicate{},
 				),
 			).
+			WithEventFilter(shardPredicate).
 			WithOptions(controller.CommonOptions()).
 			Complete(newReconciler(mgr.GetClient(), credentialsDB)),
 		"error building Warehouse reconciler",

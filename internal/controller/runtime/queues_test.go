@@ -3,8 +3,8 @@ package runtime
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/technosophos/moniker"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -21,12 +21,13 @@ func TestPriorityQueue(t *testing.T) {
 		err.Error(),
 	)
 
-	randomNamer := moniker.New()
 	objects := make([]client.Object, 50)
 	for i := range objects {
 		objects[i] = &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: randomNamer.NameSep("-"),
+				// UUIDs contain enough randomness that we know we're not accidentally
+				// creating a list that's already ordered by name.
+				Name: uuid.New().String(),
 			},
 		}
 	}
@@ -57,7 +58,7 @@ func TestPriorityQueue(t *testing.T) {
 		added := pq.Push(
 			&kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: randomNamer.NameSep("-"),
+					Name: uuid.New().String(),
 				},
 			},
 		)
