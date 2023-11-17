@@ -159,7 +159,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.3-bookworm
+      image: golang:1.21.4-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -208,8 +208,11 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.3-bookworm
+      image: golang:1.21.4-bookworm
     steps:
+    - name: Install awscli
+      run: |
+        apt update && apt install awscli -y
     - name: Checkout code
       uses: actions/checkout@v4
     - uses: actions/cache@v3
@@ -253,7 +256,7 @@ jobs:
       run: |
         curl -L https://github.com/akuity/kargo/releases/download/${{ github.ref_name }}/kargo-linux-amd64 -o kargo
         chmod 755 kargo
-        kargo fig > kargo-fig-spec.ts
+        ./kargo fig > kargo-fig-spec.ts
     - name: Create Autocomplete PR
       uses: withfig/push-to-fig-autocomplete-action@v1
       with:

@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -70,13 +69,11 @@ func ClearStageRefresh(
 	if _, ok := stage.Annotations[AnnotationKeyRefresh]; !ok {
 		return nil
 	}
-	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, AnnotationKeyRefresh))
-	patch := client.RawPatch(types.MergePatchType, patchBytes)
 	newStage := Stage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      stage.Name,
 			Namespace: stage.Namespace,
 		},
 	}
-	return c.Patch(ctx, &newStage, patch)
+	return clearRefreshObject(ctx, c, &newStage)
 }

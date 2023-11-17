@@ -23,7 +23,7 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 	var flag PromoteFlags
 	cmd := &cobra.Command{
 		Use:     "promote",
-		Args:    cobra.ExactArgs(2),
+		Args:    option.ExactArgs(2),
 		Example: "kargo stage promote (PROJECT) (NAME) [(--freight=)freight-id]",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()

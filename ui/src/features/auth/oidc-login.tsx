@@ -36,9 +36,13 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     [oidcConfig]
   );
 
-  const { data: as, isFetching } = useQuery(
-    [issuerUrl],
-    () =>
+  const {
+    data: as,
+    isFetching,
+    error
+  } = useQuery({
+    queryKey: [issuerUrl],
+    queryFn: () =>
       issuerUrl &&
       oauth
         .discoveryRequest(issuerUrl)
@@ -50,14 +54,15 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
 
           return response;
         }),
-    {
-      enabled: !!issuerUrl,
-      onError: (err) => {
-        const errorMessage = err instanceof Error ? err.message : 'OIDC config fetch error';
-        notification.error({ message: errorMessage, placement: 'bottomRight' });
-      }
+    enabled: !!issuerUrl
+  });
+
+  React.useEffect(() => {
+    if (error) {
+      const errorMessage = error instanceof Error ? error.message : 'OIDC config fetch error';
+      notification.error({ message: errorMessage, placement: 'bottomRight' });
     }
-  );
+  }, [error]);
 
   const login = async () => {
     if (!as?.authorization_endpoint) {

@@ -46,7 +46,7 @@ export const StageNode = ({
         }}
       >
         <h3 className='flex items-center text-white justify-between'>
-          <div className='text-ellipsis whitespace-nowrap overflow-hidden'>
+          <div className='text-ellipsis whitespace-nowrap overflow-hidden h-8'>
             {stage.metadata?.name}
           </div>
           {stage.status?.currentPromotion ? (

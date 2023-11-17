@@ -7,9 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -663,18 +661,15 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				createPromotionFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
+				listPromosFn: func(
+					_ context.Context,
+					obj client.ObjectList,
+					_ ...client.ListOption,
 				) error {
-					return apierrors.NewAlreadyExists(
-						schema.GroupResource{
-							Group:    kargoapi.GroupVersion.Group,
-							Resource: "Promotion",
-						},
-						"",
-					)
+					promos, ok := obj.(*kargoapi.PromotionList)
+					require.True(t, ok)
+					promos.Items = []kargoapi.Promotion{{}}
+					return nil
 				},
 			},
 			assertions: func(
@@ -689,7 +684,7 @@ func TestSyncNormalStage(t *testing.T) {
 		},
 
 		{
-			name: "other error creating Promotion",
+			name: "error creating Promotion",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
 					Subscriptions: &kargoapi.Subscriptions{
@@ -727,6 +722,13 @@ func TestSyncNormalStage(t *testing.T) {
 							Name: "fake-freight-id",
 						},
 					}, nil
+				},
+				listPromosFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
 				},
 				createPromotionFn: func(
 					context.Context,
@@ -799,6 +801,13 @@ func TestSyncNormalStage(t *testing.T) {
 							Name: "fake-freight-id",
 						},
 					}, nil
+				},
+				listPromosFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
 				},
 				createPromotionFn: func(
 					context.Context,
