@@ -49,9 +49,9 @@ kargo get stages --project=my-project my-stage
 			var allProjects []string
 
 			if opt.AllProjects {
-				respProj, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
-				if err != nil {
-					return errors.Wrap(err, "list projects")
+				respProj, errP := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
+				if errP != nil {
+					return errors.Wrap(errP, "list projects")
 				}
 				for _, p := range respProj.Msg.GetProjects() {
 					allProjects = append(allProjects, p.Name)
@@ -64,11 +64,11 @@ kargo get stages --project=my-project my-stage
 
 			// get all stages in project/all projects into a big slice
 			for _, p := range allProjects {
-				resp, err := kargoSvcCli.ListStages(ctx, connect.NewRequest(&v1alpha1.ListStagesRequest{
+				resp, errS := kargoSvcCli.ListStages(ctx, connect.NewRequest(&v1alpha1.ListStagesRequest{
 					Project: p,
 				}))
-				if err != nil {
-					return errors.Wrap(err, "list stages")
+				if errS != nil {
+					return errors.Wrap(errS, "list stages")
 				}
 				for _, s := range resp.Msg.GetStages() {
 					allStages = append(allStages, typesv1alpha1.FromStageProto(s))
@@ -96,8 +96,8 @@ kargo get stages --project=my-project my-stage
 			if len(allStages) == 0 {
 				resErr = goerrors.Join(err, errors.Errorf("No stages found"))
 			} else {
-				if err := printObjects(opt, allStages); err != nil {
-					return err
+				if errPr := printObjects(opt, allStages); errPr != nil {
+					return errPr
 				}
 			}
 			return resErr

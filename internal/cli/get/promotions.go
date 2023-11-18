@@ -60,9 +60,9 @@ kargo get promotions --project=my-project some-promotion
 			var allProjects []string
 
 			if opt.AllProjects {
-				respProj, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
-				if err != nil {
-					return errors.Wrap(err, "list projects")
+				respProj, errP := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
+				if errP != nil {
+					return errors.Wrap(errP, "list projects")
 				}
 				for _, p := range respProj.Msg.GetProjects() {
 					allProjects = append(allProjects, p.Name)
@@ -83,9 +83,9 @@ kargo get promotions --project=my-project some-promotion
 					req.Stage = proto.String(stage)
 				}
 
-				resp, err := kargoSvcCli.ListPromotions(ctx, connect.NewRequest(req))
-				if err != nil {
-					return errors.Wrap(err, "list promotions")
+				resp, errP := kargoSvcCli.ListPromotions(ctx, connect.NewRequest(req))
+				if errP != nil {
+					return errors.Wrap(errP, "list promotions")
 				}
 				for _, s := range resp.Msg.GetPromotions() {
 					allPromotions = append(allPromotions, typesv1alpha1.FromPromotionProto(s))
@@ -113,8 +113,8 @@ kargo get promotions --project=my-project some-promotion
 			if len(allPromotions) == 0 {
 				resErr = goerrors.Join(err, errors.Errorf("No promotions found"))
 			} else {
-				if err := printObjects(opt, allPromotions); err != nil {
-					return err
+				if errPr := printObjects(opt, allPromotions); errPr != nil {
+					return errPr
 				}
 			}
 			return resErr

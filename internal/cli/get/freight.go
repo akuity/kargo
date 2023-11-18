@@ -45,9 +45,9 @@ kargo get freight --project=my-project my-freight
 			var allProjects []string
 
 			if opt.AllProjects {
-				respProj, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
-				if err != nil {
-					return errors.Wrap(err, "list projects")
+				respProj, errP := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
+				if errP != nil {
+					return errors.Wrap(errP, "list projects")
 				}
 				for _, p := range respProj.Msg.GetProjects() {
 					allProjects = append(allProjects, p.Name)
@@ -60,11 +60,11 @@ kargo get freight --project=my-project my-freight
 
 			// get all freight in project/all projects into a big slice
 			for _, p := range allProjects {
-				resp, err := kargoSvcCli.QueryFreight(ctx, connect.NewRequest(&v1alpha1.QueryFreightRequest{
+				resp, errF := kargoSvcCli.QueryFreight(ctx, connect.NewRequest(&v1alpha1.QueryFreightRequest{
 					Project: p,
 				}))
-				if err != nil {
-					return errors.Wrap(err, "list freight")
+				if errF != nil {
+					return errors.Wrap(errF, "list freight")
 				}
 				freight := resp.Msg.GetGroups()[""]
 				for _, f := range freight.Freight {
@@ -94,8 +94,8 @@ kargo get freight --project=my-project my-freight
 			if len(allFreight) == 0 {
 				resErr = goerrors.Join(err, errors.Errorf("No freight found"))
 			} else {
-				if err := printObjects(opt, allFreight); err != nil {
-					return err
+				if errPr := printObjects(opt, allFreight); errPr != nil {
+					return errPr
 				}
 			}
 			return resErr
