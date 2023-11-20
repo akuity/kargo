@@ -49,7 +49,10 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
+require (
+	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
+	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
+)
 
 require (
 	cloud.google.com/go/compute v1.21.0 // indirect

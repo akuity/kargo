@@ -35,10 +35,12 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestChartsFn)
 	require.NotNil(t, e.getLatestChartVersionFn)
 	require.NotNil(t, e.getLatestCommitMetaFn)
+	require.NotNil(t, e.getAvailableFreightAliasFn)
 	require.NotNil(t, e.createFreightFn)
 }
 
 func TestSyncWarehouse(t *testing.T) {
+	const fakeAlias = "fake-alias"
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	testWarehouse := &kargoapi.Warehouse{
@@ -86,6 +88,30 @@ func TestSyncWarehouse(t *testing.T) {
 		},
 
 		{
+			name: "error getting alias for Freight",
+			reconciler: &reconciler{
+				getLatestFreightFromReposFn: func(
+					context.Context,
+					*kargoapi.Warehouse,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				getAvailableFreightAliasFn: func(context.Context) (string, error) {
+					return "", errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(
+					t,
+					err.Error(),
+					"error getting available Freight alias",
+				)
+			},
+		},
+
+		{
 			name: "latest Freight from repos isn't new",
 			reconciler: &reconciler{
 				getLatestFreightFromReposFn: func(
@@ -93,6 +119,9 @@ func TestSyncWarehouse(t *testing.T) {
 					*kargoapi.Warehouse,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
+				},
+				getAvailableFreightAliasFn: func(context.Context) (string, error) {
+					return fakeAlias, nil
 				},
 				createFreightFn: func(
 					context.Context,
@@ -122,6 +151,9 @@ func TestSyncWarehouse(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
+				getAvailableFreightAliasFn: func(context.Context) (string, error) {
+					return fakeAlias, nil
+				},
 				createFreightFn: func(
 					context.Context,
 					client.Object,
@@ -150,6 +182,9 @@ func TestSyncWarehouse(t *testing.T) {
 							Namespace: "fake-namespace",
 						},
 					}, nil
+				},
+				getAvailableFreightAliasFn: func(context.Context) (string, error) {
+					return fakeAlias, nil
 				},
 				createFreightFn: func(
 					context.Context,
