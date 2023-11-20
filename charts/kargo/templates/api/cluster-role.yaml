@@ -20,6 +20,28 @@ rules:
       - update
       - delete
   - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - users
+      - groups
+      - serviceaccounts
+    verbs:
+      - impersonate
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - selfsubjectaccessreviews
+    verbs:
+      - create
+  - apiGroups:
       - kargo.akuity.io
     resources:
       - freights

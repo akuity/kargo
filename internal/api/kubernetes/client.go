@@ -2,11 +2,14 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/pkg/errors"
 	authv1 "k8s.io/api/authorization/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,6 +25,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -529,15 +533,61 @@ func getAuthorizedClient(
 		return internalClient, nil
 	}
 
+	ra := authv1.ResourceAttributes{
+		Verb:        verb,
+		Group:       gvr.Group,
+		Version:     gvr.Version,
+		Resource:    gvr.Resource,
+		Subresource: subresource,
+		Namespace:   key.Namespace,
+		Name:        key.Name,
+	}
 	if userInfo.Username != "" {
-		// TODO: We are not yet mapping users to Kubernetes SAs, so anyone we could
-		// authenticate currently gets all the same permissions as the Kargo API
-		// server itself.
-		//
-		// We should replace this with a SubjectAccessReview on the SA to determine
-		// if the desired operation is allowed. If it is, we can return the
-		// internalClient.
-		return internalClient, nil
+		serviceAccounts := make(map[string]corev1.ServiceAccount)
+		{
+			list := &corev1.ServiceAccountList{}
+			if err := internalClient.List(ctx, list, libClient.MatchingFields{
+				kubeclient.ServiceAccountsBySubjectIndexField: userInfo.Username,
+			}); err != nil {
+				return nil, errors.Wrap(err, "list service accounts for user")
+			}
+			for idx := range list.Items {
+				sa := list.Items[idx]
+				saKey := libClient.ObjectKeyFromObject(&sa)
+				serviceAccounts[saKey.String()] = sa
+			}
+		}
+		for _, g := range userInfo.Groups {
+			group := strings.TrimSpace(g)
+			if group == "" {
+				continue
+			}
+			list := &corev1.ServiceAccountList{}
+			if err := internalClient.List(ctx, list, libClient.MatchingFields{
+				kubeclient.ServiceAccountsByGroupIndexField: group,
+			}); err != nil {
+				return nil, errors.Wrap(err, "list service accounts for user group")
+			}
+			for idx := range list.Items {
+				sa := list.Items[idx]
+				saKey := libClient.ObjectKeyFromObject(&sa)
+				serviceAccounts[saKey.String()] = sa
+			}
+		}
+		for k := range serviceAccounts {
+			sa := serviceAccounts[k]
+			_, err := getUserClient(ctx, internalClient.Scheme(), ra, withServiceAccount(&sa))
+			if err == nil {
+				// Note: At present, we never return the user-specific client. We always
+				// return the internal client so that most operations are performed by a
+				// single client with a built-in cache.
+				return internalClient, nil
+			}
+			if !apierrors.IsForbidden(err) {
+				return nil, errors.Wrap(err, "get service account specific client")
+			}
+		}
+		return nil, newForbiddenError(ra)
 	}
 
 	// If we get to here, we're dealing with a user who "authenticated" by just
@@ -545,28 +595,15 @@ func getAuthorizedClient(
 
 	// Calling getUserClient will build a user-specific client and conduct a
 	// SelfSubjectAccessReview. If the review succeeds, we'll have obtained a
-	// client that can perform the desired operation. If the review fails, the
-	// returned client will be nil.
-	client, err := getUserClient(
+	// client that can perform the desired operation.
+	_, err := getUserClient(
 		ctx,
 		internalClient.Scheme(),
-		userInfo.BearerToken,
-		authv1.ResourceAttributes{
-			Verb:        verb,
-			Group:       gvr.Group,
-			Version:     gvr.Version,
-			Resource:    gvr.Resource,
-			Subresource: subresource,
-			Namespace:   key.Namespace,
-			Name:        key.Name,
-		},
+		ra,
+		withBearerToken(userInfo.BearerToken),
 	)
 	if err != nil {
-		return nil,
-			errors.Wrap(err, "error getting user-specific Kubernetes client")
-	}
-	if client == nil {
-		return nil, errors.New("not allowed")
+		return nil, errors.Wrap(err, "get user-specific client")
 	}
 	// Note: At present, we never return the user-specific client. We always
 	// return the internal client so that most operations are performed by a
@@ -574,29 +611,62 @@ func getAuthorizedClient(
 	return internalClient, nil
 }
 
+type userClientOption func(*userClientOptions)
+
+func withBearerToken(bearerToken string) userClientOption {
+	return func(opts *userClientOptions) {
+		opts.bearerToken = bearerToken
+	}
+}
+
+func withServiceAccount(sa *corev1.ServiceAccount) userClientOption {
+	return func(opts *userClientOptions) {
+		opts.impersonationCfg = &rest.ImpersonationConfig{
+			UserName: fmt.Sprintf("system:serviceaccount:%s:%s", sa.GetNamespace(), sa.GetName()),
+			UID:      string(sa.GetUID()),
+		}
+	}
+}
+
+type userClientOptions struct {
+	bearerToken      string
+	impersonationCfg *rest.ImpersonationConfig
+}
+
 // getUserClient creates a user-specific client using the provided scheme and
-// bearer token. It then uses that client to conduct a SelfSubjectAccessReview
-// to determine whether the token provided permits the desired operation. If so,
-// the user-specific client is returned. Otherwise, nil is returned.
+// options. It then uses that client to submit a SelfSubjectAccessReview
+// to determine whether the token provided permits the desired operation.
+// If so, the user-specific client is returned.
+//
+//nolint:unparam
 func getUserClient(
 	ctx context.Context,
 	scheme *runtime.Scheme,
-	bearerToken string,
-	resourceAttrs authv1.ResourceAttributes,
+	ra authv1.ResourceAttributes,
+	opts ...userClientOption,
 ) (libClient.Client, error) {
 	cfg, err := GetRestConfig(ctx, os.Getenv("KUBECONFIG"))
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting REST config")
+		return nil, errors.Wrap(err, "get REST config")
 	}
 
-	// Tweak the REST config...
-	cfg.BearerToken = bearerToken
-	// These MUST be blanked out because they all seem to take precedence over the
-	// cfg.BearerToken field.
-	// TODO: Are there more things to blank out here?
-	cfg.BearerTokenFile = ""
-	cfg.CertData = nil
-	cfg.CertFile = ""
+	var opt userClientOptions
+	for _, apply := range opts {
+		apply(&opt)
+	}
+
+	if opt.bearerToken != "" {
+		cfg.BearerToken = opt.bearerToken
+		// These MUST be blanked out because they all seem to take precedence over the
+		// cfg.BearerToken field.
+		// TODO: Are there more things to blank out here?
+		cfg.BearerTokenFile = ""
+		cfg.CertData = nil
+		cfg.CertFile = ""
+	}
+	if opt.impersonationCfg != nil {
+		cfg.Impersonate = *opt.impersonationCfg
+	}
 
 	userClient, err := libClient.New(
 		cfg,
@@ -605,19 +675,35 @@ func getUserClient(
 		},
 	)
 	if err != nil {
-		return nil,
-			errors.Wrap(err, "error creating user-specific Kubernetes client")
+		return nil, errors.Wrap(err, "create user-specific Kubernetes client")
 	}
+
 	ssar := &authv1.SelfSubjectAccessReview{
 		Spec: authv1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &resourceAttrs,
+			ResourceAttributes: &ra,
 		},
 	}
-	if err = userClient.Create(ctx, ssar); err != nil {
-		return nil, errors.Wrap(err, "error conducting SelfSubjectAccessReview")
+	if err := userClient.Create(ctx, ssar); err != nil {
+		return nil, errors.Wrap(err, "submit SelfSubjectAccessReview")
 	}
 	if ssar.Status.Allowed {
 		return userClient, nil
 	}
-	return nil, nil
+	return nil, newForbiddenError(ra)
+}
+
+func newForbiddenError(ra authv1.ResourceAttributes) error {
+	return apierrors.NewForbidden(
+		schema.GroupResource{ /* explicitly empty */ },
+		ra.Name,
+		fmt.Errorf(
+			"%s %s",
+			ra.Verb,
+			schema.GroupVersionResource{
+				Group:    ra.Group,
+				Version:  ra.Version,
+				Resource: ra.Resource,
+			}.String(),
+		),
+	)
 }

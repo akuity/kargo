@@ -3,7 +3,9 @@ package kubeclient
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,6 +28,9 @@ const (
 	StagesByArgoCDApplicationsIndexField = "applications"
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
 	StagesByWarehouseIndexField          = "warehouse"
+
+	ServiceAccountsByGroupIndexField   = "group"
+	ServiceAccountsBySubjectIndexField = "subject"
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -252,4 +257,54 @@ func indexStagesByWarehouse(obj client.Object) []string {
 		return []string{stage.Spec.Subscriptions.Warehouse}
 	}
 	return nil
+}
+
+func IndexServiceAccountsByRBACGroups(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&corev1.ServiceAccount{},
+		ServiceAccountsByGroupIndexField,
+		indexServiceAccountsByRBACGroups,
+	)
+}
+
+func indexServiceAccountsByRBACGroups(obj client.Object) []string {
+	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
+	rawGroups := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyRBACGroups])
+	if rawGroups == "" {
+		return nil
+	}
+	groups := strings.Split(rawGroups, ",")
+	refinedGroups := make([]string, 0, len(groups))
+	for _, g := range groups {
+		if group := strings.TrimSpace(g); group != "" {
+			refinedGroups = append(refinedGroups, group)
+		}
+	}
+	return refinedGroups
+}
+
+func IndexServiceAccountsByRBACSubjects(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&corev1.ServiceAccount{},
+		ServiceAccountsBySubjectIndexField,
+		indexServiceAccountsByRBACSubjects,
+	)
+}
+
+func indexServiceAccountsByRBACSubjects(obj client.Object) []string {
+	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
+	rawGroups := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyRBACSubjects])
+	if rawGroups == "" {
+		return nil
+	}
+	subjects := strings.Split(rawGroups, ",")
+	refinedSubjects := make([]string, 0, len(subjects))
+	for _, s := range subjects {
+		if subject := strings.TrimSpace(s); subject != "" {
+			refinedSubjects = append(refinedSubjects, subject)
+		}
+	}
+	return refinedSubjects
 }

@@ -111,6 +111,14 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 			errors.Wrap(err, "index Freight by Stages for which it has been approved")
 	}
 
+	// Index ServiceAccounts by RBAC Groups
+	if err := kubeclient.IndexServiceAccountsByRBACGroups(ctx, mgr); err != nil {
+		return nil, errors.Wrap(err, "index service accounts by rbac groups")
+	}
+	// Index ServiceAccounts by RBAC Subjects
+	if err := kubeclient.IndexServiceAccountsByRBACSubjects(ctx, mgr); err != nil {
+		return nil, errors.Wrap(err, "index servi ce accounts by rbac subjects")
+	}
 	go func() {
 		if err := mgr.Start(ctx); err != nil {
 			panic(errors.Wrap(err, "start manager"))
