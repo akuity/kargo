@@ -40,6 +40,7 @@ func TestNewReconciler(t *testing.T) {
 }
 
 func TestSyncWarehouse(t *testing.T) {
+	const fakeAlias = "fake-alias"
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	testWarehouse := &kargoapi.Warehouse{
@@ -120,7 +121,7 @@ func TestSyncWarehouse(t *testing.T) {
 					return &kargoapi.Freight{}, nil
 				},
 				getAvailableFreightAliasFn: func(context.Context) (string, error) {
-					return "fake-alias", nil
+					return fakeAlias, nil
 				},
 				createFreightFn: func(
 					context.Context,
@@ -151,7 +152,7 @@ func TestSyncWarehouse(t *testing.T) {
 					return &kargoapi.Freight{}, nil
 				},
 				getAvailableFreightAliasFn: func(context.Context) (string, error) {
-					return "fake-alias", nil
+					return fakeAlias, nil
 				},
 				createFreightFn: func(
 					context.Context,
@@ -183,7 +184,7 @@ func TestSyncWarehouse(t *testing.T) {
 					}, nil
 				},
 				getAvailableFreightAliasFn: func(context.Context) (string, error) {
-					return "fake-alias", nil
+					return fakeAlias, nil
 				},
 				createFreightFn: func(
 					context.Context,
