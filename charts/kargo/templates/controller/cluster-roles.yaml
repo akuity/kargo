@@ -58,6 +58,7 @@ rules:
   - freights/status
   - promotions/status
   - stages/status
+  - warehouses/finalizers
   - warehouses/status
   verbs:
   - update

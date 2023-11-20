@@ -9,12 +9,11 @@ import (
 
 const ShardLabelKey = "kargo.akuity.io/shard"
 
-// GetShardPredicate constructs a predicate used as an event filter for Stage
-// and Promotion reconcilers. If a non-empty shard name is passed to this
-// function, it returns a predicate that matches ONLY Stages and Promotions
-// labeled for that shard. If an empty shard name is passed to this function,
-// it returns a predicate that matches ONLY Stages and Promotions that are NOT
-// labeled for any shard.
+// GetShardPredicate constructs a predicate used as an event filter for various
+// reconcilers. If a non-empty shard name is passed to this function, it returns
+// a predicate that matches ONLY resources labeled for that shard. If an empty
+// shard name is passed to this function, it returns a predicate that matches
+// ONLY resources that are NOT labeled for ANY shard.
 func GetShardPredicate(shard string) (predicate.Predicate, error) {
 	if shard == "" {
 		pred, err := predicate.LabelSelectorPredicate(
