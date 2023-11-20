@@ -9,11 +9,8 @@ import { NodeType, NodesRepoType } from '../types';
 
 import * as styles from './repo-node.module.less';
 
-const MAX_CHARS = 19;
-
 type Props = {
   nodeData: NodesRepoType;
-  height: number;
   children?: React.ReactNode;
 };
 
@@ -31,13 +28,15 @@ const ico = {
   [NodeType.REPO_CHART]: faAnchor
 };
 
-export const RepoNode = ({ nodeData, height, children }: Props) => {
+export const RepoNode = ({ nodeData, children }: Props) => {
   const type = nodeData.type;
   const value = type === NodeType.REPO_CHART ? nodeData.data.registryUrl : nodeData.data.repoUrl;
   return (
-    <div style={{ height }} className={styles.node}>
-      <h3 className='flex justify-between'>
-        <span>{nodeData.warehouseName}</span>
+    <div className={styles.node}>
+      <h3 className='flex justify-between gap-2'>
+        <div className='text-ellipsis whitespace-nowrap overflow-hidden'>
+          {nodeData.warehouseName}
+        </div>
         {nodeData.type !== NodeType.REPO_CHART && <FontAwesomeIcon icon={faBuilding} />}
       </h3>
       <div className={styles.body}>
@@ -54,8 +53,7 @@ export const RepoNode = ({ nodeData, height, children }: Props) => {
               target='_blank'
               rel='noreferrer'
             >
-              {value.length > MAX_CHARS && '...'}
-              {value.substring(value.length - MAX_CHARS)}
+              {value}
             </a>
           </Tooltip>
         </div>

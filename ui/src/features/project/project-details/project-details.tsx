@@ -152,6 +152,7 @@ export const ProjectDetails = () => {
                 ? NodeType.REPO_IMAGE
                 : NodeType.REPO_GIT;
             n.push({
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               data: sub.chart || sub.image || sub.git || ({} as any),
               stageName: stage.metadata?.name || '',
               warehouseName: cur.metadata?.name || '',
@@ -379,7 +380,7 @@ export const ProjectDetails = () => {
                         />
                       </>
                     ) : (
-                      <RepoNode nodeData={node} height={node.height}>
+                      <RepoNode nodeData={node}>
                         <div className='flex w-full'>
                           <Button
                             onClick={() =>
