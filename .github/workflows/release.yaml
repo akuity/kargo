@@ -238,10 +238,9 @@ jobs:
         CF_DISTRIBUTION_ID: ${{ secrets.CF_DISTRIBUTION_ID }}
         VERSION: ${{ needs.publish-image.outputs.unstable-version }}
       run: |
-        aws s3 sync "./bin/kargo-cli/${VERSION}" "s3://kargo-release/kargo-cli/${VERSION}" --acl public-read
-
+        aws s3 sync "./bin/kargo-cli/${VERSION}" "s3://kargo-release/kargo-cli/${VERSION}"
         printf "${VERSION}" > ./bin/kargo-cli/unstable.txt
-        aws s3 cp ./bin/kargo-cli/unstable.txt s3://kargo-release/kargo-cli/unstable.txt --acl public-read
+        aws s3 cp ./bin/kargo-cli/unstable.txt s3://kargo-release/kargo-cli/unstable.txt
         aws cloudfront create-invalidation \
           --distribution-id="${CF_DISTRIBUTION_ID}" \
           --paths "/kargo-cli/unstable.txt"
