@@ -16,7 +16,7 @@
   "devDependencies": {
     "@openapi-contrib/openapi-schema-to-json-schema": "^5.1.0",
     "@types/json-schema": "^7.0.15",
-    "@types/node": "^20.9.0",
+    "@types/node": "^20.9.2",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
@@ -54,7 +54,7 @@
     "@monaco-editor/react": "^4.6.0",
     "@tanstack/react-query": "^5.8.4",
     "@types/dagre": "^0.7.52",
-    "antd": "^5.11.1",
+    "antd": "^5.11.2",
     "classnames": "^2.3.2",
     "dagre": "^0.8.5",
     "date-fns": "^2.30.0",
