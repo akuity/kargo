@@ -61,6 +61,7 @@ service KargoService {
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
   rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
   rpc ApproveFreight(ApproveFreightRequest) returns (ApproveFreightResponse);
+  rpc UpdateFreightAlias(UpdateFreightAliasRequest) returns (UpdateFreightAliasResponse);
 
   /* Warehouse APIs */
 
@@ -437,6 +438,16 @@ message DeleteFreightResponse {
 
 message FreightList {
   repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
+}
+
+message UpdateFreightAliasRequest {
+  string project = 1;
+  string freight = 2;
+  string alias = 3;
+}
+
+message UpdateFreightAliasResponse {
+  /* explicitly empty */
 }
 
 message ListWarehousesRequest {
