@@ -193,6 +193,11 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "index Stages by upstream Stages")
 	}
 
+	// Index Stages by Warehouse
+	if err := kubeclient.IndexStagesByWarehouse(ctx, kargoMgr); err != nil {
+		return errors.Wrap(err, "index Stages by Warehouse")
+	}
+
 	shardPredicate, err := controller.GetShardPredicate(shardName)
 	if err != nil {
 		return errors.Wrap(err, "error creating shard predicate")
@@ -231,19 +236,27 @@ func SetupReconcilerWithManager(
 
 	// Watch Freight that has been marked as verified in a Stage and enqueue
 	// downstream Stages
-	downstreamEvtHandler := &EnqueueDownstreamStagesHandler{
+	verifiedFreightHandler := &verifiedFreightEventHandler{
 		kargoClient: kargoMgr.GetClient(),
 		logger:      logger,
 	}
-	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, downstreamEvtHandler); err != nil {
+	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, verifiedFreightHandler); err != nil {
 		return errors.Wrap(err, "unable to watch Freight")
 	}
 
-	stageEvtHandler := &EnqueueApprovedStagesHandler{
+	approveFreightHandler := &approvedFreightEventHandler{
 		kargoClient: kargoMgr.GetClient(),
 		logger:      logger,
 	}
-	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, stageEvtHandler); err != nil {
+	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, approveFreightHandler); err != nil {
+		return errors.Wrap(err, "unable to watch Freight")
+	}
+
+	createdFreightEventHandler := &createdFreightEventHandler{
+		kargoClient: kargoMgr.GetClient(),
+		logger:      logger,
+	}
+	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, createdFreightEventHandler); err != nil {
 		return errors.Wrap(err, "unable to watch Freight")
 	}
 
