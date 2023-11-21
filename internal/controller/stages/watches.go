@@ -15,16 +15,16 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
-// EnqueueDownstreamStagesHandler is an event handler that enqueues downstream
-// Stages when a Freight is marked as verified in a Stage, so that those Stages
+// verifiedFreightEventHandler is an event handler that enqueues downstream
+// Stages when Freight is marked as verified in a Stage, so that those Stages
 // can reconcile and possibly create a Promotion if auto-promotion is enabled.
-type EnqueueDownstreamStagesHandler struct {
+type verifiedFreightEventHandler struct {
 	logger      *log.Entry
 	kargoClient client.Client
 }
 
 // Create implements EventHandler.
-func (e *EnqueueDownstreamStagesHandler) Create(
+func (v *verifiedFreightEventHandler) Create(
 	event.CreateEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -32,7 +32,7 @@ func (e *EnqueueDownstreamStagesHandler) Create(
 }
 
 // Delete implements EventHandler.
-func (e *EnqueueDownstreamStagesHandler) Delete(
+func (v *verifiedFreightEventHandler) Delete(
 	event.DeleteEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -40,7 +40,7 @@ func (e *EnqueueDownstreamStagesHandler) Delete(
 }
 
 // Generic implements EventHandler.
-func (e *EnqueueDownstreamStagesHandler) Generic(
+func (v *verifiedFreightEventHandler) Generic(
 	event.GenericEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -48,29 +48,29 @@ func (e *EnqueueDownstreamStagesHandler) Generic(
 }
 
 // Update implements EventHandler.
-func (e *EnqueueDownstreamStagesHandler) Update(
+func (v *verifiedFreightEventHandler) Update(
 	evt event.UpdateEvent,
 	wq workqueue.RateLimitingInterface,
 ) {
 	if evt.ObjectOld == nil || evt.ObjectNew == nil {
-		e.logger.Errorf("Update event has no old or new object to update: %v", evt)
+		v.logger.Errorf("Update event has no old or new object to update: %v", evt)
 		return
 	}
 	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
 	if !ok {
-		e.logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
+		v.logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
 		return
 	}
 	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
 	if !ok {
-		e.logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
+		v.logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
 		return
 	}
 	newlyVerifiedStages := getNewlyVerifiedStages(oldFreight, newFreight)
 	downstreamStages := map[string]struct{}{}
 	for _, newlyVerifiedStage := range newlyVerifiedStages {
 		stages := kargoapi.StageList{}
-		if err := e.kargoClient.List(
+		if err := v.kargoClient.List(
 			context.TODO(),
 			&stages,
 			&client.ListOptions{
@@ -81,7 +81,7 @@ func (e *EnqueueDownstreamStagesHandler) Update(
 				),
 			},
 		); err != nil {
-			e.logger.Errorf(
+			v.logger.Errorf(
 				"Failed list Stages downstream from Stage %v in namespace %q",
 				evt.ObjectOld,
 				newFreight.Namespace,
@@ -101,7 +101,7 @@ func (e *EnqueueDownstreamStagesHandler) Update(
 				},
 			},
 		)
-		e.logger.WithFields(log.Fields{
+		v.logger.WithFields(log.Fields{
 			"namespace": newFreight.Namespace,
 			"stage":     downStreamStage,
 		}).Debug("enqueued downstream Stage for reconciliation")
@@ -118,16 +118,16 @@ func getNewlyVerifiedStages(old, new *kargoapi.Freight) []string {
 	return stages
 }
 
-// EnqueueApprovedStagesHandler is an event handler that enqueues Stages when
+// approvedFreightEventHandler is an event handler that enqueues Stages when
 // Freight is marked as approved for them, so that those Stages can reconcile
 // and possibly create a Promotion if auto-promotion is enabled.
-type EnqueueApprovedStagesHandler struct {
+type approvedFreightEventHandler struct {
 	logger      *log.Entry
 	kargoClient client.Client
 }
 
 // Create implements EventHandler.
-func (e *EnqueueApprovedStagesHandler) Create(
+func (a *approvedFreightEventHandler) Create(
 	event.CreateEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -135,7 +135,7 @@ func (e *EnqueueApprovedStagesHandler) Create(
 }
 
 // Delete implements EventHandler.
-func (e *EnqueueApprovedStagesHandler) Delete(
+func (a *approvedFreightEventHandler) Delete(
 	event.DeleteEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -143,7 +143,7 @@ func (e *EnqueueApprovedStagesHandler) Delete(
 }
 
 // Generic implements EventHandler.
-func (e *EnqueueApprovedStagesHandler) Generic(
+func (a *approvedFreightEventHandler) Generic(
 	event.GenericEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -151,22 +151,22 @@ func (e *EnqueueApprovedStagesHandler) Generic(
 }
 
 // Update implements EventHandler.
-func (e *EnqueueApprovedStagesHandler) Update(
+func (a *approvedFreightEventHandler) Update(
 	evt event.UpdateEvent,
 	wq workqueue.RateLimitingInterface,
 ) {
 	if evt.ObjectOld == nil || evt.ObjectNew == nil {
-		e.logger.Errorf("Update event has no old or new object to update: %v", evt)
+		a.logger.Errorf("Update event has no old or new object to update: %v", evt)
 		return
 	}
 	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
 	if !ok {
-		e.logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
+		a.logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
 		return
 	}
 	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
 	if !ok {
-		e.logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
+		a.logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
 		return
 	}
 	newlyApprovedStages := getNewlyApprovedStages(oldFreight, newFreight)
@@ -179,7 +179,7 @@ func (e *EnqueueApprovedStagesHandler) Update(
 				},
 			},
 		)
-		e.logger.WithFields(log.Fields{
+		a.logger.WithFields(log.Fields{
 			"namespace": newFreight.Namespace,
 			"stage":     stage,
 		}).Debug("enqueued Stage fir reconciliation")
@@ -194,4 +194,88 @@ func getNewlyApprovedStages(old, new *kargoapi.Freight) []string {
 		}
 	}
 	return stages
+}
+
+// createdFreightEventHandler is an event handler that enqueues Stages
+// subscribed to a Freight's Warehouse whenever new Freight is created, so that
+// those Stages can reconcile and possibly create a Promotion if auto-promotion
+// is enabled.
+type createdFreightEventHandler struct {
+	logger      *log.Entry
+	kargoClient client.Client
+}
+
+// Create implements EventHandler.
+func (c *createdFreightEventHandler) Create(
+	evt event.CreateEvent,
+	wq workqueue.RateLimitingInterface,
+) {
+	freight := evt.Object.(*kargoapi.Freight) // nolint: forcetypeassert
+	// TODO: Get warehouse name freight.OwnerReferences
+	if len(freight.OwnerReferences) != 1 {
+		c.logger.Warnf(
+			"Expected Freight %q to have exactly 1 OwnerReference, got %d",
+			freight.Name,
+			len(freight.OwnerReferences),
+		)
+		return
+	}
+	warehouse := freight.OwnerReferences[0].Name
+	stages := kargoapi.StageList{}
+	if err := c.kargoClient.List(
+		context.TODO(),
+		&stages,
+		&client.ListOptions{
+			Namespace: freight.Namespace,
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.StagesByWarehouseIndexField,
+				warehouse,
+			),
+		},
+	); err != nil {
+		c.logger.Errorf(
+			"Failed list Stages subscribed to Warehouse %q in namespace %q",
+			warehouse,
+			freight.Namespace,
+		)
+		return
+	}
+	for _, stage := range stages.Items {
+		wq.Add(
+			reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: freight.Namespace,
+					Name:      stage.Name,
+				},
+			},
+		)
+		c.logger.WithFields(log.Fields{
+			"namespace": freight.Namespace,
+			"stage":     stage.Name,
+		}).Debug("enqueued Stage for reconciliation")
+	}
+}
+
+// Delete implements EventHandler.
+func (c *createdFreightEventHandler) Delete(
+	event.DeleteEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Generic implements EventHandler.
+func (c *createdFreightEventHandler) Generic(
+	event.GenericEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Update implements EventHandler.
+func (c *createdFreightEventHandler) Update(
+	event.UpdateEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
 }

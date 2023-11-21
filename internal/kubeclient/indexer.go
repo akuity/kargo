@@ -25,6 +25,7 @@ const (
 	PromotionPoliciesByStageIndexField   = "stage"
 	StagesByArgoCDApplicationsIndexField = "applications"
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
+	StagesByWarehouseIndexField          = "warehouse"
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -234,4 +235,21 @@ func indexStagesByUpstreamStages(obj client.Object) []string {
 		upstreamStages[i] = upstreamStage.Name
 	}
 	return upstreamStages
+}
+
+func IndexStagesByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		StagesByWarehouseIndexField,
+		indexStagesByWarehouse,
+	)
+}
+
+func indexStagesByWarehouse(obj client.Object) []string {
+	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+	if stage.Spec.Subscriptions.Warehouse != "" {
+		return []string{stage.Spec.Subscriptions.Warehouse}
+	}
+	return nil
 }
