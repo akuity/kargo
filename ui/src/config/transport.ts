@@ -6,15 +6,39 @@ import { paths } from './paths';
 
 export const authTokenKey = 'auth_token';
 
-const errorHandler: Interceptor = (next) => async (req) => {
+const logout = () => {
+  localStorage.removeItem(authTokenKey);
+  window.location.replace(paths.login);
+};
+
+const authHandler: Interceptor = (next) => (req) => {
+  const token = localStorage.getItem(authTokenKey);
+  let isTokenExpired;
+
   try {
-    const token = localStorage.getItem(authTokenKey);
+    isTokenExpired = token && Date.now() >= JSON.parse(atob(token.split('.')[1])).exp * 1000;
+  } catch (err) {
+    logout();
 
-    if (token) {
-      req.header.append('Authorization', `Bearer ${token}`);
-    }
+    throw new ConnectError('Invalid token');
+  }
 
-    return await next(req);
+  if (isTokenExpired) {
+    logout();
+
+    throw new ConnectError('Token expired');
+  }
+
+  if (token) {
+    req.header.append('Authorization', `Bearer ${token}`);
+  }
+
+  return next(req);
+};
+
+const errorHandler: Interceptor = (next) => (req) => {
+  try {
+    return next(req);
   } catch (err) {
     if (req.signal.aborted) {
       throw err;
@@ -24,9 +48,7 @@ const errorHandler: Interceptor = (next) => async (req) => {
     notification.error({ message: errorMessage, placement: 'bottomRight' });
 
     if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
-      localStorage.removeItem(authTokenKey);
-
-      setTimeout(() => window.location.replace(paths.login), 3000);
+      logout();
     }
 
     throw err;
@@ -35,5 +57,5 @@ const errorHandler: Interceptor = (next) => async (req) => {
 
 export const transport = createConnectTransport({
   baseUrl: '',
-  interceptors: [errorHandler]
+  interceptors: [authHandler, errorHandler]
 });
