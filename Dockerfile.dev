@@ -6,7 +6,7 @@ ARG BUF_VERSION=v1.26.1
 ARG CONTROLLER_GEN_VERSION=v0.13.0
 ARG GOLANGCI_LINT_VERSION=1.54.2
 ARG HELM_VERSION=v3.12.3
-ARG NODE_MAJOR=18
+ARG NODE_MAJOR=20
 
 RUN go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
     && go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} \
