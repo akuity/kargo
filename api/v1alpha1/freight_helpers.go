@@ -31,22 +31,25 @@ func GetFreight(
 	return &freight, nil
 }
 
-// GetQualifiedFreight returns a pointer to the Freight resource specified by
-// the namespacedName argument if it is found and EITHER no Stages were
-// specified in the function call OR the Freight has qualified for ANY of the
-// specified Stages. If all other cases, nil is returned instead.
+// GetAvailableFreight returns a pointer to the Freight resource specified by
+// the namespacedName argument if it is found and:
+//
+//  1. No upstreamStages are specified
+//     OR
+//  2. The Freight has has been verified in ANY of the specified upstream stages
+//     OR
+//  3. The Freight is approved for the specified stage
 //
 // Note: The rationale for returning the found Freight (if any) instead of nil
-// when no Stages are specified is that the Stages provided are typically the
-// names of Stages UPSTREAM from some other Stage. i.e. The typical use for this
-// function is to answer whether a piece of Freight has qualified for any of a
-// given Stage's UPSTREAM Stages. Some Stages have no upstream Stages, so any
-// Freight that is found is implicitly qualified.
-func GetQualifiedFreight(
+// when no upstream stages are specified is that some Stages have no upstream
+// Stages (e.g. a Stage that subscribes to a Warehouse), so any Freight that is
+// found under those conditions is implicitly available.
+func GetAvailableFreight(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-	stages []string,
+	upstreamStages []string,
+	stage string,
 ) (*Freight, error) {
 	freight, err := GetFreight(ctx, c, namespacedName)
 	if err != nil {
@@ -55,14 +58,17 @@ func GetQualifiedFreight(
 	if freight == nil {
 		return nil, nil
 	}
-	if len(stages) == 0 {
+	if len(upstreamStages) == 0 {
 		return freight, nil
 	}
-	for qualifiedStage := range freight.Status.Qualifications {
-		for _, stage := range stages {
-			if qualifiedStage == stage {
-				return freight, nil
-			}
+	for _, stage := range upstreamStages {
+		if _, ok := freight.Status.VerifiedIn[stage]; ok {
+			return freight, nil
+		}
+	}
+	if stage != "" {
+		if _, ok := freight.Status.ApprovedFor[stage]; ok {
+			return freight, nil
 		}
 	}
 	return nil, nil

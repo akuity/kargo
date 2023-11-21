@@ -220,10 +220,14 @@ message Freight {
 }
 
 message FreightStatus {
-  map<string, Qualification> qualifications = 1;
+  map<string, VerifiedStage> verified_in = 1;
+  map<string, ApprovedStage> approved_for = 2;
 }
 
-message Qualification {
+message VerifiedStage {
+}
+
+message ApprovedStage {
 }
 
 message SimpleFreight {

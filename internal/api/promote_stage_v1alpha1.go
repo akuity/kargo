@@ -46,13 +46,13 @@ func (s *server) PromoteStage(
 		)
 	}
 
-	// Get the specified Freight. Expect a nil if it is either not found or is
-	// not qualified for any of the upstream Stages. Errors are internal problems.
+	// Get the specified Freight. Expect a nil if it is not found or not available
+	// to this Stage. Errors are indicative only of internal problems.
 	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
 	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
 		upstreamStages[i] = upstreamStage.Name
 	}
-	if freight, err := s.getQualifiedFreightFn(
+	if freight, err := s.getAvailableFreightFn(
 		ctx,
 		s.client,
 		types.NamespacedName{
@@ -60,13 +60,14 @@ func (s *server) PromoteStage(
 			Name:      req.Msg.GetFreight(),
 		},
 		upstreamStages,
+		stage.Name,
 	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	} else if freight == nil {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			errors.Errorf(
-				"no qualified Freight %q found in namespace %q",
+				"no available Freight %q found in namespace %q",
 				req.Msg.GetFreight(),
 				req.Msg.GetProject(),
 			),

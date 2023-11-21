@@ -171,6 +171,7 @@ func TestQueryFreight(t *testing.T) {
 				getAvailableFreightForStageFn: func(
 					context.Context,
 					string,
+					string,
 					kargoapi.Subscriptions,
 				) ([]kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
@@ -425,7 +426,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 			},
 		},
 		{
-			name: "error getting Freight from upstream Stages",
+			name: "error getting Freight verified in upstream Stages",
 			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{
 					{
@@ -434,7 +435,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 				},
 			},
 			server: &server{
-				getFreightQualifiedForUpstreamStagesFn: func(
+				getVerifiedFreightFn: func(
 					context.Context,
 					string,
 					[]kargoapi.StageSubscription,
@@ -444,11 +445,16 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 			},
 			assertions: func(f []kargoapi.Freight, err error) {
 				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				require.Contains(
+					t,
+					err.Error(),
+					"error listing Freight verified in Stages upstream from Stage",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
 		{
-			name: "success getting Freight from upstream Stages",
+			name: "error getting Freight approved for Stage",
 			subs: kargoapi.Subscriptions{
 				UpstreamStages: []kargoapi.StageSubscription{
 					{
@@ -457,7 +463,42 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 				},
 			},
 			server: &server{
-				getFreightQualifiedForUpstreamStagesFn: func(
+				getVerifiedFreightFn: func(
+					context.Context,
+					string,
+					[]kargoapi.StageSubscription,
+				) ([]kargoapi.Freight, error) {
+					return nil, nil
+				},
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(f []kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error listing Freight approved for Stage",
+				)
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "success getting available Freight",
+			subs: kargoapi.Subscriptions{
+				UpstreamStages: []kargoapi.StageSubscription{
+					{
+						Name: "fake-stage",
+					},
+				},
+			},
+			server: &server{
+				getVerifiedFreightFn: func(
 					context.Context,
 					string,
 					[]kargoapi.StageSubscription,
@@ -468,12 +509,23 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 								Name: "fake-freight",
 							},
 						},
+					}, nil
+				},
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{
 						{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "another fake-freight",
 							},
 						},
-					}, nil
+					}
+					return nil
 				},
 			},
 			assertions: func(freight []kargoapi.Freight, err error) {
@@ -488,6 +540,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 				testCase.server.getAvailableFreightForStage(
 					context.Background(),
 					"fake-project",
+					"fake-stage",
 					testCase.subs,
 				),
 			)
@@ -562,7 +615,7 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 	}
 }
 
-func TestGetFreightQualifiedForUpstreamStages(t *testing.T) {
+func TestGetVerifiedFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
 		server     *server
@@ -585,7 +638,7 @@ func TestGetFreightQualifiedForUpstreamStages(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"error listing Freight qualified for Stage",
+					"error listing Freight verified in Stage",
 				)
 			},
 		},
@@ -624,7 +677,7 @@ func TestGetFreightQualifiedForUpstreamStages(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.server.getFreightQualifiedForUpstreamStages(
+				testCase.server.getVerifiedFreight(
 					context.Background(),
 					"fake-project",
 					[]kargoapi.StageSubscription{

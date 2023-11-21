@@ -1739,9 +1739,14 @@ export class Freight extends Message<Freight> {
  */
 export class FreightStatus extends Message<FreightStatus> {
   /**
-   * @generated from field: map<string, github.com.akuity.kargo.pkg.api.v1alpha1.Qualification> qualifications = 1;
+   * @generated from field: map<string, github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage> verified_in = 1;
    */
-  qualifications: { [key: string]: Qualification } = {};
+  verifiedIn: { [key: string]: VerifiedStage } = {};
+
+  /**
+   * @generated from field: map<string, github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage> approved_for = 2;
+   */
+  approvedFor: { [key: string]: ApprovedStage } = {};
 
   constructor(data?: PartialMessage<FreightStatus>) {
     super();
@@ -1751,7 +1756,8 @@ export class FreightStatus extends Message<FreightStatus> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "qualifications", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: Qualification} },
+    { no: 1, name: "verified_in", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: VerifiedStage} },
+    { no: 2, name: "approved_for", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: ApprovedStage} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightStatus {
@@ -1772,33 +1778,64 @@ export class FreightStatus extends Message<FreightStatus> {
 }
 
 /**
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Qualification
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage
  */
-export class Qualification extends Message<Qualification> {
-  constructor(data?: PartialMessage<Qualification>) {
+export class VerifiedStage extends Message<VerifiedStage> {
+  constructor(data?: PartialMessage<VerifiedStage>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Qualification";
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Qualification {
-    return new Qualification().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerifiedStage {
+    return new VerifiedStage().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Qualification {
-    return new Qualification().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerifiedStage {
+    return new VerifiedStage().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Qualification {
-    return new Qualification().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerifiedStage {
+    return new VerifiedStage().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Qualification | PlainMessage<Qualification> | undefined, b: Qualification | PlainMessage<Qualification> | undefined): boolean {
-    return proto3.util.equals(Qualification, a, b);
+  static equals(a: VerifiedStage | PlainMessage<VerifiedStage> | undefined, b: VerifiedStage | PlainMessage<VerifiedStage> | undefined): boolean {
+    return proto3.util.equals(VerifiedStage, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage
+ */
+export class ApprovedStage extends Message<ApprovedStage> {
+  constructor(data?: PartialMessage<ApprovedStage>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ApprovedStage {
+    return new ApprovedStage().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ApprovedStage {
+    return new ApprovedStage().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ApprovedStage {
+    return new ApprovedStage().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ApprovedStage | PlainMessage<ApprovedStage> | undefined, b: ApprovedStage | PlainMessage<ApprovedStage> | undefined): boolean {
+    return proto3.util.equals(ApprovedStage, a, b);
   }
 }
 

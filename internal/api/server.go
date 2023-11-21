@@ -55,11 +55,12 @@ type server struct {
 		client.Client,
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
-	getQualifiedFreightFn func(
+	getAvailableFreightFn func(
 		ctx context.Context,
 		client client.Client,
 		namespacedName types.NamespacedName,
-		stages []string,
+		upstreamStages []string,
+		stage string,
 	) (*kargoapi.Freight, error)
 
 	// Common Promotions:
@@ -81,6 +82,7 @@ type server struct {
 	getAvailableFreightForStageFn func(
 		ctx context.Context,
 		project string,
+		stage string,
 		subs kargoapi.Subscriptions,
 	) ([]kargoapi.Freight, error)
 	getFreightFromWarehouseFn func(
@@ -88,7 +90,7 @@ type server struct {
 		project string,
 		warehouse string,
 	) ([]kargoapi.Freight, error)
-	getFreightQualifiedForUpstreamStagesFn func(
+	getVerifiedFreightFn func(
 		ctx context.Context,
 		project string,
 		stageSubs []kargoapi.StageSubscription,
@@ -110,18 +112,17 @@ func NewServer(
 		cfg:    cfg,
 		client: kubeClient,
 	}
-	// TODO: KR: Test that these all get set
 	s.validateProjectFn = s.validateProject
 	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = kargoapi.GetStage
-	s.getQualifiedFreightFn = kargoapi.GetQualifiedFreight
+	s.getAvailableFreightFn = kargoapi.GetAvailableFreight
 	s.createPromotionFn = kubeClient.Create
 	s.findStageSubscribersFn = s.findStageSubscribers
 	s.listFreightFn = kubeClient.List
 	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage
 	s.getFreightFromWarehouseFn = s.getFreightFromWarehouse
-	s.getFreightQualifiedForUpstreamStagesFn =
-		s.getFreightQualifiedForUpstreamStages
+	s.getVerifiedFreightFn =
+		s.getVerifiedFreight
 	s.parseManifestFn = manifest.NewParser(kubeClient.Scheme())
 	return s
 }

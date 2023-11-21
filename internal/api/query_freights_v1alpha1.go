@@ -71,6 +71,7 @@ func (s *server) QueryFreight(
 		freight, err = s.getAvailableFreightForStageFn(
 			ctx,
 			req.Msg.GetProject(),
+			req.Msg.GetStage(),
 			*stage.Spec.Subscriptions,
 		)
 		if err != nil {
@@ -109,19 +110,77 @@ func (s *server) QueryFreight(
 	}), nil
 }
 
+// getAvailableFreightForStage gets all Freight available to the specified Stage
+// for any reason. This includes:
+//
+// 1. Any Freight from a Warehouse that the Stage subscribes to directly
+// 2. Any Freight that is verified in any upstream Stages
+// 3. Any Freight that is approved for the Stage
 func (s *server) getAvailableFreightForStage(
 	ctx context.Context,
 	project string,
+	stage string,
 	subs kargoapi.Subscriptions,
 ) ([]kargoapi.Freight, error) {
 	if subs.Warehouse != "" {
 		return s.getFreightFromWarehouseFn(ctx, project, subs.Warehouse)
 	}
-	return s.getFreightQualifiedForUpstreamStagesFn(
+	verifiedFreight, err := s.getVerifiedFreightFn(
 		ctx,
 		project,
 		subs.UpstreamStages,
 	)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"error listing Freight verified in Stages upstream from Stage %q in "+
+				"namespace %q",
+			stage,
+			project,
+		)
+	}
+	var approvedFreight kargoapi.FreightList
+	if err := s.listFreightFn(
+		ctx,
+		&approvedFreight,
+		&client.ListOptions{
+			Namespace: project,
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.FreightApprovedForStagesIndexField,
+				stage,
+			),
+		},
+	); err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"error listing Freight approved for Stage %q in namespace %q",
+			stage,
+			project,
+		)
+	}
+	if len(verifiedFreight) == 0 &&
+		len(approvedFreight.Items) == 0 {
+		return nil, nil
+	}
+	// De-dupe
+	availableFreightMap := make(
+		map[string]kargoapi.Freight,
+		len(verifiedFreight)+len(approvedFreight.Items),
+	)
+	for _, freight := range verifiedFreight {
+		availableFreightMap[freight.Name] = freight
+	}
+	for _, freight := range approvedFreight.Items {
+		availableFreightMap[freight.Name] = freight
+	}
+	// Turn the map to a list
+	availableFreight := make([]kargoapi.Freight, len(availableFreightMap))
+	var i int
+	for _, freight := range availableFreightMap {
+		availableFreight[i] = freight
+		i++
+	}
+	return availableFreight, nil
 }
 
 func (s *server) getFreightFromWarehouse(
@@ -149,14 +208,14 @@ func (s *server) getFreightFromWarehouse(
 	)
 }
 
-func (s *server) getFreightQualifiedForUpstreamStages(
+func (s *server) getVerifiedFreight(
 	ctx context.Context,
 	project string,
 	stageSubs []kargoapi.StageSubscription,
 ) ([]kargoapi.Freight, error) {
-	// Start by building a de-duped map of Freight qualified for ANY upstream
-	// Stage
-	qualifiedFreight := map[string]kargoapi.Freight{}
+	// Start by building a de-duped map of Freight verified in any upstream
+	// Stage(s)
+	verifiedFreight := map[string]kargoapi.Freight{}
 	for _, stageSub := range stageSubs {
 		var freight kargoapi.FreightList
 		if err := s.listFreightFn(
@@ -165,33 +224,33 @@ func (s *server) getFreightQualifiedForUpstreamStages(
 			&client.ListOptions{
 				Namespace: project,
 				FieldSelector: fields.OneTermEqualSelector(
-					kubeclient.FreightByQualifiedStagesIndexField,
+					kubeclient.FreightByVerifiedStagesIndexField,
 					stageSub.Name,
 				),
 			},
 		); err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error listing Freight qualified for Stage %q in namespace %q",
+				"error listing Freight verified in Stage %q in namespace %q",
 				stageSub.Name,
 				project,
 			)
 		}
 		for _, freight := range freight.Items {
-			qualifiedFreight[freight.Name] = freight
+			verifiedFreight[freight.Name] = freight
 		}
 	}
-	if len(qualifiedFreight) == 0 {
+	if len(verifiedFreight) == 0 {
 		return nil, nil
 	}
 	// Turn the map to a list
-	qualifiedFreightList := make([]kargoapi.Freight, len(qualifiedFreight))
+	verifiedFreightList := make([]kargoapi.Freight, len(verifiedFreight))
 	i := 0
-	for _, freight := range qualifiedFreight {
-		qualifiedFreightList[i] = freight
+	for _, freight := range verifiedFreight {
+		verifiedFreightList[i] = freight
 		i++
 	}
-	return qualifiedFreightList, nil
+	return verifiedFreightList, nil
 }
 
 func groupByImageRepo(

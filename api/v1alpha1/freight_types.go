@@ -89,13 +89,22 @@ type GitCommit struct {
 
 // FreightStatus describes a piece of Freight's most recently observed state.
 type FreightStatus struct {
-	// Qualifications describes the Stages for which this Freight has been
-	// qualified.
-	Qualifications map[string]Qualification `json:"qualifications,omitempty"`
+	// VerifiedIn describes the Stages in which this Freight has been verified
+	// through promotion and subsequent health checks.
+	VerifiedIn map[string]VerifiedStage `json:"verifiedIn,omitempty"`
+	// ApprovedFor describes the Stages for which this Freight has been approved
+	// preemptively/manually by a user. This is useful for hotfixes, where one
+	// might wish to promote a piece of Freight to a given Stage without
+	// transiting the entire pipeline.
+	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty"`
 }
 
-// Qualification describes a Freight's qualification for a Stage.
-type Qualification struct{}
+// VerifiedStage describes a Stage in which Freight has been verified.
+type VerifiedStage struct{}
+
+// ApprovedStage describes a Stage for which Freight has been (manually)
+// approved.
+type ApprovedStage struct{}
 
 //+kubebuilder:object:root=true
 
