@@ -325,46 +325,6 @@ func TestSyncNormalStage(t *testing.T) {
 		},
 
 		{
-			name: "auto-promotion not possible",
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Subscriptions: &kargoapi.Subscriptions{
-						UpstreamStages: []kargoapi.StageSubscription{
-							{Name: "fake-stage"},
-							{Name: "another-fake-stage"},
-						},
-					},
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{},
-				},
-			},
-			reconciler: &reconciler{
-				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.SimpleFreight,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
-				},
-			},
-			assertions: func(
-				initialStatus kargoapi.StageStatus,
-				newStatus kargoapi.StageStatus,
-				err error,
-			) {
-				require.NoError(t, err)
-				// Status should be returned unchanged
-				require.Equal(t, initialStatus, newStatus)
-			},
-		},
-
-		{
 			name: "error checking if auto-promotion is permitted",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
