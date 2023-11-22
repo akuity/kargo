@@ -18,8 +18,6 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-const aliasLabelKey = "kargo.akuity.com/alias"
-
 func newGetFreightCommand(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "freight --project=project [NAME...]",
@@ -70,7 +68,7 @@ kargo get freight --project=my-project my-freight
 					fr := typesv1alpha1.FromFreightProto(f)
 					freightByName[f.GetMetadata().GetName()] = fr
 					if f.GetMetadata().GetLabels() != nil {
-						freightByAlias[f.GetMetadata().GetLabels()[aliasLabelKey]] = fr
+						freightByAlias[f.GetMetadata().GetLabels()[kargoapi.AliasLabelKey]] = fr
 					}
 				}
 				selectedFreight := make(map[string]struct{}, len(names))
@@ -107,7 +105,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 		freight := item.Object.(*kargoapi.Freight) // nolint: forcetypeassert
 		var alias string
 		if freight.Labels != nil {
-			alias = freight.Labels[aliasLabelKey]
+			alias = freight.Labels[kargoapi.AliasLabelKey]
 		}
 		rows[i] = metav1.TableRow{
 			Cells: []any{
