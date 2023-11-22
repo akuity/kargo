@@ -36,18 +36,17 @@ func newAPICommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo API Server")
 
+			cfg := config.ServerConfigFromEnv()
 			restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 			if err != nil {
 				return errors.Wrap(err, "error loading REST config")
 			}
 			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{
-				NewInternalClient: newClientForAPI,
+				NewInternalClient: newClientForAPI(cfg.KargoNamespace),
 			})
 			if err != nil {
 				return errors.Wrap(err, "error creating Kubernetes client")
 			}
-
-			cfg := config.ServerConfigFromEnv()
 
 			if cfg.AdminConfig != nil {
 				log.Info("admin account is enabled")
@@ -79,51 +78,62 @@ func newAPICommand() *cobra.Command {
 	}
 }
 
-func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme) (client.Client, error) {
-	mgr, err := ctrl.NewManager(r, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: "0",
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "new manager")
-	}
-
-	// Index Promotions by Stage
-	if err := kubeclient.IndexPromotionsByStage(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index promotions by stage")
-	}
-
-	// Index Freight by Warehouse
-	if err := kubeclient.IndexFreightByWarehouse(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index freight by warehouse")
-	}
-
-	// Index Freight by Stages in which it has been verified
-	if err := kubeclient.IndexFreightByVerifiedStages(ctx, mgr); err != nil {
-		return nil,
-			errors.Wrap(err, "index Freight by Stages in which it has been verified")
-	}
-
-	// Index Freight by Stages for which it is approved
-	if err :=
-		kubeclient.IndexFreightByApprovedStages(ctx, mgr); err != nil {
-		return nil,
-			errors.Wrap(err, "index Freight by Stages for which it has been approved")
-	}
-
-	// Index ServiceAccounts by RBAC Groups
-	if err := kubeclient.IndexServiceAccountsByRBACGroups(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index service accounts by rbac groups")
-	}
-	// Index ServiceAccounts by RBAC Subjects
-	if err := kubeclient.IndexServiceAccountsByRBACSubjects(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index servi ce accounts by rbac subjects")
-	}
-	go func() {
-		if err := mgr.Start(ctx); err != nil {
-			panic(errors.Wrap(err, "start manager"))
+func newClientForAPI(kargoNamespace string) func(
+	ctx context.Context,
+	r *rest.Config,
+	scheme *runtime.Scheme,
+) (client.Client, error) {
+	return func(ctx context.Context, r *rest.Config, scheme *runtime.Scheme) (client.Client, error) {
+		mgr, err := ctrl.NewManager(r, ctrl.Options{
+			Scheme:             scheme,
+			MetricsBindAddress: "0",
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "new manager")
 		}
-	}()
 
-	return mgr.GetClient(), nil
+		// Index Promotions by Stage
+		if err := kubeclient.IndexPromotionsByStage(ctx, mgr); err != nil {
+			return nil, errors.Wrap(err, "index promotions by stage")
+		}
+
+		// Index Freight by Warehouse
+		if err := kubeclient.IndexFreightByWarehouse(ctx, mgr); err != nil {
+			return nil, errors.Wrap(err, "index freight by warehouse")
+		}
+
+		// Index Freight by Stages in which it has been verified
+		if err := kubeclient.IndexFreightByVerifiedStages(ctx, mgr); err != nil {
+			return nil,
+				errors.Wrap(err, "index Freight by Stages in which it has been verified")
+		}
+
+		// Index Freight by Stages for which it is approved
+		if err :=
+			kubeclient.IndexFreightByApprovedStages(ctx, mgr); err != nil {
+			return nil,
+				errors.Wrap(err, "index Freight by Stages for which it has been approved")
+		}
+
+		// Index ServiceAccounts by RBAC fallback annotation
+		if err := kubeclient.IndexServiceAccountsByFallbackAnnotation(ctx, mgr, kargoNamespace); err != nil {
+			return nil, errors.Wrap(err, "index service accounts by rbac groups")
+		}
+		// Index ServiceAccounts by RBAC Groups
+		if err := kubeclient.IndexServiceAccountsByRBACGroups(ctx, mgr); err != nil {
+			return nil, errors.Wrap(err, "index service accounts by rbac groups")
+		}
+		// Index ServiceAccounts by RBAC Subjects
+		if err := kubeclient.IndexServiceAccountsByRBACSubjects(ctx, mgr); err != nil {
+			return nil, errors.Wrap(err, "index servi ce accounts by rbac subjects")
+		}
+
+		go func() {
+			if err := mgr.Start(ctx); err != nil {
+				panic(errors.Wrap(err, "start manager"))
+			}
+		}()
+
+		return mgr.GetClient(), nil
+	}
 }

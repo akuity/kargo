@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -461,8 +462,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 				Username: "test-user",
 			},
 			assert: func(client libClient.Client, err error) {
-				require.NoError(t, err)
-				require.Same(t, testInternalClient, client)
+				require.True(t, kubeerr.IsForbidden(err))
 			},
 		},
 	}

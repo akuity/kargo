@@ -28,17 +28,9 @@ rules:
       - list
       - watch
   - apiGroups:
-      - ""
-    resources:
-      - users
-      - groups
-      - serviceaccounts
-    verbs:
-      - impersonate
-  - apiGroups:
       - authorization.k8s.io
     resources:
-      - selfsubjectaccessreviews
+      - subjectaccessreviews
     verbs:
       - create
   - apiGroups:

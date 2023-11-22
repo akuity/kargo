@@ -510,6 +510,61 @@ func gvrAndKeyFromObj(
 	return pluralizedGVR, key, nil
 }
 
+type serviceAccountQueries []*libClient.ListOptions
+
+func newListOptions(opts ...libClient.ListOption) *libClient.ListOptions {
+	return (&libClient.ListOptions{}).ApplyOptions(opts)
+}
+
+func getUserServiceAccountQueries(
+	namespace string,
+	userInfo user.Info,
+) serviceAccountQueries {
+	queries := serviceAccountQueries{
+		newListOptions(
+			libClient.InNamespace(namespace),
+			libClient.MatchingFields{
+				kubeclient.ServiceAccountsBySubjectIndexField: userInfo.Username,
+			},
+		),
+	}
+	for _, g := range userInfo.Groups {
+		group := strings.TrimSpace(g)
+		if group == "" {
+			continue
+		}
+		queries = append(queries, newListOptions(
+			libClient.InNamespace(namespace),
+			libClient.MatchingFields{
+				kubeclient.ServiceAccountsByGroupIndexField: group,
+			},
+		))
+	}
+	return queries
+}
+
+// listKargoServiceAccounts returns a map of ServiceAccounts that filtered by
+// the given queries.
+func listKargoServiceAccounts(
+	ctx context.Context,
+	client libClient.Client,
+	queries ...*libClient.ListOptions,
+) (map[string]corev1.ServiceAccount, error) {
+	res := make(map[string]corev1.ServiceAccount)
+	for idx := range queries {
+		list := &corev1.ServiceAccountList{}
+		if err := client.List(ctx, list, queries[idx]); err != nil {
+			return nil, err
+		}
+		for idx := range list.Items {
+			sa := list.Items[idx]
+			saKey := libClient.ObjectKeyFromObject(&sa)
+			res[saKey.String()] = sa
+		}
+	}
+	return res, nil
+}
+
 // getAuthorizedClient examines context-bound user.Info and uses information
 // found therein to attempt to identify or build an appropriate client for
 // performing the desired operation. If it is unable to do so, it amounts to the
@@ -543,48 +598,41 @@ func getAuthorizedClient(
 		Name:        key.Name,
 	}
 	if userInfo.Username != "" {
-		serviceAccounts := make(map[string]corev1.ServiceAccount)
-		{
-			list := &corev1.ServiceAccountList{}
-			if err := internalClient.List(ctx, list, libClient.MatchingFields{
-				kubeclient.ServiceAccountsBySubjectIndexField: userInfo.Username,
-			}); err != nil {
-				return nil, errors.Wrap(err, "list service accounts for user")
-			}
-			for idx := range list.Items {
-				sa := list.Items[idx]
-				saKey := libClient.ObjectKeyFromObject(&sa)
-				serviceAccounts[saKey.String()] = sa
-			}
+		var queries [][]*libClient.ListOptions
+		namespacedServiceAccountQuery := getUserServiceAccountQueries(key.Namespace, userInfo)
+		fallbackServiceAccountQuery := []*libClient.ListOptions{
+			newListOptions(
+				libClient.MatchingFields{
+					kubeclient.ServiceAccountsByFallbackIndexField: kargoapi.AnnotationValueTrue,
+				},
+			),
 		}
-		for _, g := range userInfo.Groups {
-			group := strings.TrimSpace(g)
-			if group == "" {
-				continue
-			}
-			list := &corev1.ServiceAccountList{}
-			if err := internalClient.List(ctx, list, libClient.MatchingFields{
-				kubeclient.ServiceAccountsByGroupIndexField: group,
-			}); err != nil {
-				return nil, errors.Wrap(err, "list service accounts for user group")
-			}
-			for idx := range list.Items {
-				sa := list.Items[idx]
-				saKey := libClient.ObjectKeyFromObject(&sa)
-				serviceAccounts[saKey.String()] = sa
-			}
+		if key.Namespace == "" {
+			// Query fallback ServiceAccounts for the cluster-scoped resources
+			// to reduce to SubjectAccessReview calls.
+			queries = append([][]*libClient.ListOptions{fallbackServiceAccountQuery}, namespacedServiceAccountQuery)
+		} else {
+			queries = append([][]*libClient.ListOptions{namespacedServiceAccountQuery}, fallbackServiceAccountQuery)
 		}
-		for k := range serviceAccounts {
-			sa := serviceAccounts[k]
-			_, err := getUserClient(ctx, internalClient.Scheme(), ra, withServiceAccount(&sa))
-			if err == nil {
-				// Note: At present, we never return the user-specific client. We always
-				// return the internal client so that most operations are performed by a
-				// single client with a built-in cache.
-				return internalClient, nil
+		// Default
+		for idx := range queries {
+			listOpts := queries[idx]
+			accounts, err := listKargoServiceAccounts(ctx, internalClient, listOpts...)
+			if err != nil {
+				return nil, errors.Wrapf(err, "list service accounts")
 			}
-			if !apierrors.IsForbidden(err) {
-				return nil, errors.Wrap(err, "get service account specific client")
+			for k := range accounts {
+				sa := accounts[k]
+				_, err := getUserClient(ctx, internalClient.Scheme(), ra, withServiceAccount(&sa))
+				if err == nil {
+					// Note: At present, we never return the user-specific client. We always
+					// return the internal client so that most operations are performed by a
+					// single client with a built-in cache.
+					return internalClient, nil
+				}
+				if !apierrors.IsForbidden(err) {
+					return nil, errors.Wrap(err, "get service account specific client")
+				}
 			}
 		}
 		return nil, newForbiddenError(ra)
@@ -621,16 +669,21 @@ func withBearerToken(bearerToken string) userClientOption {
 
 func withServiceAccount(sa *corev1.ServiceAccount) userClientOption {
 	return func(opts *userClientOptions) {
-		opts.impersonationCfg = &rest.ImpersonationConfig{
-			UserName: fmt.Sprintf("system:serviceaccount:%s:%s", sa.GetNamespace(), sa.GetName()),
-			UID:      string(sa.GetUID()),
+		opts.subject = &userClientSubject{
+			uid:      string(sa.GetUID()),
+			username: fmt.Sprintf("system:serviceaccount:%s:%s", sa.GetNamespace(), sa.GetName()),
 		}
 	}
 }
 
+type userClientSubject struct {
+	username string
+	uid      string
+}
+
 type userClientOptions struct {
-	bearerToken      string
-	impersonationCfg *rest.ImpersonationConfig
+	bearerToken string
+	subject     *userClientSubject
 }
 
 // getUserClient creates a user-specific client using the provided scheme and
@@ -664,9 +717,6 @@ func getUserClient(
 		cfg.CertData = nil
 		cfg.CertFile = ""
 	}
-	if opt.impersonationCfg != nil {
-		cfg.Impersonate = *opt.impersonationCfg
-	}
 
 	userClient, err := libClient.New(
 		cfg,
@@ -678,15 +728,32 @@ func getUserClient(
 		return nil, errors.Wrap(err, "create user-specific Kubernetes client")
 	}
 
-	ssar := &authv1.SelfSubjectAccessReview{
+	if opt.subject != nil {
+		review := &authv1.SubjectAccessReview{
+			Spec: authv1.SubjectAccessReviewSpec{
+				ResourceAttributes: &ra,
+				User:               opt.subject.username,
+				UID:                opt.subject.uid,
+			},
+		}
+		if err := userClient.Create(ctx, review); err != nil {
+			return nil, errors.Wrap(err, "submit SubjectAccessReview")
+		}
+		if review.Status.Allowed {
+			return userClient, nil
+		}
+		return nil, newForbiddenError(ra)
+	}
+
+	review := &authv1.SelfSubjectAccessReview{
 		Spec: authv1.SelfSubjectAccessReviewSpec{
 			ResourceAttributes: &ra,
 		},
 	}
-	if err := userClient.Create(ctx, ssar); err != nil {
+	if err := userClient.Create(ctx, review); err != nil {
 		return nil, errors.Wrap(err, "submit SelfSubjectAccessReview")
 	}
-	if ssar.Status.Allowed {
+	if review.Status.Allowed {
 		return userClient, nil
 	}
 	return nil, newForbiddenError(ra)
