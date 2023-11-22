@@ -525,20 +525,17 @@ func (r *reconciler) syncNormalStage(
 		}
 	}
 
-	// All of these conditions disqualify auto-promotion
-	if stage.Spec.Subscriptions == nil || // No subs at all
-		(stage.Spec.Subscriptions.Warehouse == "" && len(stage.Spec.Subscriptions.UpstreamStages) == 0) || // No subs at all
-		(stage.Spec.Subscriptions.Warehouse != "" && len(stage.Spec.Subscriptions.UpstreamStages) > 0) || // Ambiguous
-		len(stage.Spec.Subscriptions.UpstreamStages) > 1 { // Ambiguous
-		logger.Debug("Stage is not eligible for auto-promotion")
+	// Stop here if we have no chance of finding any Freight to promote.
+	if stage.Spec.Subscriptions == nil ||
+		(stage.Spec.Subscriptions.Warehouse == "" && len(stage.Spec.Subscriptions.UpstreamStages) == 0) {
+		logger.Warn(
+			"Stage has no subscriptions. This may indicate an issue with resource" +
+				"validation logic.",
+		)
 		return status, nil
 	}
 
-	// If we get to here, we've determined that auto-promotion is possible.
-	// Now see if it's permitted...
-	logger.Debug(
-		"Stage is eligible for auto-promotion; checking if it is permitted...",
-	)
+	logger.Debug("checking if auto-promotion is permitted...")
 	if permitted, err :=
 		r.isAutoPromotionPermittedFn(ctx, stage.Namespace, stage.Name); err != nil {
 		return status, errors.Wrapf(
@@ -553,8 +550,8 @@ func (r *reconciler) syncNormalStage(
 		return status, nil
 	}
 
-	// If we get to here, we've determined that auto-promotion is both possible
-	// and permitted. Time to go looking for new Freight...
+	// If we get to here, auto-promotion is permitted. Time to go looking for new
+	// Freight...
 
 	latestFreight, err :=
 		r.getLatestAvailableFreightFn(ctx, stage.Namespace, stage)
