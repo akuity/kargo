@@ -101,6 +101,13 @@ type server struct {
 		stageSubs []kargoapi.StageSubscription,
 	) ([]kargoapi.Freight, error)
 
+	// Freight aliasing:
+	patchFreightAliasFn func(
+		ctx context.Context,
+		freight *kargoapi.Freight,
+		alias string,
+	) error
+
 	// Common manifest parsing:
 	parseManifestFn manifest.ParseFunc
 }
@@ -131,6 +138,7 @@ func NewServer(
 	s.getFreightFromWarehouseFn = s.getFreightFromWarehouse
 	s.getVerifiedFreightFn =
 		s.getVerifiedFreight
+	s.patchFreightAliasFn = s.patchFreightAlias
 	s.parseManifestFn = manifest.NewParser(kubeClient.Scheme())
 	return s
 }
