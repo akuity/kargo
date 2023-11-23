@@ -58,6 +58,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 						LocalMode: true,
 					},
 					client,
+					client,
 				)
 				go srv.Serve(ctx, l) // nolint: errcheck
 				opt.LocalServerAddress = fmt.Sprintf("http://%s", l.Addr())
