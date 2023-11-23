@@ -471,7 +471,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 			if testCase.userInfo != nil {
 				ctx := user.ContextWithInfo(context.Background(), *testCase.userInfo)
 				testCase.assert(
-					getAuthorizedClient(
+					getAuthorizedClient("")(
 						ctx,
 						testInternalClient,
 						"", // Verb doesn't matter for these tests

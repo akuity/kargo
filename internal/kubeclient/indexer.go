@@ -29,9 +29,8 @@ const (
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
 	StagesByWarehouseIndexField          = "warehouse"
 
-	ServiceAccountsByFallbackIndexField = "fallback"
-	ServiceAccountsByGroupIndexField    = "group"
-	ServiceAccountsBySubjectIndexField  = "subject"
+	ServiceAccountsByGroupIndexField   = "group"
+	ServiceAccountsBySubjectIndexField = "subject"
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -258,33 +257,6 @@ func indexStagesByWarehouse(obj client.Object) []string {
 		return []string{stage.Spec.Subscriptions.Warehouse}
 	}
 	return nil
-}
-
-func IndexServiceAccountsByFallbackAnnotation(
-	ctx context.Context,
-	mgr ctrl.Manager,
-	kargoNamespace string,
-) error {
-	return mgr.GetFieldIndexer().IndexField(
-		ctx,
-		&corev1.ServiceAccount{},
-		ServiceAccountsByFallbackIndexField,
-		indexServiceAccountsByFallbackAnnotation(kargoNamespace),
-	)
-}
-
-func indexServiceAccountsByFallbackAnnotation(kargoNamespace string) client.IndexerFunc {
-	return func(obj client.Object) []string {
-		sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-		if sa.Namespace != kargoNamespace {
-			return nil
-		}
-		if sa.GetAnnotations()[kargoapi.AnnotationKeyRBACFallbackServiceAccount] ==
-			kargoapi.AnnotationValueTrue {
-			return []string{kargoapi.AnnotationValueTrue}
-		}
-		return nil
-	}
 }
 
 func IndexServiceAccountsByRBACGroups(ctx context.Context, mgr ctrl.Manager) error {

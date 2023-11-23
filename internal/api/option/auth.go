@@ -16,9 +16,12 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/kubeclient"
 )
 
 const authHeaderKey = "Authorization"
@@ -34,7 +37,8 @@ var exemptProcedures = map[string]struct{}{
 // value of the Authorization header from inbound requests/connections and
 // store it in the context.
 type authInterceptor struct {
-	cfg config.ServerConfig
+	cfg            config.ServerConfig
+	internalClient libClient.Client
 
 	parseUnverifiedJWTFn func(
 		rawToken string,
@@ -45,8 +49,13 @@ type authInterceptor struct {
 		ctx context.Context,
 		rawToken string,
 	) (string, []string, bool)
-	oidcTokenVerifyFn   goOIDCIDTokenVerifyFn
-	oidcExtractGroupsFn func(*oidc.IDToken) ([]string, error)
+	oidcTokenVerifyFn     goOIDCIDTokenVerifyFn
+	oidcExtractGroupsFn   func(*oidc.IDToken) ([]string, error)
+	listServiceAccountsFn func(
+		ctx context.Context,
+		username string,
+		groups []string,
+	) (map[string][]string, error)
 }
 
 // goOIDCIDTokenVerifyFn is a github.com/coreos/go-oidc/v3/oidc/IDTokenVerifier.Verify() function
@@ -56,9 +65,11 @@ type goOIDCIDTokenVerifyFn func(ctx context.Context, rawIDToken string) (*oidc.I
 func newAuthInterceptor(
 	ctx context.Context,
 	cfg config.ServerConfig,
+	client libClient.Client,
 ) (*authInterceptor, error) {
 	a := &authInterceptor{
-		cfg: cfg,
+		cfg:            cfg,
+		internalClient: client,
 	}
 	if cfg.OIDCConfig != nil {
 		var err error
@@ -72,6 +83,7 @@ func newAuthInterceptor(
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
 	a.oidcExtractGroupsFn = oidcExtractGroups
+	a.listServiceAccountsFn = a.listServiceAccounts
 	return a, nil
 }
 
@@ -243,6 +255,43 @@ func (a *authInterceptor) WrapStreamingHandler(
 		return next(ctx, conn)
 	}
 }
+func (a *authInterceptor) listServiceAccounts(
+	ctx context.Context,
+	username string,
+	groups []string,
+) (map[string][]string, error) {
+	queries := []libClient.MatchingFields{
+		{
+			kubeclient.ServiceAccountsBySubjectIndexField: username,
+		},
+	}
+	for _, group := range groups {
+		queries = append(queries, libClient.MatchingFields{
+			kubeclient.ServiceAccountsByGroupIndexField: group,
+		})
+	}
+	accounts := make(map[string]map[string]struct{})
+	for _, q := range queries {
+		list := &corev1.ServiceAccountList{}
+		if err := a.internalClient.List(ctx, list, q); err != nil {
+			return nil, errors.Wrap(err, "list service accounts")
+		}
+		for _, sa := range list.Items {
+			namespace, name := sa.GetNamespace(), sa.GetName()
+			if _, ok := accounts[namespace]; !ok {
+				accounts[namespace] = make(map[string]struct{})
+			}
+			accounts[namespace][name] = struct{}{}
+		}
+	}
+	res := make(map[string][]string)
+	for ns, names := range accounts {
+		for name := range names {
+			res[ns] = append(res[ns], name)
+		}
+	}
+	return res, nil
+}
 
 // authenticate retrieves the value of the Authorization header from inbound
 // requests/connections, attempts to validate it and extract meaningful user
@@ -309,11 +358,16 @@ func (a *authInterceptor) authenticate(
 		// identity provider.
 		username, groups, ok := a.verifyIDPIssuedTokenFn(ctx, rawToken)
 		if ok {
+			sa, err := a.listServiceAccountsFn(ctx, username, groups)
+			if err != nil {
+				return ctx, errors.Wrap(err, "list service accounts for user")
+			}
 			return user.ContextWithInfo(
 				ctx,
 				user.Info{
-					Username: username,
-					Groups:   groups,
+					Username:        username,
+					Groups:          groups,
+					ServiceAccounts: sa,
 				},
 			), nil
 		}

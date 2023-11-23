@@ -8,12 +8,12 @@ import (
 
 	"github.com/pkg/errors"
 	authv1 "k8s.io/api/authorization/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
@@ -25,13 +25,15 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/user"
-	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 // ClientOptions specifies options for customizing the client returned by the
 // NewClient function.
 type ClientOptions struct {
+	// KargoNamespace is the namespace in which the Kargo components
+	// are running.
+	KargoNamespace string
 	// NewInternalClient may be used to take control of how the client's own
 	// internal/underlying controller-runtime client is created. This is mainly
 	// useful for tests wherein one may, for instance, wish to inject a custom
@@ -93,6 +95,8 @@ type Client interface {
 		namespace string,
 		opts metav1.ListOptions,
 	) (watch.Interface, error)
+
+	getInternalClient() libClient.Client
 }
 
 // client implements Client.
@@ -146,10 +150,10 @@ func NewClient(
 		internalClient: internalClient,
 		statusWriter: &authorizingStatusWriterWrapper{
 			internalClient:        internalClient,
-			getAuthorizedClientFn: getAuthorizedClient,
+			getAuthorizedClientFn: getAuthorizedClient(opts.KargoNamespace),
 		},
 		internalDynamicClient: internalDynamicClient,
-		getAuthorizedClientFn: getAuthorizedClient,
+		getAuthorizedClientFn: getAuthorizedClient(opts.KargoNamespace),
 	}, nil
 }
 
@@ -374,6 +378,10 @@ func (c *client) RESTMapper() meta.RESTMapper {
 	return c.internalClient.RESTMapper()
 }
 
+func (c *client) getInternalClient() libClient.Client {
+	return c.internalClient
+}
+
 // authorizingStatusWriterWrapper implements libClient.StatusWriter.
 type authorizingStatusWriterWrapper struct {
 	internalClient libClient.Client
@@ -510,120 +518,87 @@ func gvrAndKeyFromObj(
 	return pluralizedGVR, key, nil
 }
 
-type serviceAccountQueries []*libClient.ListOptions
-
-func newListOptions(opts ...libClient.ListOption) *libClient.ListOptions {
-	return (&libClient.ListOptions{}).ApplyOptions(opts)
-}
-
-func getUserServiceAccountQueries(
-	namespace string,
-	userInfo user.Info,
-) serviceAccountQueries {
-	queries := serviceAccountQueries{
-		newListOptions(
-			libClient.InNamespace(namespace),
-			libClient.MatchingFields{
-				kubeclient.ServiceAccountsBySubjectIndexField: userInfo.Username,
-			},
-		),
-	}
-	for _, g := range userInfo.Groups {
-		group := strings.TrimSpace(g)
-		if group == "" {
-			continue
-		}
-		queries = append(queries, newListOptions(
-			libClient.InNamespace(namespace),
-			libClient.MatchingFields{
-				kubeclient.ServiceAccountsByGroupIndexField: group,
-			},
-		))
-	}
-	return queries
-}
-
-// listKargoServiceAccounts returns a map of ServiceAccounts that filtered by
-// the given queries.
-func listKargoServiceAccounts(
-	ctx context.Context,
-	client libClient.Client,
-	queries ...*libClient.ListOptions,
-) (map[string]corev1.ServiceAccount, error) {
-	res := make(map[string]corev1.ServiceAccount)
-	for idx := range queries {
-		list := &corev1.ServiceAccountList{}
-		if err := client.List(ctx, list, queries[idx]); err != nil {
-			return nil, err
-		}
-		for idx := range list.Items {
-			sa := list.Items[idx]
-			saKey := libClient.ObjectKeyFromObject(&sa)
-			res[saKey.String()] = sa
-		}
-	}
-	return res, nil
-}
-
 // getAuthorizedClient examines context-bound user.Info and uses information
 // found therein to attempt to identify or build an appropriate client for
 // performing the desired operation. If it is unable to do so, it amounts to the
 // operation being unauthorized and an error is returned.
-func getAuthorizedClient(
-	ctx context.Context,
-	internalClient libClient.Client,
-	verb string,
-	gvr schema.GroupVersionResource,
-	subresource string,
-	key libClient.ObjectKey,
+func getAuthorizedClient(kargoNamespace string) func(
+	context.Context,
+	libClient.Client,
+	string,
+	schema.GroupVersionResource,
+	string,
+	libClient.ObjectKey,
 ) (libClient.Client, error) {
-	userInfo, ok := user.InfoFromContext(ctx)
-	if !ok {
-		return nil, errors.New("not allowed")
-	}
-
-	// Admins get to use the Kargo API server's own Kubernetes client. i.e. They
-	// can do everything the server can do.
-	if userInfo.IsAdmin {
-		return internalClient, nil
-	}
-
-	ra := authv1.ResourceAttributes{
-		Verb:        verb,
-		Group:       gvr.Group,
-		Version:     gvr.Version,
-		Resource:    gvr.Resource,
-		Subresource: subresource,
-		Namespace:   key.Namespace,
-		Name:        key.Name,
-	}
-	if userInfo.Username != "" {
-		var queries [][]*libClient.ListOptions
-		namespacedServiceAccountQuery := getUserServiceAccountQueries(key.Namespace, userInfo)
-		fallbackServiceAccountQuery := []*libClient.ListOptions{
-			newListOptions(
-				libClient.MatchingFields{
-					kubeclient.ServiceAccountsByFallbackIndexField: kargoapi.AnnotationValueTrue,
-				},
-			),
+	return func(
+		ctx context.Context,
+		internalClient libClient.Client,
+		verb string,
+		gvr schema.GroupVersionResource,
+		subresource string,
+		key libClient.ObjectKey,
+	) (libClient.Client, error) {
+		userInfo, ok := user.InfoFromContext(ctx)
+		if !ok {
+			return nil, errors.New("not allowed")
 		}
-		if key.Namespace == "" {
-			// Query fallback ServiceAccounts for the cluster-scoped resources
-			// to reduce to SubjectAccessReview calls.
-			queries = append([][]*libClient.ListOptions{fallbackServiceAccountQuery}, namespacedServiceAccountQuery)
-		} else {
-			queries = append([][]*libClient.ListOptions{namespacedServiceAccountQuery}, fallbackServiceAccountQuery)
+
+		// Admins get to use the Kargo API server's own Kubernetes client. i.e. They
+		// can do everything the server can do.
+		if userInfo.IsAdmin {
+			return internalClient, nil
 		}
-		// Default
-		for idx := range queries {
-			listOpts := queries[idx]
-			accounts, err := listKargoServiceAccounts(ctx, internalClient, listOpts...)
-			if err != nil {
-				return nil, errors.Wrapf(err, "list service accounts")
+
+		ra := authv1.ResourceAttributes{
+			Verb:        verb,
+			Group:       gvr.Group,
+			Version:     gvr.Version,
+			Resource:    gvr.Resource,
+			Subresource: subresource,
+			Namespace:   key.Namespace,
+			Name:        key.Name,
+		}
+		if userInfo.Username != "" {
+			serviceAccounts := make([]types.NamespacedName, 0)
+			for _, ns := range []string{
+				key.Namespace,
+				kargoNamespace,
+			} {
+				if ns == "" {
+					continue
+				}
+				accounts, ok := userInfo.ServiceAccounts[ns]
+				if !ok {
+					continue
+				}
+				for _, name := range accounts {
+					serviceAccounts = append(serviceAccounts, types.NamespacedName{
+						Namespace: ns,
+						Name:      name,
+					})
+				}
 			}
-			for k := range accounts {
-				sa := accounts[k]
-				_, err := getUserClient(ctx, internalClient.Scheme(), ra, withServiceAccount(&sa))
+			// If the operation is cluster-scoped, all ServiceAccounts are candidates.
+			if key.Namespace == "" {
+				for ns, accounts := range userInfo.ServiceAccounts {
+					if ns == key.Namespace || ns == kargoNamespace {
+						continue
+					}
+					for _, name := range accounts {
+						serviceAccounts = append(serviceAccounts, types.NamespacedName{
+							Namespace: ns,
+							Name:      name,
+						})
+					}
+				}
+			}
+			for _, sa := range serviceAccounts {
+				_, err := getUserClient(
+					ctx,
+					internalClient.Scheme(),
+					ra,
+					withServiceAccount(sa.Namespace, sa.Name),
+				)
 				if err == nil {
 					// Note: At present, we never return the user-specific client. We always
 					// return the internal client so that most operations are performed by a
@@ -634,29 +609,29 @@ func getAuthorizedClient(
 					return nil, errors.Wrap(err, "get service account specific client")
 				}
 			}
+			return nil, newForbiddenError(ra)
 		}
-		return nil, newForbiddenError(ra)
-	}
 
-	// If we get to here, we're dealing with a user who "authenticated" by just
-	// passing their bearer token for the Kubernetes API server.
+		// If we get to here, we're dealing with a user who "authenticated" by just
+		// passing their bearer token for the Kubernetes API server.
 
-	// Calling getUserClient will build a user-specific client and conduct a
-	// SelfSubjectAccessReview. If the review succeeds, we'll have obtained a
-	// client that can perform the desired operation.
-	_, err := getUserClient(
-		ctx,
-		internalClient.Scheme(),
-		ra,
-		withBearerToken(userInfo.BearerToken),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "get user-specific client")
+		// Calling getUserClient will build a user-specific client and conduct a
+		// SelfSubjectAccessReview. If the review succeeds, we'll have obtained a
+		// client that can perform the desired operation.
+		_, err := getUserClient(
+			ctx,
+			internalClient.Scheme(),
+			ra,
+			withBearerToken(userInfo.BearerToken),
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "get user-specific client")
+		}
+		// Note: At present, we never return the user-specific client. We always
+		// return the internal client so that most operations are performed by a
+		// single client with a built-in cache.
+		return internalClient, nil
 	}
-	// Note: At present, we never return the user-specific client. We always
-	// return the internal client so that most operations are performed by a
-	// single client with a built-in cache.
-	return internalClient, nil
 }
 
 type userClientOption func(*userClientOptions)
@@ -667,18 +642,16 @@ func withBearerToken(bearerToken string) userClientOption {
 	}
 }
 
-func withServiceAccount(sa *corev1.ServiceAccount) userClientOption {
+func withServiceAccount(namespace, name string) userClientOption {
 	return func(opts *userClientOptions) {
 		opts.subject = &userClientSubject{
-			uid:      string(sa.GetUID()),
-			username: fmt.Sprintf("system:serviceaccount:%s:%s", sa.GetNamespace(), sa.GetName()),
+			username: fmt.Sprintf("system:serviceaccount:%s:%s", namespace, name),
 		}
 	}
 }
 
 type userClientSubject struct {
 	username string
-	uid      string
 }
 
 type userClientOptions struct {
@@ -733,7 +706,6 @@ func getUserClient(
 			Spec: authv1.SubjectAccessReviewSpec{
 				ResourceAttributes: &ra,
 				User:               opt.subject.username,
-				UID:                opt.subject.uid,
 			},
 		}
 		if err := userClient.Create(ctx, review); err != nil {

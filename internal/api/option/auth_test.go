@@ -46,13 +46,14 @@ c1e3
 -----END CERTIFICATE-----`)
 
 func TestNewAuthInterceptor(t *testing.T) {
-	a, err := newAuthInterceptor(context.Background(), config.ServerConfig{})
+	a, err := newAuthInterceptor(context.Background(), config.ServerConfig{}, nil)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 	require.NotNil(t, a.parseUnverifiedJWTFn)
 	require.NotNil(t, a.verifyKargoIssuedTokenFn)
 	require.NotNil(t, a.verifyIDPIssuedTokenFn)
 	require.NotNil(t, a.oidcExtractGroupsFn)
+	require.NotNil(t, a.listServiceAccountsFn)
 }
 
 func TestGetKeySet(t *testing.T) {
