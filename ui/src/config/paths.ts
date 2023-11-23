@@ -4,5 +4,6 @@ export const paths = {
   project: '/project/:name',
   stage: '/project/:name/stage/:stageName',
 
-  login: '/login'
+  login: '/login',
+  tokenRenew: '/token-renew'
 };

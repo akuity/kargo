@@ -1,15 +1,20 @@
 import React, { PropsWithChildren } from 'react';
 
-import { authTokenKey } from '@ui/config/transport';
+import { authTokenKey, refreshTokenKey } from '@ui/config/auth';
 
 import { AuthContext } from './auth-context';
 
 export const AuthContextProvider = ({ children }: PropsWithChildren) => {
   const [token, setToken] = React.useState(localStorage.getItem(authTokenKey));
 
-  const login = React.useCallback((t: string) => {
-    localStorage.setItem(authTokenKey, t);
-    setToken(t);
+  const login = React.useCallback((token: string, refreshToken?: string) => {
+    localStorage.setItem(authTokenKey, token);
+
+    if (refreshToken) {
+      localStorage.setItem(refreshTokenKey, refreshToken);
+    }
+
+    setToken(token);
   }, []);
 
   const logout = React.useCallback(() => {

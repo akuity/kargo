@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { transport } from '@ui/config/transport';
+import { transportWithAuth } from '@ui/config/transport';
 import { listPromotions } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
@@ -36,7 +36,7 @@ export const Promotions = () => {
     const cancel = new AbortController();
 
     const watchPromotions = async () => {
-      const promiseClient = createPromiseClient(KargoService, transport);
+      const promiseClient = createPromiseClient(KargoService, transportWithAuth);
       const stream = promiseClient.watchPromotions(
         { project: projectName, stage: stageName },
         { signal: cancel.signal }
