@@ -323,6 +323,9 @@ func TestAuthenticate(t *testing.T) {
 				) (string, []string, bool) {
 					return "tony@starkindustries.com", []string{"avengers"}, true
 				},
+				listServiceAccountsFn: func(context.Context, string, []string) (map[string][]string, error) {
+					return nil, nil
+				},
 			},
 			token: testToken,
 			// On success, we expect user info containing username and groups to be
