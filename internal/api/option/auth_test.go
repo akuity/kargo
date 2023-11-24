@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/dex"
@@ -323,7 +324,11 @@ func TestAuthenticate(t *testing.T) {
 				) (string, []string, bool) {
 					return "tony@starkindustries.com", []string{"avengers"}, true
 				},
-				listServiceAccountsFn: func(context.Context, string, []string) (map[string][]string, error) {
+				listServiceAccountsFn: func(
+					context.Context,
+					string,
+					[]string,
+				) (map[string][]types.NamespacedName, error) {
 					return nil, nil
 				},
 			},

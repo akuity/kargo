@@ -95,8 +95,6 @@ type Client interface {
 		namespace string,
 		opts metav1.ListOptions,
 	) (watch.Interface, error)
-
-	getInternalClient() libClient.Client
 }
 
 // client implements Client.
@@ -378,10 +376,6 @@ func (c *client) RESTMapper() meta.RESTMapper {
 	return c.internalClient.RESTMapper()
 }
 
-func (c *client) getInternalClient() libClient.Client {
-	return c.internalClient
-}
-
 // authorizingStatusWriterWrapper implements libClient.StatusWriter.
 type authorizingStatusWriterWrapper struct {
 	internalClient libClient.Client
@@ -559,11 +553,7 @@ func getAuthorizedClient(kargoNamespace string) func(
 			Name:        key.Name,
 		}
 		if userInfo.Username != "" {
-			serviceAccounts := make([]types.NamespacedName, 0)
-			for _, ns := range []string{
-				key.Namespace,
-				kargoNamespace,
-			} {
+			for _, ns := range []string{key.Namespace, kargoNamespace} {
 				if ns == "" {
 					continue
 				}
@@ -571,42 +561,42 @@ func getAuthorizedClient(kargoNamespace string) func(
 				if !ok {
 					continue
 				}
-				for _, name := range accounts {
-					serviceAccounts = append(serviceAccounts, types.NamespacedName{
-						Namespace: ns,
-						Name:      name,
-					})
+				for _, sa := range accounts {
+					err := reviewSubjectAccess(
+						ctx,
+						internalClient.Scheme(),
+						ra,
+						withServiceAccount(sa),
+					)
+					if err == nil {
+						return internalClient, nil
+					}
+					if !apierrors.IsForbidden(err) {
+						return nil, errors.Wrap(err, "review subject access")
+					}
 				}
 			}
-			// If the operation is cluster-scoped, all ServiceAccounts are candidates.
+			// If the operation is related to cluster-scoped resources
+			// (e.g. Project(Namespace)), all ServiceAccounts are candidates.
 			if key.Namespace == "" {
 				for ns, accounts := range userInfo.ServiceAccounts {
 					if ns == key.Namespace || ns == kargoNamespace {
 						continue
 					}
-					for _, name := range accounts {
-						serviceAccounts = append(serviceAccounts, types.NamespacedName{
-							Namespace: ns,
-							Name:      name,
-						})
+					for _, sa := range accounts {
+						err := reviewSubjectAccess(
+							ctx,
+							internalClient.Scheme(),
+							ra,
+							withServiceAccount(sa),
+						)
+						if err == nil {
+							return internalClient, nil
+						}
+						if !apierrors.IsForbidden(err) {
+							return nil, errors.Wrap(err, "review subject access")
+						}
 					}
-				}
-			}
-			for _, sa := range serviceAccounts {
-				_, err := getUserClient(
-					ctx,
-					internalClient.Scheme(),
-					ra,
-					withServiceAccount(sa.Namespace, sa.Name),
-				)
-				if err == nil {
-					// Note: At present, we never return the user-specific client. We always
-					// return the internal client so that most operations are performed by a
-					// single client with a built-in cache.
-					return internalClient, nil
-				}
-				if !apierrors.IsForbidden(err) {
-					return nil, errors.Wrap(err, "get service account specific client")
 				}
 			}
 			return nil, newForbiddenError(ra)
@@ -614,38 +604,30 @@ func getAuthorizedClient(kargoNamespace string) func(
 
 		// If we get to here, we're dealing with a user who "authenticated" by just
 		// passing their bearer token for the Kubernetes API server.
-
-		// Calling getUserClient will build a user-specific client and conduct a
-		// SelfSubjectAccessReview. If the review succeeds, we'll have obtained a
-		// client that can perform the desired operation.
-		_, err := getUserClient(
+		if err := reviewSubjectAccess(
 			ctx,
 			internalClient.Scheme(),
 			ra,
 			withBearerToken(userInfo.BearerToken),
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "get user-specific client")
+		); err != nil {
+			return nil, errors.Wrap(err, "review subject access")
 		}
-		// Note: At present, we never return the user-specific client. We always
-		// return the internal client so that most operations are performed by a
-		// single client with a built-in cache.
 		return internalClient, nil
 	}
 }
 
-type userClientOption func(*userClientOptions)
+type subjectOption func(*userClientOptions)
 
-func withBearerToken(bearerToken string) userClientOption {
+func withBearerToken(bearerToken string) subjectOption {
 	return func(opts *userClientOptions) {
 		opts.bearerToken = bearerToken
 	}
 }
 
-func withServiceAccount(namespace, name string) userClientOption {
+func withServiceAccount(name types.NamespacedName) subjectOption {
 	return func(opts *userClientOptions) {
 		opts.subject = &userClientSubject{
-			username: fmt.Sprintf("system:serviceaccount:%s:%s", namespace, name),
+			username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
 		}
 	}
 }
@@ -659,21 +641,18 @@ type userClientOptions struct {
 	subject     *userClientSubject
 }
 
-// getUserClient creates a user-specific client using the provided scheme and
-// options. It then uses that client to submit a SelfSubjectAccessReview
-// to determine whether the token provided permits the desired operation.
-// If so, the user-specific client is returned.
-//
-//nolint:unparam
-func getUserClient(
+// reviewSubjectAccess submits a (Self)SubjectAccessReview to determine
+// whether the subject that configured with subjectOption is allowed to
+// do the desired operation.
+func reviewSubjectAccess(
 	ctx context.Context,
 	scheme *runtime.Scheme,
 	ra authv1.ResourceAttributes,
-	opts ...userClientOption,
-) (libClient.Client, error) {
+	opts ...subjectOption,
+) error {
 	cfg, err := GetRestConfig(ctx, os.Getenv("KUBECONFIG"))
 	if err != nil {
-		return nil, errors.Wrap(err, "get REST config")
+		return errors.Wrap(err, "get REST config")
 	}
 
 	var opt userClientOptions
@@ -698,7 +677,7 @@ func getUserClient(
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "create user-specific Kubernetes client")
+		return errors.Wrap(err, "create user-specific Kubernetes client")
 	}
 
 	if opt.subject != nil {
@@ -709,12 +688,12 @@ func getUserClient(
 			},
 		}
 		if err := userClient.Create(ctx, review); err != nil {
-			return nil, errors.Wrap(err, "submit SubjectAccessReview")
+			return errors.Wrap(err, "submit SubjectAccessReview")
 		}
 		if review.Status.Allowed {
-			return userClient, nil
+			return nil
 		}
-		return nil, newForbiddenError(ra)
+		return newForbiddenError(ra)
 	}
 
 	review := &authv1.SelfSubjectAccessReview{
@@ -723,12 +702,12 @@ func getUserClient(
 		},
 	}
 	if err := userClient.Create(ctx, review); err != nil {
-		return nil, errors.Wrap(err, "submit SelfSubjectAccessReview")
+		return errors.Wrap(err, "submit SelfSubjectAccessReview")
 	}
 	if review.Status.Allowed {
-		return userClient, nil
+		return nil
 	}
-	return nil, newForbiddenError(ra)
+	return newForbiddenError(ra)
 }
 
 func newForbiddenError(ra authv1.ResourceAttributes) error {

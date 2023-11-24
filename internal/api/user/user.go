@@ -1,6 +1,10 @@
 package user
 
-import "context"
+import (
+	"context"
+
+	"k8s.io/apimachinery/pkg/types"
+)
 
 type userInfoKey struct{}
 
@@ -27,7 +31,7 @@ type Info struct {
 	BearerToken string
 	// ServiceAccounts is the map of the ServiceAccounts that are mapped to the user
 	// by `rbac.kargo.akuity.io` annotations.
-	ServiceAccounts map[string][]string
+	ServiceAccounts map[string][]types.NamespacedName
 }
 
 // ContextWithInfo returns a context.Context that has been augmented with

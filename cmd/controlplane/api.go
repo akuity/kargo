@@ -9,10 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
+	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -41,16 +43,22 @@ func newAPICommand() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "error loading REST config")
 			}
+			scheme, err := newSchemeForAPI()
+			if err != nil {
+				return errors.Wrap(err, "new scheme for API")
+			}
+			internalClient, err := newClientForAPI(ctx, restCfg, scheme)
+			if err != nil {
+				return errors.Wrap(err, "create internal Kubernetes client")
+			}
 			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{
-				KargoNamespace:    cfg.KargoNamespace,
-				NewInternalClient: newClientForAPI,
+				KargoNamespace: cfg.KargoNamespace,
+				NewInternalClient: func(context.Context, *rest.Config, *runtime.Scheme) (client.Client, error) {
+					return internalClient, nil
+				},
 			})
 			if err != nil {
 				return errors.Wrap(err, "create Kubernetes client")
-			}
-			internalClient, err := newClientForAPI(ctx, restCfg, kubeClient.Scheme())
-			if err != nil {
-				return errors.Wrap(err, "create internal Kubernetes client")
 			}
 
 			if cfg.AdminConfig != nil {
@@ -131,4 +139,15 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 	}()
 
 	return mgr.GetClient(), nil
+}
+
+func newSchemeForAPI() (*runtime.Scheme, error) {
+	scheme := runtime.NewScheme()
+	if err := kubescheme.AddToScheme(scheme); err != nil {
+		return nil, errors.Wrap(err, "add Kubernetes api to scheme")
+	}
+	if err := kargoapi.AddToScheme(scheme); err != nil {
+		return nil, errors.Wrap(err, "add kargo api to scheme")
+	}
+	return scheme, nil
 }

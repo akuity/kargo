@@ -17,6 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api/config"
@@ -55,7 +56,7 @@ type authInterceptor struct {
 		ctx context.Context,
 		username string,
 		groups []string,
-	) (map[string][]string, error)
+	) (map[string][]types.NamespacedName, error)
 }
 
 // goOIDCIDTokenVerifyFn is a github.com/coreos/go-oidc/v3/oidc/IDTokenVerifier.Verify() function
@@ -259,7 +260,7 @@ func (a *authInterceptor) listServiceAccounts(
 	ctx context.Context,
 	username string,
 	groups []string,
-) (map[string][]string, error) {
+) (map[string][]types.NamespacedName, error) {
 	queries := []libClient.MatchingFields{
 		{
 			kubeclient.ServiceAccountsBySubjectIndexField: username,
@@ -270,21 +271,24 @@ func (a *authInterceptor) listServiceAccounts(
 			kubeclient.ServiceAccountsByGroupIndexField: group,
 		})
 	}
-	accounts := make(map[string]map[string]struct{})
+	accounts := make(map[string]map[types.NamespacedName]struct{})
 	for _, q := range queries {
 		list := &corev1.ServiceAccountList{}
 		if err := a.internalClient.List(ctx, list, q); err != nil {
 			return nil, errors.Wrap(err, "list service accounts")
 		}
 		for _, sa := range list.Items {
-			namespace, name := sa.GetNamespace(), sa.GetName()
-			if _, ok := accounts[namespace]; !ok {
-				accounts[namespace] = make(map[string]struct{})
+			key := types.NamespacedName{
+				Namespace: sa.GetNamespace(),
+				Name:      sa.GetName(),
 			}
-			accounts[namespace][name] = struct{}{}
+			if _, ok := accounts[key.Namespace]; !ok {
+				accounts[key.Namespace] = make(map[types.NamespacedName]struct{})
+			}
+			accounts[key.Namespace][key] = struct{}{}
 		}
 	}
-	res := make(map[string][]string)
+	res := make(map[string][]types.NamespacedName)
 	for ns, names := range accounts {
 		for name := range names {
 			res[ns] = append(res[ns], name)
