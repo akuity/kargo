@@ -16,7 +16,7 @@ data:
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   {{- if .Values.controller.sharedCredentials.enabled }}
-  KARGO_SHARED_CREDENTIALS_NAMESPACES: {{ .Values.controller.sharedCredentials.namespaces }}
+  GLOBAL_CREDENTIALS_NAMESPACES: {{ .Values.controller.sharedCredentials.namespaces }}
   {{- end }}
   {{- if .Values.kubeconfigSecrets.argocd }}
   ARGOCD_KUBECONFIG: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml

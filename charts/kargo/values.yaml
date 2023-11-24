@@ -178,8 +178,8 @@ controller:
   enabled: true
 
   ## All settings relating to shared credentials (used across multiple kargo projects)
-  sharedCredentials:
-    ## @param controller.sharedCredentials.enable Whether to enable the controller to look for credentials stored in specific namespaces used to share credentials.
+  globalCredentials:
+    ## @param controller.globalCredentials.enable Whether to enable the controller to look for credentials stored in specific namespaces used to share credentials.
     enabled: false
     ## @param controller.namespaces List of namespaces to look for shared credentials as CSV (comma separated values).
     namespaces: ""

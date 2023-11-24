@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"context"
+	"github.com/kelseyhightower/envconfig"
 	"strings"
 
 	"github.com/argoproj/argo-cd/v2/applicationset/utils"
@@ -55,10 +56,38 @@ type Database interface {
 // utilizes a Kubernetes controller runtime client to index and retrieve
 // credentials stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	sharedCredentialsNamespaces []string
-	argoCDNamespace             string
-	kargoClient                 client.Client
-	argoClient                  client.Client
+	*kubernetesDatabaseConfig
+}
+
+// kubernetesDatabaseConfig is a configuration struct for the
+// kubernetesDatabase struct. It uses the functional options pattern to allow
+// for easy configuration.
+type kubernetesDatabaseConfig struct {
+	argoCDNamespace             string   `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
+	globalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
+
+	kargoClient client.Client
+	// it set we know that "borrowing ArgoCD creds" is enabled
+
+	argoClient client.Client
+}
+
+// KubernetesDatabaseOption is a functional option for configuring a
+// kubernetesDatabase. Options defined in credentials_options.go.
+type KubernetesDatabaseOption func(*kubernetesDatabaseConfig)
+
+func createConfig(opts ...KubernetesDatabaseOption) *kubernetesDatabaseConfig {
+	config := &kubernetesDatabaseConfig{}
+
+	// load from env if defined
+	envconfig.MustProcess("", config)
+
+	// apply user supplied options
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	return config
 }
 
 // NewKubernetesDatabase initializes and returns an implementation of the
@@ -67,19 +96,11 @@ type kubernetesDatabase struct {
 // carries out the important task of indexing Credentials stored in Kubernetes
 // Secrets by repository type + URL.
 func NewKubernetesDatabase(
-	sharedCredentialsNamespaces []string,
-	argoCDNamespace string,
-	kargoClient client.Client,
-	argoClient client.Client,
+	opts ...KubernetesDatabaseOption,
 ) Database {
-	if sharedCredentialsNamespaces == nil {
-		sharedCredentialsNamespaces = make([]string, 0)
-	}
+	cfg := createConfig(opts...)
 	return &kubernetesDatabase{
-		sharedCredentialsNamespaces: sharedCredentialsNamespaces,
-		argoCDNamespace:             argoCDNamespace,
-		kargoClient:                 kargoClient,
-		argoClient:                  argoClient,
+		kubernetesDatabaseConfig: cfg,
 	}
 }
 
@@ -108,13 +129,57 @@ func (k *kubernetesDatabase) Get(
 	); err != nil {
 		return creds, false, err
 	}
+	// Found creds in namespace
+	if secret != nil {
+		return secretToCreds(secret), true, nil
+	}
 
-	if secret == nil {
-		// Check namespace for credentials template
+	// Check namespace for credentials template
+	if secret, err = getCredentialsSecret(
+		ctx,
+		k.kargoClient,
+		namespace,
+		labels.Set(map[string]string{
+			kargoSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
+		}).AsSelector(),
+		credType,
+		repoURL,
+		true, // repoURL is a prefix
+	); err != nil {
+		return creds, false, err
+	}
+
+	// Found template creds in namespace
+	if secret != nil {
+		return secretToCreds(secret), true, nil
+	}
+
+	// Check global credentials namespaces for credentials
+	for _, globalCredsNamespace := range k.globalCredentialsNamespaces {
+		// Check shared creds namespace for credentials
 		if secret, err = getCredentialsSecret(
 			ctx,
 			k.kargoClient,
-			namespace,
+			globalCredsNamespace,
+			labels.Set(map[string]string{
+				kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
+			}).AsSelector(),
+			credType,
+			repoURL,
+			false, // repoURL is not a prefix
+		); err != nil {
+			return creds, false, err
+		}
+		// Found creds in global creds namespace
+		if secret != nil {
+			return secretToCreds(secret), true, nil
+		}
+
+		// Check shared creds namespace for credentials template
+		if secret, err = getCredentialsSecret(
+			ctx,
+			k.kargoClient,
+			globalCredsNamespace,
 			labels.Set(map[string]string{
 				kargoSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
 			}).AsSelector(),
@@ -125,42 +190,9 @@ func (k *kubernetesDatabase) Get(
 			return creds, false, err
 		}
 
-		if secret == nil {
-			for _, sharedCredsNamespace := range k.sharedCredentialsNamespaces {
-				// Check shared creds namespace for credentials
-				if secret, err = getCredentialsSecret(
-					ctx,
-					k.kargoClient,
-					sharedCredsNamespace,
-					labels.Set(map[string]string{
-						kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
-					}).AsSelector(),
-					credType,
-					repoURL,
-					false, // repoURL is not a prefix
-				); err != nil {
-					return creds, false, err
-				}
-				// Check shared creds namespace for credentials template
-				if secret, err = getCredentialsSecret(
-					ctx,
-					k.kargoClient,
-					sharedCredsNamespace,
-					labels.Set(map[string]string{
-						kargoSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
-					}).AsSelector(),
-					credType,
-					repoURL,
-					true, // repoURL is a prefix
-				); err != nil {
-					return creds, false, err
-				}
-			}
+		if secret != nil {
+			return secretToCreds(secret), true, nil
 		}
-	}
-
-	if secret != nil {
-		return secretToCreds(secret), true, nil
 	}
 
 	if k.argoClient == nil {
