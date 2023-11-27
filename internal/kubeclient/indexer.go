@@ -29,8 +29,8 @@ const (
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
 	StagesByWarehouseIndexField          = "warehouse"
 
-	ServiceAccountsByGroupIndexField   = "group"
-	ServiceAccountsBySubjectIndexField = "subject"
+	ServiceAccountsByGroupIndexField   = "groups"
+	ServiceAccountsBySubjectIndexField = "subjects"
 )
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
