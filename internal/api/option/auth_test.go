@@ -328,7 +328,7 @@ func TestAuthenticate(t *testing.T) {
 					context.Context,
 					string,
 					[]string,
-				) (map[string][]types.NamespacedName, error) {
+				) (map[string]map[types.NamespacedName]struct{}, error) {
 					return nil, nil
 				},
 			},

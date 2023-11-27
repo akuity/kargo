@@ -56,7 +56,7 @@ type authInterceptor struct {
 		ctx context.Context,
 		username string,
 		groups []string,
-	) (map[string][]types.NamespacedName, error)
+	) (map[string]map[types.NamespacedName]struct{}, error)
 }
 
 // goOIDCIDTokenVerifyFn is a github.com/coreos/go-oidc/v3/oidc/IDTokenVerifier.Verify() function
@@ -260,7 +260,7 @@ func (a *authInterceptor) listServiceAccounts(
 	ctx context.Context,
 	username string,
 	groups []string,
-) (map[string][]types.NamespacedName, error) {
+) (map[string]map[types.NamespacedName]struct{}, error) {
 	queries := []libClient.MatchingFields{
 		{
 			kubeclient.ServiceAccountsBySubjectIndexField: username,
@@ -288,13 +288,7 @@ func (a *authInterceptor) listServiceAccounts(
 			accounts[key.Namespace][key] = struct{}{}
 		}
 	}
-	res := make(map[string][]types.NamespacedName)
-	for ns, names := range accounts {
-		for name := range names {
-			res[ns] = append(res[ns], name)
-		}
-	}
-	return res, nil
+	return accounts, nil
 }
 
 // authenticate retrieves the value of the Authorization header from inbound

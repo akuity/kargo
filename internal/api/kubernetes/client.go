@@ -561,7 +561,7 @@ func getAuthorizedClient(kargoNamespace string) func(
 				if !ok {
 					continue
 				}
-				for _, sa := range accounts {
+				for sa := range accounts {
 					err := reviewSubjectAccess(
 						ctx,
 						internalClient.Scheme(),
@@ -583,7 +583,7 @@ func getAuthorizedClient(kargoNamespace string) func(
 					if ns == key.Namespace || ns == kargoNamespace {
 						continue
 					}
-					for _, sa := range accounts {
+					for sa := range accounts {
 						err := reviewSubjectAccess(
 							ctx,
 							internalClient.Scheme(),
