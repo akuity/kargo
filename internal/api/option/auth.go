@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -271,6 +272,20 @@ func (a *authInterceptor) listServiceAccounts(
 			kubeclient.ServiceAccountsByGroupIndexField: group,
 		})
 	}
+	kargoNamespaces := make(map[string]struct{})
+	if a.cfg.KargoNamespace != "" {
+		// Kargo namespace is allowed by default
+		kargoNamespaces[a.cfg.KargoNamespace] = struct{}{}
+	}
+	nsList := &corev1.NamespaceList{}
+	if err := a.internalClient.List(ctx, nsList, libClient.MatchingLabels{
+		kargoapi.LabelProjectKey: kargoapi.LabelTrueValue,
+	}); err != nil {
+		return nil, errors.Wrap(err, "list namespaces")
+	}
+	for _, ns := range nsList.Items {
+		kargoNamespaces[ns.GetName()] = struct{}{}
+	}
 	accounts := make(map[string]map[types.NamespacedName]struct{})
 	for _, q := range queries {
 		list := &corev1.ServiceAccountList{}
@@ -281,6 +296,9 @@ func (a *authInterceptor) listServiceAccounts(
 			key := types.NamespacedName{
 				Namespace: sa.GetNamespace(),
 				Name:      sa.GetName(),
+			}
+			if _, ok := kargoNamespaces[key.Namespace]; !ok {
+				continue
 			}
 			if _, ok := accounts[key.Namespace]; !ok {
 				accounts[key.Namespace] = make(map[types.NamespacedName]struct{})
