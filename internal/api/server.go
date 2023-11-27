@@ -32,8 +32,9 @@ var (
 )
 
 type server struct {
-	cfg    config.ServerConfig
-	client kubernetes.Client
+	cfg            config.ServerConfig
+	client         kubernetes.Client
+	internalClient client.Client
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -107,10 +108,12 @@ type Server interface {
 func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
+	internalClient client.Client,
 ) Server {
 	s := &server{
-		cfg:    cfg,
-		client: kubeClient,
+		cfg:            cfg,
+		client:         kubeClient,
+		internalClient: internalClient,
 	}
 	s.validateProjectFn = s.validateProject
 	s.externalValidateProjectFn = validation.ValidateProject
@@ -131,7 +134,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	log := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	opts, err := option.NewHandlerOption(ctx, s.cfg)
+	opts, err := option.NewHandlerOption(ctx, s.cfg, s.internalClient)
 	if err != nil {
 		return errors.Wrap(err, "error initializing handler options")
 	}

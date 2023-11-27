@@ -16,9 +16,14 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/kubeclient"
 )
 
 const authHeaderKey = "Authorization"
@@ -34,7 +39,8 @@ var exemptProcedures = map[string]struct{}{
 // value of the Authorization header from inbound requests/connections and
 // store it in the context.
 type authInterceptor struct {
-	cfg config.ServerConfig
+	cfg            config.ServerConfig
+	internalClient libClient.Client
 
 	parseUnverifiedJWTFn func(
 		rawToken string,
@@ -45,8 +51,13 @@ type authInterceptor struct {
 		ctx context.Context,
 		rawToken string,
 	) (string, []string, bool)
-	oidcTokenVerifyFn   goOIDCIDTokenVerifyFn
-	oidcExtractGroupsFn func(*oidc.IDToken) ([]string, error)
+	oidcTokenVerifyFn     goOIDCIDTokenVerifyFn
+	oidcExtractGroupsFn   func(*oidc.IDToken) ([]string, error)
+	listServiceAccountsFn func(
+		ctx context.Context,
+		username string,
+		groups []string,
+	) (map[string]map[types.NamespacedName]struct{}, error)
 }
 
 // goOIDCIDTokenVerifyFn is a github.com/coreos/go-oidc/v3/oidc/IDTokenVerifier.Verify() function
@@ -56,9 +67,11 @@ type goOIDCIDTokenVerifyFn func(ctx context.Context, rawIDToken string) (*oidc.I
 func newAuthInterceptor(
 	ctx context.Context,
 	cfg config.ServerConfig,
+	client libClient.Client,
 ) (*authInterceptor, error) {
 	a := &authInterceptor{
-		cfg: cfg,
+		cfg:            cfg,
+		internalClient: client,
 	}
 	if cfg.OIDCConfig != nil {
 		var err error
@@ -72,6 +85,7 @@ func newAuthInterceptor(
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
 	a.oidcExtractGroupsFn = oidcExtractGroups
+	a.listServiceAccountsFn = a.listServiceAccounts
 	return a, nil
 }
 
@@ -243,6 +257,57 @@ func (a *authInterceptor) WrapStreamingHandler(
 		return next(ctx, conn)
 	}
 }
+func (a *authInterceptor) listServiceAccounts(
+	ctx context.Context,
+	username string,
+	groups []string,
+) (map[string]map[types.NamespacedName]struct{}, error) {
+	queries := []libClient.MatchingFields{
+		{
+			kubeclient.ServiceAccountsBySubjectIndexField: username,
+		},
+	}
+	for _, group := range groups {
+		queries = append(queries, libClient.MatchingFields{
+			kubeclient.ServiceAccountsByGroupIndexField: group,
+		})
+	}
+	kargoNamespaces := make(map[string]struct{})
+	if a.cfg.KargoNamespace != "" {
+		// Kargo namespace is allowed by default
+		kargoNamespaces[a.cfg.KargoNamespace] = struct{}{}
+	}
+	nsList := &corev1.NamespaceList{}
+	if err := a.internalClient.List(ctx, nsList, libClient.MatchingLabels{
+		kargoapi.LabelProjectKey: kargoapi.LabelTrueValue,
+	}); err != nil {
+		return nil, errors.Wrap(err, "list namespaces")
+	}
+	for _, ns := range nsList.Items {
+		kargoNamespaces[ns.GetName()] = struct{}{}
+	}
+	accounts := make(map[string]map[types.NamespacedName]struct{})
+	for _, q := range queries {
+		list := &corev1.ServiceAccountList{}
+		if err := a.internalClient.List(ctx, list, q); err != nil {
+			return nil, errors.Wrap(err, "list service accounts")
+		}
+		for _, sa := range list.Items {
+			key := types.NamespacedName{
+				Namespace: sa.GetNamespace(),
+				Name:      sa.GetName(),
+			}
+			if _, ok := kargoNamespaces[key.Namespace]; !ok {
+				continue
+			}
+			if _, ok := accounts[key.Namespace]; !ok {
+				accounts[key.Namespace] = make(map[types.NamespacedName]struct{})
+			}
+			accounts[key.Namespace][key] = struct{}{}
+		}
+	}
+	return accounts, nil
+}
 
 // authenticate retrieves the value of the Authorization header from inbound
 // requests/connections, attempts to validate it and extract meaningful user
@@ -309,11 +374,16 @@ func (a *authInterceptor) authenticate(
 		// identity provider.
 		username, groups, ok := a.verifyIDPIssuedTokenFn(ctx, rawToken)
 		if ok {
+			sa, err := a.listServiceAccountsFn(ctx, username, groups)
+			if err != nil {
+				return ctx, errors.Wrap(err, "list service accounts for user")
+			}
 			return user.ContextWithInfo(
 				ctx,
 				user.Info{
-					Username: username,
-					Groups:   groups,
+					Username:        username,
+					Groups:          groups,
+					ServiceAccounts: sa,
 				},
 			), nil
 		}

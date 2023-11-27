@@ -2,15 +2,18 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/pkg/errors"
 	authv1 "k8s.io/api/authorization/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
@@ -28,6 +31,9 @@ import (
 // ClientOptions specifies options for customizing the client returned by the
 // NewClient function.
 type ClientOptions struct {
+	// KargoNamespace is the namespace in which the Kargo components
+	// are running.
+	KargoNamespace string
 	// NewInternalClient may be used to take control of how the client's own
 	// internal/underlying controller-runtime client is created. This is mainly
 	// useful for tests wherein one may, for instance, wish to inject a custom
@@ -142,10 +148,10 @@ func NewClient(
 		internalClient: internalClient,
 		statusWriter: &authorizingStatusWriterWrapper{
 			internalClient:        internalClient,
-			getAuthorizedClientFn: getAuthorizedClient,
+			getAuthorizedClientFn: getAuthorizedClient(opts.KargoNamespace),
 		},
 		internalDynamicClient: internalDynamicClient,
-		getAuthorizedClientFn: getAuthorizedClient,
+		getAuthorizedClientFn: getAuthorizedClient(opts.KargoNamespace),
 	}, nil
 }
 
@@ -510,48 +516,34 @@ func gvrAndKeyFromObj(
 // found therein to attempt to identify or build an appropriate client for
 // performing the desired operation. If it is unable to do so, it amounts to the
 // operation being unauthorized and an error is returned.
-func getAuthorizedClient(
-	ctx context.Context,
-	internalClient libClient.Client,
-	verb string,
-	gvr schema.GroupVersionResource,
-	subresource string,
-	key libClient.ObjectKey,
+func getAuthorizedClient(kargoNamespace string) func(
+	context.Context,
+	libClient.Client,
+	string,
+	schema.GroupVersionResource,
+	string,
+	libClient.ObjectKey,
 ) (libClient.Client, error) {
-	userInfo, ok := user.InfoFromContext(ctx)
-	if !ok {
-		return nil, errors.New("not allowed")
-	}
+	return func(
+		ctx context.Context,
+		internalClient libClient.Client,
+		verb string,
+		gvr schema.GroupVersionResource,
+		subresource string,
+		key libClient.ObjectKey,
+	) (libClient.Client, error) {
+		userInfo, ok := user.InfoFromContext(ctx)
+		if !ok {
+			return nil, errors.New("not allowed")
+		}
 
-	// Admins get to use the Kargo API server's own Kubernetes client. i.e. They
-	// can do everything the server can do.
-	if userInfo.IsAdmin {
-		return internalClient, nil
-	}
+		// Admins get to use the Kargo API server's own Kubernetes client. i.e. They
+		// can do everything the server can do.
+		if userInfo.IsAdmin {
+			return internalClient, nil
+		}
 
-	if userInfo.Username != "" {
-		// TODO: We are not yet mapping users to Kubernetes SAs, so anyone we could
-		// authenticate currently gets all the same permissions as the Kargo API
-		// server itself.
-		//
-		// We should replace this with a SubjectAccessReview on the SA to determine
-		// if the desired operation is allowed. If it is, we can return the
-		// internalClient.
-		return internalClient, nil
-	}
-
-	// If we get to here, we're dealing with a user who "authenticated" by just
-	// passing their bearer token for the Kubernetes API server.
-
-	// Calling getUserClient will build a user-specific client and conduct a
-	// SelfSubjectAccessReview. If the review succeeds, we'll have obtained a
-	// client that can perform the desired operation. If the review fails, the
-	// returned client will be nil.
-	client, err := getUserClient(
-		ctx,
-		internalClient.Scheme(),
-		userInfo.BearerToken,
-		authv1.ResourceAttributes{
+		ra := authv1.ResourceAttributes{
 			Verb:        verb,
 			Group:       gvr.Group,
 			Version:     gvr.Version,
@@ -559,44 +551,124 @@ func getAuthorizedClient(
 			Subresource: subresource,
 			Namespace:   key.Namespace,
 			Name:        key.Name,
-		},
-	)
-	if err != nil {
-		return nil,
-			errors.Wrap(err, "error getting user-specific Kubernetes client")
+		}
+		if userInfo.Username != "" {
+			for _, ns := range []string{key.Namespace, kargoNamespace} {
+				if ns == "" {
+					continue
+				}
+				accounts, ok := userInfo.ServiceAccounts[ns]
+				if !ok {
+					continue
+				}
+				for sa := range accounts {
+					err := reviewSubjectAccess(
+						ctx,
+						internalClient.Scheme(),
+						ra,
+						withServiceAccount(sa),
+					)
+					if err == nil {
+						return internalClient, nil
+					}
+					if !apierrors.IsForbidden(err) {
+						return nil, errors.Wrap(err, "review subject access")
+					}
+				}
+			}
+			// If the operation is related to cluster-scoped resources
+			// (e.g. Project(Namespace)), all ServiceAccounts are candidates.
+			if key.Namespace == "" {
+				for ns, accounts := range userInfo.ServiceAccounts {
+					if ns == key.Namespace || ns == kargoNamespace {
+						continue
+					}
+					for sa := range accounts {
+						err := reviewSubjectAccess(
+							ctx,
+							internalClient.Scheme(),
+							ra,
+							withServiceAccount(sa),
+						)
+						if err == nil {
+							return internalClient, nil
+						}
+						if !apierrors.IsForbidden(err) {
+							return nil, errors.Wrap(err, "review subject access")
+						}
+					}
+				}
+			}
+			return nil, newForbiddenError(ra)
+		}
+
+		// If we get to here, we're dealing with a user who "authenticated" by just
+		// passing their bearer token for the Kubernetes API server.
+		if err := reviewSubjectAccess(
+			ctx,
+			internalClient.Scheme(),
+			ra,
+			withBearerToken(userInfo.BearerToken),
+		); err != nil {
+			return nil, errors.Wrap(err, "review subject access")
+		}
+		return internalClient, nil
 	}
-	if client == nil {
-		return nil, errors.New("not allowed")
-	}
-	// Note: At present, we never return the user-specific client. We always
-	// return the internal client so that most operations are performed by a
-	// single client with a built-in cache.
-	return internalClient, nil
 }
 
-// getUserClient creates a user-specific client using the provided scheme and
-// bearer token. It then uses that client to conduct a SelfSubjectAccessReview
-// to determine whether the token provided permits the desired operation. If so,
-// the user-specific client is returned. Otherwise, nil is returned.
-func getUserClient(
+type subjectOption func(*userClientOptions)
+
+func withBearerToken(bearerToken string) subjectOption {
+	return func(opts *userClientOptions) {
+		opts.bearerToken = bearerToken
+	}
+}
+
+func withServiceAccount(name types.NamespacedName) subjectOption {
+	return func(opts *userClientOptions) {
+		opts.subject = &userClientSubject{
+			username: fmt.Sprintf("system:serviceaccount:%s:%s", name.Namespace, name.Name),
+		}
+	}
+}
+
+type userClientSubject struct {
+	username string
+}
+
+type userClientOptions struct {
+	bearerToken string
+	subject     *userClientSubject
+}
+
+// reviewSubjectAccess submits a (Self)SubjectAccessReview to determine
+// whether the subject that configured with subjectOption is allowed to
+// do the desired operation.
+func reviewSubjectAccess(
 	ctx context.Context,
 	scheme *runtime.Scheme,
-	bearerToken string,
-	resourceAttrs authv1.ResourceAttributes,
-) (libClient.Client, error) {
+	ra authv1.ResourceAttributes,
+	opts ...subjectOption,
+) error {
 	cfg, err := GetRestConfig(ctx, os.Getenv("KUBECONFIG"))
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting REST config")
+		return errors.Wrap(err, "get REST config")
 	}
 
-	// Tweak the REST config...
-	cfg.BearerToken = bearerToken
-	// These MUST be blanked out because they all seem to take precedence over the
-	// cfg.BearerToken field.
-	// TODO: Are there more things to blank out here?
-	cfg.BearerTokenFile = ""
-	cfg.CertData = nil
-	cfg.CertFile = ""
+	var opt userClientOptions
+	for _, apply := range opts {
+		apply(&opt)
+	}
+
+	if opt.bearerToken != "" {
+		cfg.BearerToken = opt.bearerToken
+		// These MUST be blanked out because they all seem to take precedence over the
+		// cfg.BearerToken field.
+		// TODO: Are there more things to blank out here?
+		cfg.BearerTokenFile = ""
+		cfg.CertData = nil
+		cfg.CertFile = ""
+	}
 
 	userClient, err := libClient.New(
 		cfg,
@@ -605,19 +677,51 @@ func getUserClient(
 		},
 	)
 	if err != nil {
-		return nil,
-			errors.Wrap(err, "error creating user-specific Kubernetes client")
+		return errors.Wrap(err, "create user-specific Kubernetes client")
 	}
-	ssar := &authv1.SelfSubjectAccessReview{
+
+	if opt.subject != nil {
+		review := &authv1.SubjectAccessReview{
+			Spec: authv1.SubjectAccessReviewSpec{
+				ResourceAttributes: &ra,
+				User:               opt.subject.username,
+			},
+		}
+		if err := userClient.Create(ctx, review); err != nil {
+			return errors.Wrap(err, "submit SubjectAccessReview")
+		}
+		if review.Status.Allowed {
+			return nil
+		}
+		return newForbiddenError(ra)
+	}
+
+	review := &authv1.SelfSubjectAccessReview{
 		Spec: authv1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &resourceAttrs,
+			ResourceAttributes: &ra,
 		},
 	}
-	if err = userClient.Create(ctx, ssar); err != nil {
-		return nil, errors.Wrap(err, "error conducting SelfSubjectAccessReview")
+	if err := userClient.Create(ctx, review); err != nil {
+		return errors.Wrap(err, "submit SelfSubjectAccessReview")
 	}
-	if ssar.Status.Allowed {
-		return userClient, nil
+	if review.Status.Allowed {
+		return nil
 	}
-	return nil, nil
+	return newForbiddenError(ra)
+}
+
+func newForbiddenError(ra authv1.ResourceAttributes) error {
+	return apierrors.NewForbidden(
+		schema.GroupResource{ /* explicitly empty */ },
+		ra.Name,
+		fmt.Errorf(
+			"%s %s",
+			ra.Verb,
+			schema.GroupVersionResource{
+				Group:    ra.Group,
+				Version:  ra.Version,
+				Resource: ra.Resource,
+			}.String(),
+		),
+	)
 }

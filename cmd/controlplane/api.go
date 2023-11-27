@@ -9,10 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
+	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -36,18 +38,28 @@ func newAPICommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo API Server")
 
+			cfg := config.ServerConfigFromEnv()
 			restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 			if err != nil {
 				return errors.Wrap(err, "error loading REST config")
 			}
+			scheme, err := newSchemeForAPI()
+			if err != nil {
+				return errors.Wrap(err, "new scheme for API")
+			}
+			internalClient, err := newClientForAPI(ctx, restCfg, scheme)
+			if err != nil {
+				return errors.Wrap(err, "create internal Kubernetes client")
+			}
 			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{
-				NewInternalClient: newClientForAPI,
+				KargoNamespace: cfg.KargoNamespace,
+				NewInternalClient: func(context.Context, *rest.Config, *runtime.Scheme) (client.Client, error) {
+					return internalClient, nil
+				},
 			})
 			if err != nil {
-				return errors.Wrap(err, "error creating Kubernetes client")
+				return errors.Wrap(err, "create Kubernetes client")
 			}
-
-			cfg := config.ServerConfigFromEnv()
 
 			if cfg.AdminConfig != nil {
 				log.Info("admin account is enabled")
@@ -60,7 +72,7 @@ func newAPICommand() *cobra.Command {
 				}).Info("SSO via OpenID Connect is enabled")
 			}
 
-			srv := api.NewServer(cfg, kubeClient)
+			srv := api.NewServer(cfg, kubeClient, internalClient)
 			l, err := net.Listen(
 				"tcp",
 				fmt.Sprintf(
@@ -111,6 +123,15 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 			errors.Wrap(err, "index Freight by Stages for which it has been approved")
 	}
 
+	// Index ServiceAccounts by RBAC Groups
+	if err := kubeclient.IndexServiceAccountsByRBACGroups(ctx, mgr); err != nil {
+		return nil, errors.Wrap(err, "index service accounts by rbac groups")
+	}
+	// Index ServiceAccounts by RBAC Subjects
+	if err := kubeclient.IndexServiceAccountsByRBACSubjects(ctx, mgr); err != nil {
+		return nil, errors.Wrap(err, "index servi ce accounts by rbac subjects")
+	}
+
 	go func() {
 		if err := mgr.Start(ctx); err != nil {
 			panic(errors.Wrap(err, "start manager"))
@@ -118,4 +139,15 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 	}()
 
 	return mgr.GetClient(), nil
+}
+
+func newSchemeForAPI() (*runtime.Scheme, error) {
+	scheme := runtime.NewScheme()
+	if err := kubescheme.AddToScheme(scheme); err != nil {
+		return nil, errors.Wrap(err, "add Kubernetes api to scheme")
+	}
+	if err := kargoapi.AddToScheme(scheme); err != nil {
+		return nil, errors.Wrap(err, "add kargo api to scheme")
+	}
+	return scheme, nil
 }
