@@ -26,6 +26,7 @@ const (
 
 	PromotionPoliciesByStageIndexField   = "stage"
 	StagesByArgoCDApplicationsIndexField = "applications"
+	StagesByFreightIndexField            = "freight"
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
 	StagesByWarehouseIndexField          = "warehouse"
 
@@ -219,6 +220,25 @@ func indexFreightByApprovedStages(obj client.Object) []string {
 		i++
 	}
 	return approvedStages
+}
+
+func IndexStagesByFreight(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		StagesByFreightIndexField,
+		indexStagesByFreight,
+	)
+}
+
+func indexStagesByFreight(obj client.Object) []string {
+	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+	if stage.Status.CurrentFreight != nil {
+		if id := stage.Status.CurrentFreight.ID; id != "" {
+			return []string{id}
+		}
+	}
+	return nil
 }
 
 func IndexStagesByUpstreamStages(ctx context.Context, mgr ctrl.Manager) error {

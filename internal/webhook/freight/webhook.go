@@ -2,7 +2,10 @@ package freight
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
+	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -11,13 +14,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
-var freightGroupKind = schema.GroupKind{
-	Group: kargoapi.GroupVersion.Group,
-	Kind:  "Freight",
-}
+var (
+	freightGroupKind = schema.GroupKind{
+		Group: kargoapi.GroupVersion.Group,
+		Kind:  "Freight",
+	}
+	freightGroupResource = schema.GroupResource{
+		Group:    kargoapi.GroupVersion.Group,
+		Resource: "freights",
+	}
+)
 
 type webhook struct {
 	client client.Client
@@ -111,7 +121,31 @@ func (w *webhook) ValidateUpdate(
 	return nil
 }
 
-func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
-	// No-op
+func (w *webhook) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+
+	// Check if the given freight is used by any stages.
+	var list kargoapi.StageList
+	if err := w.client.List(
+		ctx,
+		&list,
+		client.InNamespace(freight.GetNamespace()),
+		client.MatchingFields{
+			kubeclient.StagesByFreightIndexField: freight.ID,
+		},
+	); err != nil {
+		return errors.Wrap(err, "list stages")
+	}
+	if len(list.Items) > 0 {
+		stages := make([]string, len(list.Items))
+		for i, stage := range list.Items {
+			stages[i] = fmt.Sprintf("%q", stage.Name)
+		}
+		err := fmt.Errorf(
+			"freight is in-use by stages (%s)",
+			strings.Join(stages, ", "),
+		)
+		return apierrors.NewForbidden(freightGroupResource, freight.Name, err)
+	}
 	return nil
 }

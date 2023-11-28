@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -170,12 +172,68 @@ func TestValidateUpdate(t *testing.T) {
 }
 
 func TestValidateDelete(t *testing.T) {
-	w := &webhook{}
-	require.NoError(
-		t,
-		w.ValidateDelete(
-			context.Background(),
-			&kargoapi.Freight{},
-		),
-	)
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testCases := map[string]struct {
+		clientBuilderFunc func(*fake.ClientBuilder) *fake.ClientBuilder
+		input             *kargoapi.Freight
+		shouldErr         bool
+	}{
+		"idle freight": {
+			clientBuilderFunc: func(b *fake.ClientBuilder) *fake.ClientBuilder {
+				return b
+			},
+			input: &kargoapi.Freight{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "fake-freight",
+				},
+				ID: "fake-id",
+			},
+			shouldErr: false,
+		},
+		"in-use freight": {
+			clientBuilderFunc: func(b *fake.ClientBuilder) *fake.ClientBuilder {
+				return b.WithObjects(
+					&kargoapi.Stage{
+						ObjectMeta: v1.ObjectMeta{
+							Name: "fake-stage",
+						},
+						Status: kargoapi.StageStatus{
+							CurrentFreight: &kargoapi.SimpleFreight{
+								ID: "fake-id",
+							},
+						},
+					},
+				)
+			},
+			input: &kargoapi.Freight{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "fake-freight",
+				},
+				ID: "fake-id",
+			},
+			shouldErr: true,
+		},
+	}
+	for name, tc := range testCases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+
+			w := newWebhook(
+				tc.clientBuilderFunc(fake.NewClientBuilder().WithScheme(scheme)).
+					Build(),
+			)
+			err := w.ValidateDelete(ctx, tc.input)
+			if tc.shouldErr {
+				require.Error(t, err)
+				require.True(t, apierrors.IsForbidden(err))
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }
