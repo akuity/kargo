@@ -177,6 +177,13 @@ controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
 
+  ## All settings relating to shared credentials (used across multiple kargo projects)
+  globalCredentials:
+    ## @param controller.globalCredentials.enabled Whether to enable the controller to look for credentials stored in specific namespaces used to share credentials.
+    enabled: false
+    ## @param controller.globalCredentials.namespaces List of namespaces to look for shared credentials.
+    namespaces: []
+
   ## @param controller.shardName [nullable] Set a shard name only if you are running multiple controllers backed by a single underlying control plane. Setting a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving the shard name undefined will designate this controller as the default controller that is responsible exclusively for resources that are **not** assigned to a specific shard. Leaving this undefined is the correct choice when you are not using sharding at all. It is also the correct setting if you are using sharding and want to designate a controller as the default for handling resources not assigned to a specific shard. In most cases, this setting should simply be left alone.
   # shardName:
 
