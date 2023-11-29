@@ -15,14 +15,15 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	apiconfig "github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/cli/apply"
-	"github.com/akuity/kargo/internal/cli/create"
-	"github.com/akuity/kargo/internal/cli/delete"
-	"github.com/akuity/kargo/internal/cli/get"
-	"github.com/akuity/kargo/internal/cli/login"
+	"github.com/akuity/kargo/internal/cli/cmd/apply"
+	cliconfigcmd "github.com/akuity/kargo/internal/cli/cmd/config"
+	"github.com/akuity/kargo/internal/cli/cmd/create"
+	"github.com/akuity/kargo/internal/cli/cmd/delete"
+	"github.com/akuity/kargo/internal/cli/cmd/get"
+	"github.com/akuity/kargo/internal/cli/cmd/login"
+	"github.com/akuity/kargo/internal/cli/cmd/refresh"
+	"github.com/akuity/kargo/internal/cli/cmd/stage"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/cli/refresh"
-	"github.com/akuity/kargo/internal/cli/stage"
 )
 
 // rootState holds state used internally by the root command.
@@ -90,6 +91,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
 
 	cmd.AddCommand(apply.NewCommand(opt))
+	cmd.AddCommand(cliconfigcmd.NewCommand())
 	cmd.AddCommand(create.NewCommand(opt))
 	cmd.AddCommand(delete.NewCommand(opt))
 	cmd.AddCommand(get.NewCommand(opt))

@@ -33,7 +33,7 @@ kargo get warehouses --project=my-project my-warehouse
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := opt.Project.OrElse("")
+			project := opt.Project
 			if project == "" {
 				return errors.New("project is required")
 			}
@@ -83,7 +83,7 @@ kargo get warehouses --project=my-project my-warehouse
 			return resErr
 		},
 	}
-	option.OptionalProject(opt.Project)(cmd.Flags())
+	option.Project(&opt.Project, opt.Project)(cmd.Flags())
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }

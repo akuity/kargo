@@ -48,7 +48,7 @@ func refreshObject(
 			return err
 		}
 
-		project := opt.Project.OrElse("")
+		project := opt.Project
 		if project == "" {
 			return errors.New("project is required")
 		}

@@ -36,7 +36,7 @@ kargo get stages --project=my-project my-stage
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := opt.Project.OrElse("")
+			project := opt.Project
 			if project == "" {
 				return errors.New("project is required")
 			}
@@ -78,7 +78,7 @@ kargo get stages --project=my-project my-stage
 			return resErr
 		},
 	}
-	option.OptionalProject(opt.Project)(cmd.Flags())
+	option.Project(&opt.Project, opt.Project)(cmd.Flags())
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }
