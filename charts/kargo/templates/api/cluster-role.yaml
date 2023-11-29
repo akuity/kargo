@@ -41,6 +41,7 @@ rules:
       - get
       - list
       - watch
+      - delete
   - apiGroups:
       - kargo.akuity.io
     resources:
