@@ -132,14 +132,14 @@ func newControllerCommand() *cobra.Command {
 				}
 			}
 
-			credentialsDbOpts := make([]credentials.KubernetesDatabaseOption, 0)
+			credentialsDbOpts := make([]credentials.KubernetesDatabaseOption, 0, 1)
 			if types.MustParseBool(
 				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
 			) {
 				credentialsDbOpts = append(credentialsDbOpts, credentials.WithArgoClient(appMgr.GetClient()))
 			}
-			credentialsDbOpts = append(credentialsDbOpts, credentials.WithKargoClient(kargoMgr.GetClient()))
 			credentialsDB := credentials.NewKubernetesDatabase(
+				kargoMgr.GetClient(),
 				credentialsDbOpts...,
 			)
 

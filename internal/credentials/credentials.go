@@ -96,9 +96,11 @@ func createConfig(opts ...KubernetesDatabaseOption) *kubernetesDatabaseConfig {
 // carries out the important task of indexing Credentials stored in Kubernetes
 // Secrets by repository type + URL.
 func NewKubernetesDatabase(
+	kargoClient client.Client,
 	opts ...KubernetesDatabaseOption,
 ) Database {
 	cfg := createConfig(opts...)
+	cfg.kargoClient = kargoClient
 	return &kubernetesDatabase{
 		kubernetesDatabaseConfig: cfg,
 	}

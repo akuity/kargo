@@ -15,9 +15,9 @@ func TestNewKubernetesDatabase(t *testing.T) {
 	const testArgoCDNameSpace = "argocd"
 	testClient := fake.NewClientBuilder().Build()
 	d := NewKubernetesDatabase(
+		testClient,
 		WithArgoCDNamespace(testArgoCDNameSpace),
 		WithArgoClient(testClient),
-		WithKargoClient(testClient),
 	)
 	require.NotNil(t, d)
 	k, ok := d.(*kubernetesDatabase)

@@ -14,12 +14,6 @@ func WithGlobalCredentialsNamespaces(namespaces []string) KubernetesDatabaseOpti
 	}
 }
 
-func WithKargoClient(client client.Client) KubernetesDatabaseOption {
-	return func(config *kubernetesDatabaseConfig) {
-		config.kargoClient = client
-	}
-}
-
 func WithArgoClient(client client.Client) KubernetesDatabaseOption {
 	return func(config *kubernetesDatabaseConfig) {
 		config.argoClient = client
