@@ -47,7 +47,7 @@ kargo get promotions --project=my-project some-promotion
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := opt.Project.OrElse("")
+			project := opt.Project
 			if project == "" {
 				return errors.New("project is required")
 			}
@@ -93,7 +93,7 @@ kargo get promotions --project=my-project some-promotion
 			return resErr
 		},
 	}
-	option.OptionalProject(opt.Project)(cmd.Flags())
+	option.Project(&opt.Project, opt.Project)(cmd.Flags())
 	option.OptionalStage(flag.Stage)(cmd.Flags())
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd

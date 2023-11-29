@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/logging"
@@ -16,12 +17,13 @@ import (
 func NewHandlerOption(
 	ctx context.Context,
 	cfg config.ServerConfig,
+	internalClient libClient.Client,
 ) (connect.HandlerOption, error) {
 	interceptors := []connect.Interceptor{
 		newLogInterceptor(logging.LoggerFromContext(ctx), loggingIgnorableMethods),
 	}
 	if !cfg.LocalMode {
-		authInterceptor, err := newAuthInterceptor(ctx, cfg)
+		authInterceptor, err := newAuthInterceptor(ctx, cfg, internalClient)
 		if err != nil {
 			return nil,
 				errors.Wrap(err, "error initializing authentication interceptor")

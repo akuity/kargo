@@ -17,6 +17,8 @@ import { Freight, GitCommit, Stage } from '@ui/gen/v1alpha1/types_pb';
 
 export type PromotionType = 'default' | 'subscribers';
 
+import { FreightLabel } from '../common/freight-label';
+
 import styles from './freightline.module.less';
 import { StageIndicators } from './stage-indicators';
 
@@ -107,7 +109,7 @@ export const Freightline = (props: {
 
   return (
     <div
-      className='w-full py-4 px-1 h-56 flex flex-col overflow-hidden'
+      className='w-full py-4 px-1 h-60 flex flex-col overflow-hidden'
       style={{ backgroundColor: '#222' }}
     >
       <div className='text-gray-300 text-sm ml-12 mb-3'>
@@ -363,7 +365,7 @@ const FreightItem = (props: {
             }
             placement='bottom'
           >
-            {freight?.metadata?.name?.substring(0, 7)}
+            <FreightLabel freight={freight} />
           </Tooltip>
         </div>
       </div>

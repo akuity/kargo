@@ -44,6 +44,16 @@ func validateProjectAndWarehouseName(project, name string) error {
 	return nil
 }
 
+func validateProjectAndFreightName(project, name string) error {
+	if project == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
+	}
+	if name == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("freight should not be empty"))
+	}
+	return nil
+}
+
 func validateGroupByOrderBy(group string, groupBy string, orderBy string) error {
 	if group != "" && groupBy == "" {
 		return connect.NewError(

@@ -68,6 +68,10 @@ func newWebhooksServerCommand() *cobra.Command {
 			if err = kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
 				return errors.Wrap(err, "index PromotionPolicies by Stage")
 			}
+			// Index Stages by Freight
+			if err = kubeclient.IndexStagesByFreight(ctx, mgr); err != nil {
+				return errors.Wrap(err, "index Stages by Freight")
+			}
 
 			if err = stage.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "setup Stage webhook")

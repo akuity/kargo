@@ -30,7 +30,7 @@ func TestNewServer(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	s, ok := NewServer(testServerConfig, testClient).(*server)
+	s, ok := NewServer(testServerConfig, testClient, fake.NewClientBuilder().Build()).(*server)
 	require.True(t, ok)
 	require.NotNil(t, s)
 	require.Same(t, testClient, s.client)

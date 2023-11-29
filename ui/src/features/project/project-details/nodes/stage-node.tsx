@@ -4,9 +4,10 @@ import { Tooltip } from 'antd';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { FreightLabel } from '@ui/features/common/freight-label';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionType } from '@ui/features/freightline/freightline';
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Freight, Stage } from '@ui/gen/v1alpha1/types_pb';
 
 import * as styles from './stage-node.module.less';
 
@@ -18,7 +19,8 @@ export const StageNode = ({
   onPromoteClick,
   projectName,
   hasNoSubscribers,
-  promoting
+  promoting,
+  currentFreight
 }: {
   stage: Stage;
   color: string;
@@ -28,6 +30,7 @@ export const StageNode = ({
   hasNoSubscribers?: boolean;
   promoting?: PromotionType;
   onPromoteClick: (type: PromotionType) => void;
+  currentFreight: Freight;
 }) => {
   const navigate = useNavigate();
   return (
@@ -46,29 +49,29 @@ export const StageNode = ({
         }}
       >
         <h3 className='flex items-center text-white justify-between'>
-          <div className='text-ellipsis whitespace-nowrap overflow-hidden'>
-            {stage.metadata?.name}
+          <div className='truncate pb-1'>{stage.metadata?.name}</div>
+          <div className='pb-1'>
+            {stage.status?.currentPromotion ? (
+              <Tooltip
+                title={`Freight ${stage.status?.currentPromotion.freight?.id} is being promoted`}
+              >
+                <FontAwesomeIcon icon={faGear} spin={true} />
+              </Tooltip>
+            ) : (
+              stage.status?.health && (
+                <HealthStatusIcon
+                  health={stage.status?.health}
+                  style={{ fontSize: '14px' }}
+                  hideColor={true}
+                />
+              )
+            )}
           </div>
-          {stage.status?.currentPromotion ? (
-            <Tooltip
-              title={`Freight ${stage.status?.currentPromotion.freight?.id} is being promoted`}
-            >
-              <FontAwesomeIcon icon={faGear} spin={true} />
-            </Tooltip>
-          ) : (
-            stage.status?.health && (
-              <HealthStatusIcon
-                health={stage.status?.health}
-                style={{ fontSize: '14px' }}
-                hideColor={true}
-              />
-            )
-          )}
         </h3>
         <div className={styles.body}>
           <h3>Current Freight</h3>
-          <p className='font-mono text-sm font-semibold'>
-            {stage.status?.currentFreight?.id?.slice(0, 7) || 'N/A'}{' '}
+          <p className='font-mono text-sm font-semibold h-full flex items-center justify-center'>
+            <FreightLabel freight={currentFreight} />
           </p>
         </div>
         <>

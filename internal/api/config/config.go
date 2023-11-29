@@ -14,6 +14,7 @@ import (
 )
 
 type StandardConfig struct {
+	KargoNamespace          string        `envconfig:"KARGO_NAMESPACE" required:"true"`
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
 	UIDirectory             string        `envconfig:"UI_DIR" default:"./ui/build"`
 }

@@ -20,6 +20,20 @@ rules:
       - update
       - delete
   - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+  - apiGroups:
       - kargo.akuity.io
     resources:
       - freights
@@ -27,6 +41,7 @@ rules:
       - get
       - list
       - watch
+      - delete
   - apiGroups:
       - kargo.akuity.io
     resources:

@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/dex"
@@ -46,13 +47,14 @@ c1e3
 -----END CERTIFICATE-----`)
 
 func TestNewAuthInterceptor(t *testing.T) {
-	a, err := newAuthInterceptor(context.Background(), config.ServerConfig{})
+	a, err := newAuthInterceptor(context.Background(), config.ServerConfig{}, nil)
 	require.NoError(t, err)
 	require.NotNil(t, a)
 	require.NotNil(t, a.parseUnverifiedJWTFn)
 	require.NotNil(t, a.verifyKargoIssuedTokenFn)
 	require.NotNil(t, a.verifyIDPIssuedTokenFn)
 	require.NotNil(t, a.oidcExtractGroupsFn)
+	require.NotNil(t, a.listServiceAccountsFn)
 }
 
 func TestGetKeySet(t *testing.T) {
@@ -321,6 +323,13 @@ func TestAuthenticate(t *testing.T) {
 					string,
 				) (string, []string, bool) {
 					return "tony@starkindustries.com", []string{"avengers"}, true
+				},
+				listServiceAccountsFn: func(
+					context.Context,
+					string,
+					[]string,
+				) (map[string]map[types.NamespacedName]struct{}, error) {
+					return nil, nil
 				},
 			},
 			token: testToken,

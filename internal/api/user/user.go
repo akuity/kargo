@@ -1,6 +1,10 @@
 package user
 
-import "context"
+import (
+	"context"
+
+	"k8s.io/apimachinery/pkg/types"
+)
 
 type userInfoKey struct{}
 
@@ -25,6 +29,9 @@ type Info struct {
 	// constructing an ad-hoc Kubernetes client, this token will be used directly.
 	// When this is non-empty, all other fields should have an empty value.
 	BearerToken string
+	// ServiceAccounts is the map of the ServiceAccounts that are mapped to the user
+	// by `rbac.kargo.akuity.io` annotations.
+	ServiceAccounts map[string]map[types.NamespacedName]struct{}
 }
 
 // ContextWithInfo returns a context.Context that has been augmented with

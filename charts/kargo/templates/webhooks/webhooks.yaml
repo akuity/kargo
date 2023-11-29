@@ -63,7 +63,7 @@ webhooks:
     apiGroups: ["kargo.akuity.io"]
     apiVersions: ["v1alpha1"]
     resources: ["freights"]
-    operations: ["CREATE", "UPDATE"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
   failurePolicy: Fail
 - name: promotion.kargo.akuity.io
   admissionReviewVersions: ["v1"]
