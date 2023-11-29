@@ -117,7 +117,7 @@ const Nodule = (props: {
         left: props.begin ? -noduleHeight / 2 : 'auto',
         right: props.begin ? 'auto' : -noduleHeight / 2
       }}
-      className={`z-10 flex items-center justify-center hover:text-white border border-sky-300 border-solid hover:bg-blue-400 absolute rounded-lg ${
+      className={`select-none z-10 flex items-center justify-center hover:text-white border border-sky-300 border-solid hover:bg-blue-400 absolute rounded-lg ${
         props.selected ? 'text-white bg-blue-400' : 'bg-white text-blue-500'
       }`}
     >
