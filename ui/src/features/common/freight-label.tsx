@@ -1,6 +1,6 @@
 import { Freight } from '@ui/gen/v1alpha1/types_pb';
 
-import { ALIAS_LABEL_KEY } from './config';
+const ALIAS_LABEL_KEY = 'kargo.akuity.com/alias';
 
 export const FreightLabel = ({ freight }: { freight?: Freight }) => (
   <>
