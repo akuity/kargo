@@ -40,6 +40,12 @@ type webhook struct {
 		schema.GroupKind,
 		client.Object,
 	) error
+
+	listFreightFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -55,6 +61,7 @@ func newWebhook(kubeClient client.Client) *webhook {
 	return &webhook{
 		client:            kubeClient,
 		validateProjectFn: libWebhook.ValidateProject,
+		listFreightFn:     kubeClient.List,
 	}
 }
 
@@ -78,6 +85,32 @@ func (w *webhook) ValidateCreate(
 		w.validateProjectFn(ctx, w.client, freightGroupKind, freight); err != nil {
 		return err
 	}
+
+	if freight.ObjectMeta.Labels != nil &&
+		freight.ObjectMeta.Labels[kargoapi.AliasLabelKey] != "" {
+		alias := freight.ObjectMeta.Labels[kargoapi.AliasLabelKey]
+		freightList := kargoapi.FreightList{}
+		if err := w.listFreightFn(
+			ctx,
+			&freightList,
+			client.InNamespace(freight.Namespace),
+			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
+		); err != nil {
+			return apierrors.NewInternalError(err)
+		}
+		if len(freightList.Items) > 0 {
+			return apierrors.NewConflict(
+				freightGroupResource,
+				freight.Name,
+				errors.Errorf(
+					"alias %q already used by another piece of Freight in namespace %q",
+					alias,
+					freight.Namespace,
+				),
+			)
+		}
+	}
+
 	if len(freight.Commits) == 0 &&
 		len(freight.Images) == 0 &&
 		len(freight.Charts) == 0 {
@@ -97,11 +130,38 @@ func (w *webhook) ValidateCreate(
 }
 
 func (w *webhook) ValidateUpdate(
-	_ context.Context,
+	ctx context.Context,
 	oldObj runtime.Object,
 	newObj runtime.Object,
 ) error {
 	freight := newObj.(*kargoapi.Freight) // nolint: forcetypeassert
+
+	if freight.ObjectMeta.Labels != nil &&
+		freight.ObjectMeta.Labels[kargoapi.AliasLabelKey] != "" {
+		alias := freight.ObjectMeta.Labels[kargoapi.AliasLabelKey]
+		freightList := kargoapi.FreightList{}
+		if err := w.listFreightFn(
+			ctx,
+			&freightList,
+			client.InNamespace(freight.Namespace),
+			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
+		); err != nil {
+			return apierrors.NewInternalError(err)
+		}
+		if len(freightList.Items) > 1 ||
+			(len(freightList.Items) == 1 && freightList.Items[0].Name != freight.Name) {
+			return apierrors.NewConflict(
+				freightGroupResource,
+				freight.Name,
+				errors.Errorf(
+					"alias %q already used by another piece of Freight in namespace %q",
+					alias,
+					freight.Namespace,
+				),
+			)
+		}
+	}
+
 	// Freight is meant to be immutable. We only need to compare IDs because IDs
 	// are fingerprints that are deterministically derived from the artifacts
 	// referenced by the Freight.

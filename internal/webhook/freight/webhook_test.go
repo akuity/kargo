@@ -3,11 +3,12 @@ package freight
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,7 @@ func TestNewWebhook(t *testing.T) {
 	w := newWebhook(kubeClient)
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.validateProjectFn)
+	require.NotNil(t, w.listFreightFn)
 }
 
 func TestDefault(t *testing.T) {
@@ -62,6 +64,77 @@ func TestValidateCreate(t *testing.T) {
 			assertions: func(err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
+			},
+		},
+		{
+			name: "error listing freight",
+			freight: kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.AliasLabelKey: "fake-alias",
+					},
+				},
+			},
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(
+					t,
+					int32(http.StatusInternalServerError),
+					statusErr.Status().Code,
+				)
+			},
+		},
+		{
+			name: "alias already in use",
+			freight: kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.AliasLabelKey: "fake-alias",
+					},
+				},
+			},
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{{}}
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(t, int32(http.StatusConflict), statusErr.Status().Code)
 			},
 		},
 		{
@@ -118,14 +191,91 @@ func TestValidateCreate(t *testing.T) {
 func TestValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
+		webhook    *webhook
 		setup      func() (*kargoapi.Freight, *kargoapi.Freight)
 		assertions func(error)
 	}{
 		{
+			name: "error listing freight",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				return &kargoapi.Freight{}, &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							kargoapi.AliasLabelKey: "fake-alias",
+						},
+					},
+				}
+			},
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(
+					t,
+					int32(http.StatusInternalServerError),
+					statusErr.Status().Code,
+				)
+			},
+		},
+		{
+			name: "alias already in use",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				return &kargoapi.Freight{}, &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							kargoapi.AliasLabelKey: "fake-alias",
+						},
+					},
+				}
+			},
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{{}, {}}
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(t, int32(http.StatusConflict), statusErr.Status().Code)
+			},
+		},
+
+		{
 			name: "attempt to mutate",
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
 				oldFreight := &kargoapi.Freight{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
@@ -135,6 +285,7 @@ func TestValidateUpdate(t *testing.T) {
 				newFreight.ID = "another-fake-id"
 				return oldFreight, newFreight
 			},
+			webhook: &webhook{},
 			assertions: func(err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "\"fake-name\" is invalid")
@@ -146,7 +297,7 @@ func TestValidateUpdate(t *testing.T) {
 			name: "update without mutation",
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
 				oldFreight := &kargoapi.Freight{
-					ObjectMeta: v1.ObjectMeta{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
@@ -155,6 +306,7 @@ func TestValidateUpdate(t *testing.T) {
 				newFreight := oldFreight.DeepCopy()
 				return oldFreight, newFreight
 			},
+			webhook: &webhook{},
 			assertions: func(err error) {
 				require.NoError(t, err)
 			},
@@ -162,10 +314,13 @@ func TestValidateUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			w := &webhook{}
 			oldFreight, newFreight := testCase.setup()
 			testCase.assertions(
-				w.ValidateUpdate(context.Background(), oldFreight, newFreight),
+				testCase.webhook.ValidateUpdate(
+					context.Background(),
+					oldFreight,
+					newFreight,
+				),
 			)
 		})
 	}
@@ -185,7 +340,7 @@ func TestValidateDelete(t *testing.T) {
 				return b
 			},
 			input: &kargoapi.Freight{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "fake-freight",
 				},
 				ID: "fake-id",
@@ -196,7 +351,7 @@ func TestValidateDelete(t *testing.T) {
 			clientBuilderFunc: func(b *fake.ClientBuilder) *fake.ClientBuilder {
 				return b.WithObjects(
 					&kargoapi.Stage{
-						ObjectMeta: v1.ObjectMeta{
+						ObjectMeta: metav1.ObjectMeta{
 							Name: "fake-stage",
 						},
 						Status: kargoapi.StageStatus{
@@ -208,7 +363,7 @@ func TestValidateDelete(t *testing.T) {
 				)
 			},
 			input: &kargoapi.Freight{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "fake-freight",
 				},
 				ID: "fake-id",
