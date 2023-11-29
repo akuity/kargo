@@ -123,11 +123,11 @@ export const Freightline = (props: {
           ) : (
             <>
               <FontAwesomeIcon icon={faTriangleExclamation} className='mr-2' />
-              Available freight shown includes all freight which have previously been qualified in{' '}
+              Available freight includes all which have been verified in{' '}
               {promotionType === 'subscribers' ? (
                 <>this stage.</>
               ) : (
-                <> any immediately upstream stage.</>
+                <> any immediately upstream stage OR approved for this stage.</>
               )}
             </>
           )}
