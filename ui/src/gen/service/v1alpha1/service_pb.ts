@@ -3038,6 +3038,82 @@ export class QueryFreightResponse extends Message<QueryFreightResponse> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
+ */
+export class DeleteFreightRequest extends Message<DeleteFreightRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteFreightRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteFreightRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFreightRequest {
+    return new DeleteFreightRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteFreightRequest {
+    return new DeleteFreightRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteFreightRequest {
+    return new DeleteFreightRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteFreightRequest | PlainMessage<DeleteFreightRequest> | undefined, b: DeleteFreightRequest | PlainMessage<DeleteFreightRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteFreightRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
+ */
+export class DeleteFreightResponse extends Message<DeleteFreightResponse> {
+  constructor(data?: PartialMessage<DeleteFreightResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteFreightResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFreightResponse {
+    return new DeleteFreightResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteFreightResponse {
+    return new DeleteFreightResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteFreightResponse {
+    return new DeleteFreightResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteFreightResponse | PlainMessage<DeleteFreightResponse> | undefined, b: DeleteFreightResponse | PlainMessage<DeleteFreightResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteFreightResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.FreightList
  */
 export class FreightList extends Message<FreightList> {

@@ -59,6 +59,7 @@ service KargoService {
   /* Freight APIs */
 
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
+  rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
 
   /* Warehouse APIs */
 
@@ -422,6 +423,15 @@ message QueryFreightRequest {
 
 message QueryFreightResponse {
   map<string, FreightList> groups = 1;
+}
+
+message DeleteFreightRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteFreightResponse {
+  /* explicitly empty */
 }
 
 message FreightList {
