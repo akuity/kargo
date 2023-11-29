@@ -26,9 +26,10 @@ func LocalServer(v *bool) FlagFn {
 		fs.BoolVar(v, "local-server", false, "Use local server")
 	}
 }
-func OptionalProject(v Optional[string]) FlagFn {
-	return func(fs *pflag.FlagSet) {
-		fs.VarP(v, "project", "p", "Project")
+
+func Project(v *string, defaultProject string) FlagFn {
+	return func(s *pflag.FlagSet) {
+		s.StringVarP(v, "project", "p", defaultProject, "Project")
 	}
 }
 

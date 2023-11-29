@@ -10,6 +10,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/config"
 )
 
 type Option struct {
@@ -17,15 +18,15 @@ type Option struct {
 	LocalServerAddress string
 	UseLocalServer     bool
 
-	Project Optional[string]
+	Project string
 
 	IOStreams  *genericclioptions.IOStreams
 	PrintFlags *genericclioptions.PrintFlags
 }
 
-func NewOption() *Option {
+func NewOption(cfg config.CLIConfig) *Option {
 	return &Option{
-		Project: OptionalString(),
+		Project: cfg.Project,
 	}
 }
 

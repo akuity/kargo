@@ -59,6 +59,8 @@ type CLIConfig struct {
 	// re-authenticates. When true, refresh tokens will not be used, thereby
 	// forcing users to periodically re-assess this choice.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// Project is the default Project for the command.
+	Project string `json:"project,omitempty"`
 }
 
 // LoadCLIConfig loads Kargo CLI configuration from a file in the Kargo home

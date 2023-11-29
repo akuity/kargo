@@ -30,7 +30,7 @@ kargo delete warehouse --project=my-project my-warehouse
 				return errors.New("get client from config")
 			}
 
-			project := opt.Project.OrElse("")
+			project := opt.Project
 			if project == "" {
 				return errors.New("project is required")
 			}
@@ -55,6 +55,6 @@ kargo delete warehouse --project=my-project my-warehouse
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.OptionalProject(opt.Project)(cmd.Flags())
+	option.Project(&opt.Project, opt.Project)(cmd.Flags())
 	return cmd
 }
