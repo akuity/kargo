@@ -22,7 +22,7 @@ import {
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
-import { Stage, Warehouse } from '@ui/gen/v1alpha1/types_pb';
+import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 
 import { Images } from './images';
@@ -32,8 +32,8 @@ import styles from './project-details.module.less';
 import { NodeType, NodesItemType } from './types';
 
 const lineThickness = 2;
-const nodeWidth = 144;
-const nodeHeight = 100;
+const nodeWidth = 150;
+const nodeHeight = 118;
 
 const warehouseNodeWidth = 180;
 const warehouseNodeHeight = 140;
@@ -281,6 +281,7 @@ export const ProjectDetails = () => {
   const [subscribersByStage, setSubscribersByStage] = React.useState<{ [key: string]: Stage[] }>(
     {}
   );
+  const [fullFreightById, setFullFreightById] = React.useState<{ [key: string]: Freight }>({});
 
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
@@ -295,6 +296,14 @@ export const ProjectDetails = () => {
     setStagesPerFreight(stagesPerFreight);
     setSubscribersByStage(subscribersByStage);
   }, [data, freightData]);
+
+  React.useEffect(() => {
+    const fullFreightById: { [key: string]: Freight } = {};
+    (freightData?.groups['']?.freight || []).forEach((freight) => {
+      fullFreightById[freight.id || ''] = freight;
+    });
+    setFullFreightById(fullFreightById);
+  }, [freightData]);
 
   if (isLoading || isLoadingFreight) return <LoadingState />;
 
@@ -359,6 +368,9 @@ export const ProjectDetails = () => {
                           height={node.height}
                           projectName={name}
                           faded={isFaded(node.data)}
+                          currentFreight={
+                            fullFreightById[node.data?.status?.currentFreight?.id || '']
+                          }
                           hasNoSubscribers={
                             (subscribersByStage[node?.data?.metadata?.name || ''] || []).length ===
                             0
