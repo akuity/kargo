@@ -1,6 +1,10 @@
 import { Timestamp } from '@bufbuild/protobuf';
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { IconDefinition, faTimeline } from '@fortawesome/free-solid-svg-icons';
+import {
+  IconDefinition,
+  faTimeline,
+  faTriangleExclamation
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Tooltip, message } from 'antd';
@@ -108,39 +112,56 @@ export const Freightline = (props: {
   }, [availableFreightData]);
 
   return (
-    <div
-      className='w-full py-4 px-1 h-60 flex flex-col overflow-hidden'
-      style={{ backgroundColor: '#222' }}
-    >
-      <div className='text-gray-300 text-sm ml-12 mb-3'>
+    <div className='w-full pb-3 flex flex-col overflow-hidden' style={{ backgroundColor: '#222' }}>
+      <div className='text-gray-300 text-sm h-20 overflow-hidden'>
+        <div
+          className='w-full p-1 pl-12 mb-2 text-xs h-6 flex items-center'
+          style={{ backgroundColor: '#111' }}
+        >
+          {promotingStage === undefined ? (
+            <></>
+          ) : (
+            <>
+              <FontAwesomeIcon icon={faTriangleExclamation} className='mr-2' />
+              Available freight shown includes all freight which have previously been qualified in{' '}
+              {promotionType === 'subscribers' ? (
+                <>this stage.</>
+              ) : (
+                <> any immediately upstream stage.</>
+              )}
+            </>
+          )}
+        </div>
+
         {promotingStage === undefined ? (
-          <div className='font-semibold flex items-center'>
+          <div className='font-semibold flex items-center ml-12'>
             <FontAwesomeIcon icon={faTimeline} className='mr-2' />
             FREIGHTLINE
           </div>
         ) : (
-          <div className='flex items-center'>
-            PROMOTING {promotionType === 'subscribers' ? 'SUBSCRIBERS' : ''} /
-            <div className='font-semibold flex items-center ml-1'>
-              STAGE{' '}
+          <>
+            <div className='flex items-center ml-12'>
+              PROMOTING {promotionType === 'subscribers' ? 'SUBSCRIBERS OF' : 'CURRENT'} STAGE{' '}
+              <div className='font-semibold flex items-center ml-1'>
+                <div
+                  className='px-2 rounded text-white ml-2'
+                  style={{ backgroundColor: stageColorMap[promotingStage?.metadata?.uid || ''] }}
+                >
+                  {' '}
+                  {promotingStage?.metadata?.name?.toUpperCase()}
+                </div>
+              </div>
               <div
-                className='px-2 rounded text-white ml-2'
-                style={{ backgroundColor: stageColorMap[promotingStage?.metadata?.uid || ''] }}
+                className='ml-auto mr-4 cursor-pointer px-2 text-white bg-zinc-700 rounded hover:bg-zinc-600 font-semibold'
+                onClick={() => setPromotingStage(undefined)}
               >
-                {' '}
-                {promotingStage?.metadata?.name?.toUpperCase()}
+                CANCEL
               </div>
             </div>
-            <div
-              className='ml-auto mr-4 cursor-pointer px-2 text-white bg-zinc-700 rounded hover:bg-zinc-600 font-semibold'
-              onClick={() => setPromotingStage(undefined)}
-            >
-              CANCEL
-            </div>
-          </div>
+          </>
         )}
       </div>
-      <div className='flex h-full w-full items-center'>
+      <div className='flex h-full w-full items-center px-1'>
         <div
           className='text-gray-500 text-sm font-semibold mb-2 w-min h-min'
           style={{ transform: 'rotate(-0.25turn)' }}
