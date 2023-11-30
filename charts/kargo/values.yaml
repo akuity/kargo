@@ -112,11 +112,18 @@ api:
     ## @param api.oidc.cliClientID The client ID for the OIDC client used by CLI (optional). Needed by some OIDC providers (such as Dex) that require a separate Client ID for web app login vs. CLI login (`http://localhost`). If Dex is enabled, this value will be ignored and cli client ID will be automatically configured. If Dex is not enabled, and a different client app is configured for localhost CLI login, this should be the client ID configured in the IdP.
     cliClientID:
 
+    globalServiceAccounts:
+      ## @param api.oidc.globalServiceAccounts.enabled Whether to enable the api to look for
+      ## service accounts in specific namespaces used to share service accounts.
+      enabled: false
+      ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.
+      namespaces: []
+
     dex:
       ## @param api.oidc.dex.enabled Whether to enable Dex as the identity provider. When set to true, the Kargo installation will include a Dex server and the Kargo API server will be configured to make the /dex endpoint a reverse proxy for the Dex server.
       enabled: false
 
-      image: 
+      image:
         ## @param api.oidc.dex.image.repository Image repository of Dex
         repository: ghcr.io/dexidp/dex
         ## @param api.oidc.dex.image.tag Image tag for Dex.
@@ -145,7 +152,7 @@ api:
       ## GitHub Example
       # - id: github
       #   name: GitHub
-      #   type: github  
+      #   type: github
       #   config:
       #     clientID: <your client ID>
       #     clientSecret: <your client secret>
