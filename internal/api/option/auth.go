@@ -272,10 +272,15 @@ func (a *authInterceptor) listServiceAccounts(
 			kubeclient.ServiceAccountsByGroupIndexField: group,
 		})
 	}
-	kargoNamespaces := make(map[string]struct{})
+	allowedNamespaces := make(map[string]struct{})
 	if a.cfg.KargoNamespace != "" {
 		// Kargo namespace is allowed by default
-		kargoNamespaces[a.cfg.KargoNamespace] = struct{}{}
+		allowedNamespaces[a.cfg.KargoNamespace] = struct{}{}
+	}
+	if a.cfg.OIDCConfig != nil {
+		for _, ns := range a.cfg.OIDCConfig.GlobalServiceAccountNamespaces {
+			allowedNamespaces[ns] = struct{}{}
+		}
 	}
 	nsList := &corev1.NamespaceList{}
 	if err := a.internalClient.List(ctx, nsList, libClient.MatchingLabels{
@@ -284,7 +289,7 @@ func (a *authInterceptor) listServiceAccounts(
 		return nil, errors.Wrap(err, "list namespaces")
 	}
 	for _, ns := range nsList.Items {
-		kargoNamespaces[ns.GetName()] = struct{}{}
+		allowedNamespaces[ns.GetName()] = struct{}{}
 	}
 	accounts := make(map[string]map[types.NamespacedName]struct{})
 	for _, q := range queries {
@@ -297,7 +302,7 @@ func (a *authInterceptor) listServiceAccounts(
 				Namespace: sa.GetNamespace(),
 				Name:      sa.GetName(),
 			}
-			if _, ok := kargoNamespaces[key.Namespace]; !ok {
+			if _, ok := allowedNamespaces[key.Namespace]; !ok {
 				continue
 			}
 			if _, ok := accounts[key.Namespace]; !ok {
