@@ -60,6 +60,7 @@ service KargoService {
 
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
   rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
+  rpc ApproveFreight(ApproveFreightRequest) returns (ApproveFreightResponse);
 
   /* Warehouse APIs */
 
@@ -509,4 +510,14 @@ message RefreshWarehouseRequest {
 
 message RefreshWarehouseResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+}
+
+message ApproveFreightRequest {
+  string project = 1;
+  string id = 2;
+  string stage = 3;
+}
+
+message ApproveFreightResponse {
+  /* explicitly empty */
 }
