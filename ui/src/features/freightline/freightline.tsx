@@ -97,11 +97,15 @@ export const Freightline = (props: {
   }, [promotingStage, freight, promotionType]);
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && promotingStage !== undefined) {
+      const initFreight = availableFreightData?.groups['']?.freight || [];
       const availableFreight =
         promotionType === 'default'
-          ? availableFreightData?.groups['']?.freight || []
-          : promotingStage?.status?.history || [];
+          ? initFreight
+          : initFreight.filter(
+              (f) => !!f?.status?.verifiedIn[promotingStage?.metadata?.name || '']
+            );
+
       const pe: { [key: string]: boolean } = {};
       ((availableFreight as Freight[]) || []).map((f: Freight) => {
         const name = promotionType === 'default' ? f?.metadata?.name : f?.id;
@@ -373,7 +377,7 @@ const FreightItem = (props: {
       </div>
       <div className='mt-auto w-full'>
         <div
-          className={`w-full text-center font-mono text-xs ${
+          className={`w-full text-center font-mono text-xs truncate ${
             confirmingPromotion ? 'text-white' : 'text-gray-400'
           }`}
         >

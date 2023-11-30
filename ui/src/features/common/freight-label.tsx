@@ -14,5 +14,7 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
     setId(freight?.metadata?.name?.substring(0, 7) || 'N/A');
   }, [freight]);
 
-  return <>{alias ? <Tooltip title={id}>{alias}</Tooltip> : <>{id}</>}</>;
+  return (
+    <span className='truncate'>{alias ? <Tooltip title={id}>{alias}</Tooltip> : <>{id}</>}</span>
+  );
 };
