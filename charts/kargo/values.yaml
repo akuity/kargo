@@ -113,8 +113,7 @@ api:
     cliClientID:
 
     globalServiceAccounts:
-      ## @param api.oidc.globalServiceAccounts.enabled Whether to enable the api to look for
-      ## service accounts in specific namespaces used to share service accounts.
+      ## @param api.oidc.globalServiceAccounts.enabled Whether to enable the api to look for service accounts in specific namespaces used to share service accounts.
       enabled: false
       ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.
       namespaces: []
