@@ -128,6 +128,9 @@ const (
 	// KargoServiceApproveFreightProcedure is the fully-qualified name of the KargoService's
 	// ApproveFreight RPC.
 	KargoServiceApproveFreightProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ApproveFreight"
+	// KargoServiceUpdateFreightAliasProcedure is the fully-qualified name of the KargoService's
+	// UpdateFreightAlias RPC.
+	KargoServiceUpdateFreightAliasProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateFreightAlias"
 	// KargoServiceListWarehousesProcedure is the fully-qualified name of the KargoService's
 	// ListWarehouses RPC.
 	KargoServiceListWarehousesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListWarehouses"
@@ -189,6 +192,7 @@ type KargoServiceClient interface {
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
+	UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error)
 	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
 	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchWarehousesResponse], error)
@@ -373,6 +377,11 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceApproveFreightProcedure,
 			opts...,
 		),
+		updateFreightAlias: connect.NewClient[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse](
+			httpClient,
+			baseURL+KargoServiceUpdateFreightAliasProcedure,
+			opts...,
+		),
 		listWarehouses: connect.NewClient[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse](
 			httpClient,
 			baseURL+KargoServiceListWarehousesProcedure,
@@ -446,6 +455,7 @@ type kargoServiceClient struct {
 	queryFreight             *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
 	deleteFreight            *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
 	approveFreight           *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
+	updateFreightAlias       *connect.Client[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse]
 	listWarehouses           *connect.Client[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse]
 	getWarehouse             *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
 	watchWarehouses          *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
@@ -622,6 +632,11 @@ func (c *kargoServiceClient) ApproveFreight(ctx context.Context, req *connect.Re
 	return c.approveFreight.CallUnary(ctx, req)
 }
 
+// UpdateFreightAlias calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias.
+func (c *kargoServiceClient) UpdateFreightAlias(ctx context.Context, req *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error) {
+	return c.updateFreightAlias.CallUnary(ctx, req)
+}
+
 // ListWarehouses calls akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses.
 func (c *kargoServiceClient) ListWarehouses(ctx context.Context, req *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error) {
 	return c.listWarehouses.CallUnary(ctx, req)
@@ -696,6 +711,7 @@ type KargoServiceHandler interface {
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
+	UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error)
 	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
 	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest], *connect.ServerStream[v1alpha1.WatchWarehousesResponse]) error
@@ -876,6 +892,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		svc.ApproveFreight,
 		opts...,
 	)
+	kargoServiceUpdateFreightAliasHandler := connect.NewUnaryHandler(
+		KargoServiceUpdateFreightAliasProcedure,
+		svc.UpdateFreightAlias,
+		opts...,
+	)
 	kargoServiceListWarehousesHandler := connect.NewUnaryHandler(
 		KargoServiceListWarehousesProcedure,
 		svc.ListWarehouses,
@@ -979,6 +1000,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteFreightHandler.ServeHTTP(w, r)
 		case KargoServiceApproveFreightProcedure:
 			kargoServiceApproveFreightHandler.ServeHTTP(w, r)
+		case KargoServiceUpdateFreightAliasProcedure:
+			kargoServiceUpdateFreightAliasHandler.ServeHTTP(w, r)
 		case KargoServiceListWarehousesProcedure:
 			kargoServiceListWarehousesHandler.ServeHTTP(w, r)
 		case KargoServiceGetWarehouseProcedure:
@@ -1132,6 +1155,10 @@ func (UnimplementedKargoServiceHandler) DeleteFreight(context.Context, *connect.
 
 func (UnimplementedKargoServiceHandler) ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error) {

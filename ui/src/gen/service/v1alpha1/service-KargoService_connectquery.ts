@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateResourceRequest, CreateResourceResponse, CreateStageRequest, CreateStageResponse, CreateWarehouseRequest, CreateWarehouseResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateStageRequest, UpdateStageResponse, UpdateWarehouseRequest, UpdateWarehouseResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateProjectRequest, CreateProjectResponse, CreatePromotionPolicyRequest, CreatePromotionPolicyResponse, CreateResourceRequest, CreateResourceResponse, CreateStageRequest, CreateStageResponse, CreateWarehouseRequest, CreateWarehouseResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeletePromotionPolicyRequest, DeletePromotionPolicyResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetPromotionPolicyRequest, GetPromotionPolicyResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionPoliciesRequest, ListPromotionPoliciesResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdatePromotionPolicyRequest, UpdatePromotionPolicyResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateStageRequest, UpdateStageResponse, UpdateWarehouseRequest, UpdateWarehouseResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -523,6 +523,23 @@ export const approveFreight = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).approveFreight;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias
+ */
+export const updateFreightAlias = createQueryService({
+  service: {
+    methods: {
+      updateFreightAlias: {
+        name: "UpdateFreightAlias",
+        kind: MethodKind.Unary,
+        I: UpdateFreightAliasRequest,
+        O: UpdateFreightAliasResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).updateFreightAlias;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses

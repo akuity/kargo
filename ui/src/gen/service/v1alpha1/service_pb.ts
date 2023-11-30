@@ -3151,6 +3151,88 @@ export class FreightList extends Message<FreightList> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
+ */
+export class UpdateFreightAliasRequest extends Message<UpdateFreightAliasRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string freight = 2;
+   */
+  freight = "";
+
+  /**
+   * @generated from field: string alias = 3;
+   */
+  alias = "";
+
+  constructor(data?: PartialMessage<UpdateFreightAliasRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "freight", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFreightAliasRequest {
+    return new UpdateFreightAliasRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFreightAliasRequest {
+    return new UpdateFreightAliasRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFreightAliasRequest {
+    return new UpdateFreightAliasRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateFreightAliasRequest | PlainMessage<UpdateFreightAliasRequest> | undefined, b: UpdateFreightAliasRequest | PlainMessage<UpdateFreightAliasRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateFreightAliasRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
+ */
+export class UpdateFreightAliasResponse extends Message<UpdateFreightAliasResponse> {
+  constructor(data?: PartialMessage<UpdateFreightAliasResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateFreightAliasResponse {
+    return new UpdateFreightAliasResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateFreightAliasResponse {
+    return new UpdateFreightAliasResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateFreightAliasResponse {
+    return new UpdateFreightAliasResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateFreightAliasResponse | PlainMessage<UpdateFreightAliasResponse> | undefined, b: UpdateFreightAliasResponse | PlainMessage<UpdateFreightAliasResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateFreightAliasResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
  */
 export class ListWarehousesRequest extends Message<ListWarehousesRequest> {
