@@ -57,8 +57,22 @@ func (s *server) DeleteStage(
 
 	for i := range approvedFreightList.Items {
 		freight := approvedFreightList.Items[i]
-		delete(freight.Status.ApprovedFor, stage.Name)
-		if err := s.client.Status().Update(ctx, &freight); err != nil {
+
+		newStatus := *freight.Status.DeepCopy()
+		if newStatus.ApprovedFor == nil {
+			newStatus.ApprovedFor = map[string]kargoapi.ApprovedStage{}
+		}
+
+		delete(newStatus.ApprovedFor, stage.Name)
+
+		if err := kubeclient.PatchStatus(
+			ctx,
+			s.client,
+			&freight,
+			func(status *kargoapi.FreightStatus) {
+				*status = newStatus
+			},
+		); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
 	}
