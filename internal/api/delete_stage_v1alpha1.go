@@ -6,9 +6,11 @@ import (
 
 	"connectrpc.com/connect"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -35,6 +37,46 @@ func (s *server) DeleteStage(
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+
+	approvedFreightList := kargoapi.FreightList{}
+	err := s.listFreightFn(
+		ctx,
+		&approvedFreightList,
+		&client.ListOptions{
+			Namespace: req.Msg.GetProject(),
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.FreightApprovedForStagesIndexField,
+				stage.Name,
+			),
+		},
+	)
+
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	for i := range approvedFreightList.Items {
+		freight := approvedFreightList.Items[i]
+
+		newStatus := *freight.Status.DeepCopy()
+		if newStatus.ApprovedFor == nil {
+			newStatus.ApprovedFor = map[string]kargoapi.ApprovedStage{}
+		}
+
+		delete(newStatus.ApprovedFor, stage.Name)
+
+		if err := kubeclient.PatchStatus(
+			ctx,
+			s.client,
+			&freight,
+			func(status *kargoapi.FreightStatus) {
+				*status = newStatus
+			},
+		); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+	}
+
 	if err := s.client.Delete(ctx, &stage); err != nil && !kubeerr.IsNotFound(err) {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

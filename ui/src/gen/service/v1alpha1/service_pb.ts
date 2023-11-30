@@ -3769,3 +3769,85 @@ export class RefreshWarehouseResponse extends Message<RefreshWarehouseResponse> 
   }
 }
 
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
+ */
+export class ApproveFreightRequest extends Message<ApproveFreightRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string stage = 3;
+   */
+  stage = "";
+
+  constructor(data?: PartialMessage<ApproveFreightRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ApproveFreightRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ApproveFreightRequest {
+    return new ApproveFreightRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ApproveFreightRequest {
+    return new ApproveFreightRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ApproveFreightRequest {
+    return new ApproveFreightRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ApproveFreightRequest | PlainMessage<ApproveFreightRequest> | undefined, b: ApproveFreightRequest | PlainMessage<ApproveFreightRequest> | undefined): boolean {
+    return proto3.util.equals(ApproveFreightRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
+ */
+export class ApproveFreightResponse extends Message<ApproveFreightResponse> {
+  constructor(data?: PartialMessage<ApproveFreightResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ApproveFreightResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ApproveFreightResponse {
+    return new ApproveFreightResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ApproveFreightResponse {
+    return new ApproveFreightResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ApproveFreightResponse {
+    return new ApproveFreightResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ApproveFreightResponse | PlainMessage<ApproveFreightResponse> | undefined, b: ApproveFreightResponse | PlainMessage<ApproveFreightResponse> | undefined): boolean {
+    return proto3.util.equals(ApproveFreightResponse, a, b);
+  }
+}
+
