@@ -1,6 +1,8 @@
 api:
   logLevel: DEBUG
   host: localhost:30081
+  tls:
+    enabled: false
   adminAccount:
     password: admin
     tokenSigningKey: iwishtowashmyirishwristwatch
