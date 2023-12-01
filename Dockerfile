@@ -1,7 +1,7 @@
 ####################################################################################################
-# builder
+# back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.21.4-bookworm as builder
+FROM --platform=$BUILDPLATFORM golang:1.21.4-bookworm as back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -62,13 +62,52 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
     chmod +x /tools/grpc_health_probe
 
 ####################################################################################################
+# back-end-dev
+# - no UI
+# - relies on go build that runs on host
+# - supports development
+# - not used for official image builds
+####################################################################################################
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.33 as back-end-dev
+
+USER root
+
+COPY --from=tools /tools/ /usr/local/bin/
+COPY bin/controlplane/kargo /usr/local/bin/kargo
+
+USER 1000:0
+
+CMD ["/usr/local/bin/kargo"]
+
+####################################################################################################
+# ui-dev
+# - includes UI dev dependencies
+# - runs with vite
+# - supports development
+# - not used for official image builds
+####################################################################################################
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.9.0 AS ui-dev
+
+RUN npm install --global pnpm
+WORKDIR /ui
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+
+RUN pnpm install
+
+COPY ["ui/", "."]
+
+CMD ["pnpm", "dev"]
+
+####################################################################################################
 # final
+# - the official image we publish
+# - purposefully last so that it is the default target when building
 ####################################################################################################
 FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.33 as final
 
 USER root
 
-COPY --from=builder /kargo/bin/ /usr/local/bin/
+COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=tools /tools/ /usr/local/bin/
 COPY --from=ui-builder /ui/build /ui/build
 
