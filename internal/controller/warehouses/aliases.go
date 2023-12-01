@@ -9,8 +9,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-const aliasLabelKey = "kargo.akuity.com/alias"
-
 func (r *reconciler) getAvailableFreightAlias(
 	ctx context.Context,
 ) (string, error) {
@@ -20,7 +18,7 @@ func (r *reconciler) getAvailableFreightAlias(
 		if err := r.client.List(
 			ctx,
 			&freight,
-			client.MatchingLabels{aliasLabelKey: alias},
+			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
 		); err != nil {
 			return "", errors.Wrapf(
 				err,

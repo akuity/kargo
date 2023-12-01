@@ -241,7 +241,7 @@ func (r *reconciler) syncWarehouse(
 	logger.Debug("got latest Freight from repositories")
 
 	freight.Labels = map[string]string{}
-	if freight.Labels[aliasLabelKey], err =
+	if freight.Labels[kargoapi.AliasLabelKey], err =
 		r.getAvailableFreightAliasFn(ctx); err != nil {
 		return status, errors.Wrap(err, "error getting available Freight alias")
 	}
