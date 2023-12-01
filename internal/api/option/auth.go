@@ -273,10 +273,6 @@ func (a *authInterceptor) listServiceAccounts(
 		})
 	}
 	allowedNamespaces := make(map[string]struct{})
-	if a.cfg.KargoNamespace != "" {
-		// Kargo namespace is allowed by default
-		allowedNamespaces[a.cfg.KargoNamespace] = struct{}{}
-	}
 	if a.cfg.OIDCConfig != nil {
 		for _, ns := range a.cfg.OIDCConfig.GlobalServiceAccountNamespaces {
 			allowedNamespaces[ns] = struct{}{}

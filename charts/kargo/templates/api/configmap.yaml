@@ -30,9 +30,7 @@ data:
   {{- end }}
   {{- if .Values.api.oidc.enabled }}
   OIDC_ENABLED: "true"
-  {{- if .Values.api.oidc.globalServiceAccounts.enabled }}
   GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
-  {{- end }}
   {{- if .Values.api.oidc.dex.enabled }}
   {{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) }}
   OIDC_ISSUER_URL: https://{{ .Values.api.host }}/dex
