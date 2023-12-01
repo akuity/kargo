@@ -9,8 +9,13 @@ import TabItem from '@theme/TabItem';
 
 This guide presents a basic introduction to Kargo. Together, we will:
 
-1. Create a local Kubernetes cluster with Kargo and its dependencies already
-   installed.
+1. Install Kargo and its dependencies into an existing, local Kubernetes
+   cluster.
+
+    OR
+
+    Create a new local Kubernetes cluster with Kargo and its dependencies
+    already installed.
 
 1. Install the Kargo CLI.
 
@@ -19,33 +24,91 @@ This guide presents a basic introduction to Kargo. Together, we will:
 
 1. Clean up.
 
-## Prerequisites
-
-* [Docker](https://www.docker.com/)
-* [kind](https://kind.sigs.k8s.io/) or [k3d](https://k3d.io/): These
-  instructions were tested with:
-    * kind: v0.17.0
-    * k3d: v5.4.9
-* [Helm](https://helm.sh/docs/) v3.13.1 or greater
+:::info
+If you're looking to contribute to Kargo, you may wish to consult the
+[contributor guide](./contributor-guide) instead.
+:::
 
 ### Starting a Local Cluster
 
-With our prerequisites met, we can execute a helper script to launch a 
-kind or k3d cluster and install Kargo along with its dependencies:
+Any of the following approaches require [Helm](https://helm.sh/docs/) v3.13.1 or
+greater to be installed.
 
 <Tabs groupId="cluster-start">
+<TabItem value="docker-desktop" label="Docker Desktop">
+
+If you are a
+[Docker Desktop](https://www.docker.com/products/docker-desktop/)
+user, you can follow
+[these instructions](https://docs.docker.com/desktop/kubernetes/) to enable
+its built-in Kubernetes support.
+
+:::info
+Although this is one of the fastest paths to a local Kubernetes cluster, be
+aware that Docker Desktop supports only a _single_ Kubernetes cluster. If
+that cluster reaches a state you are dissatisfied with, resetting it will
+remove not just Kargo-related resources, but _all_ your workloads and data.
+:::
+
+```shell
+curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/install.sh | sh
+```
+
+</TabItem>
+<TabItem value="orbstack" label="OrbStack">
+
+[OrbStack](https://orbstack.dev/) is a fast, lightweight, drop-in replacement
+for Docker Desktop for Mac OS only. You can follow
+[these instructions](https://docs.orbstack.dev/kubernetes/) to enable its
+built-in Kubernetes support.
+
+:::info
+Although this is one of the fastest paths to a local Kubernetes cluster, be
+aware that OrbStack supports only a _single_ Kubernetes cluster. If
+that cluster reaches a state you are dissatisfied with, resetting it will
+remove not just Kargo-related resources, but _all_ your workloads and data.
+:::
+
+```shell
+curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/install.sh | sh
+```
+
+</TabItem>
 <TabItem value="kind" label="kind">
+
+If you have any Docker-compatible container runtime installed (including native
+Docker, Docker Desktop, or OrbStack), you can easily launch a disposable cluster
+just for this quickstart using
+[kind](https://kind.sigs.k8s.io/#installation-and-usage).
 
 ```shell
 curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/kind.sh | sh
 ```
 
+:::info
+While this option is a bit more complex than using Docker Desktop or OrbStack
+directly, it offers the advantage of being fully-disposable. If your cluster
+reaches a state you are dissatisfied with, you can simply destroy it and
+launch a new one.
+:::
+
 </TabItem>
 <TabItem value="k3d" label="k3d">
+
+If you have any Docker-compatible container runtime installed (including native
+Docker, Docker Desktop, or OrbStack), you can easily launch a disposable cluster
+just for this quickstart using [k3d](https://k3d.io).
 
 ```shell
 curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/k3d.sh | sh
 ```
+
+:::info
+While this option is a bit more complex than using Docker Desktop or OrbStack
+directly, it offers the advantage of being fully-disposable. If your cluster
+reaches a state you are dissatisfied with, you can simply destroy it and
+launch a new one.
+:::
 
 </TabItem>
 <TabItem value="more-info" label="More Info">
@@ -55,9 +118,9 @@ If you are averse to piping a downloaded script directly into a shell, please
 feel free to download the applicable script and inspect its contents prior to
 execution.
 
-Either script should only:
+Any approach you select should only:
 
-1. Launch a kind or k3d cluster
+1. Launch a new, local Kubernetes cluster, if applicable
 1. Install cert-manager
 1. Install Argo CD
 1. Install Kargo
@@ -597,10 +660,45 @@ this introduction.
 
 Congratulations! You've just gotten hands on with Kargo for the first time!
 
-To clean up, we will simply destroy our kind or k3d cluster:
+Now let's clean up!
 
 <Tabs groupId="cluster-start">
+<TabItem value="docker-desktop" label="Docker Desktop">
+
+Docker Desktop supports only a _single_ Kubernetes cluster. If you are
+comfortable deleting not just just Kargo-related resources, but _all_ your
+workloads and data, the cluster can be reset from the Docker Desktop
+Dashboard.
+
+If, instead, you wish to preserve non-Kargo-related workloads and data, you
+will need to manually uninstall Kargo and its prerequisites:
+
+```shell
+curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/uninstall.sh | sh
+```
+
+</TabItem>
+<TabItem value="orbstack" label="OrbStack">
+
+OrbStack supports only a _single_ Kubernetes cluster. If you are
+comfortable deleting not just just Kargo-related resources, but _all_ your
+workloads and data, you can destroy the cluster with:
+
+```shell
+orb delete k8s
+```
+
+If, instead, you wish to preserve non-Kargo-related workloads and data, you
+will need to manually uninstall Kargo and its prerequisites:
+
+```shell
+curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/uninstall.sh | sh
+```
+
+</TabItem>
 <TabItem value="kind" label="kind">
+
+Simply destroy the cluster:
 
 ```shell
 kind delete cluster --name kargo-quickstart
@@ -608,6 +706,8 @@ kind delete cluster --name kargo-quickstart
 
 </TabItem>
 <TabItem value="k3d" label="k3d">
+
+Simply destroy the cluster:
 
 ```shell
 k3d cluster delete kargo-quickstart
