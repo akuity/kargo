@@ -208,14 +208,12 @@ hack-build-cli: hack-build-dev-tools
 .PHONY: hack-kind-up
 hack-kind-up:
 	ctlptl apply -f hack/kind/cluster.yaml
-	make hack-install-cert-manager
-	make hack-install-argocd
+	make hack-install-prereqs
 
 .PHONY: hack-k3d-up
 hack-k3d-up:
 	ctlptl apply -f hack/k3d/cluster.yaml
-	make hack-install-cert-manager
-	make hack-install-argocd
+	make hack-install-prereqs
 
 .PHONY: hack-kind-down
 hack-kind-down:
@@ -224,6 +222,9 @@ hack-kind-down:
 .PHONY: hack-k3d-down
 hack-k3d-down:
 	ctlptl delete -f hack/k3d/cluster.yaml
+
+.PHONY: hack-install-prereqs
+hack-install-prereqs: hack-install-cert-manager hack-install-argocd
 
 .PHONY: hack-install-cert-manager
 hack-install-cert-manager:
@@ -249,6 +250,17 @@ hack-install-argocd:
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30080 \
 		--wait
+
+.PHONY: hack-uninstall-prereqs
+hack-uninstall-prereqs: hack-uninstall-argocd hack-uninstall-cert-manager 
+
+.PHONY: hack-uninstall-argocd
+hack-uninstall-argocd:
+	helm delete argocd --namespace argocd
+
+.PHONY: hack-uninstall-cert-manager
+hack-uninstall-cert-manager:
+	helm delete cert-manager --namespace cert-manager
 
 .PHONY: hack-add-rollouts
 hack-add-rollouts:
