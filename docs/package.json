@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "yarn build-gtag-plugin && docusaurus start",
-    "build-gtag-plugin": "cd plugins/gtag && yarn install && yarn build",
-    "build": "yarn build-gtag-plugin && docusaurus build",
+    "start": "pnpm build-gtag-plugin && docusaurus start",
+    "build-gtag-plugin": "cd plugins/gtag && pnpm install && pnpm build",
+    "build": "pnpm build-gtag-plugin && docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
