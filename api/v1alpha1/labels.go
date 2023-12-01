@@ -5,5 +5,5 @@ const (
 
 	LabelTrueValue = "true"
 
-	AliasLabelKey = "kargo.akuity.com/alias"
+	AliasLabelKey = "kargo.akuity.io/alias"
 )

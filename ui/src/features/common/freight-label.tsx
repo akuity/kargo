@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/types_pb';
 
-const ALIAS_LABEL_KEY = 'kargo.akuity.com/alias';
+const ALIAS_LABEL_KEY = 'kargo.akuity.io/alias';
 
 export const FreightLabel = ({ freight }: { freight?: Freight }) => {
   const [id, setId] = useState<string>('');
