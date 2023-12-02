@@ -58,6 +58,9 @@ api:
   nodeSelector: {}
   ## @param api.tolerations Tolerations for api pods.
   tolerations: []
+  probes:
+    ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
+    enabled: true
 
   tls:
     ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section will be ignored when this is set to `false`.
@@ -127,6 +130,9 @@ api:
         tag: v2.37.0
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
+      probes:
+        ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
+        enabled: true
 
       tls:
         ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-dex-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
