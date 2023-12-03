@@ -150,6 +150,7 @@ DOCKER_CMD := $(CONTAINER_RUNTIME) run \
 	--rm \
 	-v gomodcache:/go/pkg/mod \
 	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
+	-v /workspaces/kargo/ui/node_modules \
 	-w /workspaces/kargo \
 	kargo:dev-tools
 
