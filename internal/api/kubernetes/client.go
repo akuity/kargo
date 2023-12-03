@@ -31,9 +31,9 @@ import (
 // ClientOptions specifies options for customizing the client returned by the
 // NewClient function.
 type ClientOptions struct {
-	// KargoNamespace is the namespace in which the Kargo components
-	// are running.
-	KargoNamespace string
+	// GlobalServiceAccountNamespaces is a list of namespaces in which we should
+	// always look for ServiceAccounts when attempting to authorize a user.
+	GlobalServiceAccountNamespaces []string
 	// NewInternalClient may be used to take control of how the client's own
 	// internal/underlying controller-runtime client is created. This is mainly
 	// useful for tests wherein one may, for instance, wish to inject a custom
@@ -148,10 +148,10 @@ func NewClient(
 		internalClient: internalClient,
 		statusWriter: &authorizingStatusWriterWrapper{
 			internalClient:        internalClient,
-			getAuthorizedClientFn: getAuthorizedClient(opts.KargoNamespace),
+			getAuthorizedClientFn: getAuthorizedClient(opts.GlobalServiceAccountNamespaces),
 		},
 		internalDynamicClient: internalDynamicClient,
-		getAuthorizedClientFn: getAuthorizedClient(opts.KargoNamespace),
+		getAuthorizedClientFn: getAuthorizedClient(opts.GlobalServiceAccountNamespaces),
 	}, nil
 }
 
@@ -516,7 +516,7 @@ func gvrAndKeyFromObj(
 // found therein to attempt to identify or build an appropriate client for
 // performing the desired operation. If it is unable to do so, it amounts to the
 // operation being unauthorized and an error is returned.
-func getAuthorizedClient(kargoNamespace string) func(
+func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 	context.Context,
 	libClient.Client,
 	string,
@@ -552,50 +552,35 @@ func getAuthorizedClient(kargoNamespace string) func(
 			Namespace:   key.Namespace,
 			Name:        key.Name,
 		}
+
 		if userInfo.Username != "" {
-			for _, ns := range []string{key.Namespace, kargoNamespace} {
-				if ns == "" {
-					continue
+			var namespacesToCheck []string
+			if key.Namespace != "" {
+				namespacesToCheck = make([]string, 0, len(globalServiceAccountNamespaces)+1)
+				namespacesToCheck = append(namespacesToCheck, key.Namespace)
+				namespacesToCheck = append(namespacesToCheck, globalServiceAccountNamespaces...)
+			} else {
+				namespacesToCheck = make([]string, len(userInfo.ServiceAccountsByNamespace))
+				var i int
+				for ns := range userInfo.ServiceAccountsByNamespace {
+					namespacesToCheck[i] = ns
+					i++
 				}
-				accounts, ok := userInfo.ServiceAccounts[ns]
-				if !ok {
-					continue
-				}
-				for sa := range accounts {
+			}
+			for _, namespaceToCheck := range namespacesToCheck {
+				serviceAccountsToCheck := userInfo.ServiceAccountsByNamespace[namespaceToCheck]
+				for serviceAccountToCheck := range serviceAccountsToCheck {
 					err := reviewSubjectAccess(
 						ctx,
 						internalClient.Scheme(),
 						ra,
-						withServiceAccount(sa),
+						withServiceAccount(serviceAccountToCheck),
 					)
 					if err == nil {
 						return internalClient, nil
 					}
 					if !apierrors.IsForbidden(err) {
 						return nil, errors.Wrap(err, "review subject access")
-					}
-				}
-			}
-			// If the operation is related to cluster-scoped resources
-			// (e.g. Project(Namespace)), all ServiceAccounts are candidates.
-			if key.Namespace == "" {
-				for ns, accounts := range userInfo.ServiceAccounts {
-					if ns == key.Namespace || ns == kargoNamespace {
-						continue
-					}
-					for sa := range accounts {
-						err := reviewSubjectAccess(
-							ctx,
-							internalClient.Scheme(),
-							ra,
-							withServiceAccount(sa),
-						)
-						if err == nil {
-							return internalClient, nil
-						}
-						if !apierrors.IsForbidden(err) {
-							return nil, errors.Wrap(err, "review subject access")
-						}
 					}
 				}
 			}

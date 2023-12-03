@@ -257,6 +257,7 @@ func (a *authInterceptor) WrapStreamingHandler(
 		return next(ctx, conn)
 	}
 }
+
 func (a *authInterceptor) listServiceAccounts(
 	ctx context.Context,
 	username string,
@@ -272,34 +273,45 @@ func (a *authInterceptor) listServiceAccounts(
 			kubeclient.ServiceAccountsByGroupIndexField: group,
 		})
 	}
+	// allowedNamespaces is a set of all namespaces in which to search for
+	// ServiceAccounts the user may be mapped to. These will includes all project
+	// namespaces and any additional namespaces that the Kargo admin has
+	// designated.
 	allowedNamespaces := make(map[string]struct{})
 	if a.cfg.OIDCConfig != nil {
+		// Add namespaces designated by the Kargo admin to the set.
 		for _, ns := range a.cfg.OIDCConfig.GlobalServiceAccountNamespaces {
 			allowedNamespaces[ns] = struct{}{}
 		}
 	}
+	// Find all project namespaces.
 	nsList := &corev1.NamespaceList{}
 	if err := a.internalClient.List(ctx, nsList, libClient.MatchingLabels{
 		kargoapi.LabelProjectKey: kargoapi.LabelTrueValue,
 	}); err != nil {
 		return nil, errors.Wrap(err, "list namespaces")
 	}
+	// Add all project namespaces to the set.
 	for _, ns := range nsList.Items {
 		allowedNamespaces[ns.GetName()] = struct{}{}
 	}
+	// Now search all identified namespaces for ServiceAccounts that the user may
+	// be mapped to.
 	accounts := make(map[string]map[types.NamespacedName]struct{})
-	for _, q := range queries {
+	for _, query := range queries {
+		// List ALL ServiceAccounts matching the query.
 		list := &corev1.ServiceAccountList{}
-		if err := a.internalClient.List(ctx, list, q); err != nil {
+		if err := a.internalClient.List(ctx, list, query); err != nil {
 			return nil, errors.Wrap(err, "list service accounts")
 		}
 		for _, sa := range list.Items {
+			// Skip if it's not in a namespace we care about.
+			if _, ok := allowedNamespaces[sa.GetNamespace()]; !ok {
+				continue
+			}
 			key := types.NamespacedName{
 				Namespace: sa.GetNamespace(),
 				Name:      sa.GetName(),
-			}
-			if _, ok := allowedNamespaces[key.Namespace]; !ok {
-				continue
 			}
 			if _, ok := accounts[key.Namespace]; !ok {
 				accounts[key.Namespace] = make(map[types.NamespacedName]struct{})
@@ -382,9 +394,9 @@ func (a *authInterceptor) authenticate(
 			return user.ContextWithInfo(
 				ctx,
 				user.Info{
-					Username:        username,
-					Groups:          groups,
-					ServiceAccounts: sa,
+					Username:                   username,
+					Groups:                     groups,
+					ServiceAccountsByNamespace: sa,
 				},
 			), nil
 		}

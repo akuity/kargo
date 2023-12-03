@@ -51,12 +51,15 @@ func newAPICommand() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "create internal Kubernetes client")
 			}
-			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{
-				KargoNamespace: cfg.KargoNamespace,
+			kubeClientOptions := kubernetes.ClientOptions{
 				NewInternalClient: func(context.Context, *rest.Config, *runtime.Scheme) (client.Client, error) {
 					return internalClient, nil
 				},
-			})
+			}
+			if cfg.OIDCConfig != nil {
+				kubeClientOptions.GlobalServiceAccountNamespaces = cfg.OIDCConfig.GlobalServiceAccountNamespaces
+			}
+			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubeClientOptions)
 			if err != nil {
 				return errors.Wrap(err, "create Kubernetes client")
 			}
