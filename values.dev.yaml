@@ -1,6 +1,7 @@
 api:
   logLevel: DEBUG
   host: localhost:30081
+  enablePermissiveCORSPolicy: true
   adminAccount:
     password: admin
     tokenSigningKey: iwishtowashmyirishwristwatch
