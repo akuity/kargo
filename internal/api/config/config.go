@@ -21,12 +21,13 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
-	LocalMode      bool
-	TLSConfig      *TLSConfig
-	OIDCConfig     *oidc.Config
-	AdminConfig    *AdminConfig
-	DexProxyConfig *dex.ProxyConfig
-	ArgoCDConfig   ArgoCDConfig
+	LocalMode                   bool
+	TLSConfig                   *TLSConfig
+	OIDCConfig                  *oidc.Config
+	AdminConfig                 *AdminConfig
+	DexProxyConfig              *dex.ProxyConfig
+	ArgoCDConfig                ArgoCDConfig
+	PermissiveCORSPolicyEnabled bool
 }
 
 func ServerConfigFromEnv() ServerConfig {
@@ -49,6 +50,8 @@ func ServerConfigFromEnv() ServerConfig {
 		cfg.DexProxyConfig = &dexProxyCfg
 	}
 	envconfig.MustProcess("", &cfg.ArgoCDConfig)
+	cfg.PermissiveCORSPolicyEnabled =
+		types.MustParseBool(os.GetEnv("PERMISSIVE_CORS_POLICY_ENABLED", "false"))
 	return cfg
 }
 
