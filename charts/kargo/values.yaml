@@ -58,14 +58,12 @@ api:
   nodeSelector: {}
   ## @param api.tolerations Tolerations for api pods.
   tolerations: []
-<<<<<<< Updated upstream
+  ## @param api.affinity Specifies pod affinity for api pods.
+  affinity: {}
+
   probes:
     ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
     enabled: true
-=======
-  ## @param api.affinity Specifies pod affinity for api pods.
-  affinity: {}
->>>>>>> Stashed changes
 
   tls:
     ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section will be ignored when this is set to `false`.
