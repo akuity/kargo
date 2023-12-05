@@ -53,7 +53,8 @@ k8s_resource(
     'kargo-api:configmap',
     'kargo-api:secret',
     'kargo-api:serviceaccount'
-  ]
+  ],
+  resource_deps=['dex-server']
 )
 
 k8s_resource(

@@ -39,6 +39,7 @@ spec:
             - name: h2c
               containerPort: 8080
               protocol: TCP
+{{- if .Values.api.probes.enabled }}
           livenessProbe:
             exec:
               command:
@@ -47,7 +48,7 @@ spec:
 {{- if .Values.api.tls.enabled }}
                 - -tls
                 - -tls-no-verify
-{{- end }}                
+{{- end }}
             initialDelaySeconds: 10
           readinessProbe:
             exec:
@@ -59,6 +60,7 @@ spec:
                 - -tls-no-verify
 {{- end }}
             initialDelaySeconds: 5
+{{- end }}
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}
           volumeMounts:
             - mountPath: /etc/kargo
