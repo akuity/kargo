@@ -25,6 +25,10 @@ spec:
         secret/checksum: {{ include (print $.Template.BasePath "/api/secret.yaml") . | sha256sum }}
     spec:
       serviceAccount: kargo-api
+      {{- with .Values.api.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: api
           image: {{ include "kargo.image" . }}
