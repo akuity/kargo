@@ -21,6 +21,10 @@ spec:
       template:
         spec:
           serviceAccountName: kargo-garbage-collector
+          {{- with .Values.garbageCollector.affinity }}
+          affinity:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
           containers:
           - name: garbage-collector
             image: {{ include "kargo.image" . }}
