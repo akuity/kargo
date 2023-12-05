@@ -9,6 +9,7 @@ import (
 
 	"connectrpc.com/grpchealth"
 	"github.com/pkg/errors"
+	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -151,8 +152,20 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 		mux.Handle("/dex/", dexProxy)
 	}
 
+	handler := h2c.NewHandler(mux, &http2.Server{})
+
+	// Sometimes a permissive CORS policy is useful during local development.
+	if s.cfg.PermissiveCORSPolicyEnabled {
+		handler = cors.New(cors.Options{
+			AllowCredentials: true,
+			AllowedOrigins:   []string{"*"},
+			AllowedMethods:   []string{"DELETE", "GET", "POST", "PUT"},
+			AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		}).Handler(handler)
+	}
+
 	srv := &http.Server{
-		Handler:           h2c.NewHandler(mux, &http2.Server{}),
+		Handler:           handler,
 		ReadHeaderTimeout: time.Minute,
 	}
 

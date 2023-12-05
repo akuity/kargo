@@ -49,6 +49,7 @@ require (
 )
 
 require (
+	github.com/rs/cors v1.8.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 )
