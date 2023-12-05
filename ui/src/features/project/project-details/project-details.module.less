@@ -1,19 +1,19 @@
 .dag {
-    position: relative;
+  position: relative;
   //   color: white;
-    --dot-bg: white;
-    --dot-color: #333;
-    --dot-size: 1px;
-    --dot-space: 25px;
-    @apply overflow-hidden flex-grow w-full;
-    background: linear-gradient(
-          90deg,
-          var(--dot-bg) calc(var(--dot-space) - var(--dot-size)),
-          transparent 1%
-        )
-        center / var(--dot-space) var(--dot-space),
-      linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center /
-        var(--dot-space) var(--dot-space),
-      var(--dot-color);
-  }
-  
+  --dot-bg: white;
+  --dot-color: #333;
+  --dot-size: 1px;
+  --dot-space: 25px;
+  @apply overflow-hidden flex-grow w-full;
+  background:
+    linear-gradient(90deg, var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%)
+      center / var(--dot-space) var(--dot-space),
+    linear-gradient(var(--dot-bg) calc(var(--dot-space) - var(--dot-size)), transparent 1%) center /
+      var(--dot-space) var(--dot-space),
+    var(--dot-color);
+}
+
+.headerButton {
+  @apply ml-auto mr-4 cursor-pointer px-2 text-white bg-zinc-700 rounded hover:bg-zinc-600 font-semibold;
+}

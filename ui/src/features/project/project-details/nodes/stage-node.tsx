@@ -1,4 +1,9 @@
-import { faBullseye, faGear, faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBullseye,
+  faCircleCheck,
+  faGear,
+  faTruckArrowRight
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import { generatePath, useNavigate } from 'react-router-dom';
@@ -20,7 +25,9 @@ export const StageNode = ({
   projectName,
   hasNoSubscribers,
   promoting,
-  currentFreight
+  currentFreight,
+  onClick,
+  approving
 }: {
   stage: Stage;
   color: string;
@@ -31,15 +38,23 @@ export const StageNode = ({
   promoting?: PromotionType;
   onPromoteClick: (type: PromotionType) => void;
   currentFreight: Freight;
+  onClick?: () => void;
+  approving?: boolean;
 }) => {
   const navigate = useNavigate();
   return (
     <div
       className={styles.node}
       style={{ backgroundColor: color, position: 'relative', cursor: 'pointer' }}
-      onClick={() =>
-        navigate(generatePath(paths.stage, { name: projectName, stageName: stage.metadata?.name }))
-      }
+      onClick={() => {
+        if (onClick) {
+          onClick();
+        } else {
+          navigate(
+            generatePath(paths.stage, { name: projectName, stageName: stage.metadata?.name })
+          );
+        }
+      }}
     >
       <div
         className={`${styles.node} ${faded ? styles.faded : ''}`}
@@ -69,26 +84,37 @@ export const StageNode = ({
           </div>
         </h3>
         <div className={styles.body}>
-          <h3>Current Freight</h3>
-          <p className='font-mono text-sm font-semibold h-full flex items-center justify-center'>
-            <FreightLabel freight={currentFreight} />
-          </p>
-        </div>
-        <>
-          <Nodule
-            begin={true}
-            nodeHeight={height}
-            onClick={() => onPromoteClick('default')}
-            selected={promoting === 'default'}
-          />
-          {!hasNoSubscribers && (
-            <Nodule
-              nodeHeight={height}
-              onClick={() => onPromoteClick('subscribers')}
-              selected={promoting === 'subscribers'}
-            />
+          {approving ? (
+            <div className='h-full flex items-center justify-center font-bold cursor-pointer text-blue-500 hover:text-blue-400'>
+              <FontAwesomeIcon icon={faCircleCheck} className='mr-2' />
+              APPROVE
+            </div>
+          ) : (
+            <>
+              <h3>Current Freight</h3>
+              <p className='font-mono text-sm font-semibold h-full flex items-center justify-center'>
+                <FreightLabel freight={currentFreight} />
+              </p>
+            </>
           )}
-        </>
+        </div>
+        {!approving && (
+          <>
+            <Nodule
+              begin={true}
+              nodeHeight={height}
+              onClick={() => onPromoteClick('default')}
+              selected={promoting === 'default'}
+            />
+            {!hasNoSubscribers && (
+              <Nodule
+                nodeHeight={height}
+                onClick={() => onPromoteClick('subscribers')}
+                selected={promoting === 'subscribers'}
+              />
+            )}
+          </>
+        )}
       </div>
     </div>
   );
