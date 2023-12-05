@@ -10,7 +10,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/images"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -38,9 +38,9 @@ func (r *reconciler) getLatestImages(
 				sub.RepoURL,
 			)
 		}
-		var regCreds *images.Credentials
+		var regCreds *image.Credentials
 		if ok {
-			regCreds = &images.Credentials{
+			regCreds = &image.Credentials{
 				Username: creds.Username,
 				Password: creds.Password,
 			}
@@ -50,11 +50,12 @@ func (r *reconciler) getLatestImages(
 		}
 
 		tag, err := r.getLatestTagFn(
+			ctx,
 			sub.RepoURL,
-			sub.UpdateStrategy,
+			sub.TagSelectionStrategy,
 			sub.SemverConstraint,
 			sub.AllowTags,
-			sub.IgnoreTags,
+			sub.IgnoreTags, // TODO: KR: Fix this
 			sub.Platform,
 			regCreds,
 		)
@@ -94,4 +95,46 @@ func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
 
 func getGithubImageSourceURL(gitRepoURL, tag string) string {
 	return fmt.Sprintf("%s/tree/%s", git.NormalizeGitURL(gitRepoURL), tag)
+}
+
+func getLatestTag(
+	ctx context.Context,
+	repoURL string,
+	tagSelectionStrategy kargoapi.ImageTagSelectionStrategy,
+	constraint string,
+	allowTagsRegex string,
+	ignoreTags []string,
+	platform string,
+	creds *image.Credentials,
+) (string, error) {
+	tc, err := image.NewTagSelector(
+		repoURL,
+		image.TagSelectionStrategy(tagSelectionStrategy),
+		&image.TagSelectorOptions{
+			Constraint: constraint,
+			AllowRegex: allowTagsRegex,
+			Ignore:     ignoreTags,
+			Platform:   platform,
+			Creds:      creds,
+		},
+	)
+	if err != nil {
+		return "", errors.Wrapf(
+			err,
+			"error creating tag constraint for image %q",
+			repoURL,
+		)
+	}
+	tag, err := tc.SelectTag(ctx)
+	if err != nil {
+		return "", errors.Wrapf(
+			err,
+			"error fetching newest applicable tag for image %q",
+			repoURL,
+		)
+	}
+	if tag == nil {
+		return "", errors.Errorf("found no applicable tags for image %q", repoURL)
+	}
+	return tag.Name, nil
 }
