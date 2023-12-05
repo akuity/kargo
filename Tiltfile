@@ -47,7 +47,6 @@ k8s_resource(
   ],
   labels = ['kargo'],
   objects = [
-    'kargo-api:certificate',
     'kargo-api:clusterrole',
     'kargo-api:clusterrolebinding',
     'kargo-api:configmap',
