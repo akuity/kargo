@@ -24,6 +24,10 @@ spec:
         configmap/checksum: {{ include (print $.Template.BasePath "/webhooks-server/configmap.yaml") . | sha256sum }}
     spec:
       serviceAccount: kargo-webhooks-server
+      {{- with .Values.webhooksServer.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: webhooks-server
         image: {{ include "kargo.image" . }}

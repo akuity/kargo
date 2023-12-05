@@ -45,6 +45,13 @@ rules:
   - apiGroups:
       - kargo.akuity.io
     resources:
+      - freights/status
+    verbs:
+      - update
+      - patch
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
       - promotionpolicies
       - stages
       - warehouses

@@ -47,13 +47,13 @@ k8s_resource(
   ],
   labels = ['kargo'],
   objects = [
-    'kargo-api:certificate',
     'kargo-api:clusterrole',
     'kargo-api:clusterrolebinding',
     'kargo-api:configmap',
     'kargo-api:secret',
     'kargo-api:serviceaccount'
-  ]
+  ],
+  resource_deps=['dex-server']
 )
 
 k8s_resource(

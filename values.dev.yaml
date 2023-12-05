@@ -1,7 +1,11 @@
 api:
   logLevel: DEBUG
   host: localhost:30081
+  tls:
+    enabled: false
   enablePermissiveCORSPolicy: true
+  probes:
+    enabled: false
   adminAccount:
     password: admin
     tokenSigningKey: iwishtowashmyirishwristwatch
@@ -13,5 +17,7 @@ api:
       - id: mock
         name: Example
         type: mockCallback
+      probes:
+        enabled: false
 controller:
   logLevel: DEBUG

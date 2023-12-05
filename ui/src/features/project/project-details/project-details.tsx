@@ -1,9 +1,16 @@
 import { createPromiseClient } from '@bufbuild/connect';
+import { Timestamp } from '@bufbuild/protobuf';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
-import { faDiagramProject, faRefresh } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCircleCheck,
+  faDiagramProject,
+  faEllipsisV,
+  faRefresh,
+  faTimeline
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Empty, message } from 'antd';
+import { Button, Dropdown, Empty, message } from 'antd';
 import { graphlib, layout } from 'dagre';
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -11,13 +18,25 @@ import { useParams } from 'react-router-dom';
 import { transport } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
-import { Freightline, PromotionType } from '@ui/features/freightline/freightline';
+import { ConfirmPromotionDialogue } from '@ui/features/freightline/confirm-promotion-dialogue';
+import { FreightContents } from '@ui/features/freightline/freight-contents';
+import { FreightItem, FreightMode } from '@ui/features/freightline/freight-item';
+import {
+  Freightline,
+  FreightlineHeader,
+  PromotionType
+} from '@ui/features/freightline/freightline';
+import { PromotingStageBanner } from '@ui/features/freightline/promoting-stage-banner';
+import { StageIndicators } from '@ui/features/freightline/stage-indicators';
 import { StageDetails } from '@ui/features/stage/stage-details';
 import { getStageColors } from '@ui/features/stage/utils';
 import {
+  approveFreight,
   getStage,
   listStages,
   listWarehouses,
+  promoteStage,
+  promoteSubscribers,
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
@@ -37,6 +56,8 @@ const nodeHeight = 118;
 
 const warehouseNodeWidth = 180;
 const warehouseNodeHeight = 140;
+
+const getSeconds = (ts?: Timestamp): number => Number(ts?.seconds) || 0;
 
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
@@ -120,6 +141,8 @@ export const ProjectDetails = () => {
       setWarehouseMap(wm);
     }
   }, [warehouseData, isLoadingWarehouses]);
+
+  const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
 
   const [nodes, connectors, box, sortedStages] = React.useMemo(() => {
     if (!data) {
@@ -261,7 +284,8 @@ export const ProjectDetails = () => {
       .sort((a, b) => a.left - b.left)
       .map((item) => item.data) as Stage[];
 
-    const stageColorMap = getStageColors(name || '', sortedStages);
+    const scm = getStageColors(name || '', sortedStages);
+    setStageColorMap(scm);
     nodes.forEach((node) => {
       if (node.type === NodeType.STAGE) {
         const color = stageColorMap[node.data?.metadata?.uid || ''];
@@ -282,6 +306,91 @@ export const ProjectDetails = () => {
     {}
   );
   const [fullFreightById, setFullFreightById] = React.useState<{ [key: string]: Freight }>({});
+  const [promotionEligible, setPromotionEligible] = React.useState<{ [key: string]: boolean }>({});
+  const [manuallyApproving, setManuallyApproving] = React.useState<string | undefined>();
+
+  const { mutate: manualApproveAction } = useMutation({
+    ...approveFreight.useMutation(),
+    onError: (err) => {
+      message.error(err?.toString());
+    },
+    onSuccess: () => {
+      message.success(`Freight ${confirmingPromotion} has been manually approved.`);
+      setManuallyApproving(undefined);
+    }
+  });
+
+  const { mutate: promoteSubscribersAction } = useMutation({
+    ...promoteSubscribers.useMutation(),
+    onError: (err) => {
+      message.error(err?.toString());
+    },
+    onSuccess: () => {
+      message.success(
+        `All subscribers of "${promotingStage?.metadata?.name}" stage have been promoted.`
+      );
+      setPromotingStage(undefined);
+    }
+  });
+
+  const { mutate: promoteAction } = useMutation({
+    ...promoteStage.useMutation(),
+    onError: (err) => {
+      message.error(err?.toString());
+    },
+    onSuccess: () => {
+      message.success(`Stage "${promotingStage?.metadata?.name}" has been promoted.`);
+      setPromotingStage(undefined);
+    }
+  });
+
+  const {
+    data: availableFreightData,
+    refetch: refetchAvailableFreight,
+    isLoading: isLoadingAvailableFreight
+  } = useQuery(
+    queryFreight.useQuery({ project: name, stage: promotingStage?.metadata?.name || '' })
+  );
+
+  const freightModeFor = (freightID: string): FreightMode => {
+    if (manuallyApproving) {
+      return manuallyApproving === freightID ? FreightMode.Selected : FreightMode.Disabled;
+    }
+
+    if (!promotingStage) {
+      return FreightMode.Default;
+    }
+
+    if (confirmingPromotion === freightID) {
+      return FreightMode.Confirming;
+    }
+
+    return promotionEligible[freightID] ? FreightMode.Promotable : FreightMode.Disabled;
+  };
+
+  // When in promotion mode, create a map of freight eligible for promotion, indexed by Freight ID
+  React.useEffect(() => {
+    if (!isLoadingAvailableFreight && promotingStage !== undefined) {
+      const initFreight = availableFreightData?.groups['']?.freight || [];
+      const availableFreight =
+        promotionType === 'default'
+          ? initFreight
+          : // if promoting subscribers, only include freight that has been verified in the promoting stage
+            initFreight.filter(
+              (f) => !!f?.status?.verifiedIn[promotingStage?.metadata?.name || '']
+            );
+
+      const pe: { [key: string]: boolean } = {};
+      ((availableFreight as Freight[]) || []).forEach((f: Freight) => {
+        pe[f?.id || ''] = true;
+      });
+      setPromotionEligible(pe);
+    }
+  }, [availableFreightData]);
+
+  React.useEffect(() => {
+    refetchAvailableFreight();
+  }, [promotingStage, promotionType, freightData]);
 
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
@@ -327,17 +436,147 @@ export const ProjectDetails = () => {
 
   return (
     <div className='flex flex-col flex-grow'>
-      <ColorContext.Provider value={getStageColors(name || '', sortedStages || [])}>
+      <ColorContext.Provider value={stageColorMap}>
         <Freightline
-          freight={freightData?.groups['']?.freight || []}
-          stagesPerFreight={stagesPerFreight}
           promotingStage={promotingStage}
           setPromotingStage={setPromotingStage}
           promotionType={promotionType}
-          confirmingPromotion={confirmingPromotion}
-          setConfirmingPromotion={setConfirmingPromotion}
-          project={name || ''}
-        />
+          header={
+            <FreightlineHeader
+              banner={
+                promotingStage && (
+                  <PromotingStageBanner promotionType={promotionType || 'default'} />
+                )
+              }
+            >
+              {!promotingStage && !manuallyApproving && (
+                <div className='font-semibold'>
+                  <FontAwesomeIcon icon={faTimeline} className='mr-2' />
+                  FREIGHTLINE
+                </div>
+              )}
+              {promotingStage && (
+                <>
+                  PROMOTING {promotionType === 'subscribers' ? 'SUBSCRIBERS OF' : 'CURRENT'} STAGE{' '}
+                  <div className='font-semibold flex items-center ml-1'>
+                    <div
+                      className='px-2 rounded text-white ml-2'
+                      style={{
+                        backgroundColor: stageColorMap[promotingStage?.metadata?.uid || '']
+                      }}
+                    >
+                      {' '}
+                      {promotingStage?.metadata?.name?.toUpperCase()}
+                    </div>
+                  </div>
+                  <div className={styles.headerButton} onClick={() => setPromotingStage(undefined)}>
+                    CANCEL
+                  </div>
+                </>
+              )}
+              {manuallyApproving && (
+                <div className='flex items-center w-full'>
+                  MANUALLY APPROVING
+                  <div
+                    className={styles.headerButton}
+                    onClick={() => setManuallyApproving(undefined)}
+                  >
+                    CANCEL
+                  </div>
+                </div>
+              )}
+            </FreightlineHeader>
+          }
+        >
+          <>
+            {(freightData?.groups['']?.freight || [])
+              .sort(
+                (a, b) =>
+                  getSeconds(b.metadata?.creationTimestamp) -
+                  getSeconds(a.metadata?.creationTimestamp)
+              )
+              .map((f, i) => {
+                const id = f?.metadata?.name || `${i}`;
+                return (
+                  <FreightItem
+                    freight={f || undefined}
+                    key={id}
+                    onClick={() => {
+                      if (promotingStage && promotionEligible[id]) {
+                        setConfirmingPromotion(confirmingPromotion ? undefined : f?.id);
+                      }
+                    }}
+                    mode={freightModeFor(id)}
+                    empty={(stagesPerFreight[id] || []).length === 0}
+                  >
+                    <Dropdown
+                      className='absolute top-2 right-2'
+                      trigger={['click']}
+                      menu={{
+                        items: [
+                          {
+                            key: '1',
+                            label: (
+                              <>
+                                <FontAwesomeIcon icon={faCircleCheck} className='mr-2' /> Manually
+                                Approve
+                              </>
+                            ),
+                            onClick: () => {
+                              setManuallyApproving(id);
+                            }
+                          }
+                        ]
+                      }}
+                    >
+                      <FontAwesomeIcon
+                        icon={faEllipsisV}
+                        className='cursor-pointer text-gray-500 hover:text-white'
+                      />
+                    </Dropdown>
+                    <StageIndicators
+                      stages={stagesPerFreight[id] || []}
+                      faded={!!manuallyApproving}
+                    />
+                    <FreightContents
+                      highlighted={
+                        // contains stages, not in promotion mode
+                        ((stagesPerFreight[id] || []).length > 0 && !promotingStage) ||
+                        // in promotion mode, is eligible
+                        (!!promotingStage && promotionEligible[id]) ||
+                        false
+                      }
+                      promoting={!!promotingStage}
+                      freight={f}
+                    />
+                    {promotingStage && confirmingPromotion === id && (
+                      <ConfirmPromotionDialogue
+                        stageName={promotingStage?.metadata?.name || ''}
+                        promotionType={promotionType || 'default'}
+                        onClick={() => {
+                          const currentData = {
+                            project: promotingStage?.metadata?.namespace,
+                            freight: f?.id
+                          };
+                          if (promotionType === 'default') {
+                            promoteAction({
+                              name: promotingStage?.metadata?.name,
+                              ...currentData
+                            });
+                          } else {
+                            promoteSubscribersAction({
+                              stage: promotingStage?.metadata?.name,
+                              ...currentData
+                            });
+                          }
+                        }}
+                      />
+                    )}
+                  </FreightItem>
+                );
+              })}
+          </>
+        </Freightline>
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full ${styles.dag}`}>
             <div className='text-sm mb-4 font-semibold p-6'>
@@ -389,6 +628,18 @@ export const ProjectDetails = () => {
                               ? promotionType
                               : undefined
                           }
+                          onClick={
+                            manuallyApproving
+                              ? () => {
+                                  manualApproveAction({
+                                    stage: node.data?.metadata?.name,
+                                    project: name,
+                                    id: manuallyApproving
+                                  });
+                                }
+                              : undefined
+                          }
+                          approving={!!manuallyApproving}
                         />
                       </>
                     ) : (
