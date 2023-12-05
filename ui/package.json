@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "main": "index.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "dev:local-api": "API_URL=http://localhost:8080 vite",
     "build": "vite build",
     "lint": "eslint --ignore-path .gitignore . --max-warnings=0",
