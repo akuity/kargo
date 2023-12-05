@@ -1,4 +1,5 @@
 import { Tooltip } from 'antd';
+import { formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { Freight } from '@ui/gen/v1alpha1/types_pb';
@@ -15,6 +16,27 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
   }, [freight]);
 
   return (
-    <span className='truncate'>{alias ? <Tooltip title={id}>{alias}</Tooltip> : <>{id}</>}</span>
+    <span className='truncate'>
+      <Tooltip
+        title={
+          <>
+            {alias && <div>Alias: {alias}</div>}
+            <div>ID: {id}</div>
+            <div>
+              {freight?.metadata?.creationTimestamp && (
+                <>
+                  Created:{' '}
+                  {formatDistance(freight?.metadata?.creationTimestamp?.toDate(), new Date(), {
+                    addSuffix: true
+                  })}
+                </>
+              )}
+            </div>
+          </>
+        }
+      >
+        {alias || id}
+      </Tooltip>
+    </span>
   );
 };
