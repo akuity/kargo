@@ -327,7 +327,7 @@ export const ProjectDetails = () => {
     },
     onSuccess: () => {
       message.success(
-        `All subscribers of "${promotingStage?.metadata?.name}" stage have been promoted.`
+        `Promotion requests to all subscribers of "${promotingStage?.metadata?.name}" have been submitted.`
       );
       setPromotingStage(undefined);
     }
@@ -339,7 +339,9 @@ export const ProjectDetails = () => {
       message.error(err?.toString());
     },
     onSuccess: () => {
-      message.success(`Stage "${promotingStage?.metadata?.name}" has been promoted.`);
+      message.success(
+        `Promotion request for stage "${promotingStage?.metadata?.name}" has been successfully submitted.`
+      );
       setPromotingStage(undefined);
     }
   });
