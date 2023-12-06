@@ -6,12 +6,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:validation:Enum={Image,Tag}
+// +kubebuilder:validation:Enum={ImageAndTag,Tag,ImageAndDigest,Digest}
 type ImageUpdateValueType string
 
 const (
-	ImageUpdateValueTypeImage ImageUpdateValueType = "Image"
-	ImageUpdateValueTypeTag   ImageUpdateValueType = "Tag"
+	ImageUpdateValueTypeImageAndTag    ImageUpdateValueType = "ImageAndTag"
+	ImageUpdateValueTypeTag            ImageUpdateValueType = "Tag"
+	ImageUpdateValueTypeImageAndDigest ImageUpdateValueType = "ImageAndDigest"
+	ImageUpdateValueTypeDigest         ImageUpdateValueType = "Digest"
 )
 
 type HealthState string
@@ -195,6 +197,11 @@ type KustomizeImageUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[\w-\.]+(/[\w-\.]+)*$
 	Path string `json:"path"`
+	// UseDigest specifies whether the image's digest should be used instead of
+	// its tag.
+	//
+	//+kubebuilder:validation:Optional
+	UseDigest bool `json:"useDigest"`
 }
 
 // HelmPromotionMechanism describes how to use Helm to incorporate Freight into
@@ -228,9 +235,16 @@ type HelmImageUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
 	// Value specifies the new value for the specified key in the specified Helm
-	// values file. Valid values are "Image", which replaces the value of the
-	// specified key with the entire <image name>:<tag>, or "Tag" which replaces
-	// the value of the specified with just the new tag. This is a required field.
+	// values file. Valid values are:
+	//
+	// - ImageAndTag: Replaces the value of the specified key with
+	//   <image name>:<tag>
+	// - Tag: Replaces the value of the specified key with just the new tag
+	// - ImageAndDigest: Replaces the value of the specified key with
+	//   <image name>@<digest>
+	// - Digest: Replaces the value of the specified key with just the new digest.
+	//
+	// This is a required field.
 	Value ImageUpdateValueType `json:"value"`
 }
 
@@ -324,7 +338,7 @@ type ArgoCDKustomize struct {
 	// Argo CD Application's Kustomize parameters.
 	//
 	//+kubebuilder:validation:MinItems=1
-	Images []string `json:"images"`
+	Images []ArgoCDKustomizeImageUpdate `json:"images"`
 }
 
 // ArgoCDHelm describes updates to an Argo CD Application source's Helm-specific
@@ -335,6 +349,20 @@ type ArgoCDHelm struct {
 	//
 	//+kubebuilder:validation:MinItems=1
 	Images []ArgoCDHelmImageUpdate `json:"images"`
+}
+
+// ArgoCDKustomizeImageUpdate describes how a specific image version can be
+// incorporated into an Argo CD Application's Kustomize parameters.
+type ArgoCDKustomizeImageUpdate struct {
+	// Image specifies a container image (without tag). This is a required field.
+	//
+	//+kubebuilder:validation:MinLength=1
+	Image string `json:"image"`
+	// UseDigest specifies whether the image's digest should be used instead of
+	// its tag.
+	//
+	//+kubebuilder:validation:Optional
+	UseDigest bool `json:"useDigest"`
 }
 
 // ArgoCDHelmImageUpdate describes how a specific image version can be
@@ -350,10 +378,16 @@ type ArgoCDHelmImageUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
 	// Value specifies the new value for the specified key in the Argo CD
-	// Application's Helm parameters. Valid values are "Image", which replaces the
-	// value of the specified key with the entire <image name>:<tag>, or "Tag"
-	// which replaces the value of the specified with just the new tag. This is a
-	// required field.
+	// Application's Helm parameters. Valid values are:
+	//
+	// - ImageAndTag: Replaces the value of the specified key with
+	//   <image name>:<tag>
+	// - Tag: Replaces the value of the specified key with just the new tag
+	// - ImageAndDigest: Replaces the value of the specified key with
+	//   <image name>@<digest>
+	// - Digest: Replaces the value of the specified key with just the new digest.
+	//
+	// This is a required field.
 	Value ImageUpdateValueType `json:"value"`
 }
 
@@ -452,6 +486,9 @@ type Image struct {
 	// Tag identifies a specific version of the image in the repository specified
 	// by RepoURL.
 	Tag string `json:"tag,omitempty"`
+	// Digest identifies a specific version of the image in the repository
+	// specified by RepoURL. This is a more precise identifier than Tag.
+	Digest string `json:"digest,omitempty"`
 }
 
 // Chart describes a specific version of a Helm chart.
