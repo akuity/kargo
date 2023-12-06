@@ -20,16 +20,16 @@ const (
 
 	// kargoSecretTypeLabelKey is the key for a label used to identify the type
 	// of credentials stored in a Secret.
-	kargoSecretTypeLabelKey = "kargo.akuity.io/secret-type"
+	kargoSecretTypeLabelKey = "kargo.akuity.io/secret-type" // nolint: gosec
 	// argoCDSecretTypeLabelKey is the key for a label used to identify the type
 	// of credentials stored in a Secret within Argo CD's namespace.
-	argoCDSecretTypeLabelKey = "argocd.argoproj.io/secret-type"
+	argoCDSecretTypeLabelKey = "argocd.argoproj.io/secret-type" // nolint: gosec
 	// repositorySecretTypeLabelValue denotes that a secret contains credentials
 	// for a repository that is an exact match on the normalized URL.
 	repositorySecretTypeLabelValue = "repository"
 	// repoCredsSecretTypeLabelValue denotes that a secret contains credentials
 	// for any repository whose URL begins with a specific prefix.
-	repoCredsSecretTypeLabelValue = "repo-creds"
+	repoCredsSecretTypeLabelValue = "repo-creds" // nolint: gosec
 )
 
 // Type is a string type used to represent a type of Credentials.
