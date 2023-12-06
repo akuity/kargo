@@ -4,16 +4,33 @@ import (
 	"context"
 	"strings"
 
-	"github.com/argoproj/argo-cd/v2/applicationset/utils"
-	"github.com/argoproj/argo-cd/v2/common"
-	"github.com/argoproj/argo-cd/v2/util/git"
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/internal/git"
 )
 
-const authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
+const (
+	// authorizedProjectsAnnotationKey is the key for an annotation used by owners
+	// of Secrets in Argo CD's namespace to indicate consent to be borrowed by
+	// specific Kargo projects.
+	authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
+
+	// kargoSecretTypeLabelKey is the key for a label used to identify the type
+	// of credentials stored in a Secret.
+	kargoSecretTypeLabelKey = "kargo.akuity.io/secret-type"
+	// argoCDSecretTypeLabelKey is the key for a label used to identify the type
+	// of credentials stored in a Secret within Argo CD's namespace.
+	argoCDSecretTypeLabelKey = "argocd.argoproj.io/secret-type"
+	// repositorySecretTypeLabelValue denotes that a secret contains credentials
+	// for a repository that is an exact match on the normalized URL.
+	repositorySecretTypeLabelValue = "repository"
+	// repoCredsSecretTypeLabelValue denotes that a secret contains credentials
+	// for any repository whose URL begins with a specific prefix.
+	repoCredsSecretTypeLabelValue = "repo-creds"
+)
 
 // Type is a string type used to represent a type of Credentials.
 type Type string
@@ -25,8 +42,6 @@ const (
 	TypeHelm Type = "helm"
 	// TypeImage represents credentials for an image repository.
 	TypeImage Type = "image"
-
-	kargoSecretTypeLabel = "kargo.akuity.io/secret-type" // nolint: gosec
 )
 
 // Credentials generically represents any type of repository credential.
@@ -123,7 +138,7 @@ func (k *kubernetesDatabase) Get(
 		k.kargoClient,
 		namespace,
 		labels.Set(map[string]string{
-			kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
+			kargoSecretTypeLabelKey: repositorySecretTypeLabelValue,
 		}).AsSelector(),
 		credType,
 		repoURL,
@@ -142,7 +157,7 @@ func (k *kubernetesDatabase) Get(
 		k.kargoClient,
 		namespace,
 		labels.Set(map[string]string{
-			kargoSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
+			kargoSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
 		}).AsSelector(),
 		credType,
 		repoURL,
@@ -164,7 +179,7 @@ func (k *kubernetesDatabase) Get(
 			k.kargoClient,
 			globalCredsNamespace,
 			labels.Set(map[string]string{
-				kargoSecretTypeLabel: common.LabelValueSecretTypeRepository,
+				kargoSecretTypeLabelKey: repositorySecretTypeLabelValue,
 			}).AsSelector(),
 			credType,
 			repoURL,
@@ -183,7 +198,7 @@ func (k *kubernetesDatabase) Get(
 			k.kargoClient,
 			globalCredsNamespace,
 			labels.Set(map[string]string{
-				kargoSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
+				kargoSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
 			}).AsSelector(),
 			credType,
 			repoURL,
@@ -208,7 +223,7 @@ func (k *kubernetesDatabase) Get(
 		k.argoClient,
 		k.argoCDNamespace,
 		labels.Set(map[string]string{
-			utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepository,
+			argoCDSecretTypeLabelKey: repositorySecretTypeLabelValue,
 		}).AsSelector(),
 		credType,
 		repoURL,
@@ -224,7 +239,7 @@ func (k *kubernetesDatabase) Get(
 			k.argoClient,
 			k.argoCDNamespace,
 			labels.Set(map[string]string{
-				utils.ArgoCDSecretTypeLabel: common.LabelValueSecretTypeRepoCreds,
+				argoCDSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
 			}).AsSelector(),
 			credType,
 			repoURL,
