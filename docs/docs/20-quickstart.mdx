@@ -144,11 +144,11 @@ docker logout ghcr.io
 
 At the end of this process:
 
-* The Argo CD dashboard will be accessible at [localhost:8443](https://localhost:8443).
+* The Argo CD dashboard will be accessible at [localhost:31443](https://localhost:31443).
 
   The username and password are both `admin`.
 
-* The Kargo dashboard will be accessible at [localhost:8444](https://localhost:8444).
+* The Kargo dashboard will be accessible at [localhost:31444](https://localhost:31444).
 
   The admin password is `admin`.
 
@@ -257,7 +257,7 @@ spec:
 EOF
 ```
 
-If you visit [your Argo CD dashboard](https://localhost:8443), you will notice
+If you visit [your Argo CD dashboard](https://localhost:31443), you will notice
 all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
@@ -290,7 +290,7 @@ the previous section.
 1. Then, log into Kargo:
 
     ```shell
-    kargo login https://localhost:8444 \
+    kargo login https://localhost:31444 \
       --admin \
       --password admin \
       --insecure-skip-tls-verify
@@ -523,7 +523,7 @@ the previous section.
     We can repeat the command above until our `Promotion` is in a `Healthy`
     state and we can further validate the success of this entire process by
     visiting the test instance of our site at
-    [localhost:8081](http://localhost:8081).
+    [localhost:30081](http://localhost:30081).
 
     If we once again view the `status` of our `test` `Stage` in more detail, we
     will see that it now reflects its current `Freight`, and the history of all
@@ -615,8 +615,8 @@ command to progress the `Freight` from `stage` to `uat` and again from `uat` to
 :::info
 The `uat` and `prod` instances of our site should be accessible at:
 
-* `uat`: [localhost:8082](http://localhost:8082)
-* `prod`: [localhost:8083](http://localhost:8083)
+* `uat`: [localhost:30082](http://localhost:30082)
+* `prod`: [localhost:30083](http://localhost:30083)
 :::
 
 :::info

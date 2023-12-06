@@ -9,15 +9,15 @@ name: kargo-quickstart
 nodes:
 - extraPortMappings:
   - containerPort: 31443 # Argo CD dashboard
-    hostPort: 8443
+    hostPort: 31443
   - containerPort: 31444 # Kargo dashboard
-    hostPort: 8444
+    hostPort: 31444
   - containerPort: 30081 # test application instance
-    hostPort: 8081
+    hostPort: 30081
   - containerPort: 30082 # UAT application instance
-    hostPort: 8082
+    hostPort: 30082
   - containerPort: 30083 # prod application instance
-    hostPort: 8083
+    hostPort: 30083
   
 EOF
 
