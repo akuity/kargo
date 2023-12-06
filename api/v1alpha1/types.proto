@@ -24,7 +24,12 @@ message ArgoCDHelmImageUpdate {
 }
 
 message ArgoCDKustomize {
-  repeated string images = 1 [json_name = "images"];
+  repeated ArgoCDKustomizeImageUpdate images = 1 [json_name = "images"];
+}
+
+message ArgoCDKustomizeImageUpdate {
+  string image = 1 [json_name = "image"];
+  bool use_digest = 2 [json_name = "useDigest"];
 }
 
 message ArgoCDSourceUpdate {
@@ -118,6 +123,7 @@ message HelmPromotionMechanism {
 message Image {
   string repo_url = 1 [json_name = "repoURL"];
   string tag = 2 [json_name = "tag"];
+  string digest = 3 [json_name = "digest"];
 }
 
 message ImageSubscription {
@@ -132,6 +138,7 @@ message ImageSubscription {
 message KustomizeImageUpdate {
   string image = 1 [json_name = "image"];
   string path = 2 [json_name = "path"];
+  bool use_digest = 3 [json_name = "useDigest"];
 }
 
 message KustomizePromotionMechanism {
