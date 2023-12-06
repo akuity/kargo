@@ -226,64 +226,34 @@ cluster:
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: argoproj.io/v1alpha1
-kind: Application
+kind: ApplicationSet
 metadata:
-  name: kargo-demo-test
+  name: kargo-demo
   namespace: argocd
-  annotations:
-    kargo.akuity.io/authorized-stage: kargo-demo:test
 spec:
-  project: default
-  source:
-    repoURL: ${GITOPS_REPO_URL}
-    targetRevision: stage/test
-    path: stages/test
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: kargo-demo-test
-  syncPolicy:
-    syncOptions:
-    - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: kargo-demo-uat
-  namespace: argocd
-  annotations:
-    kargo.akuity.io/authorized-stage: kargo-demo:uat
-spec:
-  project: default
-  source:
-    repoURL: ${GITOPS_REPO_URL}
-    targetRevision: stage/uat
-    path: stages/uat
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: kargo-demo-uat
-  syncPolicy:
-    syncOptions:
-    - CreateNamespace=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: kargo-demo-prod
-  namespace: argocd
-  annotations:
-    kargo.akuity.io/authorized-stage: kargo-demo:prod
-spec:
-  project: default
-  source:
-    repoURL: ${GITOPS_REPO_URL}
-    targetRevision: stage/prod
-    path: stages/prod
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: kargo-demo-prod
-  syncPolicy:
-    syncOptions:
-    - CreateNamespace=true
+  generators:
+  - list:
+      elements:
+      - stage: test
+      - stage: uat
+      - stage: prod
+  template:
+    metadata:
+      name: kargo-demo-{{stage}}
+      annotations:
+        kargo.akuity.io/authorized-stage: kargo-demo:{{stage}}
+    spec:
+      project: default
+      source:
+        repoURL: ${GITOPS_REPO_URL}
+        targetRevision: stage/{{stage}}
+        path: stages/{{stage}}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-demo-{{stage}}
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
 EOF
 ```
 
