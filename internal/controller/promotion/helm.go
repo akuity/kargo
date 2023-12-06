@@ -123,43 +123,59 @@ func buildValuesFilesChanges(
 	imageUpdates []kargoapi.HelmImageUpdate,
 ) (map[string]map[string]string, []string) {
 	tagsByImage := map[string]string{}
+	digestsByImage := make(map[string]string, len(images))
 	for _, image := range images {
 		tagsByImage[image.RepoURL] = image.Tag
+		digestsByImage[image.RepoURL] = image.Digest
 	}
-
 	changesByFile := make(map[string]map[string]string, len(imageUpdates))
 	changeSummary := make([]string, 0, len(imageUpdates))
 	for _, imageUpdate := range imageUpdates {
-		if imageUpdate.Value != kargoapi.ImageUpdateValueTypeImage &&
-			imageUpdate.Value != kargoapi.ImageUpdateValueTypeTag {
+		switch imageUpdate.Value {
+		case kargoapi.ImageUpdateValueTypeImageAndTag,
+			kargoapi.ImageUpdateValueTypeTag,
+			kargoapi.ImageUpdateValueTypeImageAndDigest,
+			kargoapi.ImageUpdateValueTypeDigest:
+		default:
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
-		tag, found := tagsByImage[imageUpdate.Image]
-		if !found {
+		tag, tagFound := tagsByImage[imageUpdate.Image]
+		digest, digestFound := digestsByImage[imageUpdate.Image]
+		if !tagFound && !digestFound {
 			// There's no change to make in this case.
 			continue
 		}
-		if _, found = changesByFile[imageUpdate.ValuesFilePath]; !found {
+		if _, found := changesByFile[imageUpdate.ValuesFilePath]; !found {
 			changesByFile[imageUpdate.ValuesFilePath] = map[string]string{}
 		}
-		if imageUpdate.Value == kargoapi.ImageUpdateValueTypeImage {
+
+		var fqImageRef string // Fully qualified image reference
+		switch imageUpdate.Value {
+		case kargoapi.ImageUpdateValueTypeImageAndTag:
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
 				fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
-		} else {
+			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
+		case kargoapi.ImageUpdateValueTypeTag:
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = tag
+			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
+		case kargoapi.ImageUpdateValueTypeImageAndDigest:
+			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
+				fmt.Sprintf("%s@%s", imageUpdate.Image, digest)
+			fqImageRef = fmt.Sprintf("%s@%s", imageUpdate.Image, digest)
+		case kargoapi.ImageUpdateValueTypeDigest:
+			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = digest
+			fqImageRef = fmt.Sprintf("%s@%s", imageUpdate.Image, digest)
 		}
 		changeSummary = append(
 			changeSummary,
 			fmt.Sprintf(
-				"updated %s to use image %s:%s",
+				"updated %s to use image %s",
 				imageUpdate.ValuesFilePath,
-				imageUpdate.Image,
-				tag,
+				fqImageRef,
 			),
 		)
 	}
-
 	return changesByFile, changeSummary
 }
 

@@ -49,7 +49,7 @@ func (r *reconciler) getLatestImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		tag, err := r.getLatestTagFn(
+		tag, digest, err := r.getImageRefsFn(
 			ctx,
 			sub.RepoURL,
 			sub.TagSelectionStrategy,
@@ -72,6 +72,7 @@ func (r *reconciler) getLatestImages(
 				RepoURL:    sub.RepoURL,
 				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, tag),
 				Tag:        tag,
+				Digest:     digest,
 			},
 		)
 		logger.WithField("tag", tag).
@@ -97,7 +98,7 @@ func getGithubImageSourceURL(gitRepoURL, tag string) string {
 	return fmt.Sprintf("%s/tree/%s", git.NormalizeGitURL(gitRepoURL), tag)
 }
 
-func getLatestTag(
+func getImageRefs(
 	ctx context.Context,
 	repoURL string,
 	tagSelectionStrategy kargoapi.ImageTagSelectionStrategy,
@@ -106,7 +107,7 @@ func getLatestTag(
 	ignoreTags []string,
 	platform string,
 	creds *image.Credentials,
-) (string, error) {
+) (string, string, error) {
 	tc, err := image.NewTagSelector(
 		repoURL,
 		image.TagSelectionStrategy(tagSelectionStrategy),
@@ -119,7 +120,7 @@ func getLatestTag(
 		},
 	)
 	if err != nil {
-		return "", errors.Wrapf(
+		return "", "", errors.Wrapf(
 			err,
 			"error creating tag constraint for image %q",
 			repoURL,
@@ -127,14 +128,14 @@ func getLatestTag(
 	}
 	tag, err := tc.SelectTag(ctx)
 	if err != nil {
-		return "", errors.Wrapf(
+		return "", "", errors.Wrapf(
 			err,
 			"error fetching newest applicable tag for image %q",
 			repoURL,
 		)
 	}
 	if tag == nil {
-		return "", errors.Errorf("found no applicable tags for image %q", repoURL)
+		return "", "", errors.Errorf("found no applicable tags for image %q", repoURL)
 	}
-	return tag.Name, nil
+	return tag.Name, tag.Digest.String(), nil
 }

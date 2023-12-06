@@ -31,7 +31,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestFreightFromReposFn)
 	require.NotNil(t, e.getLatestCommitsFn)
 	require.NotNil(t, e.getLatestImagesFn)
-	require.NotNil(t, e.getLatestTagFn)
+	require.NotNil(t, e.getImageRefsFn)
 	require.NotNil(t, e.getLatestChartsFn)
 	require.NotNil(t, e.getLatestChartVersionFn)
 	require.NotNil(t, e.getLatestCommitMetaFn)

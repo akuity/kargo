@@ -50,7 +50,7 @@ type reconciler struct {
 		subs []kargoapi.RepoSubscription,
 	) ([]kargoapi.Image, error)
 
-	getLatestTagFn func(
+	getImageRefsFn func(
 		ctx context.Context,
 		repoURL string,
 		tagSelectionStrategy kargoapi.ImageTagSelectionStrategy,
@@ -59,7 +59,7 @@ type reconciler struct {
 		ignoreTags []string,
 		platform string,
 		creds *image.Credentials,
-	) (string, error)
+	) (string, string, error)
 
 	getLatestChartsFn func(
 		ctx context.Context,
@@ -143,7 +143,7 @@ func newReconciler(
 	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
 	r.getLatestCommitsFn = r.getLatestCommits
 	r.getLatestImagesFn = r.getLatestImages
-	r.getLatestTagFn = getLatestTag
+	r.getImageRefsFn = getImageRefs
 	r.getLatestChartsFn = r.getLatestCharts
 	r.getLatestChartVersionFn = helm.GetLatestChartVersion
 	r.getLatestCommitMetaFn = getLatestCommitMeta

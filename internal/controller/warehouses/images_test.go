@@ -15,43 +15,35 @@ import (
 
 func TestGetLatestImages(t *testing.T) {
 	testCases := []struct {
-		name           string
-		credentialsDB  credentials.Database
-		getLatestTagFn func(
-			context.Context,
-			string,
-			kargoapi.ImageTagSelectionStrategy,
-			string,
-			string,
-			[]string,
-			string,
-			*image.Credentials,
-		) (string, error)
+		name       string
+		reconciler *reconciler
 		assertions func([]kargoapi.Image, error)
 	}{
 		{
 			name: "error getting latest version of an image",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{
+					GetFn: func(
+						context.Context,
+						string,
+						credentials.Type,
+						string,
+					) (credentials.Credentials, bool, error) {
+						return credentials.Credentials{}, false, nil
+					},
+				},
+				getImageRefsFn: func(
 					context.Context,
 					string,
-					credentials.Type,
+					kargoapi.ImageTagSelectionStrategy,
 					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, nil
+					string,
+					[]string,
+					string,
+					*image.Credentials,
+				) (string, string, error) {
+					return "", "", errors.New("something went wrong")
 				},
-			},
-			getLatestTagFn: func(
-				context.Context,
-				string,
-				kargoapi.ImageTagSelectionStrategy,
-				string,
-				string,
-				[]string,
-				string,
-				*image.Credentials,
-			) (string, error) {
-				return "", errors.New("something went wrong")
 			},
 			assertions: func(_ []kargoapi.Image, err error) {
 				require.Error(t, err)
@@ -66,27 +58,29 @@ func TestGetLatestImages(t *testing.T) {
 
 		{
 			name: "success",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{
+					GetFn: func(
+						context.Context,
+						string,
+						credentials.Type,
+						string,
+					) (credentials.Credentials, bool, error) {
+						return credentials.Credentials{}, false, nil
+					},
+				},
+				getImageRefsFn: func(
 					context.Context,
 					string,
-					credentials.Type,
+					kargoapi.ImageTagSelectionStrategy,
 					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, nil
+					string,
+					[]string,
+					string,
+					*image.Credentials,
+				) (string, string, error) {
+					return "fake-tag", "fake-digest", nil
 				},
-			},
-			getLatestTagFn: func(
-				context.Context,
-				string,
-				kargoapi.ImageTagSelectionStrategy,
-				string,
-				string,
-				[]string,
-				string,
-				*image.Credentials,
-			) (string, error) {
-				return "fake-tag", nil
 			},
 			assertions: func(images []kargoapi.Image, err error) {
 				require.NoError(t, err)
@@ -96,6 +90,7 @@ func TestGetLatestImages(t *testing.T) {
 					kargoapi.Image{
 						RepoURL: "fake-url",
 						Tag:     "fake-tag",
+						Digest:  "fake-digest",
 					},
 					images[0],
 				)
@@ -104,12 +99,8 @@ func TestGetLatestImages(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := reconciler{
-				credentialsDB:  testCase.credentialsDB,
-				getLatestTagFn: testCase.getLatestTagFn,
-			}
 			testCase.assertions(
-				r.getLatestImages(
+				testCase.reconciler.getLatestImages(
 					context.Background(),
 					"fake-namespace",
 					[]kargoapi.RepoSubscription{

@@ -628,8 +628,10 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			update: kargoapi.ArgoCDSourceUpdate{
 				RepoURL: "fake-url",
 				Kustomize: &kargoapi.ArgoCDKustomize{
-					Images: []string{
-						"fake-image-url",
+					Images: []kargoapi.ArgoCDKustomizeImageUpdate{
+						{
+							Image: "fake-image-url",
+						},
 					},
 				},
 			},
@@ -680,7 +682,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 						{
 							Image: "fake-image-url",
 							Key:   "image",
-							Value: "Image",
+							Value: kargoapi.ImageUpdateValueTypeImageAndTag,
 						},
 					},
 				},
@@ -727,23 +729,28 @@ func TestBuildKustomizeImagesForArgoCDAppSource(t *testing.T) {
 		{
 			RepoURL: "fake-url",
 			Tag:     "fake-tag",
+			Digest:  "fake-digest",
 		},
 		{
 			RepoURL: "another-fake-url",
 			Tag:     "another-fake-tag",
+			Digest:  "another-fake-digest",
 		},
 	}
-	imageUpdates := []string{
-		"fake-url",
-		"another-fake-url",
-		"image-that-is-not-in-list",
+	imageUpdates := []kargoapi.ArgoCDKustomizeImageUpdate{
+		{Image: "fake-url"},
+		{
+			Image:     "another-fake-url",
+			UseDigest: true,
+		},
+		{Image: "image-that-is-not-in-list"},
 	}
 	result := buildKustomizeImagesForArgoCDAppSource(images, imageUpdates)
 	require.Equal(
 		t,
 		argocd.KustomizeImages{
 			"fake-url=fake-url:fake-tag",
-			"another-fake-url=another-fake-url:another-fake-tag",
+			"another-fake-url=another-fake-url@another-fake-digest",
 		},
 		result,
 	)
@@ -754,22 +761,44 @@ func TestBuildHelmParamChangesForArgoCDAppSource(t *testing.T) {
 		{
 			RepoURL: "fake-url",
 			Tag:     "fake-tag",
+			Digest:  "fake-digest",
 		},
 		{
-			RepoURL: "another-fake-url",
-			Tag:     "another-fake-tag",
+			RepoURL: "second-fake-url",
+			Tag:     "second-fake-tag",
+			Digest:  "second-fake-digest",
+		},
+		{
+			RepoURL: "third-fake-url",
+			Tag:     "third-fake-tag",
+			Digest:  "third-fake-digest",
+		},
+		{
+			RepoURL: "fourth-fake-url",
+			Tag:     "fourth-fake-tag",
+			Digest:  "fourth-fake-digest",
 		},
 	}
 	imageUpdates := []kargoapi.ArgoCDHelmImageUpdate{
 		{
 			Image: "fake-url",
 			Key:   "fake-key",
-			Value: "Image",
+			Value: kargoapi.ImageUpdateValueTypeImageAndTag,
 		},
 		{
-			Image: "another-fake-url",
-			Key:   "another-fake-key",
-			Value: "Tag",
+			Image: "second-fake-url",
+			Key:   "second-fake-key",
+			Value: kargoapi.ImageUpdateValueTypeTag,
+		},
+		{
+			Image: "third-fake-url",
+			Key:   "third-fake-key",
+			Value: kargoapi.ImageUpdateValueTypeImageAndDigest,
+		},
+		{
+			Image: "fourth-fake-url",
+			Key:   "fourth-fake-key",
+			Value: kargoapi.ImageUpdateValueTypeDigest,
 		},
 		{
 			Image: "image-that-is-not-in-list",
@@ -781,8 +810,10 @@ func TestBuildHelmParamChangesForArgoCDAppSource(t *testing.T) {
 	require.Equal(
 		t,
 		map[string]string{
-			"fake-key":         "fake-url:fake-tag",
-			"another-fake-key": "another-fake-tag",
+			"fake-key":        "fake-url:fake-tag",
+			"second-fake-key": "second-fake-tag",
+			"third-fake-key":  "third-fake-url@third-fake-digest",
+			"fourth-fake-key": "fourth-fake-digest",
 		},
 		result,
 	)
