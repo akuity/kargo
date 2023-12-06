@@ -278,6 +278,30 @@
                   },
                   "render": {
                     "description": "Render describes how to use Kargo Render to incorporate Freight into the Stage. This is mutually exclusive with the Kustomize and Helm fields.",
+                    "properties": {
+                      "images": {
+                        "description": "Images describes how images can be incorporated into a Stage using Kargo Render. If this field is omitted, all images in the Freight being promoted will be passed to Kargo Render in the form <image name>:<tag>. (e.g. Will not use digests by default.)",
+                        "items": {
+                          "description": "KargoRenderImageUpdate describes how an image can be incorporated into a Stage using Kargo Render.",
+                          "properties": {
+                            "image": {
+                              "description": "Image specifies a container image (without tag). This is a required field.",
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "useDigest": {
+                              "description": "UseDigest specifies whether the image's digest should be used instead of its tag.",
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "image"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      }
+                    },
                     "type": "object"
                   },
                   "repoURL": {
