@@ -147,9 +147,9 @@ export class ArgoCDHelmImageUpdate extends Message<ArgoCDHelmImageUpdate> {
  */
 export class ArgoCDKustomize extends Message<ArgoCDKustomize> {
   /**
-   * @generated from field: repeated string images = 1;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomizeImageUpdate images = 1;
    */
-  images: string[] = [];
+  images: ArgoCDKustomizeImageUpdate[] = [];
 
   constructor(data?: PartialMessage<ArgoCDKustomize>) {
     super();
@@ -159,7 +159,7 @@ export class ArgoCDKustomize extends Message<ArgoCDKustomize> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomize";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "images", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 1, name: "images", kind: "message", T: ArgoCDKustomizeImageUpdate, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDKustomize {
@@ -176,6 +176,49 @@ export class ArgoCDKustomize extends Message<ArgoCDKustomize> {
 
   static equals(a: ArgoCDKustomize | PlainMessage<ArgoCDKustomize> | undefined, b: ArgoCDKustomize | PlainMessage<ArgoCDKustomize> | undefined): boolean {
     return proto3.util.equals(ArgoCDKustomize, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomizeImageUpdate
+ */
+export class ArgoCDKustomizeImageUpdate extends Message<ArgoCDKustomizeImageUpdate> {
+  /**
+   * @generated from field: string image = 1;
+   */
+  image = "";
+
+  /**
+   * @generated from field: bool use_digest = 2;
+   */
+  useDigest = false;
+
+  constructor(data?: PartialMessage<ArgoCDKustomizeImageUpdate>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomizeImageUpdate";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "use_digest", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ArgoCDKustomizeImageUpdate {
+    return new ArgoCDKustomizeImageUpdate().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ArgoCDKustomizeImageUpdate {
+    return new ArgoCDKustomizeImageUpdate().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ArgoCDKustomizeImageUpdate {
+    return new ArgoCDKustomizeImageUpdate().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ArgoCDKustomizeImageUpdate | PlainMessage<ArgoCDKustomizeImageUpdate> | undefined, b: ArgoCDKustomizeImageUpdate | PlainMessage<ArgoCDKustomizeImageUpdate> | undefined): boolean {
+    return proto3.util.equals(ArgoCDKustomizeImageUpdate, a, b);
   }
 }
 
@@ -903,6 +946,11 @@ export class Image extends Message<Image> {
    */
   tag = "";
 
+  /**
+   * @generated from field: string digest = 3;
+   */
+  digest = "";
+
   constructor(data?: PartialMessage<Image>) {
     super();
     proto3.util.initPartial(data, this);
@@ -913,6 +961,7 @@ export class Image extends Message<Image> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "tag", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Image {
@@ -1013,6 +1062,11 @@ export class KustomizeImageUpdate extends Message<KustomizeImageUpdate> {
    */
   path = "";
 
+  /**
+   * @generated from field: bool use_digest = 3;
+   */
+  useDigest = false;
+
   constructor(data?: PartialMessage<KustomizeImageUpdate>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1023,6 +1077,7 @@ export class KustomizeImageUpdate extends Message<KustomizeImageUpdate> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "use_digest", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KustomizeImageUpdate {
