@@ -3,6 +3,8 @@ import { Timestamp } from '@bufbuild/protobuf';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faCircleCheck,
+  faClipboard,
+  faCopy,
   faDiagramProject,
   faEllipsisV,
   faRefresh,
@@ -49,6 +51,7 @@ import { RepoNode } from './nodes/repo-node';
 import { StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
 import { NodeType, NodesItemType } from './types';
+import { getAlias } from '@ui/features/common/freight-label';
 
 const lineThickness = 2;
 const nodeWidth = 150;
@@ -527,7 +530,33 @@ export const ProjectDetails = () => {
                             onClick: () => {
                               setManuallyApproving(id);
                             }
-                          }
+                          },
+                          {
+                            key: '2',
+                            label: (
+                              <>
+                                <FontAwesomeIcon icon={faClipboard} className='mr-2' /> Copy ID
+                              </>
+                            ),
+                            onClick: () => {
+                              navigator.clipboard.writeText(id);
+                              message.success('Copied Freight ID to clipboard');
+                            }
+                          },
+                          getAlias(f)
+                            ? {
+                                key: '3',
+                                label: (
+                                  <>
+                                    <FontAwesomeIcon icon={faCopy} className='mr-2' /> Copy Alias
+                                  </>
+                                ),
+                                onClick: () => {
+                                  navigator.clipboard.writeText(getAlias(f) || '');
+                                  message.success('Copied Freight Alias to clipboard');
+                                }
+                              }
+                            : null
                         ]
                       }}
                     >
