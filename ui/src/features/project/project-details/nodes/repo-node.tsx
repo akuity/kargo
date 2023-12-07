@@ -48,7 +48,11 @@ export const RepoNode = ({ nodeData, children }: Props) => {
           {nodeData.type === NodeType.REPO_CHART ? 'Registry URL' : 'Repo URL'}
           <Tooltip title={value}>
             <a
-              href={urlWithProtocol(value)}
+              href={
+                nodeData.type === NodeType.REPO_IMAGE
+                  ? urlWithProtocol(value)
+                  : `https://${value.replace('https://', '')}`
+              }
               className={styles.value}
               target='_blank'
               rel='noreferrer'
