@@ -129,6 +129,6 @@ k8s_yaml(
     './charts/kargo',
     name = 'kargo',
     namespace = 'kargo',
-    values = 'values.dev.yaml'
+    values = 'hack/tilt/values.dev.yaml'
   )
 )
