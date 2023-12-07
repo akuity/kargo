@@ -22,7 +22,6 @@ type kargoRenderMechanism struct {
 		namespace string,
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.SimpleFreight,
-		images []string,
 	) (kargoapi.SimpleFreight, error)
 	getReadRefFn func(
 		update kargoapi.GitRepoUpdate,
@@ -78,11 +77,6 @@ func (b *kargoRenderMechanism) Promote(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Kargo Render-based promotion mechanisms")
 
-	images := make([]string, len(newFreight.Images))
-	for i, image := range newFreight.Images {
-		images[i] = fmt.Sprintf("%s:%s", image.RepoURL, image.Tag)
-	}
-
 	for _, update := range updates {
 		var err error
 		if newFreight, err = b.doSingleUpdateFn(
@@ -90,7 +84,6 @@ func (b *kargoRenderMechanism) Promote(
 			stage.Namespace,
 			update,
 			newFreight,
-			images,
 		); err != nil {
 			return newFreight, err
 		}
@@ -108,7 +101,6 @@ func (b *kargoRenderMechanism) doSingleUpdate(
 	namespace string,
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.SimpleFreight,
-	images []string,
 ) (kargoapi.SimpleFreight, error) {
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
@@ -138,6 +130,36 @@ func (b *kargoRenderMechanism) doSingleUpdate(
 		logger.Debug("obtained credentials for git repo")
 	} else {
 		logger.Debug("found no credentials for git repo")
+	}
+
+	images := make([]string, 0, len(newFreight.Images))
+	if len(update.Render.Images) == 0 {
+		// When no explicit image updates are specified, we will pass all images
+		// from the Freight in <ulr>:<tag> format.
+		for _, image := range newFreight.Images {
+			images = append(images, fmt.Sprintf("%s:%s", image.RepoURL, image.Tag))
+		}
+	} else {
+		// When explicit image updates are specified, we will only pass images with
+		// a corresponding update.
+
+		// Build a map of image updates indexed by image URL. This way, as we
+		// iterate over all images in the Freight, we can quickly check if there is
+		// an update, and if so, whether it specifies to use a digest or a tag.
+		imageUpdatesByImage :=
+			make(map[string]kargoapi.KargoRenderImageUpdate, len(update.Render.Images))
+		for _, imageUpdate := range update.Render.Images {
+			imageUpdatesByImage[imageUpdate.Image] = imageUpdate
+		}
+		for _, image := range newFreight.Images {
+			if imageUpdate, ok := imageUpdatesByImage[image.RepoURL]; ok {
+				if imageUpdate.UseDigest {
+					images = append(images, fmt.Sprintf("%s@%s", image.RepoURL, image.Digest))
+				} else {
+					images = append(images, fmt.Sprintf("%s:%s", image.RepoURL, image.Tag))
+				}
+			}
+		}
 	}
 
 	req := render.Request{
