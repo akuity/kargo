@@ -20,6 +20,7 @@ import { useParams } from 'react-router-dom';
 import { transport } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
+import { getAlias } from '@ui/features/common/freight-label';
 import { ConfirmPromotionDialogue } from '@ui/features/freightline/confirm-promotion-dialogue';
 import { FreightContents } from '@ui/features/freightline/freight-contents';
 import { FreightItem, FreightMode } from '@ui/features/freightline/freight-item';
@@ -51,7 +52,6 @@ import { RepoNode } from './nodes/repo-node';
 import { StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
 import { NodeType, NodesItemType } from './types';
-import { getAlias } from '@ui/features/common/freight-label';
 
 const lineThickness = 2;
 const nodeWidth = 150;
@@ -89,6 +89,7 @@ export const ProjectDetails = () => {
     onSuccess: () => {
       message.success('Warehouse successfully refreshed');
       setPromotingStage(undefined);
+      refetchAvailableFreight();
     }
   });
 
