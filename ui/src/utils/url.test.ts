@@ -24,7 +24,9 @@ const testImages = {
   'docker.io/jitesoft/nginx': 'https://hub.docker.com/r/jitesoft/nginx',
 
   // AWS
-  'public.ecr.aws/karpenter/controller': 'https://gallery.ecr.aws/karpenter/controller'
+  'public.ecr.aws/karpenter/controller': 'https://gallery.ecr.aws/karpenter/controller',
+  '602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/coredns':
+    'https://us-west-2.console.aws.amazon.com/ecr/repositories/private/602401143452/eks/coredns'
 } as { [key: string]: string };
 
 describe('urlForImage', () => {

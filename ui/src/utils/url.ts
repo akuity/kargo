@@ -32,5 +32,15 @@ export const urlForImage = (image: string): string => {
   if (parts[0] === 'public.ecr.aws') {
     return `${protocol}gallery.ecr.aws/${parts.slice(1).join('/')}`;
   }
+
+  if (parts[0].endsWith('amazonaws.com')) {
+    const domainParts = parts[0].split('.');
+    const region = domainParts[3];
+    const id = domainParts[0];
+
+    return `${protocol}${region}.console.aws.amazon.com/ecr/repositories/private/${id}/${parts
+      .slice(1)
+      .join('/')}`;
+  }
   return `${protocol}${image}`;
 };
