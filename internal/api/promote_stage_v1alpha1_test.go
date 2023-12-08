@@ -117,7 +117,7 @@ func TestPromoteStage(t *testing.T) {
 			},
 		},
 		{
-			name: "error getting available Freight",
+			name: "error getting Freight",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
 				Name:    "fake-stage",
@@ -144,12 +144,10 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
-					[]string,
-					string,
 				) (*kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -166,7 +164,7 @@ func TestPromoteStage(t *testing.T) {
 			},
 		},
 		{
-			name: "available Freight not found",
+			name: "Freight not found",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
 				Name:    "fake-stage",
@@ -193,12 +191,10 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
-					[]string,
-					string,
 				) (*kargoapi.Freight, error) {
 					return nil, nil
 				},
@@ -211,8 +207,59 @@ func TestPromoteStage(t *testing.T) {
 				connErr, ok := err.(*connect.Error)
 				require.True(t, ok)
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
-				require.Contains(t, connErr.Message(), "no available Freight")
-				require.Contains(t, connErr.Message(), "found in namespace")
+				require.Contains(t, connErr.Message(), "Freight")
+				require.Contains(t, connErr.Message(), "not found in namespace")
+			},
+		},
+		{
+			name: "Freight not available",
+			req: &svcv1alpha1.PromoteStageRequest{
+				Project: "fake-project",
+				Name:    "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectFn: func(ctx context.Context, project string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: &kargoapi.StageSpec{
+							Subscriptions: &kargoapi.Subscriptions{
+								UpstreamStages: []kargoapi.StageSubscription{
+									{
+										Name: "fake-upstream-stage",
+									},
+								},
+							},
+						},
+					}, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
+					return false
+				},
+			},
+			assertions: func(
+				_ *connect.Response[svcv1alpha1.PromoteStageResponse],
+				err error,
+			) {
+				require.Error(t, err)
+				connErr, ok := err.(*connect.Error)
+				require.True(t, ok)
+				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
+				require.Contains(t, connErr.Message(), "Freight")
+				require.Contains(t, connErr.Message(), "is not available to Stage")
 			},
 		},
 		{
@@ -243,14 +290,15 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
-					[]string,
-					string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
+					return true
 				},
 				createPromotionFn: func(
 					context.Context,
@@ -299,14 +347,15 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getAvailableFreightFn: func(
+				getFreightFn: func(
 					context.Context,
 					client.Client,
 					types.NamespacedName,
-					[]string,
-					string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
+					return true
 				},
 				createPromotionFn: func(
 					context.Context,

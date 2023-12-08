@@ -31,8 +31,9 @@ func GetFreight(
 	return &freight, nil
 }
 
-// GetAvailableFreight returns a pointer to the Freight resource specified by
-// the namespacedName argument if it is found and:
+// IsFreightAvailable answers whether the specified Freight is available to the
+// specified Stage having the specified upstream stages. Freight is available
+// if:
 //
 //  1. No upstreamStages are specified
 //     OR
@@ -40,36 +41,26 @@ func GetFreight(
 //     OR
 //  3. The Freight is approved for the specified stage
 //
-// Note: The rationale for returning the found Freight (if any) instead of nil
-// when no upstream stages are specified is that some Stages have no upstream
-// Stages (e.g. a Stage that subscribes to a Warehouse), so any Freight that is
-// found under those conditions is implicitly available.
-func GetAvailableFreight(
-	ctx context.Context,
-	c client.Client,
-	namespacedName types.NamespacedName,
-	upstreamStages []string,
+// Note: The rationale for returning true when no upstream stages are specified
+// is that some Stages have no upstream Stages (e.g. a Stage that subscribes to
+// a Warehouse), so ANY Freight is available to such a Stage.
+func IsFreightAvailable(
+	freight *Freight,
 	stage string,
-) (*Freight, error) {
-	freight, err := GetFreight(ctx, c, namespacedName)
-	if err != nil {
-		return nil, err
-	}
-	if freight == nil {
-		return nil, nil
-	}
+	upstreamStages []string,
+) bool {
 	if len(upstreamStages) == 0 {
-		return freight, nil
+		return true
 	}
 	for _, stage := range upstreamStages {
 		if _, ok := freight.Status.VerifiedIn[stage]; ok {
-			return freight, nil
+			return true
 		}
 	}
 	if stage != "" {
 		if _, ok := freight.Status.ApprovedFor[stage]; ok {
-			return freight, nil
+			return true
 		}
 	}
-	return nil, nil
+	return false
 }

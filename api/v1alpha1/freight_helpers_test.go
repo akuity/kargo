@@ -62,3 +62,57 @@ func TestGetFreight(t *testing.T) {
 		})
 	}
 }
+
+func TestIsFreightAvailable(t *testing.T) {
+	testFreight := &Freight{
+		Status: FreightStatus{
+			VerifiedIn: map[string]VerifiedStage{
+				"fake-stage-1": {},
+			},
+			ApprovedFor: map[string]ApprovedStage{
+				"fake-stage-2": {},
+			},
+		},
+	}
+	testCases := []struct {
+		name           string
+		stage          string
+		upstreamStages []string
+		available      bool
+	}{
+		{
+			name:      "no upstream Stages specified",
+			available: true,
+		},
+		{
+			name:           "verified in an upstream Stage",
+			upstreamStages: []string{"fake-stage-1"},
+			available:      true,
+		},
+		{
+			name:           "approved for Stage",
+			stage:          "fake-stage-2",
+			upstreamStages: []string{"fake-stage-3"},
+			available:      true,
+		},
+		{
+			name:           "unavailable",
+			stage:          "fake-stage-3",
+			upstreamStages: []string{"upstream-stage-2"},
+			available:      false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.available,
+				IsFreightAvailable(
+					testFreight,
+					testCase.stage,
+					testCase.upstreamStages,
+				),
+			)
+		})
+	}
+}

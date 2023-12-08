@@ -278,30 +278,38 @@ func (r *reconciler) promote(
 		return nil
 	}
 
-	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
-	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
-		upstreamStages[i] = upstreamStage.Name
-	}
-	// Get the specified Freight. Expect a nil if it is not found or not available
-	// to this Stage. Errors are indicative only of internal problems.
-	targetFreight, err := kargoapi.GetAvailableFreight(
+	targetFreight, err := kargoapi.GetFreight(
 		ctx,
 		r.kargoClient,
 		types.NamespacedName{
 			Namespace: promo.Namespace,
 			Name:      promo.Spec.Freight,
 		},
-		upstreamStages,
-		stageName,
 	)
 	if err != nil {
-		return err
+		return errors.Wrapf(
+			err,
+			"error finding Freight %q in namespace %q",
+			promo.Spec.Freight, promo.Namespace,
+		)
 	}
 	if targetFreight == nil {
 		return errors.Errorf(
-			"no available Freight %q found in namespace %q",
+			"Freight %q not found in namespace %q",
 			promo.Spec.Freight,
 			promo.Namespace,
+		)
+	}
+	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
+	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
+		upstreamStages[i] = upstreamStage.Name
+	}
+	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreamStages) {
+		return errors.Errorf(
+			"Freight %q is not available to Stage %q in namespace %q",
+			promo.Spec.Freight,
+			stageName,
+			stageNamespace,
 		)
 	}
 
