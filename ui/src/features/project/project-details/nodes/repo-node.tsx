@@ -3,7 +3,7 @@ import { faAnchor, faBuilding } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 
-import { urlWithProtocol } from '@ui/utils/url';
+import { urlForImage } from '@ui/utils/url';
 
 import { NodeType, NodesRepoType } from '../types';
 
@@ -50,7 +50,7 @@ export const RepoNode = ({ nodeData, children }: Props) => {
             <a
               href={
                 nodeData.type === NodeType.REPO_IMAGE
-                  ? urlWithProtocol(value)
+                  ? urlForImage(value)
                   : `https://${value.replace('https://', '')}`
               }
               className={styles.value}
