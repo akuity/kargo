@@ -69,19 +69,25 @@ func TestSelectKustomizeUpdates(t *testing.T) {
 }
 
 func TestKustomizerApply(t *testing.T) {
-	const (
-		testImage = "fake-image"
-		testTag   = "fake-tag"
-	)
 	testCases := []struct {
 		name       string
-		setImageFn func(dir, image, tag string) error
+		update     kargoapi.GitRepoUpdate
+		kustomizer *kustomizer
 		assertions func(changes []string, err error)
 	}{
 		{
 			name: "error running kustomize edit set image",
-			setImageFn: func(string, string, string) error {
-				return errors.New("something went wrong")
+			update: kargoapi.GitRepoUpdate{
+				Kustomize: &kargoapi.KustomizePromotionMechanism{
+					Images: []kargoapi.KustomizeImageUpdate{
+						{Image: "fake-image"},
+					},
+				},
+			},
+			kustomizer: &kustomizer{
+				setImageFn: func(string, string, string) error {
+					return errors.New("something went wrong")
+				},
 			},
 			assertions: func(_ []string, err error) {
 				require.Error(t, err)
@@ -90,37 +96,74 @@ func TestKustomizerApply(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
-			setImageFn: func(string, string, string) error {
-				return nil
+			name: "success using tag",
+			update: kargoapi.GitRepoUpdate{
+				Kustomize: &kargoapi.KustomizePromotionMechanism{
+					Images: []kargoapi.KustomizeImageUpdate{
+						{
+							Image: "fake-image",
+							Path:  "fake-path",
+						},
+					},
+				},
+			},
+			kustomizer: &kustomizer{
+				setImageFn: func(string, string, string) error {
+					return nil
+				},
 			},
 			assertions: func(changes []string, err error) {
 				require.NoError(t, err)
-				require.Len(t, changes, 1)
+				require.Equal(
+					t,
+					[]string{
+						"updated fake-path/kustomization.yaml to use image fake-image:fake-tag",
+					},
+					changes,
+				)
+			},
+		},
+		{
+			name: "success using digest",
+			update: kargoapi.GitRepoUpdate{
+				Kustomize: &kargoapi.KustomizePromotionMechanism{
+					Images: []kargoapi.KustomizeImageUpdate{
+						{
+							Image:     "fake-image",
+							Path:      "fake-path",
+							UseDigest: true,
+						},
+					},
+				},
+			},
+			kustomizer: &kustomizer{
+				setImageFn: func(string, string, string) error {
+					return nil
+				},
+			},
+			assertions: func(changes []string, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]string{
+						"updated fake-path/kustomization.yaml to use image fake-image@fake-digest",
+					},
+					changes,
+				)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				(&kustomizer{
-					setImageFn: testCase.setImageFn,
-				}).apply(
-					kargoapi.GitRepoUpdate{
-						Kustomize: &kargoapi.KustomizePromotionMechanism{
-							Images: []kargoapi.KustomizeImageUpdate{
-								{
-									Image: testImage,
-									Path:  "fake-path",
-								},
-							},
-						},
-					},
+				testCase.kustomizer.apply(
+					testCase.update,
 					kargoapi.SimpleFreight{
 						Images: []kargoapi.Image{
 							{
-								RepoURL: testImage,
-								Tag:     testTag,
+								RepoURL: "fake-image",
+								Tag:     "fake-tag",
+								Digest:  "fake-digest",
 							},
 						},
 					},

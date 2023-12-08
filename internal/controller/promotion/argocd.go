@@ -345,53 +345,77 @@ func applyArgoCDSourceUpdate(
 
 func buildKustomizeImagesForArgoCDAppSource(
 	images []kargoapi.Image,
-	imageUpdates []string,
+	imageUpdates []kargoapi.ArgoCDKustomizeImageUpdate,
 ) argocd.KustomizeImages {
-	tagsByImage := map[string]string{}
+	tagsByImage := make(map[string]string, len(images))
+	digestsByImage := make(map[string]string, len(images))
 	for _, image := range images {
 		tagsByImage[image.RepoURL] = image.Tag
+		digestsByImage[image.RepoURL] = image.Digest
 	}
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(imageUpdates))
 	for _, imageUpdate := range imageUpdates {
-		tag, found := tagsByImage[imageUpdate]
-		if !found {
+		tag, tagFound := tagsByImage[imageUpdate.Image]
+		digest, digestFound := digestsByImage[imageUpdate.Image]
+		if !tagFound && !digestFound {
 			// There's no change to make in this case.
 			continue
 		}
+		var kustomizeImageStr string
+		if imageUpdate.UseDigest {
+			kustomizeImageStr =
+				fmt.Sprintf("%s=%s@%s", imageUpdate.Image, imageUpdate.Image, digest)
+		} else {
+			kustomizeImageStr =
+				fmt.Sprintf("%s=%s:%s", imageUpdate.Image, imageUpdate.Image, tag)
+		}
 		kustomizeImages = append(
 			kustomizeImages,
-			argocd.KustomizeImage(
-				fmt.Sprintf("%s=%s:%s", imageUpdate, imageUpdate, tag),
-			),
+			argocd.KustomizeImage(kustomizeImageStr),
 		)
 	}
 	return kustomizeImages
 }
 
+// buildHelmParamChangesForArgoCDAppSource takes a list of images and a list of
+// instructions about changes that should be made to various Helm parameters and
+// distills them into a map of new values indexed by parameter name.
 func buildHelmParamChangesForArgoCDAppSource(
 	images []kargoapi.Image,
 	imageUpdates []kargoapi.ArgoCDHelmImageUpdate,
 ) map[string]string {
-	tagsByImage := map[string]string{}
+	tagsByImage := make(map[string]string, len(images))
+	digestsByImage := make(map[string]string, len(images))
 	for _, image := range images {
 		tagsByImage[image.RepoURL] = image.Tag
+		digestsByImage[image.RepoURL] = image.Digest
 	}
 	changes := map[string]string{}
 	for _, imageUpdate := range imageUpdates {
-		if imageUpdate.Value != kargoapi.ImageUpdateValueTypeImage &&
-			imageUpdate.Value != kargoapi.ImageUpdateValueTypeTag {
+		switch imageUpdate.Value {
+		case kargoapi.ImageUpdateValueTypeImageAndTag,
+			kargoapi.ImageUpdateValueTypeTag,
+			kargoapi.ImageUpdateValueTypeImageAndDigest,
+			kargoapi.ImageUpdateValueTypeDigest:
+		default:
 			// This really shouldn't happen, so we'll ignore it.
 			continue
 		}
-		tag, found := tagsByImage[imageUpdate.Image]
-		if !found {
+		tag, tagFound := tagsByImage[imageUpdate.Image]
+		digest, digestFound := digestsByImage[imageUpdate.Image]
+		if !tagFound && !digestFound {
 			// There's no change to make in this case.
 			continue
 		}
-		if imageUpdate.Value == kargoapi.ImageUpdateValueTypeImage {
+		switch imageUpdate.Value {
+		case kargoapi.ImageUpdateValueTypeImageAndTag:
 			changes[imageUpdate.Key] = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
-		} else {
+		case kargoapi.ImageUpdateValueTypeTag:
 			changes[imageUpdate.Key] = tag
+		case kargoapi.ImageUpdateValueTypeImageAndDigest:
+			changes[imageUpdate.Key] = fmt.Sprintf("%s@%s", imageUpdate.Image, digest)
+		case kargoapi.ImageUpdateValueTypeDigest:
+			changes[imageUpdate.Key] = digest
 		}
 	}
 	return changes

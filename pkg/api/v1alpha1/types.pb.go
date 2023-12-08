@@ -200,7 +200,7 @@ type ArgoCDKustomize struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Images []string `protobuf:"bytes,1,rep,name=images,proto3" json:"images,omitempty"`
+	Images []*ArgoCDKustomizeImageUpdate `protobuf:"bytes,1,rep,name=images,proto3" json:"images,omitempty"`
 }
 
 func (x *ArgoCDKustomize) Reset() {
@@ -235,11 +235,66 @@ func (*ArgoCDKustomize) Descriptor() ([]byte, []int) {
 	return file_v1alpha1_types_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ArgoCDKustomize) GetImages() []string {
+func (x *ArgoCDKustomize) GetImages() []*ArgoCDKustomizeImageUpdate {
 	if x != nil {
 		return x.Images
 	}
 	return nil
+}
+
+type ArgoCDKustomizeImageUpdate struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Image     string `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
+	UseDigest bool   `protobuf:"varint,2,opt,name=use_digest,json=useDigest,proto3" json:"use_digest,omitempty"`
+}
+
+func (x *ArgoCDKustomizeImageUpdate) Reset() {
+	*x = ArgoCDKustomizeImageUpdate{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1alpha1_types_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ArgoCDKustomizeImageUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArgoCDKustomizeImageUpdate) ProtoMessage() {}
+
+func (x *ArgoCDKustomizeImageUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_types_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArgoCDKustomizeImageUpdate.ProtoReflect.Descriptor instead.
+func (*ArgoCDKustomizeImageUpdate) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ArgoCDKustomizeImageUpdate) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *ArgoCDKustomizeImageUpdate) GetUseDigest() bool {
+	if x != nil {
+		return x.UseDigest
+	}
+	return false
 }
 
 type ArgoCDSourceUpdate struct {
@@ -257,7 +312,7 @@ type ArgoCDSourceUpdate struct {
 func (x *ArgoCDSourceUpdate) Reset() {
 	*x = ArgoCDSourceUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[4]
+		mi := &file_v1alpha1_types_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -270,7 +325,7 @@ func (x *ArgoCDSourceUpdate) String() string {
 func (*ArgoCDSourceUpdate) ProtoMessage() {}
 
 func (x *ArgoCDSourceUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[4]
+	mi := &file_v1alpha1_types_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +338,7 @@ func (x *ArgoCDSourceUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArgoCDSourceUpdate.ProtoReflect.Descriptor instead.
 func (*ArgoCDSourceUpdate) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{4}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ArgoCDSourceUpdate) GetRepoUrl() string {
@@ -330,7 +385,7 @@ type KargoRenderPromotionMechanism struct {
 func (x *KargoRenderPromotionMechanism) Reset() {
 	*x = KargoRenderPromotionMechanism{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[5]
+		mi := &file_v1alpha1_types_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -343,7 +398,7 @@ func (x *KargoRenderPromotionMechanism) String() string {
 func (*KargoRenderPromotionMechanism) ProtoMessage() {}
 
 func (x *KargoRenderPromotionMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[5]
+	mi := &file_v1alpha1_types_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,7 +411,7 @@ func (x *KargoRenderPromotionMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KargoRenderPromotionMechanism.ProtoReflect.Descriptor instead.
 func (*KargoRenderPromotionMechanism) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{5}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{6}
 }
 
 type Chart struct {
@@ -372,7 +427,7 @@ type Chart struct {
 func (x *Chart) Reset() {
 	*x = Chart{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[6]
+		mi := &file_v1alpha1_types_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -385,7 +440,7 @@ func (x *Chart) String() string {
 func (*Chart) ProtoMessage() {}
 
 func (x *Chart) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[6]
+	mi := &file_v1alpha1_types_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -398,7 +453,7 @@ func (x *Chart) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Chart.ProtoReflect.Descriptor instead.
 func (*Chart) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{6}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Chart) GetRegistryUrl() string {
@@ -435,7 +490,7 @@ type ChartSubscription struct {
 func (x *ChartSubscription) Reset() {
 	*x = ChartSubscription{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[7]
+		mi := &file_v1alpha1_types_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -448,7 +503,7 @@ func (x *ChartSubscription) String() string {
 func (*ChartSubscription) ProtoMessage() {}
 
 func (x *ChartSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[7]
+	mi := &file_v1alpha1_types_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -461,7 +516,7 @@ func (x *ChartSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChartSubscription.ProtoReflect.Descriptor instead.
 func (*ChartSubscription) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{7}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ChartSubscription) GetRegistryUrl() string {
@@ -501,7 +556,7 @@ type GitCommit struct {
 func (x *GitCommit) Reset() {
 	*x = GitCommit{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[8]
+		mi := &file_v1alpha1_types_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -514,7 +569,7 @@ func (x *GitCommit) String() string {
 func (*GitCommit) ProtoMessage() {}
 
 func (x *GitCommit) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[8]
+	mi := &file_v1alpha1_types_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -527,7 +582,7 @@ func (x *GitCommit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitCommit.ProtoReflect.Descriptor instead.
 func (*GitCommit) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{8}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GitCommit) GetRepoUrl() string {
@@ -588,7 +643,7 @@ type GitRepoUpdate struct {
 func (x *GitRepoUpdate) Reset() {
 	*x = GitRepoUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[9]
+		mi := &file_v1alpha1_types_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -601,7 +656,7 @@ func (x *GitRepoUpdate) String() string {
 func (*GitRepoUpdate) ProtoMessage() {}
 
 func (x *GitRepoUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[9]
+	mi := &file_v1alpha1_types_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -614,7 +669,7 @@ func (x *GitRepoUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitRepoUpdate.ProtoReflect.Descriptor instead.
 func (*GitRepoUpdate) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{9}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GitRepoUpdate) GetRepoUrl() string {
@@ -671,7 +726,7 @@ type GitSubscription struct {
 func (x *GitSubscription) Reset() {
 	*x = GitSubscription{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[10]
+		mi := &file_v1alpha1_types_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -684,7 +739,7 @@ func (x *GitSubscription) String() string {
 func (*GitSubscription) ProtoMessage() {}
 
 func (x *GitSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[10]
+	mi := &file_v1alpha1_types_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -697,7 +752,7 @@ func (x *GitSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitSubscription.ProtoReflect.Descriptor instead.
 func (*GitSubscription) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{10}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GitSubscription) GetRepoUrl() string {
@@ -727,7 +782,7 @@ type Health struct {
 func (x *Health) Reset() {
 	*x = Health{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[11]
+		mi := &file_v1alpha1_types_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -740,7 +795,7 @@ func (x *Health) String() string {
 func (*Health) ProtoMessage() {}
 
 func (x *Health) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[11]
+	mi := &file_v1alpha1_types_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +808,7 @@ func (x *Health) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Health.ProtoReflect.Descriptor instead.
 func (*Health) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{11}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Health) GetStatus() string {
@@ -791,7 +846,7 @@ type ArgoCDAppState struct {
 func (x *ArgoCDAppState) Reset() {
 	*x = ArgoCDAppState{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[12]
+		mi := &file_v1alpha1_types_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -804,7 +859,7 @@ func (x *ArgoCDAppState) String() string {
 func (*ArgoCDAppState) ProtoMessage() {}
 
 func (x *ArgoCDAppState) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[12]
+	mi := &file_v1alpha1_types_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -817,7 +872,7 @@ func (x *ArgoCDAppState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArgoCDAppState.ProtoReflect.Descriptor instead.
 func (*ArgoCDAppState) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{12}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ArgoCDAppState) GetNamespace() string {
@@ -860,7 +915,7 @@ type ArgoCDAppHealthStatus struct {
 func (x *ArgoCDAppHealthStatus) Reset() {
 	*x = ArgoCDAppHealthStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[13]
+		mi := &file_v1alpha1_types_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -873,7 +928,7 @@ func (x *ArgoCDAppHealthStatus) String() string {
 func (*ArgoCDAppHealthStatus) ProtoMessage() {}
 
 func (x *ArgoCDAppHealthStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[13]
+	mi := &file_v1alpha1_types_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -886,7 +941,7 @@ func (x *ArgoCDAppHealthStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArgoCDAppHealthStatus.ProtoReflect.Descriptor instead.
 func (*ArgoCDAppHealthStatus) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{13}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ArgoCDAppHealthStatus) GetStatus() string {
@@ -916,7 +971,7 @@ type ArgoCDAppSyncStatus struct {
 func (x *ArgoCDAppSyncStatus) Reset() {
 	*x = ArgoCDAppSyncStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[14]
+		mi := &file_v1alpha1_types_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -929,7 +984,7 @@ func (x *ArgoCDAppSyncStatus) String() string {
 func (*ArgoCDAppSyncStatus) ProtoMessage() {}
 
 func (x *ArgoCDAppSyncStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[14]
+	mi := &file_v1alpha1_types_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -942,7 +997,7 @@ func (x *ArgoCDAppSyncStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArgoCDAppSyncStatus.ProtoReflect.Descriptor instead.
 func (*ArgoCDAppSyncStatus) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{14}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ArgoCDAppSyncStatus) GetStatus() string {
@@ -979,7 +1034,7 @@ type HelmChartDependencyUpdate struct {
 func (x *HelmChartDependencyUpdate) Reset() {
 	*x = HelmChartDependencyUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[15]
+		mi := &file_v1alpha1_types_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -992,7 +1047,7 @@ func (x *HelmChartDependencyUpdate) String() string {
 func (*HelmChartDependencyUpdate) ProtoMessage() {}
 
 func (x *HelmChartDependencyUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[15]
+	mi := &file_v1alpha1_types_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1005,7 +1060,7 @@ func (x *HelmChartDependencyUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HelmChartDependencyUpdate.ProtoReflect.Descriptor instead.
 func (*HelmChartDependencyUpdate) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{15}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *HelmChartDependencyUpdate) GetRegistryUrl() string {
@@ -1043,7 +1098,7 @@ type HelmImageUpdate struct {
 func (x *HelmImageUpdate) Reset() {
 	*x = HelmImageUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[16]
+		mi := &file_v1alpha1_types_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1056,7 +1111,7 @@ func (x *HelmImageUpdate) String() string {
 func (*HelmImageUpdate) ProtoMessage() {}
 
 func (x *HelmImageUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[16]
+	mi := &file_v1alpha1_types_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1069,7 +1124,7 @@ func (x *HelmImageUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HelmImageUpdate.ProtoReflect.Descriptor instead.
 func (*HelmImageUpdate) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{16}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *HelmImageUpdate) GetImage() string {
@@ -1112,7 +1167,7 @@ type HelmPromotionMechanism struct {
 func (x *HelmPromotionMechanism) Reset() {
 	*x = HelmPromotionMechanism{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[17]
+		mi := &file_v1alpha1_types_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1125,7 +1180,7 @@ func (x *HelmPromotionMechanism) String() string {
 func (*HelmPromotionMechanism) ProtoMessage() {}
 
 func (x *HelmPromotionMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[17]
+	mi := &file_v1alpha1_types_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1138,7 +1193,7 @@ func (x *HelmPromotionMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HelmPromotionMechanism.ProtoReflect.Descriptor instead.
 func (*HelmPromotionMechanism) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{17}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *HelmPromotionMechanism) GetImages() []*HelmImageUpdate {
@@ -1162,12 +1217,13 @@ type Image struct {
 
 	RepoUrl string `protobuf:"bytes,1,opt,name=repo_url,json=repoURL,proto3" json:"repo_url,omitempty"`
 	Tag     string `protobuf:"bytes,2,opt,name=tag,proto3" json:"tag,omitempty"`
+	Digest  string `protobuf:"bytes,3,opt,name=digest,proto3" json:"digest,omitempty"`
 }
 
 func (x *Image) Reset() {
 	*x = Image{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[18]
+		mi := &file_v1alpha1_types_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1180,7 +1236,7 @@ func (x *Image) String() string {
 func (*Image) ProtoMessage() {}
 
 func (x *Image) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[18]
+	mi := &file_v1alpha1_types_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1193,7 +1249,7 @@ func (x *Image) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Image.ProtoReflect.Descriptor instead.
 func (*Image) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{18}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *Image) GetRepoUrl() string {
@@ -1206,6 +1262,13 @@ func (x *Image) GetRepoUrl() string {
 func (x *Image) GetTag() string {
 	if x != nil {
 		return x.Tag
+	}
+	return ""
+}
+
+func (x *Image) GetDigest() string {
+	if x != nil {
+		return x.Digest
 	}
 	return ""
 }
@@ -1226,7 +1289,7 @@ type ImageSubscription struct {
 func (x *ImageSubscription) Reset() {
 	*x = ImageSubscription{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[19]
+		mi := &file_v1alpha1_types_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1239,7 +1302,7 @@ func (x *ImageSubscription) String() string {
 func (*ImageSubscription) ProtoMessage() {}
 
 func (x *ImageSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[19]
+	mi := &file_v1alpha1_types_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1252,7 +1315,7 @@ func (x *ImageSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageSubscription.ProtoReflect.Descriptor instead.
 func (*ImageSubscription) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{19}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ImageSubscription) GetRepoUrl() string {
@@ -1302,14 +1365,15 @@ type KustomizeImageUpdate struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Image string `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
-	Path  string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Image     string `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
+	Path      string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	UseDigest bool   `protobuf:"varint,3,opt,name=use_digest,json=useDigest,proto3" json:"use_digest,omitempty"`
 }
 
 func (x *KustomizeImageUpdate) Reset() {
 	*x = KustomizeImageUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[20]
+		mi := &file_v1alpha1_types_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1322,7 +1386,7 @@ func (x *KustomizeImageUpdate) String() string {
 func (*KustomizeImageUpdate) ProtoMessage() {}
 
 func (x *KustomizeImageUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[20]
+	mi := &file_v1alpha1_types_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1335,7 +1399,7 @@ func (x *KustomizeImageUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KustomizeImageUpdate.ProtoReflect.Descriptor instead.
 func (*KustomizeImageUpdate) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{20}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *KustomizeImageUpdate) GetImage() string {
@@ -1352,6 +1416,13 @@ func (x *KustomizeImageUpdate) GetPath() string {
 	return ""
 }
 
+func (x *KustomizeImageUpdate) GetUseDigest() bool {
+	if x != nil {
+		return x.UseDigest
+	}
+	return false
+}
+
 type KustomizePromotionMechanism struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1363,7 +1434,7 @@ type KustomizePromotionMechanism struct {
 func (x *KustomizePromotionMechanism) Reset() {
 	*x = KustomizePromotionMechanism{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[21]
+		mi := &file_v1alpha1_types_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1376,7 +1447,7 @@ func (x *KustomizePromotionMechanism) String() string {
 func (*KustomizePromotionMechanism) ProtoMessage() {}
 
 func (x *KustomizePromotionMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[21]
+	mi := &file_v1alpha1_types_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1389,7 +1460,7 @@ func (x *KustomizePromotionMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KustomizePromotionMechanism.ProtoReflect.Descriptor instead.
 func (*KustomizePromotionMechanism) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{21}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *KustomizePromotionMechanism) GetImages() []*KustomizeImageUpdate {
@@ -1414,7 +1485,7 @@ type Promotion struct {
 func (x *Promotion) Reset() {
 	*x = Promotion{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[22]
+		mi := &file_v1alpha1_types_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1427,7 +1498,7 @@ func (x *Promotion) String() string {
 func (*Promotion) ProtoMessage() {}
 
 func (x *Promotion) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[22]
+	mi := &file_v1alpha1_types_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1440,7 +1511,7 @@ func (x *Promotion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Promotion.ProtoReflect.Descriptor instead.
 func (*Promotion) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{22}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *Promotion) GetApiVersion() string {
@@ -1490,7 +1561,7 @@ type PromotionInfo struct {
 func (x *PromotionInfo) Reset() {
 	*x = PromotionInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[23]
+		mi := &file_v1alpha1_types_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1503,7 +1574,7 @@ func (x *PromotionInfo) String() string {
 func (*PromotionInfo) ProtoMessage() {}
 
 func (x *PromotionInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[23]
+	mi := &file_v1alpha1_types_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1516,7 +1587,7 @@ func (x *PromotionInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromotionInfo.ProtoReflect.Descriptor instead.
 func (*PromotionInfo) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{23}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *PromotionInfo) GetName() string {
@@ -1545,7 +1616,7 @@ type PromotionList struct {
 func (x *PromotionList) Reset() {
 	*x = PromotionList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[24]
+		mi := &file_v1alpha1_types_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1558,7 +1629,7 @@ func (x *PromotionList) String() string {
 func (*PromotionList) ProtoMessage() {}
 
 func (x *PromotionList) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[24]
+	mi := &file_v1alpha1_types_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1571,7 +1642,7 @@ func (x *PromotionList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromotionList.ProtoReflect.Descriptor instead.
 func (*PromotionList) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{24}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *PromotionList) GetMetadata() *metav1.ListMeta {
@@ -1600,7 +1671,7 @@ type PromotionMechanisms struct {
 func (x *PromotionMechanisms) Reset() {
 	*x = PromotionMechanisms{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[25]
+		mi := &file_v1alpha1_types_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1613,7 +1684,7 @@ func (x *PromotionMechanisms) String() string {
 func (*PromotionMechanisms) ProtoMessage() {}
 
 func (x *PromotionMechanisms) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[25]
+	mi := &file_v1alpha1_types_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1626,7 +1697,7 @@ func (x *PromotionMechanisms) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromotionMechanisms.ProtoReflect.Descriptor instead.
 func (*PromotionMechanisms) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{25}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *PromotionMechanisms) GetGitRepoUpdates() []*GitRepoUpdate {
@@ -1658,7 +1729,7 @@ type PromotionPolicy struct {
 func (x *PromotionPolicy) Reset() {
 	*x = PromotionPolicy{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[26]
+		mi := &file_v1alpha1_types_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1671,7 +1742,7 @@ func (x *PromotionPolicy) String() string {
 func (*PromotionPolicy) ProtoMessage() {}
 
 func (x *PromotionPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[26]
+	mi := &file_v1alpha1_types_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1684,7 +1755,7 @@ func (x *PromotionPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromotionPolicy.ProtoReflect.Descriptor instead.
 func (*PromotionPolicy) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{26}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *PromotionPolicy) GetApiVersion() string {
@@ -1734,7 +1805,7 @@ type PromotionPolicyList struct {
 func (x *PromotionPolicyList) Reset() {
 	*x = PromotionPolicyList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[27]
+		mi := &file_v1alpha1_types_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1747,7 +1818,7 @@ func (x *PromotionPolicyList) String() string {
 func (*PromotionPolicyList) ProtoMessage() {}
 
 func (x *PromotionPolicyList) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[27]
+	mi := &file_v1alpha1_types_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1760,7 +1831,7 @@ func (x *PromotionPolicyList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromotionPolicyList.ProtoReflect.Descriptor instead.
 func (*PromotionPolicyList) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{27}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *PromotionPolicyList) GetMetadata() *metav1.ListMeta {
@@ -1789,7 +1860,7 @@ type PromotionSpec struct {
 func (x *PromotionSpec) Reset() {
 	*x = PromotionSpec{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[28]
+		mi := &file_v1alpha1_types_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1802,7 +1873,7 @@ func (x *PromotionSpec) String() string {
 func (*PromotionSpec) ProtoMessage() {}
 
 func (x *PromotionSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[28]
+	mi := &file_v1alpha1_types_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1815,7 +1886,7 @@ func (x *PromotionSpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromotionSpec.ProtoReflect.Descriptor instead.
 func (*PromotionSpec) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{28}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *PromotionSpec) GetStage() string {
@@ -1844,7 +1915,7 @@ type PromotionStatus struct {
 func (x *PromotionStatus) Reset() {
 	*x = PromotionStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[29]
+		mi := &file_v1alpha1_types_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1857,7 +1928,7 @@ func (x *PromotionStatus) String() string {
 func (*PromotionStatus) ProtoMessage() {}
 
 func (x *PromotionStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[29]
+	mi := &file_v1alpha1_types_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1870,7 +1941,7 @@ func (x *PromotionStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromotionStatus.ProtoReflect.Descriptor instead.
 func (*PromotionStatus) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{29}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *PromotionStatus) GetPhase() string {
@@ -1900,7 +1971,7 @@ type RepoSubscription struct {
 func (x *RepoSubscription) Reset() {
 	*x = RepoSubscription{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[30]
+		mi := &file_v1alpha1_types_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1913,7 +1984,7 @@ func (x *RepoSubscription) String() string {
 func (*RepoSubscription) ProtoMessage() {}
 
 func (x *RepoSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[30]
+	mi := &file_v1alpha1_types_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1926,7 +1997,7 @@ func (x *RepoSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RepoSubscription.ProtoReflect.Descriptor instead.
 func (*RepoSubscription) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{30}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *RepoSubscription) GetGit() *GitSubscription {
@@ -1965,7 +2036,7 @@ type Stage struct {
 func (x *Stage) Reset() {
 	*x = Stage{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[31]
+		mi := &file_v1alpha1_types_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1978,7 +2049,7 @@ func (x *Stage) String() string {
 func (*Stage) ProtoMessage() {}
 
 func (x *Stage) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[31]
+	mi := &file_v1alpha1_types_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1991,7 +2062,7 @@ func (x *Stage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Stage.ProtoReflect.Descriptor instead.
 func (*Stage) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{31}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *Stage) GetApiVersion() string {
@@ -2041,7 +2112,7 @@ type StageList struct {
 func (x *StageList) Reset() {
 	*x = StageList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[32]
+		mi := &file_v1alpha1_types_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2054,7 +2125,7 @@ func (x *StageList) String() string {
 func (*StageList) ProtoMessage() {}
 
 func (x *StageList) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[32]
+	mi := &file_v1alpha1_types_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2067,7 +2138,7 @@ func (x *StageList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StageList.ProtoReflect.Descriptor instead.
 func (*StageList) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{32}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *StageList) GetMetadata() *metav1.ListMeta {
@@ -2096,7 +2167,7 @@ type StageSpec struct {
 func (x *StageSpec) Reset() {
 	*x = StageSpec{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[33]
+		mi := &file_v1alpha1_types_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2109,7 +2180,7 @@ func (x *StageSpec) String() string {
 func (*StageSpec) ProtoMessage() {}
 
 func (x *StageSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[33]
+	mi := &file_v1alpha1_types_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2122,7 +2193,7 @@ func (x *StageSpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StageSpec.ProtoReflect.Descriptor instead.
 func (*StageSpec) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{33}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *StageSpec) GetSubscriptions() *Subscriptions {
@@ -2157,7 +2228,7 @@ type Freight struct {
 func (x *Freight) Reset() {
 	*x = Freight{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[34]
+		mi := &file_v1alpha1_types_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2170,7 +2241,7 @@ func (x *Freight) String() string {
 func (*Freight) ProtoMessage() {}
 
 func (x *Freight) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[34]
+	mi := &file_v1alpha1_types_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2183,7 +2254,7 @@ func (x *Freight) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Freight.ProtoReflect.Descriptor instead.
 func (*Freight) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{34}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *Freight) GetApiVersion() string {
@@ -2254,7 +2325,7 @@ type FreightStatus struct {
 func (x *FreightStatus) Reset() {
 	*x = FreightStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[35]
+		mi := &file_v1alpha1_types_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2267,7 +2338,7 @@ func (x *FreightStatus) String() string {
 func (*FreightStatus) ProtoMessage() {}
 
 func (x *FreightStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[35]
+	mi := &file_v1alpha1_types_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2280,7 +2351,7 @@ func (x *FreightStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FreightStatus.ProtoReflect.Descriptor instead.
 func (*FreightStatus) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{35}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *FreightStatus) GetVerifiedIn() map[string]*VerifiedStage {
@@ -2306,7 +2377,7 @@ type VerifiedStage struct {
 func (x *VerifiedStage) Reset() {
 	*x = VerifiedStage{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[36]
+		mi := &file_v1alpha1_types_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2319,7 +2390,7 @@ func (x *VerifiedStage) String() string {
 func (*VerifiedStage) ProtoMessage() {}
 
 func (x *VerifiedStage) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[36]
+	mi := &file_v1alpha1_types_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2332,7 +2403,7 @@ func (x *VerifiedStage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifiedStage.ProtoReflect.Descriptor instead.
 func (*VerifiedStage) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{36}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{37}
 }
 
 type ApprovedStage struct {
@@ -2344,7 +2415,7 @@ type ApprovedStage struct {
 func (x *ApprovedStage) Reset() {
 	*x = ApprovedStage{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[37]
+		mi := &file_v1alpha1_types_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2357,7 +2428,7 @@ func (x *ApprovedStage) String() string {
 func (*ApprovedStage) ProtoMessage() {}
 
 func (x *ApprovedStage) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[37]
+	mi := &file_v1alpha1_types_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2370,7 +2441,7 @@ func (x *ApprovedStage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApprovedStage.ProtoReflect.Descriptor instead.
 func (*ApprovedStage) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{37}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{38}
 }
 
 type SimpleFreight struct {
@@ -2388,7 +2459,7 @@ type SimpleFreight struct {
 func (x *SimpleFreight) Reset() {
 	*x = SimpleFreight{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[38]
+		mi := &file_v1alpha1_types_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2401,7 +2472,7 @@ func (x *SimpleFreight) String() string {
 func (*SimpleFreight) ProtoMessage() {}
 
 func (x *SimpleFreight) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[38]
+	mi := &file_v1alpha1_types_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2414,7 +2485,7 @@ func (x *SimpleFreight) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SimpleFreight.ProtoReflect.Descriptor instead.
 func (*SimpleFreight) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{38}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *SimpleFreight) GetId() string {
@@ -2467,7 +2538,7 @@ type StageStatus struct {
 func (x *StageStatus) Reset() {
 	*x = StageStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[39]
+		mi := &file_v1alpha1_types_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2480,7 +2551,7 @@ func (x *StageStatus) String() string {
 func (*StageStatus) ProtoMessage() {}
 
 func (x *StageStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[39]
+	mi := &file_v1alpha1_types_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2493,7 +2564,7 @@ func (x *StageStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StageStatus.ProtoReflect.Descriptor instead.
 func (*StageStatus) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{39}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *StageStatus) GetCurrentFreight() *SimpleFreight {
@@ -2542,7 +2613,7 @@ type StageSubscription struct {
 func (x *StageSubscription) Reset() {
 	*x = StageSubscription{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[40]
+		mi := &file_v1alpha1_types_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2555,7 +2626,7 @@ func (x *StageSubscription) String() string {
 func (*StageSubscription) ProtoMessage() {}
 
 func (x *StageSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[40]
+	mi := &file_v1alpha1_types_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2568,7 +2639,7 @@ func (x *StageSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StageSubscription.ProtoReflect.Descriptor instead.
 func (*StageSubscription) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{40}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *StageSubscription) GetName() string {
@@ -2590,7 +2661,7 @@ type Subscriptions struct {
 func (x *Subscriptions) Reset() {
 	*x = Subscriptions{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[41]
+		mi := &file_v1alpha1_types_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2603,7 +2674,7 @@ func (x *Subscriptions) String() string {
 func (*Subscriptions) ProtoMessage() {}
 
 func (x *Subscriptions) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[41]
+	mi := &file_v1alpha1_types_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2616,7 +2687,7 @@ func (x *Subscriptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Subscriptions.ProtoReflect.Descriptor instead.
 func (*Subscriptions) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{41}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *Subscriptions) GetUpstreamStages() []*StageSubscription {
@@ -2648,7 +2719,7 @@ type Warehouse struct {
 func (x *Warehouse) Reset() {
 	*x = Warehouse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[42]
+		mi := &file_v1alpha1_types_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2661,7 +2732,7 @@ func (x *Warehouse) String() string {
 func (*Warehouse) ProtoMessage() {}
 
 func (x *Warehouse) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[42]
+	mi := &file_v1alpha1_types_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2674,7 +2745,7 @@ func (x *Warehouse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Warehouse.ProtoReflect.Descriptor instead.
 func (*Warehouse) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{42}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *Warehouse) GetApiVersion() string {
@@ -2723,7 +2794,7 @@ type WarehouseSpec struct {
 func (x *WarehouseSpec) Reset() {
 	*x = WarehouseSpec{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[43]
+		mi := &file_v1alpha1_types_proto_msgTypes[44]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2736,7 +2807,7 @@ func (x *WarehouseSpec) String() string {
 func (*WarehouseSpec) ProtoMessage() {}
 
 func (x *WarehouseSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[43]
+	mi := &file_v1alpha1_types_proto_msgTypes[44]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2749,7 +2820,7 @@ func (x *WarehouseSpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WarehouseSpec.ProtoReflect.Descriptor instead.
 func (*WarehouseSpec) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{43}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *WarehouseSpec) GetSubscriptions() []*RepoSubscription {
@@ -2771,7 +2842,7 @@ type WarehouseStatus struct {
 func (x *WarehouseStatus) Reset() {
 	*x = WarehouseStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_v1alpha1_types_proto_msgTypes[44]
+		mi := &file_v1alpha1_types_proto_msgTypes[45]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2784,7 +2855,7 @@ func (x *WarehouseStatus) String() string {
 func (*WarehouseStatus) ProtoMessage() {}
 
 func (x *WarehouseStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_v1alpha1_types_proto_msgTypes[44]
+	mi := &file_v1alpha1_types_proto_msgTypes[45]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2797,7 +2868,7 @@ func (x *WarehouseStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WarehouseStatus.ProtoReflect.Descriptor instead.
 func (*WarehouseStatus) Descriptor() ([]byte, []int) {
-	return file_v1alpha1_types_proto_rawDescGZIP(), []int{44}
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *WarehouseStatus) GetError() string {
@@ -2849,189 +2920,202 @@ var file_v1alpha1_types_proto_rawDesc = []byte{
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6b,
 	0x65, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a,
 	0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61,
-	0x6c, 0x75, 0x65, 0x22, 0x29, 0x0a, 0x0f, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x4b, 0x75, 0x73,
-	0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x73,
-	0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x06, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x73, 0x22, 0xee,
-	0x02, 0x0a, 0x12, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x53, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x55,
-	0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x19, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72,
-	0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c,
-	0x12, 0x19, 0x0a, 0x05, 0x63, 0x68, 0x61, 0x72, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48,
-	0x00, 0x52, 0x05, 0x63, 0x68, 0x61, 0x72, 0x74, 0x88, 0x01, 0x01, 0x12, 0x39, 0x0a, 0x16, 0x75,
-	0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x5f, 0x72, 0x65, 0x76,
-	0x69, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x48, 0x01, 0x52, 0x14, 0x75,
-	0x70, 0x64, 0x61, 0x74, 0x65, 0x54, 0x61, 0x72, 0x67, 0x65, 0x74, 0x52, 0x65, 0x76, 0x69, 0x73,
-	0x69, 0x6f, 0x6e, 0x88, 0x01, 0x01, 0x12, 0x5c, 0x0a, 0x09, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d,
-	0x69, 0x7a, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x39, 0x2e, 0x67, 0x69, 0x74, 0x68,
-	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c,
-	0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x4b, 0x75, 0x73, 0x74, 0x6f,
-	0x6d, 0x69, 0x7a, 0x65, 0x48, 0x02, 0x52, 0x09, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a,
-	0x65, 0x88, 0x01, 0x01, 0x12, 0x4d, 0x0a, 0x04, 0x68, 0x65, 0x6c, 0x6d, 0x18, 0x05, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x34, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e,
+	0x6c, 0x75, 0x65, 0x22, 0x6f, 0x0a, 0x0f, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x4b, 0x75, 0x73,
+	0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x12, 0x5c, 0x0a, 0x06, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x73,
+	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x44, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
+	0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x4b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a,
+	0x65, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x06, 0x69, 0x6d,
+	0x61, 0x67, 0x65, 0x73, 0x22, 0x51, 0x0a, 0x1a, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x4b, 0x75,
+	0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x55, 0x70, 0x64, 0x61,
+	0x74, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x1d, 0x0a, 0x0a, 0x75, 0x73, 0x65, 0x5f,
+	0x64, 0x69, 0x67, 0x65, 0x73, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x75, 0x73,
+	0x65, 0x44, 0x69, 0x67, 0x65, 0x73, 0x74, 0x22, 0xee, 0x02, 0x0a, 0x12, 0x41, 0x72, 0x67, 0x6f,
+	0x43, 0x44, 0x53, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x19,
+	0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12, 0x19, 0x0a, 0x05, 0x63, 0x68, 0x61,
+	0x72, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x05, 0x63, 0x68, 0x61, 0x72,
+	0x74, 0x88, 0x01, 0x01, 0x12, 0x39, 0x0a, 0x16, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x74,
+	0x61, 0x72, 0x67, 0x65, 0x74, 0x5f, 0x72, 0x65, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x08, 0x48, 0x01, 0x52, 0x14, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x54, 0x61,
+	0x72, 0x67, 0x65, 0x74, 0x52, 0x65, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x88, 0x01, 0x01, 0x12,
+	0x5c, 0x0a, 0x09, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x39, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e,
 	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67,
 	0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x72,
-	0x67, 0x6f, 0x43, 0x44, 0x48, 0x65, 0x6c, 0x6d, 0x48, 0x03, 0x52, 0x04, 0x68, 0x65, 0x6c, 0x6d,
-	0x88, 0x01, 0x01, 0x42, 0x08, 0x0a, 0x06, 0x5f, 0x63, 0x68, 0x61, 0x72, 0x74, 0x42, 0x19, 0x0a,
-	0x17, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x5f,
-	0x72, 0x65, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x42, 0x0c, 0x0a, 0x0a, 0x5f, 0x6b, 0x75, 0x73,
-	0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x42, 0x07, 0x0a, 0x05, 0x5f, 0x68, 0x65, 0x6c, 0x6d, 0x22,
-	0x1f, 0x0a, 0x1d, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x52, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x50, 0x72,
-	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63, 0x68, 0x61, 0x6e, 0x69, 0x73, 0x6d,
-	0x22, 0x58, 0x0a, 0x05, 0x43, 0x68, 0x61, 0x72, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x72, 0x65, 0x67,
-	0x69, 0x73, 0x74, 0x72, 0x79, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x0b, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79, 0x55, 0x52, 0x4c, 0x12, 0x12, 0x0a, 0x04,
-	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
-	0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x22, 0xa0, 0x01, 0x0a, 0x11, 0x43,
-	0x68, 0x61, 0x72, 0x74, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e,
-	0x12, 0x21, 0x0a, 0x0c, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79, 0x5f, 0x75, 0x72, 0x6c,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79,
-	0x55, 0x52, 0x4c, 0x12, 0x17, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x48, 0x00, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x88, 0x01, 0x01, 0x12, 0x30, 0x0a, 0x11,
-	0x73, 0x65, 0x6d, 0x76, 0x65, 0x72, 0x5f, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61, 0x69, 0x6e,
-	0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x48, 0x01, 0x52, 0x10, 0x73, 0x65, 0x6d, 0x76, 0x65,
-	0x72, 0x43, 0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61, 0x69, 0x6e, 0x74, 0x88, 0x01, 0x01, 0x42, 0x07,
-	0x0a, 0x05, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x42, 0x14, 0x0a, 0x12, 0x5f, 0x73, 0x65, 0x6d, 0x76,
-	0x65, 0x72, 0x5f, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61, 0x69, 0x6e, 0x74, 0x22, 0xcd, 0x01,
-	0x0a, 0x09, 0x47, 0x69, 0x74, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x12, 0x19, 0x0a, 0x08, 0x72,
-	0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x72,
-	0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68,
-	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x12, 0x33,
-	0x0a, 0x13, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x5f, 0x63, 0x68, 0x65, 0x63, 0x6b, 0x5f, 0x63,
-	0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x11, 0x68,
-	0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74,
-	0x88, 0x01, 0x01, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x05,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x16, 0x0a,
-	0x06, 0x61, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x61,
-	0x75, 0x74, 0x68, 0x6f, 0x72, 0x42, 0x16, 0x0a, 0x14, 0x5f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68,
-	0x5f, 0x63, 0x68, 0x65, 0x63, 0x6b, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x22, 0xd0, 0x03,
-	0x0a, 0x0d, 0x47, 0x69, 0x74, 0x52, 0x65, 0x70, 0x6f, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12,
-	0x19, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12, 0x24, 0x0a, 0x0b, 0x72, 0x65,
-	0x61, 0x64, 0x5f, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48,
-	0x00, 0x52, 0x0a, 0x72, 0x65, 0x61, 0x64, 0x42, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x88, 0x01, 0x01,
-	0x12, 0x21, 0x0a, 0x0c, 0x77, 0x72, 0x69, 0x74, 0x65, 0x5f, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68,
-	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x77, 0x72, 0x69, 0x74, 0x65, 0x42, 0x72, 0x61,
-	0x6e, 0x63, 0x68, 0x12, 0x68, 0x0a, 0x09, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65,
-	0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x45, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
-	0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
-	0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
-	0x31, 0x2e, 0x4b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f,
-	0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63, 0x68, 0x61, 0x6e, 0x69, 0x73, 0x6d, 0x48, 0x01, 0x52,
-	0x09, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x88, 0x01, 0x01, 0x12, 0x59, 0x0a,
-	0x04, 0x68, 0x65, 0x6c, 0x6d, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x40, 0x2e, 0x67, 0x69,
+	0x67, 0x6f, 0x43, 0x44, 0x4b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x48, 0x02, 0x52,
+	0x09, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x88, 0x01, 0x01, 0x12, 0x4d, 0x0a,
+	0x04, 0x68, 0x65, 0x6c, 0x6d, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x34, 0x2e, 0x67, 0x69,
 	0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
 	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x48, 0x65, 0x6c, 0x6d, 0x50, 0x72, 0x6f, 0x6d, 0x6f,
-	0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63, 0x68, 0x61, 0x6e, 0x69, 0x73, 0x6d, 0x48, 0x02, 0x52,
-	0x04, 0x68, 0x65, 0x6c, 0x6d, 0x88, 0x01, 0x01, 0x12, 0x64, 0x0a, 0x06, 0x72, 0x65, 0x6e, 0x64,
-	0x65, 0x72, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x47, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75,
-	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x52, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x50,
-	0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63, 0x68, 0x61, 0x6e, 0x69, 0x73,
-	0x6d, 0x48, 0x03, 0x52, 0x06, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x88, 0x01, 0x01, 0x42, 0x0e,
-	0x0a, 0x0c, 0x5f, 0x72, 0x65, 0x61, 0x64, 0x5f, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x42, 0x0c,
-	0x0a, 0x0a, 0x5f, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x42, 0x07, 0x0a, 0x05,
-	0x5f, 0x68, 0x65, 0x6c, 0x6d, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72,
-	0x22, 0x44, 0x0a, 0x0f, 0x47, 0x69, 0x74, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
-	0x69, 0x6f, 0x6e, 0x12, 0x19, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12, 0x16,
-	0x0a, 0x06, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06,
-	0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x22, 0x93, 0x01, 0x0a, 0x06, 0x48, 0x65, 0x61, 0x6c, 0x74,
-	0x68, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x69, 0x73, 0x73,
-	0x75, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x06, 0x69, 0x73, 0x73, 0x75, 0x65,
-	0x73, 0x12, 0x59, 0x0a, 0x0b, 0x61, 0x72, 0x67, 0x6f, 0x63, 0x64, 0x5f, 0x61, 0x70, 0x70, 0x73,
-	0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x38, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
-	0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
-	0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
-	0x31, 0x2e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x53, 0x74, 0x61, 0x74, 0x65,
-	0x52, 0x0a, 0x61, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x73, 0x22, 0x88, 0x02, 0x0a,
-	0x0e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x53, 0x74, 0x61, 0x74, 0x65, 0x12,
-	0x1c, 0x0a, 0x09, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x09, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x12, 0x12, 0x0a,
-	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d,
-	0x65, 0x12, 0x64, 0x0a, 0x0d, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x5f, 0x73, 0x74, 0x61, 0x74,
-	0x75, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x3f, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75,
-	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x48, 0x65, 0x61,
-	0x6c, 0x74, 0x68, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x0c, 0x68, 0x65, 0x61, 0x6c, 0x74,
-	0x68, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x5e, 0x0a, 0x0b, 0x73, 0x79, 0x6e, 0x63, 0x5f,
-	0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x3d, 0x2e, 0x67,
-	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76,
-	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70,
-	0x70, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x0a, 0x73, 0x79, 0x6e,
-	0x63, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x22, 0x49, 0x0a, 0x15, 0x41, 0x72, 0x67, 0x6f, 0x43,
-	0x44, 0x41, 0x70, 0x70, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
-	0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73,
-	0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61,
-	0x67, 0x65, 0x22, 0x67, 0x0a, 0x13, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x53,
-	0x79, 0x6e, 0x63, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61,
-	0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75,
-	0x73, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x1c, 0x0a,
-	0x09, 0x72, 0x65, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x09,
-	0x52, 0x09, 0x72, 0x65, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x71, 0x0a, 0x19, 0x48,
-	0x65, 0x6c, 0x6d, 0x43, 0x68, 0x61, 0x72, 0x74, 0x44, 0x65, 0x70, 0x65, 0x6e, 0x64, 0x65, 0x6e,
-	0x63, 0x79, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x21, 0x0a, 0x0c, 0x72, 0x65, 0x67, 0x69,
-	0x73, 0x74, 0x72, 0x79, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b,
-	0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79, 0x55, 0x52, 0x4c, 0x12, 0x12, 0x0a, 0x04, 0x6e,
-	0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12,
-	0x1d, 0x0a, 0x0a, 0x63, 0x68, 0x61, 0x72, 0x74, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x03, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x09, 0x63, 0x68, 0x61, 0x72, 0x74, 0x50, 0x61, 0x74, 0x68, 0x22, 0x79,
-	0x0a, 0x0f, 0x48, 0x65, 0x6c, 0x6d, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74,
-	0x65, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x28, 0x0a, 0x10, 0x76, 0x61, 0x6c, 0x75, 0x65,
-	0x73, 0x5f, 0x66, 0x69, 0x6c, 0x65, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x0e, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x46, 0x69, 0x6c, 0x65, 0x50, 0x61, 0x74,
-	0x68, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
-	0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x04, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0xc8, 0x01, 0x0a, 0x16, 0x48, 0x65,
-	0x6c, 0x6d, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63, 0x68, 0x61,
-	0x6e, 0x69, 0x73, 0x6d, 0x12, 0x51, 0x0a, 0x06, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x73, 0x18, 0x01,
-	0x20, 0x03, 0x28, 0x0b, 0x32, 0x39, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x48, 0x65, 0x6c,
+	0x6d, 0x48, 0x03, 0x52, 0x04, 0x68, 0x65, 0x6c, 0x6d, 0x88, 0x01, 0x01, 0x42, 0x08, 0x0a, 0x06,
+	0x5f, 0x63, 0x68, 0x61, 0x72, 0x74, 0x42, 0x19, 0x0a, 0x17, 0x5f, 0x75, 0x70, 0x64, 0x61, 0x74,
+	0x65, 0x5f, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x5f, 0x72, 0x65, 0x76, 0x69, 0x73, 0x69, 0x6f,
+	0x6e, 0x42, 0x0c, 0x0a, 0x0a, 0x5f, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x42,
+	0x07, 0x0a, 0x05, 0x5f, 0x68, 0x65, 0x6c, 0x6d, 0x22, 0x1f, 0x0a, 0x1d, 0x4b, 0x61, 0x72, 0x67,
+	0x6f, 0x52, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e,
+	0x4d, 0x65, 0x63, 0x68, 0x61, 0x6e, 0x69, 0x73, 0x6d, 0x22, 0x58, 0x0a, 0x05, 0x43, 0x68, 0x61,
+	0x72, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79, 0x5f, 0x75,
+	0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74,
+	0x72, 0x79, 0x55, 0x52, 0x4c, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72,
+	0x73, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73,
+	0x69, 0x6f, 0x6e, 0x22, 0xa0, 0x01, 0x0a, 0x11, 0x43, 0x68, 0x61, 0x72, 0x74, 0x53, 0x75, 0x62,
+	0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x21, 0x0a, 0x0c, 0x72, 0x65, 0x67,
+	0x69, 0x73, 0x74, 0x72, 0x79, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0b, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79, 0x55, 0x52, 0x4c, 0x12, 0x17, 0x0a, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x04, 0x6e, 0x61,
+	0x6d, 0x65, 0x88, 0x01, 0x01, 0x12, 0x30, 0x0a, 0x11, 0x73, 0x65, 0x6d, 0x76, 0x65, 0x72, 0x5f,
+	0x63, 0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61, 0x69, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
+	0x48, 0x01, 0x52, 0x10, 0x73, 0x65, 0x6d, 0x76, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x73, 0x74, 0x72,
+	0x61, 0x69, 0x6e, 0x74, 0x88, 0x01, 0x01, 0x42, 0x07, 0x0a, 0x05, 0x5f, 0x6e, 0x61, 0x6d, 0x65,
+	0x42, 0x14, 0x0a, 0x12, 0x5f, 0x73, 0x65, 0x6d, 0x76, 0x65, 0x72, 0x5f, 0x63, 0x6f, 0x6e, 0x73,
+	0x74, 0x72, 0x61, 0x69, 0x6e, 0x74, 0x22, 0xcd, 0x01, 0x0a, 0x09, 0x47, 0x69, 0x74, 0x43, 0x6f,
+	0x6d, 0x6d, 0x69, 0x74, 0x12, 0x19, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12,
+	0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12,
+	0x16, 0x0a, 0x06, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x12, 0x33, 0x0a, 0x13, 0x68, 0x65, 0x61, 0x6c, 0x74,
+	0x68, 0x5f, 0x63, 0x68, 0x65, 0x63, 0x6b, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x11, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x43, 0x68,
+	0x65, 0x63, 0x6b, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x88, 0x01, 0x01, 0x12, 0x18, 0x0a, 0x07,
+	0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d,
+	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x61, 0x75, 0x74, 0x68, 0x6f, 0x72,
+	0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x61, 0x75, 0x74, 0x68, 0x6f, 0x72, 0x42, 0x16,
+	0x0a, 0x14, 0x5f, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x5f, 0x63, 0x68, 0x65, 0x63, 0x6b, 0x5f,
+	0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x22, 0xd0, 0x03, 0x0a, 0x0d, 0x47, 0x69, 0x74, 0x52, 0x65,
+	0x70, 0x6f, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x19, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f,
+	0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x72, 0x65, 0x70, 0x6f,
+	0x55, 0x52, 0x4c, 0x12, 0x24, 0x0a, 0x0b, 0x72, 0x65, 0x61, 0x64, 0x5f, 0x62, 0x72, 0x61, 0x6e,
+	0x63, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x0a, 0x72, 0x65, 0x61, 0x64,
+	0x42, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x88, 0x01, 0x01, 0x12, 0x21, 0x0a, 0x0c, 0x77, 0x72, 0x69,
+	0x74, 0x65, 0x5f, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0b, 0x77, 0x72, 0x69, 0x74, 0x65, 0x42, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x12, 0x68, 0x0a, 0x09,
+	0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x45, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70,
+	0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4b, 0x75, 0x73, 0x74, 0x6f,
+	0x6d, 0x69, 0x7a, 0x65, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63,
+	0x68, 0x61, 0x6e, 0x69, 0x73, 0x6d, 0x48, 0x01, 0x52, 0x09, 0x6b, 0x75, 0x73, 0x74, 0x6f, 0x6d,
+	0x69, 0x7a, 0x65, 0x88, 0x01, 0x01, 0x12, 0x59, 0x0a, 0x04, 0x68, 0x65, 0x6c, 0x6d, 0x18, 0x06,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x40, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
 	0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70,
 	0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
-	0x48, 0x65, 0x6c, 0x6d, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52,
-	0x06, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x73, 0x12, 0x5b, 0x0a, 0x06, 0x63, 0x68, 0x61, 0x72, 0x74,
-	0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x43, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
-	0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67,
-	0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x2e, 0x48, 0x65, 0x6c, 0x6d, 0x43, 0x68, 0x61, 0x72, 0x74, 0x44, 0x65, 0x70, 0x65,
-	0x6e, 0x64, 0x65, 0x6e, 0x63, 0x79, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x06, 0x63, 0x68,
-	0x61, 0x72, 0x74, 0x73, 0x22, 0x34, 0x0a, 0x05, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x19, 0x0a,
-	0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12, 0x10, 0x0a, 0x03, 0x74, 0x61, 0x67, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x74, 0x61, 0x67, 0x22, 0xb3, 0x02, 0x0a, 0x11, 0x49,
-	0x6d, 0x61, 0x67, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e,
-	0x12, 0x19, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12, 0x39, 0x0a, 0x16, 0x74,
-	0x61, 0x67, 0x5f, 0x73, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x73, 0x74, 0x72,
-	0x61, 0x74, 0x65, 0x67, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x19, 0x69, 0x6d, 0x61,
-	0x67, 0x65, 0x54, 0x61, 0x67, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74,
-	0x72, 0x61, 0x74, 0x65, 0x67, 0x79, 0x12, 0x30, 0x0a, 0x11, 0x73, 0x65, 0x6d, 0x76, 0x65, 0x72,
-	0x5f, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61, 0x69, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x09, 0x48, 0x00, 0x52, 0x10, 0x73, 0x65, 0x6d, 0x76, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x73, 0x74,
-	0x72, 0x61, 0x69, 0x6e, 0x74, 0x88, 0x01, 0x01, 0x12, 0x22, 0x0a, 0x0a, 0x61, 0x6c, 0x6c, 0x6f,
-	0x77, 0x5f, 0x74, 0x61, 0x67, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x48, 0x01, 0x52, 0x09,
-	0x61, 0x6c, 0x6c, 0x6f, 0x77, 0x54, 0x61, 0x67, 0x73, 0x88, 0x01, 0x01, 0x12, 0x1f, 0x0a, 0x0b,
-	0x69, 0x67, 0x6e, 0x6f, 0x72, 0x65, 0x5f, 0x74, 0x61, 0x67, 0x73, 0x18, 0x05, 0x20, 0x03, 0x28,
-	0x09, 0x52, 0x0a, 0x69, 0x67, 0x6e, 0x6f, 0x72, 0x65, 0x54, 0x61, 0x67, 0x73, 0x12, 0x1f, 0x0a,
-	0x08, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x48,
-	0x02, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x88, 0x01, 0x01, 0x42, 0x14,
-	0x0a, 0x12, 0x5f, 0x73, 0x65, 0x6d, 0x76, 0x65, 0x72, 0x5f, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x72,
-	0x61, 0x69, 0x6e, 0x74, 0x42, 0x0d, 0x0a, 0x0b, 0x5f, 0x61, 0x6c, 0x6c, 0x6f, 0x77, 0x5f, 0x74,
-	0x61, 0x67, 0x73, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d,
-	0x22, 0x40, 0x0a, 0x14, 0x4b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x49, 0x6d, 0x61,
-	0x67, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6d, 0x61, 0x67,
-	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x12,
-	0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61,
-	0x74, 0x68, 0x22, 0x75, 0x0a, 0x1b, 0x4b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x50,
+	0x48, 0x65, 0x6c, 0x6d, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63,
+	0x68, 0x61, 0x6e, 0x69, 0x73, 0x6d, 0x48, 0x02, 0x52, 0x04, 0x68, 0x65, 0x6c, 0x6d, 0x88, 0x01,
+	0x01, 0x12, 0x64, 0x0a, 0x06, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x18, 0x07, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x47, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61,
+	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e,
+	0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4b, 0x61, 0x72,
+	0x67, 0x6f, 0x52, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
+	0x6e, 0x4d, 0x65, 0x63, 0x68, 0x61, 0x6e, 0x69, 0x73, 0x6d, 0x48, 0x03, 0x52, 0x06, 0x72, 0x65,
+	0x6e, 0x64, 0x65, 0x72, 0x88, 0x01, 0x01, 0x42, 0x0e, 0x0a, 0x0c, 0x5f, 0x72, 0x65, 0x61, 0x64,
+	0x5f, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x42, 0x0c, 0x0a, 0x0a, 0x5f, 0x6b, 0x75, 0x73, 0x74,
+	0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x42, 0x07, 0x0a, 0x05, 0x5f, 0x68, 0x65, 0x6c, 0x6d, 0x42, 0x09,
+	0x0a, 0x07, 0x5f, 0x72, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x22, 0x44, 0x0a, 0x0f, 0x47, 0x69, 0x74,
+	0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x19, 0x0a, 0x08,
+	0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
+	0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12, 0x16, 0x0a, 0x06, 0x62, 0x72, 0x61, 0x6e, 0x63,
+	0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x22,
+	0x93, 0x01, 0x0a, 0x06, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74,
+	0x75, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x69, 0x73, 0x73, 0x75, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03,
+	0x28, 0x09, 0x52, 0x06, 0x69, 0x73, 0x73, 0x75, 0x65, 0x73, 0x12, 0x59, 0x0a, 0x0b, 0x61, 0x72,
+	0x67, 0x6f, 0x63, 0x64, 0x5f, 0x61, 0x70, 0x70, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x38, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70,
+	0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x72, 0x67, 0x6f, 0x43,
+	0x44, 0x41, 0x70, 0x70, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x0a, 0x61, 0x72, 0x67, 0x6f, 0x43,
+	0x44, 0x41, 0x70, 0x70, 0x73, 0x22, 0x88, 0x02, 0x0a, 0x0e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44,
+	0x41, 0x70, 0x70, 0x53, 0x74, 0x61, 0x74, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x6e, 0x61, 0x6d, 0x65,
+	0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6e, 0x61, 0x6d,
+	0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x64, 0x0a, 0x0d, 0x68, 0x65,
+	0x61, 0x6c, 0x74, 0x68, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x3f, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61,
+	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e,
+	0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x72, 0x67,
+	0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x48, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x53, 0x74, 0x61, 0x74,
+	0x75, 0x73, 0x52, 0x0c, 0x68, 0x65, 0x61, 0x6c, 0x74, 0x68, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
+	0x12, 0x5e, 0x0a, 0x0b, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18,
+	0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x3d, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
+	0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x52, 0x0a, 0x73, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
+	0x22, 0x49, 0x0a, 0x15, 0x41, 0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x48, 0x65, 0x61,
+	0x6c, 0x74, 0x68, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61,
+	0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75,
+	0x73, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x22, 0x67, 0x0a, 0x13, 0x41,
+	0x72, 0x67, 0x6f, 0x43, 0x44, 0x41, 0x70, 0x70, 0x53, 0x79, 0x6e, 0x63, 0x53, 0x74, 0x61, 0x74,
+	0x75, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65,
+	0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x65,
+	0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x1c, 0x0a, 0x09, 0x72, 0x65, 0x76, 0x69, 0x73, 0x69,
+	0x6f, 0x6e, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09, 0x72, 0x65, 0x76, 0x69, 0x73,
+	0x69, 0x6f, 0x6e, 0x73, 0x22, 0x71, 0x0a, 0x19, 0x48, 0x65, 0x6c, 0x6d, 0x43, 0x68, 0x61, 0x72,
+	0x74, 0x44, 0x65, 0x70, 0x65, 0x6e, 0x64, 0x65, 0x6e, 0x63, 0x79, 0x55, 0x70, 0x64, 0x61, 0x74,
+	0x65, 0x12, 0x21, 0x0a, 0x0c, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x79, 0x5f, 0x75, 0x72,
+	0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72,
+	0x79, 0x55, 0x52, 0x4c, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1d, 0x0a, 0x0a, 0x63, 0x68, 0x61, 0x72,
+	0x74, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x63, 0x68,
+	0x61, 0x72, 0x74, 0x50, 0x61, 0x74, 0x68, 0x22, 0x79, 0x0a, 0x0f, 0x48, 0x65, 0x6c, 0x6d, 0x49,
+	0x6d, 0x61, 0x67, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6d,
+	0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65,
+	0x12, 0x28, 0x0a, 0x10, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x5f, 0x66, 0x69, 0x6c, 0x65, 0x5f,
+	0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0e, 0x76, 0x61, 0x6c, 0x75,
+	0x65, 0x73, 0x46, 0x69, 0x6c, 0x65, 0x50, 0x61, 0x74, 0x68, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65,
+	0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05,
+	0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c,
+	0x75, 0x65, 0x22, 0xc8, 0x01, 0x0a, 0x16, 0x48, 0x65, 0x6c, 0x6d, 0x50, 0x72, 0x6f, 0x6d, 0x6f,
+	0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63, 0x68, 0x61, 0x6e, 0x69, 0x73, 0x6d, 0x12, 0x51, 0x0a,
+	0x06, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x39, 0x2e,
+	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
+	0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x48, 0x65, 0x6c, 0x6d, 0x49, 0x6d, 0x61,
+	0x67, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x06, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x73,
+	0x12, 0x5b, 0x0a, 0x06, 0x63, 0x68, 0x61, 0x72, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x43, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61,
+	0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x48, 0x65, 0x6c, 0x6d,
+	0x43, 0x68, 0x61, 0x72, 0x74, 0x44, 0x65, 0x70, 0x65, 0x6e, 0x64, 0x65, 0x6e, 0x63, 0x79, 0x55,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x06, 0x63, 0x68, 0x61, 0x72, 0x74, 0x73, 0x22, 0x4c, 0x0a,
+	0x05, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x19, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75,
+	0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52,
+	0x4c, 0x12, 0x10, 0x0a, 0x03, 0x74, 0x61, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
+	0x74, 0x61, 0x67, 0x12, 0x16, 0x0a, 0x06, 0x64, 0x69, 0x67, 0x65, 0x73, 0x74, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x64, 0x69, 0x67, 0x65, 0x73, 0x74, 0x22, 0xb3, 0x02, 0x0a, 0x11,
+	0x49, 0x6d, 0x61, 0x67, 0x65, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f,
+	0x6e, 0x12, 0x19, 0x0a, 0x08, 0x72, 0x65, 0x70, 0x6f, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x07, 0x72, 0x65, 0x70, 0x6f, 0x55, 0x52, 0x4c, 0x12, 0x39, 0x0a, 0x16,
+	0x74, 0x61, 0x67, 0x5f, 0x73, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x73, 0x74,
+	0x72, 0x61, 0x74, 0x65, 0x67, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x19, 0x69, 0x6d,
+	0x61, 0x67, 0x65, 0x54, 0x61, 0x67, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53,
+	0x74, 0x72, 0x61, 0x74, 0x65, 0x67, 0x79, 0x12, 0x30, 0x0a, 0x11, 0x73, 0x65, 0x6d, 0x76, 0x65,
+	0x72, 0x5f, 0x63, 0x6f, 0x6e, 0x73, 0x74, 0x72, 0x61, 0x69, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x09, 0x48, 0x00, 0x52, 0x10, 0x73, 0x65, 0x6d, 0x76, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x73,
+	0x74, 0x72, 0x61, 0x69, 0x6e, 0x74, 0x88, 0x01, 0x01, 0x12, 0x22, 0x0a, 0x0a, 0x61, 0x6c, 0x6c,
+	0x6f, 0x77, 0x5f, 0x74, 0x61, 0x67, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x48, 0x01, 0x52,
+	0x09, 0x61, 0x6c, 0x6c, 0x6f, 0x77, 0x54, 0x61, 0x67, 0x73, 0x88, 0x01, 0x01, 0x12, 0x1f, 0x0a,
+	0x0b, 0x69, 0x67, 0x6e, 0x6f, 0x72, 0x65, 0x5f, 0x74, 0x61, 0x67, 0x73, 0x18, 0x05, 0x20, 0x03,
+	0x28, 0x09, 0x52, 0x0a, 0x69, 0x67, 0x6e, 0x6f, 0x72, 0x65, 0x54, 0x61, 0x67, 0x73, 0x12, 0x1f,
+	0x0a, 0x08, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09,
+	0x48, 0x02, 0x52, 0x08, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x88, 0x01, 0x01, 0x42,
+	0x14, 0x0a, 0x12, 0x5f, 0x73, 0x65, 0x6d, 0x76, 0x65, 0x72, 0x5f, 0x63, 0x6f, 0x6e, 0x73, 0x74,
+	0x72, 0x61, 0x69, 0x6e, 0x74, 0x42, 0x0d, 0x0a, 0x0b, 0x5f, 0x61, 0x6c, 0x6c, 0x6f, 0x77, 0x5f,
+	0x74, 0x61, 0x67, 0x73, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72,
+	0x6d, 0x22, 0x5f, 0x0a, 0x14, 0x4b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x49, 0x6d,
+	0x61, 0x67, 0x65, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6d, 0x61,
+	0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x12,
+	0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70,
+	0x61, 0x74, 0x68, 0x12, 0x1d, 0x0a, 0x0a, 0x75, 0x73, 0x65, 0x5f, 0x64, 0x69, 0x67, 0x65, 0x73,
+	0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x09, 0x75, 0x73, 0x65, 0x44, 0x69, 0x67, 0x65,
+	0x73, 0x74, 0x22, 0x75, 0x0a, 0x1b, 0x4b, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x69, 0x7a, 0x65, 0x50,
 	0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65, 0x63, 0x68, 0x61, 0x6e, 0x69, 0x73,
 	0x6d, 0x12, 0x56, 0x0a, 0x06, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28,
 	0x0b, 0x32, 0x3e, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61,
@@ -3377,121 +3461,123 @@ func file_v1alpha1_types_proto_rawDescGZIP() []byte {
 	return file_v1alpha1_types_proto_rawDescData
 }
 
-var file_v1alpha1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
+var file_v1alpha1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
 var file_v1alpha1_types_proto_goTypes = []interface{}{
 	(*ArgoCDAppUpdate)(nil),               // 0: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
 	(*ArgoCDHelm)(nil),                    // 1: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelm
 	(*ArgoCDHelmImageUpdate)(nil),         // 2: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelmImageUpdate
 	(*ArgoCDKustomize)(nil),               // 3: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomize
-	(*ArgoCDSourceUpdate)(nil),            // 4: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate
-	(*KargoRenderPromotionMechanism)(nil), // 5: github.com.akuity.kargo.pkg.api.v1alpha1.KargoRenderPromotionMechanism
-	(*Chart)(nil),                         // 6: github.com.akuity.kargo.pkg.api.v1alpha1.Chart
-	(*ChartSubscription)(nil),             // 7: github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription
-	(*GitCommit)(nil),                     // 8: github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
-	(*GitRepoUpdate)(nil),                 // 9: github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate
-	(*GitSubscription)(nil),               // 10: github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription
-	(*Health)(nil),                        // 11: github.com.akuity.kargo.pkg.api.v1alpha1.Health
-	(*ArgoCDAppState)(nil),                // 12: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState
-	(*ArgoCDAppHealthStatus)(nil),         // 13: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppHealthStatus
-	(*ArgoCDAppSyncStatus)(nil),           // 14: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppSyncStatus
-	(*HelmChartDependencyUpdate)(nil),     // 15: github.com.akuity.kargo.pkg.api.v1alpha1.HelmChartDependencyUpdate
-	(*HelmImageUpdate)(nil),               // 16: github.com.akuity.kargo.pkg.api.v1alpha1.HelmImageUpdate
-	(*HelmPromotionMechanism)(nil),        // 17: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism
-	(*Image)(nil),                         // 18: github.com.akuity.kargo.pkg.api.v1alpha1.Image
-	(*ImageSubscription)(nil),             // 19: github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription
-	(*KustomizeImageUpdate)(nil),          // 20: github.com.akuity.kargo.pkg.api.v1alpha1.KustomizeImageUpdate
-	(*KustomizePromotionMechanism)(nil),   // 21: github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism
-	(*Promotion)(nil),                     // 22: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
-	(*PromotionInfo)(nil),                 // 23: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo
-	(*PromotionList)(nil),                 // 24: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList
-	(*PromotionMechanisms)(nil),           // 25: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms
-	(*PromotionPolicy)(nil),               // 26: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
-	(*PromotionPolicyList)(nil),           // 27: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList
-	(*PromotionSpec)(nil),                 // 28: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec
-	(*PromotionStatus)(nil),               // 29: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus
-	(*RepoSubscription)(nil),              // 30: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription
-	(*Stage)(nil),                         // 31: github.com.akuity.kargo.pkg.api.v1alpha1.Stage
-	(*StageList)(nil),                     // 32: github.com.akuity.kargo.pkg.api.v1alpha1.StageList
-	(*StageSpec)(nil),                     // 33: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
-	(*Freight)(nil),                       // 34: github.com.akuity.kargo.pkg.api.v1alpha1.Freight
-	(*FreightStatus)(nil),                 // 35: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus
-	(*VerifiedStage)(nil),                 // 36: github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage
-	(*ApprovedStage)(nil),                 // 37: github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage
-	(*SimpleFreight)(nil),                 // 38: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
-	(*StageStatus)(nil),                   // 39: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
-	(*StageSubscription)(nil),             // 40: github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription
-	(*Subscriptions)(nil),                 // 41: github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions
-	(*Warehouse)(nil),                     // 42: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse
-	(*WarehouseSpec)(nil),                 // 43: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec
-	(*WarehouseStatus)(nil),               // 44: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseStatus
-	nil,                                   // 45: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry
-	nil,                                   // 46: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry
-	(*metav1.ObjectMeta)(nil),             // 47: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	(*metav1.ListMeta)(nil),               // 48: github.com.akuity.kargo.pkg.api.metav1.ListMeta
-	(*timestamppb.Timestamp)(nil),         // 49: google.protobuf.Timestamp
+	(*ArgoCDKustomizeImageUpdate)(nil),    // 4: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomizeImageUpdate
+	(*ArgoCDSourceUpdate)(nil),            // 5: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate
+	(*KargoRenderPromotionMechanism)(nil), // 6: github.com.akuity.kargo.pkg.api.v1alpha1.KargoRenderPromotionMechanism
+	(*Chart)(nil),                         // 7: github.com.akuity.kargo.pkg.api.v1alpha1.Chart
+	(*ChartSubscription)(nil),             // 8: github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription
+	(*GitCommit)(nil),                     // 9: github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
+	(*GitRepoUpdate)(nil),                 // 10: github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate
+	(*GitSubscription)(nil),               // 11: github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription
+	(*Health)(nil),                        // 12: github.com.akuity.kargo.pkg.api.v1alpha1.Health
+	(*ArgoCDAppState)(nil),                // 13: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState
+	(*ArgoCDAppHealthStatus)(nil),         // 14: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppHealthStatus
+	(*ArgoCDAppSyncStatus)(nil),           // 15: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppSyncStatus
+	(*HelmChartDependencyUpdate)(nil),     // 16: github.com.akuity.kargo.pkg.api.v1alpha1.HelmChartDependencyUpdate
+	(*HelmImageUpdate)(nil),               // 17: github.com.akuity.kargo.pkg.api.v1alpha1.HelmImageUpdate
+	(*HelmPromotionMechanism)(nil),        // 18: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism
+	(*Image)(nil),                         // 19: github.com.akuity.kargo.pkg.api.v1alpha1.Image
+	(*ImageSubscription)(nil),             // 20: github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription
+	(*KustomizeImageUpdate)(nil),          // 21: github.com.akuity.kargo.pkg.api.v1alpha1.KustomizeImageUpdate
+	(*KustomizePromotionMechanism)(nil),   // 22: github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism
+	(*Promotion)(nil),                     // 23: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
+	(*PromotionInfo)(nil),                 // 24: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo
+	(*PromotionList)(nil),                 // 25: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList
+	(*PromotionMechanisms)(nil),           // 26: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms
+	(*PromotionPolicy)(nil),               // 27: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
+	(*PromotionPolicyList)(nil),           // 28: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList
+	(*PromotionSpec)(nil),                 // 29: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec
+	(*PromotionStatus)(nil),               // 30: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus
+	(*RepoSubscription)(nil),              // 31: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription
+	(*Stage)(nil),                         // 32: github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+	(*StageList)(nil),                     // 33: github.com.akuity.kargo.pkg.api.v1alpha1.StageList
+	(*StageSpec)(nil),                     // 34: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
+	(*Freight)(nil),                       // 35: github.com.akuity.kargo.pkg.api.v1alpha1.Freight
+	(*FreightStatus)(nil),                 // 36: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus
+	(*VerifiedStage)(nil),                 // 37: github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage
+	(*ApprovedStage)(nil),                 // 38: github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage
+	(*SimpleFreight)(nil),                 // 39: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
+	(*StageStatus)(nil),                   // 40: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
+	(*StageSubscription)(nil),             // 41: github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription
+	(*Subscriptions)(nil),                 // 42: github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions
+	(*Warehouse)(nil),                     // 43: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse
+	(*WarehouseSpec)(nil),                 // 44: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec
+	(*WarehouseStatus)(nil),               // 45: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseStatus
+	nil,                                   // 46: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry
+	nil,                                   // 47: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry
+	(*metav1.ObjectMeta)(nil),             // 48: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	(*metav1.ListMeta)(nil),               // 49: github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	(*timestamppb.Timestamp)(nil),         // 50: google.protobuf.Timestamp
 }
 var file_v1alpha1_types_proto_depIdxs = []int32{
-	4,  // 0: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate.source_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate
+	5,  // 0: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate.source_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate
 	2,  // 1: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelm.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelmImageUpdate
-	3,  // 2: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate.kustomize:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomize
-	1,  // 3: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate.helm:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelm
-	21, // 4: github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate.kustomize:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism
-	17, // 5: github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate.helm:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism
-	5,  // 6: github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate.render:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.KargoRenderPromotionMechanism
-	12, // 7: github.com.akuity.kargo.pkg.api.v1alpha1.Health.argocd_apps:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState
-	13, // 8: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState.health_status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppHealthStatus
-	14, // 9: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState.sync_status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppSyncStatus
-	16, // 10: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmImageUpdate
-	15, // 11: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmChartDependencyUpdate
-	20, // 12: github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.KustomizeImageUpdate
-	47, // 13: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	28, // 14: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec
-	29, // 15: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus
-	38, // 16: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo.freight:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
-	48, // 17: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
-	22, // 18: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
-	9,  // 19: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms.git_repo_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate
-	0,  // 20: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms.argocd_app_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
-	47, // 21: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	48, // 22: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
-	26, // 23: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
-	10, // 24: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.git:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription
-	19, // 25: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.image:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription
-	7,  // 26: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.chart:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription
-	47, // 27: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	33, // 28: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
-	39, // 29: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
-	48, // 30: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
-	31, // 31: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
-	41, // 32: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.subscriptions:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions
-	25, // 33: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.promotion_mechanisms:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms
-	47, // 34: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	8,  // 35: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.commits:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
-	18, // 36: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Image
-	6,  // 37: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Chart
-	35, // 38: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus
-	45, // 39: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.verified_in:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry
-	46, // 40: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.approved_for:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry
-	49, // 41: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.first_seen:type_name -> google.protobuf.Timestamp
-	8,  // 42: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.commits:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
-	18, // 43: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Image
-	6,  // 44: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Chart
-	38, // 45: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.current_freight:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
-	38, // 46: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.history:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
-	11, // 47: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.health:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Health
-	23, // 48: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.current_promotion:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo
-	40, // 49: github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions.upstream_stages:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription
-	47, // 50: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	43, // 51: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec
-	44, // 52: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseStatus
-	30, // 53: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec.subscriptions:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription
-	36, // 54: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage
-	37, // 55: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage
-	56, // [56:56] is the sub-list for method output_type
-	56, // [56:56] is the sub-list for method input_type
-	56, // [56:56] is the sub-list for extension type_name
-	56, // [56:56] is the sub-list for extension extendee
-	0,  // [0:56] is the sub-list for field type_name
+	4,  // 2: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomize.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomizeImageUpdate
+	3,  // 3: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate.kustomize:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDKustomize
+	1,  // 4: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate.helm:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelm
+	22, // 5: github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate.kustomize:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism
+	18, // 6: github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate.helm:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism
+	6,  // 7: github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate.render:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.KargoRenderPromotionMechanism
+	13, // 8: github.com.akuity.kargo.pkg.api.v1alpha1.Health.argocd_apps:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState
+	14, // 9: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState.health_status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppHealthStatus
+	15, // 10: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppState.sync_status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppSyncStatus
+	17, // 11: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmImageUpdate
+	16, // 12: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmChartDependencyUpdate
+	21, // 13: github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.KustomizeImageUpdate
+	48, // 14: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	29, // 15: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec
+	30, // 16: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus
+	39, // 17: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo.freight:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
+	49, // 18: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	23, // 19: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
+	10, // 20: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms.git_repo_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate
+	0,  // 21: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms.argocd_app_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
+	48, // 22: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	49, // 23: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	27, // 24: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy
+	11, // 25: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.git:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription
+	20, // 26: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.image:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription
+	8,  // 27: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.chart:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription
+	48, // 28: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	34, // 29: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
+	40, // 30: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
+	49, // 31: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	32, // 32: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
+	42, // 33: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.subscriptions:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions
+	26, // 34: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.promotion_mechanisms:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms
+	48, // 35: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	9,  // 36: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.commits:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
+	19, // 37: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Image
+	7,  // 38: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Chart
+	36, // 39: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus
+	46, // 40: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.verified_in:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry
+	47, // 41: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.approved_for:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry
+	50, // 42: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.first_seen:type_name -> google.protobuf.Timestamp
+	9,  // 43: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.commits:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
+	19, // 44: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Image
+	7,  // 45: github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Chart
+	39, // 46: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.current_freight:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
+	39, // 47: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.history:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.SimpleFreight
+	12, // 48: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.health:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Health
+	24, // 49: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.current_promotion:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo
+	41, // 50: github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions.upstream_stages:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription
+	48, // 51: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	44, // 52: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec
+	45, // 53: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseStatus
+	31, // 54: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec.subscriptions:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription
+	37, // 55: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage
+	38, // 56: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage
+	57, // [57:57] is the sub-list for method output_type
+	57, // [57:57] is the sub-list for method input_type
+	57, // [57:57] is the sub-list for extension type_name
+	57, // [57:57] is the sub-list for extension extendee
+	0,  // [0:57] is the sub-list for field type_name
 }
 
 func init() { file_v1alpha1_types_proto_init() }
@@ -3549,7 +3635,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ArgoCDSourceUpdate); i {
+			switch v := v.(*ArgoCDKustomizeImageUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3561,7 +3647,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*KargoRenderPromotionMechanism); i {
+			switch v := v.(*ArgoCDSourceUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3573,7 +3659,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Chart); i {
+			switch v := v.(*KargoRenderPromotionMechanism); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3585,7 +3671,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ChartSubscription); i {
+			switch v := v.(*Chart); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3597,7 +3683,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GitCommit); i {
+			switch v := v.(*ChartSubscription); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3609,7 +3695,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GitRepoUpdate); i {
+			switch v := v.(*GitCommit); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3621,7 +3707,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GitSubscription); i {
+			switch v := v.(*GitRepoUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3633,7 +3719,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Health); i {
+			switch v := v.(*GitSubscription); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3645,7 +3731,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ArgoCDAppState); i {
+			switch v := v.(*Health); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3657,7 +3743,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ArgoCDAppHealthStatus); i {
+			switch v := v.(*ArgoCDAppState); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3669,7 +3755,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ArgoCDAppSyncStatus); i {
+			switch v := v.(*ArgoCDAppHealthStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3681,7 +3767,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HelmChartDependencyUpdate); i {
+			switch v := v.(*ArgoCDAppSyncStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3693,7 +3779,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HelmImageUpdate); i {
+			switch v := v.(*HelmChartDependencyUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3705,7 +3791,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HelmPromotionMechanism); i {
+			switch v := v.(*HelmImageUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3717,7 +3803,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Image); i {
+			switch v := v.(*HelmPromotionMechanism); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3729,7 +3815,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImageSubscription); i {
+			switch v := v.(*Image); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3741,7 +3827,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*KustomizeImageUpdate); i {
+			switch v := v.(*ImageSubscription); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3753,7 +3839,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*KustomizePromotionMechanism); i {
+			switch v := v.(*KustomizeImageUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3765,7 +3851,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Promotion); i {
+			switch v := v.(*KustomizePromotionMechanism); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3777,7 +3863,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromotionInfo); i {
+			switch v := v.(*Promotion); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3789,7 +3875,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromotionList); i {
+			switch v := v.(*PromotionInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3801,7 +3887,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromotionMechanisms); i {
+			switch v := v.(*PromotionList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3813,7 +3899,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromotionPolicy); i {
+			switch v := v.(*PromotionMechanisms); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3825,7 +3911,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromotionPolicyList); i {
+			switch v := v.(*PromotionPolicy); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3837,7 +3923,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromotionSpec); i {
+			switch v := v.(*PromotionPolicyList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3849,7 +3935,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromotionStatus); i {
+			switch v := v.(*PromotionSpec); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3861,7 +3947,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RepoSubscription); i {
+			switch v := v.(*PromotionStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3873,7 +3959,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Stage); i {
+			switch v := v.(*RepoSubscription); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3885,7 +3971,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StageList); i {
+			switch v := v.(*Stage); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3897,7 +3983,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StageSpec); i {
+			switch v := v.(*StageList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3909,7 +3995,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Freight); i {
+			switch v := v.(*StageSpec); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3921,7 +4007,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*FreightStatus); i {
+			switch v := v.(*Freight); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3933,7 +4019,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*VerifiedStage); i {
+			switch v := v.(*FreightStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3945,7 +4031,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ApprovedStage); i {
+			switch v := v.(*VerifiedStage); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3957,7 +4043,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SimpleFreight); i {
+			switch v := v.(*ApprovedStage); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3969,7 +4055,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StageStatus); i {
+			switch v := v.(*SimpleFreight); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3981,7 +4067,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StageSubscription); i {
+			switch v := v.(*StageStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3993,7 +4079,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Subscriptions); i {
+			switch v := v.(*StageSubscription); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4005,7 +4091,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Warehouse); i {
+			switch v := v.(*Subscriptions); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4017,7 +4103,7 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WarehouseSpec); i {
+			switch v := v.(*Warehouse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -4029,6 +4115,18 @@ func file_v1alpha1_types_proto_init() {
 			}
 		}
 		file_v1alpha1_types_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WarehouseSpec); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_v1alpha1_types_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WarehouseStatus); i {
 			case 0:
 				return &v.state
@@ -4042,23 +4140,23 @@ func file_v1alpha1_types_proto_init() {
 		}
 	}
 	file_v1alpha1_types_proto_msgTypes[0].OneofWrappers = []interface{}{}
-	file_v1alpha1_types_proto_msgTypes[4].OneofWrappers = []interface{}{}
-	file_v1alpha1_types_proto_msgTypes[7].OneofWrappers = []interface{}{}
+	file_v1alpha1_types_proto_msgTypes[5].OneofWrappers = []interface{}{}
 	file_v1alpha1_types_proto_msgTypes[8].OneofWrappers = []interface{}{}
 	file_v1alpha1_types_proto_msgTypes[9].OneofWrappers = []interface{}{}
-	file_v1alpha1_types_proto_msgTypes[19].OneofWrappers = []interface{}{}
-	file_v1alpha1_types_proto_msgTypes[22].OneofWrappers = []interface{}{}
-	file_v1alpha1_types_proto_msgTypes[24].OneofWrappers = []interface{}{}
-	file_v1alpha1_types_proto_msgTypes[30].OneofWrappers = []interface{}{}
-	file_v1alpha1_types_proto_msgTypes[38].OneofWrappers = []interface{}{}
+	file_v1alpha1_types_proto_msgTypes[10].OneofWrappers = []interface{}{}
+	file_v1alpha1_types_proto_msgTypes[20].OneofWrappers = []interface{}{}
+	file_v1alpha1_types_proto_msgTypes[23].OneofWrappers = []interface{}{}
+	file_v1alpha1_types_proto_msgTypes[25].OneofWrappers = []interface{}{}
+	file_v1alpha1_types_proto_msgTypes[31].OneofWrappers = []interface{}{}
 	file_v1alpha1_types_proto_msgTypes[39].OneofWrappers = []interface{}{}
+	file_v1alpha1_types_proto_msgTypes[40].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_v1alpha1_types_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   47,
+			NumMessages:   48,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -266,10 +266,22 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 		{
 			RepoURL: "fake-url",
 			Tag:     "fake-tag",
+			Digest:  "fake-digest",
 		},
 		{
-			RepoURL: "another-fake-url",
-			Tag:     "another-fake-tag",
+			RepoURL: "second-fake-url",
+			Tag:     "second-fake-tag",
+			Digest:  "second-fake-digest",
+		},
+		{
+			RepoURL: "third-fake-url",
+			Tag:     "third-fake-tag",
+			Digest:  "third-fake-digest",
+		},
+		{
+			RepoURL: "fourth-fake-url",
+			Tag:     "fourth-fake-tag",
+			Digest:  "fourth-fake-digest",
 		},
 	}
 	imageUpdates := []kargoapi.HelmImageUpdate{
@@ -277,19 +289,25 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 			ValuesFilePath: "fake-values.yaml",
 			Image:          "fake-url",
 			Key:            "fake-key",
-			Value:          "Image",
+			Value:          kargoapi.ImageUpdateValueTypeImageAndTag,
 		},
 		{
 			ValuesFilePath: "fake-values.yaml",
-			Image:          "another-fake-url",
-			Key:            "another-fake-key",
-			Value:          "Image",
+			Image:          "second-fake-url",
+			Key:            "second-fake-key",
+			Value:          kargoapi.ImageUpdateValueTypeTag,
 		},
 		{
 			ValuesFilePath: "another-fake-values.yaml",
-			Image:          "fake-url",
-			Key:            "fake-key",
-			Value:          "Tag",
+			Image:          "third-fake-url",
+			Key:            "third-fake-key",
+			Value:          kargoapi.ImageUpdateValueTypeImageAndDigest,
+		},
+		{
+			ValuesFilePath: "another-fake-values.yaml",
+			Image:          "fourth-fake-url",
+			Key:            "fourth-fake-key",
+			Value:          kargoapi.ImageUpdateValueTypeDigest,
 		},
 		{
 			ValuesFilePath: "yet-another-fake-values.yaml",
@@ -303,11 +321,12 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 		t,
 		map[string]map[string]string{
 			"fake-values.yaml": {
-				"fake-key":         "fake-url:fake-tag",
-				"another-fake-key": "another-fake-url:another-fake-tag",
+				"fake-key":        "fake-url:fake-tag",
+				"second-fake-key": "second-fake-tag",
 			},
 			"another-fake-values.yaml": {
-				"fake-key": "fake-tag",
+				"third-fake-key":  "third-fake-url@third-fake-digest",
+				"fourth-fake-key": "fourth-fake-digest",
 			},
 		},
 		result,
@@ -316,8 +335,9 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 		t,
 		[]string{
 			"updated fake-values.yaml to use image fake-url:fake-tag",
-			"updated fake-values.yaml to use image another-fake-url:another-fake-tag",
-			"updated another-fake-values.yaml to use image fake-url:fake-tag",
+			"updated fake-values.yaml to use image second-fake-url:second-fake-tag",
+			"updated another-fake-values.yaml to use image third-fake-url@third-fake-digest",
+			"updated another-fake-values.yaml to use image fourth-fake-url@fourth-fake-digest",
 		},
 		changeSummary,
 	)

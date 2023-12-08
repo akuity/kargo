@@ -209,6 +209,7 @@ func FromImageProto(i *v1alpha1.Image) *kargoapi.Image {
 	return &kargoapi.Image{
 		RepoURL: i.GetRepoUrl(),
 		Tag:     i.GetTag(),
+		Digest:  i.GetDigest(),
 	}
 }
 
@@ -389,8 +390,9 @@ func FromKustomizeImageUpdateProto(u *v1alpha1.KustomizeImageUpdate) *kargoapi.K
 		return nil
 	}
 	return &kargoapi.KustomizeImageUpdate{
-		Image: u.GetImage(),
-		Path:  u.GetPath(),
+		Image:     u.GetImage(),
+		Path:      u.GetPath(),
+		UseDigest: u.UseDigest,
 	}
 }
 
@@ -471,9 +473,13 @@ func FromArgoCDKustomizeProto(k *v1alpha1.ArgoCDKustomize) *kargoapi.ArgoCDKusto
 	if k == nil {
 		return nil
 	}
-	return &kargoapi.ArgoCDKustomize{
-		Images: k.GetImages(),
+	a := &kargoapi.ArgoCDKustomize{
+		Images: make([]kargoapi.ArgoCDKustomizeImageUpdate, len(k.GetImages())),
 	}
+	for i, image := range k.GetImages() {
+		a.Images[i] = *FromArgoCDKustomizeImageUpdateProto(image)
+	}
+	return a
 }
 
 func FromArgoCDHelm(h *v1alpha1.ArgoCDHelm) *kargoapi.ArgoCDHelm {
@@ -486,6 +492,16 @@ func FromArgoCDHelm(h *v1alpha1.ArgoCDHelm) *kargoapi.ArgoCDHelm {
 	}
 	return &kargoapi.ArgoCDHelm{
 		Images: images,
+	}
+}
+
+func FromArgoCDKustomizeImageUpdateProto(u *v1alpha1.ArgoCDKustomizeImageUpdate) *kargoapi.ArgoCDKustomizeImageUpdate {
+	if u == nil {
+		return nil
+	}
+	return &kargoapi.ArgoCDKustomizeImageUpdate{
+		Image:     u.GetImage(),
+		UseDigest: u.GetUseDigest(),
 	}
 }
 
@@ -745,8 +761,9 @@ func ToKustomizePromotionMechanismProto(
 
 func ToKustomizeImageUpdateProto(k kargoapi.KustomizeImageUpdate) *v1alpha1.KustomizeImageUpdate {
 	return &v1alpha1.KustomizeImageUpdate{
-		Image: k.Image,
-		Path:  k.Path,
+		Image:     k.Image,
+		Path:      k.Path,
+		UseDigest: k.UseDigest,
 	}
 }
 
@@ -813,9 +830,13 @@ func ToArgoCDSourceUpdateProto(a kargoapi.ArgoCDSourceUpdate) *v1alpha1.ArgoCDSo
 }
 
 func ToArgoCDKustomizeProto(a kargoapi.ArgoCDKustomize) *v1alpha1.ArgoCDKustomize {
-	return &v1alpha1.ArgoCDKustomize{
-		Images: a.Images,
+	k := &v1alpha1.ArgoCDKustomize{
+		Images: make([]*v1alpha1.ArgoCDKustomizeImageUpdate, len(a.Images)),
 	}
+	for i, image := range a.Images {
+		k.Images[i] = ToArgoCDKustomizeImageUpdateProto(image)
+	}
+	return k
 }
 
 func ToArgoCDHelmProto(a kargoapi.ArgoCDHelm) *v1alpha1.ArgoCDHelm {
@@ -825,6 +846,13 @@ func ToArgoCDHelmProto(a kargoapi.ArgoCDHelm) *v1alpha1.ArgoCDHelm {
 	}
 	return &v1alpha1.ArgoCDHelm{
 		Images: images,
+	}
+}
+
+func ToArgoCDKustomizeImageUpdateProto(a kargoapi.ArgoCDKustomizeImageUpdate) *v1alpha1.ArgoCDKustomizeImageUpdate {
+	return &v1alpha1.ArgoCDKustomizeImageUpdate{
+		Image:     a.Image,
+		UseDigest: a.UseDigest,
 	}
 }
 
@@ -940,6 +968,7 @@ func ToImageProto(i kargoapi.Image) *v1alpha1.Image {
 	return &v1alpha1.Image{
 		RepoUrl: i.RepoURL,
 		Tag:     i.Tag,
+		Digest:  i.Digest,
 	}
 }
 

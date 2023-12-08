@@ -41,7 +41,7 @@ func selectKustomizeUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepo
 // kustomizer is a helper struct whose sole purpose is to close over several
 // other functions that are used in the implementation of the apply() function.
 type kustomizer struct {
-	setImageFn func(dir, image, tag string) error
+	setImageFn func(dir, image, fqImageRef string) error
 }
 
 // apply uses Kustomize to carry out the provided update in the specified
@@ -54,33 +54,36 @@ func (k *kustomizer) apply(
 ) ([]string, error) {
 	changeSummary := make([]string, 0, len(update.Kustomize.Images))
 	for _, imgUpdate := range update.Kustomize.Images {
-		var tag string
+		var fqImageRef string // Fully-qualified image reference
 		for _, img := range newFreight.Images {
 			if img.RepoURL == imgUpdate.Image {
-				tag = img.Tag
+				if imgUpdate.UseDigest {
+					fqImageRef = fmt.Sprintf("%s@%s", img.RepoURL, img.Digest)
+				} else {
+					fqImageRef = fmt.Sprintf("%s:%s", img.RepoURL, img.Tag)
+				}
 				break
 			}
 		}
-		if tag == "" {
+		if fqImageRef == "" {
 			// TODO: Warn?
 			continue
 		}
 		dir := filepath.Join(workingDir, imgUpdate.Path)
-		if err := k.setImageFn(dir, imgUpdate.Image, tag); err != nil {
+		if err := k.setImageFn(dir, imgUpdate.Image, fqImageRef); err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error updating image %q to tag %q using Kustomize",
+				"error updating image %q to %q using Kustomize",
 				imgUpdate.Image,
-				tag,
+				fqImageRef,
 			)
 		}
 		changeSummary = append(
 			changeSummary,
 			fmt.Sprintf(
-				"updated %s/kustomization.yaml to use image %s:%s",
+				"updated %s/kustomization.yaml to use image %s",
 				imgUpdate.Path,
-				imgUpdate.Image,
-				tag,
+				fqImageRef,
 			),
 		)
 	}

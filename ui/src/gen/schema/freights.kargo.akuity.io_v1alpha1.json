@@ -71,6 +71,10 @@
       "items": {
         "description": "Image describes a specific version of a container image.",
         "properties": {
+          "digest": {
+            "description": "Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag.",
+            "type": "string"
+          },
           "gitRepoURL": {
             "description": "GitRepoURL specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field if Kargo was able to infer it.",
             "type": "string"

@@ -63,10 +63,12 @@
                                     "type": "string"
                                   },
                                   "value": {
-                                    "description": "Value specifies the new value for the specified key in the Argo CD Application's Helm parameters. Valid values are \"Image\", which replaces the value of the specified key with the entire <image name>:<tag>, or \"Tag\" which replaces the value of the specified with just the new tag. This is a required field.",
+                                    "description": "Value specifies the new value for the specified key in the Argo CD Application's Helm parameters. Valid values are: \n - ImageAndTag: Replaces the value of the specified key with <image name>:<tag> - Tag: Replaces the value of the specified key with just the new tag - ImageAndDigest: Replaces the value of the specified key with <image name>@<digest> - Digest: Replaces the value of the specified key with just the new digest. \n This is a required field.",
                                     "enum": [
-                                      "Image",
-                                      "Tag"
+                                      "ImageAndTag",
+                                      "Tag",
+                                      "ImageAndDigest",
+                                      "Digest"
                                     ],
                                     "type": "string"
                                   }
@@ -93,7 +95,22 @@
                             "images": {
                               "description": "Images describes how specific image versions can be incorporated into an Argo CD Application's Kustomize parameters.",
                               "items": {
-                                "type": "string"
+                                "description": "ArgoCDKustomizeImageUpdate describes how a specific image version can be incorporated into an Argo CD Application's Kustomize parameters.",
+                                "properties": {
+                                  "image": {
+                                    "description": "Image specifies a container image (without tag). This is a required field.",
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "useDigest": {
+                                    "description": "UseDigest specifies whether the image's digest should be used instead of its tag.",
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "image"
+                                ],
+                                "type": "object"
                               },
                               "minItems": 1,
                               "type": "array"
@@ -186,10 +203,12 @@
                               "type": "string"
                             },
                             "value": {
-                              "description": "Value specifies the new value for the specified key in the specified Helm values file. Valid values are \"Image\", which replaces the value of the specified key with the entire <image name>:<tag>, or \"Tag\" which replaces the value of the specified with just the new tag. This is a required field.",
+                              "description": "Value specifies the new value for the specified key in the specified Helm values file. Valid values are: \n - ImageAndTag: Replaces the value of the specified key with <image name>:<tag> - Tag: Replaces the value of the specified key with just the new tag - ImageAndDigest: Replaces the value of the specified key with <image name>@<digest> - Digest: Replaces the value of the specified key with just the new digest. \n This is a required field.",
                               "enum": [
-                                "Image",
-                                "Tag"
+                                "ImageAndTag",
+                                "Tag",
+                                "ImageAndDigest",
+                                "Digest"
                               ],
                               "type": "string"
                             },
@@ -231,6 +250,10 @@
                               "minLength": 1,
                               "pattern": "^[\\w-\\.]+(/[\\w-\\.]+)*$",
                               "type": "string"
+                            },
+                            "useDigest": {
+                              "description": "UseDigest specifies whether the image's digest should be used instead of its tag.",
+                              "type": "boolean"
                             }
                           },
                           "required": [
@@ -387,6 +410,10 @@
               "items": {
                 "description": "Image describes a specific version of a container image.",
                 "properties": {
+                  "digest": {
+                    "description": "Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag.",
+                    "type": "string"
+                  },
                   "gitRepoURL": {
                     "description": "GitRepoURL specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field if Kargo was able to infer it.",
                     "type": "string"
@@ -478,6 +505,10 @@
                   "items": {
                     "description": "Image describes a specific version of a container image.",
                     "properties": {
+                      "digest": {
+                        "description": "Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag.",
+                        "type": "string"
+                      },
                       "gitRepoURL": {
                         "description": "GitRepoURL specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field if Kargo was able to infer it.",
                         "type": "string"
@@ -658,6 +689,10 @@
                 "items": {
                   "description": "Image describes a specific version of a container image.",
                   "properties": {
+                    "digest": {
+                      "description": "Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag.",
+                      "type": "string"
+                    },
                     "gitRepoURL": {
                       "description": "GitRepoURL specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field if Kargo was able to infer it.",
                       "type": "string"
