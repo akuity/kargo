@@ -1,5 +1,5 @@
 // Logic adapted from:
-// https://github.com/distribution/distribution/blob/7b502560cad43970472964166dcb095b1f883ae4/reference/normalize.go
+// https://github.com/distribution/reference/blob/v0.5.0/normalize.go
 
 const protocol = 'https://';
 const dockerHub = 'hub.docker.com';
