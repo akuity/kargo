@@ -28,5 +28,9 @@ export const urlForImage = (image: string): string => {
   ) {
     return `${protocol}${dockerHub}/${userPath}/${image}`;
   }
+
+  if (parts[0] === 'public.ecr.aws') {
+    return `${protocol}gallery.ecr.aws/${parts.slice(1).join('/')}`;
+  }
   return `${protocol}${image}`;
 };

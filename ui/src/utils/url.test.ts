@@ -21,7 +21,10 @@ const testImages = {
 
   // DockerHub User
   'jitesoft/nginx': 'https://hub.docker.com/r/jitesoft/nginx',
-  'docker.io/jitesoft/nginx': 'https://hub.docker.com/r/jitesoft/nginx'
+  'docker.io/jitesoft/nginx': 'https://hub.docker.com/r/jitesoft/nginx',
+
+  // AWS
+  'public.ecr.aws/karpenter/controller': 'https://gallery.ecr.aws/karpenter/controller'
 } as { [key: string]: string };
 
 describe('urlForImage', () => {
