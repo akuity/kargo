@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -20,9 +21,11 @@ func TestNewReconciler(t *testing.T) {
 	e := newReconciler(
 		kubeClient,
 		kubeClient,
+		kubeClient,
+		"",
 	)
 	require.NotNil(t, e.kargoClient)
-	require.NotNil(t, e.argoClient)
+	require.NotNil(t, e.argocdClient)
 	// Assert that all overridable behaviors were initialized to a default:
 	// Loop guard:
 	require.NotNil(t, e.hasNonTerminalPromotionsFn)
@@ -31,6 +34,13 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.checkHealthFn)
 	require.NotNil(t, e.getArgoCDAppFn)
 	// Freight verification:
+	require.NotNil(t, e.startVerificationFn)
+	require.NotNil(t, e.getVerificationInfoFn)
+	require.NotNil(t, e.getAnalysisTemplateFn)
+	require.NotNil(t, e.listAnalysisRunsFn)
+	require.NotNil(t, e.buildAnalysisRunFn)
+	require.NotNil(t, e.createAnalysisRunFn)
+	require.NotNil(t, e.getAnalysisRunFn)
 	require.NotNil(t, e.getFreightFn)
 	require.NotNil(t, e.verifyFreightInStageFn)
 	require.NotNil(t, e.patchFreightStatusFn)
@@ -293,6 +303,87 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "error starting verification",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseVerifying,
+					CurrentFreight: &kargoapi.SimpleFreight{},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				startVerificationFn: func(
+					context.Context,
+					*kargoapi.Stage,
+				) (*kargoapi.VerificationInfo, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error starting verification process")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "error checking verification result",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseVerifying,
+					CurrentFreight: &kargoapi.SimpleFreight{
+						VerificationInfo: &kargoapi.VerificationInfo{},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.SimpleFreight,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				getVerificationInfoFn: func(ctx context.Context, s *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error getting verification result")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
 			},
@@ -743,10 +834,14 @@ func TestSyncNormalStage(t *testing.T) {
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:            kargoapi.StagePhaseVerifying,
 					CurrentPromotion: &kargoapi.PromotionInfo{},
-					CurrentFreight:   &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.SimpleFreight{
+						VerificationInfo: &kargoapi.VerificationInfo{},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -759,6 +854,18 @@ func TestSyncNormalStage(t *testing.T) {
 					return &kargoapi.Health{
 						Status: kargoapi.HealthStateHealthy,
 					}
+				},
+				getVerificationInfoFn: func(
+					context.Context,
+					*kargoapi.Stage,
+				) (*kargoapi.VerificationInfo, error) {
+					return &kargoapi.VerificationInfo{
+						AnalysisRun: kargoapi.AnalysisRunReference{
+							Name:      "fake-analysis-run",
+							Namespace: "fake-namespace",
+							Phase:     string(rollouts.AnalysisPhaseSuccessful),
+						},
+					}, nil
 				},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
@@ -803,8 +910,21 @@ func TestSyncNormalStage(t *testing.T) {
 			) {
 				require.NoError(t, err)
 				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
-				require.NotNil(t, newStatus.Health)                       // Set
-				require.Nil(t, newStatus.CurrentPromotion)                // Cleared
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				require.NotNil(t, newStatus.Health)        // Set
+				require.Nil(t, newStatus.CurrentPromotion) // Cleared
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						AnalysisRun: kargoapi.AnalysisRunReference{
+							Name:      "fake-analysis-run",
+							Namespace: "fake-namespace",
+							Phase:     string(rollouts.AnalysisPhaseSuccessful),
+						},
+					},
+					newStatus.CurrentFreight.VerificationInfo,
+				)
 			},
 		},
 	}

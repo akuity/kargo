@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/applications"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
+	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"
@@ -65,6 +66,12 @@ func newControllerCommand() *cobra.Command {
 							"scheme",
 					)
 				}
+				if err = rollouts.AddToScheme(scheme); err != nil {
+					return errors.Wrap(
+						err,
+						"error adding Argo Rollouts API to Kargo controller manager scheme",
+					)
+				}
 				if err = kargoapi.AddToScheme(scheme); err != nil {
 					return errors.Wrap(
 						err,
@@ -82,15 +89,14 @@ func newControllerCommand() *cobra.Command {
 				}
 			}
 
-			var appMgr manager.Manager
+			var argocdMgr manager.Manager
 			{
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,
-						"error loading REST config for Argo CD Application controller "+
-							"manager",
+						"error loading REST config for Argo CD controller manager",
 					)
 				}
 				restCfg.ContentType = runtime.ContentTypeJSON
@@ -99,15 +105,14 @@ func newControllerCommand() *cobra.Command {
 				if err = corev1.AddToScheme(scheme); err != nil {
 					return errors.Wrap(
 						err,
-						"error adding Kubernetes core API to Argo CD Application "+
-							"controller manager scheme",
+						"error adding Kubernetes core API to Argo CD controller "+
+							"manager scheme",
 					)
 				}
 				if err = argocd.AddToScheme(scheme); err != nil {
 					return errors.Wrap(
 						err,
-						"error adding Kargo API to Argo CD Application controller manager "+
-							"scheme",
+						"error adding Argo CD API to Argo CD controller manager scheme",
 					)
 				}
 
@@ -117,7 +122,7 @@ func newControllerCommand() *cobra.Command {
 				) {
 					watchNamespace = os.GetEnv("ARGOCD_NAMESPACE", "argocd")
 				}
-				if appMgr, err = ctrl.NewManager(
+				if argocdMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
 						Scheme:             scheme,
@@ -132,43 +137,96 @@ func newControllerCommand() *cobra.Command {
 				}
 			}
 
+			var rolloutsMgr manager.Manager
+			{
+				restCfg, err :=
+					kubernetes.GetRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
+				if err != nil {
+					return errors.Wrap(
+						err,
+						"error loading REST config for Argo Rollouts controller manager",
+					)
+				}
+				restCfg.ContentType = runtime.ContentTypeJSON
+
+				scheme := runtime.NewScheme()
+				if err = rollouts.AddToScheme(scheme); err != nil {
+					return errors.Wrap(
+						err,
+						"error adding Argo Rollouts API to Argo Rollouts controller "+
+							"manager scheme",
+					)
+				}
+
+				var watchNamespace string // Empty string means all namespaces
+				if shardName != "" {
+					// TODO: When NOT sharded, Kargo can simply create AnalysisRun
+					// resources in the project namespaces. When sharded, AnalysisRun
+					// resources must be created IN the shard clusters (not the Kargo
+					// control plane cluster) and project namespaces do not exist in the
+					// shard clusters. We need a place to put them, so for now we allow
+					// the user to specify a namespace that that exists on each shard for
+					// this purpose. Note that the namespace does not need to be the same
+					// on every shard. This may be one of the weaker points in our tenancy
+					// model and can stand to be improved.
+					watchNamespace = os.GetEnv(
+						"ARGO_ROLLOUTS_ANALYSIS_RUNS_NAMESPACE",
+						"kargo-analysis-runs",
+					)
+				}
+				if rolloutsMgr, err = ctrl.NewManager(
+					restCfg,
+					ctrl.Options{
+						Scheme:             scheme,
+						MetricsBindAddress: "0",
+						Namespace:          watchNamespace,
+					},
+				); err != nil {
+					return errors.Wrap(
+						err,
+						"error initializing Argo Rollouts AnalysisRun controller manager",
+					)
+				}
+			}
+
 			credentialsDbOpts := make([]credentials.KubernetesDatabaseOption, 0, 1)
 			if types.MustParseBool(
 				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
 			) {
-				credentialsDbOpts = append(credentialsDbOpts, credentials.WithArgoClient(appMgr.GetClient()))
+				credentialsDbOpts = append(credentialsDbOpts, credentials.WithArgoClient(argocdMgr.GetClient()))
 			}
 			credentialsDB := credentials.NewKubernetesDatabase(
 				kargoMgr.GetClient(),
 				credentialsDbOpts...,
 			)
 
-			if err := stages.SetupReconcilerWithManager(
+			if err := applications.SetupReconcilerWithManager(
 				ctx,
 				kargoMgr,
-				appMgr,
+				argocdMgr,
 				shardName,
 			); err != nil {
-				return errors.Wrap(err, "error setting up Stages reconciler")
+				return errors.Wrap(err, "error setting up Applications reconciler")
 			}
 
 			if err := promotions.SetupReconcilerWithManager(
 				ctx,
 				kargoMgr,
-				appMgr,
+				argocdMgr,
 				credentialsDB,
 				shardName,
 			); err != nil {
 				return errors.Wrap(err, "error setting up Promotions reconciler")
 			}
 
-			if err := applications.SetupReconcilerWithManager(
+			if err := stages.SetupReconcilerWithManager(
 				ctx,
 				kargoMgr,
-				appMgr,
+				argocdMgr,
+				rolloutsMgr,
 				shardName,
 			); err != nil {
-				return errors.Wrap(err, "error setting up Applications reconciler")
+				return errors.Wrap(err, "error setting up Stages reconciler")
 			}
 
 			if err := warehouses.SetupReconcilerWithManager(
@@ -194,7 +252,7 @@ func newControllerCommand() *cobra.Command {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := appMgr.Start(ctx); err != nil {
+				if err := argocdMgr.Start(ctx); err != nil {
 					errChan <- errors.Wrap(err, "error starting argo manager")
 				}
 			}()
