@@ -689,7 +689,14 @@ func TestExtractTagFromCollection(t *testing.T) {
 			name: "with platform constraint -- no refs matched",
 			collection: &manifestlist.DeserializedManifestList{
 				ManifestList: manifestlist.ManifestList{
-					Manifests: []manifestlist.ManifestDescriptor{{}},
+					Manifests: []manifestlist.ManifestDescriptor{
+						{
+							Platform: manifestlist.PlatformSpec{
+								OS:           "linux",
+								Architecture: "arm64",
+							},
+						},
+					},
 				},
 			},
 			platform: &platformConstraint{
@@ -845,7 +852,14 @@ func TestExtractTagFromCollection(t *testing.T) {
 			name: "without platform constraint -- error getting tag by digest",
 			collection: &manifestlist.DeserializedManifestList{
 				ManifestList: manifestlist.ManifestList{
-					Manifests: []manifestlist.ManifestDescriptor{{}},
+					Manifests: []manifestlist.ManifestDescriptor{
+						{
+							Platform: manifestlist.PlatformSpec{
+								OS:           "linux",
+								Architecture: "amd64",
+							},
+						},
+					},
 				},
 			},
 			client: &repositoryClient{
@@ -870,7 +884,14 @@ func TestExtractTagFromCollection(t *testing.T) {
 			name: "without platform constraint -- no tag found",
 			collection: &manifestlist.DeserializedManifestList{
 				ManifestList: manifestlist.ManifestList{
-					Manifests: []manifestlist.ManifestDescriptor{{}},
+					Manifests: []manifestlist.ManifestDescriptor{
+						{
+							Platform: manifestlist.PlatformSpec{
+								OS:           "linux",
+								Architecture: "amd64",
+							},
+						},
+					},
 				},
 			},
 			client: &repositoryClient{
@@ -891,7 +912,14 @@ func TestExtractTagFromCollection(t *testing.T) {
 			name: "without platform constraint -- success",
 			collection: &manifestlist.DeserializedManifestList{
 				ManifestList: manifestlist.ManifestList{
-					Manifests: []manifestlist.ManifestDescriptor{{}},
+					Manifests: []manifestlist.ManifestDescriptor{
+						{
+							Platform: manifestlist.PlatformSpec{
+								OS:           "linux",
+								Architecture: "amd64",
+							},
+						},
+					},
 				},
 			},
 			client: &repositoryClient{
