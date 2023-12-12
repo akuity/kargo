@@ -21,6 +21,9 @@ spec:
     - jsonPath: .status.health.status
       name: Health
       type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -433,6 +436,59 @@ spec:
                       field is mutually exclusive with the UpstreamStages field.
                     type: string
                 type: object
+              verification:
+                description: Verification describes how to verify a Stage's current
+                  Freight is fit for promotion downstream.
+                properties:
+                  analysisRunMetadata:
+                    description: AnalysisRunMetadata is contains optional metadata
+                      that should be applied to all AnalysisRuns.
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Additional annotations to apply to an AnalysisRun.
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Additional labels to apply to an AnalysisRun.
+                        type: object
+                    type: object
+                  analysisTemplates:
+                    description: AnalysisTemplates is a list of AnalysisTemplates
+                      from which AnalysisRuns should be created to verify a Stage's
+                      current Freight is fit to be promoted downstream.
+                    items:
+                      description: AnalysisTemplateReference is a reference to an
+                        AnalysisTemplate.
+                      properties:
+                        name:
+                          description: Name is the name of the AnalysisTemplate in
+                            the same project/namespace as the Stage.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  args:
+                    description: Args lists arguments that should be added to all
+                      AnalysisRuns.
+                    items:
+                      description: AnalysisRunArgument represents an argument to be
+                        added to an AnalysisRun.
+                      properties:
+                        name:
+                          description: Name is the name of the argument.
+                          type: string
+                        value:
+                          description: Value is the value of the argument.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                type: object
             required:
             - subscriptions
             type: object
@@ -532,6 +588,31 @@ spec:
                           type: string
                       type: object
                     type: array
+                  verificationResult:
+                    description: VerificationInfo is information about any verification
+                      process that was associated with this Freight for this Stage.
+                    properties:
+                      analysisRun:
+                        description: AnalysisRunReference is a reference to an AnalysisRun.
+                        properties:
+                          name:
+                            description: Name is the name of the AnalysisRun.
+                            type: string
+                          namespace:
+                            description: Namespace is the namespace of the AnalysisRun.
+                            type: string
+                          phase:
+                            description: Phase is the last observed phase of the AnalysisRun
+                              referenced by Name.
+                            type: string
+                        required:
+                        - name
+                        - namespace
+                        - phase
+                        type: object
+                    required:
+                    - analysisRun
+                    type: object
                 type: object
               currentPromotion:
                 description: CurrentPromotion is a reference to the currently Running
@@ -629,6 +710,32 @@ spec:
                               type: string
                           type: object
                         type: array
+                      verificationResult:
+                        description: VerificationInfo is information about any verification
+                          process that was associated with this Freight for this Stage.
+                        properties:
+                          analysisRun:
+                            description: AnalysisRunReference is a reference to an
+                              AnalysisRun.
+                            properties:
+                              name:
+                                description: Name is the name of the AnalysisRun.
+                                type: string
+                              namespace:
+                                description: Namespace is the namespace of the AnalysisRun.
+                                type: string
+                              phase:
+                                description: Phase is the last observed phase of the
+                                  AnalysisRun referenced by Name.
+                                type: string
+                            required:
+                            - name
+                            - namespace
+                            - phase
+                            type: object
+                        required:
+                        - analysisRun
+                        type: object
                     type: object
                   name:
                     description: Name is the name of the Promotion
@@ -794,6 +901,31 @@ spec:
                             type: string
                         type: object
                       type: array
+                    verificationResult:
+                      description: VerificationInfo is information about any verification
+                        process that was associated with this Freight for this Stage.
+                      properties:
+                        analysisRun:
+                          description: AnalysisRunReference is a reference to an AnalysisRun.
+                          properties:
+                            name:
+                              description: Name is the name of the AnalysisRun.
+                              type: string
+                            namespace:
+                              description: Namespace is the namespace of the AnalysisRun.
+                              type: string
+                            phase:
+                              description: Phase is the last observed phase of the
+                                AnalysisRun referenced by Name.
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          - phase
+                          type: object
+                      required:
+                      - analysisRun
+                      type: object
                   type: object
                 type: array
               observedGeneration:
@@ -801,6 +933,9 @@ spec:
                   that this Stage status was reconciled against.
                 format: int64
                 type: integer
+              phase:
+                description: Phase describes where the Stage currently is in its lifecycle.
+                type: string
             type: object
         required:
         - spec

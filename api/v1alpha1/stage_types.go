@@ -452,8 +452,6 @@ type StageStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// CurrentPromotion is a reference to the currently Running promotion.
 	CurrentPromotion *PromotionInfo `json:"currentPromotion,omitempty"`
-	// CurrentVerification is a reference to the currently Running verification.
-	CurrentVerification *VerificationInfo `json:"currentVerification,omitempty"`
 }
 
 // SimpleFreight is a simplified representation of a piece of Freight -- not a

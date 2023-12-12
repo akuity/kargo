@@ -137,10 +137,11 @@ func FromSimpleFreightProto(s *v1alpha1.SimpleFreight) *kargoapi.SimpleFreight {
 		charts[idx] = *FromChartProto(chart)
 	}
 	return &kargoapi.SimpleFreight{
-		ID:      s.GetId(),
-		Commits: commits,
-		Images:  images,
-		Charts:  charts,
+		ID:               s.GetId(),
+		Commits:          commits,
+		Images:           images,
+		Charts:           charts,
+		VerificationInfo: FromVerificationInfo(s.VerificationInfo),
 	}
 }
 
