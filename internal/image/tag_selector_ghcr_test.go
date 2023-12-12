@@ -27,11 +27,12 @@ func TestSelectTagGHCR(t *testing.T) {
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	t.Run("digest strategy", func(t *testing.T) {
+		const constraint = "v0.1.0"
 		s, err := NewTagSelector(
 			kargoRepo,
 			TagSelectionStrategyDigest,
 			&TagSelectorOptions{
-				Constraint: "v0.1.0",
+				Constraint: constraint,
 			},
 		)
 		require.NoError(t, err)
@@ -40,17 +41,18 @@ func TestSelectTagGHCR(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NotNil(t, tag)
-		require.Equal(t, "v0.1.0", tag.Name)
+		require.Equal(t, constraint, tag.Name)
 		require.NotEmpty(t, tag.Digest)
 		require.NotNil(t, tag.CreatedAt)
 	})
 
 	t.Run("digest strategy with platform constraint", func(t *testing.T) {
+		const constraint = "v0.1.0"
 		s, err := NewTagSelector(
 			kargoRepo,
 			TagSelectionStrategyDigest,
 			&TagSelectorOptions{
-				Constraint: "v0.1.0",
+				Constraint: constraint,
 				Platform:   platform,
 			},
 		)
@@ -60,7 +62,7 @@ func TestSelectTagGHCR(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NotNil(t, tag)
-		require.Equal(t, "v0.1.0", tag.Name)
+		require.Equal(t, constraint, tag.Name)
 		require.NotEmpty(t, tag.Digest)
 		require.NotNil(t, tag.CreatedAt)
 	})
@@ -69,7 +71,7 @@ func TestSelectTagGHCR(t *testing.T) {
 		s, err := NewTagSelector(
 			kargoRepo,
 			TagSelectionStrategyLexical,
-			&TagSelectorOptions{},
+			nil,
 		)
 		require.NoError(t, err)
 
@@ -77,8 +79,8 @@ func TestSelectTagGHCR(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NotNil(t, tag)
-		require.Empty(t, tag.Digest)
-		require.Nil(t, tag.CreatedAt)
+		require.NotEmpty(t, tag.Digest)
+		require.NotNil(t, tag.CreatedAt)
 	})
 
 	t.Run("lexical strategy with platform constraint", func(t *testing.T) {
@@ -113,7 +115,7 @@ func TestSelectTagGHCR(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NotNil(t, tag)
-		require.Contains(t, tag.Name, "v0.1.0-rc.2")
+		require.Equal(t, "v0.1.0-rc.24", tag.Name)
 		require.NotEmpty(t, tag.Digest)
 		require.NotNil(t, tag.CreatedAt)
 	})
@@ -133,7 +135,7 @@ func TestSelectTagGHCR(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NotNil(t, tag)
-		require.Contains(t, tag.Name, "v0.1.0-rc.2")
+		require.Equal(t, "v0.1.0-rc.24", tag.Name)
 		require.NotEmpty(t, tag.Digest)
 		require.NotNil(t, tag.CreatedAt)
 	})
@@ -155,8 +157,8 @@ func TestSelectTagGHCR(t *testing.T) {
 		min := semver.MustParse("0.1.0")
 		require.True(t, semVer.GreaterThan(min) || semVer.Equal(min))
 		require.True(t, semVer.LessThan(semver.MustParse("1.0.0")))
-		require.Empty(t, tag.Digest)
-		require.Nil(t, tag.CreatedAt)
+		require.NotEmpty(t, tag.Digest)
+		require.NotNil(t, tag.CreatedAt)
 	})
 
 	t.Run("semver strategy with platform constraint", func(t *testing.T) {
@@ -178,6 +180,29 @@ func TestSelectTagGHCR(t *testing.T) {
 		min := semver.MustParse("0.1.0")
 		require.True(t, semVer.GreaterThan(min) || semVer.Equal(min))
 		require.True(t, semVer.LessThan(semver.MustParse("1.0.0")))
+		require.NotEmpty(t, tag.Digest)
+		require.NotNil(t, tag.CreatedAt)
+	})
+
+	t.Run("tolerance for non-image references", func(t *testing.T) {
+		// Image lists or indices may contain non-image references. These could be
+		// to things like attestations. This test verifies that we ignore such
+		// references to avoid parsing errors.
+		const tagName = "unknown"
+		s, err := NewTagSelector(
+			"ghcr.io/akuity/kargo-test",
+			TagSelectionStrategyDigest,
+			&TagSelectorOptions{
+				Constraint: tagName,
+			},
+		)
+		require.NoError(t, err)
+
+		tag, err := s.SelectTag(ctx)
+		require.NoError(t, err)
+
+		require.NotNil(t, tag)
+		require.Equal(t, tagName, tag.Name)
 		require.NotEmpty(t, tag.Digest)
 		require.NotNil(t, tag.CreatedAt)
 	})

@@ -578,7 +578,18 @@ func (r *repositoryClient) extractTagFromCollection(
 		digest,
 	)
 
-	refs := collection.References()
+	refs := make([]distribution.Descriptor, 0, len(collection.References()))
+	for _, ref := range collection.References() {
+		if ref.Platform == nil ||
+			ref.Platform.OS == "unknown" || ref.Platform.OS == "" ||
+			ref.Platform.Architecture == "unknown" || ref.Platform.Architecture == "" {
+			// This reference doesn't look like a reference to an image. It might
+			// be an attestation or something else. Skip it.
+			continue
+		}
+		refs = append(refs, ref)
+	}
+
 	if len(refs) == 0 {
 		return nil, errors.Errorf(
 			"empty V2 manifest list or OCI index %s is not supported",
