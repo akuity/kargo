@@ -2,6 +2,36 @@ trigger_mode(TRIGGER_MODE_MANUAL)
 allow_k8s_contexts('orbstack')
 
 load('ext://namespace', 'namespace_create')
+
+local_resource(
+  'back-end-compile',
+  'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/controlplane/kargo ./cmd/controlplane',
+  deps=[
+    'api/',
+    'cmd/',
+    'internal/',
+    'pkg/',
+    'go.mod',
+    'go.sum'
+  ],
+  labels = ['native-processes'],
+  trigger_mode = TRIGGER_MODE_AUTO
+)
+docker_build(
+  'ghcr.io/akuity/kargo',
+  '.',
+  only = ['bin/controlplane/kargo'],
+  target = 'back-end-dev', # Just the back end, built natively, copied to the image
+)
+
+docker_build(
+  'kargo-ui',
+  '.',
+  only = ['ui/'],
+  target = 'ui-dev', # Just the font end, served by vite, live updated
+  live_update = [sync('ui', '/ui')]
+)
+
 namespace_create('kargo')
 k8s_resource(
   new_name = 'namespace',
@@ -9,24 +39,17 @@ k8s_resource(
   labels = ['kargo']
 )
 
-docker_build(
-  'ghcr.io/akuity/kargo',
-  '.',
-  only = [
-    'api/',
-    'cmd/',
-    'internal/',
-    'pkg/',
-    'ui',
-    'go.mod',
-    'go.sum'
-  ],
-  ignore = ['**/*_test.go'],
-  build_args = {
-    'GIT_COMMIT': local('git rev-parse HEAD'),
-    'GIT_TREE_STATE': local('if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi')
-  }
+k8s_yaml(
+  helm(
+    './charts/kargo',
+    name = 'kargo',
+    namespace = 'kargo',
+    values = 'hack/tilt/values.dev.yaml'
+  )
 )
+# Normally the API server serves up the front end, but we want live updates
+# of the UI, so we're breaking it out into its own separate deployment here.
+k8s_yaml('hack/tilt/ui.yaml')
 
 k8s_resource(
   new_name = 'common',
@@ -53,7 +76,7 @@ k8s_resource(
     'kargo-api:secret',
     'kargo-api:serviceaccount'
   ],
-  resource_deps=['dex-server']
+  resource_deps=['back-end-compile','dex-server']
 )
 
 k8s_resource(
@@ -69,7 +92,8 @@ k8s_resource(
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
     'kargo-controller-argocd:clusterrolebinding'
-  ]
+  ],
+  resource_deps=['back-end-compile']
 )
 
 k8s_resource(
@@ -92,7 +116,18 @@ k8s_resource(
     'kargo-garbage-collector:clusterrolebinding',
     'kargo-garbage-collector:configmap',
     'kargo-garbage-collector:serviceaccount'
-  ]
+  ],
+  resource_deps=['back-end-compile']
+)
+
+k8s_resource(
+  workload = 'kargo-ui',
+  new_name = 'ui',
+  port_forwards = [
+    '30082:3333'
+  ],
+  labels = ['kargo'],
+  trigger_mode = TRIGGER_MODE_AUTO
 )
 
 k8s_resource(
@@ -109,7 +144,8 @@ k8s_resource(
     'kargo-webhooks-server:serviceaccount',
     'kargo-webhooks-server-ns-controller:clusterrole',
     'kargo-webhooks-server-ns-controller:clusterrolebinding'
-  ]
+  ],
+  resource_deps=['back-end-compile']
 )
 
 k8s_resource(
@@ -122,13 +158,4 @@ k8s_resource(
     'warehouses.kargo.akuity.io:customresourcedefinition'
   ],
   labels = ['kargo']
-)
-
-k8s_yaml(
-  helm(
-    './charts/kargo',
-    name = 'kargo',
-    namespace = 'kargo',
-    values = 'hack/tilt/values.dev.yaml'
-  )
 )
