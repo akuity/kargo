@@ -1,7 +1,7 @@
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.21.4-bookworm as back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.21.5-bookworm as back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
