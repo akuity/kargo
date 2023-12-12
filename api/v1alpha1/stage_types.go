@@ -172,7 +172,29 @@ type GitRepoUpdate struct {
 
 // KargoRenderPromotionMechanism describes how to use Kargo Render to
 // incorporate Freight into a Stage.
-type KargoRenderPromotionMechanism struct{}
+type KargoRenderPromotionMechanism struct {
+	// Images describes how images can be incorporated into a Stage using Kargo
+	// Render. If this field is omitted, all images in the Freight being promoted
+	// will be passed to Kargo Render in the form <image name>:<tag>. (e.g. Will
+	// not use digests by default.)
+	//
+	//+kubebuilder:validation:Optional
+	Images []KargoRenderImageUpdate `json:"images"`
+}
+
+// KargoRenderImageUpdate describes how an image can be incorporated into a
+// Stage using Kargo Render.
+type KargoRenderImageUpdate struct {
+	// Image specifies a container image (without tag). This is a required field.
+	//
+	//+kubebuilder:validation:MinLength=1
+	Image string `json:"image"`
+	// UseDigest specifies whether the image's digest should be used instead of
+	// its tag.
+	//
+	//+kubebuilder:validation:Optional
+	UseDigest bool `json:"useDigest"`
+}
 
 // KustomizePromotionMechanism describes how to use Kustomize to incorporate
 // Freight into a Stage.

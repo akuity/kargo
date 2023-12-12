@@ -63,9 +63,7 @@ func TestKargoRenderPromote(t *testing.T) {
 					_ string,
 					_ kargoapi.GitRepoUpdate,
 					newFreight kargoapi.SimpleFreight,
-					images []string,
 				) (kargoapi.SimpleFreight, error) {
-					require.Equal(t, []string{"fake-url:fake-tag"}, images)
 					return newFreight, errors.New("something went wrong")
 				},
 			},
@@ -106,9 +104,7 @@ func TestKargoRenderPromote(t *testing.T) {
 					_ string,
 					_ kargoapi.GitRepoUpdate,
 					newFreight kargoapi.SimpleFreight,
-					images []string,
 				) (kargoapi.SimpleFreight, error) {
-					require.Equal(t, []string{"fake-url:fake-tag"}, images)
 					return newFreight, nil
 				},
 			},
@@ -157,6 +153,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 	const testRef = "fake-ref"
 	testCases := []struct {
 		name       string
+		freight    kargoapi.SimpleFreight
 		promoMech  *kargoRenderMechanism
 		update     kargoapi.GitRepoUpdate
 		assertions func(
@@ -222,6 +219,10 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 		},
 		{
 			name: "error rendering manifests",
+			update: kargoapi.GitRepoUpdate{
+				RepoURL: "fake-url",
+				Render:  &kargoapi.KargoRenderPromotionMechanism{},
+			},
 			promoMech: &kargoRenderMechanism{
 				getReadRefFn: func(
 					kargoapi.GitRepoUpdate,
@@ -260,7 +261,28 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- no action",
+			name: "success -- all images -- no action",
+			freight: kargoapi.SimpleFreight{
+				Commits: []kargoapi.GitCommit{{}},
+				Images: []kargoapi.Image{
+					{
+						RepoURL: "fake-url",
+						Tag:     "fake-tag",
+					},
+					{
+						RepoURL: "second-fake-url",
+						Tag:     "second-fake-tag",
+					},
+					{
+						RepoURL: "third-fake-url",
+						Tag:     "third-fake-tag",
+					},
+				},
+			},
+			update: kargoapi.GitRepoUpdate{
+				RepoURL: "fake-url",
+				Render:  &kargoapi.KargoRenderPromotionMechanism{},
+			},
 			promoMech: &kargoRenderMechanism{
 				getReadRefFn: func(
 					kargoapi.GitRepoUpdate,
@@ -279,7 +301,16 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 						Password: "fake-personal-access-token",
 					}, true, nil
 				},
-				renderManifestsFn: func(render.Request) (render.Response, error) {
+				renderManifestsFn: func(req render.Request) (render.Response, error) {
+					require.Equal(
+						t,
+						[]string{
+							"fake-url:fake-tag",
+							"second-fake-url:second-fake-tag",
+							"third-fake-url:third-fake-tag",
+						},
+						req.Images,
+					)
 					return render.Response{
 						ActionTaken: render.ActionTakenNone,
 						CommitID:    "fake-commit-id",
@@ -303,7 +334,41 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- commit",
+			name: "success -- some images -- commit",
+			freight: kargoapi.SimpleFreight{
+				Commits: []kargoapi.GitCommit{{}},
+				Images: []kargoapi.Image{
+					{
+						RepoURL: "fake-url",
+						Tag:     "fake-tag",
+						Digest:  "fake-digest",
+					},
+					{
+						RepoURL: "second-fake-url",
+						Tag:     "second-fake-tag",
+						Digest:  "second-fake-digest",
+					},
+					{
+						RepoURL: "third-fake-url",
+						Tag:     "third-fake-tag",
+						Digest:  "third-fake-digest",
+					},
+				},
+			},
+			update: kargoapi.GitRepoUpdate{
+				RepoURL: "fake-url",
+				Render: &kargoapi.KargoRenderPromotionMechanism{
+					Images: []kargoapi.KargoRenderImageUpdate{
+						{
+							Image: "fake-url",
+						},
+						{
+							Image:     "second-fake-url",
+							UseDigest: true,
+						},
+					},
+				},
+			},
 			promoMech: &kargoRenderMechanism{
 				getReadRefFn: func(
 					kargoapi.GitRepoUpdate,
@@ -322,7 +387,15 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 						Password: "fake-personal-access-token",
 					}, true, nil
 				},
-				renderManifestsFn: func(render.Request) (render.Response, error) {
+				renderManifestsFn: func(req render.Request) (render.Response, error) {
+					require.Equal(
+						t,
+						[]string{
+							"fake-url:fake-tag",
+							"second-fake-url@second-fake-digest",
+						},
+						req.Images,
+					)
 					return render.Response{
 						ActionTaken: render.ActionTakenPushedDirectly,
 						CommitID:    "fake-commit-id",
@@ -348,17 +421,13 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightIn := kargoapi.SimpleFreight{
-				Commits: []kargoapi.GitCommit{{}},
-			}
-			newFreightOut, err := testCase.promoMech.doSingleUpdate(
+			res, err := testCase.promoMech.doSingleUpdate(
 				context.Background(),
 				"fake-namespace",
 				testCase.update,
-				newFreightIn,
-				nil, // Images
+				testCase.freight,
 			)
-			testCase.assertions(newFreightIn, newFreightOut, err)
+			testCase.assertions(testCase.freight, res, err)
 		})
 	}
 }
