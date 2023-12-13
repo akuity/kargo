@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,10 +33,10 @@ func (s *server) DeleteWarehouse(
 			return nil, connect.NewError(connect.CodeNotFound,
 				fmt.Errorf("warehouse %q not found", key.String()))
 		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get warehouse"))
 	}
 	if err := s.client.Delete(ctx, &warehouse); err != nil && !kubeerr.IsNotFound(err) {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "delete warehouse"))
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteWarehouseResponse{}), nil
 }

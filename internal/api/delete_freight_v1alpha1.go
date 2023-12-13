@@ -34,7 +34,7 @@ func (s *server) DeleteFreight(
 				errors.Errorf("freight %q not found", req.Msg.GetName()),
 			)
 		}
-		return nil, errors.Wrap(err, "delete freight")
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "delete freight"))
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteFreightResponse{}), nil
 }

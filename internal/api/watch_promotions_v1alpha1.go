@@ -36,13 +36,13 @@ func (s *server) WatchPromotions(
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			return connect.NewError(connect.CodeInternal, err)
+			return connect.NewError(getCodeFromError(err), errors.Wrap(err, "get stage"))
 		}
 	}
 
 	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, req.Msg.GetProject(), metav1.ListOptions{})
 	if err != nil {
-		return errors.Wrap(err, "watch promotion")
+		return connect.NewError(getCodeFromError(err), errors.Wrap(err, "watch promotion"))
 	}
 	defer w.Stop()
 	for {
@@ -55,11 +55,11 @@ func (s *server) WatchPromotions(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return errors.Errorf("unexpected object type %T", e.Object)
+				return connect.NewError(connect.CodeInternal, errors.Errorf("unexpected object type %T", e.Object))
 			}
 			var promotion *kargoapi.Promotion
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &promotion); err != nil {
-				return errors.Wrap(err, "from unstructured")
+				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "from unstructured"))
 			}
 			// FIXME: Current (dynamic) client doesn't support filtering with indexed field by indexer,
 			// so manually filter stage here.
@@ -70,7 +70,7 @@ func (s *server) WatchPromotions(
 				Promotion: typesv1alpha1.ToPromotionProto(*promotion),
 				Type:      string(e.Type),
 			}); err != nil {
-				return errors.Wrap(err, "send response")
+				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "send response"))
 			}
 		}
 	}

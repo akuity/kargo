@@ -29,14 +29,14 @@ func (s *server) DeleteProject(
 			return nil, connect.NewError(connect.CodeNotFound,
 				errors.Errorf("project %q not found", name))
 		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get namespace"))
 	}
 	if ns.GetLabels()[kargoapi.LabelProjectKey] != kargoapi.LabelTrueValue {
 		return nil, connect.NewError(connect.CodeFailedPrecondition,
 			errors.Errorf("namespace %q is not a project", ns.GetName()))
 	}
 	if err := s.client.Delete(ctx, &ns); err != nil && !kubeerr.IsNotFound(err) {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "delete namespace"))
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteProjectResponse{
 		/* explicitly empty */

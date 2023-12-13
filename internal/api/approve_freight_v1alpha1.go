@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -37,7 +38,7 @@ func (s *server) ApproveFreight(
 			return nil, connect.NewError(connect.CodeNotFound,
 				fmt.Errorf("freight %q not found", freightKey.String()))
 		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get freight"))
 	}
 
 	var stage kargoapi.Stage
@@ -50,7 +51,7 @@ func (s *server) ApproveFreight(
 			return nil, connect.NewError(connect.CodeNotFound,
 				fmt.Errorf("stage %q not found", key.String()))
 		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get stage"))
 	}
 
 	newStatus := *freight.Status.DeepCopy()
@@ -72,7 +73,7 @@ func (s *server) ApproveFreight(
 			*status = newStatus
 		},
 	); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "patch status"))
 	}
 
 	return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil

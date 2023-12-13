@@ -39,7 +39,7 @@ func (s *server) WatchPromotion(
 		if kubeerr.IsNotFound(err) {
 			return connect.NewError(connect.CodeNotFound, err)
 		}
-		return connect.NewError(connect.CodeInternal, err)
+		return connect.NewError(getCodeFromError(err), errors.Wrap(err, "get promotion"))
 	}
 
 	opts := metav1.ListOptions{
@@ -47,7 +47,7 @@ func (s *server) WatchPromotion(
 	}
 	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, req.Msg.GetProject(), opts)
 	if err != nil {
-		return errors.Wrap(err, "watch promotion")
+		return connect.NewError(getCodeFromError(err), errors.Wrap(err, "watch promotion"))
 	}
 	defer w.Stop()
 	for {
@@ -60,17 +60,17 @@ func (s *server) WatchPromotion(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return errors.Errorf("unexpected object type %T", e.Object)
+				return connect.NewError(connect.CodeInternal, errors.Errorf("unexpected object type %T", e.Object))
 			}
 			var promotion *kargoapi.Promotion
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &promotion); err != nil {
-				return errors.Wrap(err, "from unstructured")
+				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "from unstructured"))
 			}
 			if err := stream.Send(&svcv1alpha1.WatchPromotionResponse{
 				Promotion: typesv1alpha1.ToPromotionProto(*promotion),
 				Type:      string(e.Type),
 			}); err != nil {
-				return errors.Wrap(err, "send response")
+				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "send response"))
 			}
 		}
 	}

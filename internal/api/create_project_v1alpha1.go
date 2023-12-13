@@ -28,8 +28,7 @@ func (s *server) CreateProject(
 	var existingNs corev1.Namespace
 	if err := s.client.Get(ctx, client.ObjectKey{Name: name}, &existingNs); err == nil || !kubeerr.IsNotFound(err) {
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal,
-				errors.Wrap(err, "get existing namespace"))
+			return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get namespace"))
 		}
 		if existingNs.GetLabels()[kargoapi.LabelProjectKey] == kargoapi.LabelTrueValue {
 			return nil, connect.NewError(connect.CodeAlreadyExists,
@@ -48,7 +47,7 @@ func (s *server) CreateProject(
 		},
 	}
 	if err := s.client.Create(ctx, &ns); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "create namespace"))
 	}
 	return connect.NewResponse(&svcv1alpha1.CreateProjectResponse{
 		Project: &svcv1alpha1.Project{

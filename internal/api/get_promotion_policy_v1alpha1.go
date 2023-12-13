@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
+	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,7 +33,7 @@ func (s *server) GetPromotionPolicy(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get promotion policy"))
 	}
 	return connect.NewResponse(&svcv1alpha1.GetPromotionPolicyResponse{
 		PromotionPolicy: typesv1alpha1.ToPromotionPolicyProto(policy),

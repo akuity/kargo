@@ -40,7 +40,7 @@ func (s *server) PromoteSubscribers(
 		},
 	)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get stage"))
 	}
 	if stage == nil {
 		return nil, connect.NewError(
@@ -71,7 +71,7 @@ func (s *server) PromoteSubscribers(
 		},
 	)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get freight"))
 	}
 	if freight == nil {
 		return nil, connect.NewError(
@@ -100,10 +100,10 @@ func (s *server) PromoteSubscribers(
 
 	subscribers, err := s.findStageSubscribersFn(ctx, stage)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "find stage subscribers"))
 	}
 	if len(subscribers) == 0 {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("Stage %q has no subscribers", req.Msg.GetStage()))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q has no subscribers", req.Msg.GetStage()))
 	}
 
 	promoteErrs := make([]error, 0, len(subscribers))

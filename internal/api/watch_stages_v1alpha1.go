@@ -37,7 +37,7 @@ func (s *server) WatchStages(
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			return connect.NewError(connect.CodeInternal, err)
+			return connect.NewError(getCodeFromError(err), errors.Wrap(err, "get stage"))
 		}
 	}
 
@@ -48,7 +48,7 @@ func (s *server) WatchStages(
 	w, err :=
 		s.client.Watch(ctx, &kargoapi.Stage{}, req.Msg.GetProject(), opts)
 	if err != nil {
-		return errors.Wrap(err, "watch stage")
+		return connect.NewError(getCodeFromError(err), errors.Wrap(err, "watch stage"))
 	}
 	defer w.Stop()
 	for {
@@ -61,17 +61,17 @@ func (s *server) WatchStages(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return errors.Errorf("unexpected object type %T", e.Object)
+				return connect.NewError(connect.CodeInternal, errors.Errorf("unexpected object type %T", e.Object))
 			}
 			var stage *kargoapi.Stage
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &stage); err != nil {
-				return errors.Wrap(err, "from unstructured")
+				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "from unstructured"))
 			}
 			if err := stream.Send(&svcv1alpha1.WatchStagesResponse{
 				Stage: typesv1alpha1.ToStageProto(*stage),
 				Type:  string(e.Type),
 			}); err != nil {
-				return errors.Wrap(err, "send response")
+				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "send response"))
 			}
 		}
 	}

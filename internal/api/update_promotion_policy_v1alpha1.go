@@ -52,10 +52,11 @@ func (s *server) UpdatePromotionPolicy(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get promotion policy"))
 	}
 	policy.SetResourceVersion(existingPolicy.GetResourceVersion())
 	if err := s.client.Update(ctx, &policy); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "update promotion policy"))
 	}
 	return connect.NewResponse(&svcv1alpha1.UpdatePromotionPolicyResponse{
 		PromotionPolicy: typesv1alpha1.ToPromotionPolicyProto(policy),

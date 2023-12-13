@@ -48,10 +48,11 @@ func (s *server) UpdateWarehouse(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get warehouse"))
 	}
 	warehouse.SetResourceVersion(existingWarehouse.GetResourceVersion())
 	if err := s.client.Update(ctx, &warehouse); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "update warehouse"))
 	}
 	return connect.NewResponse(&svcv1alpha1.UpdateWarehouseResponse{
 		Warehouse: typesv1alpha1.ToWarehouseProto(warehouse),

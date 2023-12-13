@@ -57,7 +57,7 @@ func (s *server) QueryFreight(
 			},
 		)
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
+			return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get stage"))
 		}
 		if stage == nil {
 			return nil, connect.NewError(
@@ -75,7 +75,7 @@ func (s *server) QueryFreight(
 			*stage.Spec.Subscriptions,
 		)
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
+			return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get available freight for stage"))
 		}
 	} else {
 		freightList := &kargoapi.FreightList{}
@@ -85,7 +85,7 @@ func (s *server) QueryFreight(
 			freightList,
 			client.InNamespace(req.Msg.GetProject()),
 		); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
+			return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "list freights"))
 		}
 		freight = freightList.Items
 	}

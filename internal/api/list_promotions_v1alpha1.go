@@ -36,7 +36,7 @@ func (s *server) ListPromotions(
 		)
 	}
 	if err := s.client.List(ctx, &list, opts...); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "list promotions"))
 	}
 	promotions := make([]*v1alpha1.Promotion, len(list.Items))
 	for idx, promotion := range list.Items {

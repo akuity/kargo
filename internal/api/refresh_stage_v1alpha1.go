@@ -28,7 +28,7 @@ func (s *server) RefreshStage(
 	}
 	stage, err := kargoapi.RefreshStage(ctx, s.client, objKey)
 	if err != nil {
-		return nil, err
+		return nil, connect.NewError(getCodeFromError(err), err)
 	}
 	// If there is a current promotion then refresh it too.
 	if stage.Status.CurrentPromotion != nil {

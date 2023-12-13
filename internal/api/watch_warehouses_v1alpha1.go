@@ -37,7 +37,7 @@ func (s *server) WatchWarehouses(
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			return connect.NewError(connect.CodeInternal, err)
+			return connect.NewError(getCodeFromError(err), errors.Wrap(err, "get warehouse"))
 		}
 	}
 
@@ -48,7 +48,7 @@ func (s *server) WatchWarehouses(
 	w, err :=
 		s.client.Watch(ctx, &kargoapi.Warehouse{}, req.Msg.GetProject(), opts)
 	if err != nil {
-		return errors.Wrap(err, "watch warehouse")
+		return connect.NewError(getCodeFromError(err), errors.Wrap(err, "watch warehouse"))
 	}
 	defer w.Stop()
 	for {
@@ -61,17 +61,17 @@ func (s *server) WatchWarehouses(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return errors.Errorf("unexpected object type %T", e.Object)
+				return connect.NewError(connect.CodeInternal, errors.Errorf("unexpected object type %T", e.Object))
 			}
 			var warehouse *kargoapi.Warehouse
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &warehouse); err != nil {
-				return errors.Wrap(err, "from unstructured")
+				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "from unstructured"))
 			}
 			if err := stream.Send(&svcv1alpha1.WatchWarehousesResponse{
 				Warehouse: typesv1alpha1.ToWarehouseProto(*warehouse),
 				Type:      string(e.Type),
 			}); err != nil {
-				return errors.Wrap(err, "send response")
+				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "send response"))
 			}
 		}
 	}
