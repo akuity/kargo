@@ -177,6 +177,8 @@ type GitRepoUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	WriteBranch string `json:"writeBranch"`
+	// PullRequest will generate a pull request instead of making the commit directly
+	PullRequest *PullRequestPromotionMechanism `json:"pullRequest,omitempty"`
 	// Render describes how to use Kargo Render to incorporate Freight into the
 	// Stage. This is mutually exclusive with the Kustomize and Helm fields.
 	Render *KargoRenderPromotionMechanism `json:"render,omitempty"`
@@ -186,6 +188,16 @@ type GitRepoUpdate struct {
 	// Helm describes how to use Helm to incorporate Freight into the Stage. This
 	// is mutually exclusive with the Render and Kustomize fields.
 	Helm *HelmPromotionMechanism `json:"helm,omitempty"`
+}
+
+// PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion
+// Attempts to infer the git provider from well-known git domains.
+type PullRequestPromotionMechanism struct {
+	// GitHub indicates git provider is GitHub
+	GitHub *GitHubPullRequest `json:"github,omitempty"`
+}
+
+type GitHubPullRequest struct {
 }
 
 // KargoRenderPromotionMechanism describes how to use Kargo Render to

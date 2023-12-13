@@ -271,6 +271,16 @@
                     ],
                     "type": "object"
                   },
+                  "pullRequest": {
+                    "description": "PullRequest will generate a pull request instead of making the commit directly",
+                    "properties": {
+                      "github": {
+                        "description": "GitHub indicates git provider is GitHub",
+                        "type": "object"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "readBranch": {
                     "description": "ReadBranch specifies a particular branch of the repository from which to locate contents that will be written to the branch specified by the WriteBranch field. This field is optional. When not specified, the ReadBranch is implicitly the repository's default branch AND in cases where a Freight includes a GitCommit, that commit's ID will supersede the value of this field. Therefore, in practice, this field is only used to clarify what branch of a repository can be treated as a source of manifests or other configuration when a Stage has no subscription to that repository.",
                     "pattern": "^(\\w+([-/]\\w+)*)?$",

@@ -3,7 +3,8 @@ import {
   faCircleCheck,
   faCircleExclamation,
   faCircleNotch,
-  faCircleQuestion
+  faCircleQuestion,
+  faHourglassStart
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -94,17 +95,18 @@ export const Promotions = () => {
         switch (promotion.status?.phase) {
           case 'Succeeded':
             return (
-              <Tooltip title='Succeeded' placement='right'>
+              <Popover content={promotion.status?.message} title={promotion.status?.phase} placement='right'>
                 <FontAwesomeIcon
                   color={theme.defaultSeed.colorSuccess}
                   icon={faCircleCheck}
                   size='lg'
                 />
-              </Tooltip>
+              </Popover>
             );
+          case 'Failed':
           case 'Errored':
             return (
-              <Popover content={promotion.status.error} title='Errored' placement='right'>
+              <Popover content={promotion.status?.message} title={promotion.status?.phase} placement='right'>
                 <FontAwesomeIcon
                   color={theme.defaultSeed.colorError}
                   icon={faCircleExclamation}
@@ -112,17 +114,17 @@ export const Promotions = () => {
                 />
               </Popover>
             );
-          case 'Pending':
           case 'Running':
             return (
               <Tooltip title={promotion.status?.phase} placement='right'>
                 <FontAwesomeIcon icon={faCircleNotch} spin size='lg' />
               </Tooltip>
             );
+          case 'Pending':
           default:
             return (
-              <Tooltip title={promotion.status?.phase || 'Unknown'} placement='right'>
-                <FontAwesomeIcon color='#aaa' icon={faCircleQuestion} size='lg' />
+              <Tooltip title='Pending' placement='right'>
+                <FontAwesomeIcon color='#aaa' icon={faHourglassStart} size='lg' />
               </Tooltip>
             );
         }

@@ -20,19 +20,22 @@ const (
 	// PromotionPhaseSucceeded denotes a Promotion that has been successfully
 	// executed.
 	PromotionPhaseSucceeded PromotionPhase = "Succeeded"
+	// PromotionPhaseFailed denotes a Promotion that has failed
+	PromotionPhaseFailed PromotionPhase = "Failed"
 	// PromotionPhaseErrored denotes a Promotion that has failed for technical
 	// reasons. Further information about the failure can be found in the
 	// Promotion's status.
-	//
-	// TODO: "For technical reasons" is the operative phrase here. We are leaving
-	// room for the possibility in the near future that a Promotion might fail
-	// as a result of some user action.
 	PromotionPhaseErrored PromotionPhase = "Errored"
 )
 
 // IsTerminal returns true if the PromotionPhase is a terminal one.
 func (p *PromotionPhase) IsTerminal() bool {
-	return *p == PromotionPhaseSucceeded || *p == PromotionPhaseErrored
+	switch *p {
+	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored:
+		return true
+	default:
+		return false
+	}
 }
 
 //+kubebuilder:resource:shortName={promo,promos}
@@ -84,10 +87,21 @@ type PromotionSpec struct {
 type PromotionStatus struct {
 	// Phase describes where the Promotion currently is in its lifecycle.
 	Phase PromotionPhase `json:"phase,omitempty"`
-	// Error describes any errors that are preventing the Promotion controller
-	// from executing this Promotion. i.e. If the Phase field has a value of
-	// Failed, this field can be expected to explain why.
-	Error string `json:"error,omitempty"`
+	// Message is a display message about the promotion, including any errors
+	// preventing the Promotion controller from executing this Promotion.
+	// i.e. If the Phase field has a value of Failed, this field can be expected
+	// to explain why.
+	Message string `json:"message,omitempty"`
+	// Metadata holds arbitrary metadata set by promotion mechanisms
+	// (e.g. for display purposes, or internal bookkeeping)
+	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
+// WithPhase returns a copy of PromotionStatus with the given phase
+func (p *PromotionStatus) WithPhase(phase PromotionPhase) *PromotionStatus {
+	status := p.DeepCopy()
+	status.Phase = phase
+	return status
 }
 
 //+kubebuilder:object:root=true

@@ -19,7 +19,7 @@ type kargoRenderMechanism struct {
 	// Overridable behaviors:
 	doSingleUpdateFn func(
 		ctx context.Context,
-		namespace string,
+		promo *kargoapi.Promotion,
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.SimpleFreight,
 	) (kargoapi.SimpleFreight, error)
@@ -59,8 +59,9 @@ func (*kargoRenderMechanism) GetName() string {
 func (b *kargoRenderMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
+	promo *kargoapi.Promotion,
 	newFreight kargoapi.SimpleFreight,
-) (kargoapi.SimpleFreight, error) {
+) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
 	updates := make([]kargoapi.GitRepoUpdate, 0, len(stage.Spec.PromotionMechanisms.GitRepoUpdates))
 	for _, update := range stage.Spec.PromotionMechanisms.GitRepoUpdates {
 		if update.Render != nil {
@@ -69,7 +70,7 @@ func (b *kargoRenderMechanism) Promote(
 	}
 
 	if len(updates) == 0 {
-		return newFreight, nil
+		return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
 	}
 
 	newFreight = *newFreight.DeepCopy()
@@ -81,24 +82,24 @@ func (b *kargoRenderMechanism) Promote(
 		var err error
 		if newFreight, err = b.doSingleUpdateFn(
 			ctx,
-			stage.Namespace,
+			promo,
 			update,
 			newFreight,
 		); err != nil {
-			return newFreight, err
+			return nil, newFreight, err
 		}
 	}
 
 	logger.Debug("done executing Kargo Render-based promotion mechanisms")
 
-	return newFreight, nil
+	return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
 }
 
 // doSingleUpdateFn updates configuration in a single Git repository using
 // Kargo Render.
 func (b *kargoRenderMechanism) doSingleUpdate(
 	ctx context.Context,
-	namespace string,
+	promo *kargoapi.Promotion,
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.SimpleFreight,
 ) (kargoapi.SimpleFreight, error) {
@@ -111,7 +112,7 @@ func (b *kargoRenderMechanism) doSingleUpdate(
 
 	creds, ok, err := b.getCredentialsFn(
 		ctx,
-		namespace,
+		promo.Namespace,
 		credentials.TypeGit,
 		update.RepoURL,
 	)

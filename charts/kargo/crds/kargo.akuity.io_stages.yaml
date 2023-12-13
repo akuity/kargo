@@ -348,6 +348,14 @@ spec:
                           required:
                           - images
                           type: object
+                        pullRequest:
+                          description: PullRequest will generate a pull request instead
+                            of making the commit directly
+                          properties:
+                            github:
+                              description: GitHub indicates git provider is GitHub
+                              type: object
+                          type: object
                         readBranch:
                           description: ReadBranch specifies a particular branch of
                             the repository from which to locate contents that will

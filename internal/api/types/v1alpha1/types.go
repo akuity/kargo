@@ -566,8 +566,8 @@ func FromPromotionStatusProto(s *v1alpha1.PromotionStatus) *kargoapi.PromotionSt
 		return nil
 	}
 	return &kargoapi.PromotionStatus{
-		Phase: kargoapi.PromotionPhase(s.GetPhase()),
-		Error: s.GetError(),
+		Phase:   kargoapi.PromotionPhase(s.GetPhase()),
+		Message: s.GetMessage(),
 	}
 }
 
@@ -1112,8 +1112,8 @@ func ToPromotionProto(p kargoapi.Promotion) *v1alpha1.Promotion {
 			Freight: p.Spec.Freight,
 		},
 		Status: &v1alpha1.PromotionStatus{
-			Phase: string(p.Status.Phase),
-			Error: p.Status.Error,
+			Phase:   string(p.Status.Phase),
+			Message: p.Status.Message,
 		},
 	}
 }
