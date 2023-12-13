@@ -5,9 +5,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-)
 
-const ShardLabelKey = "kargo.akuity.io/shard"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+)
 
 // GetShardPredicate constructs a predicate used as an event filter for various
 // reconcilers. If a non-empty shard name is passed to this function, it returns
@@ -20,7 +20,7 @@ func GetShardPredicate(shard string) (predicate.Predicate, error) {
 			metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      ShardLabelKey,
+						Key:      kargoapi.ShardLabelKey,
 						Operator: metav1.LabelSelectorOpDoesNotExist,
 					},
 				},
@@ -32,7 +32,7 @@ func GetShardPredicate(shard string) (predicate.Predicate, error) {
 		*metav1.SetAsLabelSelector(
 			labels.Set(
 				map[string]string{
-					ShardLabelKey: shard,
+					kargoapi.ShardLabelKey: shard,
 				},
 			),
 		),

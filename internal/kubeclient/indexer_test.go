@@ -7,7 +7,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller"
 )
 
 func TestIndexStagesByApp(t *testing.T) {
@@ -25,7 +24,7 @@ func TestIndexStagesByApp(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						controller.ShardLabelKey: "another-shard",
+						kargoapi.ShardLabelKey: "another-shard",
 					},
 				},
 				Spec: &kargoapi.StageSpec{
@@ -49,7 +48,7 @@ func TestIndexStagesByApp(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						controller.ShardLabelKey: testShardName,
+						kargoapi.ShardLabelKey: testShardName,
 					},
 				},
 				Spec: &kargoapi.StageSpec{
