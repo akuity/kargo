@@ -62,24 +62,38 @@ func (s *server) PromoteSubscribers(
 	// Expect a nil if the specified Freight is not found or doesn't meet these
 	// conditions. Errors are indicative only of internal problems.
 	var freight *kargoapi.Freight
-	if freight, err = s.getAvailableFreightFn(
+	freight, err = s.getFreightFn(
 		ctx,
 		s.client,
 		types.NamespacedName{
 			Namespace: req.Msg.GetProject(),
 			Name:      req.Msg.GetFreight(),
 		},
-		[]string{req.Msg.GetStage()}, // verified in
-		"",                           // approved for not considered
-	); err != nil {
+	)
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
-	} else if freight == nil {
+	}
+	if freight == nil {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			errors.Errorf(
-				"no available Freight %q found in namespace %q",
+				"Freight %q not found in namespace %q",
 				req.Msg.GetFreight(),
 				req.Msg.GetProject(),
+			),
+		)
+	}
+	if !s.isFreightAvailableFn(
+		freight,
+		"",                           // approved for not considered
+		[]string{req.Msg.GetStage()}, // verified in
+	) {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.Errorf(
+				"Freight %q is not available to Stage %q",
+				req.Msg.GetFreight(),
+				req.Msg.GetStage(),
 			),
 		)
 	}

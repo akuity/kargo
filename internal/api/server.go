@@ -57,13 +57,16 @@ type server struct {
 		client.Client,
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
-	getAvailableFreightFn func(
+	getFreightFn func(
 		ctx context.Context,
-		client client.Client,
+		c client.Client,
 		namespacedName types.NamespacedName,
-		upstreamStages []string,
-		stage string,
 	) (*kargoapi.Freight, error)
+	isFreightAvailableFn func(
+		freight *kargoapi.Freight,
+		stage string,
+		upstreamStages []string,
+	) bool
 
 	// Common Promotions:
 	createPromotionFn func(
@@ -119,7 +122,8 @@ func NewServer(
 	s.validateProjectFn = s.validateProject
 	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = kargoapi.GetStage
-	s.getAvailableFreightFn = kargoapi.GetAvailableFreight
+	s.getFreightFn = kargoapi.GetFreight
+	s.isFreightAvailableFn = kargoapi.IsFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findStageSubscribersFn = s.findStageSubscribers
 	s.listFreightFn = kubeClient.List
