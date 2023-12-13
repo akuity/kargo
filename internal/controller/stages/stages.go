@@ -377,6 +377,7 @@ func (r *reconciler) syncControlFlowStage(
 	status := *stage.Status.DeepCopy()
 	status.ObservedGeneration = stage.Generation
 	status.Health = nil // Reset health
+	status.Phase = kargoapi.StagePhaseNotApplicable
 	status.CurrentPromotion = nil
 
 	// A Stage without promotion mechanisms shouldn't have a currentFreight. Make
@@ -488,6 +489,7 @@ func (r *reconciler) syncNormalStage(
 	status.CurrentPromotion = nil
 
 	if status.CurrentFreight == nil {
+		status.Phase = kargoapi.StagePhaseNotApplicable
 		logger.Debug("Stage has no current Freight; no health checks to perform")
 	} else {
 		//  Check health and mark current Freight as verified in Stage if applicable
@@ -506,22 +508,25 @@ func (r *reconciler) syncNormalStage(
 			freightLogger.Debug("Stage health deemed not applicable")
 		}
 
-		// If health is not applicable or healthy, mark the current Freight as
-		// verified in this Stage
-		if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-			if err := r.verifyFreightInStageFn(
-				ctx,
-				stage.Namespace,
-				status.CurrentFreight.ID,
-				stage.Name,
-			); err != nil {
-				return status, errors.Wrapf(
-					err,
-					"error marking Freight %q in namespace %q as verified in Stage %q",
-					status.CurrentFreight.ID,
+		if status.Phase == kargoapi.StagePhaseVerifying {
+			// If health is not applicable or healthy, mark the current Freight as
+			// verified in this Stage
+			if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
+				if err := r.verifyFreightInStageFn(
+					ctx,
 					stage.Namespace,
+					status.CurrentFreight.ID,
 					stage.Name,
-				)
+				); err != nil {
+					return status, errors.Wrapf(
+						err,
+						"error marking Freight %q in namespace %q as verified in Stage %q",
+						status.CurrentFreight.ID,
+						stage.Namespace,
+						stage.Name,
+					)
+				}
+				status.Phase = kargoapi.StagePhaseSteady
 			}
 		}
 	}

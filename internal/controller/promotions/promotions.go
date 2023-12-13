@@ -322,6 +322,7 @@ func (r *reconciler) promote(
 	}
 
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
+		status.Phase = kargoapi.StagePhasePromoting
 		status.CurrentPromotion = &kargoapi.PromotionInfo{
 			Name:    promo.Name,
 			Freight: simpleTargetFreight,
@@ -339,6 +340,7 @@ func (r *reconciler) promote(
 	// The assumption is that controller does not process multiple promotions in one stage
 	// so we are safe from race conditions and can just update the status
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
+		status.Phase = kargoapi.StagePhaseVerifying
 		status.CurrentPromotion = nil
 		// control-flow Stage history is maintained in Stage controller.
 		// So we only modify history for normal Stages.

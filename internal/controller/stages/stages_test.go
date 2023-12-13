@@ -66,6 +66,9 @@ func TestSyncControlFlowStage(t *testing.T) {
 						Warehouse: "fake-warehouse",
 					},
 				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseNotApplicable,
+				},
 			},
 			reconciler: &reconciler{
 				listFreightFn: func(
@@ -97,6 +100,9 @@ func TestSyncControlFlowStage(t *testing.T) {
 							{Name: "fake-stage"},
 						},
 					},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseNotApplicable,
 				},
 			},
 			reconciler: &reconciler{
@@ -131,6 +137,9 @@ func TestSyncControlFlowStage(t *testing.T) {
 					Subscriptions: &kargoapi.Subscriptions{
 						Warehouse: "fake-warehouse",
 					},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseNotApplicable,
 				},
 			},
 			reconciler: &reconciler{
@@ -176,6 +185,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseNotApplicable,
 					CurrentFreight: &kargoapi.SimpleFreight{},
 					Health:         &kargoapi.Health{},
 				},
@@ -295,6 +305,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseVerifying,
 					CurrentFreight: &kargoapi.SimpleFreight{},
 				},
 			},
@@ -592,6 +603,9 @@ func TestSyncNormalStage(t *testing.T) {
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
+				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
@@ -653,6 +667,9 @@ func TestSyncNormalStage(t *testing.T) {
 						Warehouse: "fake-warehouse",
 					},
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{},
 				},
 			},
 			reconciler: &reconciler{
