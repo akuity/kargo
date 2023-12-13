@@ -1,6 +1,7 @@
 SHELL ?= /bin/bash
 
 ARGO_CD_CHART_VERSION := 5.51.6
+ARGO_ROLLOUTS_CHART_VERSION := 2.32.8
 BUF_LINT_ERROR_FORMAT ?= text
 GO_LINT_ERROR_FORMAT ?= colored-line-number
 CERT_MANAGER_CHART_VERSION := 1.11.5
@@ -225,7 +226,7 @@ hack-k3d-down:
 	ctlptl delete -f hack/k3d/cluster.yaml
 
 .PHONY: hack-install-prereqs
-hack-install-prereqs: hack-install-cert-manager hack-install-argocd
+hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts
 
 .PHONY: hack-install-cert-manager
 hack-install-cert-manager:
@@ -250,10 +251,27 @@ hack-install-argocd:
 		--set 'configs.params."application\.namespaces"=*' \
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30080 \
+		--set server.extensions.enabled=true \
+		--set server.extensions.contents[0].name=argo-rollouts \
+		--set server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar \
+		--wait
+
+.PHONY: hack-install-argo-rollouts
+hack-install-argo-rollouts:
+	helm upgrade rollouts argo-rollouts \
+		--repo https://argoproj.github.io/argo-helm \
+		--version $(ARGO_ROLLOUTS_CHART_VERSION) \
+		--install \
+		--create-namespace \
+		--namespace rollouts \
 		--wait
 
 .PHONY: hack-uninstall-prereqs
-hack-uninstall-prereqs: hack-uninstall-argocd hack-uninstall-cert-manager 
+hack-uninstall-prereqs: hack-uninstall-argo-rollouts hack-uninstall-argocd hack-uninstall-cert-manager 
+
+.PHONY: hack-uninstall-argo-rollouts
+hack-uninstall-argo-rollouts:
+	helm delete rollouts --namespace rollouts
 
 .PHONY: hack-uninstall-argocd
 hack-uninstall-argocd:
@@ -262,22 +280,3 @@ hack-uninstall-argocd:
 .PHONY: hack-uninstall-cert-manager
 hack-uninstall-cert-manager:
 	helm delete cert-manager --namespace cert-manager
-
-.PHONY: hack-add-rollouts
-hack-add-rollouts:
-	helm upgrade argocd argo-cd \
-		--repo https://argoproj.github.io/argo-helm \
-		--version $(ARGO_CD_CHART_VERSION) \
-		--namespace argocd \
-		--reuse-values \
-		--set server.extensions.enabled=true \
-		--set server.extensions.contents[0].name=argo-rollouts \
-		--set server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.2.0/extension.tar \
-		--wait
-	helm upgrade argo-rollouts argo-rollouts \
-		--repo https://argoproj.github.io/argo-helm \
-		--version 2.20.0 \
-		--install \
-		--create-namespace \
-		--namespace argo-rollouts \
-		--wait
