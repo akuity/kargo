@@ -63,6 +63,14 @@ rules:
   verbs:
   - update
   - patch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysistemplates
+  verbs:
+  - get
+  - list
+  - watch
 ---
 {{- if not .Values.controller.argocd.watchArgocdNamespaceOnly }}
 apiVersion: rbac.authorization.k8s.io/v1
@@ -81,6 +89,15 @@ rules:
   - get
   - list
   - patch
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  verbs:
+  - create
+  - get
+  - list
   - watch
 {{- end }}  
 {{- end }}
