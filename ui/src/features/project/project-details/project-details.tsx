@@ -163,11 +163,9 @@ export const ProjectDetails = () => {
         const refreshing = e.warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
         if (refreshing) {
           refresh[e.warehouse?.metadata?.name || ''] = true;
-          alert('detected refresh for warehouse');
         } else if (refresh[e.warehouse?.metadata?.name || '']) {
           delete refresh[e.warehouse?.metadata?.name || ''];
           refetchAvailableFreight();
-          alert('done refreshing warehouse, fetching new freight');
         }
 
         const listWarehousesQueryKey = listWarehouses.getQueryKey({ project: name });
