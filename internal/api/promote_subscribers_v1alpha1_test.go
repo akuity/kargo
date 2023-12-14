@@ -83,8 +83,8 @@ func TestPromoteSubscribers(t *testing.T) {
 				require.Error(t, err)
 				connErr, ok := err.(*connect.Error)
 				require.True(t, ok)
-				require.Equal(t, connect.CodeInternal, connErr.Code())
-				require.Equal(t, "something went wrong", connErr.Message())
+				require.Equal(t, connect.CodeUnknown, connErr.Code())
+				require.Equal(t, "get stage: something went wrong", connErr.Message())
 			},
 		},
 		{
@@ -161,8 +161,8 @@ func TestPromoteSubscribers(t *testing.T) {
 				require.Error(t, err)
 				connErr, ok := err.(*connect.Error)
 				require.True(t, ok)
-				require.Equal(t, connect.CodeInternal, connErr.Code())
-				require.Equal(t, "something went wrong", connErr.Message())
+				require.Equal(t, connect.CodeUnknown, connErr.Code())
+				require.Equal(t, "get freight: something went wrong", connErr.Message())
 			},
 		},
 		{
@@ -316,8 +316,8 @@ func TestPromoteSubscribers(t *testing.T) {
 				require.Error(t, err)
 				connErr, ok := err.(*connect.Error)
 				require.True(t, ok)
-				require.Equal(t, connect.CodeInternal, connErr.Code())
-				require.Equal(t, "something went wrong", connErr.Message())
+				require.Equal(t, connect.CodeUnknown, connErr.Code())
+				require.Equal(t, "find stage subscribers: something went wrong", connErr.Message())
 			},
 		},
 		{
@@ -373,7 +373,7 @@ func TestPromoteSubscribers(t *testing.T) {
 				connErr, ok := err.(*connect.Error)
 				require.True(t, ok)
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
-				require.Contains(t, connErr.Message(), "Stage")
+				require.Contains(t, connErr.Message(), "stage")
 				require.Contains(t, connErr.Message(), "has no subscribers")
 			},
 		},
