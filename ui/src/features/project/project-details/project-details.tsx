@@ -69,7 +69,6 @@ export const ProjectDetails = () => {
     queryFreight.useQuery({ project: name })
   );
 
-  // const [warehouseMap, setWarehouseMap] = useState<{ [key: string]: Warehouse }>({});
   const { data: warehouseData, isLoading: isLoadingWarehouses } = useQuery(
     listWarehouses.useQuery({ project: name })
   );
