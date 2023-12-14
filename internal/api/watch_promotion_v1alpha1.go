@@ -39,7 +39,7 @@ func (s *server) WatchPromotion(
 		if kubeerr.IsNotFound(err) {
 			return connect.NewError(connect.CodeNotFound, err)
 		}
-		return connect.NewError(getCodeFromError(err), errors.Wrap(err, "get promotion"))
+		return connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get promotion"))
 	}
 
 	opts := metav1.ListOptions{
@@ -47,7 +47,7 @@ func (s *server) WatchPromotion(
 	}
 	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, req.Msg.GetProject(), opts)
 	if err != nil {
-		return connect.NewError(getCodeFromError(err), errors.Wrap(err, "watch promotion"))
+		return connect.NewError(connect.CodeUnknown, errors.Wrap(err, "watch promotion"))
 	}
 	defer w.Stop()
 	for {

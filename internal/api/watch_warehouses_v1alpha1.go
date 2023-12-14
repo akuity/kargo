@@ -37,7 +37,7 @@ func (s *server) WatchWarehouses(
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			return connect.NewError(getCodeFromError(err), errors.Wrap(err, "get warehouse"))
+			return connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get warehouse"))
 		}
 	}
 
@@ -48,7 +48,7 @@ func (s *server) WatchWarehouses(
 	w, err :=
 		s.client.Watch(ctx, &kargoapi.Warehouse{}, req.Msg.GetProject(), opts)
 	if err != nil {
-		return connect.NewError(getCodeFromError(err), errors.Wrap(err, "watch warehouse"))
+		return connect.NewError(connect.CodeUnknown, errors.Wrap(err, "watch warehouse"))
 	}
 	defer w.Stop()
 	for {

@@ -26,7 +26,7 @@ func (s *server) ListWarehouses(
 
 	var list kargoapi.WarehouseList
 	if err := s.client.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "list warehouses"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "list warehouses"))
 	}
 
 	warehouses := make([]*v1alpha1.Warehouse, len(list.Items))

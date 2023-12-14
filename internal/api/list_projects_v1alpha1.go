@@ -22,7 +22,7 @@ func (s *server) ListProjects(
 	selector := labels.Set{kargoapi.LabelProjectKey: kargoapi.LabelTrueValue}.AsSelector()
 	nsList := &corev1.NamespaceList{}
 	if err := s.client.List(ctx, nsList, client.MatchingLabelsSelector{Selector: selector}); err != nil {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "list projects"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "list projects"))
 	}
 
 	projects := make([]*svcv1alpha1.Project, len(nsList.Items))

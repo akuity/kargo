@@ -36,7 +36,7 @@ func (s *server) DeleteStage(
 			return nil, connect.NewError(connect.CodeNotFound,
 				fmt.Errorf("stage %q not found", key.String()))
 		}
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get stage"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get stage"))
 	}
 
 	approvedFreightList := kargoapi.FreightList{}
@@ -53,7 +53,7 @@ func (s *server) DeleteStage(
 	)
 
 	if err != nil {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "list freight"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "list freight"))
 	}
 
 	for i := range approvedFreightList.Items {
@@ -74,12 +74,12 @@ func (s *server) DeleteStage(
 				*status = newStatus
 			},
 		); err != nil {
-			return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "patch status"))
+			return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "patch status"))
 		}
 	}
 
 	if err := s.client.Delete(ctx, &stage); err != nil && !kubeerr.IsNotFound(err) {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "delete stage"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "delete stage"))
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteStageResponse{}), nil
 }

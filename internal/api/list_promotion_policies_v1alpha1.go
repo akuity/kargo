@@ -26,7 +26,7 @@ func (s *server) ListPromotionPolicies(
 
 	var list kargoapi.PromotionPolicyList
 	if err := s.client.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "list promotion policies"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "list promotion policies"))
 	}
 	policies := make([]*v1alpha1.PromotionPolicy, len(list.Items))
 	for idx, policy := range list.Items {

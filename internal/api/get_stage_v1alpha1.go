@@ -33,7 +33,7 @@ func (s *server) GetStage(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get stage"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get stage"))
 	}
 	return connect.NewResponse(&svcv1alpha1.GetStageResponse{
 		Stage: typesv1alpha1.ToStageProto(stage),

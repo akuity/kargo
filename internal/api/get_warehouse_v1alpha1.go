@@ -32,7 +32,7 @@ func (s *server) GetWarehouse(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get warehouse"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get warehouse"))
 	}
 	return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
 		Warehouse: typesv1alpha1.ToWarehouseProto(warehouse),

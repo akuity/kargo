@@ -33,7 +33,7 @@ func (s *server) PromoteStage(
 		},
 	)
 	if err != nil {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get stage"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get stage"))
 	}
 	if stage == nil {
 		return nil, connect.NewError(
@@ -55,7 +55,7 @@ func (s *server) PromoteStage(
 		},
 	)
 	if err != nil {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "get freight"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get freight"))
 	}
 	if freight == nil {
 		return nil, connect.NewError(
@@ -84,7 +84,7 @@ func (s *server) PromoteStage(
 
 	promotion := kargo.NewPromotion(*stage, req.Msg.GetFreight())
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "create promotion"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "create promotion"))
 	}
 	return connect.NewResponse(&svcv1alpha1.PromoteStageResponse{
 		Promotion: typesv1alpha1.ToPromotionProto(promotion),

@@ -50,7 +50,7 @@ func (s *server) CreatePromotionPolicy(
 		if kubeerr.IsAlreadyExists(err) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		}
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "create promotion policy"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "create promotion policy"))
 	}
 	return connect.NewResponse(&svcv1alpha1.CreatePromotionPolicyResponse{
 		PromotionPolicy: typesv1alpha1.ToPromotionPolicyProto(policy),

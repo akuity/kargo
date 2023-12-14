@@ -49,7 +49,7 @@ func (s *server) CreateStage(
 		if kubeerr.IsAlreadyExists(err) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		}
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "create stage"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "create stage"))
 	}
 	return connect.NewResponse(&svcv1alpha1.CreateStageResponse{
 		Stage: typesv1alpha1.ToStageProto(stage),

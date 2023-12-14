@@ -46,7 +46,7 @@ func (s *server) CreateWarehouse(
 		if kubeerr.IsAlreadyExists(err) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		}
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "create warehouse"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "create warehouse"))
 	}
 	return connect.NewResponse(&svcv1alpha1.CreateWarehouseResponse{
 		Warehouse: typesv1alpha1.ToWarehouseProto(warehouse),

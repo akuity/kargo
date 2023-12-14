@@ -32,7 +32,7 @@ func (s *server) SetAutoPromotionForStage(
 	if err := s.client.List(ctx, &policyList, client.InNamespace(req.Msg.GetProject()), client.MatchingFields{
 		kubeclient.PromotionPoliciesByStageIndexField: req.Msg.GetStage(),
 	}); err != nil {
-		return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "list promotion policies"))
+		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "list promotion policies"))
 	}
 
 	// Since only one PromotionPolicy is allowed per stage,
@@ -42,7 +42,7 @@ func (s *server) SetAutoPromotionForStage(
 		policy = policyList.Items[0]
 		policy.EnableAutoPromotion = req.Msg.GetEnable()
 		if err := s.client.Update(ctx, &policy); err != nil {
-			return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "update promotion policy"))
+			return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "update promotion policy"))
 		}
 	} else {
 		policy = kargoapi.PromotionPolicy{
@@ -54,7 +54,7 @@ func (s *server) SetAutoPromotionForStage(
 			EnableAutoPromotion: req.Msg.GetEnable(),
 		}
 		if err := s.client.Create(ctx, &policy); err != nil {
-			return nil, connect.NewError(getCodeFromError(err), errors.Wrap(err, "create promotion policy"))
+			return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "create promotion policy"))
 		}
 	}
 	return connect.NewResponse(&svcv1alpha1.SetAutoPromotionForStageResponse{
