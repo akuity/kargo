@@ -13,25 +13,27 @@ export enum NodeType {
   WAREHOUSE
 }
 
-export type NodesRepoType =
+type NodeBase = {
+  stageName: string;
+  warehouseName: string;
+  refreshing?: boolean;
+};
+
+export type NodesRepoType = (
   | {
       type: NodeType.REPO_IMAGE;
       data: ImageSubscription;
-      stageName: string;
-      warehouseName: string;
     }
   | {
       type: NodeType.REPO_GIT;
       data: GitSubscription;
-      stageName: string;
-      warehouseName: string;
     }
   | {
       type: NodeType.REPO_CHART;
       data: ChartSubscription;
-      stageName: string;
-      warehouseName: string;
-    };
+    }
+) &
+  NodeBase;
 
 export type NodesItemType =
   | {

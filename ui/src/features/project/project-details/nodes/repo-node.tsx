@@ -1,5 +1,5 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faBuilding } from '@fortawesome/free-solid-svg-icons';
+import { faAnchor, faBuilding, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 
@@ -37,7 +37,10 @@ export const RepoNode = ({ nodeData, children }: Props) => {
         <div className='text-ellipsis whitespace-nowrap overflow-hidden'>
           {nodeData.warehouseName}
         </div>
-        {nodeData.type !== NodeType.REPO_CHART && <FontAwesomeIcon icon={faBuilding} />}
+        <div className='flex items-center'>
+          {nodeData.refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
+          {nodeData.type !== NodeType.REPO_CHART && <FontAwesomeIcon icon={faBuilding} />}
+        </div>
       </h3>
       <div className={styles.body}>
         <div className='mb-2'>
