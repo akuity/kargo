@@ -22,24 +22,34 @@ type PromoteSubscribersFlags struct {
 func newPromoteSubscribersCommand(opt *option.Option) *cobra.Command {
 	var flag PromoteSubscribersFlags
 	cmd := &cobra.Command{
-		Use:     "promote-subscribers",
-		Args:    option.ExactArgs(2),
-		Example: "kargo stage promote-subscribers (PROJECT) (NAME) [(--freight=)freight-id]",
+		Use:  "promote --project=project (STAGE) [(--freight=)freight-id]",
+		Args: option.ExactArgs(2),
+		Example: `
+# Promote subscribers for a specific project
+kargo stage promote-subscribers dev --project=my-project --freight=abc123
+
+# Promote subscribers for the default project
+kargo config set project my-project
+kargo stage promote-subscribers dev --freight=abc123
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			project := opt.Project
+			if project == "" {
+				return errors.New("project is required")
+			}
+
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
 				return err
 			}
 
-			project := strings.TrimSpace(args[0])
-			if project == "" {
-				return errors.New("project is required")
-			}
-			name := strings.TrimSpace(args[1])
-			if name == "" {
+			stage := strings.TrimSpace(args[0])
+			if stage == "" {
 				return errors.New("name is required")
 			}
+
 			freight := strings.TrimSpace(flag.Freight)
 			if freight == "" {
 				return errors.New("freight is required")
@@ -47,7 +57,7 @@ func newPromoteSubscribersCommand(opt *option.Option) *cobra.Command {
 
 			res, promoteErr := kargoSvcCli.PromoteSubscribers(ctx, connect.NewRequest(&v1alpha1.PromoteSubscribersRequest{
 				Project: project,
-				Stage:   name,
+				Stage:   stage,
 				Freight: freight,
 			}))
 			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
