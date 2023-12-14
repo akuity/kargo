@@ -3,9 +3,12 @@ package kargo
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
@@ -90,6 +93,65 @@ func TestNewPromotion(t *testing.T) {
 			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.LessOrEqual(t, len(promo.Name), 253)
 			tc.assertions(t, tc.stage, promo)
+		})
+	}
+}
+
+func TestIgnoreClearRefreshUpdates(t *testing.T) {
+	testCases := []struct {
+		name     string
+		old      client.Object
+		new      client.Object
+		expected bool
+	}{
+		{
+			name:     "nil",
+			old:      nil,
+			new:      nil,
+			expected: true,
+		},
+		{
+			name: "refresh cleared",
+			old: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyRefresh: time.Now().Format(time.RFC3339),
+					},
+				},
+			},
+			new: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "refresh set",
+			old: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			new: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyRefresh: time.Now().Format(time.RFC3339),
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			icru := IgnoreClearRefreshUpdates{}
+			e := event.UpdateEvent{
+				ObjectOld: tc.old,
+				ObjectNew: tc.new,
+			}
+			require.Equal(t, tc.expected, icru.Update(e))
 		})
 	}
 }

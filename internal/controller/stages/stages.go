@@ -220,6 +220,7 @@ func SetupReconcilerWithManager(
 			),
 		).
 		WithEventFilter(shardPredicate).
+		WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
 		WithOptions(controller.CommonOptions()).
 		Build(newReconciler(kargoMgr.GetClient(), argoMgr.GetClient()))
 	if err != nil {
