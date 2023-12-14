@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
+	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -122,6 +123,7 @@ func SetupReconcilerWithManager(
 				),
 			).
 			WithEventFilter(shardPredicate).
+			WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
 			WithOptions(controller.CommonOptions()).
 			Complete(newReconciler(mgr.GetClient(), credentialsDB)),
 		"error building Warehouse reconciler",
