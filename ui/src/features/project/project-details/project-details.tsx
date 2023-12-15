@@ -14,7 +14,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Empty, message } from 'antd';
 import { graphlib, layout } from 'dagre';
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
 
 import { transport } from '@ui/config/transport';
@@ -69,7 +69,6 @@ export const ProjectDetails = () => {
     queryFreight.useQuery({ project: name })
   );
 
-  const [warehouseMap, setWarehouseMap] = useState<{ [key: string]: Warehouse }>({});
   const { data: warehouseData, isLoading: isLoadingWarehouses } = useQuery(
     listWarehouses.useQuery({ project: name })
   );
@@ -89,12 +88,11 @@ export const ProjectDetails = () => {
     onSuccess: () => {
       message.success('Warehouse successfully refreshed');
       setPromotingStage(undefined);
-      refetchAvailableFreight();
     }
   });
 
   React.useEffect(() => {
-    if (!data || !isVisible) {
+    if (!data || !isVisible || !warehouseData) {
       return;
     }
 
@@ -133,17 +131,67 @@ export const ProjectDetails = () => {
     };
     watchStages();
 
+    const watchWarehouses = async () => {
+      const promiseClient = createPromiseClient(KargoService, transport);
+      const stream = promiseClient.watchWarehouses({ project: name }, { signal: cancel.signal });
+      let warehouses = warehouseData?.warehouses || [];
+      const refresh = {} as { [key: string]: boolean };
+
+      for await (const e of stream) {
+        const index = warehouses.findIndex(
+          (item) => item.metadata?.name === e.warehouse?.metadata?.name
+        );
+        if (e.type === 'DELETED') {
+          if (index !== -1) {
+            warehouses = [
+              ...warehouses.slice(0, index),
+              ...warehouses.slice(index + 1)
+            ] as Warehouse[];
+          }
+        } else {
+          if (index === -1) {
+            warehouses = [...warehouses, e.warehouse as Warehouse] as Warehouse[];
+          } else {
+            warehouses = [
+              ...warehouses.slice(0, index),
+              e.warehouse as Warehouse,
+              ...warehouses.slice(index + 1)
+            ] as Warehouse[];
+          }
+        }
+
+        const refreshing = e.warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
+        if (refreshing) {
+          refresh[e.warehouse?.metadata?.name || ''] = true;
+        } else if (refresh[e.warehouse?.metadata?.name || '']) {
+          delete refresh[e.warehouse?.metadata?.name || ''];
+          refetchAvailableFreight();
+        }
+
+        const listWarehousesQueryKey = listWarehouses.getQueryKey({ project: name });
+        client.setQueryData(listWarehousesQueryKey, { warehouses });
+
+        const getWarehouseQueryKey = getStage.getQueryKey({
+          project: name,
+          name: e.warehouse?.metadata?.name
+        });
+        client.setQueryData(getWarehouseQueryKey, { warehouse: e.warehouse });
+      }
+    };
+    watchWarehouses();
+
     return () => cancel.abort();
   }, [isLoading, isVisible, name]);
 
-  React.useEffect(() => {
-    if (!isLoadingWarehouses) {
-      const wm = {} as { [key: string]: Warehouse };
-      (warehouseData?.warehouses || []).forEach((w: Warehouse) => {
-        wm[w?.metadata?.name || ''] = w;
-      });
-      setWarehouseMap(wm);
+  const [warehouseMap] = React.useMemo(() => {
+    const wm = {} as { [key: string]: Warehouse };
+    if (!warehouseData) {
+      return [wm];
     }
+    (warehouseData?.warehouses || []).forEach((w: Warehouse) => {
+      wm[w?.metadata?.name || ''] = w;
+    });
+    return [wm];
   }, [warehouseData, isLoadingWarehouses]);
 
   const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
@@ -183,6 +231,7 @@ export const ProjectDetails = () => {
               data: sub.chart || sub.image || sub.git || ({} as any),
               stageName: stage.metadata?.name || '',
               warehouseName: cur.metadata?.name || '',
+              refreshing: !!cur?.metadata?.annotations['kargo.akuity.io/refresh'],
               type
             });
           });
