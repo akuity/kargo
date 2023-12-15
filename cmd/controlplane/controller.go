@@ -13,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/controller/analysis"
 	"github.com/akuity/kargo/internal/controller/applications"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
@@ -200,6 +201,15 @@ func newControllerCommand() *cobra.Command {
 				credentialsDbOpts...,
 			)
 
+			if err := analysis.SetupReconcilerWithManager(
+				ctx,
+				kargoMgr,
+				rolloutsMgr,
+				shardName,
+			); err != nil {
+				return errors.Wrap(err, "error setting up AnalysisRuns reconciler")
+			}
+
 			if err := applications.SetupReconcilerWithManager(
 				ctx,
 				kargoMgr,
@@ -244,6 +254,14 @@ func newControllerCommand() *cobra.Command {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				if err := argocdMgr.Start(ctx); err != nil {
+					errChan <- errors.Wrap(err, "error starting argo cd manager")
+				}
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 				if err := kargoMgr.Start(ctx); err != nil {
 					errChan <- errors.Wrap(err, "error starting kargo manager")
 				}
@@ -252,8 +270,8 @@ func newControllerCommand() *cobra.Command {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := argocdMgr.Start(ctx); err != nil {
-					errChan <- errors.Wrap(err, "error starting argo manager")
+				if err := rolloutsMgr.Start(ctx); err != nil {
+					errChan <- errors.Wrap(err, "error starting rollouts manager")
 				}
 			}()
 
