@@ -17,9 +17,12 @@ type Info struct {
 	// verified as the Kargo API server's admin user. When this is true, all
 	// other fields should have an empty value.
 	IsAdmin bool
-	// Username is the name of a non-admin user whose credentials have been
-	// successfully verified by the server's authentication middleware.
-	Username string
+	// Subject is the unique identified of a non-admin user whose credentials have
+	// been successfully verified by the server's authentication middleware.
+	Subject string
+	// Email is the verified email address of a non-admin user whose credentials
+	// have been successfully verified by the server's authentication middleware.
+	Email string
 	// Groups are the group claims obtained from credentials that have been
 	// successfully verified by the server's authentication middleware.
 	Groups []string

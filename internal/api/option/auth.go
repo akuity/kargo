@@ -50,13 +50,12 @@ type authInterceptor struct {
 	verifyIDPIssuedTokenFn   func(
 		ctx context.Context,
 		rawToken string,
-	) (string, []string, bool)
+	) (claims, bool)
 	oidcTokenVerifyFn     goOIDCIDTokenVerifyFn
-	oidcExtractGroupsFn   func(*oidc.IDToken) ([]string, error)
+	oidcExtractClaimsFn   func(*oidc.IDToken) (claims, error)
 	listServiceAccountsFn func(
 		ctx context.Context,
-		username string,
-		groups []string,
+		c claims,
 	) (map[string]map[types.NamespacedName]struct{}, error)
 }
 
@@ -84,7 +83,7 @@ func newAuthInterceptor(
 		jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
-	a.oidcExtractGroupsFn = oidcExtractGroups
+	a.oidcExtractClaimsFn = oidcExtractClaims
 	a.listServiceAccountsFn = a.listServiceAccounts
 	return a, nil
 }
@@ -260,17 +259,19 @@ func (a *authInterceptor) WrapStreamingHandler(
 
 func (a *authInterceptor) listServiceAccounts(
 	ctx context.Context,
-	username string,
-	groups []string,
+	c claims,
 ) (map[string]map[types.NamespacedName]struct{}, error) {
 	queries := []libClient.MatchingFields{
 		{
-			kubeclient.ServiceAccountsBySubjectIndexField: username,
+			kubeclient.ServiceAccountsByOIDCEmailIndexField: c.Subject,
+		},
+		{
+			kubeclient.ServiceAccountsByOIDCSubjectIndexField: c.Subject,
 		},
 	}
-	for _, group := range groups {
+	for _, group := range c.Groups {
 		queries = append(queries, libClient.MatchingFields{
-			kubeclient.ServiceAccountsByGroupIndexField: group,
+			kubeclient.ServiceAccountsByOIDCGroupIndexField: group,
 		})
 	}
 	// allowedNamespaces is a set of all namespaces in which to search for
@@ -385,17 +386,18 @@ func (a *authInterceptor) authenticate(
 		untrustedClaims.Issuer == a.cfg.OIDCConfig.IssuerURL {
 		// Case 2: This token was allegedly issued by Kargo's OpenID Connect
 		// identity provider.
-		username, groups, ok := a.verifyIDPIssuedTokenFn(ctx, rawToken)
+		c, ok := a.verifyIDPIssuedTokenFn(ctx, rawToken)
 		if ok {
-			sa, err := a.listServiceAccountsFn(ctx, username, groups)
+			sa, err := a.listServiceAccountsFn(ctx, c)
 			if err != nil {
 				return ctx, errors.Wrap(err, "list service accounts for user")
 			}
 			return user.ContextWithInfo(
 				ctx,
 				user.Info{
-					Username:                   username,
-					Groups:                     groups,
+					Subject:                    c.Subject,
+					Email:                      c.Email,
+					Groups:                     c.Groups,
 					ServiceAccountsByNamespace: sa,
 				},
 			), nil
@@ -416,28 +418,28 @@ func (a *authInterceptor) authenticate(
 }
 
 // verifyIDPIssuedToken attempts to verify that the provided raw token was
-// issued by Kargo's OpenID Connect identity provider. On success, username, and
-// groups are extracted and returned along with a true boolean. If the provided
-// raw token couldn't be verified, the returned boolean is false. A non-nil
-// error is only ever returned if something goes wrong AFTER successfully
-// verifying the token. Callers may infer that if the returned error is nil, but
-// the returned boolean is false, the provided raw token could not be verified.
+// issued by Kargo's OpenID Connect identity provider. On success, select claims
+// are extracted and returned along with a true boolean. If the provided raw
+// token couldn't be verified, the returned boolean is false. A non-nil error is
+// only ever returned if something goes wrong AFTER successfully verifying the
+// token. Callers may infer that if the returned error is nil, but the returned
+// boolean is false, the provided raw token could not be verified.
 func (a *authInterceptor) verifyIDPIssuedToken(
 	ctx context.Context,
 	rawToken string,
-) (string, []string, bool) {
+) (claims, bool) {
+	c := claims{}
 	if a.oidcTokenVerifyFn == nil {
-		return "", nil, false
+		return c, false
 	}
 	token, err := a.oidcTokenVerifyFn(ctx, rawToken)
 	if err != nil {
-		return "", nil, false
+		return c, false
 	}
-	groups, err := a.oidcExtractGroupsFn(token)
-	if err != nil {
-		return "", nil, false
+	if c, err = a.oidcExtractClaimsFn(token); err != nil {
+		return c, false
 	}
-	return token.Subject, groups, true
+	return c, true
 }
 
 // verifyKargoIssuedToken attempts to verify that the provided raw token was
@@ -456,10 +458,14 @@ func (a *authInterceptor) verifyKargoIssuedToken(rawToken string) bool {
 	return err == nil
 }
 
-func oidcExtractGroups(token *oidc.IDToken) ([]string, error) {
-	var claims struct {
-		Groups []string `json:"groups"`
-	}
-	err := token.Claims(&claims)
-	return claims.Groups, err
+type claims struct {
+	Subject string   `json:"sub"`
+	Email   string   `json:"email"`
+	Groups  []string `json:"groups"`
+}
+
+func oidcExtractClaims(token *oidc.IDToken) (claims, error) {
+	c := claims{}
+	err := token.Claims(&c)
+	return c, err
 }
