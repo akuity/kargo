@@ -7,6 +7,8 @@ import {
   faCopy,
   faDiagramProject,
   faEllipsisV,
+  faEye,
+  faEyeSlash,
   faRefresh,
   faTimeline
 } from '@fortawesome/free-solid-svg-icons';
@@ -46,10 +48,11 @@ import {
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
+import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
-import { StageNode } from './nodes/stage-node';
+import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
 import { NodeType, NodesItemType } from './types';
 
@@ -57,8 +60,8 @@ const lineThickness = 2;
 const nodeWidth = 150;
 const nodeHeight = 118;
 
-const warehouseNodeWidth = 180;
-const warehouseNodeHeight = 140;
+const warehouseNodeWidth = 150;
+const warehouseNodeHeight = 100;
 
 const getSeconds = (ts?: Timestamp): number => Number(ts?.seconds) || 0;
 
@@ -90,6 +93,11 @@ export const ProjectDetails = () => {
       setPromotingStage(undefined);
     }
   });
+
+  const [hideSubscriptions, setHideSubscriptions] = useLocalStorage(
+    `${name}-hideSubscriptions`,
+    false
+  );
 
   React.useEffect(() => {
     if (!data || !isVisible || !warehouseData) {
@@ -220,25 +228,36 @@ export const ProjectDetails = () => {
         const warehouseName = stage.spec?.subscriptions?.warehouse;
         if (warehouseName) {
           const cur = warehouseMap[warehouseName];
-          cur?.spec?.subscriptions?.forEach((sub) => {
-            const type = sub.chart
-              ? NodeType.REPO_CHART
-              : sub.image
-                ? NodeType.REPO_IMAGE
-                : NodeType.REPO_GIT;
-            n.push({
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              data: sub.chart || sub.image || sub.git || ({} as any),
-              stageName: stage.metadata?.name || '',
-              warehouseName: cur.metadata?.name || '',
-              refreshing: !!cur?.metadata?.annotations['kargo.akuity.io/refresh'],
-              type
-            });
+          n.push({
+            data: cur?.metadata?.name || '',
+            stageName: stage.metadata?.name || '',
+            warehouseName: cur?.metadata?.name || '',
+            refreshing: !!cur?.metadata?.annotations['kargo.akuity.io/refresh'],
+            type: NodeType.WAREHOUSE
           });
+          if (!hideSubscriptions) {
+            cur?.spec?.subscriptions?.forEach((sub) => {
+              const type = sub.chart
+                ? NodeType.REPO_CHART
+                : sub.image
+                  ? NodeType.REPO_IMAGE
+                  : NodeType.REPO_GIT;
+              n.push({
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                data: sub.chart || sub.image || sub.git || ({} as any),
+                stageName: stage.metadata?.name || '',
+                warehouseName: cur.metadata?.name || '',
+                type
+              });
+            });
+          }
         }
 
         return n;
       });
+
+    const parentIndexFor: { [key: string]: number } = {};
+    const subscriberIndexFor: { [key: string]: number } = {};
 
     myNodes.forEach((item, index) => {
       if (item.type === NodeType.STAGE) {
@@ -258,11 +277,29 @@ export const ProjectDetails = () => {
           width: warehouseNodeWidth,
           height: warehouseNodeHeight
         });
-        const subsIndex = myNodes.findIndex((node) => {
-          return node.type === NodeType.STAGE && node.data.metadata?.name === item.stageName;
-        });
 
-        g.setEdge(String(index), String(subsIndex));
+        if (hideSubscriptions || item.type !== NodeType.WAREHOUSE) {
+          let subsIndex = subscriberIndexFor[item.stageName];
+          if (subsIndex === undefined) {
+            subsIndex = myNodes.findIndex((node) => {
+              return node.type === NodeType.STAGE && node.data.metadata?.name === item.stageName;
+            });
+            subscriberIndexFor[item.stageName] = subsIndex;
+          }
+          g.setEdge(String(index), String(subsIndex));
+        }
+
+        if (item.type !== NodeType.WAREHOUSE) {
+          let parentIndex = parentIndexFor[item.warehouseName];
+          if (parentIndex === undefined) {
+            parentIndex = myNodes.findIndex((node) => {
+              return node.type === NodeType.WAREHOUSE && node.warehouseName === item.warehouseName;
+            });
+            parentIndexFor[item.warehouseName] = parentIndex;
+          }
+          // draw edge between subscription and parent warehouse
+          g.setEdge(String(parentIndex), String(index));
+        }
       }
     });
 
@@ -349,7 +386,7 @@ export const ProjectDetails = () => {
     });
 
     return [nodes, connectors, box, sortedStages];
-  }, [data]);
+  }, [data, hideSubscriptions]);
 
   const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
   const [promotingStage, setPromotingStage] = React.useState<Stage | undefined>();
@@ -725,18 +762,30 @@ export const ProjectDetails = () => {
                       </>
                     ) : (
                       <RepoNode nodeData={node}>
-                        <div className='flex w-full'>
-                          <Button
-                            onClick={() =>
-                              refreshWarehouseAction({ name: node.warehouseName, project: name })
-                            }
-                            icon={<FontAwesomeIcon icon={faRefresh} />}
-                            size='small'
-                            className='mt-1 ml-auto'
-                          >
-                            Refresh
-                          </Button>
+                        <div className='flex w-full h-full'>
+                          {node.type === NodeType.WAREHOUSE && (
+                            <Button
+                              onClick={() =>
+                                refreshWarehouseAction({
+                                  name: node.warehouseName,
+                                  project: name
+                                })
+                              }
+                              icon={<FontAwesomeIcon icon={faRefresh} />}
+                              size='small'
+                              className='m-auto'
+                            >
+                              Refresh
+                            </Button>
+                          )}
                         </div>
+                        {node.type === NodeType.WAREHOUSE && (
+                          <Nodule
+                            nodeHeight={warehouseNodeHeight}
+                            onClick={() => setHideSubscriptions(!hideSubscriptions)}
+                            icon={hideSubscriptions ? faEye : faEyeSlash}
+                          />
+                        )}
                       </RepoNode>
                     )}
                   </div>

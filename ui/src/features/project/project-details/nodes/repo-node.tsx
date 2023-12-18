@@ -14,13 +14,6 @@ type Props = {
   children?: React.ReactNode;
 };
 
-const name = {
-  [NodeType.REPO_IMAGE]: 'Image',
-  [NodeType.REPO_GIT]: 'Git',
-  [NodeType.REPO_CHART]: 'Chart',
-  [NodeType.WAREHOUSE]: 'Warehouse'
-};
-
 const ico = {
   [NodeType.REPO_IMAGE]: faDocker,
   [NodeType.REPO_GIT]: faGit,
@@ -30,40 +23,44 @@ const ico = {
 
 export const RepoNode = ({ nodeData, children }: Props) => {
   const type = nodeData.type;
-  const value = type === NodeType.REPO_CHART ? nodeData.data.registryUrl : nodeData.data.repoUrl;
+  const value =
+    type === NodeType.REPO_CHART
+      ? nodeData.data.registryUrl
+      : type === NodeType.WAREHOUSE
+        ? nodeData.data
+        : nodeData.data.repoUrl;
   return (
     <div className={styles.node}>
       <h3 className='flex justify-between gap-2'>
-        <div className='text-ellipsis whitespace-nowrap overflow-hidden'>
-          {nodeData.warehouseName}
+        <div className='text-ellipsis whitespace-nowrap overflow-x-hidden pb-1'>
+          {nodeData.type === NodeType.WAREHOUSE ? nodeData.data : 'Subscription'}
         </div>
         <div className='flex items-center'>
           {nodeData.refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
-          {nodeData.type !== NodeType.REPO_CHART && <FontAwesomeIcon icon={faBuilding} />}
+          {type && <FontAwesomeIcon icon={ico[type]} />}
         </div>
       </h3>
       <div className={styles.body}>
-        <div className='mb-2'>
-          <div className='flex items-center font-semibold text-sm mb-2'>
-            {type && <FontAwesomeIcon icon={ico[type]} className='mr-2' />}
-            {name[type as NodeType.REPO_CHART | NodeType.REPO_GIT | NodeType.REPO_IMAGE]}
+        {nodeData.type !== NodeType.WAREHOUSE && (
+          <div className='mb-2'>
+            {nodeData.type === NodeType.REPO_CHART ? 'Registry URL' : 'Repo URL'}
+            <Tooltip title={value}>
+              <a
+                href={
+                  nodeData.type === NodeType.REPO_IMAGE
+                    ? urlForImage(value)
+                    : `https://${value.replace('https://', '')}`
+                }
+                className={styles.value}
+                target='_blank'
+                rel='noreferrer'
+              >
+                {value}
+              </a>
+            </Tooltip>
           </div>
-          {nodeData.type === NodeType.REPO_CHART ? 'Registry URL' : 'Repo URL'}
-          <Tooltip title={value}>
-            <a
-              href={
-                nodeData.type === NodeType.REPO_IMAGE
-                  ? urlForImage(value)
-                  : `https://${value.replace('https://', '')}`
-              }
-              className={styles.value}
-              target='_blank'
-              rel='noreferrer'
-            >
-              {value}
-            </a>
-          </Tooltip>
-        </div>
+        )}
+
         {children}
       </div>
     </div>
