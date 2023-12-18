@@ -18,17 +18,25 @@ import (
 
 func newEnableAutoPromotion(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "enable-auto-promotion",
-		Args:    option.ExactArgs(2),
-		Example: "kargo stage enable-auto-promotion (PROJECT) (STAGE)",
+		Use:  "enable-auto-promotion --project=project (STAGE)",
+		Args: option.ExactArgs(2),
+		Example: `
+# Enable auto-promotion on a stage for a specific project
+kargo stage enable-auto-promotion --project=my-project dev
+
+# Enable auto-promotion on a stage for the default project
+kargo config set project my-project
+kargo stage enable-auto-promotion dev
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := strings.TrimSpace(args[0])
+			project := opt.Project
 			if project == "" {
 				return errors.New("project is required")
 			}
-			stage := strings.TrimSpace(args[1])
+
+			stage := strings.TrimSpace(args[0])
 			if stage == "" {
 				return errors.New("stage is required")
 			}
@@ -41,17 +49,25 @@ func newEnableAutoPromotion(opt *option.Option) *cobra.Command {
 
 func newDisableAutoPromotion(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "disable-auto-promotion",
-		Args:    option.ExactArgs(2),
-		Example: "kargo stage disable-auto-promotion (PROJECT) (STAGE)",
+		Use:  "disable-auto-promotion --project=project (STAGE)",
+		Args: option.ExactArgs(2),
+		Example: `
+# Disable auto-promotion on a stage for a specific project
+kargo stage disable-auto-promotion --project=my-project dev
+
+# Disable auto-promotion on a stage for the default project
+kargo config set project my-project
+kargo stage disable-auto-promotion dev
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := strings.TrimSpace(args[0])
+			project := opt.Project
 			if project == "" {
 				return errors.New("project is required")
 			}
-			stage := strings.TrimSpace(args[1])
+
+			stage := strings.TrimSpace(args[0])
 			if stage == "" {
 				return errors.New("stage is required")
 			}
