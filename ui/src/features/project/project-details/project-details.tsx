@@ -278,7 +278,7 @@ export const ProjectDetails = () => {
           height: warehouseNodeHeight
         });
 
-        if (hideSubscriptions || item.type !== NodeType.WAREHOUSE) {
+        if (item.type === NodeType.WAREHOUSE) {
           let subsIndex = subscriberIndexFor[item.stageName];
           if (subsIndex === undefined) {
             subsIndex = myNodes.findIndex((node) => {
@@ -297,8 +297,8 @@ export const ProjectDetails = () => {
             });
             parentIndexFor[item.warehouseName] = parentIndex;
           }
-          // draw edge between subscription and parent warehouse
-          g.setEdge(String(parentIndex), String(index));
+          // draw edge between subscription and warehouse
+          g.setEdge(String(index), String(parentIndex));
         }
       }
     });
@@ -784,6 +784,7 @@ export const ProjectDetails = () => {
                             nodeHeight={warehouseNodeHeight}
                             onClick={() => setHideSubscriptions(!hideSubscriptions)}
                             icon={hideSubscriptions ? faEye : faEyeSlash}
+                            begin={true}
                           />
                         )}
                       </RepoNode>
