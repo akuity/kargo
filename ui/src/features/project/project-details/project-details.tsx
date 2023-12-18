@@ -91,6 +91,8 @@ export const ProjectDetails = () => {
     }
   });
 
+  const [highlightedStages, setHighlightedStages] = React.useState<{ [key: string]: boolean }>({});
+
   React.useEffect(() => {
     if (!data || !isVisible || !warehouseData) {
       return;
@@ -489,6 +491,18 @@ export const ProjectDetails = () => {
     return false;
   };
 
+  const onHover = (h: boolean, id: string) => {
+    const stages = {} as { [key: string]: boolean };
+    if (!h) {
+      setHighlightedStages(stages);
+      return;
+    }
+    (stagesPerFreight[id] || []).forEach((stage) => {
+      stages[stage.metadata?.name || ''] = true;
+    });
+    setHighlightedStages(stages);
+  };
+
   return (
     <div className='flex flex-col flex-grow'>
       <ColorContext.Provider value={stageColorMap}>
@@ -563,6 +577,13 @@ export const ProjectDetails = () => {
                     }}
                     mode={freightModeFor(id)}
                     empty={(stagesPerFreight[id] || []).length === 0}
+                    onHover={(h) => onHover(h, id)}
+                    highlighted={(stagesPerFreight[id] || []).reduce((h, cur) => {
+                      if (h) {
+                        return true;
+                      }
+                      return highlightedStages[cur.metadata?.name || ''];
+                    }, false)}
                   >
                     <Dropdown
                       className='absolute top-2 right-2'
@@ -720,7 +741,9 @@ export const ProjectDetails = () => {
                                 }
                               : undefined
                           }
+                          onHover={(h) => onHover(h, node.data?.status?.currentFreight?.id || '')}
                           approving={!!manuallyApproving}
+                          highlighted={highlightedStages[node.data?.metadata?.name || '']}
                         />
                       </>
                     ) : (

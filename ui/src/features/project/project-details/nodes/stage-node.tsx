@@ -27,7 +27,9 @@ export const StageNode = ({
   promoting,
   currentFreight,
   onClick,
-  approving
+  approving,
+  onHover,
+  highlighted
 }: {
   stage: Stage;
   color: string;
@@ -40,6 +42,8 @@ export const StageNode = ({
   currentFreight: Freight;
   onClick?: () => void;
   approving?: boolean;
+  onHover: (hovering: boolean) => void;
+  highlighted?: boolean;
 }) => {
   const navigate = useNavigate();
   return (
@@ -55,9 +59,13 @@ export const StageNode = ({
           );
         }
       }}
+      onMouseEnter={() => onHover(true)}
+      onMouseLeave={() => onHover(false)}
     >
       <div
-        className={`${styles.node} ${faded ? styles.faded : ''}`}
+        className={`${styles.node} ${faded ? styles.faded : ''} ${
+          highlighted ? styles.highlighted : ''
+        }`}
         style={{
           backgroundColor: color,
           position: 'relative'
