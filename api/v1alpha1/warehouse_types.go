@@ -134,7 +134,7 @@ type ChartSubscription struct {
 	// chart registry (using HTTP/S) OR an OCI registry. This field is required.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$`
+	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
 	RegistryURL string `json:"registryURL"`
 	// Name specifies a Helm chart to subscribe to within the Helm chart registry
 	// specified by the RegistryURL field. This field is required.
