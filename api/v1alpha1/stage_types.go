@@ -277,7 +277,7 @@ type HelmChartDependencyUpdate struct {
 	// ChartPath whose version should be updated.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$`
+	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
 	RegistryURL string `json:"registryURL"`
 	// Name along with RegistryURL identify a subchart of the umbrella chart at
 	// ChartPath whose version should be updated.

@@ -173,7 +173,7 @@
                             "registryURL": {
                               "description": "RegistryURL along with Name identify a subchart of the umbrella chart at ChartPath whose version should be updated.",
                               "minLength": 1,
-                              "pattern": "^(((https?)|(oci))://)([\\w\\d\\.]+)(:[\\d]+)?(/.*)*$",
+                              "pattern": "^(((https?)|(oci))://)([\\w\\d\\.\\-]+)(:[\\d]+)?(/.*)*$",
                               "type": "string"
                             }
                           },
