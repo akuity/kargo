@@ -48,14 +48,14 @@ spec:
                       properties:
                         name:
                           description: Name specifies a Helm chart to subscribe to
-                            within the Helm chart registry specified by the RegistryURL
+                            within the Helm chart repository specified by the Repository
                             field. This field is required.
                           minLength: 1
                           type: string
-                        registryURL:
-                          description: RegistryURL specifies the URL of a Helm chart
-                            registry. It may be a classic chart registry (using HTTP/S)
-                            OR an OCI registry. This field is required.
+                        repository:
+                          description: Repository specifies the URL of a Helm chart
+                            registry. It may be within a classic chart registry (using
+                            HTTP/S) OR an OCI registry. This field is required.
                           minLength: 1
                           pattern: ^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$
                           type: string
@@ -70,7 +70,7 @@ spec:
                           type: string
                       required:
                       - name
-                      - registryURL
+                      - repository
                       type: object
                     git:
                       description: Git describes a subscriptions to a Git repository.

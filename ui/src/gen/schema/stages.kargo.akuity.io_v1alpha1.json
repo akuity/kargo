@@ -166,12 +166,12 @@
                               "type": "string"
                             },
                             "name": {
-                              "description": "Name along with RegistryURL identify a subchart of the umbrella chart at ChartPath whose version should be updated.",
+                              "description": "Name along with Repository identify a subchart of the umbrella chart at ChartPath whose version should be updated.",
                               "minLength": 1,
                               "type": "string"
                             },
-                            "registryURL": {
-                              "description": "RegistryURL along with Name identify a subchart of the umbrella chart at ChartPath whose version should be updated.",
+                            "repository": {
+                              "description": "Repository along with Name identify a subchart of the umbrella chart at ChartPath whose version should be updated.",
                               "minLength": 1,
                               "pattern": "^(((https?)|(oci))://)([\\w\\d\\.\\-]+)(:[\\d]+)?(/.*)*$",
                               "type": "string"
@@ -180,7 +180,7 @@
                           "required": [
                             "chartPath",
                             "name",
-                            "registryURL"
+                            "repository"
                           ],
                           "type": "object"
                         },
@@ -452,8 +452,8 @@
                     "description": "Name specifies the name of the chart.",
                     "type": "string"
                   },
-                  "registryURL": {
-                    "description": "RepoURL specifies the remote registry in which this chart is located.",
+                  "repository": {
+                    "description": "Repository specifies the remote repository in which this chart is located.",
                     "type": "string"
                   },
                   "version": {
@@ -579,8 +579,8 @@
                         "description": "Name specifies the name of the chart.",
                         "type": "string"
                       },
-                      "registryURL": {
-                        "description": "RepoURL specifies the remote registry in which this chart is located.",
+                      "repository": {
+                        "description": "Repository specifies the remote repository in which this chart is located.",
                         "type": "string"
                       },
                       "version": {
@@ -795,8 +795,8 @@
                       "description": "Name specifies the name of the chart.",
                       "type": "string"
                     },
-                    "registryURL": {
-                      "description": "RepoURL specifies the remote registry in which this chart is located.",
+                    "repository": {
+                      "description": "Repository specifies the remote repository in which this chart is located.",
                       "type": "string"
                     },
                     "version": {

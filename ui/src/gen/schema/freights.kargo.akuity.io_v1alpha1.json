@@ -15,8 +15,8 @@
             "description": "Name specifies the name of the chart.",
             "type": "string"
           },
-          "registryURL": {
-            "description": "RepoURL specifies the remote registry in which this chart is located.",
+          "repository": {
+            "description": "Repository specifies the remote repository in which this chart is located.",
             "type": "string"
           },
           "version": {
