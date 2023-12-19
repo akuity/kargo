@@ -1,5 +1,6 @@
 ---
-description: Installing Kargo
+description: Learn how to install Kargo using this step-by-step guide
+sidebar_label: Installing Kargo
 ---
 
 # Installing Kargo
