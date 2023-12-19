@@ -191,7 +191,7 @@ func buildChartDependencyChanges(
 	// Build a table of charts --> versions
 	versionsByChart := make(map[string]string, len(charts))
 	for _, chart := range charts {
-		key := fmt.Sprintf("%s:%s", chart.RegistryURL, chart.Name)
+		key := fmt.Sprintf("%s/%s", chart.RegistryURL, chart.Name)
 		versionsByChart[key] = chart.Version
 	}
 
@@ -222,7 +222,7 @@ func buildChartDependencyChanges(
 				errors.Wrapf(err, "error unmarshaling %q", absChartYAMLPath)
 		}
 		for i, dependency := range chartYAMLObj.Dependencies {
-			chartKey := fmt.Sprintf("%s:%s", dependency.Repository, dependency.Name)
+			chartKey := fmt.Sprintf("%s/%s", dependency.Repository, dependency.Name)
 			version, found := versionsByChart[chartKey]
 			if !found {
 				continue

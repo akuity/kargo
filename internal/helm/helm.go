@@ -136,11 +136,13 @@ func getChartVersionsFromOCIRegistry(
 	chart string,
 	creds *Credentials,
 ) ([]string, error) {
+	ref := fmt.Sprintf("%s/%s", strings.TrimPrefix(registryURL, "oci://"), chart)
+	parsedRef, err := registry.ParseReference(ref)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error parsing reference %q", ref)
+	}
 	rep := &remote.Repository{
-		Reference: registry.Reference{
-			Registry:   strings.TrimPrefix(registryURL, "oci://"),
-			Repository: chart,
-		},
+		Reference: parsedRef,
 		Client: &auth.Client{
 			Credential: func(context.Context, string) (auth.Credential, error) {
 				if creds != nil {

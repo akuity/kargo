@@ -98,16 +98,37 @@ func TestGetChartVersionsFromClassicRegistry(t *testing.T) {
 func TestGetChartVersionsFromOCIRegistry(t *testing.T) {
 	// Instead of mocking out an OCI registry, it's more expedient to use Kargo's
 	// own chart repo on ghcr.io to test this.
-	const testRegistryURL = "oci://ghcr.io"
-	const testChart = "akuity/kargo-charts/kargo"
-	versions, err := getChartVersionsFromOCIRegistry(
-		context.Background(),
-		testRegistryURL,
-		testChart,
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotEmpty(t, versions)
+	testCases := []struct {
+		registryURL string
+		chart       string
+	}{
+		// These test cases validate that Kargo is forgiving in terms of what the
+		// user provides for registryURL and for chart.
+		{
+			registryURL: "oci://ghcr.io",
+			chart:       "akuity/kargo-charts/kargo",
+		},
+		{
+			registryURL: "oci://ghcr.io/akuity",
+			chart:       "kargo-charts/kargo",
+		},
+		{
+			registryURL: "oci://ghcr.io/akuity/kargo-charts",
+			chart:       "kargo",
+		},
+	}
+	for i, testCase := range testCases {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			versions, err := getChartVersionsFromOCIRegistry(
+				context.Background(),
+				testCase.registryURL,
+				testCase.chart,
+				nil,
+			)
+			require.NoError(t, err)
+			require.NotEmpty(t, versions)
+		})
+	}
 }
 
 func TestGetLatestVersion(t *testing.T) {
