@@ -1,6 +1,6 @@
 ---
 description: Find out how to manage credentials with Kargo
-sidebar_label: Managing credetials
+sidebar_label: Managing credentials
 ---
 
 # Managing Credentials
