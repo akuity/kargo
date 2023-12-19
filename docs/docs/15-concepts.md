@@ -1,6 +1,6 @@
 ---
 sidebar_label: Key Concepts
-description: Find out more about key Kargo concepts - stage, freight, promotion, subscription, and more
+description: Find out more about key Kargo concepts - stages, freight, warehouses, promotions, and more
 ---
 # Key Kargo Concepts
 
