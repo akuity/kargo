@@ -1,6 +1,6 @@
 ---
 sidebar_label: Code of conduct
-description: Contributor Covenant Code of Conduct for Kargo open source project
+description: Contributor Code of Conduct for Kargo open source project
 ---
 
 # Kargo Contributor Code of Conduct
