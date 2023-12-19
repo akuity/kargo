@@ -19,13 +19,17 @@ export const FreightItem = ({
   children,
   onClick,
   mode,
-  empty
+  empty,
+  highlighted,
+  onHover
 }: {
   freight?: Freight;
   children: React.ReactNode;
   onClick?: () => void;
   mode: FreightMode;
   empty: boolean;
+  highlighted?: boolean;
+  onHover: (hovering: boolean) => void;
 }) => {
   return (
     <div
@@ -35,9 +39,12 @@ export const FreightItem = ({
         [styles.promotable]: mode === FreightMode.Promotable,
         [styles.disabled]: mode === FreightMode.Disabled,
         [styles.confirming]: mode === FreightMode.Confirming,
-        [styles.selected]: mode === FreightMode.Selected
+        [styles.selected]: mode === FreightMode.Selected,
+        [styles.highlighted]: highlighted
       })}
       onClick={onClick}
+      onMouseEnter={() => onHover(true)}
+      onMouseLeave={() => onHover(false)}
     >
       <div className='flex w-full h-full mb-1 items-center justify-center'>{children}</div>
       <div className='mt-auto w-full'>
