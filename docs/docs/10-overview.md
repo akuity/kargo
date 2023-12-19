@@ -1,7 +1,8 @@
 ---
 slug: /
-title: Overview
-Description: What is Kargo?
+sidebar_label: Overview
+description: Find out more about Kargo - a next-generation continuous delivery and application lifecycle
+orchestration platform for Kubernetes
 ---
 
 # What is Kargo?

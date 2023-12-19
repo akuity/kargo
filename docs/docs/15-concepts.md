@@ -1,9 +1,8 @@
 ---
-title: Concepts
-description: Concepts
+sidebar_label: Key Concepts
+description: Find out more about key Kargo concepts - stage, freight, promotion, subscription, and more
 ---
-
-This section covers important Kargo concepts.
+# Key Kargo Concepts
 
 ## The Basics
 

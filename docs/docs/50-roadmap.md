@@ -1,9 +1,9 @@
 ---
-title: Roadmap
-Description: Kargo Roadmap
+sidebar_label: Roadmap
+Description: See what's on the roadmap of Kargo and find out more about the latest releases
 ---
 
-# Roadmap
+# Kargo Roadmap
 
 Over a series of releases, Kargo's maintainers intend to establish and settle into a predictable, but yet to be determined release cadence.
 
