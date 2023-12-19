@@ -32,6 +32,10 @@ export type NodesRepoType = (
       type: NodeType.REPO_CHART;
       data: ChartSubscription;
     }
+  | {
+      type: NodeType.WAREHOUSE;
+      data: string;
+    }
 ) &
   NodeBase;
 

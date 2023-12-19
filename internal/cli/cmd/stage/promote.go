@@ -22,24 +22,34 @@ type PromoteFlags struct {
 func newPromoteCommand(opt *option.Option) *cobra.Command {
 	var flag PromoteFlags
 	cmd := &cobra.Command{
-		Use:     "promote",
-		Args:    option.ExactArgs(2),
-		Example: "kargo stage promote (PROJECT) (NAME) [(--freight=)freight-id]",
+		Use:  "promote --project=project (STAGE) [(--freight=)freight-id]",
+		Args: option.ExactArgs(2),
+		Example: `
+# Promote a freight to a stage for a specific project
+kargo stage promote dev --project=my-project --freight=abc123
+
+# Promote a freight to a stage for the default project
+kargo config set project my-project
+kargo stage promote dev --freight=abc123
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			project := opt.Project
+			if project == "" {
+				return errors.New("project is required")
+			}
+
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
 				return err
 			}
 
-			project := strings.TrimSpace(args[0])
-			if project == "" {
-				return errors.New("project is required")
-			}
-			name := strings.TrimSpace(args[1])
-			if name == "" {
+			stage := strings.TrimSpace(args[0])
+			if stage == "" {
 				return errors.New("name is required")
 			}
+
 			freight := strings.TrimSpace(flag.Freight)
 			if freight == "" {
 				// TODO: Get latest available freight if empty
@@ -48,7 +58,7 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 
 			res, err := kargoSvcCli.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
 				Project: project,
-				Name:    name,
+				Name:    stage,
 				Freight: freight,
 			}))
 			if err != nil {

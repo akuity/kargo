@@ -57,7 +57,7 @@ spec:
                             registry. It may be a classic chart registry (using HTTP/S)
                             OR an OCI registry. This field is required.
                           minLength: 1
-                          pattern: ^(((https?)|(oci))://)([\w\d\.]+)(:[\d]+)?(/.*)*$
+                          pattern: ^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$
                           type: string
                         semverConstraint:
                           description: SemverConstraint specifies constraints on what
