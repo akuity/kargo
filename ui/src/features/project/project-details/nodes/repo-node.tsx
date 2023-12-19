@@ -25,7 +25,7 @@ export const RepoNode = ({ nodeData, children }: Props) => {
   const type = nodeData.type;
   const value =
     type === NodeType.REPO_CHART
-      ? nodeData.data.registryUrl
+      ? nodeData.data.repository
       : type === NodeType.WAREHOUSE
         ? nodeData.data
         : nodeData.data.repoUrl;
