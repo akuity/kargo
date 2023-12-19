@@ -296,7 +296,12 @@ func applyArgoCDSourceUpdate(
 		}
 		if !done {
 			for _, chart := range newFreight.Charts {
-				if chart.Repository == source.RepoURL && chart.Name == source.Chart {
+				// Instead of comparing repos and chart names individually, this
+				// strategy is a bit more resilient to circumstances where a user may
+				// have used repo "x", chart "y/z" in the warehouse, but their
+				// Application says repo "x/y", chart "z".
+				if fmt.Sprintf("%s/%s", chart.Repository, chart.Name) ==
+					fmt.Sprintf("%s/%s", source.RepoURL, source.Chart) {
 					source.TargetRevision = chart.Version
 					break
 				}
