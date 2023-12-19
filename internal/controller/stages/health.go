@@ -121,7 +121,7 @@ func (r *reconciler) checkHealth(
 		}
 		if desiredRevision == "" {
 			for _, chart := range currentFreight.Charts {
-				if chart.RegistryURL == app.Spec.Source.RepoURL &&
+				if chart.Repository == app.Spec.Source.RepoURL &&
 					chart.Name == app.Spec.Source.Chart {
 					desiredRevision = chart.Version
 					break

@@ -71,7 +71,7 @@ type reconciler struct {
 
 	getLatestChartVersionFn func(
 		ctx context.Context,
-		registryURL string,
+		repository string,
 		chart string,
 		semverConstraint string,
 		creds *helm.Credentials,

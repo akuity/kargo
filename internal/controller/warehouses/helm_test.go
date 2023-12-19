@@ -26,7 +26,7 @@ func TestGetLatestCharts(t *testing.T) {
 		assertions func([]kargoapi.Chart, error)
 	}{
 		{
-			name: "error getting registry credentials",
+			name: "error getting repository credentials",
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(
 					context.Context,
@@ -43,7 +43,7 @@ func TestGetLatestCharts(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"error obtaining credentials for chart registry",
+					"error obtaining credentials for chart repository",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -135,9 +135,9 @@ func TestGetLatestCharts(t *testing.T) {
 				require.Equal(
 					t,
 					kargoapi.Chart{
-						RegistryURL: "fake-url",
-						Name:        "fake-chart",
-						Version:     "1.0.0",
+						Repository: "fake-url",
+						Name:       "fake-chart",
+						Version:    "1.0.0",
 					},
 					charts[0],
 				)
@@ -156,8 +156,8 @@ func TestGetLatestCharts(t *testing.T) {
 				[]kargoapi.RepoSubscription{
 					{
 						Chart: &kargoapi.ChartSubscription{
-							RegistryURL: "fake-url",
-							Name:        "fake-chart",
+							Repository: "fake-url",
+							Name:       "fake-chart",
 						},
 					},
 				},

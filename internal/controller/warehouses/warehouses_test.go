@@ -331,9 +331,9 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				) ([]kargoapi.Chart, error) {
 					return []kargoapi.Chart{
 						{
-							RegistryURL: "fake-registry",
-							Name:        "fake-chart",
-							Version:     "fake-version",
+							Repository: "fake-repo",
+							Name:       "fake-chart",
+							Version:    "fake-version",
 						},
 					}, nil
 				},
@@ -368,9 +368,9 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 						},
 						Charts: []kargoapi.Chart{
 							{
-								RegistryURL: "fake-registry",
-								Name:        "fake-chart",
-								Version:     "fake-version",
+								Repository: "fake-repo",
+								Name:       "fake-chart",
+								Version:    "fake-version",
 							},
 						},
 					},

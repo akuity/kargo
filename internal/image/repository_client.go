@@ -123,8 +123,7 @@ func newRepositoryClient(
 	if err != nil {
 		return nil, errors.Wrapf(err, "error parsing image repo URL %s", repoURL)
 	}
-	registryURL := reference.Domain(repoRef)
-	reg := getRegistry(registryURL)
+	reg := getRegistry(reference.Domain(repoRef))
 	image := reg.normalizeImageName(reference.Path(repoRef))
 	apiAddress := strings.TrimSuffix(reg.apiAddress, "/")
 

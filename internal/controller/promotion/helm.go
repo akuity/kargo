@@ -191,7 +191,7 @@ func buildChartDependencyChanges(
 	// Build a table of charts --> versions
 	versionsByChart := make(map[string]string, len(charts))
 	for _, chart := range charts {
-		key := fmt.Sprintf("%s/%s", chart.RegistryURL, chart.Name)
+		key := fmt.Sprintf("%s/%s", chart.Repository, chart.Name)
 		versionsByChart[key] = chart.Version
 	}
 

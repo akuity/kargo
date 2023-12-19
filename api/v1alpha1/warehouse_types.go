@@ -130,14 +130,15 @@ type ImageSubscription struct {
 
 // ChartSubscription defines a subscription to a Helm chart repository.
 type ChartSubscription struct {
-	// RegistryURL specifies the URL of a Helm chart registry. It may be a classic
-	// chart registry (using HTTP/S) OR an OCI registry. This field is required.
+	// Repository specifies the URL of a Helm chart registry. It may be within a
+	// classic chart registry (using HTTP/S) OR an OCI registry. This field is
+	// required.
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
-	RegistryURL string `json:"registryURL"`
-	// Name specifies a Helm chart to subscribe to within the Helm chart registry
-	// specified by the RegistryURL field. This field is required.
+	Repository string `json:"repository"`
+	// Name specifies a Helm chart to subscribe to within the Helm chart
+	// repository specified by the Repository field. This field is required.
 	//
 	//+kubebuilder:validation:MinLength=1
 	Name string `json:"name"`

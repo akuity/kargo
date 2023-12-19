@@ -303,13 +303,13 @@ type HelmImageUpdate struct {
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
 // as a subchart of an umbrella chart can be updated.
 type HelmChartDependencyUpdate struct {
-	// RegistryURL along with Name identify a subchart of the umbrella chart at
+	// Repository along with Name identify a subchart of the umbrella chart at
 	// ChartPath whose version should be updated.
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
-	RegistryURL string `json:"registryURL"`
-	// Name along with RegistryURL identify a subchart of the umbrella chart at
+	Repository string `json:"repository"`
+	// Name along with Repository identify a subchart of the umbrella chart at
 	// ChartPath whose version should be updated.
 	//
 	//+kubebuilder:validation:MinLength=1
@@ -550,8 +550,8 @@ type Image struct {
 
 // Chart describes a specific version of a Helm chart.
 type Chart struct {
-	// RepoURL specifies the remote registry in which this chart is located.
-	RegistryURL string `json:"registryURL,omitempty"`
+	// Repository specifies the remote repository in which this chart is located.
+	Repository string `json:"repository,omitempty"`
 	// Name specifies the name of the chart.
 	Name string `json:"name,omitempty"`
 	// Version specifies a particular version of the chart.

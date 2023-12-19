@@ -296,7 +296,7 @@ func applyArgoCDSourceUpdate(
 		}
 		if !done {
 			for _, chart := range newFreight.Charts {
-				if chart.RegistryURL == source.RepoURL && chart.Name == source.Chart {
+				if chart.Repository == source.RepoURL && chart.Name == source.Chart {
 					source.TargetRevision = chart.Version
 					break
 				}

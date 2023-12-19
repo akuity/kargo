@@ -290,7 +290,7 @@ func groupByChartRepo(
 	groups := make(map[string]*svcv1alpha1.FreightList)
 	for _, f := range freight {
 		for _, c := range f.Charts {
-			repoURL := fmt.Sprintf("%s/%s", c.RegistryURL, c.Name)
+			repoURL := fmt.Sprintf("%s/%s", c.Repository, c.Name)
 			if group == "" || repoURL == group {
 				groups[repoURL] = appendToFreightList(groups[repoURL], f)
 			}
@@ -376,7 +376,7 @@ func getRepoAndTag(s *apiv1alpha1.Freight) (string, string, *semver.Version) {
 		repo = s.Images[0].RepoUrl
 		tag = s.Images[0].Tag
 	} else if len(s.Charts) > 0 {
-		repo = s.Charts[0].RegistryUrl + "/" + s.Charts[0].Name
+		repo = s.Charts[0].Repository + "/" + s.Charts[0].Name
 		tag = s.Charts[0].Version
 	} else {
 		return "", "", nil

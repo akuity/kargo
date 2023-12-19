@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetChartVersionsFromClassicRegistry(t *testing.T) {
+func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 	// This is a mock registry. Depending on the request path, it returns a 404,
 	// invalid YAML, or valid YAML.
 	testServer := httptest.NewServer(
@@ -18,11 +18,11 @@ func TestGetChartVersionsFromClassicRegistry(t *testing.T) {
 			func(w http.ResponseWriter, r *http.Request) {
 				defer r.Body.Close()
 				switch r.URL.Path {
-				case "/bad-registry/index.yaml":
+				case "/bad-repo/index.yaml":
 					w.WriteHeader(http.StatusOK)
 					_, err := w.Write([]byte("this isn't yaml"))
 					require.NoError(t, err)
-				case "/fake-registry/index.yaml":
+				case "/fake-repo/index.yaml":
 					w.WriteHeader(http.StatusOK)
 					_, err := w.Write([]byte(`entries:
   fake-chart:
@@ -39,43 +39,43 @@ func TestGetChartVersionsFromClassicRegistry(t *testing.T) {
 	)
 	defer testServer.Close()
 	testCases := []struct {
-		name        string
-		registryURL string
-		chart       string
-		assertions  func(versions []string, err error)
+		name       string
+		repository string
+		chart      string
+		assertions func(versions []string, err error)
 	}{
 		{
-			name:        "request for registry index returns non-200 status",
-			registryURL: fmt.Sprintf("%s/non-existent-registry", testServer.URL),
-			chart:       "fake-chart",
+			name:       "request for repo index returns non-200 status",
+			repository: fmt.Sprintf("%s/non-existent-repo", testServer.URL),
+			chart:      "fake-chart",
 			assertions: func(versions []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "received unexpected HTTP 404")
 			},
 		},
 		{
-			name:        "index isn't valid YAML",
-			registryURL: fmt.Sprintf("%s/bad-registry", testServer.URL),
-			chart:       "fake-chart",
+			name:       "index isn't valid YAML",
+			repository: fmt.Sprintf("%s/bad-repo", testServer.URL),
+			chart:      "fake-chart",
 			assertions: func(versions []string, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "error unmarshaling registry index")
+				require.Contains(t, err.Error(), "error unmarshaling repository index")
 			},
 		},
 		{
-			name:        "no versions found",
-			registryURL: fmt.Sprintf("%s/fake-registry", testServer.URL),
-			chart:       "non-existent-chart",
+			name:       "no versions found",
+			repository: fmt.Sprintf("%s/fake-repo", testServer.URL),
+			chart:      "non-existent-chart",
 			assertions: func(versions []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "no versions of chart")
-				require.Contains(t, err.Error(), "found in registry index")
+				require.Contains(t, err.Error(), "found in repository index")
 			},
 		},
 		{
-			name:        "success",
-			registryURL: fmt.Sprintf("%s/fake-registry", testServer.URL),
-			chart:       "fake-chart",
+			name:       "success",
+			repository: fmt.Sprintf("%s/fake-repo", testServer.URL),
+			chart:      "fake-chart",
 			assertions: func(versions []string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, []string{"1.0.0", "1.1.0", "1.2.0"}, versions)
@@ -85,8 +85,8 @@ func TestGetChartVersionsFromClassicRegistry(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				getChartVersionsFromClassicRegistry(
-					testCase.registryURL,
+				getChartVersionsFromClassicRepo(
+					testCase.repository,
 					testCase.chart,
 					nil,
 				),
@@ -95,33 +95,33 @@ func TestGetChartVersionsFromClassicRegistry(t *testing.T) {
 	}
 }
 
-func TestGetChartVersionsFromOCIRegistry(t *testing.T) {
+func TestGetChartVersionsFromOCIRepo(t *testing.T) {
 	// Instead of mocking out an OCI registry, it's more expedient to use Kargo's
 	// own chart repo on ghcr.io to test this.
 	testCases := []struct {
-		registryURL string
-		chart       string
+		repository string
+		chart      string
 	}{
 		// These test cases validate that Kargo is forgiving in terms of what the
-		// user provides for registryURL and for chart.
+		// user provides for repository and for chart fields.
 		{
-			registryURL: "oci://ghcr.io",
-			chart:       "akuity/kargo-charts/kargo",
+			repository: "oci://ghcr.io",
+			chart:      "akuity/kargo-charts/kargo",
 		},
 		{
-			registryURL: "oci://ghcr.io/akuity",
-			chart:       "kargo-charts/kargo",
+			repository: "oci://ghcr.io/akuity",
+			chart:      "kargo-charts/kargo",
 		},
 		{
-			registryURL: "oci://ghcr.io/akuity/kargo-charts",
-			chart:       "kargo",
+			repository: "oci://ghcr.io/akuity/kargo-charts",
+			chart:      "kargo",
 		},
 	}
 	for i, testCase := range testCases {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			versions, err := getChartVersionsFromOCIRegistry(
+			versions, err := getChartVersionsFromOCIRepo(
 				context.Background(),
-				testCase.registryURL,
+				testCase.repository,
 				testCase.chart,
 				nil,
 			)

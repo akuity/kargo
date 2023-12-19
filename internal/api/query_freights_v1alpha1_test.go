@@ -312,26 +312,26 @@ func TestQueryFreight(t *testing.T) {
 					freight.Items = []kargoapi.Freight{
 						{
 							Charts: []kargoapi.Chart{{
-								RegistryURL: "fake-registry-url",
-								Name:        "fake-chart-name",
+								Repository: "fake-registry-url",
+								Name:       "fake-chart-name",
 							}},
 						},
 						{
 							Charts: []kargoapi.Chart{{
-								RegistryURL: "fake-registry-url",
-								Name:        "fake-chart-name",
+								Repository: "fake-registry-url",
+								Name:       "fake-chart-name",
 							}},
 						},
 						{
 							Charts: []kargoapi.Chart{{
-								RegistryURL: "fake-registry-url",
-								Name:        "another-fake-chart-name",
+								Repository: "fake-registry-url",
+								Name:       "another-fake-chart-name",
 							}},
 						},
 						{
 							Charts: []kargoapi.Chart{{
-								RegistryURL: "fake-registry-url",
-								Name:        "another-fake-chart-name",
+								Repository: "fake-registry-url",
+								Name:       "another-fake-chart-name",
 							}},
 						},
 					}
@@ -772,26 +772,26 @@ func TestGroupByChartRepo(t *testing.T) {
 	testFreight := []kargoapi.Freight{
 		{
 			Charts: []kargoapi.Chart{{
-				RegistryURL: "fake-registry-url",
-				Name:        "fake-chart",
+				Repository: "fake-registry-url",
+				Name:       "fake-chart",
 			}},
 		},
 		{
 			Charts: []kargoapi.Chart{{
-				RegistryURL: "fake-registry-url",
-				Name:        "fake-chart",
+				Repository: "fake-registry-url",
+				Name:       "fake-chart",
 			}},
 		},
 		{
 			Charts: []kargoapi.Chart{{
-				RegistryURL: "another-fake-registry-url",
-				Name:        "fake-chart",
+				Repository: "another-fake-registry-url",
+				Name:       "fake-chart",
 			}},
 		},
 		{
 			Charts: []kargoapi.Chart{{
-				RegistryURL: "another-fake-registry-url",
-				Name:        "fake-chart",
+				Repository: "another-fake-registry-url",
+				Name:       "fake-chart",
 			}},
 		},
 	}

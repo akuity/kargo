@@ -91,9 +91,9 @@ func TestFreightUpdateID(t *testing.T) {
 		},
 		Charts: []Chart{
 			{
-				RegistryURL: "fake-chart-registry",
-				Name:        "fake-chart",
-				Version:     "fake-chart-version",
+				Repository: "fake-chart-registry",
+				Name:       "fake-chart",
+				Version:    "fake-chart-version",
 			},
 		},
 	}

@@ -56,7 +56,7 @@ func (f *Freight) UpdateID() {
 	for _, chart := range f.Charts {
 		artifacts = append(
 			artifacts,
-			fmt.Sprintf("%s/%s:%s", chart.RegistryURL, chart.Name, chart.Version),
+			fmt.Sprintf("%s/%s:%s", chart.Repository, chart.Name, chart.Version),
 		)
 	}
 	sort.Strings(artifacts)
