@@ -1,5 +1,5 @@
 ---
-description: Find out how to manage credentials with Kargo
+description: Find out how to manage repository credentials for use by Kargo
 sidebar_label: Managing credentials
 ---
 
