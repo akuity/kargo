@@ -263,10 +263,10 @@ func (a *authInterceptor) listServiceAccounts(
 ) (map[string]map[types.NamespacedName]struct{}, error) {
 	queries := []libClient.MatchingFields{
 		{
-			kubeclient.ServiceAccountsByOIDCEmailIndexField: c.Subject,
+			kubeclient.ServiceAccountsByOIDCSubjectIndexField: c.Subject,
 		},
 		{
-			kubeclient.ServiceAccountsByOIDCSubjectIndexField: c.Subject,
+			kubeclient.ServiceAccountsByOIDCEmailIndexField: c.Email,
 		},
 	}
 	for _, group := range c.Groups {
