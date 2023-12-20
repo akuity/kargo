@@ -366,10 +366,11 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	result := ctrl.Result{
-		// TODO: Make this configurable
 		// Note: If there is a failure, controller runtime ignores this and uses
 		// progressive backoff instead. So this value only affects when we will
 		// reconcile next if THIS reconciliation succeeds.
+		//
+		// TODO: Make this configurable
 		RequeueAfter: 5 * time.Minute,
 	}
 

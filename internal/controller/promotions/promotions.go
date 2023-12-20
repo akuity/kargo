@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -120,7 +121,9 @@ func (r *reconciler) Reconcile(
 	result := ctrl.Result{
 		// Note: If there is a failure, controller runtime ignores this and uses
 		// progressive backoff instead. So this value only prevents requeueing
-		// a Promotion if THIS reconciliation succeeds.
+		// a Promotion if THIS reconciliation succeeds. Also note that we may
+		// update this to a non-zero value if the Promotion is Running and requires
+		// us to follow up on it.
 		RequeueAfter: 0,
 	}
 
@@ -223,6 +226,13 @@ func (r *reconciler) Reconcile(
 
 	if newStatus.Phase.IsTerminal() {
 		logger.Infof("promotion %s", newStatus.Phase)
+	}
+	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
+		// If the promotion is still running, we'll need to periodically check on
+		// it.
+		//
+		// TODO: Make this configurable
+		result.RequeueAfter = 5 * time.Minute
 	}
 
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
