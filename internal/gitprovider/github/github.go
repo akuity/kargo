@@ -13,6 +13,10 @@ import (
 	"github.com/akuity/kargo/internal/gitprovider"
 )
 
+const (
+	GitProviderServiceName = "github"
+)
+
 var (
 	githubRegistration = gitprovider.ProviderRegistration{
 		Predicate: func(repoURL string) bool {
@@ -20,11 +24,11 @@ var (
 			if err != nil {
 				return false
 			}
-			// The assumption here is that no one would ever put "github" in
-			// the DNS name of their self-hosted git provider. There is also
-			// the chance that they self host github but give it a name like:
-			// 'git.mycompany.com', in which case we would return false
-			return strings.Contains(u.Host, "github")
+			// We assume that any hostname with the word "github" in the hostname,
+			// can use this provider. NOTE: we will miss cases where the host is
+			// GitHub but doesn't incorporate the word "github" in the hostname.
+			// e.g. 'git.mycompany.com'
+			return strings.Contains(u.Host, GitProviderServiceName)
 		},
 		NewService: func() (gitprovider.GitProviderService, error) {
 			return NewGitHubProvider()
@@ -33,14 +37,14 @@ var (
 )
 
 func init() {
-	gitprovider.RegisterProvider("github", githubRegistration)
+	gitprovider.RegisterProvider(GitProviderServiceName, githubRegistration)
 }
 
 type GitHubProvider struct { // nolint: revive
 	client *github.Client
 }
 
-func NewGitHubProvider() (*GitHubProvider, error) {
+func NewGitHubProvider() (gitprovider.GitProviderService, error) {
 	client := github.NewClient(nil)
 	return &GitHubProvider{
 		client: client,
@@ -134,10 +138,11 @@ func convertGithubPR(ghPR *github.PullRequest) *gitprovider.PullRequest {
 		prState = gitprovider.PullRequestStateClosed
 	}
 	return &gitprovider.PullRequest{
-		Number: int64(pointer.IntDeref(ghPR.Number, 0)),
-		URL:    pointer.StringDeref(ghPR.HTMLURL, ""),
-		State:  prState,
-		Object: ghPR,
+		Number:         int64(pointer.IntDeref(ghPR.Number, 0)),
+		URL:            pointer.StringDeref(ghPR.HTMLURL, ""),
+		State:          prState,
+		MergeCommitSHA: pointer.StringDeref(ghPR.MergeCommitSHA, ""),
+		Object:         ghPR,
 	}
 }
 

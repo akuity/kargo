@@ -52,6 +52,8 @@ type PullRequest struct {
 	URL string `json:"url"`
 	// State is the pull request state (one of: Open, Closed)
 	State PullRequestState `json:"state"`
+	// MergeCommitSHA is the SHA of the merge commit
+	MergeCommitSHA string `json:"mergeCommitSHA"`
 	// Object is the underlying object from the provider
 	Object any `json:"-"`
 }

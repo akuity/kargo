@@ -69,15 +69,12 @@ func (c *compositeMechanism) Promote(
 			)
 		}
 		newStatus = aggregateGitPromoStatus(newStatus, *otherStatus)
-		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+		if newStatus.Phase != kargoapi.PromotionPhaseSucceeded {
 			// We only continue to the next promotion mechanism if the current
 			// mechanism succeeded. This is because a PR must be merged before
 			// performing the ArgoCD sync.
-			continue
+			break
 		}
-		// Current promotion mechanism is either Failed/Errored/Running.
-		// We stop executing promotion mechanisms and return the current status.
-		break
 	}
 
 	logger.Debug("done executing promotion mechanisms. aggregated status: ", newStatus.Phase)

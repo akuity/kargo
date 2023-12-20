@@ -361,6 +361,7 @@ func FromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kargoapi.GitRepoUpdate {
 		Render:      FromKargoRenderPromotionMechanismProto(u.GetRender()),
 		Kustomize:   FromKustomizePromotionMechanismProto(u.GetKustomize()),
 		Helm:        FromHelmPromotionMechanismProto(u.GetHelm()),
+		PullRequest: FromPullRequestPromotionMechanismProto(u.GetPullRequest()),
 	}
 }
 
@@ -417,6 +418,19 @@ func FromHelmPromotionMechanismProto(
 		Images: images,
 		Charts: charts,
 	}
+}
+
+func FromPullRequestPromotionMechanismProto(
+	m *v1alpha1.PullRequestPromotionMechanism,
+) *kargoapi.PullRequestPromotionMechanism {
+	if m == nil {
+		return nil
+	}
+	pr := kargoapi.PullRequestPromotionMechanism{}
+	if m.GetGithub() != nil {
+		pr.GitHub = &kargoapi.GitHubPullRequest{}
+	}
+	return &pr
 }
 
 func FromHelmImageUpdateProto(u *v1alpha1.HelmImageUpdate) *kargoapi.HelmImageUpdate {
@@ -566,8 +580,9 @@ func FromPromotionStatusProto(s *v1alpha1.PromotionStatus) *kargoapi.PromotionSt
 		return nil
 	}
 	return &kargoapi.PromotionStatus{
-		Phase:   kargoapi.PromotionPhase(s.GetPhase()),
-		Message: s.GetMessage(),
+		Phase:    kargoapi.PromotionPhase(s.GetPhase()),
+		Message:  s.GetMessage(),
+		Metadata: s.GetMetadata(),
 	}
 }
 
@@ -814,6 +829,7 @@ func ToGitRepoUpdateProto(g kargoapi.GitRepoUpdate) *v1alpha1.GitRepoUpdate {
 		Render:      render,
 		Kustomize:   kustomize,
 		Helm:        helm,
+		PullRequest: ToPullRequestPromotionMechanismProto(g.PullRequest),
 	}
 }
 
@@ -923,6 +939,19 @@ func ToArgoCDHelmProto(a kargoapi.ArgoCDHelm) *v1alpha1.ArgoCDHelm {
 	return &v1alpha1.ArgoCDHelm{
 		Images: images,
 	}
+}
+
+func ToPullRequestPromotionMechanismProto(
+	p *kargoapi.PullRequestPromotionMechanism,
+) *v1alpha1.PullRequestPromotionMechanism {
+	if p == nil {
+		return nil
+	}
+	pr := v1alpha1.PullRequestPromotionMechanism{}
+	if p.GitHub != nil {
+		pr.Github = &v1alpha1.GitHubPullRequest{}
+	}
+	return &pr
 }
 
 func ToArgoCDKustomizeImageUpdateProto(a kargoapi.ArgoCDKustomizeImageUpdate) *v1alpha1.ArgoCDKustomizeImageUpdate {

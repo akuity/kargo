@@ -180,7 +180,11 @@ func (g *gitMechanism) doSingleUpdate(
 
 	newStatus := promo.Status.DeepCopy()
 	if update.PullRequest != nil {
-		newStatus, err = reconcilePullRequest(ctx, promo.Status, repo, creds, commitBranch, update.WriteBranch)
+		gpClient, err := newGitProvider(update.RepoURL, update.PullRequest, creds)
+		if err != nil {
+			return nil, newFreight, err
+		}
+		commitID, newStatus, err = reconcilePullRequest(ctx, promo.Status, repo, gpClient, commitBranch, update.WriteBranch)
 		if err != nil {
 			return nil, newFreight, err
 		}
@@ -189,7 +193,7 @@ func (g *gitMechanism) doSingleUpdate(
 		newStatus.Phase = kargoapi.PromotionPhaseSucceeded
 	}
 
-	if commitIndex > -1 {
+	if commitIndex > -1 && newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
 		newFreight.Commits[commitIndex].HealthCheckCommit = commitID
 	}
 
@@ -267,8 +271,7 @@ func getRepoCredentialsFn(
 	}
 }
 
-// gitCommit clones the specified git repository using the provided credentials
-// (which may be nil), checks out the specified readRef (if non-empty), applies
+// gitCommit checks out the specified readRef (if non-empty), applies
 // the provided update function to the cloned repository, and then commits and
 // pushes any changes to the specified writeBranch. The function returns the
 // commit ID of the last commit made to the repository, or an error if any of
