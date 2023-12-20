@@ -160,92 +160,92 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			err error,
 		)
 	}{
-		// {
-		// 	name: "error getting readref",
-		// 	promoMech: &gitMechanism{
-		// 		getReadRefFn: func(
-		// 			kargoapi.GitRepoUpdate,
-		// 			[]kargoapi.GitCommit,
-		// 		) (string, int, error) {
-		// 			return "", 0, errors.New("something went wrong")
-		// 		},
-		// 	},
-		// 	assertions: func(
-		// 		status *kargoapi.PromotionStatus,
-		// 		newFreightIn kargoapi.SimpleFreight,
-		// 		newFreightOut kargoapi.SimpleFreight,
-		// 		err error,
-		// 	) {
-		// 		require.Error(t, err)
-		// 		require.Equal(t, "something went wrong", err.Error())
-		// 		require.Equal(t, newFreightIn, newFreightOut)
-		// 	},
-		// },
-		// {
-		// 	name: "error getting repo credentials",
-		// 	promoMech: &gitMechanism{
-		// 		getReadRefFn: func(
-		// 			kargoapi.GitRepoUpdate,
-		// 			[]kargoapi.GitCommit,
-		// 		) (string, int, error) {
-		// 			return testRef, 0, nil
-		// 		},
-		// 		getCredentialsFn: func(
-		// 			context.Context,
-		// 			string,
-		// 			string,
-		// 		) (*git.RepoCredentials, error) {
-		// 			return nil, errors.New("something went wrong")
-		// 		},
-		// 	},
-		// 	assertions: func(
-		// 		status *kargoapi.PromotionStatus,
-		// 		newFreightIn kargoapi.SimpleFreight,
-		// 		newFreightOut kargoapi.SimpleFreight,
-		// 		err error,
-		// 	) {
-		// 		require.Error(t, err)
-		// 		require.Equal(t, "something went wrong", err.Error())
-		// 		require.Equal(t, newFreightIn, newFreightOut)
-		// 	},
-		// },
-		// {
-		// 	name: "error committing change to repo",
-		// 	promoMech: &gitMechanism{
-		// 		getReadRefFn: func(
-		// 			kargoapi.GitRepoUpdate,
-		// 			[]kargoapi.GitCommit,
-		// 		) (string, int, error) {
-		// 			return testRef, 0, nil
-		// 		},
-		// 		getCredentialsFn: func(
-		// 			context.Context,
-		// 			string,
-		// 			string,
-		// 		) (*git.RepoCredentials, error) {
-		// 			return nil, nil
-		// 		},
-		// 		gitCommitFn: func(
-		// 			update kargoapi.GitRepoUpdate,
-		// 			newFreight kargoapi.SimpleFreight,
-		// 			readRef string,
-		// 			writeBranch string,
-		// 			repo git.Repo,
-		// 		) (string, error) {
-		// 			return "", errors.New("something went wrong")
-		// 		},
-		// 	},
-		// 	assertions: func(
-		// 		status *kargoapi.PromotionStatus,
-		// 		newFreightIn kargoapi.SimpleFreight,
-		// 		newFreightOut kargoapi.SimpleFreight,
-		// 		err error,
-		// 	) {
-		// 		require.Error(t, err)
-		// 		require.Equal(t, "something went wrong", err.Error())
-		// 		require.Equal(t, newFreightIn, newFreightOut)
-		// 	},
-		// },
+		{
+			name: "error getting readref",
+			promoMech: &gitMechanism{
+				getReadRefFn: func(
+					kargoapi.GitRepoUpdate,
+					[]kargoapi.GitCommit,
+				) (string, int, error) {
+					return "", 0, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				status *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
+			name: "error getting repo credentials",
+			promoMech: &gitMechanism{
+				getReadRefFn: func(
+					kargoapi.GitRepoUpdate,
+					[]kargoapi.GitCommit,
+				) (string, int, error) {
+					return testRef, 0, nil
+				},
+				getCredentialsFn: func(
+					context.Context,
+					string,
+					string,
+				) (*git.RepoCredentials, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				status *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
+			name: "error committing change to repo",
+			promoMech: &gitMechanism{
+				getReadRefFn: func(
+					kargoapi.GitRepoUpdate,
+					[]kargoapi.GitCommit,
+				) (string, int, error) {
+					return testRef, 0, nil
+				},
+				getCredentialsFn: func(
+					context.Context,
+					string,
+					string,
+				) (*git.RepoCredentials, error) {
+					return nil, nil
+				},
+				gitCommitFn: func(
+					update kargoapi.GitRepoUpdate,
+					newFreight kargoapi.SimpleFreight,
+					readRef string,
+					writeBranch string,
+					repo git.Repo,
+				) (string, error) {
+					return "", errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				status *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.SimpleFreight,
+				newFreightOut kargoapi.SimpleFreight,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
 		{
 			name: "success",
 			promoMech: &gitMechanism{

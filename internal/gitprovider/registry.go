@@ -5,8 +5,8 @@ import (
 )
 
 // ProviderRegistration holds details on how to instantiate the correct git provider
-// based on parameters (i.e. repo URL). It allows GitProviderService implementations
-// to generically register themselves to
+// based on parameters (i.e. repo URL). It allows programs to selectively register
+// GitProviderService implementations by anonymously importing implementation packages.
 type ProviderRegistration struct {
 	// Predicate is a function which should return true if the given repoURL is appropriate
 	// for the provider to handle (e.g. github.com is the domain name)
@@ -41,7 +41,7 @@ func NewGitProviderServiceFromURL(repoURL string) (GitProviderService, error) {
 }
 
 // RegisterProvider is called by provider implementation packages to register themselves as
-// a git provider for aut
+// a git provider.
 func RegisterProvider(name string, reg ProviderRegistration) {
 	if _, alreadyRegistered := registeredProviders[name]; alreadyRegistered {
 		panic(fmt.Sprintf("Provider %q already registered", name))

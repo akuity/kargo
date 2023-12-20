@@ -153,7 +153,7 @@ func reconcilePullRequest(
 			if merged {
 				newStatus.Phase = kargoapi.PromotionPhaseSucceeded
 				newStatus.Message = "Pull request was merged"
-				if pr.MergeCommitSHA != "" {
+				if pr.MergeCommitSHA == "" {
 					return "", nil, fmt.Errorf("merge commit SHA is empty")
 				}
 				mergeCommitSHA = pr.MergeCommitSHA
