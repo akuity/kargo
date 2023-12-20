@@ -25,9 +25,9 @@ application's lifecycle.
 
 Read more about Kargo in our [docs](https://kargo.akuity.io) or get hands-on
 right away by following our 
-[Quickstart documentation](https://kargo.akuity.io/quickstart) or watch the launch webinar with Kelsey Hightower and Jesse Suen to see a live demo and discussion of Kargo:
+[Quickstart documentation](https://kargo.akuity.io/quickstart) or watch the *Multi-Stage Deployment Pipelines the GitOps Way* talk by Jesse Suen & Kent Rancourt of Akuity at GitOpsCon EU 2024:
 
-[![Kargo Video Webinar](https://img.youtube.com/vi/yaZc0DdeLKk/0.jpg)](https://youtu.be/yaZc0DdeLKk)
+[![Multi-Stage Deployment Pipelines the GitOps Way - Kargo](https://img.youtube.com/vi/tl8w72tehZ0/0.jpg)](https://youtu.be/tl8w72tehZ0)
 
 This documentation is very new, so please open issues against this repository if
 you encounter any difficulties.
