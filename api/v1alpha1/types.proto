@@ -71,6 +71,7 @@ message GitRepoUpdate {
   optional KustomizePromotionMechanism kustomize = 5 [json_name = "kustomize"];
   optional HelmPromotionMechanism helm = 6 [json_name = "helm"];
   optional KargoRenderPromotionMechanism render = 7 [json_name = "render"];
+  optional PullRequestPromotionMechanism pull_request = 8 [json_name = "pullRequest"];
 }
 
 message GitSubscription {
@@ -118,6 +119,13 @@ message HelmImageUpdate {
 message HelmPromotionMechanism {
   repeated HelmImageUpdate images = 1 [json_name = "images"];
   repeated HelmChartDependencyUpdate charts = 2 [json_name = "charts"];
+}
+
+message PullRequestPromotionMechanism {
+  GitHubPullRequest github = 1 [json_name = "github"];
+}
+
+message GitHubPullRequest {
 }
 
 message Image {
@@ -188,7 +196,8 @@ message PromotionSpec {
 
 message PromotionStatus {
   string phase = 1 [json_name = "phase"];
-  string error = 2 [json_name = "error"];
+  string message = 2 [json_name = "message"];
+  map<string, string> metadata = 3 [json_name = "metadata"];
 }
 
 message RepoSubscription {

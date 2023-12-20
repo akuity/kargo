@@ -30,7 +30,15 @@ func (s *server) RefreshStage(
 	if err != nil {
 		return nil, err
 	}
-
+	// If there is a current promotion then refresh it too.
+	if stage.Status.CurrentPromotion != nil {
+		if _, err := kargoapi.RefreshPromotion(ctx, s.client, client.ObjectKey{
+			Namespace: req.Msg.GetProject(),
+			Name:      stage.Status.CurrentPromotion.Name,
+		}); err != nil {
+			return nil, err
+		}
+	}
 	return connect.NewResponse(&svcv1alpha1.RefreshStageResponse{
 		Stage: typesv1alpha1.ToStageProto(*stage),
 	}), nil

@@ -34,7 +34,7 @@ type reconciler struct {
 
 	// The following behaviors are overridable for testing purposes:
 
-	promoteFn func(context.Context, kargoapi.Promotion) error
+	promoteFn func(context.Context, kargoapi.Promotion) (*kargoapi.PromotionStatus, error)
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -145,29 +145,29 @@ func (r *reconciler) Reconcile(
 		return result, errors.Wrap(err, "error initializing Promotion queues")
 	}
 
-	logger = logger.WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"promotion": req.NamespacedName.Name,
-	})
 	ctx = logging.ContextWithLogger(ctx, logger)
-	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
 	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return result, err
 	}
-	if promo == nil {
-		// Ignore if not found. This can happen if the Promotion was deleted after
-		// the current reconciliation request was issued.
+	if promo == nil || promo.Status.Phase.IsTerminal() {
+		// Ignore if not found or already finished. Promo might be nil if the
+		// Promotion was deleted after the current reconciliation request was issued.
 		return result, nil
 	}
 
+	logger = logger.WithFields(log.Fields{
+		"namespace": req.NamespacedName.Namespace,
+		"promotion": req.NamespacedName.Name,
+		"stage":     promo.Spec.Stage,
+		"freight":   promo.Spec.Freight,
+	})
+
 	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
 		// anything we've already marked Running, we allow it to continue to reconcile
-	} else if promo.Status.Phase.IsTerminal() {
-		// if promo is already finished, nothing to do
-		return result, nil
+		logger.Debug("continuing Promotion")
 	} else {
 		// promo is Pending. Try to begin it.
 		if !r.pqs.tryBegin(ctx, promo) {
@@ -180,13 +180,8 @@ func (r *reconciler) Reconcile(
 			}
 			return result, nil
 		}
+		logger.Infof("began promotion")
 	}
-
-	logger = logger.WithFields(log.Fields{
-		"stage":   promo.Spec.Stage,
-		"freight": promo.Spec.Freight,
-	})
-	logger.Debug("executing Promotion")
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
@@ -200,8 +195,7 @@ func (r *reconciler) Reconcile(
 
 	promoCtx := logging.ContextWithLogger(ctx, logger)
 
-	phase := kargoapi.PromotionPhaseSucceeded
-	phaseError := ""
+	newStatus := promo.Status.DeepCopy()
 
 	// Wrap the promoteFn() call in an anonymous function to recover() any panics, so
 	// we can update the promo's phase with Error if it does. This breaks an infinite
@@ -210,30 +204,35 @@ func (r *reconciler) Reconcile(
 		defer func() {
 			if err := recover(); err != nil {
 				logger.Errorf("Promotion panic: %v", err)
-				phase = kargoapi.PromotionPhaseErrored
-				phaseError = fmt.Sprintf("%v", err)
+				newStatus.Phase = kargoapi.PromotionPhaseErrored
+				newStatus.Message = fmt.Sprintf("%v", err)
 			}
 		}()
-		if err = r.promoteFn(
+		otherStatus, promoteErr := r.promoteFn(
 			promoCtx,
 			*promo,
-		); err != nil {
-			phase = kargoapi.PromotionPhaseErrored
-			phaseError = err.Error()
-			logger.Errorf("error executing Promotion: %s", err)
+		)
+		if promoteErr != nil {
+			newStatus.Phase = kargoapi.PromotionPhaseErrored
+			newStatus.Message = promoteErr.Error()
+			logger.Errorf("error executing Promotion: %s", promoteErr)
+		} else {
+			newStatus = otherStatus
 		}
 	}()
 
-	if phase.IsTerminal() {
-		logger.Debugf("promotion %s", phase)
+	if newStatus.Phase.IsTerminal() {
+		logger.Infof("promotion %s", newStatus.Phase)
 	}
 
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
-		status.Phase = phase
-		status.Error = phaseError
+		*status = *newStatus
 	})
 	if err != nil {
 		logger.Errorf("error updating Promotion status: %s", err)
+	}
+	if clearRefreshErr := kargoapi.ClearPromotionRefresh(ctx, r.kargoClient, promo); clearRefreshErr != nil {
+		logger.Errorf("error clearing Promotion refresh annotation: %s", clearRefreshErr)
 	}
 
 	// Controller runtime automatically gives us a progressive backoff if err is not nil
@@ -243,7 +242,7 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) promote(
 	ctx context.Context,
 	promo kargoapi.Promotion,
-) error {
+) (*kargoapi.PromotionStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 	stageName := promo.Spec.Stage
 	stageNamespace := promo.Namespace
@@ -258,7 +257,7 @@ func (r *reconciler) promote(
 		},
 	)
 	if err != nil {
-		return errors.Wrapf(
+		return nil, errors.Wrapf(
 			err,
 			"error finding Stage %q in namespace %q",
 			stageName,
@@ -266,7 +265,7 @@ func (r *reconciler) promote(
 		)
 	}
 	if stage == nil {
-		return errors.Errorf(
+		return nil, errors.Errorf(
 			"could not find Stage %q in namespace %q",
 			stageName,
 			stageNamespace,
@@ -275,8 +274,10 @@ func (r *reconciler) promote(
 	logger.Debug("found associated Stage")
 
 	if stage.Status.CurrentFreight != nil && stage.Status.CurrentFreight.ID == freightName {
-		logger.Debug("Stage already has the desired Freight")
-		return nil
+		return &kargoapi.PromotionStatus{
+			Phase:   kargoapi.PromotionPhaseSucceeded,
+			Message: "Stage already has the desired Freight",
+		}, nil
 	}
 
 	targetFreight, err := kargoapi.GetFreight(
@@ -288,14 +289,14 @@ func (r *reconciler) promote(
 		},
 	)
 	if err != nil {
-		return errors.Wrapf(
+		return nil, errors.Wrapf(
 			err,
 			"error finding Freight %q in namespace %q",
 			promo.Spec.Freight, promo.Namespace,
 		)
 	}
 	if targetFreight == nil {
-		return errors.Errorf(
+		return nil, errors.Errorf(
 			"Freight %q not found in namespace %q",
 			promo.Spec.Freight,
 			promo.Namespace,
@@ -306,7 +307,7 @@ func (r *reconciler) promote(
 		upstreamStages[i] = upstreamStage.Name
 	}
 	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreamStages) {
-		return errors.Errorf(
+		return nil, errors.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
 			stageName,
@@ -329,33 +330,42 @@ func (r *reconciler) promote(
 		}
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	nextFreight, err := r.promoMechanisms.Promote(ctx, stage, simpleTargetFreight)
+	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, simpleTargetFreight)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// The assumption is that controller does not process multiple promotions in one stage
-	// so we are safe from race conditions and can just update the status
-	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
-		status.Phase = kargoapi.StagePhaseVerifying
-		status.CurrentPromotion = nil
-		// control-flow Stage history is maintained in Stage controller.
-		// So we only modify history for normal Stages.
-		// (Technically, we should prevent creating promotion jobs on
-		// control-flow stages in the first place)
-		if stage.Spec.PromotionMechanisms != nil {
-			status.CurrentFreight = &nextFreight
-			status.History.Push(nextFreight)
-		}
-	})
+	logger.Debugf("promotion %s", newStatus.Phase)
 
-	return errors.Wrapf(
-		err,
-		"error updating status of Stage %q in namespace %q",
-		stageName,
-		stageNamespace,
-	)
+	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+		// Only update Stage status if the promotion succeeded
+		// The assumption is that controller does not process multiple promotions in one stage
+		// so we are safe from race conditions and can just update the status
+		// TODO: remove all patching of Stage status out of promo reconciler
+		err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
+			status.Phase = kargoapi.StagePhaseVerifying
+			status.CurrentPromotion = nil
+			// control-flow Stage history is maintained in Stage controller.
+			// So we only modify history for normal Stages.
+			// (Technically, we should prevent creating promotion jobs on
+			// control-flow stages in the first place)
+			if stage.Spec.PromotionMechanisms != nil {
+				status.CurrentFreight = &nextFreight
+				status.History.Push(nextFreight)
+			}
+		})
+		if err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"error updating status of Stage %q in namespace %q",
+				stageName,
+				stageNamespace,
+			)
+		}
+	}
+
+	return newStatus, nil
 }

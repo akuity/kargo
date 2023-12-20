@@ -22,6 +22,8 @@ type compositeMechanism struct {
 // that is composed only of other Mechanisms. Executing Promote() or
 // CheckHealth() on a compositeMechanism will execute that same function on each
 // of its child Mechanisms in turn.
+// Promotions are executed *in sequence* and will not proceed to the next mechanism
+// until the mechanism returns Successful
 func newCompositeMechanism(
 	name string,
 	childPromotionMechanisms ...Mechanism,
@@ -41,12 +43,15 @@ func (c *compositeMechanism) GetName() string {
 func (c *compositeMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
+	promo *kargoapi.Promotion,
 	newFreight kargoapi.SimpleFreight,
-) (kargoapi.SimpleFreight, error) {
+) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
 	if stage.Spec.PromotionMechanisms == nil {
-		return newFreight, nil
+		return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded},
+			newFreight, nil
 	}
 
+	var newStatus *kargoapi.PromotionStatus
 	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
@@ -54,17 +59,68 @@ func (c *compositeMechanism) Promote(
 
 	for _, childMechanism := range c.childMechanisms {
 		var err error
-		newFreight, err = childMechanism.Promote(ctx, stage, newFreight)
+		var otherStatus *kargoapi.PromotionStatus
+		otherStatus, newFreight, err = childMechanism.Promote(ctx, stage, promo, newFreight)
 		if err != nil {
-			return newFreight, errors.Wrapf(
+			return nil, newFreight, errors.Wrapf(
 				err,
 				"error executing %s",
 				childMechanism.GetName(),
 			)
 		}
+		newStatus = aggregateGitPromoStatus(newStatus, *otherStatus)
+		if newStatus.Phase != kargoapi.PromotionPhaseSucceeded {
+			// We only continue to the next promotion mechanism if the current
+			// mechanism succeeded. This is because a PR must be merged before
+			// performing the ArgoCD sync.
+			break
+		}
 	}
 
-	logger.Debug("done executing promotion mechanisms")
+	logger.Debug("done executing promotion mechanisms. aggregated status: ", newStatus.Phase)
 
-	return newFreight, nil
+	return newStatus, newFreight, nil
+}
+
+// aggregateGitPromoStatus returns the aggregated status of two promotion statuses when
+// multiple promote mechanisms are used. Returns the most severe phase. In order of precedence:
+//
+//	Error, Failed, Running, Succeeded
+func aggregateGitPromoStatus(curr *kargoapi.PromotionStatus, other kargoapi.PromotionStatus) *kargoapi.PromotionStatus {
+	if curr == nil {
+		return other.DeepCopy()
+	}
+	newStatus := curr.DeepCopy()
+	if curr.Phase == kargoapi.PromotionPhaseErrored {
+		// do nothing. we are already at most severe phase
+	} else if other.Phase == kargoapi.PromotionPhaseErrored {
+		newStatus.Phase = kargoapi.PromotionPhaseErrored
+		newStatus.Message = other.Message
+	} else if curr.Phase == kargoapi.PromotionPhaseFailed || other.Phase == kargoapi.PromotionPhaseFailed {
+		newStatus.Phase = kargoapi.PromotionPhaseFailed
+		newStatus.Message = firstNonEmpty(curr.Message, other.Message)
+	} else if curr.Phase == kargoapi.PromotionPhaseRunning || other.Phase == kargoapi.PromotionPhaseRunning {
+		newStatus.Phase = kargoapi.PromotionPhaseRunning
+		newStatus.Message = firstNonEmpty(curr.Message, other.Message)
+	} else {
+		newStatus.Phase = kargoapi.PromotionPhaseSucceeded
+		newStatus.Message = firstNonEmpty(curr.Message, other.Message)
+	}
+	// Merge the two metadata maps
+	if len(other.Metadata) > 0 {
+		if newStatus.Metadata == nil {
+			newStatus.Metadata = make(map[string]string)
+		}
+		for k, v := range other.Metadata {
+			newStatus.Metadata[k] = v
+		}
+	}
+	return newStatus
+}
+
+func firstNonEmpty(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }

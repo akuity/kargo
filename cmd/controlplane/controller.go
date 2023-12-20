@@ -24,6 +24,8 @@ import (
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
+
+	_ "github.com/akuity/kargo/internal/gitprovider/github"
 )
 
 func newControllerCommand() *cobra.Command {

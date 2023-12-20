@@ -67,12 +67,13 @@ func (*argoCDMechanism) GetName() string {
 func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
+	promo *kargoapi.Promotion,
 	newFreight kargoapi.SimpleFreight,
-) (kargoapi.SimpleFreight, error) {
+) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
-		return newFreight, nil
+		return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
 	}
 
 	logger := logging.LoggerFromContext(ctx)
@@ -85,13 +86,13 @@ func (a *argoCDMechanism) Promote(
 			update,
 			newFreight,
 		); err != nil {
-			return newFreight, err
+			return nil, newFreight, err
 		}
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
 
-	return newFreight, nil
+	return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
 }
 
 func (a *argoCDMechanism) doSingleUpdate(

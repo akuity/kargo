@@ -25,6 +25,7 @@ rules:
   - get
   - list
   - watch
+  - patch
 - apiGroups:
   - kargo.akuity.io
   resources:

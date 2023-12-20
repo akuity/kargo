@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -54,6 +55,7 @@ func TestGitPromote(t *testing.T) {
 		name       string
 		promoMech  *gitMechanism
 		assertions func(
+			status *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.SimpleFreight,
 			newFreightOut kargoapi.SimpleFreight,
 			err error,
@@ -67,6 +69,7 @@ func TestGitPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -83,14 +86,15 @@ func TestGitPromote(t *testing.T) {
 				},
 				doSingleUpdateFn: func(
 					_ context.Context,
-					_ string,
+					_ *kargoapi.Promotion,
 					_ kargoapi.GitRepoUpdate,
 					newFreight kargoapi.SimpleFreight,
-				) (kargoapi.SimpleFreight, error) {
-					return newFreight, errors.New("something went wrong")
+				) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+					return nil, newFreight, errors.New("something went wrong")
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -108,14 +112,15 @@ func TestGitPromote(t *testing.T) {
 				},
 				doSingleUpdateFn: func(
 					_ context.Context,
-					_ string,
+					_ *kargoapi.Promotion,
 					_ kargoapi.GitRepoUpdate,
 					newFreight kargoapi.SimpleFreight,
-				) (kargoapi.SimpleFreight, error) {
-					return newFreight, nil
+				) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+					return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, newFreight, nil
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -128,16 +133,17 @@ func TestGitPromote(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			newFreightIn := kargoapi.SimpleFreight{}
-			newFreightOut, err := testCase.promoMech.Promote(
+			status, newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				&kargoapi.Stage{
 					Spec: &kargoapi.StageSpec{
 						PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					},
 				},
+				&kargoapi.Promotion{},
 				newFreightIn,
 			)
-			testCase.assertions(newFreightIn, newFreightOut, err)
+			testCase.assertions(status, newFreightIn, newFreightOut, err)
 		})
 	}
 }
@@ -148,6 +154,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 		name       string
 		promoMech  *gitMechanism
 		assertions func(
+			status *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.SimpleFreight,
 			newFreightOut kargoapi.SimpleFreight,
 			err error,
@@ -164,6 +171,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -191,6 +199,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -221,12 +230,13 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					newFreight kargoapi.SimpleFreight,
 					readRef string,
 					writeBranch string,
-					creds *git.RepoCredentials,
+					repo git.Repo,
 				) (string, error) {
 					return "", errors.New("something went wrong")
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -257,12 +267,13 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					newFreight kargoapi.SimpleFreight,
 					readRef string,
 					writeBranch string,
-					creds *git.RepoCredentials,
+					repo git.Repo,
 				) (string, error) {
 					return "fake-commit-id", nil
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -284,13 +295,15 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			newFreightIn := kargoapi.SimpleFreight{
 				Commits: []kargoapi.GitCommit{{}},
 			}
-			newFreightOut, err := testCase.promoMech.doSingleUpdate(
+			status, newFreightOut, err := testCase.promoMech.doSingleUpdate(
 				context.Background(),
-				"fake-namespace",
-				kargoapi.GitRepoUpdate{},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"},
+				},
+				kargoapi.GitRepoUpdate{RepoURL: "https://github.com/akuity/kargo"},
 				newFreightIn,
 			)
-			testCase.assertions(newFreightIn, newFreightOut, err)
+			testCase.assertions(status, newFreightIn, newFreightOut, err)
 		})
 	}
 }

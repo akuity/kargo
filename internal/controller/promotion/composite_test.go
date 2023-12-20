@@ -43,6 +43,7 @@ func TestCompositePromote(t *testing.T) {
 		promoMech  *compositeMechanism
 		newFreight kargoapi.SimpleFreight
 		assertions func(
+			promoStatus *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.SimpleFreight,
 			newFreightOut kargoapi.SimpleFreight,
 			err error,
@@ -58,14 +59,16 @@ func TestCompositePromote(t *testing.T) {
 							context.Context,
 							*kargoapi.Stage,
 							kargoapi.SimpleFreight,
-						) (kargoapi.SimpleFreight, error) {
-							return kargoapi.SimpleFreight{},
+						) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+							return &kargoapi.PromotionStatus{},
+								kargoapi.SimpleFreight{},
 								errors.New("something went wrong")
 						},
 					},
 				},
 			},
 			assertions: func(
+				promoStatus *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -89,18 +92,19 @@ func TestCompositePromote(t *testing.T) {
 							_ context.Context,
 							_ *kargoapi.Stage,
 							newFreight kargoapi.SimpleFreight,
-						) (kargoapi.SimpleFreight, error) {
+						) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
 							// This is not a realistic change that a child promotion mechanism
 							// would make, but for testing purposes, this is good enough to
 							// help us assert that the function under test does return all
 							// modifications made by its child promotion mechanisms.
 							newFreight.ID = "fake-mutated-id"
-							return newFreight, nil
+							return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, newFreight, nil
 						},
 					},
 				},
 			},
 			assertions: func(
+				promoStatus *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -116,16 +120,17 @@ func TestCompositePromote(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightOut, err := testCase.promoMech.Promote(
+			promoStatus, newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				&kargoapi.Stage{
 					Spec: &kargoapi.StageSpec{
 						PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 					},
 				},
+				&kargoapi.Promotion{},
 				testCase.newFreight,
 			)
-			testCase.assertions(testCase.newFreight, newFreightOut, err)
+			testCase.assertions(promoStatus, testCase.newFreight, newFreightOut, err)
 		})
 	}
 }

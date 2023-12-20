@@ -513,6 +513,11 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
    */
   render?: KargoRenderPromotionMechanism;
 
+  /**
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.PullRequestPromotionMechanism pull_request = 8;
+   */
+  pullRequest?: PullRequestPromotionMechanism;
+
   constructor(data?: PartialMessage<GitRepoUpdate>) {
     super();
     proto3.util.initPartial(data, this);
@@ -527,6 +532,7 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
     { no: 5, name: "kustomize", kind: "message", T: KustomizePromotionMechanism, opt: true },
     { no: 6, name: "helm", kind: "message", T: HelmPromotionMechanism, opt: true },
     { no: 7, name: "render", kind: "message", T: KargoRenderPromotionMechanism, opt: true },
+    { no: 8, name: "pull_request", kind: "message", T: PullRequestPromotionMechanism, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitRepoUpdate {
@@ -929,6 +935,74 @@ export class HelmPromotionMechanism extends Message<HelmPromotionMechanism> {
 
   static equals(a: HelmPromotionMechanism | PlainMessage<HelmPromotionMechanism> | undefined, b: HelmPromotionMechanism | PlainMessage<HelmPromotionMechanism> | undefined): boolean {
     return proto3.util.equals(HelmPromotionMechanism, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.PullRequestPromotionMechanism
+ */
+export class PullRequestPromotionMechanism extends Message<PullRequestPromotionMechanism> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.GitHubPullRequest github = 1;
+   */
+  github?: GitHubPullRequest;
+
+  constructor(data?: PartialMessage<PullRequestPromotionMechanism>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PullRequestPromotionMechanism";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "github", kind: "message", T: GitHubPullRequest },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PullRequestPromotionMechanism {
+    return new PullRequestPromotionMechanism().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PullRequestPromotionMechanism {
+    return new PullRequestPromotionMechanism().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PullRequestPromotionMechanism {
+    return new PullRequestPromotionMechanism().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PullRequestPromotionMechanism | PlainMessage<PullRequestPromotionMechanism> | undefined, b: PullRequestPromotionMechanism | PlainMessage<PullRequestPromotionMechanism> | undefined): boolean {
+    return proto3.util.equals(PullRequestPromotionMechanism, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.GitHubPullRequest
+ */
+export class GitHubPullRequest extends Message<GitHubPullRequest> {
+  constructor(data?: PartialMessage<GitHubPullRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.GitHubPullRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitHubPullRequest {
+    return new GitHubPullRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GitHubPullRequest {
+    return new GitHubPullRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GitHubPullRequest {
+    return new GitHubPullRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GitHubPullRequest | PlainMessage<GitHubPullRequest> | undefined, b: GitHubPullRequest | PlainMessage<GitHubPullRequest> | undefined): boolean {
+    return proto3.util.equals(GitHubPullRequest, a, b);
   }
 }
 
@@ -1481,9 +1555,14 @@ export class PromotionStatus extends Message<PromotionStatus> {
   phase = "";
 
   /**
-   * @generated from field: string error = 2;
+   * @generated from field: string message = 2;
    */
-  error = "";
+  message = "";
+
+  /**
+   * @generated from field: map<string, string> metadata = 3;
+   */
+  metadata: { [key: string]: string } = {};
 
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
@@ -1494,7 +1573,8 @@ export class PromotionStatus extends Message<PromotionStatus> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {

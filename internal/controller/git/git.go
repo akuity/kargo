@@ -54,6 +54,10 @@ type Repo interface {
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
+	// CurrentBranch returns the current branch
+	CurrentBranch() string
+	// DeleteBranch deletes the specified branch
+	DeleteBranch(branch string) error
 	// HasDiffs returns a bool indicating whether the working directory currently
 	// contains any differences from what's already at the head of the current
 	// branch.
@@ -61,6 +65,8 @@ type Repo interface {
 	// GetDiffPaths returns a string slice indicating the paths, relative to the
 	// root of the repository, of any new or modified files.
 	GetDiffPaths() ([]string, error)
+	// IsAncestor returns true if parent branch is an ancestor of child
+	IsAncestor(parent string, child string) (bool, error)
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
@@ -71,7 +77,9 @@ type Repo interface {
 	// ending with id2. The results exclude id1, but include id2.
 	CommitMessages(id1, id2 string) ([]string, error)
 	// Push pushes from the current branch to a remote branch by the same name.
-	Push() error
+	Push(force bool) error
+	// RefsHaveDiffs returns whether there is a diff between two commits/branches
+	RefsHaveDiffs(commit1 string, commit2 string) (bool, error)
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
 	// in the remote repository.
 	RemoteBranchExists(branch string) (bool, error)
@@ -162,8 +170,6 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.Branch != "" {
 		args = append(args, "--branch", opts.Branch)
 		r.currentBranch = opts.Branch
-	} else {
-		r.currentBranch = "HEAD"
 	}
 	if opts.SingleBranch {
 		args = append(args, "--single-branch")
@@ -174,13 +180,26 @@ func (r *repo) clone(opts *CloneOptions) error {
 	args = append(args, r.url, r.dir)
 	cmd := r.buildCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
-	_, err := libExec.Exec(cmd)
-	return errors.Wrapf(
-		err,
-		"error cloning repo %q into %q",
-		r.url,
-		r.dir,
-	)
+	if _, err := libExec.Exec(cmd); err != nil {
+		return errors.Wrapf(
+			err,
+			"error cloning repo %q into %q",
+			r.url,
+			r.dir,
+		)
+	}
+	if opts.Branch == "" {
+		// If branch wasn't specified as part of options, we need to determine it manually
+		resBytes, err := libExec.Exec(r.buildCommand(
+			"branch",
+			"--show-current",
+		))
+		if err != nil {
+			return errors.Wrap(err, "error determining branch after cloning")
+		}
+		r.currentBranch = strings.TrimSpace(string(resBytes))
+	}
+	return nil
 }
 
 func (r *repo) Close() error {
@@ -212,6 +231,21 @@ func (r *repo) Commit(message string) error {
 		"error committing changes to branch %q",
 		r.currentBranch,
 	)
+}
+
+func (r *repo) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
+	// `git diff --quiet` returns 0 if no diff, 1 if diff, and non-zero/one for any other error
+	_, err := libExec.Exec(r.buildCommand(
+		"diff", "--quiet", fmt.Sprintf("%s..%s", commit1, commit2), "--"))
+	if err == nil {
+		return false, nil
+	}
+	if execErr, ok := err.(*libExec.ExitError); ok {
+		if execErr.ExitCode == 1 {
+			return true, nil
+		}
+	}
+	return false, errors.Wrapf(err, "error diffing commits %s..%s", commit1, commit2)
 }
 
 func (r *repo) CreateChildBranch(branch string) error {
@@ -251,6 +285,25 @@ func (r *repo) CreateOrphanedBranch(branch string) error {
 	return r.Clean()
 }
 
+func (r *repo) CurrentBranch() string {
+	return r.currentBranch
+}
+
+func (r *repo) DeleteBranch(branch string) error {
+	_, err := libExec.Exec(r.buildCommand(
+		"branch",
+		"--delete",
+		"--force",
+		branch,
+	))
+	return errors.Wrapf(
+		err,
+		"error deleting branch %q for repo %q",
+		branch,
+		r.url,
+	)
+}
+
 func (r *repo) HasDiffs() (bool, error) {
 	resBytes, err := libExec.Exec(r.buildCommand("status", "-s"))
 	return len(resBytes) > 0,
@@ -273,6 +326,19 @@ func (r *repo) GetDiffPaths() ([]string, error) {
 		)
 	}
 	return paths, nil
+}
+
+func (r *repo) IsAncestor(parent string, child string) (bool, error) {
+	_, err := libExec.Exec(r.buildCommand("merge-base", "--is-ancestor", parent, child))
+	if err == nil {
+		return true, nil
+	}
+	if execErr, ok := err.(*libExec.ExitError); ok {
+		if execErr.ExitCode == 1 {
+			return false, nil
+		}
+	}
+	return false, errors.Wrapf(err, "error testing ancestry of branches %q, %q", parent, child)
 }
 
 func (r *repo) LastCommitID() (string, error) {
@@ -319,9 +385,12 @@ func (r *repo) CommitMessages(id1, id2 string) ([]string, error) {
 	return msgs, nil
 }
 
-func (r *repo) Push() error {
-	_, err :=
-		libExec.Exec(r.buildCommand("push", "origin", r.currentBranch))
+func (r *repo) Push(force bool) error {
+	args := []string{"push", "origin", r.currentBranch}
+	if force {
+		args = append(args, "--force")
+	}
+	_, err := libExec.Exec(r.buildCommand(args...))
 	return errors.Wrapf(err, "error pushing branch %q", r.currentBranch)
 }
 
