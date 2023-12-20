@@ -45,7 +45,7 @@ func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		promos                []client.Object
-		promoteFn             func(context.Context, v1alpha1.Promotion) error
+		promoteFn             func(context.Context, v1alpha1.Promotion) (*kargoapi.PromotionStatus, error)
 		promoToReconcile      *types.NamespacedName // if nil, uses the first of the promos
 		expectPromoteFnCalled bool
 		expectedPhase         kargoapi.PromotionPhase
@@ -106,7 +106,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
-			promoteFn: func(ctx context.Context, p v1alpha1.Promotion) error {
+			promoteFn: func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
 				panic("expected panic")
 			},
 		},
@@ -117,8 +117,8 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
-			promoteFn: func(ctx context.Context, p v1alpha1.Promotion) error {
-				return errors.New("expected error")
+			promoteFn: func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+				return nil, errors.New("expected error")
 			},
 		},
 	}
@@ -131,12 +131,12 @@ func TestReconcile(t *testing.T) {
 				require.NoError(t, err)
 			}
 			promoteWasCalled := false
-			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion) error {
+			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
 				if tc.promoteFn != nil {
 					return tc.promoteFn(ctx, p)
 				}
-				return nil
+				return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, nil
 			}
 			var req ctrl.Request
 			if tc.promoToReconcile != nil {

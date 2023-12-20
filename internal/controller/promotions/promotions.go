@@ -208,14 +208,14 @@ func (r *reconciler) Reconcile(
 				newStatus.Message = fmt.Sprintf("%v", err)
 			}
 		}()
-		otherStatus, err := r.promoteFn(
+		otherStatus, promoteErr := r.promoteFn(
 			promoCtx,
 			*promo,
 		)
-		if err != nil {
+		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
-			newStatus.Message = err.Error()
-			logger.Errorf("error executing Promotion: %s", err)
+			newStatus.Message = promoteErr.Error()
+			logger.Errorf("error executing Promotion: %s", promoteErr)
 		} else {
 			newStatus = otherStatus
 		}

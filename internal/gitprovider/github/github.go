@@ -36,7 +36,7 @@ func init() {
 	gitprovider.RegisterProvider("github", githubRegistration)
 }
 
-type GitHubProvider struct {
+type GitHubProvider struct { // nolint: revive
 	client *github.Client
 }
 

@@ -1112,8 +1112,9 @@ func ToPromotionProto(p kargoapi.Promotion) *v1alpha1.Promotion {
 			Freight: p.Spec.Freight,
 		},
 		Status: &v1alpha1.PromotionStatus{
-			Phase:   string(p.Status.Phase),
-			Message: p.Status.Message,
+			Phase:    string(p.Status.Phase),
+			Message:  p.Status.Message,
+			Metadata: p.Status.Metadata,
 		},
 	}
 }

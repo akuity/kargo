@@ -161,7 +161,7 @@ func (g *gitMechanism) doSingleUpdate(
 
 		if getPullRequestNumberFromMetadata(promo.Status.Metadata, update.RepoURL) == -1 {
 			// PR was never created. Prepare the branch for the commit
-			if err := preparePullRequestBranch(repo, commitBranch, update.WriteBranch); err != nil {
+			if err = preparePullRequestBranch(repo, commitBranch, update.WriteBranch); err != nil {
 				return nil, newFreight, errors.Wrapf(err, "error preparing PR branch %q", update.RepoURL)
 			}
 		}

@@ -6,7 +6,7 @@ import (
 
 // GitProviderService is an abstracted interface for a git providers (GitHub, GitLab, BitBucket)
 // when interacting against a single git repository (e.g. managing pull requests).
-type GitProviderService interface {
+type GitProviderService interface { // nolint: revive
 	// WithAuthToken sets an authorization token to the client
 	WithAuthToken(token string) GitProviderService
 

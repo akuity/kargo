@@ -22,7 +22,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 	if err != nil {
 		return err
 	}
-	if err := repo.Checkout(base); err != nil {
+	if err = repo.Checkout(base); err != nil {
 		return err
 	}
 	prBranchExists, err := repo.RemoteBranchExists(prBranch)
@@ -49,13 +49,13 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 		}
 		if !isAncestor {
 			// Branch exists, but is not an ancestor of writeBranch, recreate it
-			if err := repo.Checkout(base); err != nil {
+			if err = repo.Checkout(base); err != nil {
 				return err
 			}
-			if err := repo.DeleteBranch(prBranch); err != nil {
+			if err = repo.DeleteBranch(prBranch); err != nil {
 				return err
 			}
-			if err := repo.CreateChildBranch(prBranch); err != nil {
+			if err = repo.CreateChildBranch(prBranch); err != nil {
 				return err
 			}
 			if err = repo.Push(true); err != nil {
@@ -64,10 +64,7 @@ func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error
 		}
 	}
 	// Return to original branch
-	if err := repo.Checkout(origBranch); err != nil {
-		return err
-	}
-	return nil
+	return repo.Checkout(origBranch)
 }
 
 // reconcilePullRequest creates and monitors a pull request for the promotion,

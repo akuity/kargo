@@ -197,7 +197,7 @@ message PromotionSpec {
 message PromotionStatus {
   string phase = 1 [json_name = "phase"];
   string message = 2 [json_name = "message"];
-  map<string, VerifiedStage> metadata = 3 [json_name = "metadata"];
+  map<string, string> metadata = 3 [json_name = "metadata"];
 }
 
 message RepoSubscription {

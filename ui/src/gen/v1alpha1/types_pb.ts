@@ -1560,9 +1560,9 @@ export class PromotionStatus extends Message<PromotionStatus> {
   message = "";
 
   /**
-   * @generated from field: map<string, github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage> metadata = 3;
+   * @generated from field: map<string, string> metadata = 3;
    */
-  metadata: { [key: string]: VerifiedStage } = {};
+  metadata: { [key: string]: string } = {};
 
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
@@ -1574,7 +1574,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: VerifiedStage} },
+    { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {

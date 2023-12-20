@@ -37,6 +37,7 @@ func TestArgoCDPromote(t *testing.T) {
 		stage      *kargoapi.Stage
 		newFreight kargoapi.SimpleFreight
 		assertions func(
+			newStatus *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.SimpleFreight,
 			newFreightOut kargoapi.SimpleFreight,
 			err error,
@@ -51,6 +52,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
+				newStatus *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -81,6 +83,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
+				newStatus *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -116,6 +119,7 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
+				newStatus *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -127,12 +131,13 @@ func TestArgoCDPromote(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightOut, err := testCase.promoMech.Promote(
+			newStatus, newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				testCase.stage,
+				&kargoapi.Promotion{},
 				testCase.newFreight,
 			)
-			testCase.assertions(testCase.newFreight, newFreightOut, err)
+			testCase.assertions(newStatus, testCase.newFreight, newFreightOut, err)
 		})
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -33,6 +34,7 @@ func TestKargoRenderPromote(t *testing.T) {
 		stage      *kargoapi.Stage
 		newFreight kargoapi.SimpleFreight
 		assertions func(
+			status *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.SimpleFreight,
 			newFreightOut kargoapi.SimpleFreight,
 			err error,
@@ -47,6 +49,7 @@ func TestKargoRenderPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -60,7 +63,7 @@ func TestKargoRenderPromote(t *testing.T) {
 			promoMech: &kargoRenderMechanism{
 				doSingleUpdateFn: func(
 					_ context.Context,
-					_ string,
+					_ *kargoapi.Promotion,
 					_ kargoapi.GitRepoUpdate,
 					newFreight kargoapi.SimpleFreight,
 				) (kargoapi.SimpleFreight, error) {
@@ -87,6 +90,7 @@ func TestKargoRenderPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -101,7 +105,7 @@ func TestKargoRenderPromote(t *testing.T) {
 			promoMech: &kargoRenderMechanism{
 				doSingleUpdateFn: func(
 					_ context.Context,
-					_ string,
+					_ *kargoapi.Promotion,
 					_ kargoapi.GitRepoUpdate,
 					newFreight kargoapi.SimpleFreight,
 				) (kargoapi.SimpleFreight, error) {
@@ -128,6 +132,7 @@ func TestKargoRenderPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
+				status *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.SimpleFreight,
 				newFreightOut kargoapi.SimpleFreight,
 				err error,
@@ -139,12 +144,13 @@ func TestKargoRenderPromote(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightOut, err := testCase.promoMech.Promote(
+			status, newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				testCase.stage,
+				&kargoapi.Promotion{},
 				testCase.newFreight,
 			)
-			testCase.assertions(testCase.newFreight, newFreightOut, err)
+			testCase.assertions(status, testCase.newFreight, newFreightOut, err)
 		})
 	}
 }
@@ -423,7 +429,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			res, err := testCase.promoMech.doSingleUpdate(
 				context.Background(),
-				"fake-namespace",
+				&kargoapi.Promotion{ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"}},
 				testCase.update,
 				testCase.freight,
 			)
