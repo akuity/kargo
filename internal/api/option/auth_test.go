@@ -53,7 +53,7 @@ func TestNewAuthInterceptor(t *testing.T) {
 	require.NotNil(t, a.parseUnverifiedJWTFn)
 	require.NotNil(t, a.verifyKargoIssuedTokenFn)
 	require.NotNil(t, a.verifyIDPIssuedTokenFn)
-	require.NotNil(t, a.oidcExtractGroupsFn)
+	require.NotNil(t, a.oidcExtractClaimsFn)
 	require.NotNil(t, a.listServiceAccountsFn)
 }
 
@@ -266,7 +266,7 @@ func TestAuthenticate(t *testing.T) {
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
 				require.True(t, u.IsAdmin)
-				require.Empty(t, u.Username)
+				require.Empty(t, u.Subject)
 				require.Empty(t, u.Groups)
 				require.Empty(t, u.BearerToken)
 			},
@@ -288,8 +288,8 @@ func TestAuthenticate(t *testing.T) {
 				verifyIDPIssuedTokenFn: func(
 					context.Context,
 					string,
-				) (string, []string, bool) {
-					return "", nil, false
+				) (claims, bool) {
+					return claims{}, false
 				},
 			},
 			token: testToken,
@@ -321,13 +321,16 @@ func TestAuthenticate(t *testing.T) {
 				verifyIDPIssuedTokenFn: func(
 					context.Context,
 					string,
-				) (string, []string, bool) {
-					return "tony@starkindustries.com", []string{"avengers"}, true
+				) (claims, bool) {
+					return claims{
+						Subject: "ironman",
+						Email:   "tony@starkindustries.com",
+						Groups:  []string{"avengers"},
+					}, true
 				},
 				listServiceAccountsFn: func(
 					context.Context,
-					string,
-					[]string,
+					claims,
 				) (map[string]map[types.NamespacedName]struct{}, error) {
 					return nil, nil
 				},
@@ -340,7 +343,8 @@ func TestAuthenticate(t *testing.T) {
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
 				require.False(t, u.IsAdmin)
-				require.Equal(t, "tony@starkindustries.com", u.Username)
+				require.Equal(t, "ironman", u.Subject)
+				require.Equal(t, "tony@starkindustries.com", u.Email)
 				require.Equal(t, []string{"avengers"}, u.Groups)
 				require.Empty(t, u.BearerToken)
 			},
@@ -389,12 +393,12 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 	testCases := []struct {
 		name            string
 		authInterceptor *authInterceptor
-		assertions      func(username string, groups []string, ok bool)
+		assertions      func(c claims, ok bool)
 	}{
 		{
 			name:            "OIDC not supported",
 			authInterceptor: &authInterceptor{},
-			assertions: func(_ string, _ []string, ok bool) {
+			assertions: func(_ claims, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -408,7 +412,7 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ string, _ []string, ok bool) {
+			assertions: func(_ claims, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -421,11 +425,11 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 				) (*oidc.IDToken, error) {
 					return &oidc.IDToken{}, nil
 				},
-				oidcExtractGroupsFn: func(*oidc.IDToken) ([]string, error) {
-					return nil, errors.New("something went wrong")
+				oidcExtractClaimsFn: func(*oidc.IDToken) (claims, error) {
+					return claims{}, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ string, _ []string, ok bool) {
+			assertions: func(_ claims, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -437,17 +441,22 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 					string,
 				) (*oidc.IDToken, error) {
 					return &oidc.IDToken{
-						Subject: "tony@starkindustries.io",
+						Subject: "ironman",
 					}, nil
 				},
-				oidcExtractGroupsFn: func(*oidc.IDToken) ([]string, error) {
-					return []string{"avengers"}, nil
+				oidcExtractClaimsFn: func(*oidc.IDToken) (claims, error) {
+					return claims{
+						Subject: "ironman",
+						Email:   "tony@starkindustries.io",
+						Groups:  []string{"avengers"},
+					}, nil
 				},
 			},
-			assertions: func(username string, groups []string, ok bool) {
+			assertions: func(c claims, ok bool) {
 				require.True(t, ok)
-				require.Equal(t, "tony@starkindustries.io", username)
-				require.Equal(t, []string{"avengers"}, groups)
+				require.Equal(t, "ironman", c.Subject)
+				require.Equal(t, "tony@starkindustries.io", c.Email)
+				require.Equal(t, []string{"avengers"}, c.Groups)
 			},
 		},
 	}

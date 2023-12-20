@@ -553,7 +553,7 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 			Name:        key.Name,
 		}
 
-		if userInfo.Username != "" {
+		if userInfo.Subject != "" {
 			var namespacesToCheck []string
 			if key.Namespace != "" {
 				namespacesToCheck = make([]string, 0, len(globalServiceAccountNamespaces)+1)

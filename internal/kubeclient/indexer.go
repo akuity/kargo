@@ -30,8 +30,9 @@ const (
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
 	StagesByWarehouseIndexField          = "warehouse"
 
-	ServiceAccountsByGroupIndexField   = "groups"
-	ServiceAccountsBySubjectIndexField = "subjects"
+	ServiceAccountsByOIDCEmailIndexField   = "email"
+	ServiceAccountsByOIDCGroupIndexField   = "groups"
+	ServiceAccountsByOIDCSubjectIndexField = "subjects"
 )
 
 func IndexStagesByAnalysisRun(ctx context.Context, mgr ctrl.Manager, shardName string) error {
@@ -317,18 +318,43 @@ func indexStagesByWarehouse(obj client.Object) []string {
 	return nil
 }
 
-func IndexServiceAccountsByRBACGroups(ctx context.Context, mgr ctrl.Manager) error {
+func IndexServiceAccountsByOIDCEmail(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&corev1.ServiceAccount{},
-		ServiceAccountsByGroupIndexField,
-		indexServiceAccountsByRBACGroups,
+		ServiceAccountsByOIDCEmailIndexField,
+		indexServiceAccountsOIDCEmail,
 	)
 }
 
-func indexServiceAccountsByRBACGroups(obj client.Object) []string {
+func indexServiceAccountsOIDCEmail(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawGroups := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyRBACGroups])
+	rawEmails := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyOIDCEmails])
+	if rawEmails == "" {
+		return nil
+	}
+	emails := strings.Split(rawEmails, ",")
+	refinedEmails := make([]string, 0, len(emails))
+	for _, e := range emails {
+		if email := strings.TrimSpace(e); email != "" {
+			refinedEmails = append(refinedEmails, email)
+		}
+	}
+	return refinedEmails
+}
+
+func IndexServiceAccountsByOIDCGroups(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&corev1.ServiceAccount{},
+		ServiceAccountsByOIDCGroupIndexField,
+		indexServiceAccountsByOIDCGroups,
+	)
+}
+
+func indexServiceAccountsByOIDCGroups(obj client.Object) []string {
+	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
+	rawGroups := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyOIDCGroups])
 	if rawGroups == "" {
 		return nil
 	}
@@ -342,22 +368,22 @@ func indexServiceAccountsByRBACGroups(obj client.Object) []string {
 	return refinedGroups
 }
 
-func IndexServiceAccountsByRBACSubjects(ctx context.Context, mgr ctrl.Manager) error {
+func IndexServiceAccountsByOIDCSubjects(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,
 		&corev1.ServiceAccount{},
-		ServiceAccountsBySubjectIndexField,
-		indexServiceAccountsByRBACSubjects,
+		ServiceAccountsByOIDCSubjectIndexField,
+		indexServiceAccountsByOIDCSubjects,
 	)
 }
 
-func indexServiceAccountsByRBACSubjects(obj client.Object) []string {
+func indexServiceAccountsByOIDCSubjects(obj client.Object) []string {
 	sa := obj.(*corev1.ServiceAccount) // nolint: forcetypeassert
-	rawGroups := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyRBACSubjects])
-	if rawGroups == "" {
+	rawSubjects := strings.TrimSpace(sa.GetAnnotations()[kargoapi.AnnotationKeyOIDCSubjects])
+	if rawSubjects == "" {
 		return nil
 	}
-	subjects := strings.Split(rawGroups, ",")
+	subjects := strings.Split(rawSubjects, ",")
 	refinedSubjects := make([]string, 0, len(subjects))
 	for _, s := range subjects {
 		if subject := strings.TrimSpace(s); subject != "" {
