@@ -20,6 +20,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
@@ -27,8 +28,11 @@ import (
 
 // reconciler reconciles Stage resources.
 type reconciler struct {
-	kargoClient client.Client
-	argoClient  client.Client
+	kargoClient    client.Client
+	argocdClient   client.Client
+	rolloutsClient client.Client
+
+	shardName string
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -62,6 +66,45 @@ type reconciler struct {
 	) (*argocd.Application, error)
 
 	// Freight verification:
+
+	startVerificationFn func(
+		context.Context,
+		*kargoapi.Stage,
+	) (*kargoapi.VerificationInfo, error)
+
+	getVerificationInfoFn func(
+		context.Context,
+		*kargoapi.Stage,
+	) (*kargoapi.VerificationInfo, error)
+
+	getAnalysisTemplateFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*rollouts.AnalysisTemplate, error)
+
+	listAnalysisRunsFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+
+	buildAnalysisRunFn func(
+		stage *kargoapi.Stage,
+		templates []*rollouts.AnalysisTemplate,
+	) (*rollouts.AnalysisRun, error)
+
+	createAnalysisRunFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
+
+	getAnalysisRunFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*rollouts.AnalysisRun, error)
 
 	getFreightFn func(
 		context.Context,
@@ -146,7 +189,8 @@ type reconciler struct {
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
-	argoMgr manager.Manager,
+	argocdMgr manager.Manager,
+	rolloutsMgr manager.Manager,
 	shardName string,
 ) error {
 	// Index Promotions in non-terminal states by Stage
@@ -222,7 +266,14 @@ func SetupReconcilerWithManager(
 		WithEventFilter(shardPredicate).
 		WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
 		WithOptions(controller.CommonOptions()).
-		Build(newReconciler(kargoMgr.GetClient(), argoMgr.GetClient()))
+		Build(
+			newReconciler(
+				kargoMgr.GetClient(),
+				argocdMgr.GetClient(),
+				rolloutsMgr.GetClient(),
+				shardName,
+			),
+		)
 	if err != nil {
 		return errors.Wrap(err, "error building Stage reconciler")
 	}
@@ -264,10 +315,17 @@ func SetupReconcilerWithManager(
 	return nil
 }
 
-func newReconciler(kargoClient, argoClient client.Client) *reconciler {
+func newReconciler(
+	kargoClient client.Client,
+	argocdClient client.Client,
+	rolloutsClient client.Client,
+	shardName string,
+) *reconciler {
 	r := &reconciler{
-		kargoClient: kargoClient,
-		argoClient:  argoClient,
+		kargoClient:    kargoClient,
+		argocdClient:   argocdClient,
+		rolloutsClient: rolloutsClient,
+		shardName:      shardName,
 	}
 	// The following default behaviors are overridable for testing purposes:
 	// Loop guard:
@@ -277,6 +335,13 @@ func newReconciler(kargoClient, argoClient client.Client) *reconciler {
 	r.checkHealthFn = r.checkHealth
 	r.getArgoCDAppFn = argocd.GetApplication
 	// Freight verification:
+	r.startVerificationFn = r.startVerification
+	r.getVerificationInfoFn = r.getVerificationInfo
+	r.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
+	r.listAnalysisRunsFn = r.kargoClient.List
+	r.buildAnalysisRunFn = r.buildAnalysisRun
+	r.createAnalysisRunFn = r.rolloutsClient.Create
+	r.getAnalysisRunFn = rollouts.GetAnalysisRun
 	r.getFreightFn = kargoapi.GetFreight
 	r.verifyFreightInStageFn = r.verifyFreightInStage
 	r.patchFreightStatusFn = r.patchFreightStatus
@@ -377,6 +442,7 @@ func (r *reconciler) syncControlFlowStage(
 	status := *stage.Status.DeepCopy()
 	status.ObservedGeneration = stage.Generation
 	status.Health = nil // Reset health
+	status.Phase = kargoapi.StagePhaseNotApplicable
 	status.CurrentPromotion = nil
 
 	// A Stage without promotion mechanisms shouldn't have a currentFreight. Make
@@ -488,9 +554,11 @@ func (r *reconciler) syncNormalStage(
 	status.CurrentPromotion = nil
 
 	if status.CurrentFreight == nil {
-		logger.Debug("Stage has no current Freight; no health checks to perform")
+		status.Phase = kargoapi.StagePhaseNotApplicable
+		logger.Debug(
+			"Stage has no current Freight; no health checks or verification to perform",
+		)
 	} else {
-		//  Check health and mark current Freight as verified in Stage if applicable
 		freightLogger := logger.WithField("freight", status.CurrentFreight.ID)
 
 		// Check health
@@ -506,9 +574,61 @@ func (r *reconciler) syncNormalStage(
 			freightLogger.Debug("Stage health deemed not applicable")
 		}
 
-		// If health is not applicable or healthy, mark the current Freight as
-		// verified in this Stage
-		if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
+		// Initiate or follow-up on verification if required
+		if status.Phase == kargoapi.StagePhaseVerifying && stage.Spec.Verification != nil {
+			if status.CurrentFreight.VerificationInfo == nil {
+				if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
+					// Start verification
+					verInfo, err := r.startVerificationFn(ctx, stage)
+					if err != nil {
+						return status, errors.Wrapf(
+							err,
+							"error starting verification process for Stage %q and Freight %q in namespace %q",
+							stage.Name,
+							status.CurrentFreight.ID,
+							stage.Namespace,
+						)
+					}
+					status.CurrentFreight.VerificationInfo = verInfo
+				}
+			} else {
+				log.Debug("checking verification results")
+				verInfo, err := r.getVerificationInfoFn(ctx, stage)
+				if err != nil {
+					return status, errors.Wrapf(
+						err,
+						"error getting verification result for Stage %q and Freight %q in namespace %q",
+						stage.Name,
+						status.CurrentFreight.ID,
+						stage.Namespace,
+					)
+				}
+				status.CurrentFreight.VerificationInfo = verInfo
+				switch rollouts.AnalysisPhase(status.CurrentFreight.VerificationInfo.AnalysisRun.Phase) {
+				case rollouts.AnalysisPhasePending:
+					log.Debug("verification is pending")
+				case rollouts.AnalysisPhaseRunning:
+					log.Debug("verification is running")
+				case rollouts.AnalysisPhaseSuccessful,
+					rollouts.AnalysisPhaseFailed,
+					rollouts.AnalysisPhaseError,
+					rollouts.AnalysisPhaseInconclusive:
+					// Verification is complete
+					status.Phase = kargoapi.StagePhaseSteady
+					log.Debug("verification is complete")
+				}
+			}
+		}
+
+		// If health is not applicable or healthy
+		// AND
+		// Verification is not applicable or successful
+		// THEN
+		// Mark the Freight as verified in this Stage
+		if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
+			(stage.Spec.Verification == nil ||
+				(status.CurrentFreight.VerificationInfo != nil &&
+					status.CurrentFreight.VerificationInfo.AnalysisRun.Phase == string(rollouts.AnalysisPhaseSuccessful))) {
 			if err := r.verifyFreightInStageFn(
 				ctx,
 				stage.Namespace,

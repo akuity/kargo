@@ -7,8 +7,103 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller"
 )
+
+func TestIndexStagesByAnalysisRun(t *testing.T) {
+	const testShardName = "test-shard"
+	t.Parallel()
+	testCases := []struct {
+		name                string
+		controllerShardName string
+		stage               *kargoapi.Stage
+		assertions          func(*testing.T, []string)
+	}{
+		{
+			name:                "Stage belongs to another shard",
+			controllerShardName: testShardName,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.ShardLabelKey: "another-shard",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res []string) {
+				require.Nil(t, res)
+			},
+		},
+		{
+			name:                "Stage belongs to this shard",
+			controllerShardName: testShardName,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.ShardLabelKey: testShardName,
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							AnalysisRun: kargoapi.AnalysisRunReference{
+								Namespace: "fake-namespace",
+								Name:      "fake-analysis-run",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, res []string) {
+				require.Equal(
+					t,
+					[]string{
+						"fake-namespace:fake-analysis-run",
+					},
+					res,
+				)
+			},
+		},
+		{
+			name:                "Stage is unlabeled and this is not the default controller",
+			controllerShardName: testShardName,
+			stage:               &kargoapi.Stage{},
+			assertions: func(t *testing.T, res []string) {
+				require.Nil(t, res)
+			},
+		},
+		{
+			name:                "Stage is unlabeled and this is the default controller",
+			controllerShardName: "",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.SimpleFreight{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							AnalysisRun: kargoapi.AnalysisRunReference{
+								Namespace: "fake-namespace",
+								Name:      "fake-analysis-run",
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, res []string) {
+				require.Equal(
+					t,
+					[]string{
+						"fake-namespace:fake-analysis-run",
+					},
+					res,
+				)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			res := indexStagesByAnalysisRun(tc.controllerShardName)(tc.stage)
+			tc.assertions(t, res)
+		})
+	}
+}
 
 func TestIndexStagesByApp(t *testing.T) {
 	const testShardName = "test-shard"
@@ -25,7 +120,7 @@ func TestIndexStagesByApp(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						controller.ShardLabelKey: "another-shard",
+						kargoapi.ShardLabelKey: "another-shard",
 					},
 				},
 				Spec: &kargoapi.StageSpec{
@@ -49,7 +144,7 @@ func TestIndexStagesByApp(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						controller.ShardLabelKey: testShardName,
+						kargoapi.ShardLabelKey: testShardName,
 					},
 				},
 				Spec: &kargoapi.StageSpec{

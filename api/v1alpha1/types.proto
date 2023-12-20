@@ -213,6 +213,7 @@ message StageList {
 message StageSpec {
   Subscriptions subscriptions = 1 [json_name = "subscriptions"];
   PromotionMechanisms promotion_mechanisms = 2 [json_name = "promotionMechanisms"];
+  optional Verification verification = 3 [json_name = "verification"];
 }
 
 message Freight {
@@ -243,6 +244,7 @@ message SimpleFreight {
   repeated GitCommit commits = 4 [json_name = "commits"];
   repeated Image images = 5 [json_name = "images"];
   repeated Chart charts = 6 [json_name = "charts"];
+  optional VerificationInfo verification_info = 7 [json_name = "verificationInfo"];
 }
 
 message StageStatus {
@@ -251,6 +253,7 @@ message StageStatus {
   string error = 4 [json_name = "error"];
   optional Health health = 5 [json_name = "health"];
   optional PromotionInfo current_promotion = 6 [json_name = "currentPromotion"];
+  string phase = 7 [json_name = "phase"];
 }
 
 message StageSubscription {
@@ -277,4 +280,34 @@ message WarehouseSpec {
 message WarehouseStatus {
   string error = 1 [json_name = "error"];
   int64 observed_generation = 2 [json_name = "observedGeneration"];
+}
+
+message Verification {
+  repeated AnalysisTemplateReference analysis_templates = 1 [json_name = "analysisTemplates"];
+  optional AnalysisRunMetadata analysis_run_metadata = 2 [json_name = "analysisRunMetadata"];
+  repeated AnalysisRunArgument args = 3 [json_name = "args"];
+}
+
+message AnalysisTemplateReference {
+  string name = 1 [json_name = "name"];
+}
+
+message AnalysisRunMetadata {
+ map<string, string> labels = 1 [json_name = "labels"];
+ map<string, string> annotations = 2 [json_name = "annotations"];
+}
+
+message AnalysisRunArgument {
+  string name = 1 [json_name = "name"];
+  string value = 2 [json_name = "value"];
+}
+
+message VerificationInfo {
+  AnalysisRunReference analysis_run = 1 [json_name = "analysisRun"];
+}
+
+message AnalysisRunReference {
+  string namespace = 1 [json_name = "namespace"];
+  string name = 2 [json_name = "name"];
+  string phase = 3 [json_name = "phase"];
 }

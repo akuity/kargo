@@ -54,6 +54,7 @@ func FromStageSpecProto(s *v1alpha1.StageSpec) *kargoapi.StageSpec {
 	return &kargoapi.StageSpec{
 		Subscriptions:       FromSubscriptionsProto(s.GetSubscriptions()),
 		PromotionMechanisms: FromPromotionMechanismsProto(s.GetPromotionMechanisms()),
+		Verification:        FromVerificationProto(s.GetVerification()),
 	}
 }
 
@@ -66,6 +67,7 @@ func FromStageStatusProto(s *v1alpha1.StageStatus) *kargoapi.StageStatus {
 		history[idx] = *FromSimpleFreightProto(freight)
 	}
 	return &kargoapi.StageStatus{
+		Phase:          kargoapi.StagePhase(s.GetPhase()),
 		CurrentFreight: FromSimpleFreightProto(s.GetCurrentFreight()),
 		History:        history,
 		Health:         FromHealthProto(s.GetHealth()),
@@ -137,10 +139,11 @@ func FromSimpleFreightProto(s *v1alpha1.SimpleFreight) *kargoapi.SimpleFreight {
 		charts[idx] = *FromChartProto(chart)
 	}
 	return &kargoapi.SimpleFreight{
-		ID:      s.GetId(),
-		Commits: commits,
-		Images:  images,
-		Charts:  charts,
+		ID:               s.GetId(),
+		Commits:          commits,
+		Images:           images,
+		Charts:           charts,
+		VerificationInfo: FromVerificationInfo(s.VerificationInfo),
 	}
 }
 
@@ -587,6 +590,77 @@ func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kargoapi.PromotionPo
 	}
 }
 
+func FromVerificationProto(v *v1alpha1.Verification) *kargoapi.Verification {
+	if v == nil {
+		return nil
+	}
+	templates :=
+		make([]kargoapi.AnalysisTemplateReference, len(v.AnalysisTemplates))
+	for i := range v.AnalysisTemplates {
+		templates[i] = FromAnalysisTemplateReferenceProto(v.AnalysisTemplates[i])
+	}
+	args := make([]kargoapi.AnalysisRunArgument, len(v.Args))
+	for i := range v.Args {
+		args[i] = FromAnalysisRunArgumentProto(v.Args[i])
+	}
+	return &kargoapi.Verification{
+		AnalysisTemplates:   templates,
+		AnalysisRunMetadata: FromAnalysisRunMetadataProto(v.AnalysisRunMetadata),
+		Args:                args,
+	}
+}
+
+func FromAnalysisTemplateReferenceProto(
+	a *v1alpha1.AnalysisTemplateReference,
+) kargoapi.AnalysisTemplateReference {
+	return kargoapi.AnalysisTemplateReference{
+		Name: a.Name,
+	}
+}
+
+func FromAnalysisRunMetadataProto(
+	a *v1alpha1.AnalysisRunMetadata,
+) *kargoapi.AnalysisRunMetadata {
+	if a == nil {
+		return nil
+	}
+	return &kargoapi.AnalysisRunMetadata{
+		Labels:      a.Labels,
+		Annotations: a.Annotations,
+	}
+}
+
+func FromAnalysisRunArgumentProto(
+	a *v1alpha1.AnalysisRunArgument,
+) kargoapi.AnalysisRunArgument {
+	return kargoapi.AnalysisRunArgument{
+		Name:  a.Name,
+		Value: a.Value,
+	}
+}
+
+func FromVerificationInfo(v *v1alpha1.VerificationInfo) *kargoapi.VerificationInfo {
+	if v == nil {
+		return nil
+	}
+	k := &kargoapi.VerificationInfo{}
+	if v.AnalysisRun != nil {
+		k.AnalysisRun = *FromAnalysisRunReferenceProto(v.AnalysisRun)
+	}
+	return k
+}
+
+func FromAnalysisRunReferenceProto(a *v1alpha1.AnalysisRunReference) *kargoapi.AnalysisRunReference {
+	if a == nil {
+		return nil
+	}
+	return &kargoapi.AnalysisRunReference{
+		Namespace: a.Namespace,
+		Name:      a.Name,
+		Phase:     a.Phase,
+	}
+}
+
 func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	// Status
 	var currentFreight *v1alpha1.SimpleFreight
@@ -629,8 +703,10 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 		Spec: &v1alpha1.StageSpec{
 			Subscriptions:       ToSubscriptionsProto(*e.Spec.Subscriptions),
 			PromotionMechanisms: promotionMechanisms,
+			Verification:        ToVerificationProto(e.Spec.Verification),
 		},
 		Status: &v1alpha1.StageStatus{
+			Phase:            string(e.Status.Phase),
 			CurrentFreight:   currentFreight,
 			CurrentPromotion: currentPromotion,
 			History:          history,
@@ -922,11 +998,12 @@ func ToSimpleFreightProto(s kargoapi.SimpleFreight, firstSeen *time.Time) *v1alp
 		charts[idx] = ToChartProto(s.Charts[idx])
 	}
 	return &v1alpha1.SimpleFreight{
-		Id:        s.ID,
-		FirstSeen: firstSeenProto,
-		Commits:   commits,
-		Images:    images,
-		Charts:    charts,
+		Id:               s.ID,
+		FirstSeen:        firstSeenProto,
+		Commits:          commits,
+		Images:           images,
+		Charts:           charts,
+		VerificationInfo: ToVerificationInfoProto(s.VerificationInfo),
 	}
 }
 
@@ -1063,5 +1140,74 @@ func ToVersionProto(v version.Version) *svcv1alpha1.VersionInfo {
 		GoVersion:    v.GoVersion,
 		Compiler:     v.Compiler,
 		Platform:     v.Platform,
+	}
+}
+
+func ToVerificationProto(v *kargoapi.Verification) *v1alpha1.Verification {
+	if v == nil {
+		return nil
+	}
+	templates :=
+		make([]*v1alpha1.AnalysisTemplateReference, len(v.AnalysisTemplates))
+	for i := range v.AnalysisTemplates {
+		templates[i] = ToAnalysisTemplateReferenceProto(v.AnalysisTemplates[i])
+	}
+	args := make([]*v1alpha1.AnalysisRunArgument, len(v.Args))
+	for i := range v.Args {
+		args[i] = ToAnalysisRunArgumentProto(v.Args[i])
+	}
+	return &v1alpha1.Verification{
+		AnalysisTemplates:   templates,
+		AnalysisRunMetadata: ToAnalysisRunMetadataProto(v.AnalysisRunMetadata),
+		Args:                args,
+	}
+}
+
+func ToAnalysisTemplateReferenceProto(
+	a kargoapi.AnalysisTemplateReference,
+) *v1alpha1.AnalysisTemplateReference {
+	return &v1alpha1.AnalysisTemplateReference{
+		Name: a.Name,
+	}
+}
+
+func ToAnalysisRunMetadataProto(
+	a *kargoapi.AnalysisRunMetadata,
+) *v1alpha1.AnalysisRunMetadata {
+	if a == nil {
+		return nil
+	}
+	return &v1alpha1.AnalysisRunMetadata{
+		Labels:      a.Labels,
+		Annotations: a.Annotations,
+	}
+}
+
+func ToAnalysisRunArgumentProto(
+	a kargoapi.AnalysisRunArgument,
+) *v1alpha1.AnalysisRunArgument {
+	return &v1alpha1.AnalysisRunArgument{
+		Name:  a.Name,
+		Value: a.Value,
+	}
+}
+
+func ToVerificationInfoProto(v *kargoapi.VerificationInfo) *v1alpha1.VerificationInfo {
+	if v == nil {
+		return nil
+	}
+	return &v1alpha1.VerificationInfo{
+		AnalysisRun: ToAnalysisRunReferenceProto(&v.AnalysisRun),
+	}
+}
+
+func ToAnalysisRunReferenceProto(a *kargoapi.AnalysisRunReference) *v1alpha1.AnalysisRunReference {
+	if a == nil {
+		return nil
+	}
+	return &v1alpha1.AnalysisRunReference{
+		Namespace: a.Namespace,
+		Name:      a.Name,
+		Phase:     a.Phase,
 	}
 }

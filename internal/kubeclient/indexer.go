@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller"
 )
 
 const (
@@ -25,6 +24,7 @@ const (
 	NonTerminalPromotionsByStageIndexField = "stage"
 
 	PromotionPoliciesByStageIndexField   = "stage"
+	StagesByAnalysisRunIndexField        = "analysisRun"
 	StagesByArgoCDApplicationsIndexField = "applications"
 	StagesByFreightIndexField            = "freight"
 	StagesByUpstreamStagesIndexField     = "upstreamStages"
@@ -33,6 +33,44 @@ const (
 	ServiceAccountsByGroupIndexField   = "groups"
 	ServiceAccountsBySubjectIndexField = "subjects"
 )
+
+func IndexStagesByAnalysisRun(ctx context.Context, mgr ctrl.Manager, shardName string) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Stage{},
+		StagesByAnalysisRunIndexField,
+		indexStagesByAnalysisRun(shardName))
+}
+
+func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
+	return func(obj client.Object) []string {
+		// Return early if:
+		//
+		// 1. This is the default controller, but the object is labeled for a
+		//    specific shard.
+		//
+		// 2. This is a shard-specific controller, but the object is not labeled for
+		//    this shard.
+		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
+		if (shardName == "" && labeled) ||
+			(shardName != "" && shardName != objShardName) {
+			return nil
+		}
+
+		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+		if stage.Status.CurrentFreight == nil ||
+			stage.Status.CurrentFreight.VerificationInfo == nil {
+			return nil
+		}
+		return []string{
+			fmt.Sprintf(
+				"%s:%s",
+				stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Namespace,
+				stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Name,
+			),
+		}
+	}
+}
 
 func IndexStagesByArgoCDApplications(ctx context.Context, mgr ctrl.Manager, shardName string) error {
 	return mgr.GetFieldIndexer().IndexField(
@@ -51,7 +89,7 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 		//
 		// 2. This is a shard-specific controller, but the object is not labeled for
 		//    this shard.
-		objShardName, labeled := obj.GetLabels()[controller.ShardLabelKey]
+		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
 		if (shardName == "" && labeled) ||
 			(shardName != "" && shardName != objShardName) {
 			return nil

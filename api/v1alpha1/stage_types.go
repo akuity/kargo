@@ -6,6 +6,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type StagePhase string
+
+const (
+	// StagePhaseNotApplicable denotes a Stage that has no Freight.
+	StagePhaseNotApplicable StagePhase = "NotApplicable"
+	// StagePhaseSteady denotes a Stage that has Freight and is not currently
+	// being promoted or verified.
+	StagePhaseSteady StagePhase = "Steady"
+	// StagePhasePromoting denotes a Stage that is currently being promoted.
+	StagePhasePromoting StagePhase = "Promoting"
+	// StagePhaseVerifying denotes a Stage that is currently being verified.
+	StagePhaseVerifying StagePhase = "Verifying"
+)
+
 // +kubebuilder:validation:Enum={ImageAndTag,Tag,ImageAndDigest,Digest}
 type ImageUpdateValueType string
 
@@ -63,6 +77,7 @@ const (
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.currentFreight.id`
 //+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
+//+kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Stage is the Kargo API's main type.
@@ -97,6 +112,9 @@ type StageSpec struct {
 	// single upstream Stage where they may otherwise have subscribed to multiple
 	// upstream Stages.
 	PromotionMechanisms *PromotionMechanisms `json:"promotionMechanisms,omitempty"`
+	// Verification describes how to verify a Stage's current Freight is fit for
+	// promotion downstream.
+	Verification *Verification `json:"verification,omitempty"`
 }
 
 // Subscriptions describes a Stage's sources of Freight.
@@ -416,6 +434,8 @@ type ArgoCDHelmImageUpdate struct {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 type StageStatus struct {
+	// Phase describes where the Stage currently is in its lifecycle.
+	Phase StagePhase `json:"phase,omitempty"`
 	// CurrentFreight is a simplified representation of the Stage's current
 	// Freight describing what is currently deployed to the Stage.
 	CurrentFreight *SimpleFreight `json:"currentFreight,omitempty"`
@@ -447,6 +467,9 @@ type SimpleFreight struct {
 	Images []Image `json:"images,omitempty"`
 	// Charts describes specific versions of specific Helm charts.
 	Charts []Chart `json:"charts,omitempty"`
+	// VerificationInfo is information about any verification process that was
+	// associated with this Freight for this Stage.
+	VerificationInfo *VerificationInfo `json:"verificationResult,omitempty"`
 }
 
 type SimpleFreightStack []SimpleFreight
@@ -585,4 +608,64 @@ type PromotionInfo struct {
 	Name string `json:"name"`
 	// Freight is the freight being promoted
 	Freight SimpleFreight `json:"freight"`
+}
+
+// Verification describes how to verify that a Promotion has been successful
+// using Argo Rollouts AnalysisTemplates.
+type Verification struct {
+	// AnalysisTemplates is a list of AnalysisTemplates from which AnalysisRuns
+	// should be created to verify a Stage's current Freight is fit to be promoted
+	// downstream.
+	AnalysisTemplates []AnalysisTemplateReference `json:"analysisTemplates,omitempty"`
+	// AnalysisRunMetadata is contains optional metadata that should be applied to
+	// all AnalysisRuns.
+	AnalysisRunMetadata *AnalysisRunMetadata `json:"analysisRunMetadata,omitempty"`
+	// Args lists arguments that should be added to all AnalysisRuns.
+	Args []AnalysisRunArgument `json:"args,omitempty"`
+}
+
+// AnalysisTemplateReference is a reference to an AnalysisTemplate.
+type AnalysisTemplateReference struct {
+	// Name is the name of the AnalysisTemplate in the same project/namespace as
+	// the Stage.
+	//
+	//+kubebuilder:validation:Required
+	Name string `json:"name"`
+}
+
+// AnalysisRunMetadata contains optional metadata that should be applied to all
+// AnalysisRuns.
+type AnalysisRunMetadata struct {
+	// Additional labels to apply to an AnalysisRun.
+	Labels map[string]string `json:"labels,omitempty"`
+	// Additional annotations to apply to an AnalysisRun.
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// AnalysisRunArgument represents an argument to be added to an AnalysisRun.
+type AnalysisRunArgument struct {
+	// Name is the name of the argument.
+	//
+	//+kubebuilder:validation:Required
+	Name string `json:"name"`
+	// Value is the value of the argument.
+	//
+	//+kubebuilder:validation:Required
+	Value string `json:"value,omitempty"`
+}
+
+// VerificationInfo contains information about the currently running
+// Verification process.
+type VerificationInfo struct {
+	AnalysisRun AnalysisRunReference `json:"analysisRun"`
+}
+
+// AnalysisRunReference is a reference to an AnalysisRun.
+type AnalysisRunReference struct {
+	// Namespace is the namespace of the AnalysisRun.
+	Namespace string `json:"namespace"`
+	// Name is the name of the AnalysisRun.
+	Name string `json:"name"`
+	// Phase is the last observed phase of the AnalysisRun referenced by Name.
+	Phase string `json:"phase"`
 }

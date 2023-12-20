@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller"
 )
 
 func TestNewPromotion(t *testing.T) {
@@ -53,7 +52,7 @@ func TestNewPromotion(t *testing.T) {
 					Name:      "test",
 					Namespace: "kargo-demo",
 					Labels: map[string]string{
-						controller.ShardLabelKey: "another-shard",
+						kargoapi.ShardLabelKey: "another-shard",
 					},
 				},
 			},
@@ -62,7 +61,7 @@ func TestNewPromotion(t *testing.T) {
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, "test", parts[0])
 				require.Equal(t, testFreight[0:7], parts[2])
-				require.Equal(t, "another-shard", promo.Labels[controller.ShardLabelKey])
+				require.Equal(t, "another-shard", promo.Labels[kargoapi.ShardLabelKey])
 			},
 		},
 		{

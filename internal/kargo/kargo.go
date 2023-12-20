@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller"
 )
 
 const (
@@ -50,9 +49,9 @@ func NewPromotion(stage kargoapi.Stage, freight string) kargoapi.Promotion {
 			Freight: freight,
 		},
 	}
-	if stage.Labels != nil && stage.Labels[controller.ShardLabelKey] != "" {
+	if stage.Labels != nil && stage.Labels[kargoapi.ShardLabelKey] != "" {
 		promotion.ObjectMeta.Labels = map[string]string{
-			controller.ShardLabelKey: stage.Labels[controller.ShardLabelKey],
+			kargoapi.ShardLabelKey: stage.Labels[kargoapi.ShardLabelKey],
 		}
 	}
 	return promotion

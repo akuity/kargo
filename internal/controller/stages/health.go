@@ -32,7 +32,7 @@ func (r *reconciler) checkHealth(
 
 		app, err := r.getArgoCDAppFn(
 			ctx,
-			r.argoClient,
+			r.argocdClient,
 			updates.AppNamespaceOrDefault(),
 			updates.AppName,
 		)

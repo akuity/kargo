@@ -1681,6 +1681,11 @@ export class StageSpec extends Message<StageSpec> {
    */
   promotionMechanisms?: PromotionMechanisms;
 
+  /**
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Verification verification = 3;
+   */
+  verification?: Verification;
+
   constructor(data?: PartialMessage<StageSpec>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1691,6 +1696,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subscriptions", kind: "message", T: Subscriptions },
     { no: 2, name: "promotion_mechanisms", kind: "message", T: PromotionMechanisms },
+    { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSpec {
@@ -1923,6 +1929,11 @@ export class SimpleFreight extends Message<SimpleFreight> {
    */
   charts: Chart[] = [];
 
+  /**
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.VerificationInfo verification_info = 7;
+   */
+  verificationInfo?: VerificationInfo;
+
   constructor(data?: PartialMessage<SimpleFreight>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1936,6 +1947,7 @@ export class SimpleFreight extends Message<SimpleFreight> {
     { no: 4, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 5, name: "images", kind: "message", T: Image, repeated: true },
     { no: 6, name: "charts", kind: "message", T: Chart, repeated: true },
+    { no: 7, name: "verification_info", kind: "message", T: VerificationInfo, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SimpleFreight {
@@ -1984,6 +1996,11 @@ export class StageStatus extends Message<StageStatus> {
    */
   currentPromotion?: PromotionInfo;
 
+  /**
+   * @generated from field: string phase = 7;
+   */
+  phase = "";
+
   constructor(data?: PartialMessage<StageStatus>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1997,6 +2014,7 @@ export class StageStatus extends Message<StageStatus> {
     { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "health", kind: "message", T: Health, opt: true },
     { no: 6, name: "current_promotion", kind: "message", T: PromotionInfo, opt: true },
+    { no: 7, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageStatus {
@@ -2234,6 +2252,264 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
 
   static equals(a: WarehouseStatus | PlainMessage<WarehouseStatus> | undefined, b: WarehouseStatus | PlainMessage<WarehouseStatus> | undefined): boolean {
     return proto3.util.equals(WarehouseStatus, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Verification
+ */
+export class Verification extends Message<Verification> {
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisTemplateReference analysis_templates = 1;
+   */
+  analysisTemplates: AnalysisTemplateReference[] = [];
+
+  /**
+   * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata analysis_run_metadata = 2;
+   */
+  analysisRunMetadata?: AnalysisRunMetadata;
+
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunArgument args = 3;
+   */
+  args: AnalysisRunArgument[] = [];
+
+  constructor(data?: PartialMessage<Verification>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Verification";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "analysis_templates", kind: "message", T: AnalysisTemplateReference, repeated: true },
+    { no: 2, name: "analysis_run_metadata", kind: "message", T: AnalysisRunMetadata, opt: true },
+    { no: 3, name: "args", kind: "message", T: AnalysisRunArgument, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verification {
+    return new Verification().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Verification {
+    return new Verification().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Verification {
+    return new Verification().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Verification | PlainMessage<Verification> | undefined, b: Verification | PlainMessage<Verification> | undefined): boolean {
+    return proto3.util.equals(Verification, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisTemplateReference
+ */
+export class AnalysisTemplateReference extends Message<AnalysisTemplateReference> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<AnalysisTemplateReference>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisTemplateReference";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalysisTemplateReference {
+    return new AnalysisTemplateReference().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AnalysisTemplateReference {
+    return new AnalysisTemplateReference().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AnalysisTemplateReference {
+    return new AnalysisTemplateReference().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AnalysisTemplateReference | PlainMessage<AnalysisTemplateReference> | undefined, b: AnalysisTemplateReference | PlainMessage<AnalysisTemplateReference> | undefined): boolean {
+    return proto3.util.equals(AnalysisTemplateReference, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata
+ */
+export class AnalysisRunMetadata extends Message<AnalysisRunMetadata> {
+  /**
+   * @generated from field: map<string, string> labels = 1;
+   */
+  labels: { [key: string]: string } = {};
+
+  /**
+   * @generated from field: map<string, string> annotations = 2;
+   */
+  annotations: { [key: string]: string } = {};
+
+  constructor(data?: PartialMessage<AnalysisRunMetadata>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "labels", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 2, name: "annotations", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalysisRunMetadata {
+    return new AnalysisRunMetadata().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AnalysisRunMetadata {
+    return new AnalysisRunMetadata().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AnalysisRunMetadata {
+    return new AnalysisRunMetadata().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AnalysisRunMetadata | PlainMessage<AnalysisRunMetadata> | undefined, b: AnalysisRunMetadata | PlainMessage<AnalysisRunMetadata> | undefined): boolean {
+    return proto3.util.equals(AnalysisRunMetadata, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunArgument
+ */
+export class AnalysisRunArgument extends Message<AnalysisRunArgument> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string value = 2;
+   */
+  value = "";
+
+  constructor(data?: PartialMessage<AnalysisRunArgument>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunArgument";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalysisRunArgument {
+    return new AnalysisRunArgument().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AnalysisRunArgument {
+    return new AnalysisRunArgument().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AnalysisRunArgument {
+    return new AnalysisRunArgument().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AnalysisRunArgument | PlainMessage<AnalysisRunArgument> | undefined, b: AnalysisRunArgument | PlainMessage<AnalysisRunArgument> | undefined): boolean {
+    return proto3.util.equals(AnalysisRunArgument, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.VerificationInfo
+ */
+export class VerificationInfo extends Message<VerificationInfo> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunReference analysis_run = 1;
+   */
+  analysisRun?: AnalysisRunReference;
+
+  constructor(data?: PartialMessage<VerificationInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.VerificationInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "analysis_run", kind: "message", T: AnalysisRunReference },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerificationInfo {
+    return new VerificationInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerificationInfo {
+    return new VerificationInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerificationInfo {
+    return new VerificationInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerificationInfo | PlainMessage<VerificationInfo> | undefined, b: VerificationInfo | PlainMessage<VerificationInfo> | undefined): boolean {
+    return proto3.util.equals(VerificationInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunReference
+ */
+export class AnalysisRunReference extends Message<AnalysisRunReference> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string phase = 3;
+   */
+  phase = "";
+
+  constructor(data?: PartialMessage<AnalysisRunReference>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunReference";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AnalysisRunReference {
+    return new AnalysisRunReference().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AnalysisRunReference {
+    return new AnalysisRunReference().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AnalysisRunReference {
+    return new AnalysisRunReference().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AnalysisRunReference | PlainMessage<AnalysisRunReference> | undefined, b: AnalysisRunReference | PlainMessage<AnalysisRunReference> | undefined): boolean {
+    return proto3.util.equals(AnalysisRunReference, a, b);
   }
 }
 
