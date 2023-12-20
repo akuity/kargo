@@ -2,6 +2,7 @@ package warehouses
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -161,11 +162,12 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	result := ctrl.Result{
-		// TODO: Make this configurable
 		// Note: If there is a failure, controller runtime ignores this and uses
 		// progressive backoff instead. So this value only affects when we will
 		// reconcile next if THIS reconciliation succeeds.
-		RequeueAfter: 0,
+		//
+		// TODO: Make this configurable
+		RequeueAfter: 5 * time.Minute,
 	}
 
 	logger := logging.LoggerFromContext(ctx)
