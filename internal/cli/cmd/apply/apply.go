@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/printers"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/cli/client"
@@ -43,7 +43,7 @@ kargo apply -f stage.yaml
 			}
 
 			var printer printers.ResourcePrinter
-			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") != "" {
+			if ptr.Deref(opt.PrintFlags.OutputFormat, "") != "" {
 				printer, err = opt.PrintFlags.ToPrinter()
 				if err != nil {
 					return errors.Wrap(err, "new printer")

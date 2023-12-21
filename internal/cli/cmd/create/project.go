@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
@@ -52,7 +52,7 @@ kargo create project my-project
 			project.SetCreationTimestamp(metav1.NewTime(resp.Msg.GetProject().GetCreateTime().AsTime()))
 			project.SetName(resp.Msg.GetProject().GetName())
 
-			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
+			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Created: %q\n", name)
 				return nil
 			}

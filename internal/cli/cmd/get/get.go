@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/printers"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -49,7 +49,7 @@ func printObjects[T runtime.Object](opt *option.Option, objects []T) error {
 		Items: items,
 	}
 
-	if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") != "" {
+	if ptr.Deref(opt.PrintFlags.OutputFormat, "") != "" {
 		printer, err := opt.PrintFlags.ToPrinter()
 		if err != nil {
 			return errors.Wrap(err, "new printer")

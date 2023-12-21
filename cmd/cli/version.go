@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
@@ -44,7 +44,7 @@ func newVersionCommand(opt *option.Option) *cobra.Command {
 			}
 			cliVersion := typesv1alpha1.ToVersionProto(versionpkg.GetVersion())
 
-			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
+			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 				fmt.Println("Client Version:", cliVersion.GetVersion())
 				if serverVersion != nil {
 					fmt.Println("Server Version:", serverVersion.GetVersion())

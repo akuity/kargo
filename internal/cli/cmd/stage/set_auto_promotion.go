@@ -8,7 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
@@ -93,7 +93,7 @@ func setAutoPromotionForStage(ctx context.Context, opt *option.Option, project, 
 	if err != nil {
 		return errors.Wrapf(err, "set auto promotion for stage: %q", stage)
 	}
-	if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
+	if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 		res := "Disabled"
 		if enable {
 			res = "Enabled"
