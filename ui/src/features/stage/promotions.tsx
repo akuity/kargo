@@ -3,7 +3,6 @@ import {
   faCircleCheck,
   faCircleExclamation,
   faCircleNotch,
-  faCircleQuestion,
   faHourglassStart
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -19,6 +18,8 @@ import { listPromotions } from '@ui/gen/service/v1alpha1/service-KargoService_co
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
 import { Promotion } from '@ui/gen/v1alpha1/types_pb';
+
+import { sortPromotions } from './utils/sort';
 
 export const Promotions = () => {
   const client = useQueryClient();
@@ -76,16 +77,10 @@ export const Promotions = () => {
     return () => cancel.abort();
   }, [isLoading]);
 
-  const promotions = React.useMemo(
-    () =>
-      // Immutable sorting
-      [...(promotionsResponse?.promotions || [])].sort(
-        (a, b) =>
-          Number(b.metadata?.creationTimestamp?.seconds || 0) -
-          Number(a.metadata?.creationTimestamp?.seconds || 0)
-      ),
-    [promotionsResponse]
-  );
+  const promotions = React.useMemo(() => {
+    // Immutable sorting
+    return [...(promotionsResponse?.promotions || [])].sort(sortPromotions);
+  }, [promotionsResponse]);
 
   const columns: ColumnsType<Promotion> = [
     {
