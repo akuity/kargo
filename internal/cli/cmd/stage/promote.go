@@ -23,7 +23,7 @@ func newPromoteCommand(opt *option.Option) *cobra.Command {
 	var flag PromoteFlags
 	cmd := &cobra.Command{
 		Use:  "promote --project=project (STAGE) [(--freight=)freight-id]",
-		Args: option.ExactArgs(2),
+		Args: option.ExactArgs(1),
 		Example: `
 # Promote a freight to a stage for a specific project
 kargo stage promote dev --project=my-project --freight=abc123
@@ -80,5 +80,6 @@ kargo stage promote dev --freight=abc123
 	}
 	opt.PrintFlags.AddFlags(cmd)
 	option.Freight(&flag.Freight)(cmd.Flags())
+	option.Project(&opt.Project, opt.Project)(cmd.Flags())
 	return cmd
 }
