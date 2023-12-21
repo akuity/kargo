@@ -95,7 +95,11 @@ export const Promotions = () => {
         switch (promotion.status?.phase) {
           case 'Succeeded':
             return (
-              <Popover content={promotion.status?.message} title={promotion.status?.phase} placement='right'>
+              <Popover
+                content={promotion.status?.message}
+                title={promotion.status?.phase}
+                placement='right'
+              >
                 <FontAwesomeIcon
                   color={theme.defaultSeed.colorSuccess}
                   icon={faCircleCheck}
@@ -106,7 +110,11 @@ export const Promotions = () => {
           case 'Failed':
           case 'Errored':
             return (
-              <Popover content={promotion.status?.message} title={promotion.status?.phase} placement='right'>
+              <Popover
+                content={promotion.status?.message}
+                title={promotion.status?.phase}
+                placement='right'
+              >
                 <FontAwesomeIcon
                   color={theme.defaultSeed.colorError}
                   icon={faCircleExclamation}
