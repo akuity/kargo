@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -57,8 +58,10 @@ func TestValidateCreate(t *testing.T) {
 				) error {
 					return nil
 				},
-				validateCreateOrUpdateFn: func(*kargoapi.Warehouse) error {
-					return errors.New("something went wrong")
+				validateCreateOrUpdateFn: func(
+					*kargoapi.Warehouse,
+				) (admission.Warnings, error) {
+					return nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(err error) {
@@ -77,8 +80,10 @@ func TestValidateCreate(t *testing.T) {
 				) error {
 					return nil
 				},
-				validateCreateOrUpdateFn: func(*kargoapi.Warehouse) error {
-					return nil
+				validateCreateOrUpdateFn: func(
+					*kargoapi.Warehouse,
+				) (admission.Warnings, error) {
+					return nil, nil
 				},
 			},
 			assertions: func(err error) {
@@ -88,12 +93,11 @@ func TestValidateCreate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.webhook.ValidateCreate(
-					context.Background(),
-					&kargoapi.Warehouse{},
-				),
+			_, err := testCase.webhook.ValidateCreate(
+				context.Background(),
+				&kargoapi.Warehouse{},
 			)
+			testCase.assertions(err)
 		})
 	}
 }
@@ -107,8 +111,10 @@ func TestValidateUpdate(t *testing.T) {
 		{
 			name: "error validating warehouse",
 			webhook: &webhook{
-				validateCreateOrUpdateFn: func(*kargoapi.Warehouse) error {
-					return errors.New("something went wrong")
+				validateCreateOrUpdateFn: func(
+					*kargoapi.Warehouse,
+				) (admission.Warnings, error) {
+					return nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(err error) {
@@ -119,8 +125,10 @@ func TestValidateUpdate(t *testing.T) {
 		{
 			name: "success",
 			webhook: &webhook{
-				validateCreateOrUpdateFn: func(*kargoapi.Warehouse) error {
-					return nil
+				validateCreateOrUpdateFn: func(
+					*kargoapi.Warehouse,
+				) (admission.Warnings, error) {
+					return nil, nil
 				},
 			},
 			assertions: func(err error) {
@@ -130,20 +138,20 @@ func TestValidateUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.webhook.ValidateUpdate(
-					context.Background(),
-					nil,
-					&kargoapi.Warehouse{},
-				),
+			_, err := testCase.webhook.ValidateUpdate(
+				context.Background(),
+				nil,
+				&kargoapi.Warehouse{},
 			)
+			testCase.assertions(err)
 		})
 	}
 }
 
 func TestValidateDelete(t *testing.T) {
 	w := &webhook{}
-	require.NoError(t, w.ValidateDelete(context.Background(), nil))
+	_, err := w.ValidateDelete(context.Background(), nil)
+	require.NoError(t, err, nil)
 }
 
 func TestValidateCreateOrUpdate(t *testing.T) {
@@ -183,9 +191,8 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.webhook.validateCreateOrUpdate(&kargoapi.Warehouse{}),
-			)
+			_, err := testCase.webhook.validateCreateOrUpdate(&kargoapi.Warehouse{})
+			testCase.assertions(err)
 		})
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/image"
@@ -34,7 +35,7 @@ type webhook struct {
 		client.Object,
 	) error
 
-	validateCreateOrUpdateFn func(*kargoapi.Warehouse) error
+	validateCreateOrUpdateFn func(*kargoapi.Warehouse) (admission.Warnings, error)
 
 	validateSpecFn func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList
 }
@@ -60,7 +61,7 @@ func newWebhook(kubeClient client.Client) *webhook {
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	warehouse := obj.(*kargoapi.Warehouse) // nolint: forcetypeassert
 	if err := w.validateProjectFn(
 		ctx,
@@ -68,7 +69,7 @@ func (w *webhook) ValidateCreate(
 		warehouseGroupKind,
 		warehouse,
 	); err != nil {
-		return err
+		return nil, err
 	}
 	return w.validateCreateOrUpdateFn(warehouse)
 }
@@ -77,22 +78,27 @@ func (w *webhook) ValidateUpdate(
 	_ context.Context,
 	_ runtime.Object,
 	newObj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	warehouse := newObj.(*kargoapi.Warehouse) // nolint: forcetypeassert
 	return w.validateCreateOrUpdateFn(warehouse)
 }
 
-func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
+func (w *webhook) ValidateDelete(
+	context.Context,
+	runtime.Object,
+) (admission.Warnings, error) {
 	// No-op
-	return nil
+	return nil, nil
 }
 
-func (w *webhook) validateCreateOrUpdate(warehouse *kargoapi.Warehouse) error {
+func (w *webhook) validateCreateOrUpdate(
+	warehouse *kargoapi.Warehouse,
+) (admission.Warnings, error) {
 	if errs :=
 		w.validateSpecFn(field.NewPath("spec"), warehouse.Spec); len(errs) > 0 {
-		return apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
+		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
-	return nil
+	return nil, nil
 }
 
 func (w *webhook) validateSpec(

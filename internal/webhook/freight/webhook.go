@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -46,6 +47,12 @@ type webhook struct {
 		client.ObjectList,
 		...client.ListOption,
 	) error
+
+	listStagesFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -62,6 +69,7 @@ func newWebhook(kubeClient client.Client) *webhook {
 		client:            kubeClient,
 		validateProjectFn: libWebhook.ValidateProject,
 		listFreightFn:     kubeClient.List,
+		listStagesFn:      kubeClient.List,
 	}
 }
 
@@ -79,11 +87,11 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 	if err :=
 		w.validateProjectFn(ctx, w.client, freightGroupKind, freight); err != nil {
-		return err
+		return nil, err
 	}
 
 	if freight.ObjectMeta.Labels != nil &&
@@ -96,10 +104,10 @@ func (w *webhook) ValidateCreate(
 			client.InNamespace(freight.Namespace),
 			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
 		); err != nil {
-			return apierrors.NewInternalError(err)
+			return nil, apierrors.NewInternalError(err)
 		}
 		if len(freightList.Items) > 0 {
-			return apierrors.NewConflict(
+			return nil, apierrors.NewConflict(
 				freightGroupResource,
 				freight.Name,
 				errors.Errorf(
@@ -114,7 +122,7 @@ func (w *webhook) ValidateCreate(
 	if len(freight.Commits) == 0 &&
 		len(freight.Images) == 0 &&
 		len(freight.Charts) == 0 {
-		return apierrors.NewInvalid(
+		return nil, apierrors.NewInvalid(
 			freightGroupKind,
 			freight.Name,
 			field.ErrorList{
@@ -126,14 +134,14 @@ func (w *webhook) ValidateCreate(
 			},
 		)
 	}
-	return nil
+	return nil, nil
 }
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
 	oldObj runtime.Object,
 	newObj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	freight := newObj.(*kargoapi.Freight) // nolint: forcetypeassert
 
 	if freight.ObjectMeta.Labels != nil &&
@@ -146,11 +154,11 @@ func (w *webhook) ValidateUpdate(
 			client.InNamespace(freight.Namespace),
 			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
 		); err != nil {
-			return apierrors.NewInternalError(err)
+			return nil, apierrors.NewInternalError(err)
 		}
 		if len(freightList.Items) > 1 ||
 			(len(freightList.Items) == 1 && freightList.Items[0].Name != freight.Name) {
-			return apierrors.NewConflict(
+			return nil, apierrors.NewConflict(
 				freightGroupResource,
 				freight.Name,
 				errors.Errorf(
@@ -166,7 +174,7 @@ func (w *webhook) ValidateUpdate(
 	// are fingerprints that are deterministically derived from the artifacts
 	// referenced by the Freight.
 	if freight.ID != (oldObj.(*kargoapi.Freight)).ID { // nolint: forcetypeassert
-		return apierrors.NewInvalid(
+		return nil, apierrors.NewInvalid(
 			freightGroupKind,
 			freight.Name,
 			field.ErrorList{
@@ -178,15 +186,18 @@ func (w *webhook) ValidateUpdate(
 			},
 		)
 	}
-	return nil
+	return nil, nil
 }
 
-func (w *webhook) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+func (w *webhook) ValidateDelete(
+	ctx context.Context,
+	obj runtime.Object,
+) (admission.Warnings, error) {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 
 	// Check if the given freight is used by any stages.
 	var list kargoapi.StageList
-	if err := w.client.List(
+	if err := w.listStagesFn(
 		ctx,
 		&list,
 		client.InNamespace(freight.GetNamespace()),
@@ -194,7 +205,7 @@ func (w *webhook) ValidateDelete(ctx context.Context, obj runtime.Object) error 
 			kubeclient.StagesByFreightIndexField: freight.ID,
 		},
 	); err != nil {
-		return errors.Wrap(err, "list stages")
+		return nil, errors.Wrap(err, "list stages")
 	}
 	if len(list.Items) > 0 {
 		stages := make([]string, len(list.Items))
@@ -205,7 +216,7 @@ func (w *webhook) ValidateDelete(ctx context.Context, obj runtime.Object) error 
 			"freight is in-use by stages (%s)",
 			strings.Join(stages, ", "),
 		)
-		return apierrors.NewForbidden(freightGroupResource, freight.Name, err)
+		return nil, apierrors.NewForbidden(freightGroupResource, freight.Name, err)
 	}
-	return nil
+	return nil, nil
 }

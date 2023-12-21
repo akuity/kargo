@@ -8,6 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -55,9 +57,15 @@ func newWebhooksServerCommand() *cobra.Command {
 			mgr, err := ctrl.NewManager(
 				restCfg,
 				ctrl.Options{
-					Scheme:             scheme,
-					MetricsBindAddress: "0",
-					Port:               9443,
+					Scheme: scheme,
+					WebhookServer: webhook.NewServer(
+						webhook.Options{
+							Port: 9443,
+						},
+					),
+					Metrics: server.Options{
+						BindAddress: "0",
+					},
 				},
 			)
 			if err != nil {
