@@ -279,11 +279,9 @@ func getCredentialsSecret(
 	repoURL string,
 	acceptPrefixMatch bool,
 ) (*corev1.Secret, error) {
-	if credType == TypeGit {
-		// This is important. We don't want the presence or absence of ".git" at the
-		// end of the URL to affect credential lookups.
-		repoURL = git.NormalizeGitURL(repoURL)
-	}
+	repoURL = normalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
+		git.NormalizeGitURL(repoURL), // This should be safe even on non-Git URLs
+	)
 
 	secrets := corev1.SecretList{}
 	if err := kubeClient.List(
@@ -308,15 +306,31 @@ func getCredentialsSecret(
 		if !ok {
 			continue
 		}
-		url := string(urlBytes)
+		url := normalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
+			git.NormalizeGitURL( // This should be safe even on non-Git URLs
+				string(urlBytes),
+			),
+		)
 		if acceptPrefixMatch && strings.HasPrefix(repoURL, url) {
 			return &secret, nil
 		}
-		if !acceptPrefixMatch && git.NormalizeGitURL(url) == repoURL {
+		if !acceptPrefixMatch && url == repoURL {
 			return &secret, nil
 		}
 	}
 	return nil, nil
+}
+
+// NormalizeURL normalizes a chart repository URL for purposes of comparison.
+// Crucially, this function removes the oci:// prefix from the URL if there is
+// one.
+func normalizeChartRepositoryURL(repo string) string {
+	return strings.TrimPrefix(
+		strings.ToLower(
+			strings.TrimSpace(repo),
+		),
+		"oci://",
+	)
 }
 
 func secretToCreds(secret *corev1.Secret) Credentials {
