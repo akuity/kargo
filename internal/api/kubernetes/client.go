@@ -78,7 +78,9 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 		opts.NewInternalClient = newDefaultInternalClient
 	}
 	if opts.NewInternalDynamicClient == nil {
-		opts.NewInternalDynamicClient = dynamic.NewForConfig
+		opts.NewInternalDynamicClient = func(c *rest.Config) (dynamic.Interface, error) {
+			return dynamic.NewForConfig(c)
+		}
 	}
 	return opts, nil
 }
@@ -100,8 +102,8 @@ type Client interface {
 // client implements Client.
 type client struct {
 	internalClient        libClient.Client
-	statusWriter          *authorizingStatusWriterWrapper
 	internalDynamicClient dynamic.Interface
+	opts                  ClientOptions
 
 	getAuthorizedClientFn func(
 		ctx context.Context,
@@ -145,12 +147,9 @@ func NewClient(
 		return nil, errors.Wrap(err, "error building internal dynamic client")
 	}
 	return &client{
-		internalClient: internalClient,
-		statusWriter: &authorizingStatusWriterWrapper{
-			internalClient:        internalClient,
-			getAuthorizedClientFn: getAuthorizedClient(opts.GlobalServiceAccountNamespaces),
-		},
+		internalClient:        internalClient,
 		internalDynamicClient: internalDynamicClient,
+		opts:                  opts,
 		getAuthorizedClientFn: getAuthorizedClient(opts.GlobalServiceAccountNamespaces),
 	}, nil
 }
@@ -365,7 +364,25 @@ func (c *client) DeleteAllOf(
 }
 
 func (c *client) Status() libClient.StatusWriter {
-	return c.statusWriter
+	return c.SubResource("status")
+}
+
+func (c *client) SubResource(subResource string) libClient.SubResourceClient {
+	return &authorizingSubResourceClient{
+		subResourceType:       subResource,
+		internalClient:        c.internalClient,
+		getAuthorizedClientFn: c.getAuthorizedClientFn,
+	}
+}
+
+func (c *client) GroupVersionKindFor(
+	obj runtime.Object,
+) (schema.GroupVersionKind, error) {
+	return c.internalClient.GroupVersionKindFor(obj)
+}
+
+func (c *client) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	return c.internalClient.IsObjectNamespaced(obj)
 }
 
 func (c *client) Scheme() *runtime.Scheme {
@@ -376,8 +393,10 @@ func (c *client) RESTMapper() meta.RESTMapper {
 	return c.internalClient.RESTMapper()
 }
 
-// authorizingStatusWriterWrapper implements libClient.StatusWriter.
-type authorizingStatusWriterWrapper struct {
+// authorizingSubResourceClient implements libClient.SubResourceClient.
+type authorizingSubResourceClient struct {
+	subResourceType string
+
 	internalClient libClient.Client
 
 	getAuthorizedClientFn func(
@@ -390,10 +409,60 @@ type authorizingStatusWriterWrapper struct {
 	) (libClient.Client, error)
 }
 
-func (a *authorizingStatusWriterWrapper) Update(
+func (a *authorizingSubResourceClient) Get(
 	ctx context.Context,
 	obj libClient.Object,
-	opts ...libClient.UpdateOption,
+	subResource libClient.Object,
+	opts ...libClient.SubResourceGetOption,
+) error {
+	gvr, key, err := gvrAndKeyFromObj(obj, obj, a.internalClient.Scheme())
+	if err != nil {
+		return err
+	}
+	client, err := a.getAuthorizedClientFn(
+		ctx,
+		a.internalClient,
+		"get",
+		gvr,
+		a.subResourceType,
+		*key,
+	)
+	if err != nil {
+		return err
+	}
+	return client.SubResource(a.subResourceType).
+		Get(ctx, obj, subResource, opts...)
+}
+
+func (a *authorizingSubResourceClient) Create(
+	ctx context.Context,
+	obj libClient.Object,
+	subResource libClient.Object,
+	opts ...libClient.SubResourceCreateOption,
+) error {
+	gvr, key, err := gvrAndKeyFromObj(obj, obj, a.internalClient.Scheme())
+	if err != nil {
+		return err
+	}
+	client, err := a.getAuthorizedClientFn(
+		ctx,
+		a.internalClient,
+		"create",
+		gvr,
+		a.subResourceType,
+		*key,
+	)
+	if err != nil {
+		return err
+	}
+	return client.SubResource(a.subResourceType).
+		Create(ctx, obj, subResource, opts...)
+}
+
+func (a *authorizingSubResourceClient) Update(
+	ctx context.Context,
+	obj libClient.Object,
+	opts ...libClient.SubResourceUpdateOption,
 ) error {
 	gvr, key, err := gvrAndKeyFromObj(obj, obj, a.internalClient.Scheme())
 	if err != nil {
@@ -404,20 +473,20 @@ func (a *authorizingStatusWriterWrapper) Update(
 		a.internalClient,
 		"update",
 		gvr,
-		"status", // Subresource
+		a.subResourceType,
 		*key,
 	)
 	if err != nil {
 		return err
 	}
-	return client.Status().Update(ctx, obj, opts...)
+	return client.SubResource(a.subResourceType).Update(ctx, obj, opts...)
 }
 
-func (a *authorizingStatusWriterWrapper) Patch(
+func (a *authorizingSubResourceClient) Patch(
 	ctx context.Context,
 	obj libClient.Object,
 	patch libClient.Patch,
-	opts ...libClient.PatchOption,
+	opts ...libClient.SubResourcePatchOption,
 ) error {
 	gvr, key, err := gvrAndKeyFromObj(obj, obj, a.internalClient.Scheme())
 	if err != nil {
@@ -428,13 +497,13 @@ func (a *authorizingStatusWriterWrapper) Patch(
 		a.internalClient,
 		"patch",
 		gvr,
-		"status", // Subresource
+		a.subResourceType,
 		*key,
 	)
 	if err != nil {
 		return err
 	}
-	return client.Status().Patch(ctx, obj, patch, opts...)
+	return client.SubResource(a.subResourceType).Patch(ctx, obj, patch, opts...)
 }
 
 func (c *client) Watch(
