@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/go-github/v56/github"
 	"github.com/pkg/errors"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/internal/gitprovider"
 )
@@ -131,17 +131,17 @@ func (g *GitHubProvider) ListPullRequests(
 
 func convertGithubPR(ghPR *github.PullRequest) *gitprovider.PullRequest {
 	var prState gitprovider.PullRequestState
-	switch pointer.StringDeref(ghPR.State, "") {
+	switch ptr.Deref(ghPR.State, "") {
 	case "open":
 		prState = gitprovider.PullRequestStateOpen
 	case "closed":
 		prState = gitprovider.PullRequestStateClosed
 	}
 	return &gitprovider.PullRequest{
-		Number:         int64(pointer.IntDeref(ghPR.Number, 0)),
-		URL:            pointer.StringDeref(ghPR.HTMLURL, ""),
+		Number:         int64(ptr.Deref(ghPR.Number, 0)),
+		URL:            ptr.Deref(ghPR.HTMLURL, ""),
 		State:          prState,
-		MergeCommitSHA: pointer.StringDeref(ghPR.MergeCommitSHA, ""),
+		MergeCommitSHA: ptr.Deref(ghPR.MergeCommitSHA, ""),
 		Object:         ghPR,
 	}
 }

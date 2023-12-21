@@ -32,7 +32,8 @@ func TestNewPromotionReconciler(t *testing.T) {
 func newFakeReconciler(t *testing.T, objects ...client.Object) *reconciler {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
-	kargoClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+	kargoClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(objects...).WithStatusSubresource(objects...).Build()
 	kubeClient := fake.NewClientBuilder().Build()
 	return newReconciler(
 		kargoClient,
@@ -125,11 +126,7 @@ func TestReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.TODO()
-			r := newFakeReconciler(t)
-			for _, p := range tc.promos {
-				err := r.kargoClient.Create(ctx, p)
-				require.NoError(t, err)
-			}
+			r := newFakeReconciler(t, tc.promos...)
 			promoteWasCalled := false
 			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
