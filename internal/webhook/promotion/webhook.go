@@ -119,28 +119,28 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	if err :=
 		w.validateProjectFn(ctx, w.client, promotionGroupKind, promo); err != nil {
-		return err
+		return nil, err
 	}
-	return w.authorizeFn(ctx, promo, "create")
+	return nil, w.authorizeFn(ctx, promo, "create")
 }
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
 	oldObj runtime.Object,
 	newObj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	promo := newObj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	if err := w.authorizeFn(ctx, promo, "update"); err != nil {
-		return err
+		return nil, err
 	}
 
 	// PromotionSpecs are meant to be immutable
 	if *promo.Spec != *(oldObj.(*kargoapi.Promotion).Spec) { // nolint: forcetypeassert
-		return apierrors.NewInvalid(
+		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,
 			field.ErrorList{
@@ -152,15 +152,15 @@ func (w *webhook) ValidateUpdate(
 			},
 		)
 	}
-	return nil
+	return nil, nil
 }
 
 func (w *webhook) ValidateDelete(
 	ctx context.Context,
 	obj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
-	return w.authorizeFn(ctx, promo, "delete")
+	return nil, w.authorizeFn(ctx, promo, "delete")
 }
 
 func (w *webhook) authorize(

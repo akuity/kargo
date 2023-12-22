@@ -51,8 +51,6 @@ func TestNewClient(t *testing.T) {
 	client, ok := c.(*client)
 	require.True(t, ok)
 	require.Equal(t, testInternalClient, client.internalClient)
-	require.NotNil(t, client.statusWriter)
-	require.Equal(t, testInternalClient, client.statusWriter.internalClient)
 	require.NotNil(t, client.internalDynamicClient)
 	require.NotNil(t, client.getAuthorizedClientFn)
 }
@@ -395,16 +393,6 @@ func TestAllClientOperations(t *testing.T) {
 				) (libClient.Client, error) {
 					return nil, errors.New("not allowed")
 				}
-				client.statusWriter.getAuthorizedClientFn = func(
-					context.Context,
-					libClient.Client,
-					string,
-					schema.GroupVersionResource,
-					string,
-					libClient.ObjectKey,
-				) (libClient.Client, error) {
-					return nil, errors.New("not allowed")
-				}
 			} else {
 				client.getAuthorizedClientFn = func(
 					context.Context,
@@ -415,16 +403,6 @@ func TestAllClientOperations(t *testing.T) {
 					libClient.ObjectKey,
 				) (libClient.Client, error) {
 					return client.internalClient, nil
-				}
-				client.statusWriter.getAuthorizedClientFn = func(
-					context.Context,
-					libClient.Client,
-					string,
-					schema.GroupVersionResource,
-					string,
-					libClient.ObjectKey,
-				) (libClient.Client, error) {
-					return client.statusWriter.internalClient, nil
 				}
 			}
 			testCase.assertions(testCase.op(client))

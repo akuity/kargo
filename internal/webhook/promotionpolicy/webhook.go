@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -72,7 +73,7 @@ func newWebhook(kubeClient client.Client) *webhook {
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	policy := obj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
 	if err := w.validateProjectFn(
 		ctx,
@@ -80,23 +81,26 @@ func (w *webhook) ValidateCreate(
 		promotionPolicyGroupKind,
 		policy,
 	); err != nil {
-		return err
+		return nil, err
 	}
-	return w.validateStageUniquenessFn(ctx, policy)
+	return nil, w.validateStageUniquenessFn(ctx, policy)
 }
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
 	_ runtime.Object,
 	newObj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	policy := newObj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
-	return w.validateStageUniquenessFn(ctx, policy)
+	return nil, w.validateStageUniquenessFn(ctx, policy)
 }
 
-func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
+func (w *webhook) ValidateDelete(
+	context.Context,
+	runtime.Object,
+) (admission.Warnings, error) {
 	// No-op
-	return nil
+	return nil, nil
 }
 
 func (w *webhook) validateStageUniqueness(

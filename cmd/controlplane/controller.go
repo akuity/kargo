@@ -9,7 +9,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -84,8 +86,10 @@ func newControllerCommand() *cobra.Command {
 				if kargoMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
-						Scheme:             scheme,
-						MetricsBindAddress: "0",
+						Scheme: scheme,
+						Metrics: server.Options{
+							BindAddress: "0",
+						},
 					},
 				); err != nil {
 					return errors.Wrap(err, "error initializing Kargo controller manager")
@@ -119,18 +123,25 @@ func newControllerCommand() *cobra.Command {
 					)
 				}
 
-				var watchNamespace string // Empty string means all namespaces
+				cacheOpts := cache.Options{} // Watches all namespaces by default
 				if types.MustParseBool(
 					os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"),
 				) {
-					watchNamespace = os.GetEnv("ARGOCD_NAMESPACE", "argocd")
+					watchNamespace := os.GetEnv("ARGOCD_NAMESPACE", "argocd")
+					if watchNamespace != "" {
+						cacheOpts.DefaultNamespaces = map[string]cache.Config{
+							watchNamespace: {},
+						}
+					}
 				}
 				if argocdMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
-						Scheme:             scheme,
-						MetricsBindAddress: "0",
-						Namespace:          watchNamespace,
+						Scheme: scheme,
+						Metrics: server.Options{
+							BindAddress: "0",
+						},
+						Cache: cacheOpts,
 					},
 				); err != nil {
 					return errors.Wrap(
@@ -161,7 +172,7 @@ func newControllerCommand() *cobra.Command {
 					)
 				}
 
-				var watchNamespace string // Empty string means all namespaces
+				cacheOpts := cache.Options{} // Watches all namespaces by default
 				if shardName != "" {
 					// TODO: When NOT sharded, Kargo can simply create AnalysisRun
 					// resources in the project namespaces. When sharded, AnalysisRun
@@ -172,17 +183,22 @@ func newControllerCommand() *cobra.Command {
 					// this purpose. Note that the namespace does not need to be the same
 					// on every shard. This may be one of the weaker points in our tenancy
 					// model and can stand to be improved.
-					watchNamespace = os.GetEnv(
+					watchNamespace := os.GetEnv(
 						"ARGO_ROLLOUTS_ANALYSIS_RUNS_NAMESPACE",
 						"kargo-analysis-runs",
 					)
+					cacheOpts.DefaultNamespaces = map[string]cache.Config{
+						watchNamespace: {},
+					}
 				}
 				if rolloutsMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
-						Scheme:             scheme,
-						MetricsBindAddress: "0",
-						Namespace:          watchNamespace,
+						Scheme: scheme,
+						Metrics: server.Options{
+							BindAddress: "0",
+						},
+						Cache: cacheOpts,
 					},
 				); err != nil {
 					return errors.Wrap(

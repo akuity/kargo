@@ -7,7 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
@@ -60,7 +60,7 @@ kargo stage promote-subscribers dev --freight=abc123
 				Stage:   stage,
 				Freight: freight,
 			}))
-			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
+			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 				if res != nil && res.Msg != nil {
 					for _, p := range res.Msg.GetPromotions() {
 						fmt.Fprintf(opt.IOStreams.Out, "Promotion Created: %q\n", *p.Metadata.Name)

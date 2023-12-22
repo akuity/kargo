@@ -161,12 +161,11 @@ func TestValidateCreate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.webhook.ValidateCreate(
-					context.Background(),
-					&kargoapi.Promotion{},
-				),
+			_, err := testCase.webhook.ValidateCreate(
+				context.Background(),
+				&kargoapi.Promotion{},
 			)
+			testCase.assertions(err)
 		})
 	}
 }
@@ -253,9 +252,8 @@ func TestValidateUpdate(t *testing.T) {
 				authorizeFn: testCase.authorizeFn,
 			}
 			oldPromo, newPromo := testCase.setup()
-			testCase.assertions(
-				w.ValidateUpdate(context.Background(), oldPromo, newPromo),
-			)
+			_, err := w.ValidateUpdate(context.Background(), oldPromo, newPromo)
+			testCase.assertions(err)
 		})
 	}
 }
@@ -292,12 +290,11 @@ func TestValidateDelete(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.webhook.ValidateDelete(
-					context.Background(),
-					&kargoapi.Promotion{},
-				),
+			_, err := testCase.webhook.ValidateDelete(
+				context.Background(),
+				&kargoapi.Promotion{},
 			)
+			testCase.assertions(err)
 		})
 	}
 }
