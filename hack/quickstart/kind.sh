@@ -46,11 +46,11 @@ helm install argocd argo-cd \
   --set 'server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar' \
   --wait
 
-helm install rollouts argo-rollouts \
+helm install argo-rollouts argo-rollouts \
   --repo https://argoproj.github.io/argo-helm \
   --version 2.33.0 \
   --create-namespace \
-  --namespace rollouts \
+  --namespace argo-rollouts \
   --wait
 
 helm install kargo \

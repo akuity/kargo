@@ -258,12 +258,12 @@ hack-install-argocd:
 
 .PHONY: hack-install-argo-rollouts
 hack-install-argo-rollouts:
-	helm upgrade rollouts argo-rollouts \
+	helm upgrade argo-rollouts argo-rollouts \
 		--repo https://argoproj.github.io/argo-helm \
 		--version $(ARGO_ROLLOUTS_CHART_VERSION) \
 		--install \
 		--create-namespace \
-		--namespace rollouts \
+		--namespace argo-rollouts \
 		--wait
 
 .PHONY: hack-uninstall-prereqs
@@ -271,7 +271,7 @@ hack-uninstall-prereqs: hack-uninstall-argo-rollouts hack-uninstall-argocd hack-
 
 .PHONY: hack-uninstall-argo-rollouts
 hack-uninstall-argo-rollouts:
-	helm delete rollouts --namespace rollouts
+	helm delete argo-rollouts --namespace argo-rollouts
 
 .PHONY: hack-uninstall-argocd
 hack-uninstall-argocd:
