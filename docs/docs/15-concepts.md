@@ -17,7 +17,7 @@ instance's _purpose_ and not necessarily its _location_.
 the rationale behind this choice.
 
 _Stages are Kargo's most important concept._ They can be linked together in a
-directed asyclic graph to describe a delivery pipeline. Typically, such a
+directed acyclic graph to describe a delivery pipeline. Typically, such a
 pipeline may feature a "test" or "dev" stage as its starting point, with one or
 more "prod" stages at the end.
 
