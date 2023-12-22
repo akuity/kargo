@@ -51,11 +51,11 @@ func (s *server) UpdateStage(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get stage"))
+		return nil, errors.Wrap(err, "get stage")
 	}
 	stage.SetResourceVersion(existingStage.GetResourceVersion())
 	if err := s.client.Update(ctx, &stage); err != nil {
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "update stage"))
+		return nil, errors.Wrap(err, "update stage")
 	}
 	return connect.NewResponse(&svcv1alpha1.UpdateStageResponse{
 		Stage: typesv1alpha1.ToStageProto(stage),

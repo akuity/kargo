@@ -27,7 +27,7 @@ func (s *server) RefreshWarehouse(
 		Name:      req.Msg.GetName(),
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnknown, err)
+		return nil, err
 	}
 	return connect.NewResponse(&svcv1alpha1.RefreshWarehouseResponse{
 		Warehouse: typesv1alpha1.ToWarehouseProto(*warehouse),

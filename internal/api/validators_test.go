@@ -68,9 +68,6 @@ func TestValidateProject(t *testing.T) {
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeInternal, connErr.Code())
 			},
 		},
 		{

@@ -36,13 +36,13 @@ func (s *server) WatchPromotions(
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			return connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get stage"))
+			return errors.Wrap(err, "get stage")
 		}
 	}
 
 	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, req.Msg.GetProject(), metav1.ListOptions{})
 	if err != nil {
-		return connect.NewError(connect.CodeUnknown, errors.Wrap(err, "watch promotion"))
+		return errors.Wrap(err, "watch promotion")
 	}
 	defer w.Stop()
 	for {

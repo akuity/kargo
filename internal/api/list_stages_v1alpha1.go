@@ -26,7 +26,7 @@ func (s *server) ListStages(
 
 	var list kargoapi.StageList
 	if err := s.client.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "list stages"))
+		return nil, errors.Wrap(err, "list stages")
 	}
 
 	stages := make([]*v1alpha1.Stage, len(list.Items))

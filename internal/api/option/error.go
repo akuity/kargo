@@ -23,7 +23,7 @@ func (i *errorInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		res, err := next(ctx, req)
 		if err != nil {
-			return nil, i.unwrapError(err)
+			return nil, i.wrapError(err)
 		}
 		return res, nil
 	}
@@ -41,21 +41,16 @@ func (i *errorInterceptor) WrapStreamingHandler(
 ) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		if err := next(ctx, conn); err != nil {
-			return i.unwrapError(err)
+			return i.wrapError(err)
 		}
 		return nil
 	}
 }
 
-func (i *errorInterceptor) unwrapError(err error) error {
+func (i *errorInterceptor) wrapError(err error) error {
 	var connectErr *connect.Error
-	// Extract underlying error if the error is a connect error
 	if ok := errors.As(err, &connectErr); ok {
-		// If the error code is other than Unknown, return error as is since it is intended.
-		if connectErr.Code() != connect.CodeUnknown {
-			return err
-		}
-		return i.unwrapError(connectErr.Unwrap())
+		return err
 	}
 	var statusErr *kubeerr.StatusError
 	if ok := errors.As(err, &statusErr); ok {

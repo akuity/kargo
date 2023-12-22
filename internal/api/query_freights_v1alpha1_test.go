@@ -108,9 +108,6 @@ func TestQueryFreight(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeUnknown, connErr.Code())
 			},
 		},
 
@@ -182,9 +179,6 @@ func TestQueryFreight(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeUnknown, connErr.Code())
 			},
 		},
 
@@ -211,10 +205,7 @@ func TestQueryFreight(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeUnknown, connErr.Code())
-				require.Contains(t, connErr.Message(), "something went wrong")
+				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
 

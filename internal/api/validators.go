@@ -19,7 +19,7 @@ func (s *server) validateProject(ctx context.Context, project string) error {
 		if ok := errors.As(err, &fieldErr); ok {
 			return connect.NewError(connect.CodeInvalidArgument, err)
 		}
-		return connect.NewError(connect.CodeInternal, err)
+		return errors.Wrap(err, "validate project")
 	}
 	return nil
 }

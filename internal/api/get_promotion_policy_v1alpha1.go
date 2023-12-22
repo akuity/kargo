@@ -33,7 +33,7 @@ func (s *server) GetPromotionPolicy(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get promotion policy"))
+		return nil, errors.Wrap(err, "get promotion policy")
 	}
 	return connect.NewResponse(&svcv1alpha1.GetPromotionPolicyResponse{
 		PromotionPolicy: typesv1alpha1.ToPromotionPolicyProto(policy),

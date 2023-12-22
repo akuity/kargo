@@ -33,10 +33,10 @@ func (s *server) DeleteWarehouse(
 			return nil, connect.NewError(connect.CodeNotFound,
 				fmt.Errorf("warehouse %q not found", key.String()))
 		}
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get warehouse"))
+		return nil, errors.Wrap(err, "get warehouse")
 	}
 	if err := s.client.Delete(ctx, &warehouse); err != nil && !kubeerr.IsNotFound(err) {
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "delete warehouse"))
+		return nil, errors.Wrap(err, "delete warehouse")
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteWarehouseResponse{}), nil
 }

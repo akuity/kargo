@@ -36,7 +36,7 @@ func (s *server) GetPromotion(
 			return nil, connect.NewError(connect.CodeNotFound,
 				errors.Errorf("promotion %q not found", req.Msg.GetName()))
 		}
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get promotion"))
+		return nil, errors.Wrap(err, "get promotion")
 	}
 	return connect.NewResponse(&svcv1alpha1.GetPromotionResponse{
 		Promotion: v1alpha1.ToPromotionProto(promotion),

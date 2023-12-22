@@ -68,7 +68,7 @@ func TestErrorInterceptor(t *testing.T) {
 			errExpected:        true,
 			expectedStatusCode: connect.CodeInternal,
 		},
-		"interceptor should unwrap connect error with unknown status code": {
+		"interceptor should not unwrap connect error with unknown status code": {
 			handlerFunc: func(
 				context.Context,
 				*connect.Request[svcv1alpha1.GetVersionInfoRequest],
@@ -79,7 +79,7 @@ func TestErrorInterceptor(t *testing.T) {
 				)
 			},
 			errExpected:        true,
-			expectedStatusCode: connect.CodePermissionDenied,
+			expectedStatusCode: connect.CodeUnknown,
 		},
 		"interceptor should wrap error with appropriate status code if possible": {
 			handlerFunc: func(

@@ -79,10 +79,7 @@ func TestPromoteStage(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeUnknown, connErr.Code())
-				require.Equal(t, "get stage: something went wrong", connErr.Message())
+				require.Equal(t, "get stage: something went wrong", err.Error())
 			},
 		},
 		{
@@ -157,10 +154,7 @@ func TestPromoteStage(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeUnknown, connErr.Code())
-				require.Equal(t, "get freight: something went wrong", connErr.Message())
+				require.Equal(t, "get freight: something went wrong", err.Error())
 			},
 		},
 		{
@@ -313,10 +307,7 @@ func TestPromoteStage(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeUnknown, connErr.Code())
-				require.Equal(t, "create promotion: something went wrong", connErr.Message())
+				require.Equal(t, "create promotion: something went wrong", err.Error())
 			},
 		},
 		{

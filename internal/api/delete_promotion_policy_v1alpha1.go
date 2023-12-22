@@ -37,10 +37,10 @@ func (s *server) DeletePromotionPolicy(
 			return nil, connect.NewError(connect.CodeNotFound,
 				fmt.Errorf("promotion policy %q not found", key.String()))
 		}
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "get promotion policy"))
+		return nil, errors.Wrap(err, "get promotion policy")
 	}
 	if err := s.client.Delete(ctx, &policy); err != nil && !kubeerr.IsNotFound(err) {
-		return nil, connect.NewError(connect.CodeUnknown, errors.Wrap(err, "delete promotion policy"))
+		return nil, errors.Wrap(err, "delete promotion policy")
 	}
 	return connect.NewResponse(&svcv1alpha1.DeletePromotionPolicyResponse{}), nil
 }
