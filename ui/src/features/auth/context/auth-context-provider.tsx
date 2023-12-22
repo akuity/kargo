@@ -19,6 +19,8 @@ export const AuthContextProvider = ({ children }: PropsWithChildren) => {
 
   const logout = React.useCallback(() => {
     localStorage.removeItem(authTokenKey);
+    localStorage.removeItem(refreshTokenKey);
+
     setToken(null);
   }, []);
 

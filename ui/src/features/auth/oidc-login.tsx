@@ -141,7 +141,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         return;
       }
 
-      onLogin(result.id_token);
+      onLogin(result.id_token, result.refresh_token);
     })();
   }, [as, client, location]);
 
