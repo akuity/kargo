@@ -12,6 +12,7 @@ import { queryClient } from './config/query-client';
 import { themeConfig } from './config/themeConfig';
 import { AuthContextProvider } from './features/auth/context/auth-context-provider';
 import { ProtectedRoute } from './features/auth/protected-route';
+import { TokenRenew } from './features/auth/token-renew';
 import { MainLayout } from './features/common/layout/main-layout';
 import { Login } from './pages/login/login';
 import { Projects } from './pages/projects';
@@ -35,6 +36,7 @@ export const App = () => (
                   </Route>
                 </Route>
                 <Route path={paths.login} element={<Login />} />
+                <Route path={paths.tokenRenew} element={<TokenRenew />} />
               </Routes>
             </BrowserRouter>
           </AuthContextProvider>
