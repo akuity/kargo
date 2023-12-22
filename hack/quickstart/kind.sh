@@ -48,7 +48,7 @@ helm install argocd argo-cd \
 
 helm install rollouts argo-rollouts \
   --repo https://argoproj.github.io/argo-helm \
-  --version 2.32.8 \
+  --version 2.33.0 \
   --create-namespace \
   --namespace rollouts \
   --wait
