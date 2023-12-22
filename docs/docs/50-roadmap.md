@@ -13,28 +13,36 @@ This roadmap is subject to change at any time, for the most up to date informati
 
 ## v0.2.0
 
+__Status:__ Completed
+
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Freight and Warehouse CRDs | feature | Freight will change from being a property of a `Stage`, to being its own CRD. The source of where promotable `Freight` comes from will be known as a `Warehouse`. |
-| GitHub PR-Based Promotion | feature | Support for pull request based promotions, which do not complete until the underlying PR is closed. |
-| Kargo Render | breaking change | Bookkeeper to be rebranded as Kargo Render -- a Kargo child project for rendering manifests. |
-
+| `Freight` CRD | feature | Freight changed from being a property of a `Stage`, to being its own `Freight` CRD. |
+| `Warehouse` CRD | feature | `Freight` production was decoupled from a pipeline's first `Stage` and now comes from a `Warehouse`. |
+| Kargo Render | breaking change | The Bookkeeper project was rebranded as Kargo Render -- a Kargo sub-project for rendering manifests. |
 
 ## v0.3.0
 
+__Status:__ Completed
+
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Analysis | feature | Ability to execute user-defined analysis steps to qualify or disqualify Freight for further promotion. |
-| Improved RBAC | feature | Map SSO user identities to Kubernetes ServiceAccounts. Predefined ServiceAccount/Role/RoleBinding per project based on persona. |
-| Freight Production Rules/Filters | feature | Git repository subscriptions options to constrain conditions under which new Freight is produced. |
+| GitHub PR-Based Promotion | feature | Pull request-based promotions are now supported on GitHub. |
+| Verifications | feature | `Stage` resources can now execute a user-defined verification process after a promotion. These can be defined using Argo Rollouts `AnalysisTemplate` resources, and executions take the form of `AnalysisRun` resources. |
+| Improved RBAC | feature | SSO user identities can now be mapped to Kubernetes `ServiceAccount` resources using annotations. |
 
 ## v0.4.0
 
+__Status:__ In Progress
+
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Project Management | feature | Introduce Project CRD to simplify onboarding and project lifecycle management. Support aggregate information at the project status level. Additional `PromotionPolicy` options. Credential management via CLI and UI. |
+| `Warehouse` Rules/Filters | feature | Introduce features to constrain the conditions under which new `Freight` is produced. |
+| Project Management | feature | <ul><li>Introduce `Project` CRD to simplify onboarding and project lifecycle management.</li><li>Aggregate important status information at the `Project` level.</li><li>Introduce additional `PromotionPolicy` options.</li><li>Credential management via CLI and UI.</li></ul> |
 
 ## v0.5.0
+
+__Status:__
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
@@ -45,7 +53,7 @@ This roadmap is subject to change at any time, for the most up to date informati
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | Freight Enrichment | feature | Enhance Freight metadata for improved insight into Freight contents and the expected result of promoting a piece of Freight to a given environment. This data will be exposed to the UI and CLI tools. |
-| `Improved Microservice Support | feature | Filters for Freightlines (for example, filter by Warehouse). Add the ability to merge parallel Freightlines at a control flow Stages. |
+| Improved Microservice Support | feature | Filters for Freightlines (for example, filter by Warehouse). Add the ability to merge parallel Freightlines at a control flow Stages. |
 | `kargo init` | feature | Addition of an `init` sub-command to the Kargo CLI for streamlining project / pipeline creation. |
 | Standalone Image Writeback` | feature | Write back image changes without having to subscribe to an image repository. |
 | PromotionPolicy Improvements | feature | Add the ability to "freeze" Stages to prevent promotions. |
