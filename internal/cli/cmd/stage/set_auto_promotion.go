@@ -19,7 +19,7 @@ import (
 func newEnableAutoPromotion(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "enable-auto-promotion --project=project (STAGE)",
-		Args: option.ExactArgs(2),
+		Args: option.ExactArgs(1),
 		Example: `
 # Enable auto-promotion on a stage for a specific project
 kargo stage enable-auto-promotion --project=my-project dev
@@ -44,13 +44,14 @@ kargo stage enable-auto-promotion dev
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
+	option.Project(&opt.Project, opt.Project)(cmd.Flags())
 	return cmd
 }
 
 func newDisableAutoPromotion(opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "disable-auto-promotion --project=project (STAGE)",
-		Args: option.ExactArgs(2),
+		Args: option.ExactArgs(1),
 		Example: `
 # Disable auto-promotion on a stage for a specific project
 kargo stage disable-auto-promotion --project=my-project dev
@@ -75,6 +76,7 @@ kargo stage disable-auto-promotion dev
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
+	option.Project(&opt.Project, opt.Project)(cmd.Flags())
 	return cmd
 }
 

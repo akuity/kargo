@@ -22,8 +22,8 @@ type PromoteSubscribersFlags struct {
 func newPromoteSubscribersCommand(opt *option.Option) *cobra.Command {
 	var flag PromoteSubscribersFlags
 	cmd := &cobra.Command{
-		Use:  "promote --project=project (STAGE) [(--freight=)freight-id]",
-		Args: option.ExactArgs(2),
+		Use:  "promote-subscribers --project=project (STAGE) [(--freight=)freight-id]",
+		Args: option.ExactArgs(1),
 		Example: `
 # Promote subscribers for a specific project
 kargo stage promote-subscribers dev --project=my-project --freight=abc123
@@ -85,5 +85,6 @@ kargo stage promote-subscribers dev --freight=abc123
 	}
 	opt.PrintFlags.AddFlags(cmd)
 	option.Freight(&flag.Freight)(cmd.Flags())
+	option.Project(&opt.Project, opt.Project)(cmd.Flags())
 	return cmd
 }

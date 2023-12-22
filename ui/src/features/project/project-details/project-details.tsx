@@ -527,15 +527,19 @@ export const ProjectDetails = () => {
     return false;
   };
 
-  const onHover = (h: boolean, id: string) => {
+  const onHover = (h: boolean, id: string, isStage?: boolean) => {
     const stages = {} as { [key: string]: boolean };
     if (!h) {
       setHighlightedStages(stages);
       return;
     }
-    (stagesPerFreight[id] || []).forEach((stage) => {
-      stages[stage.metadata?.name || ''] = true;
-    });
+    if (isStage) {
+      stages[id] = true;
+    } else {
+      (stagesPerFreight[id] || []).forEach((stage) => {
+        stages[stage.metadata?.name || ''] = true;
+      });
+    }
     setHighlightedStages(stages);
   };
 
@@ -777,7 +781,7 @@ export const ProjectDetails = () => {
                                 }
                               : undefined
                           }
-                          onHover={(h) => onHover(h, node.data?.status?.currentFreight?.id || '')}
+                          onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
                           approving={!!manuallyApproving}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
                         />
