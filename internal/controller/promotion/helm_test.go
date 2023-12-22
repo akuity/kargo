@@ -321,7 +321,7 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 		t,
 		map[string]map[string]string{
 			"fake-values.yaml": {
-				"fake-key":        "fake-url:'fake-tag'",
+				"fake-key":        "fake-url:fake-tag",
 				"second-fake-key": "'second-fake-tag'",
 			},
 			"another-fake-values.yaml": {
@@ -334,8 +334,8 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 	require.Equal(
 		t,
 		[]string{
-			"updated fake-values.yaml to use image fake-url:'fake-tag'",
-			"updated fake-values.yaml to use image second-fake-url:'second-fake-tag'",
+			"updated fake-values.yaml to use image fake-url:fake-tag",
+			"updated fake-values.yaml to use image second-fake-url:second-fake-tag",
 			"updated another-fake-values.yaml to use image third-fake-url@third-fake-digest",
 			"updated another-fake-values.yaml to use image fourth-fake-url@fourth-fake-digest",
 		},

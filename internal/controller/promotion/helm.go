@@ -125,7 +125,7 @@ func buildValuesFilesChanges(
 	tagsByImage := map[string]string{}
 	digestsByImage := make(map[string]string, len(images))
 	for _, image := range images {
-		tagsByImage[image.RepoURL] = "'" + image.Tag + "'"
+		tagsByImage[image.RepoURL] = image.Tag
 		digestsByImage[image.RepoURL] = image.Digest
 	}
 	changesByFile := make(map[string]map[string]string, len(imageUpdates))
@@ -157,7 +157,7 @@ func buildValuesFilesChanges(
 				fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 		case kargoapi.ImageUpdateValueTypeTag:
-			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = tag
+			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = "'" + tag + "'"
 			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 		case kargoapi.ImageUpdateValueTypeImageAndDigest:
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =
