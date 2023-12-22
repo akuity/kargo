@@ -11,13 +11,15 @@ Installing Kargo with default configuration is quick and easy.
 
 You will need:
 
-* [Helm](https://helm.sh/docs/): These instructions were tested with v3.11.2.
-* A Kubernetes cluster with [cert-manager](https://cert-manager.io/) and
-  [Argo CD](https://argo-cd.readthedocs.io) pre-installed. These instructions
-  were tested with:
-    * Kubernetes: v1.25.3
+* [Helm](https://helm.sh/docs/): These instructions were tested with v3.13.1.
+* A Kubernetes cluster with [cert-manager](https://cert-manager.io/),
+  [Argo CD](https://argo-cd.readthedocs.io), and
+  [Argo Rollouts](https://argoproj.github.io/argo-rollouts/)
+  pre-installed. These instructions were tested with:
+    * Kubernetes: v1.27.4
     * cert-manager: v1.11.5
-    * Argo CD: v2.8.3
+    * Argo CD: v2.9.3
+    * Argo Rollouts: v1.6.4
 
 :::info
 `cert-manager` is used for self-signing a certificate used to identify Kargo's
@@ -27,8 +29,8 @@ other means. Refer to the advanced installation section for more information.
 :::
 
 :::info
-We are working toward transitioning Argo CD from a required dependency to a
-_suggested_ dependency.
+We are working toward transitioning Argo CD and Argo Rollouts from required
+dependencies to _suggested_ dependencies.
 :::
 
 :::note

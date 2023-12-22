@@ -1,7 +1,7 @@
 SHELL ?= /bin/bash
 
 ARGO_CD_CHART_VERSION := 5.51.6
-ARGO_ROLLOUTS_CHART_VERSION := 2.32.8
+ARGO_ROLLOUTS_CHART_VERSION := 2.33.0
 BUF_LINT_ERROR_FORMAT ?= text
 GO_LINT_ERROR_FORMAT ?= colored-line-number
 CERT_MANAGER_CHART_VERSION := 1.11.5
@@ -258,12 +258,12 @@ hack-install-argocd:
 
 .PHONY: hack-install-argo-rollouts
 hack-install-argo-rollouts:
-	helm upgrade rollouts argo-rollouts \
+	helm upgrade argo-rollouts argo-rollouts \
 		--repo https://argoproj.github.io/argo-helm \
 		--version $(ARGO_ROLLOUTS_CHART_VERSION) \
 		--install \
 		--create-namespace \
-		--namespace rollouts \
+		--namespace argo-rollouts \
 		--wait
 
 .PHONY: hack-uninstall-prereqs
@@ -271,7 +271,7 @@ hack-uninstall-prereqs: hack-uninstall-argo-rollouts hack-uninstall-argocd hack-
 
 .PHONY: hack-uninstall-argo-rollouts
 hack-uninstall-argo-rollouts:
-	helm delete rollouts --namespace rollouts
+	helm delete argo-rollouts --namespace argo-rollouts
 
 .PHONY: hack-uninstall-argocd
 hack-uninstall-argocd:
