@@ -222,8 +222,8 @@ that reside in the same project/namespace as the `Stage` resource.
 Argo Rollouts `AnalysisTemplate` resources (and the `AnalysisRun` resources that
 are spawned from them) were intentionally built to be re-usable in contexts
 other than Argo Rollouts. Re-using this resource type to define verification
-processes means Kargo those processes benefit from this rich and battle-tested
-feature of Argo Rollouts.
+processes means those processes benefit from this rich and battle-tested feature
+of Argo Rollouts.
 :::
 
 The following example depicts a `Stage` resource that references an
