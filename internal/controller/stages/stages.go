@@ -575,6 +575,13 @@ func (r *reconciler) syncNormalStage(
 			freightLogger.Debug("Stage health deemed not applicable")
 		}
 
+		// If the Stage is healthy and no verification process is defined, then the
+		// Stage should transition to the Steady phase.
+		if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
+			stage.Spec.Verification == nil && status.Phase == kargoapi.StagePhaseVerifying {
+			status.Phase = kargoapi.StagePhaseSteady
+		}
+
 		// Initiate or follow-up on verification if required
 		if status.Phase == kargoapi.StagePhaseVerifying && stage.Spec.Verification != nil {
 			if status.CurrentFreight.VerificationInfo == nil {
