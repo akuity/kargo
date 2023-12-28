@@ -50,7 +50,7 @@ func (f *Freight) UpdateID() {
 	for _, image := range f.Images {
 		artifacts = append(
 			artifacts,
-			fmt.Sprintf("%s@%s", image.RepoURL, image.Digest),
+			fmt.Sprintf("%s:%s@%s", image.RepoURL, image.Tag, image.Digest),
 		)
 	}
 	for _, chart := range f.Charts {
