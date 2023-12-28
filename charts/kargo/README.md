@@ -33,6 +33,12 @@ In the average case, these settings should be left alone.
 | `kubeconfigSecrets.kargo`  | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Kargo resources   | `undefined` |
 | `kubeconfigSecrets.argocd` | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources | `undefined` |
 
+### Labels
+
+| Name                       | Description                                  | Value       |
+| -------------------------- | -------------------------------------------- | ----------- |
+| `additionalLabels`         | Additional labels to add to all resources    | `{}`        |
+
 ### API
 
 | Name                                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                  | Value                |
