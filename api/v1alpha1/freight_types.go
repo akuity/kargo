@@ -50,6 +50,12 @@ func (f *Freight) UpdateID() {
 	for _, image := range f.Images {
 		artifacts = append(
 			artifacts,
+			// Note: This isn't the usual image representation using EITHER :<tag> OR @<digest>.
+			// It is possible to have found an image with a tag that is already known, but with a
+			// new digest -- as in the case of "mutable" tags like "latest". It is equally possible to
+			// have found an image with a digest that is already known, but has been re-tagged.
+			// To cover both cases, we incorporate BOTH tag and digest into the canonical
+			// representation of an image used when calculating Freight ID.
 			fmt.Sprintf("%s:%s@%s", image.RepoURL, image.Tag, image.Digest),
 		)
 	}
