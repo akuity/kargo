@@ -35,9 +35,9 @@ In the average case, these settings should be left alone.
 
 ### Labels
 
-| Name                       | Description                                  | Value       |
-| -------------------------- | -------------------------------------------- | ----------- |
-| `additionalLabels`         | Additional labels to add to all resources    | `{}`        |
+| Name               | Description                                | Value |
+| ------------------ | ------------------------------------------ | ----- |
+| `additionalLabels` | Additional labels to add to all resources. | `{}`  |
 
 ### API
 
