@@ -36,7 +36,7 @@ kargo create project my-project
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return errors.New("get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 			resp, err := kargoSvcCli.CreateProject(ctx,
 				connect.NewRequest(&kargosvcapi.CreateProjectRequest{
