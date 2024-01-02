@@ -15,8 +15,11 @@ func main() {
 	ctx := context.Background()
 	cfg, err := config.LoadCLIConfig()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, errors.Wrap(err, "load config"))
-		os.Exit(1)
+		if !config.IsConfigNotFoundErr(err) {
+			fmt.Fprintln(os.Stderr, errors.Wrap(err, "load config"))
+			os.Exit(1)
+		}
+		cfg = config.NewDefaultCLIConfig()
 	}
 	cmd, err := NewRootCommand(option.NewOption(cfg), &rootState{})
 	if err != nil {

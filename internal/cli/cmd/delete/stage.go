@@ -27,7 +27,7 @@ kargo delete stage --project=my-project my-stage
 			ctx := cmd.Context()
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return errors.New("get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 
 			project := opt.Project

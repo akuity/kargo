@@ -26,7 +26,7 @@ func newUpdateFreightAliasCommand(opt *option.Option) *cobra.Command {
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return errors.New("get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 
 			if _, err = kargoSvcCli.UpdateFreightAlias(

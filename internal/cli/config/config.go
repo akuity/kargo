@@ -63,6 +63,11 @@ type CLIConfig struct {
 	Project string `json:"project,omitempty"`
 }
 
+// NewDefaultCLIConfig returns a new default CLI configuration.
+func NewDefaultCLIConfig() CLIConfig {
+	return CLIConfig{}
+}
+
 // LoadCLIConfig loads Kargo CLI configuration from a file in the Kargo home
 // directory.
 func LoadCLIConfig() (CLIConfig, error) {
