@@ -28,6 +28,11 @@ func GetClientFromConfig(ctx context.Context, opt *option.Option) (
 	if err != nil {
 		return nil, errors.Wrap(err, "load cli config")
 	}
+	if cfg.APIAddress == "" || cfg.BearerToken == "" {
+		return nil, errors.New(
+			"seems like you are not logged in; please use `kargo login` to authenticate",
+		)
+	}
 	skipTLSVerify := opt.InsecureTLS || cfg.InsecureSkipTLSVerify
 	if cfg, err =
 		newTokenRefresher().refreshToken(ctx, cfg, skipTLSVerify); err != nil {

@@ -42,7 +42,7 @@ kargo get freight --project=my-project my-freight
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
 			if err != nil {
-				return errors.New("get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 			resp, err := kargoSvcCli.QueryFreight(ctx, connect.NewRequest(&v1alpha1.QueryFreightRequest{
 				Project: project,
