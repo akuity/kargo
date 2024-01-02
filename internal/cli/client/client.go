@@ -26,7 +26,7 @@ func GetClientFromConfig(ctx context.Context, opt *option.Option) (
 	}
 	cfg, err := config.LoadCLIConfig()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "load cli config")
 	}
 	skipTLSVerify := opt.InsecureTLS || cfg.InsecureSkipTLSVerify
 	if cfg, err =

@@ -20,9 +20,9 @@ func newSetCommand() *cobra.Command {
 kargo config set project my-project
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.LoadCLIConfig()
+			cfg, err := config.EnsureCLIConfig()
 			if err != nil {
-				return errors.Wrap(err, "load cli config")
+				return errors.Wrap(err, "ensure cli config")
 			}
 
 			key := strings.ToLower(args[0])

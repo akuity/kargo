@@ -63,6 +63,28 @@ type CLIConfig struct {
 	Project string `json:"project,omitempty"`
 }
 
+// NewDefaultCLIConfig returns a new default CLI configuration.
+func NewDefaultCLIConfig() CLIConfig {
+	return CLIConfig{}
+}
+
+// EnsureCLIConfig returns Kargo CLI configuration if exists,
+// otherwise creates a default CLI configuration to the
+// Kargo home directory and returns it.
+func EnsureCLIConfig() (CLIConfig, error) {
+	cfg, err := loadCLIConfig(xdgConfigPath)
+	if err != nil {
+		if IsConfigNotFoundErr(err) {
+			defaultCfg := NewDefaultCLIConfig()
+			if err = SaveCLIConfig(defaultCfg); err != nil {
+				return defaultCfg, errors.Wrap(err, "save default cli config")
+			}
+			return defaultCfg, nil
+		}
+	}
+	return cfg, nil
+}
+
 // LoadCLIConfig loads Kargo CLI configuration from a file in the Kargo home
 // directory.
 func LoadCLIConfig() (CLIConfig, error) {
