@@ -36,9 +36,10 @@ kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources
   # argocd: ""
 
-# -- Additional labels to add to all resources
+## @section Labels
+## @param additionalLabels Additional labels to add to all resources.
 additionalLabels: {}
-  # app: kargo
+  # my-label: my-value
 
 ## @section API
 api:
