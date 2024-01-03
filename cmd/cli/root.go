@@ -88,8 +88,8 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 		return nil, err
 	}
 	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
-	option.InsecureTLS(&opt.InsecureTLS)(cmd.PersistentFlags())
-	option.LocalServer(&opt.UseLocalServer)(cmd.PersistentFlags())
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	cmd.AddCommand(apply.NewCommand(opt))
 	cmd.AddCommand(cliconfigcmd.NewCommand())

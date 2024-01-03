@@ -15,12 +15,8 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type PromoteSubscribersFlags struct {
-	Freight string
-}
-
 func newPromoteSubscribersCommand(opt *option.Option) *cobra.Command {
-	var flag PromoteSubscribersFlags
+	var freight string
 	cmd := &cobra.Command{
 		Use:  "promote-subscribers --project=project (STAGE) [(--freight=)freight-id]",
 		Args: option.ExactArgs(1),
@@ -50,7 +46,6 @@ kargo stage promote-subscribers dev --freight=abc123
 				return errors.New("name is required")
 			}
 
-			freight := strings.TrimSpace(flag.Freight)
 			if freight == "" {
 				return errors.New("freight is required")
 			}
@@ -84,7 +79,7 @@ kargo stage promote-subscribers dev --freight=abc123
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Freight(&flag.Freight)(cmd.Flags())
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Freight(cmd.Flags(), &freight)
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }

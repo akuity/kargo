@@ -94,7 +94,7 @@ kargo get freight --project=my-project my-freight
 			return resErr
 		},
 	}
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }

@@ -23,23 +23,15 @@ func NewCommand(opt *option.Option) *cobra.Command {
 	return cmd
 }
 
-type Flags struct {
-	Wait bool
-}
-
 const (
 	refreshResourceTypeWarehouse = "warehouse"
 	refreshResourceTypeStage     = "stage"
 )
 
-func addRefreshFlags(cmd *cobra.Command, flag *Flags) {
-	cmd.Flags().BoolVar(&flag.Wait, "wait", true, "Wait until refresh completes")
-}
-
 func refreshObject(
 	opt *option.Option,
-	flag *Flags,
 	resourceType string,
+	wait bool,
 ) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
@@ -74,7 +66,7 @@ func refreshObject(
 			return errors.Wrapf(err, "refresh %s", resourceType)
 		}
 
-		if flag.Wait {
+		if wait {
 			switch resourceType {
 			case refreshResourceTypeWarehouse:
 				err = waitForWarehouse(ctx, kargoSvcCli, project, name)

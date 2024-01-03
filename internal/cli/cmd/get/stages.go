@@ -78,7 +78,7 @@ kargo get stages --project=my-project my-stage
 			return resErr
 		},
 	}
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }
