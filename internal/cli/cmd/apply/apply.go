@@ -116,5 +116,7 @@ kargo apply -f stage.yaml
 	}
 	opt.PrintFlags.AddFlags(cmd)
 	option.Filenames(cmd.Flags(), &filenames, "apply")
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
 	return cmd
 }

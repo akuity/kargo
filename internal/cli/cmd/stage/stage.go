@@ -12,6 +12,9 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 		Use:   "stage",
 		Short: "Manage stages",
 	}
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
+
 	cmd.AddCommand(newPromoteCommand(cfg, opt))
 	cmd.AddCommand(newEnableAutoPromotion(cfg, opt))
 	cmd.AddCommand(newDisableAutoPromotion(cfg, opt))

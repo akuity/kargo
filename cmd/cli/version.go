@@ -72,6 +72,7 @@ func newVersionCommand(
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
 	return cmd
 }
 

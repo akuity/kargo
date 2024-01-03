@@ -94,8 +94,6 @@ func NewRootCommand(
 		return nil, err
 	}
 	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
-	option.InsecureTLS(cmd.PersistentFlags(), opt)
-	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	cmd.AddCommand(apply.NewCommand(cfg, opt))
 	cmd.AddCommand(cliconfigcmd.NewCommand(cfg))
