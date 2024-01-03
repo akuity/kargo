@@ -13,11 +13,12 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newProjectCommand(opt *option.Option) *cobra.Command {
+func newProjectCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project (NAME)",
 		Short: "Create a project",
@@ -34,7 +35,7 @@ kargo create project my-project
 				return errors.New("name is required")
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}

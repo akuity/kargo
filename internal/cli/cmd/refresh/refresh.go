@@ -9,17 +9,18 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func NewCommand(opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "refresh",
 		Short: "Refresh a stage or warehouse",
 	}
-	cmd.AddCommand(newRefreshWarehouseCommand(opt))
-	cmd.AddCommand(newRefreshStageCommand(opt))
+	cmd.AddCommand(newRefreshWarehouseCommand(cfg, opt))
+	cmd.AddCommand(newRefreshStageCommand(cfg, opt))
 	return cmd
 }
 
@@ -37,13 +38,14 @@ func addRefreshFlags(cmd *cobra.Command, flag *Flags) {
 }
 
 func refreshObject(
+	cfg config.CLIConfig,
 	opt *option.Option,
 	flag *Flags,
 	resourceType string,
 ) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+		kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 		if err != nil {
 			return err
 		}

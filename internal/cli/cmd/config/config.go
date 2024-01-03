@@ -1,15 +1,19 @@
 package config
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
 
-func NewCommand() *cobra.Command {
+	"github.com/akuity/kargo/internal/cli/config"
+)
+
+func NewCommand(cfg config.CLIConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage Kargo CLI configuration",
 	}
 
 	// Subcommands
-	cmd.AddCommand(newSetCommand())
-	cmd.AddCommand(newUnsetCommand())
+	cmd.AddCommand(newSetCommand(cfg))
+	cmd.AddCommand(newUnsetCommand(cfg))
 	return cmd
 }

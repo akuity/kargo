@@ -14,6 +14,7 @@ import (
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -22,7 +23,7 @@ type Flags struct {
 	Filenames []string
 }
 
-func NewCommand(opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	var flag Flags
 	cmd := &cobra.Command{
 		Use:   "apply [--project=project] -f (FILENAME)",
@@ -50,7 +51,7 @@ kargo apply -f stage.yaml
 				}
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}

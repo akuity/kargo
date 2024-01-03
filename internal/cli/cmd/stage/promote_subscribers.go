@@ -11,6 +11,7 @@ import (
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -19,7 +20,10 @@ type PromoteSubscribersFlags struct {
 	Freight string
 }
 
-func newPromoteSubscribersCommand(opt *option.Option) *cobra.Command {
+func newPromoteSubscribersCommand(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
 	var flag PromoteSubscribersFlags
 	cmd := &cobra.Command{
 		Use:  "promote-subscribers --project=project (STAGE) [(--freight=)freight-id]",
@@ -40,7 +44,7 @@ kargo stage promote-subscribers dev --freight=abc123
 				return errors.New("project is required")
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return err
 			}
