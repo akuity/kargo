@@ -101,9 +101,9 @@ export const StageNode = ({
           ) : (
             <>
               <h3>Current Freight</h3>
-              <p className='font-mono text-sm font-semibold h-full flex items-center justify-center'>
+              <div className='font-mono text-sm font-semibold h-full flex items-center justify-center'>
                 <FreightLabel freight={currentFreight} />
-              </p>
+              </div>
             </>
           )}
         </div>
