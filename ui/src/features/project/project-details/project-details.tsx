@@ -14,19 +14,15 @@ import {
   faTimeline
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Empty, Input, Modal, message } from 'antd';
+import { Button, Dropdown, Empty, message } from 'antd';
 import { graphlib, layout } from 'dagre';
 import React from 'react';
-import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
-import { z } from 'zod';
 
 import { transportWithAuth } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
-import { FieldContainer } from '@ui/features/common/form/field-container';
 import { getAlias } from '@ui/features/common/freight-label';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { ConfirmPromotionDialogue } from '@ui/features/freightline/confirm-promotion-dialogue';
@@ -49,20 +45,19 @@ import {
   promoteStage,
   promoteSubscribers,
   queryFreight,
-  refreshWarehouse,
-  updateFreightAlias
+  refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/types_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
-import { zodValidators } from '@ui/utils/validators';
 
 import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
 import { NodeType, NodesItemType } from './types';
+import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
 const lineThickness = 2;
 const nodeWidth = 150;
@@ -72,10 +67,6 @@ const warehouseNodeWidth = 150;
 const warehouseNodeHeight = 100;
 
 const getSeconds = (ts?: Timestamp): number => Number(ts?.seconds) || 0;
-
-const formSchema = z.object({
-  value: zodValidators.requiredString
-});
 
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
@@ -114,58 +105,7 @@ export const ProjectDetails = () => {
     false
   );
 
-  const { control, handleSubmit } = useForm({
-    defaultValues: {
-      value: ''
-    },
-    resolver: zodResolver(formSchema)
-  });
-
-  const { mutateAsync: updateAliasAction } = useMutation({
-    ...updateFreightAlias.useMutation(),
-    onError: (err) => {
-      message.error(err?.toString());
-    },
-    onSuccess: () => {
-      message.success('Alias successfully updated');
-    }
-  });
-
-  const [editingFreight, setEditingFreight] = React.useState<Freight | undefined>();
-
-  const { show } = useModal((p) => (
-    <Modal
-      {...p}
-      title={
-        <>
-          <FontAwesomeIcon icon={faPencil} className='mr-2' />
-          Update Alias
-        </>
-      }
-      onCancel={p.hide}
-      okText='Submit'
-      onOk={handleSubmit(async (data) => {
-        await updateAliasAction({
-          project: name,
-          freight: editingFreight?.id || '',
-          alias: data.value || ''
-        });
-        refetchFreightData();
-        setEditingFreight(undefined);
-        p.hide();
-      })}
-    >
-      <div className='mb-4'>
-        <div className='text-xs font-semibold uppercase'>Freight ID</div>
-        <div className='font-mono'>{editingFreight?.id}</div>
-      </div>
-      <FieldContainer label='New Alias' name='value' control={control}>
-        {({ field }) => (
-          <Input {...field} type='text' placeholder={getAlias(editingFreight) || 'New alias'} />
-        )}
-      </FieldContainer>
-    </Modal>
-  ));
+  const { show } = useModal();
 
   React.useEffect(() => {
     if (!data || !isVisible || !warehouseData) {
@@ -743,8 +683,17 @@ export const ProjectDetails = () => {
                               </>
                             ),
                             onClick: async () => {
-                              await setEditingFreight(f);
-                              show();
+                              show((p) => (
+                                <UpdateFreightAliasModal
+                                  {...p}
+                                  freight={f || undefined}
+                                  project={name || ''}
+                                  onSubmit={() => {
+                                    refetchFreightData();
+                                    p.hide();
+                                  }}
+                                />
+                              ));
                             }
                           }
                         ]
