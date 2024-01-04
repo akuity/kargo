@@ -147,7 +147,13 @@ func (g *gitMechanism) doSingleUpdate(
 	if creds == nil {
 		creds = &git.RepoCredentials{}
 	}
-	repo, err := git.Clone(update.RepoURL, *creds, nil)
+	repo, err := git.Clone(
+		update.RepoURL,
+		*creds,
+		&git.CloneOptions{
+			InsecureSkipTLSVerify: update.InsecureSkipTLSVerify,
+		},
+	)
 	if err != nil {
 		return nil, newFreight, errors.Wrapf(err, "error cloning git repo %q", update.RepoURL)
 	}

@@ -51,7 +51,7 @@ func (r *reconciler) getLatestCommits(
 			logger.Debug("found no credentials for git repo")
 		}
 
-		gm, err := r.getLatestCommitMetaFn(ctx, sub.RepoURL, sub.Branch, repoCreds)
+		gm, err := r.getLatestCommitMetaFn(ctx, *s.Git, repoCreds)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -76,25 +76,25 @@ func (r *reconciler) getLatestCommits(
 
 func getLatestCommitMeta(
 	ctx context.Context,
-	repoURL string,
-	branch string,
+	sub kargoapi.GitSubscription,
 	creds *git.RepoCredentials,
 ) (*gitMeta, error) {
-	logger := logging.LoggerFromContext(ctx).WithField("repo", repoURL)
+	logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 	if creds == nil {
 		creds = &git.RepoCredentials{}
 	}
 	repo, err := git.Clone(
-		repoURL,
+		sub.RepoURL,
 		*creds,
 		&git.CloneOptions{
-			Branch:       branch,
-			SingleBranch: true,
-			Shallow:      true,
+			Branch:                sub.Branch,
+			SingleBranch:          true,
+			Shallow:               true,
+			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error cloning git repo %q", repoURL)
+		return nil, errors.Wrapf(err, "error cloning git repo %q", sub.RepoURL)
 	}
 	var gm gitMeta
 	gm.Commit, err = repo.LastCommitID()
@@ -102,8 +102,8 @@ func getLatestCommitMeta(
 		return nil, errors.Wrapf(
 			err,
 			"error determining last commit ID from git repo %q (branch: %q)",
-			repoURL,
-			branch,
+			sub.RepoURL,
+			sub.Branch,
 		)
 	}
 	msg, err := repo.CommitMessage(gm.Commit)
