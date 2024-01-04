@@ -61,17 +61,17 @@ func (s *server) WatchWarehouses(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return connect.NewError(connect.CodeInternal, errors.Errorf("unexpected object type %T", e.Object))
+				return errors.Errorf("unexpected object type %T", e.Object)
 			}
 			var warehouse *kargoapi.Warehouse
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &warehouse); err != nil {
-				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "from unstructured"))
+				return errors.Wrap(err, "from unstructured")
 			}
 			if err := stream.Send(&svcv1alpha1.WatchWarehousesResponse{
 				Warehouse: typesv1alpha1.ToWarehouseProto(*warehouse),
 				Type:      string(e.Type),
 			}); err != nil {
-				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "send response"))
+				return errors.Wrap(err, "send response")
 			}
 		}
 	}

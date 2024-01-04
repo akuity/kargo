@@ -61,17 +61,17 @@ func (s *server) WatchStages(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return connect.NewError(connect.CodeInternal, errors.Errorf("unexpected object type %T", e.Object))
+				return errors.Errorf("unexpected object type %T", e.Object)
 			}
 			var stage *kargoapi.Stage
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &stage); err != nil {
-				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "from unstructured"))
+				return errors.Wrap(err, "from unstructured")
 			}
 			if err := stream.Send(&svcv1alpha1.WatchStagesResponse{
 				Stage: typesv1alpha1.ToStageProto(*stage),
 				Type:  string(e.Type),
 			}); err != nil {
-				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "send response"))
+				return errors.Wrap(err, "send response")
 			}
 		}
 	}

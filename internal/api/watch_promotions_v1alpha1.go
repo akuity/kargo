@@ -55,11 +55,11 @@ func (s *server) WatchPromotions(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return connect.NewError(connect.CodeInternal, errors.Errorf("unexpected object type %T", e.Object))
+				return errors.Errorf("unexpected object type %T", e.Object)
 			}
 			var promotion *kargoapi.Promotion
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &promotion); err != nil {
-				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "from unstructured"))
+				return errors.Wrap(err, "from unstructured")
 			}
 			// FIXME: Current (dynamic) client doesn't support filtering with indexed field by indexer,
 			// so manually filter stage here.
@@ -70,7 +70,7 @@ func (s *server) WatchPromotions(
 				Promotion: typesv1alpha1.ToPromotionProto(*promotion),
 				Type:      string(e.Type),
 			}); err != nil {
-				return connect.NewError(connect.CodeInternal, errors.Wrap(err, "send response"))
+				return errors.Wrap(err, "send response")
 			}
 		}
 	}
