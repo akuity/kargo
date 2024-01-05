@@ -23,7 +23,7 @@ func (i *errorInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		res, err := next(ctx, req)
 		if err != nil {
-			return nil, i.wrapError(err)
+			return nil, i.toConnectError(err)
 		}
 		return res, nil
 	}
@@ -41,13 +41,13 @@ func (i *errorInterceptor) WrapStreamingHandler(
 ) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		if err := next(ctx, conn); err != nil {
-			return i.wrapError(err)
+			return i.toConnectError(err)
 		}
 		return nil
 	}
 }
 
-func (i *errorInterceptor) wrapError(err error) error {
+func (*errorInterceptor) toConnectError(err error) error {
 	var connectErr *connect.Error
 	if ok := errors.As(err, &connectErr); ok {
 		return err
@@ -86,6 +86,6 @@ func httpStatusToConnectCode(status int32) connect.Code {
 	case http.StatusGatewayTimeout:
 		return connect.CodeDeadlineExceeded
 	default:
-		return connect.CodeUnknown
+		return connect.CodeInternal
 	}
 }
