@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/delete"
 	"github.com/akuity/kargo/internal/cli/cmd/get"
 	"github.com/akuity/kargo/internal/cli/cmd/login"
+	"github.com/akuity/kargo/internal/cli/cmd/logout"
 	"github.com/akuity/kargo/internal/cli/cmd/refresh"
 	"github.com/akuity/kargo/internal/cli/cmd/stage"
 	"github.com/akuity/kargo/internal/cli/cmd/update"
@@ -97,6 +98,7 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	cmd.AddCommand(delete.NewCommand(opt))
 	cmd.AddCommand(get.NewCommand(opt))
 	cmd.AddCommand(login.NewCommand(opt))
+	cmd.AddCommand(logout.NewCommand())
 	cmd.AddCommand(stage.NewCommand(opt))
 	cmd.AddCommand(refresh.NewCommand(opt))
 	cmd.AddCommand(update.NewCommand(opt))
