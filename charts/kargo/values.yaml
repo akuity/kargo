@@ -232,6 +232,30 @@ controller:
   ## @param controller.affinity Specifies pod affinity for controller pods.
   affinity: {}
 
+## @section Management Controller
+## All settings for the management controller component
+managementController:
+  ## @param managementController.enabled Whether the management controller is enabled.
+  enabled: true
+
+  ## @param managementController.logLevel The log level for the management controller.
+  logLevel: INFO
+
+  ## @param managementController.resources Resources limits and requests for the management controller containers.
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  ## @param managementController.nodeSelector Node selector for management controller pods.
+  nodeSelector: {}
+  ## @param managementController.tolerations Tolerations for management controller pods.
+  tolerations: []
+  ## @param managementController.affinity Specifies pod affinity for management controller pods.
+  affinity: {}
+
 ## @section Webhooks
 webhooks:
   ## @param webhooks.register Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources.
