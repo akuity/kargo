@@ -32,11 +32,11 @@ func TestKargoRenderPromote(t *testing.T) {
 		name       string
 		promoMech  *kargoRenderMechanism
 		stage      *kargoapi.Stage
-		newFreight kargoapi.SimpleFreight
+		newFreight kargoapi.FreightReference
 		assertions func(
 			status *kargoapi.PromotionStatus,
-			newFreightIn kargoapi.SimpleFreight,
-			newFreightOut kargoapi.SimpleFreight,
+			newFreightIn kargoapi.FreightReference,
+			newFreightOut kargoapi.FreightReference,
 			err error,
 		)
 	}{
@@ -50,8 +50,8 @@ func TestKargoRenderPromote(t *testing.T) {
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -65,8 +65,8 @@ func TestKargoRenderPromote(t *testing.T) {
 					_ context.Context,
 					_ *kargoapi.Promotion,
 					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.SimpleFreight,
-				) (kargoapi.SimpleFreight, error) {
+					newFreight kargoapi.FreightReference,
+				) (kargoapi.FreightReference, error) {
 					return newFreight, errors.New("something went wrong")
 				},
 			},
@@ -81,7 +81,7 @@ func TestKargoRenderPromote(t *testing.T) {
 					},
 				},
 			},
-			newFreight: kargoapi.SimpleFreight{
+			newFreight: kargoapi.FreightReference{
 				Images: []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
@@ -91,8 +91,8 @@ func TestKargoRenderPromote(t *testing.T) {
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -107,8 +107,8 @@ func TestKargoRenderPromote(t *testing.T) {
 					_ context.Context,
 					_ *kargoapi.Promotion,
 					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.SimpleFreight,
-				) (kargoapi.SimpleFreight, error) {
+					newFreight kargoapi.FreightReference,
+				) (kargoapi.FreightReference, error) {
 					return newFreight, nil
 				},
 			},
@@ -123,7 +123,7 @@ func TestKargoRenderPromote(t *testing.T) {
 					},
 				},
 			},
-			newFreight: kargoapi.SimpleFreight{
+			newFreight: kargoapi.FreightReference{
 				Images: []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
@@ -133,8 +133,8 @@ func TestKargoRenderPromote(t *testing.T) {
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -159,12 +159,12 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 	const testRef = "fake-ref"
 	testCases := []struct {
 		name       string
-		freight    kargoapi.SimpleFreight
+		freight    kargoapi.FreightReference
 		promoMech  *kargoRenderMechanism
 		update     kargoapi.GitRepoUpdate
 		assertions func(
-			newFreightIn kargoapi.SimpleFreight,
-			newFreightOut kargoapi.SimpleFreight,
+			newFreightIn kargoapi.FreightReference,
+			newFreightOut kargoapi.FreightReference,
 			err error,
 		)
 	}{
@@ -179,8 +179,8 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -209,8 +209,8 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -252,8 +252,8 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -268,7 +268,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 		},
 		{
 			name: "success -- all images -- no action",
-			freight: kargoapi.SimpleFreight{
+			freight: kargoapi.FreightReference{
 				Commits: []kargoapi.GitCommit{{}},
 				Images: []kargoapi.Image{
 					{
@@ -324,8 +324,8 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -341,7 +341,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 		},
 		{
 			name: "success -- some images -- commit",
-			freight: kargoapi.SimpleFreight{
+			freight: kargoapi.FreightReference{
 				Commits: []kargoapi.GitCommit{{}},
 				Images: []kargoapi.Image{
 					{
@@ -409,8 +409,8 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)

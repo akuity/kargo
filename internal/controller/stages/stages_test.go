@@ -196,7 +196,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase:          kargoapi.StagePhaseNotApplicable,
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 					Health:         &kargoapi.Health{},
 				},
 			},
@@ -317,14 +317,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase:          kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -358,7 +358,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{},
 					},
 				},
@@ -367,7 +367,7 @@ func TestSyncNormalStage(t *testing.T) {
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -397,14 +397,14 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					Phase:          kargoapi.StagePhaseVerifying,
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -440,14 +440,14 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -490,14 +490,14 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -534,14 +534,14 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -591,14 +591,14 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -642,7 +642,7 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-freight-id",
 					},
 				},
@@ -651,7 +651,7 @@ func TestSyncNormalStage(t *testing.T) {
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -699,14 +699,14 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -764,14 +764,14 @@ func TestSyncNormalStage(t *testing.T) {
 					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{},
+					CurrentFreight: &kargoapi.FreightReference{},
 				},
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return nil
@@ -843,7 +843,7 @@ func TestSyncNormalStage(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					Phase:            kargoapi.StagePhaseVerifying,
 					CurrentPromotion: &kargoapi.PromotionInfo{},
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{},
 					},
 				},
@@ -852,7 +852,7 @@ func TestSyncNormalStage(t *testing.T) {
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				checkHealthFn: func(
 					context.Context,
-					kargoapi.SimpleFreight,
+					kargoapi.FreightReference,
 					[]kargoapi.ArgoCDAppUpdate,
 				) *kargoapi.Health {
 					return &kargoapi.Health{
