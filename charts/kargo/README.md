@@ -97,6 +97,17 @@ In the average case, these settings should be left alone.
 | `controller.tolerations`                      | Tolerations for controller pods.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `[]`        |
 | `controller.affinity`                         | Specifies pod affinity for controller pods.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `{}`        |
 
+### Management Controller
+
+| Name                                | Description                                                             | Value  |
+| ----------------------------------- | ----------------------------------------------------------------------- | ------ |
+| `managementController.enabled`      | Whether the management controller is enabled.                           | `true` |
+| `managementController.logLevel`     | The log level for the management controller.                            | `INFO` |
+| `managementController.resources`    | Resources limits and requests for the management controller containers. | `{}`   |
+| `managementController.nodeSelector` | Node selector for management controller pods.                           | `{}`   |
+| `managementController.tolerations`  | Tolerations for management controller pods.                             | `[]`   |
+| `managementController.affinity`     | Specifies pod affinity for management controller pods.                  | `{}`   |
+
 ### Webhooks
 
 | Name                | Description                                                                                      | Value  |
