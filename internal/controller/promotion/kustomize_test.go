@@ -158,7 +158,7 @@ func TestKustomizerApply(t *testing.T) {
 			testCase.assertions(
 				testCase.kustomizer.apply(
 					testCase.update,
-					kargoapi.SimpleFreight{
+					kargoapi.FreightReference{
 						Images: []kargoapi.Image{
 							{
 								RepoURL: "fake-image",

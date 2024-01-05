@@ -10,7 +10,7 @@ import (
 
 func (r *reconciler) checkHealth(
 	ctx context.Context,
-	currentFreight kargoapi.SimpleFreight,
+	currentFreight kargoapi.FreightReference,
 	argoCDAppUpdates []kargoapi.ArgoCDAppUpdate,
 ) *kargoapi.Health {
 	if len(argoCDAppUpdates) == 0 {

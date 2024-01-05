@@ -25,7 +25,7 @@ type argoCDMechanism struct {
 		ctx context.Context,
 		stageMeta metav1.ObjectMeta,
 		update kargoapi.ArgoCDAppUpdate,
-		newFreight kargoapi.SimpleFreight,
+		newFreight kargoapi.FreightReference,
 	) error
 	getArgoCDAppFn func(
 		ctx context.Context,
@@ -34,7 +34,7 @@ type argoCDMechanism struct {
 	) (*argocd.Application, error)
 	applyArgoCDSourceUpdateFn func(
 		argocd.ApplicationSource,
-		kargoapi.SimpleFreight,
+		kargoapi.FreightReference,
 		kargoapi.ArgoCDSourceUpdate,
 	) (argocd.ApplicationSource, error)
 	argoCDAppPatchFn func(
@@ -68,8 +68,8 @@ func (a *argoCDMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight kargoapi.SimpleFreight,
-) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+	newFreight kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
 	updates := stage.Spec.PromotionMechanisms.ArgoCDAppUpdates
 
 	if len(updates) == 0 {
@@ -99,7 +99,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 	ctx context.Context,
 	stageMeta metav1.ObjectMeta,
 	update kargoapi.ArgoCDAppUpdate,
-	newFreight kargoapi.SimpleFreight,
+	newFreight kargoapi.FreightReference,
 ) error {
 	app, err :=
 		a.getArgoCDAppFn(ctx, update.AppNamespaceOrDefault(), update.AppName)
@@ -278,7 +278,7 @@ func authorizeArgoCDAppUpdate(
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func applyArgoCDSourceUpdate(
 	source argocd.ApplicationSource,
-	newFreight kargoapi.SimpleFreight,
+	newFreight kargoapi.FreightReference,
 	update kargoapi.ArgoCDSourceUpdate,
 ) (argocd.ApplicationSource, error) {
 	if source.RepoURL != update.RepoURL || source.Chart != update.Chart {

@@ -63,7 +63,7 @@ type helmer struct {
 // directory.
 func (h *helmer) apply(
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.SimpleFreight,
+	newFreight kargoapi.FreightReference,
 	homeDir string,
 	workingDir string,
 ) ([]string, error) {

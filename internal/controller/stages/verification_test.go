@@ -27,7 +27,7 @@ func TestStarVerification(t *testing.T) {
 			name: "error listing AnalysisRuns",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -51,7 +51,7 @@ func TestStarVerification(t *testing.T) {
 			name: "Analysis run already exists",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -81,7 +81,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -117,7 +117,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -153,7 +153,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -195,7 +195,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -244,7 +244,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -321,7 +321,7 @@ func TestGetVerificationInfo(t *testing.T) {
 			name: "error getting AnalysisRun",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							AnalysisRun: kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
@@ -350,7 +350,7 @@ func TestGetVerificationInfo(t *testing.T) {
 			name: "AnalysisRun not found",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							AnalysisRun: kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
@@ -379,7 +379,7 @@ func TestGetVerificationInfo(t *testing.T) {
 			name: "success",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							AnalysisRun: kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
