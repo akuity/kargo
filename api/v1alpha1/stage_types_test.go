@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSimpleFreightStackEmpty(t *testing.T) {
+func TestFreightReferenceStackEmpty(t *testing.T) {
 	testCases := []struct {
 		name           string
-		stack          SimpleFreightStack
+		stack          FreightReferenceStack
 		expectedResult bool
 	}{
 		{
@@ -19,12 +19,12 @@ func TestSimpleFreightStackEmpty(t *testing.T) {
 		},
 		{
 			name:           "stack is empty",
-			stack:          SimpleFreightStack{},
+			stack:          FreightReferenceStack{},
 			expectedResult: true,
 		},
 		{
 			name:           "stack has items",
-			stack:          SimpleFreightStack{{ID: "foo"}},
+			stack:          FreightReferenceStack{{ID: "foo"}},
 			expectedResult: false,
 		},
 	}
@@ -35,33 +35,33 @@ func TestSimpleFreightStackEmpty(t *testing.T) {
 	}
 }
 
-func TestSimpleFreightStackPop(t *testing.T) {
+func TestFreightReferenceStackPop(t *testing.T) {
 	testCases := []struct {
 		name            string
-		stack           SimpleFreightStack
-		expectedStack   SimpleFreightStack
-		expectedFreight SimpleFreight
+		stack           FreightReferenceStack
+		expectedStack   FreightReferenceStack
+		expectedFreight FreightReference
 		expectedOK      bool
 	}{
 		{
 			name:            "stack is nil",
 			stack:           nil,
 			expectedStack:   nil,
-			expectedFreight: SimpleFreight{},
+			expectedFreight: FreightReference{},
 			expectedOK:      false,
 		},
 		{
 			name:            "stack is empty",
-			stack:           SimpleFreightStack{},
-			expectedStack:   SimpleFreightStack{},
-			expectedFreight: SimpleFreight{},
+			stack:           FreightReferenceStack{},
+			expectedStack:   FreightReferenceStack{},
+			expectedFreight: FreightReference{},
 			expectedOK:      false,
 		},
 		{
 			name:            "stack has items",
-			stack:           SimpleFreightStack{{ID: "foo"}, {ID: "bar"}},
-			expectedStack:   SimpleFreightStack{{ID: "bar"}},
-			expectedFreight: SimpleFreight{ID: "foo"},
+			stack:           FreightReferenceStack{{ID: "foo"}, {ID: "bar"}},
+			expectedStack:   FreightReferenceStack{{ID: "bar"}},
+			expectedFreight: FreightReference{ID: "foo"},
 			expectedOK:      true,
 		},
 	}
@@ -75,29 +75,29 @@ func TestSimpleFreightStackPop(t *testing.T) {
 	}
 }
 
-func TestSimpleFreightStackTop(t *testing.T) {
+func TestFreightReferenceStackTop(t *testing.T) {
 	testCases := []struct {
 		name            string
-		stack           SimpleFreightStack
-		expectedFreight SimpleFreight
+		stack           FreightReferenceStack
+		expectedFreight FreightReference
 		expectedOK      bool
 	}{
 		{
 			name:            "stack is nil",
 			stack:           nil,
-			expectedFreight: SimpleFreight{},
+			expectedFreight: FreightReference{},
 			expectedOK:      false,
 		},
 		{
 			name:            "stack is empty",
-			stack:           SimpleFreightStack{},
-			expectedFreight: SimpleFreight{},
+			stack:           FreightReferenceStack{},
+			expectedFreight: FreightReference{},
 			expectedOK:      false,
 		},
 		{
 			name:            "stack has items",
-			stack:           SimpleFreightStack{{ID: "foo"}, {ID: "bar"}},
-			expectedFreight: SimpleFreight{ID: "foo"},
+			stack:           FreightReferenceStack{{ID: "foo"}, {ID: "bar"}},
+			expectedFreight: FreightReference{ID: "foo"},
 			expectedOK:      true,
 		},
 	}
@@ -112,32 +112,32 @@ func TestSimpleFreightStackTop(t *testing.T) {
 	}
 }
 
-func TestSimpleFreightStackPush(t *testing.T) {
+func TestFreightReferenceStackPush(t *testing.T) {
 	testCases := []struct {
 		name          string
-		stack         SimpleFreightStack
-		newFreight    []SimpleFreight
-		expectedStack SimpleFreightStack
+		stack         FreightReferenceStack
+		newFreight    []FreightReference
+		expectedStack FreightReferenceStack
 	}{
 		{
 			name:          "initial stack is nil",
 			stack:         nil,
-			newFreight:    []SimpleFreight{{ID: "foo"}, {ID: "bar"}},
-			expectedStack: SimpleFreightStack{{ID: "foo"}, {ID: "bar"}},
+			newFreight:    []FreightReference{{ID: "foo"}, {ID: "bar"}},
+			expectedStack: FreightReferenceStack{{ID: "foo"}, {ID: "bar"}},
 		},
 		{
 			name:          "initial stack is not nil",
-			stack:         SimpleFreightStack{{ID: "foo"}},
-			newFreight:    []SimpleFreight{{ID: "bar"}},
-			expectedStack: SimpleFreightStack{{ID: "bar"}, {ID: "foo"}},
+			stack:         FreightReferenceStack{{ID: "foo"}},
+			newFreight:    []FreightReference{{ID: "bar"}},
+			expectedStack: FreightReferenceStack{{ID: "bar"}, {ID: "foo"}},
 		},
 		{
 			name: "initial stack is full",
-			stack: SimpleFreightStack{
+			stack: FreightReferenceStack{
 				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
-			newFreight: []SimpleFreight{{ID: "foo"}},
-			expectedStack: SimpleFreightStack{
+			newFreight: []FreightReference{{ID: "foo"}},
+			expectedStack: FreightReferenceStack{
 				{ID: "foo"}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
 		},
