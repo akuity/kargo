@@ -159,6 +159,10 @@ type GitRepoUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL"`
+	// InsecureSkipTLSVerify specifies whether certificate verification errors
+	// should be ignored when connecting to the repository. This should be enabled
+	// only with great caution.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// ReadBranch specifies a particular branch of the repository from which to
 	// locate contents that will be written to the branch specified by the
 	// WriteBranch field. This field is optional. When not specified, the

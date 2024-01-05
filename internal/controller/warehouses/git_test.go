@@ -15,27 +15,23 @@ import (
 
 func TestGetLatestCommits(t *testing.T) {
 	testCases := []struct {
-		name                  string
-		credentialsDB         credentials.Database
-		getLatestCommitMetaFn func(
-			context.Context,
-			string,
-			string,
-			*git.RepoCredentials,
-		) (*gitMeta, error)
+		name       string
+		reconciler *reconciler
 		assertions func(commits []kargoapi.GitCommit, err error)
 	}{
 		{
 			name: "error getting repo credentials",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false,
-						errors.New("something went wrong")
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{
+					GetFn: func(
+						context.Context,
+						string,
+						credentials.Type,
+						string,
+					) (credentials.Credentials, bool, error) {
+						return credentials.Credentials{}, false,
+							errors.New("something went wrong")
+					},
 				},
 			},
 			assertions: func(commits []kargoapi.GitCommit, err error) {
@@ -52,23 +48,24 @@ func TestGetLatestCommits(t *testing.T) {
 
 		{
 			name: "error getting last commit ID",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, nil
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{
+					GetFn: func(
+						context.Context,
+						string,
+						credentials.Type,
+						string,
+					) (credentials.Credentials, bool, error) {
+						return credentials.Credentials{}, false, nil
+					},
 				},
-			},
-			getLatestCommitMetaFn: func(
-				context.Context,
-				string,
-				string,
-				*git.RepoCredentials,
-			) (*gitMeta, error) {
-				return nil, errors.New("something went wrong")
+				getLatestCommitMetaFn: func(
+					context.Context,
+					kargoapi.GitSubscription,
+					*git.RepoCredentials,
+				) (*gitMeta, error) {
+					return nil, errors.New("something went wrong")
+				},
 			},
 			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.Error(t, err)
@@ -84,23 +81,24 @@ func TestGetLatestCommits(t *testing.T) {
 
 		{
 			name: "success",
-			credentialsDB: &credentials.FakeDB{
-				GetFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, nil
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{
+					GetFn: func(
+						context.Context,
+						string,
+						credentials.Type,
+						string,
+					) (credentials.Credentials, bool, error) {
+						return credentials.Credentials{}, false, nil
+					},
 				},
-			},
-			getLatestCommitMetaFn: func(
-				context.Context,
-				string,
-				string,
-				*git.RepoCredentials,
-			) (*gitMeta, error) {
-				return &gitMeta{Commit: "fake-commit", Message: "message"}, nil
+				getLatestCommitMetaFn: func(
+					context.Context,
+					kargoapi.GitSubscription,
+					*git.RepoCredentials,
+				) (*gitMeta, error) {
+					return &gitMeta{Commit: "fake-commit", Message: "message"}, nil
+				},
 			},
 			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.NoError(t, err)
@@ -119,12 +117,8 @@ func TestGetLatestCommits(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := reconciler{
-				credentialsDB:         testCase.credentialsDB,
-				getLatestCommitMetaFn: testCase.getLatestCommitMetaFn,
-			}
 			testCase.assertions(
-				r.getLatestCommits(
+				testCase.reconciler.getLatestCommits(
 					context.Background(),
 					"fake-namespace",
 					[]kargoapi.RepoSubscription{
@@ -140,24 +134,27 @@ func TestGetLatestCommits(t *testing.T) {
 	}
 }
 
-func TestGetLatestCommitID(t *testing.T) {
+func TestGetLatestCommitMeta(t *testing.T) {
 	testCases := []struct {
 		name       string
-		repoURL    string
-		branch     string
+		sub        kargoapi.GitSubscription
 		assertions func(*gitMeta, error)
 	}{
 		{
-			name:    "error cloning repo",
-			repoURL: "fake-url", // This should force a failure
+			name: "error cloning repo",
+			sub: kargoapi.GitSubscription{
+				RepoURL: "fake-url", // This should force a failure
+			},
 			assertions: func(_ *gitMeta, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error cloning git repo")
 			},
 		},
 		{
-			name:    "success",
-			repoURL: "https://github.com/akuity/kargo.git",
+			name: "success",
+			sub: kargoapi.GitSubscription{
+				RepoURL: "https://github.com/akuity/kargo.git",
+			},
 			assertions: func(gm *gitMeta, err error) {
 				require.NoError(t, err)
 				require.NotEmpty(t, gm.Commit)
@@ -169,7 +166,7 @@ func TestGetLatestCommitID(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				getLatestCommitMeta(context.TODO(), testCase.repoURL, testCase.branch, nil),
+				getLatestCommitMeta(context.TODO(), testCase.sub, nil),
 			)
 		})
 	}

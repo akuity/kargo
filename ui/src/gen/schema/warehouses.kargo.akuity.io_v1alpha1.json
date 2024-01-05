@@ -55,6 +55,10 @@
                     "pattern": "^\\w+([-/]\\w+)*$",
                     "type": "string"
                   },
+                  "insecureSkipTLSVerify": {
+                    "description": "InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution.",
+                    "type": "boolean"
+                  },
                   "repoURL": {
                     "description": "URL is the repository's URL. This is a required field.",
                     "minLength": 1,

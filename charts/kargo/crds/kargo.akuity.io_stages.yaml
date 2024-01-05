@@ -310,6 +310,12 @@ spec:
                                 type: object
                               type: array
                           type: object
+                        insecureSkipTLSVerify:
+                          description: InsecureSkipTLSVerify specifies whether certificate
+                            verification errors should be ignored when connecting
+                            to the repository. This should be enabled only with great
+                            caution.
+                          type: boolean
                         kustomize:
                           description: Kustomize describes how to use Kustomize to
                             incorporate Freight into the Stage. This is mutually exclusive
