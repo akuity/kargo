@@ -53,6 +53,14 @@ func newControllerCommand() *cobra.Command {
 
 			var kargoMgr manager.Manager
 			{
+				// If the env var is undefined, this will resolve to kubeconfig for the
+				// cluster the controller is running in.
+				//
+				// It is typically defined if this controller is running somewhere other
+				// than where the Kargo resources live. One example of this would be a
+				// sharded topology wherein Kargo controllers run on application
+				// clusters, with Kargo resources hosted in a centralized management
+				// cluster.
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
@@ -98,6 +106,14 @@ func newControllerCommand() *cobra.Command {
 
 			var argocdMgr manager.Manager
 			{
+				// If the env var is undefined, this will resolve to kubeconfig for the
+				// cluster the controller is running in.
+				//
+				// It is typically defined if this controller is running somewhere other
+				// than where the Argo CD resources live. Two examples of this would
+				// involve topologies wherein Kargo controllers run EITHER sharded
+				// across application clusters OR in a centralized management cluster,
+				// but with Argo CD deployed to a different management cluster.
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
 				if err != nil {
@@ -153,8 +169,16 @@ func newControllerCommand() *cobra.Command {
 
 			var rolloutsMgr manager.Manager
 			{
+				// If the env var is undefined, this will resolve to kubeconfig for the
+				// cluster the controller is running in.
+				//
+				// It is typically defined if this controller is running somewhere other
+				// than a cluster suitable for executing Argo Rollouts AnalysesRuns and
+				// user-defined workloads. An example of this would be a a topology
+				// wherein the Kargo and Argo CD controllers both run in management
+				// clusters, that are a not suitable for for this purpose.
 				restCfg, err :=
-					kubernetes.GetRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
+					kubernetes.GetRestConfig(ctx, os.GetEnv("ROLLOUTS_KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,
