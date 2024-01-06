@@ -50,7 +50,7 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
     ) : null
   );
 
-  // Once the Refresh process is done, refetch Freigths list
+  // Once the Refresh process is done, refetch Freight list
   React.useEffect(() => {
     if (stage?.metadata?.annotations['kargo.akuity.io/refresh']) {
       setShouldRefetchFreights(true);
