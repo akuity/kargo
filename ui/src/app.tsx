@@ -4,7 +4,6 @@ import { ConfigProvider } from 'antd';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { transport } from '@ui/config/transport';
-import { ModalContextProvider } from '@ui/features/common/modal/modal-context';
 import { Project } from '@ui/pages/project';
 
 import { paths } from './config/paths';
@@ -24,23 +23,21 @@ export const App = () => (
   <TransportProvider transport={transport}>
     <QueryClientProvider client={queryClient}>
       <ConfigProvider theme={themeConfig}>
-        <ModalContextProvider>
-          <AuthContextProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<MainLayout />}>
-                    <Route path={paths.projects} element={<Projects />} />
-                    <Route path={paths.project} element={<Project />} />
-                    <Route path={paths.stage} element={<Project />} />
-                  </Route>
+        <AuthContextProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path={paths.projects} element={<Projects />} />
+                  <Route path={paths.project} element={<Project />} />
+                  <Route path={paths.stage} element={<Project />} />
                 </Route>
-                <Route path={paths.login} element={<Login />} />
-                <Route path={paths.tokenRenew} element={<TokenRenew />} />
-              </Routes>
-            </BrowserRouter>
-          </AuthContextProvider>
-        </ModalContextProvider>
+              </Route>
+              <Route path={paths.login} element={<Login />} />
+              <Route path={paths.tokenRenew} element={<TokenRenew />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthContextProvider>
       </ConfigProvider>
     </QueryClientProvider>
   </TransportProvider>
