@@ -56,7 +56,7 @@ func (*errorInterceptor) toConnectError(err error) error {
 	if ok := errors.As(err, &statusErr); ok {
 		return connect.NewError(httpStatusToConnectCode(statusErr.Status().Code), statusErr)
 	}
-	return err
+	return connect.NewError(connect.CodeInternal, err)
 }
 
 func httpStatusToConnectCode(status int32) connect.Code {
