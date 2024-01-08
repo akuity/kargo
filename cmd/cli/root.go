@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/delete"
 	"github.com/akuity/kargo/internal/cli/cmd/get"
 	"github.com/akuity/kargo/internal/cli/cmd/login"
+	"github.com/akuity/kargo/internal/cli/cmd/logout"
 	"github.com/akuity/kargo/internal/cli/cmd/refresh"
 	"github.com/akuity/kargo/internal/cli/cmd/stage"
 	"github.com/akuity/kargo/internal/cli/cmd/update"
@@ -102,6 +103,7 @@ func NewRootCommand(
 	cmd.AddCommand(delete.NewCommand(cfg, opt))
 	cmd.AddCommand(get.NewCommand(cfg, opt))
 	cmd.AddCommand(login.NewCommand(opt))
+  cmd.AddCommand(logout.NewCommand())
 	cmd.AddCommand(stage.NewCommand(cfg, opt))
 	cmd.AddCommand(refresh.NewCommand(cfg, opt))
 	cmd.AddCommand(update.NewCommand(cfg, opt))

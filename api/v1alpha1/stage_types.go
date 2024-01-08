@@ -159,6 +159,10 @@ type GitRepoUpdate struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL"`
+	// InsecureSkipTLSVerify specifies whether certificate verification errors
+	// should be ignored when connecting to the repository. This should be enabled
+	// only with great caution.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// ReadBranch specifies a particular branch of the repository from which to
 	// locate contents that will be written to the branch specified by the
 	// WriteBranch field. This field is optional. When not specified, the
@@ -450,10 +454,10 @@ type StageStatus struct {
 	Phase StagePhase `json:"phase,omitempty"`
 	// CurrentFreight is a simplified representation of the Stage's current
 	// Freight describing what is currently deployed to the Stage.
-	CurrentFreight *SimpleFreight `json:"currentFreight,omitempty"`
+	CurrentFreight *FreightReference `json:"currentFreight,omitempty"`
 	// History is a stack of recent Freight. By default, the last ten Freight are
 	// stored.
-	History SimpleFreightStack `json:"history,omitempty"`
+	History FreightReferenceStack `json:"history,omitempty"`
 	// Health is the Stage's last observed health.
 	Health *Health `json:"health,omitempty"`
 	// Error describes any errors that are preventing the Stage controller
@@ -466,9 +470,9 @@ type StageStatus struct {
 	CurrentPromotion *PromotionInfo `json:"currentPromotion,omitempty"`
 }
 
-// SimpleFreight is a simplified representation of a piece of Freight -- not a
-// root resource type.
-type SimpleFreight struct {
+// FreightReference is a simplified representation of a piece of Freight -- not
+// a root resource type.
+type FreightReference struct {
 	// ID is system-assigned value that is derived deterministically from the
 	// contents of the Freight. i.e. Two pieces of Freight can be compared for
 	// equality by comparing their IDs.
@@ -484,37 +488,37 @@ type SimpleFreight struct {
 	VerificationInfo *VerificationInfo `json:"verificationResult,omitempty"`
 }
 
-type SimpleFreightStack []SimpleFreight
+type FreightReferenceStack []FreightReference
 
-// Empty returns a bool indicating whether or not the SimpleFreightStack is
+// Empty returns a bool indicating whether or not the FreightReferenceStack is
 // empty. nil counts as empty.
-func (s SimpleFreightStack) Empty() bool {
-	return len(s) == 0
+func (f FreightReferenceStack) Empty() bool {
+	return len(f) == 0
 }
 
-// Pop removes and returns the leading element from a SimpleFreightStack. If the
-// SimpleFreightStack is empty, the SimpleFreightStack is not modified and a
-// empty SimpleFreight is returned instead. A boolean is also returned
-// indicating whether the returned SimpleFreight came from the top of the stack
-// (true) or is a zero value for that type (false).
-func (s *SimpleFreightStack) Pop() (SimpleFreight, bool) {
-	item, ok := s.Top()
+// Pop removes and returns the leading element from a FreightReferenceStack. If
+// the FreightReferenceStack is empty, the FreightReferenceStack is not modified
+// and a empty FreightReference is returned instead. A boolean is also returned
+// indicating whether the returned FreightReference came from the top of the
+// stack (true) or is a zero value for that type (false).
+func (f *FreightReferenceStack) Pop() (FreightReference, bool) {
+	item, ok := f.Top()
 	if ok {
-		*s = (*s)[1:]
+		*f = (*f)[1:]
 	}
 	return item, ok
 }
 
-// Top returns the leading element from a SimpleFreightStack without modifying
-// the SimpleFreightStack. If the SimpleFreightStack is empty, an empty
-// SimpleFreight is returned instead. A boolean is also returned indicating
-// whether the returned SimpleFreight came from the top of the stack (true) or
-// is a zero value for that type (false).
-func (s SimpleFreightStack) Top() (SimpleFreight, bool) {
-	if s.Empty() {
-		return SimpleFreight{}, false
+// Top returns the leading element from a FreightReferenceStack without
+// modifying the FreightReferenceStack. If the FreightReferenceStack is empty,
+// an empty FreightReference is returned instead. A boolean is also returned
+// indicating whether the returned FreightReference came from the top of the
+// stack (true) or is a zero value for that type (false).
+func (f FreightReferenceStack) Top() (FreightReference, bool) {
+	if f.Empty() {
+		return FreightReference{}, false
 	}
-	item := *s[0].DeepCopy()
+	item := *f[0].DeepCopy()
 	return item, true
 }
 
@@ -524,11 +528,11 @@ func (s SimpleFreightStack) Top() (SimpleFreight, bool) {
 // the element at the top of the stack. If resulting modification grow the depth
 // of the stack beyond 10 elements, the stack is truncated at the bottom. i.e.
 // Modified to contain only the top 10 elements.
-func (s *SimpleFreightStack) Push(freight ...SimpleFreight) {
-	*s = append(freight, *s...)
+func (f *FreightReferenceStack) Push(freight ...FreightReference) {
+	*f = append(freight, *f...)
 	const max = 10
-	if len(*s) > max {
-		*s = (*s)[:max]
+	if len(*f) > max {
+		*f = (*f)[:max]
 	}
 }
 
@@ -619,7 +623,7 @@ type PromotionInfo struct {
 	// Name is the name of the Promotion
 	Name string `json:"name"`
 	// Freight is the freight being promoted
-	Freight SimpleFreight `json:"freight"`
+	Freight FreightReference `json:"freight"`
 }
 
 // Verification describes how to verify that a Promotion has been successful

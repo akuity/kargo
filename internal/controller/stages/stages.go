@@ -54,7 +54,7 @@ type reconciler struct {
 
 	checkHealthFn func(
 		context.Context,
-		kargoapi.SimpleFreight,
+		kargoapi.FreightReference,
 		[]kargoapi.ArgoCDAppUpdate,
 	) *kargoapi.Health
 

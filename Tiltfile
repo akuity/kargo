@@ -121,6 +121,19 @@ k8s_resource(
 )
 
 k8s_resource(
+  workload = 'kargo-management-controller',
+  new_name = 'management-controller',
+  labels = ['kargo'],
+  objects = [
+    'kargo-management-controller:clusterrole',
+    'kargo-management-controller:clusterrolebinding',
+    'kargo-management-controller:configmap',
+    'kargo-management-controller:serviceaccount'
+  ],
+  resource_deps=['back-end-compile']
+)
+
+k8s_resource(
   workload = 'kargo-ui',
   new_name = 'ui',
   port_forwards = [
@@ -152,9 +165,10 @@ k8s_resource(
   new_name = 'crds',
   objects = [
     'freights.kargo.akuity.io:customresourcedefinition',
-    'stages.kargo.akuity.io:customresourcedefinition',
+    'projects.kargo.akuity.io:customresourcedefinition',
     'promotionpolicies.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition',
+    'stages.kargo.akuity.io:customresourcedefinition',
     'warehouses.kargo.akuity.io:customresourcedefinition'
   ],
   labels = ['kargo']

@@ -24,9 +24,10 @@ interface ModalContextValue {
 export const ModalContext = React.createContext<ModalContextValue | null>(null);
 interface ModalProviderProps {
   children: React.ReactNode;
+  container: HTMLElement | null;
 }
 
-export const ModalContextProvider = ({ children }: ModalProviderProps) => {
+export const ModalContextProvider = ({ children, container }: ModalProviderProps) => {
   const [modals, setModals] = React.useState<Record<string, ModalItem>>({});
 
   const show = (key: string, modal: ModalComponent) => {
@@ -74,7 +75,7 @@ export const ModalContextProvider = ({ children }: ModalProviderProps) => {
       {/* REACT SPECIFIC BUG - https://github.com/remix-run/react-router/issues/8834#issuecomment-1118083034 */}
       <div className='h-full'>
         {children}
-        <Portal>
+        <Portal container={container}>
           <>
             {Object.keys(modals).map((key) => {
               const { component: Component, visible } = modals[key];

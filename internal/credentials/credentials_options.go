@@ -4,13 +4,13 @@ import "sigs.k8s.io/controller-runtime/pkg/client"
 
 func WithArgoCDNamespace(namespace string) KubernetesDatabaseOption {
 	return func(config *kubernetesDatabaseConfig) {
-		config.argoCDNamespace = namespace
+		config.ArgoCDNamespace = namespace
 	}
 }
 
 func WithGlobalCredentialsNamespaces(namespaces []string) KubernetesDatabaseOption {
 	return func(config *kubernetesDatabaseConfig) {
-		config.globalCredentialsNamespaces = namespaces
+		config.GlobalCredentialsNamespaces = namespaces
 	}
 }
 

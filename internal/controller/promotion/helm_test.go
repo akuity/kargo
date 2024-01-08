@@ -252,7 +252,7 @@ func TestHelmerApply(t *testing.T) {
 					kargoapi.GitRepoUpdate{
 						Helm: &kargoapi.HelmPromotionMechanism{},
 					},
-					kargoapi.SimpleFreight{}, // The way the tests are structured, this value doesn't matter
+					kargoapi.FreightReference{}, // The way the tests are structured, this value doesn't matter
 					"",
 					"",
 				),

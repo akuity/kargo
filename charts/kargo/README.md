@@ -20,18 +20,28 @@
 
 ### KubeConfigs
 
-Optionally point to Kubernetes Secrets containing kubeconfig for a remote
-Kubernetes cluster hosting Kargo resources and/or a remote Kubernetes cluster
-hosting Argo CD resources. This is useful for cases where the Kargo
-controller is running somewhere other than the cluster(s) it is managing. The
-config for Kargo and Argo CD can be the same, different, or omitted entirely.
-When omitted, the controller will fall back on in-cluster configuration.
-In the average case, these settings should be left alone.
+Optionally point to Kubernetes Secrets containing kubeconfig for:
 
-| Name                       | Description                                                                                              | Value       |
-| -------------------------- | -------------------------------------------------------------------------------------------------------- | ----------- |
-| `kubeconfigSecrets.kargo`  | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Kargo resources   | `undefined` |
-| `kubeconfigSecrets.argocd` | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources | `undefined` |
+1. A remote cluster hosting Kargo resources
+
+2. A remote cluster hosting Argo CD resources
+
+3. A remote cluster that is running Argo Rollouts and is a suitable location
+to execute user-defined verification processes in the form of Argo
+Rollouts AnalysisRuns
+
+This flexibility is useful for various advanced use cases -- especially
+topologies where Kargo data may be sharded, with Kargo controllers distributed
+across many clusters. Any two, or even all three, of these configurations may
+be the same. In the average case, these should all be left unspecified. All
+that are unspecified will default to configuration for the cluster in which
+the Kargo controller is running.
+
+| Name                         | Description                                                                                                                                                   | Value       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `kubeconfigSecrets.kargo`    | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Kargo resources. Used by all Kargo components.                         | `undefined` |
+| `kubeconfigSecrets.argocd`   | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.                   | `undefined` |
+| `kubeconfigSecrets.rollouts` | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster that can execute Argo Rollouts AnalysisRuns. Used by Kargo controller(s) only. | `undefined` |
 
 ### API
 
@@ -96,6 +106,17 @@ In the average case, these settings should be left alone.
 | `controller.nodeSelector`                     | Node selector for controller pods.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `{}`        |
 | `controller.tolerations`                      | Tolerations for controller pods.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `[]`        |
 | `controller.affinity`                         | Specifies pod affinity for controller pods.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `{}`        |
+
+### Management Controller
+
+| Name                                | Description                                                             | Value  |
+| ----------------------------------- | ----------------------------------------------------------------------- | ------ |
+| `managementController.enabled`      | Whether the management controller is enabled.                           | `true` |
+| `managementController.logLevel`     | The log level for the management controller.                            | `INFO` |
+| `managementController.resources`    | Resources limits and requests for the management controller containers. | `{}`   |
+| `managementController.nodeSelector` | Node selector for management controller pods.                           | `{}`   |
+| `managementController.tolerations`  | Tolerations for management controller pods.                             | `[]`   |
+| `managementController.affinity`     | Specifies pod affinity for management controller pods.                  | `{}`   |
 
 ### Webhooks
 

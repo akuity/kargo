@@ -44,8 +44,8 @@ func (c *compositeMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight kargoapi.SimpleFreight,
-) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+	newFreight kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
 	if stage.Spec.PromotionMechanisms == nil {
 		return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded},
 			newFreight, nil

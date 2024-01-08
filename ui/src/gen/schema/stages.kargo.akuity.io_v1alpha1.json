@@ -232,6 +232,10 @@
                     },
                     "type": "object"
                   },
+                  "insecureSkipTLSVerify": {
+                    "description": "InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution.",
+                    "type": "boolean"
+                  },
                   "kustomize": {
                     "description": "Kustomize describes how to use Kustomize to incorporate Freight into the Stage. This is mutually exclusive with the Render and Helm fields.",
                     "properties": {
@@ -784,7 +788,7 @@
         "history": {
           "description": "History is a stack of recent Freight. By default, the last ten Freight are stored.",
           "items": {
-            "description": "SimpleFreight is a simplified representation of a piece of Freight -- not a root resource type.",
+            "description": "FreightReference is a simplified representation of a piece of Freight -- not a root resource type.",
             "properties": {
               "charts": {
                 "description": "Charts describes specific versions of specific Helm charts.",

@@ -78,10 +78,9 @@ type reconciler struct {
 	) (string, error)
 
 	getLatestCommitMetaFn func(
-		ctx context.Context,
-		repoURL string,
-		branch string,
-		creds *git.RepoCredentials,
+		context.Context,
+		kargoapi.GitSubscription,
+		*git.RepoCredentials,
 	) (*gitMeta, error)
 
 	getAvailableFreightAliasFn func(context.Context) (string, error)

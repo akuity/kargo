@@ -331,7 +331,7 @@ func (r *reconciler) promote(
 		)
 	}
 
-	simpleTargetFreight := kargoapi.SimpleFreight{
+	simpleTargetFreight := kargoapi.FreightReference{
 		ID:      targetFreight.ID,
 		Commits: targetFreight.Commits,
 		Images:  targetFreight.Images,

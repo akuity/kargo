@@ -78,8 +78,8 @@ type kubernetesDatabase struct {
 // kubernetesDatabase struct. It uses the functional options pattern to allow
 // for easy configuration.
 type kubernetesDatabaseConfig struct {
-	argoCDNamespace             string   `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
-	globalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
+	ArgoCDNamespace             string   `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
+	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
 
 	kargoClient client.Client
 	// it set we know that "borrowing ArgoCD creds" is enabled
@@ -172,7 +172,7 @@ func (k *kubernetesDatabase) Get(
 	}
 
 	// Check global credentials namespaces for credentials
-	for _, globalCredsNamespace := range k.globalCredentialsNamespaces {
+	for _, globalCredsNamespace := range k.GlobalCredentialsNamespaces {
 		// Check shared creds namespace for credentials
 		if secret, err = getCredentialsSecret(
 			ctx,
@@ -221,7 +221,7 @@ func (k *kubernetesDatabase) Get(
 	if secret, err = getCredentialsSecret(
 		ctx,
 		k.argoClient,
-		k.argoCDNamespace,
+		k.ArgoCDNamespace,
 		labels.Set(map[string]string{
 			argoCDSecretTypeLabelKey: repositorySecretTypeLabelValue,
 		}).AsSelector(),
@@ -237,7 +237,7 @@ func (k *kubernetesDatabase) Get(
 		if secret, err = getCredentialsSecret(
 			ctx,
 			k.argoClient,
-			k.argoCDNamespace,
+			k.ArgoCDNamespace,
 			labels.Set(map[string]string{
 				argoCDSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
 			}).AsSelector(),
