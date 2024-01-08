@@ -1,4 +1,4 @@
-{{- if or .Values.controller.argocd.watchArgocdNamespaceOnly .Values.controller.argocd.enableCredentialBorrowing }}
+{{- if and .Values.controller.argocd.integrationEnabled (or .Values.controller.argocd.watchArgocdNamespaceOnly .Values.controller.argocd.enableCredentialBorrowing) }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

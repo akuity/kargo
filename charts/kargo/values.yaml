@@ -199,6 +199,11 @@ api:
       # "": https://argocd.example.com
       # "shard2": https://argocd2.example.com
 
+  ## All settings relating to the use of Argo Rollouts by the API Server.
+  rollouts:
+    ## @param api.rollouts.integrationEnabled Specifies whether Argo Rollouts integration is enabled. When not enabled, the API server will not be capable of creating/updating/applying AnalysesTemplate resources in the Kargo control plane.
+    integrationEnabled: true
+
 ## @section Controller
 ## All settings for the controller component
 controller:
@@ -213,15 +218,23 @@ controller:
   ## @param controller.shardName [nullable] Set a shard name only if you are running multiple controllers backed by a single underlying control plane. Setting a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving the shard name undefined will designate this controller as the default controller that is responsible exclusively for resources that are **not** assigned to a specific shard. Leaving this undefined is the correct choice when you are not using sharding at all. It is also the correct setting if you are using sharding and want to designate a controller as the default for handling resources not assigned to a specific shard. In most cases, this setting should simply be left alone.
   # shardName:
 
-  ## All settings relating to the Argo CD control plane this controller will
+  ## All settings relating to the Argo CD control plane this controller might
   ## integrate with.
   argocd:
+    ## @param controller.argocd.integrationEnabled Specifies whether Argo CD integration is enabled. When not enabled, the controller will not watch Argo CD Application resources or factor Application health and sync state into determinations of Stage health. Argo CD-based promotion mechanisms will also fail.
+    integrationEnabled: true
     ## @param controller.argocd.namespace The namespace into which Argo CD is installed.
     namespace: argocd
     ## @param controller.argocd.watchArgocdNamespaceOnly Specifies whether the reconciler that watches Argo CD Applications for the sake of forcing related Stages to reconcile should only watch Argo CD Application resources residing in Argo CD's own namespace. Note: Older versions of Argo CD only supported Argo CD Application resources in Argo CD's own namespace, but newer versions support Argo CD Application resources in any namespace. This should usually be left as `false`.
     watchArgocdNamespaceOnly: false
     ## @param controller.argocd.enableCredentialBorrowing Specifies whether Kargo may borrow repository credentials (specially formatted and specially annotated Secrets) from Argo CD.
     enableCredentialBorrowing: true
+
+  ## All settings relating to the use of Argo Rollouts AnalysisTemplates and
+  ## AnalysisRuns as a means of verifying Stages after a Promotion.
+  rollouts:
+    ## @param controller.rollouts.integrationEnabled Specifies whether Argo Rollouts integration is enabled. When not enabled, the controller will not reconcile Argo Rollouts AnalysisRun resources and attempts to verify Stages via Analysis will fail.
+    integrationEnabled: true
 
   ## @param controller.logLevel The log level for the controller.
   logLevel: INFO
