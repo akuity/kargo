@@ -96,6 +96,7 @@ export const ProjectDetails = () => {
     onSuccess: () => {
       message.success('Warehouse successfully refreshed');
       setPromotingStage(undefined);
+      refetchFreightData();
     }
   });
 
