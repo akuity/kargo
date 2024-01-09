@@ -19,6 +19,9 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 		Use:   "refresh",
 		Short: "Refresh a stage or warehouse",
 	}
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
+
 	cmd.AddCommand(newRefreshWarehouseCommand(cfg, opt))
 	cmd.AddCommand(newRefreshStageCommand(cfg, opt))
 	return cmd

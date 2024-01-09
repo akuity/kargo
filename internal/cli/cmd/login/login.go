@@ -154,6 +154,7 @@ func NewCommand(opt *option.Option) *cobra.Command {
 		"Log in using OpenID Connect and the server's configured identity "+
 			"provider; mutually exclusive with --admin and --kubeconfig",
 	)
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
 	return cmd
 }
 

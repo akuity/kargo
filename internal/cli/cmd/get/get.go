@@ -28,6 +28,9 @@ kargo get stages --project=my-project
 kargo get promotions --project=my-project --stage=my-stage
 `,
 	}
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
+
 	// Subcommands
 	cmd.AddCommand(newGetFreightCommand(cfg, opt))
 	cmd.AddCommand(newGetProjectsCommand(cfg, opt))

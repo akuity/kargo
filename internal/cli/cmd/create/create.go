@@ -94,6 +94,8 @@ kargo create project my-project
 	}
 	opt.PrintFlags.AddFlags(cmd)
 	option.Filenames(cmd.Flags(), &filenames, "apply")
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	// Subcommands
 	cmd.AddCommand(newProjectCommand(cfg, opt))
