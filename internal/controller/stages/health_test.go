@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
@@ -17,18 +18,23 @@ func TestCheckHealth(t *testing.T) {
 		name             string
 		freight          kargoapi.FreightReference
 		argoCDAppUpdates []kargoapi.ArgoCDAppUpdate
-		getArgoCDAppFn   func(
-			context.Context,
-			client.Client,
-			string,
-			string,
-		) (*argocd.Application, error)
-		assertions func(*kargoapi.Health)
+		reconciler       *reconciler
+		assertions       func(*kargoapi.Health)
 	}{
 		{
-			name: "no argoCDAppUpdates are defined",
+			name:       "no argoCDAppUpdates are defined",
+			reconciler: &reconciler{},
 			assertions: func(health *kargoapi.Health) {
 				require.Nil(t, health)
+			},
+		},
+		{
+			name:             "argo cd integration is not enabled",
+			argoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{}},
+			reconciler:       &reconciler{},
+			assertions: func(health *kargoapi.Health) {
+				require.NotNil(t, health)
+				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 			},
 		},
 		{
@@ -39,13 +45,16 @@ func TestCheckHealth(t *testing.T) {
 					AppNamespace: "fake-namespace",
 				},
 			},
-			getArgoCDAppFn: func(
-				context.Context,
-				client.Client,
-				string,
-				string,
-			) (*argocd.Application, error) {
-				return nil, errors.New("something went wrong")
+			reconciler: &reconciler{
+				argocdClient: fake.NewClientBuilder().Build(),
+				getArgoCDAppFn: func(
+					context.Context,
+					client.Client,
+					string,
+					string,
+				) (*argocd.Application, error) {
+					return nil, errors.New("something went wrong")
+				},
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
@@ -87,13 +96,16 @@ func TestCheckHealth(t *testing.T) {
 					AppNamespace: "fake-namespace",
 				},
 			},
-			getArgoCDAppFn: func(
-				context.Context,
-				client.Client,
-				string,
-				string,
-			) (*argocd.Application, error) {
-				return nil, nil
+			reconciler: &reconciler{
+				argocdClient: fake.NewClientBuilder().Build(),
+				getArgoCDAppFn: func(
+					context.Context,
+					client.Client,
+					string,
+					string,
+				) (*argocd.Application, error) {
+					return nil, nil
+				},
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
@@ -133,27 +145,30 @@ func TestCheckHealth(t *testing.T) {
 					AppNamespace: "fake-namespace",
 				},
 			},
-			getArgoCDAppFn: func(
-				context.Context,
-				client.Client,
-				string,
-				string,
-			) (*argocd.Application, error) {
-				return &argocd.Application{
-					Spec: argocd.ApplicationSpec{
-						Sources: argocd.ApplicationSources{
-							{},
+			reconciler: &reconciler{
+				argocdClient: fake.NewClientBuilder().Build(),
+				getArgoCDAppFn: func(
+					context.Context,
+					client.Client,
+					string,
+					string,
+				) (*argocd.Application, error) {
+					return &argocd.Application{
+						Spec: argocd.ApplicationSpec{
+							Sources: argocd.ApplicationSources{
+								{},
+							},
 						},
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
+						Status: argocd.ApplicationStatus{
+							Health: argocd.HealthStatus{
+								Status: argocd.HealthStatusHealthy,
+							},
+							Sync: argocd.SyncStatus{
+								Status: argocd.SyncStatusCodeSynced,
+							},
 						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}, nil
+					}, nil
+				},
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
@@ -191,22 +206,25 @@ func TestCheckHealth(t *testing.T) {
 					AppNamespace: "fake-namespace",
 				},
 			},
-			getArgoCDAppFn: func(
-				context.Context,
-				client.Client,
-				string,
-				string,
-			) (*argocd.Application, error) {
-				return &argocd.Application{
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusDegraded,
+			reconciler: &reconciler{
+				argocdClient: fake.NewClientBuilder().Build(),
+				getArgoCDAppFn: func(
+					context.Context,
+					client.Client,
+					string,
+					string,
+				) (*argocd.Application, error) {
+					return &argocd.Application{
+						Status: argocd.ApplicationStatus{
+							Health: argocd.HealthStatus{
+								Status: argocd.HealthStatusDegraded,
+							},
+							Sync: argocd.SyncStatus{
+								Status: argocd.SyncStatusCodeSynced,
+							},
 						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}, nil
+					}, nil
+				},
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
@@ -248,28 +266,31 @@ func TestCheckHealth(t *testing.T) {
 					AppNamespace: "fake-namespace",
 				},
 			},
-			getArgoCDAppFn: func(
-				context.Context,
-				client.Client,
-				string,
-				string,
-			) (*argocd.Application, error) {
-				return &argocd.Application{
-					Spec: argocd.ApplicationSpec{
-						Source: &argocd.ApplicationSource{
-							RepoURL: "fake-url",
+			reconciler: &reconciler{
+				argocdClient: fake.NewClientBuilder().Build(),
+				getArgoCDAppFn: func(
+					context.Context,
+					client.Client,
+					string,
+					string,
+				) (*argocd.Application, error) {
+					return &argocd.Application{
+						Spec: argocd.ApplicationSpec{
+							Source: &argocd.ApplicationSource{
+								RepoURL: "fake-url",
+							},
 						},
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
+						Status: argocd.ApplicationStatus{
+							Health: argocd.HealthStatus{
+								Status: argocd.HealthStatusHealthy,
+							},
+							Sync: argocd.SyncStatus{
+								Status:   argocd.SyncStatusCodeSynced,
+								Revision: "not-the-right-commit",
+							},
 						},
-						Sync: argocd.SyncStatus{
-							Status:   argocd.SyncStatusCodeSynced,
-							Revision: "not-the-right-commit",
-						},
-					},
-				}, nil
+					}, nil
+				},
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
@@ -311,28 +332,31 @@ func TestCheckHealth(t *testing.T) {
 					AppNamespace: "fake-namespace",
 				},
 			},
-			getArgoCDAppFn: func(
-				context.Context,
-				client.Client,
-				string,
-				string,
-			) (*argocd.Application, error) {
-				return &argocd.Application{
-					Spec: argocd.ApplicationSpec{
-						Source: &argocd.ApplicationSource{
-							RepoURL: "fake-url",
+			reconciler: &reconciler{
+				argocdClient: fake.NewClientBuilder().Build(),
+				getArgoCDAppFn: func(
+					context.Context,
+					client.Client,
+					string,
+					string,
+				) (*argocd.Application, error) {
+					return &argocd.Application{
+						Spec: argocd.ApplicationSpec{
+							Source: &argocd.ApplicationSource{
+								RepoURL: "fake-url",
+							},
 						},
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
+						Status: argocd.ApplicationStatus{
+							Health: argocd.HealthStatus{
+								Status: argocd.HealthStatusHealthy,
+							},
+							Sync: argocd.SyncStatus{
+								Status:   argocd.SyncStatusCodeSynced,
+								Revision: "fake-commit",
+							},
 						},
-						Sync: argocd.SyncStatus{
-							Status:   argocd.SyncStatusCodeSynced,
-							Revision: "fake-commit",
-						},
-					},
-				}, nil
+					}, nil
+				},
 			},
 			assertions: func(health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateHealthy, health.Status)
@@ -359,11 +383,8 @@ func TestCheckHealth(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reconciler := &reconciler{
-				getArgoCDAppFn: testCase.getArgoCDAppFn,
-			}
 			testCase.assertions(
-				reconciler.checkHealth(
+				testCase.reconciler.checkHealth(
 					context.Background(),
 					testCase.freight,
 					testCase.argoCDAppUpdates,

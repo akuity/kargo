@@ -106,7 +106,7 @@ func newControllerCommand() *cobra.Command {
 			}
 
 			var argocdMgr manager.Manager
-			{
+			if types.MustParseBool(os.GetEnv("ARGOCD_INTEGRATION_ENABLED", "true")) {
 				// If the env var is undefined, this will resolve to kubeconfig for the
 				// cluster the controller is running in.
 				//
@@ -169,7 +169,7 @@ func newControllerCommand() *cobra.Command {
 			}
 
 			var rolloutsMgr manager.Manager
-			{
+			if types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true")) {
 				// If the env var is undefined, this will resolve to kubeconfig for the
 				// cluster the controller is running in.
 				//
@@ -245,22 +245,26 @@ func newControllerCommand() *cobra.Command {
 				credentials.KubernetesDatabaseConfigFromEnv(),
 			)
 
-			if err := analysis.SetupReconcilerWithManager(
-				ctx,
-				kargoMgr,
-				rolloutsMgr,
-				shardName,
-			); err != nil {
-				return errors.Wrap(err, "error setting up AnalysisRuns reconciler")
+			if rolloutsMgr != nil {
+				if err := analysis.SetupReconcilerWithManager(
+					ctx,
+					kargoMgr,
+					rolloutsMgr,
+					shardName,
+				); err != nil {
+					return errors.Wrap(err, "error setting up AnalysisRuns reconciler")
+				}
 			}
 
-			if err := applications.SetupReconcilerWithManager(
-				ctx,
-				kargoMgr,
-				argocdMgr,
-				shardName,
-			); err != nil {
-				return errors.Wrap(err, "error setting up Applications reconciler")
+			if argocdMgr != nil {
+				if err := applications.SetupReconcilerWithManager(
+					ctx,
+					kargoMgr,
+					argocdMgr,
+					shardName,
+				); err != nil {
+					return errors.Wrap(err, "error setting up Applications reconciler")
+				}
 			}
 
 			if err := promotions.SetupReconcilerWithManager(
@@ -295,13 +299,15 @@ func newControllerCommand() *cobra.Command {
 
 			wg := sync.WaitGroup{}
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				if err := argocdMgr.Start(ctx); err != nil {
-					errChan <- errors.Wrap(err, "error starting argo cd manager")
-				}
-			}()
+			if argocdMgr != nil {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					if err := argocdMgr.Start(ctx); err != nil {
+						errChan <- errors.Wrap(err, "error starting argo cd manager")
+					}
+				}()
+			}
 
 			wg.Add(1)
 			go func() {
@@ -311,13 +317,15 @@ func newControllerCommand() *cobra.Command {
 				}
 			}()
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				if err := rolloutsMgr.Start(ctx); err != nil {
-					errChan <- errors.Wrap(err, "error starting rollouts manager")
-				}
-			}()
+			if rolloutsMgr != nil {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					if err := rolloutsMgr.Start(ctx); err != nil {
+						errChan <- errors.Wrap(err, "error starting rollouts manager")
+					}
+				}()
+			}
 
 			// Adapt wg to a channel that can be used in a select
 			doneCh := make(chan struct{})

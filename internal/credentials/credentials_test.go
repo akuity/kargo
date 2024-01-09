@@ -22,7 +22,7 @@ func TestNewKubernetesDatabase(t *testing.T) {
 	k, ok := d.(*kubernetesDatabase)
 	require.True(t, ok)
 	require.Same(t, testClient, k.kargoClient)
-	require.Same(t, testClient, k.argoClient)
+	require.Same(t, testClient, k.argocdClient)
 	require.Equal(t, testCfg, k.cfg)
 }
 

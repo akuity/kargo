@@ -44,7 +44,7 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: kargoapi.AnalysisRunReference{
+							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Namespace: "fake-namespace",
 								Name:      "fake-analysis-run",
 							},
@@ -77,7 +77,7 @@ func TestIndexStagesByAnalysisRun(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: kargoapi.AnalysisRunReference{
+							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Namespace: "fake-namespace",
 								Name:      "fake-analysis-run",
 							},

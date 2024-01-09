@@ -43,7 +43,7 @@ type reconciler struct {
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
-	argoMgr manager.Manager,
+	argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
 	shardName string,
 ) error {
@@ -53,9 +53,14 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "error creating shard selector predicate")
 	}
 
+	var argocdClient client.Client
+	if argocdMgr != nil {
+		argocdClient = argocdMgr.GetClient()
+	}
+
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
-		argoMgr.GetClient(),
+		argocdClient,
 		credentialsDB,
 	)
 
@@ -99,7 +104,7 @@ func SetupReconcilerWithManager(
 
 func newReconciler(
 	kargoClient client.Client,
-	argoClient client.Client,
+	argocdClient client.Client,
 	credentialsDB credentials.Database,
 ) *reconciler {
 	pqs := promoQueues{
@@ -110,7 +115,7 @@ func newReconciler(
 		kargoClient: kargoClient,
 		pqs:         &pqs,
 		promoMechanisms: promotion.NewMechanisms(
-			argoClient,
+			argocdClient,
 			credentialsDB,
 		),
 	}

@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -21,8 +22,19 @@ func TestStarVerification(t *testing.T) {
 		name       string
 		stage      *kargoapi.Stage
 		reconciler *reconciler
-		assertions func(*kargoapi.VerificationInfo, error)
+		assertions func(*kargoapi.VerificationInfo)
 	}{
+		{
+			name:       "rollouts integration not enabled",
+			reconciler: &reconciler{},
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.Contains(
+					t,
+					vi.Message,
+					"Rollouts integration is disabled on this controller",
+				)
+			},
+		},
 		{
 			name: "error listing AnalysisRuns",
 			stage: &kargoapi.Stage{
@@ -33,6 +45,7 @@ func TestStarVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -41,10 +54,9 @@ func TestStarVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error listing AnalysisRuns for Stage")
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.Contains(t, vi.Message, "something went wrong")
+				require.Contains(t, vi.Message, "error listing AnalysisRuns for Stage")
 			},
 		},
 		{
@@ -57,6 +69,7 @@ func TestStarVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					_ context.Context,
 					objList client.ObjectList,
@@ -68,8 +81,9 @@ func TestStarVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(_ *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Empty(t, vi.Message)
 			},
 		},
 		{
@@ -87,6 +101,7 @@ func TestStarVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -102,10 +117,10 @@ func TestStarVerification(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.VerificationInfo, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error getting AnalysisTemplate")
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Contains(t, vi.Message, "something went wrong")
+				require.Contains(t, vi.Message, "error getting AnalysisTemplate")
 			},
 		},
 		{
@@ -123,6 +138,7 @@ func TestStarVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -138,10 +154,10 @@ func TestStarVerification(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(_ *kargoapi.VerificationInfo, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "AnalysisTemplate")
-				require.Contains(t, err.Error(), "not found")
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Contains(t, vi.Message, "AnalysisTemplate")
+				require.Contains(t, vi.Message, "not found")
 			},
 		},
 		{
@@ -159,6 +175,7 @@ func TestStarVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -180,10 +197,10 @@ func TestStarVerification(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.VerificationInfo, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error building AnalysisRun for Stage")
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Contains(t, vi.Message, "something went wrong")
+				require.Contains(t, vi.Message, "error building AnalysisRun for Stage")
 			},
 		},
 		{
@@ -201,6 +218,7 @@ func TestStarVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -229,10 +247,10 @@ func TestStarVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.VerificationInfo, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error creating AnalysisRun")
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Contains(t, vi.Message, "something went wrong")
+				require.Contains(t, vi.Message, "error creating AnalysisRun")
 			},
 		},
 		{
@@ -250,6 +268,7 @@ func TestStarVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -283,17 +302,17 @@ func TestStarVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(ver *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
+			assertions: func(vi *kargoapi.VerificationInfo) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						AnalysisRun: kargoapi.AnalysisRunReference{
+						Phase: kargoapi.VerificationPhasePending,
+						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-run",
 							Namespace: "fake-namespace",
 						},
 					},
-					ver,
+					vi,
 				)
 			},
 		},
@@ -315,15 +334,27 @@ func TestGetVerificationInfo(t *testing.T) {
 		name       string
 		stage      *kargoapi.Stage
 		reconciler *reconciler
-		assertions func(*kargoapi.VerificationInfo, error)
+		assertions func(*kargoapi.VerificationInfo)
 	}{
+		{
+			name:       "rollouts integration not enabled",
+			reconciler: &reconciler{},
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Contains(
+					t,
+					vi.Message,
+					"Rollouts integration is disabled on this controller",
+				)
+			},
+		},
 		{
 			name: "error getting AnalysisRun",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: kargoapi.AnalysisRunReference{
+							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
 								Namespace: "fake-namespace",
 							},
@@ -332,6 +363,7 @@ func TestGetVerificationInfo(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -340,10 +372,10 @@ func TestGetVerificationInfo(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error getting AnalysisRun")
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Contains(t, vi.Message, "something went wrong")
+				require.Contains(t, vi.Message, "error getting AnalysisRun")
 			},
 		},
 		{
@@ -352,7 +384,7 @@ func TestGetVerificationInfo(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: kargoapi.AnalysisRunReference{
+							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
 								Namespace: "fake-namespace",
 							},
@@ -361,6 +393,7 @@ func TestGetVerificationInfo(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -369,10 +402,10 @@ func TestGetVerificationInfo(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "AnalysisRun")
-				require.Contains(t, err.Error(), "not found")
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Contains(t, vi.Message, "AnalysisRun")
+				require.Contains(t, vi.Message, "not found")
 			},
 		},
 		{
@@ -381,7 +414,7 @@ func TestGetVerificationInfo(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
-							AnalysisRun: kargoapi.AnalysisRunReference{
+							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
 								Namespace: "fake-namespace",
 							},
@@ -390,6 +423,7 @@ func TestGetVerificationInfo(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -406,18 +440,18 @@ func TestGetVerificationInfo(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(ver *kargoapi.VerificationInfo, err error) {
-				require.NoError(t, err)
+			assertions: func(vi *kargoapi.VerificationInfo) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						AnalysisRun: kargoapi.AnalysisRunReference{
+						Phase: kargoapi.VerificationPhaseSuccessful,
+						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-run",
 							Namespace: "fake-namespace",
 							Phase:     string(rollouts.AnalysisPhaseSuccessful),
 						},
 					},
-					ver,
+					vi,
 				)
 			},
 		},
