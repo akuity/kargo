@@ -8,18 +8,22 @@ import (
 	"github.com/spf13/cobra"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
-func newRefreshWarehouseCommand(opt *option.Option) *cobra.Command {
+func newRefreshWarehouseCommand(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
 	var wait bool
 	cmd := &cobra.Command{
 		Use:     "warehouse (WAREHOUSE)",
 		Args:    option.ExactArgs(1),
 		Example: "kargo warehouse refresh --project=guestbook (WAREHOUSE)",
-		RunE:    refreshObject(opt, "warehouse", wait),
+		RunE:    refreshObject(cfg, opt, "warehouse", wait),
 	}
 	option.Wait(cmd.Flags(), &wait)
 	option.Project(cmd.Flags(), opt, opt.Project)

@@ -9,10 +9,11 @@ import (
 	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
-func NewCommand(opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get (RESOURCE) [NAME]...",
 		Short: "Display one or many resources",
@@ -28,11 +29,11 @@ kargo get promotions --project=my-project --stage=my-stage
 `,
 	}
 	// Subcommands
-	cmd.AddCommand(newGetFreightCommand(opt))
-	cmd.AddCommand(newGetProjectsCommand(opt))
-	cmd.AddCommand(newGetPromotionsCommand(opt))
-	cmd.AddCommand(newGetStagesCommand(opt))
-	cmd.AddCommand(newGetWarehousesCommand(opt))
+	cmd.AddCommand(newGetFreightCommand(cfg, opt))
+	cmd.AddCommand(newGetProjectsCommand(cfg, opt))
+	cmd.AddCommand(newGetPromotionsCommand(cfg, opt))
+	cmd.AddCommand(newGetStagesCommand(cfg, opt))
+	cmd.AddCommand(newGetWarehousesCommand(cfg, opt))
 	return cmd
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/refresh"
 	"github.com/akuity/kargo/internal/cli/cmd/stage"
 	"github.com/akuity/kargo/internal/cli/cmd/update"
+	clicfg "github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
@@ -33,7 +34,11 @@ type rootState struct {
 	localServerListener net.Listener
 }
 
-func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
+func NewRootCommand(
+	cfg clicfg.CLIConfig,
+	opt *option.Option,
+	rs *rootState,
+) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:               "kargo",
 		DisableAutoGenTag: true,
@@ -92,17 +97,17 @@ func NewRootCommand(opt *option.Option, rs *rootState) (*cobra.Command, error) {
 	option.InsecureTLS(cmd.PersistentFlags(), opt)
 	option.LocalServer(cmd.PersistentFlags(), opt)
 
-	cmd.AddCommand(apply.NewCommand(opt))
-	cmd.AddCommand(cliconfigcmd.NewCommand())
-	cmd.AddCommand(create.NewCommand(opt))
-	cmd.AddCommand(delete.NewCommand(opt))
-	cmd.AddCommand(get.NewCommand(opt))
+	cmd.AddCommand(apply.NewCommand(cfg, opt))
+	cmd.AddCommand(cliconfigcmd.NewCommand(cfg))
+	cmd.AddCommand(create.NewCommand(cfg, opt))
+	cmd.AddCommand(delete.NewCommand(cfg, opt))
+	cmd.AddCommand(get.NewCommand(cfg, opt))
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(logout.NewCommand())
-	cmd.AddCommand(stage.NewCommand(opt))
-	cmd.AddCommand(refresh.NewCommand(opt))
-	cmd.AddCommand(update.NewCommand(opt))
-	cmd.AddCommand(newVersionCommand(opt))
+	cmd.AddCommand(stage.NewCommand(cfg, opt))
+	cmd.AddCommand(refresh.NewCommand(cfg, opt))
+	cmd.AddCommand(update.NewCommand(cfg, opt))
+	cmd.AddCommand(newVersionCommand(cfg, opt))
 	cmd.AddCommand(
 		cobracompletefig.CreateCompletionSpecCommand(
 			cobracompletefig.Opts{

@@ -14,11 +14,15 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newGetFreightCommand(opt *option.Option) *cobra.Command {
+func newGetFreightCommand(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "freight --project=project [NAME...]",
 		Short: "Display one or many pieces of freight",
@@ -40,7 +44,7 @@ kargo get freight --project=my-project my-freight
 				return errors.New("project is required")
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}

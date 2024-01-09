@@ -14,11 +14,12 @@ import (
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func NewCommand(opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	var filenames []string
 	cmd := &cobra.Command{
 		Use:   "create [--project=project] -f (FILENAME)",
@@ -49,7 +50,7 @@ kargo create project my-project
 				}
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -95,6 +96,6 @@ kargo create project my-project
 	option.Filenames(cmd.Flags(), &filenames, "apply")
 
 	// Subcommands
-	cmd.AddCommand(newProjectCommand(opt))
+	cmd.AddCommand(newProjectCommand(cfg, opt))
 	return cmd
 }
