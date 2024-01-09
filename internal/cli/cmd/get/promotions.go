@@ -19,14 +19,8 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type PromotionsFlags struct {
-	Stage option.Optional[string]
-}
-
 func newGetPromotionsCommand(opt *option.Option) *cobra.Command {
-	flag := PromotionsFlags{
-		Stage: option.OptionalString(),
-	}
+	var stage string
 	cmd := &cobra.Command{
 		Use:     "promotions --project=project [--stage=stage] [NAME...]",
 		Aliases: []string{"promotion", "promos", "promo"},
@@ -54,7 +48,7 @@ kargo get promotions --project=my-project some-promotion
 			req := &v1alpha1.ListPromotionsRequest{
 				Project: project,
 			}
-			if stage, ok := flag.Stage.Get(); ok {
+			if stage != "" {
 				req.Stage = proto.String(stage)
 			}
 
@@ -93,8 +87,8 @@ kargo get promotions --project=my-project some-promotion
 			return resErr
 		},
 	}
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
-	option.OptionalStage(flag.Stage)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
+	option.Stage(cmd.Flags(), &stage)
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }

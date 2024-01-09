@@ -31,19 +31,15 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-const (
-	flagAdmin                = "admin"
-	flagKubeconfig           = "kubeconfig"
-	flagPassword             = "password"
-	flagPort                 = "port"
-	flagSSO                  = "sso"
-	defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-)
+const defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 //go:embed assets
 var assets embed.FS
 
 func NewCommand(opt *option.Option) *cobra.Command {
+	var useAdmin, useKubeconfig, useSSO bool
+	var password string
+	var callbackPort int
 	cmd := &cobra.Command{
 		Use:     "login server-address",
 		Args:    option.ExactArgs(1),
@@ -51,21 +47,6 @@ func NewCommand(opt *option.Option) *cobra.Command {
 		Example: "kargo login https://kargo.example.com --sso",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-
-			useAdmin, err := cmd.Flags().GetBool(flagAdmin)
-			if err != nil {
-				return err
-			}
-
-			useKubeconfig, err := cmd.Flags().GetBool(flagKubeconfig)
-			if err != nil {
-				return err
-			}
-
-			useSSO, err := cmd.Flags().GetBool(flagSSO)
-			if err != nil {
-				return err
-			}
 
 			var flagCount int
 			if useAdmin {
@@ -85,12 +66,8 @@ func NewCommand(opt *option.Option) *cobra.Command {
 
 			serverAddress := args[0]
 			var bearerToken, refreshToken string
+			var err error
 			if useAdmin {
-				var password string
-				if password, err = cmd.Flags().GetString(flagPassword); err != nil {
-					return err
-				}
-
 				for {
 					if password != "" {
 						break
@@ -102,23 +79,15 @@ func NewCommand(opt *option.Option) *cobra.Command {
 						return err
 					}
 				}
-
 				if bearerToken, err =
 					adminLogin(ctx, serverAddress, password, opt.InsecureTLS); err != nil {
 					return err
 				}
 			} else if useKubeconfig {
-				bearerToken, err = kubeconfigLogin(ctx)
-				if err != nil {
+				if bearerToken, err = kubeconfigLogin(ctx); err != nil {
 					return err
 				}
 			} else {
-				var callbackPort int
-				callbackPort, err = cmd.Flags().GetInt(flagPort)
-				if err != nil {
-					return err
-				}
-
 				if bearerToken, refreshToken, err =
 					ssoLogin(ctx, serverAddress, callbackPort, opt.InsecureTLS); err != nil {
 					return err
@@ -145,36 +114,41 @@ func NewCommand(opt *option.Option) *cobra.Command {
 			return errors.Wrap(err, "error persisting configuration")
 		},
 	}
-	cmd.Flags().BoolP(
-		flagAdmin,
+	cmd.Flags().BoolVarP(
+		&useAdmin,
+		"admin",
 		"a",
 		false,
 		"Log in as the Kargo admin user; mutually exclusive with --kubeconfig and "+
 			"--sso",
 	)
-	cmd.Flags().BoolP(
-		flagKubeconfig,
+	cmd.Flags().BoolVarP(
+		&useKubeconfig,
+		"kubeconfig",
 		"k",
 		false,
 		"Log in using a token obtained from the local Kubernetes configuration's "+
 			"current context; mutually exclusive with --admin and --sso",
 	)
-	cmd.Flags().StringP(
-		flagPassword,
+	cmd.Flags().StringVarP(
+		&password,
+		"password",
 		"P",
 		"",
 		"Specify the password for non-interactive admin user login; only used "+
 			"with --admin",
 	)
-	cmd.Flags().IntP(
-		flagPort,
+	cmd.Flags().IntVarP(
+		&callbackPort,
+		"port",
 		"p",
 		0,
 		"Port to use for the callback URL; 0 selects any available, "+
 			"unprivileged port; only used with --sso",
 	)
-	cmd.Flags().BoolP(
-		flagSSO,
+	cmd.Flags().BoolVarP(
+		&useSSO,
+		"sso",
 		"s",
 		false,
 		"Log in using OpenID Connect and the server's configured identity "+

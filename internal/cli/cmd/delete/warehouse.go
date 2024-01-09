@@ -55,6 +55,6 @@ kargo delete warehouse --project=my-project my-warehouse
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }

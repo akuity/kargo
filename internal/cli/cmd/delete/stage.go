@@ -50,6 +50,6 @@ kargo delete stage --project=my-project my-stage
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }

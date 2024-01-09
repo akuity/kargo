@@ -6,41 +6,31 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type FlagFn func(*pflag.FlagSet)
-
-func Filenames(verb string, v *[]string) FlagFn {
-	return func(fs *pflag.FlagSet) {
-		fs.StringSliceVarP(v, "filename", "f", nil,
-			fmt.Sprintf("Filename, directory, or URL to files to use to %s the resource", verb))
-	}
+func Filenames(fs *pflag.FlagSet, filenames *[]string, verb string) {
+	fs.StringSliceVarP(filenames, "filename", "f", nil,
+		fmt.Sprintf("Filename, directory, or URL to files to use to %s the resource", verb))
 }
 
-func InsecureTLS(v *bool) FlagFn {
-	return func(fs *pflag.FlagSet) {
-		fs.BoolVar(v, "insecure-skip-tls-verify", false, "Skip TLS certificate verification")
-	}
+func InsecureTLS(fs *pflag.FlagSet, opt *Option) {
+	fs.BoolVar(&opt.InsecureTLS, "insecure-skip-tls-verify", false, "Skip TLS certificate verification")
 }
 
-func LocalServer(v *bool) FlagFn {
-	return func(fs *pflag.FlagSet) {
-		fs.BoolVar(v, "local-server", false, "Use local server")
-	}
+func LocalServer(fs *pflag.FlagSet, opt *Option) {
+	fs.BoolVar(&opt.UseLocalServer, "local-server", false, "Use local server")
 }
 
-func Project(v *string, defaultProject string) FlagFn {
-	return func(s *pflag.FlagSet) {
-		s.StringVarP(v, "project", "p", defaultProject, "Project")
-	}
+func Project(fs *pflag.FlagSet, opt *Option, defaultProject string) {
+	fs.StringVarP(&opt.Project, "project", "p", defaultProject, "Project")
 }
 
-func OptionalStage(v Optional[string]) FlagFn {
-	return func(fs *pflag.FlagSet) {
-		fs.Var(v, "stage", "Stage")
-	}
+func Stage(fs *pflag.FlagSet, stage *string) {
+	fs.StringVar(stage, "stage", "", "Stage")
 }
 
-func Freight(v *string) FlagFn {
-	return func(fs *pflag.FlagSet) {
-		fs.StringVar(v, "freight", "", "Freight ID")
-	}
+func Freight(fs *pflag.FlagSet, freight *string) {
+	fs.StringVar(freight, "freight", "", "Freight ID")
+}
+
+func Wait(fs *pflag.FlagSet, wait *bool) {
+	fs.BoolVar(wait, "wait", false, "Wait until refresh completes")
 }
