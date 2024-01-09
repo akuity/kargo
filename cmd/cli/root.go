@@ -16,6 +16,7 @@ import (
 	apiconfig "github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/cli/cmd/apply"
+	"github.com/akuity/kargo/internal/cli/cmd/approve"
 	cliconfigcmd "github.com/akuity/kargo/internal/cli/cmd/config"
 	"github.com/akuity/kargo/internal/cli/cmd/create"
 	"github.com/akuity/kargo/internal/cli/cmd/delete"
@@ -98,6 +99,7 @@ func NewRootCommand(
 	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	cmd.AddCommand(apply.NewCommand(cfg, opt))
+	cmd.AddCommand(approve.NewCommand(cfg, opt))
 	cmd.AddCommand(cliconfigcmd.NewCommand(cfg))
 	cmd.AddCommand(create.NewCommand(cfg, opt))
 	cmd.AddCommand(delete.NewCommand(cfg, opt))
