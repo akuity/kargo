@@ -73,6 +73,8 @@ func httpStatusToConnectCode(status int32) connect.Code {
 		return connect.CodeAlreadyExists
 	case http.StatusGone:
 		return connect.CodeNotFound
+	case http.StatusUnprocessableEntity:
+		return connect.CodeInvalidArgument
 	case http.StatusTooManyRequests:
 		return connect.CodeResourceExhausted
 	case 499:
