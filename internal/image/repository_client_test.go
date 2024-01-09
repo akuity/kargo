@@ -604,6 +604,18 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 			},
 		},
 		{
+			name: "doesn't look like an image",
+			client: &repositoryClient{
+				getBlobFn: func(context.Context, digest.Digest) ([]byte, error) {
+					return []byte(`{"os": "", "architecture": ""}`), nil
+				},
+			},
+			assertions: func(tag *Tag, err error) {
+				require.NoError(t, err)
+				require.Nil(t, tag)
+			},
+		},
+		{
 			name: "platform does not match",
 			platform: &platformConstraint{
 				os:   "linux",
@@ -623,7 +635,7 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 			name: "error parsing timestamp",
 			client: &repositoryClient{
 				getBlobFn: func(context.Context, digest.Digest) ([]byte, error) {
-					return []byte(`{"created": "junk"}`), nil
+					return []byte(`{"os": "linux", "architecture": "arm64", "created": "junk"}`), nil
 				},
 			},
 			assertions: func(_ *Tag, err error) {
