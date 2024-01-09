@@ -48,6 +48,6 @@ kargo delete project my-project
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }

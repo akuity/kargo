@@ -18,15 +18,15 @@ func newRefreshWarehouseCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {
-	var flag Flags
+	var wait bool
 	cmd := &cobra.Command{
 		Use:     "warehouse (WAREHOUSE)",
 		Args:    option.ExactArgs(1),
 		Example: "kargo warehouse refresh --project=guestbook (WAREHOUSE)",
-		RunE:    refreshObject(cfg, opt, &flag, "warehouse"),
+		RunE:    refreshObject(cfg, opt, "warehouse", wait),
 	}
-	addRefreshFlags(cmd, &flag)
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Wait(cmd.Flags(), &wait)
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }
 

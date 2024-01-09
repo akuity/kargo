@@ -19,12 +19,8 @@ import (
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type Flags struct {
-	Filenames []string
-}
-
 func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
-	var flag Flags
+	var filenames []string
 	cmd := &cobra.Command{
 		Use:   "apply [--project=project] -f (FILENAME)",
 		Short: "Apply a resource from a file or from stdin",
@@ -34,11 +30,11 @@ kargo apply -f stage.yaml
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if len(flag.Filenames) == 0 {
+			if len(filenames) == 0 {
 				return errors.New("filename is required")
 			}
 
-			rawManifest, err := option.ReadManifests(flag.Filenames...)
+			rawManifest, err := option.ReadManifests(filenames...)
 			if err != nil {
 				return errors.Wrap(err, "read manifests")
 			}
@@ -119,6 +115,6 @@ kargo apply -f stage.yaml
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Filenames("apply", &flag.Filenames)(cmd.Flags())
+	option.Filenames(cmd.Flags(), &filenames, "apply")
 	return cmd
 }

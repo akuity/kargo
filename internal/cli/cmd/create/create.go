@@ -19,12 +19,8 @@ import (
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type Flags struct {
-	Filenames []string
-}
-
 func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
-	var flag Flags
+	var filenames []string
 	cmd := &cobra.Command{
 		Use:   "create [--project=project] -f (FILENAME)",
 		Short: "Create a resource from a file or from stdin",
@@ -37,11 +33,11 @@ kargo create project my-project
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if len(flag.Filenames) == 0 {
+			if len(filenames) == 0 {
 				return errors.New("filename is required")
 			}
 
-			manifest, err := option.ReadManifests(flag.Filenames...)
+			manifest, err := option.ReadManifests(filenames...)
 			if err != nil {
 				return errors.Wrap(err, "read manifests")
 			}
@@ -97,7 +93,7 @@ kargo create project my-project
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Filenames("create", &flag.Filenames)(cmd.Flags())
+	option.Filenames(cmd.Flags(), &filenames, "apply")
 
 	// Subcommands
 	cmd.AddCommand(newProjectCommand(cfg, opt))

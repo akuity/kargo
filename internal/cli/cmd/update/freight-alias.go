@@ -49,6 +49,6 @@ func newUpdateFreightAliasCommand(
 			return nil
 		},
 	}
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }
