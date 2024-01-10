@@ -201,7 +201,7 @@ api:
 
   ## All settings relating to the use of Argo Rollouts by the API Server.
   rollouts:
-    ## @param api.rollouts.integrationEnabled Specifies whether Argo Rollouts integration is enabled. When not enabled, the API server will not be capable of creating/updating/applying AnalysesTemplate resources in the Kargo control plane.
+    ## @param api.rollouts.integrationEnabled Specifies whether Argo Rollouts integration is enabled. When not enabled, the API server will not be capable of creating/updating/applying AnalysesTemplate resources in the Kargo control plane. When enabled, the API server will perform a sanity check at startup. If Argo Rollouts CRDs are not found, the API server will proceed as if this integration had been explicitly disabled. Explicitly disabling is still preferable if this integration is not desired, as it will grant fewer permissions to the API server.
     integrationEnabled: true
 
 ## @section Controller
@@ -221,7 +221,7 @@ controller:
   ## All settings relating to the Argo CD control plane this controller might
   ## integrate with.
   argocd:
-    ## @param controller.argocd.integrationEnabled Specifies whether Argo CD integration is enabled. When not enabled, the controller will not watch Argo CD Application resources or factor Application health and sync state into determinations of Stage health. Argo CD-based promotion mechanisms will also fail.
+    ## @param controller.argocd.integrationEnabled Specifies whether Argo CD integration is enabled. When not enabled, the controller will not watch Argo CD Application resources or factor Application health and sync state into determinations of Stage health. Argo CD-based promotion mechanisms will also fail. When enabled, the controller will perform a sanity check at startup. If Argo CD CRDs are not found, the controller will proceed as if this integration had been explicitly disabled. Explicitly disabling is still preferable if this integration is not desired, as it will grant fewer permissions to the controller.
     integrationEnabled: true
     ## @param controller.argocd.namespace The namespace into which Argo CD is installed.
     namespace: argocd
@@ -233,7 +233,7 @@ controller:
   ## All settings relating to the use of Argo Rollouts AnalysisTemplates and
   ## AnalysisRuns as a means of verifying Stages after a Promotion.
   rollouts:
-    ## @param controller.rollouts.integrationEnabled Specifies whether Argo Rollouts integration is enabled. When not enabled, the controller will not reconcile Argo Rollouts AnalysisRun resources and attempts to verify Stages via Analysis will fail.
+    ## @param controller.rollouts.integrationEnabled Specifies whether Argo Rollouts integration is enabled. When not enabled, the controller will not reconcile Argo Rollouts AnalysisRun resources and attempts to verify Stages via Analysis will fail. When enabled, the controller will perform a sanity check at startup. If Argo Rollouts CRDs are not found, the controller will proceed as if this integration had been explicitly disabled. Explicitly disabling is still preferable if this integration is not desired, as it will grant fewer permissions to the controller.
     integrationEnabled: true
 
   ## @param controller.logLevel The log level for the controller.

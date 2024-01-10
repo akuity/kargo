@@ -46,10 +46,30 @@ func newAPICommand() *cobra.Command {
 			if err != nil {
 				return errors.Wrap(err, "error loading REST config")
 			}
-			scheme, err := newSchemeForAPI()
-			if err != nil {
-				return errors.Wrap(err, "new scheme for API")
+
+			scheme := runtime.NewScheme()
+			if err = kubescheme.AddToScheme(scheme); err != nil {
+				return errors.Wrap(err, "add Kubernetes api to scheme")
 			}
+			if types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true")) {
+				if argoRolloutsExists(ctx, restCfg) {
+					log.Info("Argo Rollouts integration is enabled")
+					if err = rollouts.AddToScheme(scheme); err != nil {
+						return errors.Wrap(err, "add argo rollouts api to scheme")
+					}
+				} else {
+					log.Warn(
+						"Argo Rollouts integration was enabled, but no Argo Rollouts " +
+							"CRDs were found. Proceeding without Argo Rollouts integration.",
+					)
+				}
+			} else {
+				log.Info("Argo Rollouts integration is disabled")
+			}
+			if err = kargoapi.AddToScheme(scheme); err != nil {
+				return errors.Wrap(err, "add kargo api to scheme")
+			}
+
 			internalClient, err := newClientForAPI(ctx, restCfg, scheme)
 			if err != nil {
 				return errors.Wrap(err, "create internal Kubernetes client")
@@ -151,20 +171,4 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 	}()
 
 	return mgr.GetClient(), nil
-}
-
-func newSchemeForAPI() (*runtime.Scheme, error) {
-	scheme := runtime.NewScheme()
-	if err := kubescheme.AddToScheme(scheme); err != nil {
-		return nil, errors.Wrap(err, "add Kubernetes api to scheme")
-	}
-	if types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true")) {
-		if err := rollouts.AddToScheme(scheme); err != nil {
-			return nil, errors.Wrap(err, "add argo rollouts api to scheme")
-		}
-	}
-	if err := kargoapi.AddToScheme(scheme); err != nil {
-		return nil, errors.Wrap(err, "add kargo api to scheme")
-	}
-	return scheme, nil
 }
