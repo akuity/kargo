@@ -76,9 +76,8 @@ fully-supported at this time.
 
 In cases where one or more sets of credentials are needed widely across _all_
 Kargo projects, the administrator/operator installing Kargo may opt-in to
-designating one or more namespaces as homes for "global" credentials using
-the `controller.globalCredentials.enabled` and 
-`controller.globalCredentials.namespaces` settings in Kargo's Helm chart.
+designating one or more namespaces as homes for "global" credentials using the
+`controller.globalCredentials.namespaces` setting in Kargo's Helm chart.
 Refer to
 [the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation)
 for more details.

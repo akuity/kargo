@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -232,15 +233,16 @@ func newControllerCommand() *cobra.Command {
 				}
 			}
 
-			credentialsDbOpts := make([]credentials.KubernetesDatabaseOption, 0, 1)
+			var argoClientForCreds client.Client
 			if types.MustParseBool(
 				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
 			) {
-				credentialsDbOpts = append(credentialsDbOpts, credentials.WithArgoClient(argocdMgr.GetClient()))
+				argoClientForCreds = argocdMgr.GetClient()
 			}
 			credentialsDB := credentials.NewKubernetesDatabase(
 				kargoMgr.GetClient(),
-				credentialsDbOpts...,
+				argoClientForCreds,
+				credentials.KubernetesDatabaseConfigFromEnv(),
 			)
 
 			if err := analysis.SetupReconcilerWithManager(
