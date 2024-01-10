@@ -37,7 +37,7 @@ func (s *server) WatchStages(
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			return connect.NewError(connect.CodeInternal, err)
+			return errors.Wrap(err, "get stage")
 		}
 	}
 

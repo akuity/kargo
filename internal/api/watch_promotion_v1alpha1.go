@@ -39,7 +39,7 @@ func (s *server) WatchPromotion(
 		if kubeerr.IsNotFound(err) {
 			return connect.NewError(connect.CodeNotFound, err)
 		}
-		return connect.NewError(connect.CodeInternal, err)
+		return errors.Wrap(err, "get promotion")
 	}
 
 	opts := metav1.ListOptions{
