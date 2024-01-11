@@ -2,8 +2,8 @@ package v1alpha1
 
 const (
 	AliasLabelKey   = "kargo.akuity.io/alias"
-	LabelProjectKey = "kargo.akuity.io/project"
 	FreightLabelKey = "kargo.akuity.io/freight"
+	ProjectLabelKey = "kargo.akuity.io/project"
 	ShardLabelKey   = "kargo.akuity.io/shard"
 	StageLabelKey   = "kargo.akuity.io/stage"
 
