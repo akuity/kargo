@@ -2,13 +2,16 @@ package get
 
 import (
 	goerrors "errors"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/duration"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
@@ -44,16 +47,16 @@ kargo get projects -o json
 			}
 
 			names := slices.Compact(args)
-			res := make([]*unstructured.Unstructured, 0, len(resp.Msg.GetProjects()))
+			res := make([]*kargoapi.Project, 0, len(resp.Msg.GetProjects()))
 			var resErr error
 			if len(names) == 0 {
 				for _, p := range resp.Msg.GetProjects() {
 					res = append(res, typesv1alpha1.FromProjectProto(p))
 				}
 			} else {
-				projectsByName := make(map[string]*unstructured.Unstructured, len(resp.Msg.GetProjects()))
+				projectsByName := make(map[string]*kargoapi.Project, len(resp.Msg.GetProjects()))
 				for _, p := range resp.Msg.GetProjects() {
-					projectsByName[p.GetName()] = typesv1alpha1.FromProjectProto(p)
+					projectsByName[p.Metadata.GetName()] = typesv1alpha1.FromProjectProto(p)
 				}
 				for _, name := range names {
 					if promo, ok := projectsByName[name]; ok {
@@ -71,4 +74,27 @@ kargo get projects -o json
 	}
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
+}
+
+func newProjectTable(list *metav1.List) *metav1.Table {
+	rows := make([]metav1.TableRow, len(list.Items))
+	for i, item := range list.Items {
+		project := item.Object.(*kargoapi.Project) // nolint: forcetypeassert
+		rows[i] = metav1.TableRow{
+			Cells: []any{
+				project.Name,
+				project.Status.Phase,
+				duration.HumanDuration(time.Since(project.CreationTimestamp.Time)),
+			},
+			Object: list.Items[i],
+		}
+	}
+	return &metav1.Table{
+		ColumnDefinitions: []metav1.TableColumnDefinition{
+			{Name: "Name", Type: "string"},
+			{Name: "Phase", Type: "string"},
+			{Name: "Age", Type: "string"},
+		},
+		Rows: rows,
+	}
 }
