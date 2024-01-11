@@ -70,12 +70,12 @@ type reconciler struct {
 	startVerificationFn func(
 		context.Context,
 		*kargoapi.Stage,
-	) (*kargoapi.VerificationInfo, error)
+	) *kargoapi.VerificationInfo
 
 	getVerificationInfoFn func(
 		context.Context,
 		*kargoapi.Stage,
-	) (*kargoapi.VerificationInfo, error)
+	) *kargoapi.VerificationInfo
 
 	getAnalysisTemplateFn func(
 		context.Context,
@@ -247,6 +247,14 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "error creating shard predicate")
 	}
 
+	var argocdClient, rolloutsClient client.Client
+	if argocdMgr != nil {
+		argocdClient = argocdMgr.GetClient()
+	}
+	if rolloutsMgr != nil {
+		rolloutsClient = rolloutsMgr.GetClient()
+	}
+
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
 		WithEventFilter(
@@ -269,8 +277,8 @@ func SetupReconcilerWithManager(
 		Build(
 			newReconciler(
 				kargoMgr.GetClient(),
-				argocdMgr.GetClient(),
-				rolloutsMgr.GetClient(),
+				argocdClient,
+				rolloutsClient,
 				shardName,
 			),
 		)
@@ -367,7 +375,9 @@ func newReconciler(
 	r.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	r.listAnalysisRunsFn = r.kargoClient.List
 	r.buildAnalysisRunFn = r.buildAnalysisRun
-	r.createAnalysisRunFn = r.rolloutsClient.Create
+	if rolloutsClient != nil {
+		r.createAnalysisRunFn = r.rolloutsClient.Create
+	}
 	r.getAnalysisRunFn = rollouts.GetAnalysisRun
 	r.getFreightFn = kargoapi.GetFreight
 	r.verifyFreightInStageFn = r.verifyFreightInStage
@@ -613,45 +623,21 @@ func (r *reconciler) syncNormalStage(
 		if status.Phase == kargoapi.StagePhaseVerifying && stage.Spec.Verification != nil {
 			if status.CurrentFreight.VerificationInfo == nil {
 				if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-					// Start verification
-					verInfo, err := r.startVerificationFn(ctx, stage)
-					if err != nil {
-						return status, errors.Wrapf(
-							err,
-							"error starting verification process for Stage %q and Freight %q in namespace %q",
-							stage.Name,
-							status.CurrentFreight.ID,
-							stage.Namespace,
-						)
-					}
-					status.CurrentFreight.VerificationInfo = verInfo
+					log.Debug("starting verification")
+					status.CurrentFreight.VerificationInfo = r.startVerificationFn(ctx, stage)
 				}
 			} else {
 				log.Debug("checking verification results")
-				verInfo, err := r.getVerificationInfoFn(ctx, stage)
-				if err != nil {
-					return status, errors.Wrapf(
-						err,
-						"error getting verification result for Stage %q and Freight %q in namespace %q",
-						stage.Name,
-						status.CurrentFreight.ID,
-						stage.Namespace,
-					)
-				}
-				status.CurrentFreight.VerificationInfo = verInfo
-				switch rollouts.AnalysisPhase(status.CurrentFreight.VerificationInfo.AnalysisRun.Phase) {
-				case rollouts.AnalysisPhasePending:
-					log.Debug("verification is pending")
-				case rollouts.AnalysisPhaseRunning:
-					log.Debug("verification is running")
-				case rollouts.AnalysisPhaseSuccessful,
-					rollouts.AnalysisPhaseFailed,
-					rollouts.AnalysisPhaseError,
-					rollouts.AnalysisPhaseInconclusive:
-					// Verification is complete
-					status.Phase = kargoapi.StagePhaseSteady
-					log.Debug("verification is complete")
-				}
+				status.CurrentFreight.VerificationInfo = r.getVerificationInfoFn(ctx, stage)
+			}
+			log.Debugf(
+				"verification phase is %s",
+				status.CurrentFreight.VerificationInfo.Phase,
+			)
+			if status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
+				// Verification is complete
+				status.Phase = kargoapi.StagePhaseSteady
+				log.Debug("verification is complete")
 			}
 		}
 
@@ -663,7 +649,7 @@ func (r *reconciler) syncNormalStage(
 		if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
 			(stage.Spec.Verification == nil ||
 				(status.CurrentFreight.VerificationInfo != nil &&
-					status.CurrentFreight.VerificationInfo.AnalysisRun.Phase == string(rollouts.AnalysisPhaseSuccessful))) {
+					status.CurrentFreight.VerificationInfo.Phase == kargoapi.VerificationPhaseSuccessful)) {
 			if err := r.verifyFreightInStageFn(
 				ctx,
 				stage.Namespace,

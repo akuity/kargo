@@ -91,7 +91,9 @@ k8s_resource(
     'kargo-controller:rolebinding',
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
-    'kargo-controller-argocd:clusterrolebinding'
+    'kargo-controller-argocd:clusterrolebinding',
+    'kargo-controller-rollouts:clusterrole',
+    'kargo-controller-rollouts:clusterrolebinding'
   ],
   resource_deps=['back-end-compile']
 )

@@ -24,6 +24,15 @@ func (r *reconciler) checkHealth(
 		Issues:     []string{},
 	}
 
+	if r.argocdClient == nil && len(argoCDAppUpdates) > 0 {
+		h.Status = kargoapi.HealthStateUnknown
+		h.Issues = []string{
+			"Argo CD integration is disabled on this controller; cannot assess" +
+				" the health or sync status of Argo CD Applications",
+		}
+		return &h
+	}
+
 	for i, updates := range argoCDAppUpdates {
 		h.ArgoCDApps[i] = kargoapi.ArgoCDAppStatus{
 			Namespace: updates.AppNamespaceOrDefault(),

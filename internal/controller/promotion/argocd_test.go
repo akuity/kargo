@@ -62,8 +62,35 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 		},
 		{
+			name:      "argo cd integration disabled",
+			promoMech: &argoCDMechanism{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{},
+						},
+					},
+				},
+			},
+			assertions: func(
+				newStatus *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"Argo CD integration is disabled on this controller",
+				)
+			},
+		},
+		{
 			name: "error applying update",
 			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewClientBuilder().Build(),
 				doSingleUpdateFn: func(
 					context.Context,
 					metav1.ObjectMeta,
@@ -100,6 +127,7 @@ func TestArgoCDPromote(t *testing.T) {
 		{
 			name: "success",
 			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewClientBuilder().Build(),
 				doSingleUpdateFn: func(
 					context.Context,
 					metav1.ObjectMeta,
