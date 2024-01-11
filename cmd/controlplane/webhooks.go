@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 	"github.com/akuity/kargo/internal/webhook/freight"
+	"github.com/akuity/kargo/internal/webhook/project"
 	"github.com/akuity/kargo/internal/webhook/promotion"
 	"github.com/akuity/kargo/internal/webhook/promotionpolicy"
 	"github.com/akuity/kargo/internal/webhook/stage"
@@ -81,8 +82,11 @@ func newWebhooksServerCommand() *cobra.Command {
 				return errors.Wrap(err, "index Stages by Freight")
 			}
 
-			if err = stage.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "setup Stage webhook")
+			if err = freight.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "setup Freight webhook")
+			}
+			if err = project.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "setup Project webhook")
 			}
 			if err = promotion.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "setup Promotion webhook")
@@ -90,8 +94,8 @@ func newWebhooksServerCommand() *cobra.Command {
 			if err = promotionpolicy.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "setup PromotionPolicy webhook")
 			}
-			if err = freight.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "setup Freight webhook")
+			if err = stage.SetupWebhookWithManager(mgr); err != nil {
+				return errors.Wrap(err, "setup Stage webhook")
 			}
 			if err = warehouse.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "setup Warehouse webhook")
