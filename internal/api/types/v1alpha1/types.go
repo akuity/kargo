@@ -6,7 +6,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	kubemetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesmetav1 "github.com/akuity/kargo/internal/api/types/metav1"
@@ -15,16 +14,36 @@ import (
 	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
-func FromProjectProto(p *svcv1alpha1.Project) *unstructured.Unstructured {
+func FromProjectProto(p *v1alpha1.Project) *kargoapi.Project {
 	if p == nil {
 		return nil
 	}
-	u := &unstructured.Unstructured{}
-	u.SetAPIVersion(kargoapi.GroupVersion.String())
-	u.SetKind("Project")
-	u.SetCreationTimestamp(kubemetav1.NewTime(p.GetCreateTime().AsTime()))
-	u.SetName(p.GetName())
-	return u
+	var status kargoapi.ProjectStatus
+	if p.GetStatus() != nil {
+		status = *FromProjectStatusProto(p.GetStatus())
+	}
+	var objectMeta kubemetav1.ObjectMeta
+	if p.GetMetadata() != nil {
+		objectMeta = *typesmetav1.FromObjectMetaProto(p.GetMetadata())
+	}
+	return &kargoapi.Project{
+		TypeMeta: kubemetav1.TypeMeta{
+			APIVersion: kargoapi.GroupVersion.String(),
+			Kind:       "Project",
+		},
+		ObjectMeta: objectMeta,
+		Status:     status,
+	}
+}
+
+func FromProjectStatusProto(p *v1alpha1.ProjectStatus) *kargoapi.ProjectStatus {
+	if p == nil {
+		return nil
+	}
+	return &kargoapi.ProjectStatus{
+		Phase:   kargoapi.ProjectPhase(p.GetPhase()),
+		Message: p.GetMessage(),
+	}
 }
 
 func FromStageProto(s *v1alpha1.Stage) *kargoapi.Stage {
@@ -676,6 +695,22 @@ func FromAnalysisRunReferenceProto(a *v1alpha1.AnalysisRunReference) *kargoapi.A
 		Namespace: a.Namespace,
 		Name:      a.Name,
 		Phase:     a.Phase,
+	}
+}
+
+func ToProjectProto(p kargoapi.Project) *v1alpha1.Project {
+	return &v1alpha1.Project{
+		ApiVersion: p.APIVersion,
+		Kind:       p.Kind,
+		Metadata:   typesmetav1.ToObjectMetaProto(p.ObjectMeta),
+		Status:     ToProjectStatusProto(p.Status),
+	}
+}
+
+func ToProjectStatusProto(p kargoapi.ProjectStatus) *v1alpha1.ProjectStatus {
+	return &v1alpha1.ProjectStatus{
+		Phase:   string(p.Phase),
+		Message: p.Message,
 	}
 }
 
