@@ -580,21 +580,30 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 		{
 			name: "update target revision (helm chart)",
 			source: argocd.ApplicationSource{
-				RepoURL: "fake-url",
+				RepoURL: "fake/url",
 				Chart:   "fake-chart",
 			},
 			newFreight: kargoapi.SimpleFreight{
 				Charts: []kargoapi.Chart{
 					{
-						Repository: "fake-url",
-						Name:       "fake-chart",
+						// Note these attributes are deliberately a little different than
+						// the source attributes, but when joined with a slash, they match.
+						// This is to test that Kargo is resilient to minor differences
+						// between how the source and the update instructions are each
+						// specified.
+						Repository: "fake",
+						Name:       "url/fake-chart",
 						Version:    "fake-version",
 					},
 				},
 			},
 			update: kargoapi.ArgoCDSourceUpdate{
-				RepoURL:              "fake-url",
-				Chart:                "fake-chart",
+				// Once again, these attributes are deliberately a little different than
+				// the source attributes, but when joined with a slash, they match. This
+				// is to test that Kargo is resilient to minor differences between how
+				// the source and the update instructions are each specified.
+				RepoURL:              "fake",
+				Chart:                "url/fake-chart",
 				UpdateTargetRevision: true,
 			},
 			assertions: func(

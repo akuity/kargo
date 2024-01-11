@@ -360,7 +360,7 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	err = os.WriteFile(
 		filepath.Join(testFooChartDir, "Chart.yaml"),
 		[]byte(`dependencies:
-- repository: fake-repo
+- repository: fake/url
   name: fake-chart
   version: placeholder
 `),
@@ -390,8 +390,12 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	// New charts
 	charts := []kargoapi.Chart{
 		{
-			Repository: "fake-repo",
-			Name:       "fake-chart",
+			// Note these attributes are deliberately a little different than the ones
+			// in the fake Chart.yaml, but when joined with a slash, they match. This
+			// is to test that Kargo is resilient to minor differences between how the
+			// chart dependencies and the update instructions are each specified.
+			Repository: "fake",
+			Name:       "url/fake-chart",
 			Version:    "fake-version",
 		},
 		{
@@ -404,8 +408,13 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	// Instructions for how to update Chart.yaml files
 	chartUpdates := []kargoapi.HelmChartDependencyUpdate{
 		{
-			Repository: "fake-repo",
-			Name:       "fake-chart",
+			// Once again, these attributes are deliberately a little different than
+			// the ones in the fake Chart.yaml, but when joined with a slash, they
+			// match. This is to test that Kargo is resilient to minor differences
+			// between how the chart dependencies and the update instructions are each
+			// specified.
+			Repository: "fake",
+			Name:       "url/fake-chart",
 			ChartPath:  "charts/foo",
 		},
 		{

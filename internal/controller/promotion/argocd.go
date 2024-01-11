@@ -281,27 +281,41 @@ func applyArgoCDSourceUpdate(
 	newFreight kargoapi.SimpleFreight,
 	update kargoapi.ArgoCDSourceUpdate,
 ) (argocd.ApplicationSource, error) {
-	if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
-		return source, nil
-	}
-
-	if update.UpdateTargetRevision {
-		var done bool
-		for _, commit := range newFreight.Commits {
-			if commit.RepoURL == source.RepoURL {
-				source.TargetRevision = commit.ID
-				done = true
-				break
+	if source.Chart == "" {
+		// This source references a git repo
+		if update.Chart != "" {
+			// This update references a Helm chart repo; not a match
+			return source, nil
+		}
+		if source.RepoURL != update.RepoURL {
+			return source, nil
+		}
+		if update.UpdateTargetRevision {
+			for _, commit := range newFreight.Commits {
+				if commit.RepoURL == source.RepoURL {
+					source.TargetRevision = commit.ID
+					break
+				}
 			}
 		}
-		if !done {
+	} else {
+		// This source references a Helm chart repo
+		if update.Chart == "" {
+			// This update references a git repo; not a match
+			return source, nil
+		}
+		// Matching this way is more resilient to differences in how users may
+		// have specified the repo and chart names in the Warehouse vs. the
+		// Application.
+		if fmt.Sprintf("%s/%s", source.RepoURL, source.Chart) != fmt.Sprintf("%s/%s", update.RepoURL, update.Chart) {
+			return source, nil
+		}
+		if update.UpdateTargetRevision {
 			for _, chart := range newFreight.Charts {
-				// Instead of comparing repos and chart names individually, this
-				// strategy is a bit more resilient to circumstances where a user may
-				// have used repo "x", chart "y/z" in the warehouse, but their
-				// Application says repo "x/y", chart "z".
-				if fmt.Sprintf("%s/%s", chart.Repository, chart.Name) ==
-					fmt.Sprintf("%s/%s", source.RepoURL, source.Chart) {
+				// Once again, matching this way is more resilient to differences in how
+				// users may have specified the repo and chart names in the Warehouse
+				// vs. the Application.
+				if fmt.Sprintf("%s/%s", chart.Repository, chart.Name) == fmt.Sprintf("%s/%s", source.RepoURL, source.Chart) {
 					source.TargetRevision = chart.Version
 					break
 				}
