@@ -153,6 +153,18 @@ message KustomizePromotionMechanism {
   repeated KustomizeImageUpdate images = 1 [json_name = "images"];
 }
 
+message Project {
+  string api_version = 1 [json_name = "apiVersion"];
+  string kind = 2 [json_name = "kind"];
+  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3 [json_name = "metadata"];
+  ProjectStatus status = 4 [json_name = "status"];
+}
+
+message ProjectStatus {
+  string phase = 1 [json_name = "phase"];
+  string message = 2 [json_name = "message"];
+}
+
 message Promotion {
   string api_version = 1 [json_name = "apiVersion"];
   string kind = 2 [json_name = "kind"];
