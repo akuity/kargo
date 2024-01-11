@@ -32,7 +32,7 @@ type reconciler struct {
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
-	argoMgr manager.Manager,
+	argocdMgr manager.Manager,
 	shardName string,
 ) error {
 	// Index Stages by Argo CD Applications
@@ -40,7 +40,7 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "index Stages by Argo CD Applications")
 	}
 	logger := logging.LoggerFromContext(ctx)
-	return ctrl.NewControllerManagedBy(argoMgr).
+	return ctrl.NewControllerManagedBy(argocdMgr).
 		For(&argocd.Application{}).
 		WithEventFilter(AppHealthSyncStatusChangePredicate{logger: logger}).
 		WithOptions(controller.CommonOptions()).

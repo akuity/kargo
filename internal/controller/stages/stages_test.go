@@ -332,8 +332,11 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-				) (*kargoapi.VerificationInfo, error) {
-					return nil, errors.New("something went wrong")
+				) *kargoapi.VerificationInfo {
+					return &kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseError,
+						Message: "something went wrong",
+					}
 				},
 			},
 			assertions: func(
@@ -341,10 +344,20 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error starting verification process")
-				// Status should be returned unchanged
+				require.NoError(t, err)
+				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseError,
+						Message: "something went wrong",
+					},
+					newStatus.CurrentFreight.VerificationInfo,
+				)
+				// Everything else should be returned unchanged
+				newStatus.CurrentFreight.VerificationInfo = nil
+				newStatus.Phase = initialStatus.Phase
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
@@ -372,8 +385,11 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.Health {
 					return nil
 				},
-				getVerificationInfoFn: func(ctx context.Context, s *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
-					return nil, errors.New("something went wrong")
+				getVerificationInfoFn: func(ctx context.Context, s *kargoapi.Stage) *kargoapi.VerificationInfo {
+					return &kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseError,
+						Message: "something went wrong",
+					}
 				},
 			},
 			assertions: func(
@@ -381,10 +397,21 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(t, err.Error(), "error getting verification result")
-				// Status should be returned unchanged
+				require.NoError(t, err)
+				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseError,
+						Message: "something went wrong",
+					},
+					newStatus.CurrentFreight.VerificationInfo,
+				)
+				// Phase should be changed to Steady
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				// Everything else should be unchanged
+				newStatus.Phase = initialStatus.Phase
+				newStatus.CurrentFreight = initialStatus.CurrentFreight
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},
@@ -862,14 +889,15 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					context.Context,
 					*kargoapi.Stage,
-				) (*kargoapi.VerificationInfo, error) {
+				) *kargoapi.VerificationInfo {
 					return &kargoapi.VerificationInfo{
-						AnalysisRun: kargoapi.AnalysisRunReference{
+						Phase: kargoapi.VerificationPhaseSuccessful,
+						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-analysis-run",
 							Namespace: "fake-namespace",
 							Phase:     string(rollouts.AnalysisPhaseSuccessful),
 						},
-					}, nil
+					}
 				},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
@@ -921,7 +949,8 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						AnalysisRun: kargoapi.AnalysisRunReference{
+						Phase: kargoapi.VerificationPhaseSuccessful,
+						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-analysis-run",
 							Namespace: "fake-namespace",
 							Phase:     string(rollouts.AnalysisPhaseSuccessful),

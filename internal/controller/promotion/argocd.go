@@ -20,6 +20,7 @@ const authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
 // argoCDMechanism is an implementation of the Mechanism interface that updates
 // Argo CD Application resources.
 type argoCDMechanism struct {
+	argocdClient client.Client
 	// These behaviors are overridable for testing purposes:
 	doSingleUpdateFn func(
 		ctx context.Context,
@@ -47,14 +48,16 @@ type argoCDMechanism struct {
 
 // newArgoCDMechanism returns an implementation of the Mechanism interface that
 // updates Argo CD Application resources.
-func newArgoCDMechanism(
-	argoClient client.Client,
-) Mechanism {
-	a := &argoCDMechanism{}
+func newArgoCDMechanism(argocdClient client.Client) Mechanism {
+	a := &argoCDMechanism{
+		argocdClient: argocdClient,
+	}
 	a.doSingleUpdateFn = a.doSingleUpdate
-	a.getArgoCDAppFn = getApplicationFn(argoClient)
+	a.getArgoCDAppFn = getApplicationFn(argocdClient)
 	a.applyArgoCDSourceUpdateFn = applyArgoCDSourceUpdate
-	a.argoCDAppPatchFn = argoClient.Patch
+	if argocdClient != nil {
+		a.argoCDAppPatchFn = argocdClient.Patch
+	}
 	return a
 }
 
@@ -74,6 +77,14 @@ func (a *argoCDMechanism) Promote(
 
 	if len(updates) == 0 {
 		return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+	}
+
+	if a.argocdClient == nil {
+		return promo.Status.WithPhase(kargoapi.PromotionPhaseFailed), newFreight,
+			errors.New(
+				"Argo CD integration is disabled on this controller; cannot perform " +
+					"promotion",
+			)
 	}
 
 	logger := logging.LoggerFromContext(ctx)
@@ -202,7 +213,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 }
 
 func getApplicationFn(
-	argoClient client.Client,
+	argocdClient client.Client,
 ) func(
 	ctx context.Context,
 	namespace string,
@@ -213,7 +224,7 @@ func getApplicationFn(
 		namespace string,
 		name string,
 	) (*argocd.Application, error) {
-		return argocd.GetApplication(ctx, argoClient, namespace, name)
+		return argocd.GetApplication(ctx, argocdClient, namespace, name)
 	}
 }
 

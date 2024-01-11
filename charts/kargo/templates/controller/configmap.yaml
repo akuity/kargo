@@ -16,13 +16,17 @@ data:
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   GLOBAL_CREDENTIALS_NAMESPACES: {{ join "," .Values.controller.globalCredentials.namespaces }}
+  ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
+  {{- if .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.kubeconfigSecrets.argocd }}
   ARGOCD_KUBECONFIG: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml
-  {{- end }}
-  {{- if .Values.kubeconfigSecrets.rollouts }}
-  ROLLOUTS_KUBECONFIG: /etc/kargo/kubeconfigs/rollouts-kubeconfig.yaml
   {{- end }}
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace }}
   ARGOCD_ENABLE_CREDENTIAL_BORROWING: {{ quote .Values.controller.argocd.enableCredentialBorrowing }}
   ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY: {{ quote .Values.controller.argocd.watchArgocdNamespaceOnly }}
+  {{- end }}
+  ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.controller.rollouts.integrationEnabled }}
+  {{- if and .Values.controller.rollouts.integrationEnabled .Values.kubeconfigSecrets.rollouts }}
+  ROLLOUTS_KUBECONFIG: /etc/kargo/kubeconfigs/rollouts-kubeconfig.yaml
+  {{- end }}
 {{- end }}

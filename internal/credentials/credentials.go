@@ -71,9 +71,9 @@ type Database interface {
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	kargoClient client.Client
-	argoClient  client.Client // nil if credential borrowing is not enabled
-	cfg         KubernetesDatabaseConfig
+	kargoClient  client.Client
+	argocdClient client.Client // nil if credential borrowing is not enabled
+	cfg          KubernetesDatabaseConfig
 }
 
 // KubernetesDatabaseConfig represents configuration for a Kubernetes based
@@ -94,13 +94,13 @@ func KubernetesDatabaseConfigFromEnv() KubernetesDatabaseConfig {
 // retrieve Credentials stored in Kubernetes Secrets.
 func NewKubernetesDatabase(
 	kargoClient client.Client,
-	argoClient client.Client,
+	argocdClient client.Client,
 	cfg KubernetesDatabaseConfig,
 ) Database {
 	return &kubernetesDatabase{
-		kargoClient: kargoClient,
-		argoClient:  argoClient,
-		cfg:         cfg,
+		kargoClient:  kargoClient,
+		argocdClient: argocdClient,
+		cfg:          cfg,
 	}
 }
 
@@ -195,7 +195,7 @@ func (k *kubernetesDatabase) Get(
 		}
 	}
 
-	if k.argoClient == nil {
+	if k.argocdClient == nil {
 		// We cannot borrow creds from from Argo CD
 		return creds, false, nil
 	}
@@ -203,7 +203,7 @@ func (k *kubernetesDatabase) Get(
 	// Check Argo CD's namespace for credentials
 	if secret, err = getCredentialsSecret(
 		ctx,
-		k.argoClient,
+		k.argocdClient,
 		k.cfg.ArgoCDNamespace,
 		labels.Set(map[string]string{
 			argoCDSecretTypeLabelKey: repositorySecretTypeLabelValue,
@@ -219,7 +219,7 @@ func (k *kubernetesDatabase) Get(
 		// Check Argo CD's namespace for credentials template
 		if secret, err = getCredentialsSecret(
 			ctx,
-			k.argoClient,
+			k.argocdClient,
 			k.cfg.ArgoCDNamespace,
 			labels.Set(map[string]string{
 				argoCDSecretTypeLabelKey: repoCredsSecretTypeLabelValue,

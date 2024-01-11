@@ -313,6 +313,8 @@ message AnalysisRunArgument {
 
 message VerificationInfo {
   AnalysisRunReference analysis_run = 1 [json_name = "analysisRun"];
+  string phase = 2 [json_name = "phase"];
+  string message = 3 [json_name = "message"];
 }
 
 message AnalysisRunReference {

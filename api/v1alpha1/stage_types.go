@@ -20,6 +20,44 @@ const (
 	StagePhaseVerifying StagePhase = "Verifying"
 )
 
+type VerificationPhase string
+
+// Note: VerificationPhases are identical to AnalysisRunPhases. In almost all
+// cases, the VerificationPhase will be a reflection of the underlying
+// AnalysisRunPhase. There are exceptions to this, such as in the case where an
+// AnalysisRun cannot be launched successfully.
+
+const (
+	// VerificationPhasePending denotes a verification process that has not yet
+	// started yet.
+	VerificationPhasePending VerificationPhase = "Pending"
+	// VerificationPhaseRunning denotes a verification that is currently running.
+	VerificationPhaseRunning VerificationPhase = "Running"
+	// VerificationPhaseSuccessful denotes a verification process that has
+	// completed successfully.
+	VerificationPhaseSuccessful VerificationPhase = "Successful"
+	// VerificationPhaseFailed denotes a verification process that has completed
+	// with a failure.
+	VerificationPhaseFailed VerificationPhase = "Failed"
+	// VerificationPhaseError denotes a verification process that has completed
+	// with an error.
+	VerificationPhaseError VerificationPhase = "Error"
+	// VerificationPhaseInconclusive denotes a verification process that has
+	// completed with an inconclusive result.
+	VerificationPhaseInconclusive VerificationPhase = "Inconclusive"
+)
+
+// IsTerminal returns true if the VerificationPhase is a terminal one.
+func (v *VerificationPhase) IsTerminal() bool {
+	switch *v {
+	case VerificationPhaseSuccessful, VerificationPhaseFailed,
+		VerificationPhaseError, VerificationPhaseInconclusive:
+		return true
+	default:
+		return false
+	}
+}
+
 // +kubebuilder:validation:Enum={ImageAndTag,Tag,ImageAndDigest,Digest}
 type ImageUpdateValueType string
 
@@ -485,7 +523,7 @@ type FreightReference struct {
 	Charts []Chart `json:"charts,omitempty"`
 	// VerificationInfo is information about any verification process that was
 	// associated with this Freight for this Stage.
-	VerificationInfo *VerificationInfo `json:"verificationResult,omitempty"`
+	VerificationInfo *VerificationInfo `json:"verificationInfo,omitempty"`
 }
 
 type FreightReferenceStack []FreightReference
@@ -673,7 +711,17 @@ type AnalysisRunArgument struct {
 // VerificationInfo contains information about the currently running
 // Verification process.
 type VerificationInfo struct {
-	AnalysisRun AnalysisRunReference `json:"analysisRun"`
+	// Phase describes the current phase of the Verification process. Generally,
+	// this will be a reflection of the underlying AnalysisRun's phase, however,
+	// there are exceptions to this, such as in the case where an AnalysisRun
+	// cannot be launched successfully.
+	Phase VerificationPhase `json:"phase,omitempty"`
+	// Message may contain additional information about why the verification
+	// process is in its current phase.
+	Message string `json:"message,omitempty"`
+	// AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
+	// the Verification process.
+	AnalysisRun *AnalysisRunReference `json:"analysisRun,omitempty"`
 }
 
 // AnalysisRunReference is a reference to an AnalysisRun.

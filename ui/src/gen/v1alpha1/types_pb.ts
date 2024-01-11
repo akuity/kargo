@@ -2516,6 +2516,16 @@ export class VerificationInfo extends Message<VerificationInfo> {
    */
   analysisRun?: AnalysisRunReference;
 
+  /**
+   * @generated from field: string phase = 2;
+   */
+  phase = "";
+
+  /**
+   * @generated from field: string message = 3;
+   */
+  message = "";
+
   constructor(data?: PartialMessage<VerificationInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2525,6 +2535,8 @@ export class VerificationInfo extends Message<VerificationInfo> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.VerificationInfo";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "analysis_run", kind: "message", T: AnalysisRunReference },
+    { no: 2, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerificationInfo {
