@@ -15,6 +15,9 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -41,9 +44,17 @@ spec:
             type: object
           status:
             description: Status describes the Project's current status.
+            properties:
+              message:
+                description: Message is a display message about the Project, including
+                  any errors preventing the Project from being reconciled. i.e. If
+                  the Phase field has a value of CreationFailed, this field can be
+                  expected to explain why.
+                type: string
+              phase:
+                description: Phase describes the Project's current phase.
+                type: string
             type: object
-        required:
-        - spec
         type: object
     served: true
     storage: true

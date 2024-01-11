@@ -390,7 +390,7 @@ message CreateProjectRequest {
 }
 
 message CreateProjectResponse {
-  Project project = 1;
+  github.com.akuity.kargo.pkg.api.v1alpha1.Project project = 1;
 }
 
 message ListProjectsRequest {
