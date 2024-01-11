@@ -9,22 +9,22 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func NewCommand(opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "refresh",
 		Short: "Refresh a stage or warehouse",
 	}
-	cmd.AddCommand(newRefreshWarehouseCommand(opt))
-	cmd.AddCommand(newRefreshStageCommand(opt))
-	return cmd
-}
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
 
-type Flags struct {
-	Wait bool
+	cmd.AddCommand(newRefreshWarehouseCommand(cfg, opt))
+	cmd.AddCommand(newRefreshStageCommand(cfg, opt))
+	return cmd
 }
 
 const (
@@ -32,18 +32,15 @@ const (
 	refreshResourceTypeStage     = "stage"
 )
 
-func addRefreshFlags(cmd *cobra.Command, flag *Flags) {
-	cmd.Flags().BoolVar(&flag.Wait, "wait", true, "Wait until refresh completes")
-}
-
 func refreshObject(
+	cfg config.CLIConfig,
 	opt *option.Option,
-	flag *Flags,
 	resourceType string,
+	wait bool,
 ) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
-		kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+		kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 		if err != nil {
 			return err
 		}
@@ -74,7 +71,7 @@ func refreshObject(
 			return errors.Wrapf(err, "refresh %s", resourceType)
 		}
 
-		if flag.Wait {
+		if wait {
 			switch resourceType {
 			case refreshResourceTypeWarehouse:
 				err = waitForWarehouse(ctx, kargoSvcCli, project, name)

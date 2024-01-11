@@ -7,23 +7,23 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type PromoteFlags struct {
-	Freight string
-}
-
-func newPromoteCommand(opt *option.Option) *cobra.Command {
-	var flag PromoteFlags
+func newPromoteCommand(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
+	var freight string
 	cmd := &cobra.Command{
 		Use:  "promote --project=project (STAGE) [(--freight=)freight-id]",
-		Args: option.ExactArgs(2),
+		Args: option.ExactArgs(1),
 		Example: `
 # Promote a freight to a stage for a specific project
 kargo stage promote dev --project=my-project --freight=abc123
@@ -40,7 +40,7 @@ kargo stage promote dev --freight=abc123
 				return errors.New("project is required")
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return err
 			}
@@ -50,7 +50,6 @@ kargo stage promote dev --freight=abc123
 				return errors.New("name is required")
 			}
 
-			freight := strings.TrimSpace(flag.Freight)
 			if freight == "" {
 				// TODO: Get latest available freight if empty
 				return errors.New("freight is required")
@@ -64,7 +63,7 @@ kargo stage promote dev --freight=abc123
 			if err != nil {
 				return errors.Wrap(err, "promote stage")
 			}
-			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
+			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 				fmt.Fprintf(opt.IOStreams.Out,
 					"Promotion Created: %q\n", res.Msg.GetPromotion().GetMetadata().GetName())
 				return nil
@@ -79,6 +78,7 @@ kargo stage promote dev --freight=abc123
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Freight(&flag.Freight)(cmd.Flags())
+	option.Freight(cmd.Flags(), &freight)
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }

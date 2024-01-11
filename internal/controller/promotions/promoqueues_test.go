@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/runtime"
 )
@@ -24,8 +23,8 @@ var (
 	barStageKey = types.NamespacedName{Namespace: testNamespace, Name: "bar"}
 
 	testNamespace = "default"
-	testPromos    = v1alpha1.PromotionList{
-		Items: []v1alpha1.Promotion{
+	testPromos    = kargoapi.PromotionList{
+		Items: []kargoapi.Promotion{
 			// foo stage. two have same creation timestamp but different names
 			*newPromo(testNamespace, "d", "foo", "", after),
 			*newPromo(testNamespace, "b", "foo", "", now),
@@ -35,9 +34,9 @@ var (
 			// one needs to be deduplicated. one promo is invalid
 			*newPromo(testNamespace, "x", "bar", "", before),
 			*newPromo(testNamespace, "x", "bar", "", before),
-			*newPromo(testNamespace, "y", "bar", v1alpha1.PromotionPhaseRunning, now),
+			*newPromo(testNamespace, "y", "bar", kargoapi.PromotionPhaseRunning, now),
 			*newPromo(testNamespace, "z", "bar", "", after),
-			kargoapi.Promotion{
+			{
 				ObjectMeta: metav1.ObjectMeta{
 					CreationTimestamp: now,
 					Name:              "w",
@@ -49,7 +48,7 @@ var (
 )
 
 func newPromo(namespace, name, stage string,
-	phase v1alpha1.PromotionPhase,
+	phase kargoapi.PromotionPhase,
 	creationTimestamp metav1.Time,
 ) *kargoapi.Promotion {
 	return &kargoapi.Promotion{
@@ -58,10 +57,10 @@ func newPromo(namespace, name, stage string,
 			Name:              name,
 			Namespace:         namespace,
 		},
-		Spec: &v1alpha1.PromotionSpec{
+		Spec: &kargoapi.PromotionSpec{
 			Stage: stage,
 		},
-		Status: v1alpha1.PromotionStatus{
+		Status: kargoapi.PromotionStatus{
 			Phase: phase,
 		},
 	}

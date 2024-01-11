@@ -41,11 +41,11 @@ func TestCompositePromote(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMech  *compositeMechanism
-		newFreight kargoapi.SimpleFreight
+		newFreight kargoapi.FreightReference
 		assertions func(
 			promoStatus *kargoapi.PromotionStatus,
-			newFreightIn kargoapi.SimpleFreight,
-			newFreightOut kargoapi.SimpleFreight,
+			newFreightIn kargoapi.FreightReference,
+			newFreightOut kargoapi.FreightReference,
 			err error,
 		)
 	}{
@@ -58,10 +58,10 @@ func TestCompositePromote(t *testing.T) {
 						PromoteFn: func(
 							context.Context,
 							*kargoapi.Stage,
-							kargoapi.SimpleFreight,
-						) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+							kargoapi.FreightReference,
+						) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
 							return &kargoapi.PromotionStatus{},
-								kargoapi.SimpleFreight{},
+								kargoapi.FreightReference{},
 								errors.New("something went wrong")
 						},
 					},
@@ -69,8 +69,8 @@ func TestCompositePromote(t *testing.T) {
 			},
 			assertions: func(
 				promoStatus *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -91,8 +91,8 @@ func TestCompositePromote(t *testing.T) {
 						PromoteFn: func(
 							_ context.Context,
 							_ *kargoapi.Stage,
-							newFreight kargoapi.SimpleFreight,
-						) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+							newFreight kargoapi.FreightReference,
+						) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
 							// This is not a realistic change that a child promotion mechanism
 							// would make, but for testing purposes, this is good enough to
 							// help us assert that the function under test does return all
@@ -105,8 +105,8 @@ func TestCompositePromote(t *testing.T) {
 			},
 			assertions: func(
 				promoStatus *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)

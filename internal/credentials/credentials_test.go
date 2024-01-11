@@ -13,19 +13,18 @@ import (
 )
 
 func TestNewKubernetesDatabase(t *testing.T) {
-	const testArgoCDNameSpace = "argocd"
 	testClient := fake.NewClientBuilder().Build()
-	d := NewKubernetesDatabase(
-		testClient,
-		WithArgoCDNamespace(testArgoCDNameSpace),
-		WithArgoClient(testClient),
-	)
+	testCfg := KubernetesDatabaseConfig{
+		ArgoCDNamespace:             "fake-namespace",
+		GlobalCredentialsNamespaces: []string{"another-fake-namespace"},
+	}
+	d := NewKubernetesDatabase(testClient, testClient, testCfg)
 	require.NotNil(t, d)
 	k, ok := d.(*kubernetesDatabase)
 	require.True(t, ok)
-	require.Equal(t, testArgoCDNameSpace, k.argoCDNamespace)
 	require.Same(t, testClient, k.kargoClient)
 	require.Same(t, testClient, k.argoClient)
+	require.Equal(t, testCfg, k.cfg)
 }
 
 func TestGetCredentialsSecret(t *testing.T) {

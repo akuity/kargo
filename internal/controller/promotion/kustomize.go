@@ -48,7 +48,7 @@ type kustomizer struct {
 // working directory.
 func (k *kustomizer) apply(
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.SimpleFreight,
+	newFreight kargoapi.FreightReference,
 	_ string,
 	workingDir string,
 ) ([]string, error) {

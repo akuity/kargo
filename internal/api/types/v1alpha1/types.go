@@ -62,13 +62,13 @@ func FromStageStatusProto(s *v1alpha1.StageStatus) *kargoapi.StageStatus {
 	if s == nil {
 		return nil
 	}
-	history := make(kargoapi.SimpleFreightStack, len(s.GetHistory()))
+	history := make(kargoapi.FreightReferenceStack, len(s.GetHistory()))
 	for idx, freight := range s.GetHistory() {
-		history[idx] = *FromSimpleFreightProto(freight)
+		history[idx] = *FromFreightReferenceProto(freight)
 	}
 	return &kargoapi.StageStatus{
 		Phase:          kargoapi.StagePhase(s.GetPhase()),
-		CurrentFreight: FromSimpleFreightProto(s.GetCurrentFreight()),
+		CurrentFreight: FromFreightReferenceProto(s.GetCurrentFreight()),
 		History:        history,
 		Health:         FromHealthProto(s.GetHealth()),
 		Error:          s.GetError(),
@@ -122,7 +122,7 @@ func FromFreightProto(f *v1alpha1.Freight) *kargoapi.Freight {
 	}
 }
 
-func FromSimpleFreightProto(s *v1alpha1.SimpleFreight) *kargoapi.SimpleFreight {
+func FromFreightReferenceProto(s *v1alpha1.FreightReference) *kargoapi.FreightReference {
 	if s == nil {
 		return nil
 	}
@@ -138,7 +138,7 @@ func FromSimpleFreightProto(s *v1alpha1.SimpleFreight) *kargoapi.SimpleFreight {
 	for idx, chart := range s.GetCharts() {
 		charts[idx] = *FromChartProto(chart)
 	}
-	return &kargoapi.SimpleFreight{
+	return &kargoapi.FreightReference{
 		ID:               s.GetId(),
 		Commits:          commits,
 		Images:           images,
@@ -678,13 +678,13 @@ func FromAnalysisRunReferenceProto(a *v1alpha1.AnalysisRunReference) *kargoapi.A
 
 func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	// Status
-	var currentFreight *v1alpha1.SimpleFreight
+	var currentFreight *v1alpha1.FreightReference
 	if e.Status.CurrentFreight != nil {
-		currentFreight = ToSimpleFreightProto(*e.Status.CurrentFreight, nil)
+		currentFreight = ToFreightReferenceProto(*e.Status.CurrentFreight, nil)
 	}
-	history := make([]*v1alpha1.SimpleFreight, len(e.Status.History))
+	history := make([]*v1alpha1.FreightReference, len(e.Status.History))
 	for idx := range e.Status.History {
-		history[idx] = ToSimpleFreightProto(e.Status.History[idx], nil)
+		history[idx] = ToFreightReferenceProto(e.Status.History[idx], nil)
 	}
 	var health *v1alpha1.Health
 	if e.Status.Health != nil {
@@ -700,7 +700,7 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 	}
 	var currentPromotion *v1alpha1.PromotionInfo
 	if e.Status.CurrentPromotion != nil {
-		sf := kargoapi.SimpleFreight{
+		sf := kargoapi.FreightReference{
 			ID:      e.Status.CurrentPromotion.Freight.ID,
 			Commits: e.Status.CurrentPromotion.Freight.Commits,
 			Images:  e.Status.CurrentPromotion.Freight.Images,
@@ -708,7 +708,7 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 		}
 		currentPromotion = &v1alpha1.PromotionInfo{
 			Name:    e.Status.CurrentPromotion.Name,
-			Freight: ToSimpleFreightProto(sf, nil),
+			Freight: ToFreightReferenceProto(sf, nil),
 		}
 	}
 	return &v1alpha1.Stage{
@@ -1009,7 +1009,7 @@ func ToFreightProto(f kargoapi.Freight) *v1alpha1.Freight {
 	}
 }
 
-func ToSimpleFreightProto(s kargoapi.SimpleFreight, firstSeen *time.Time) *v1alpha1.SimpleFreight {
+func ToFreightReferenceProto(s kargoapi.FreightReference, firstSeen *time.Time) *v1alpha1.FreightReference {
 	var firstSeenProto *timestamppb.Timestamp
 	if firstSeen != nil {
 		firstSeenProto = timestamppb.New(*firstSeen)
@@ -1026,7 +1026,7 @@ func ToSimpleFreightProto(s kargoapi.SimpleFreight, firstSeen *time.Time) *v1alp
 	for idx := range s.Charts {
 		charts[idx] = ToChartProto(s.Charts[idx])
 	}
-	return &v1alpha1.SimpleFreight{
+	return &v1alpha1.FreightReference{
 		Id:               s.ID,
 		FirstSeen:        firstSeenProto,
 		Commits:          commits,

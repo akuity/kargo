@@ -20,8 +20,8 @@ type Mechanism interface {
 		context.Context,
 		*kargoapi.Stage,
 		*kargoapi.Promotion,
-		kargoapi.SimpleFreight,
-	) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error)
+		kargoapi.FreightReference,
+	) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error)
 }
 
 // NewMechanisms returns the entrypoint to a hierarchical tree of promotion

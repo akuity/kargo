@@ -1,0 +1,67 @@
+{{- if .Values.managementController.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kargo-management-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.managementController.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.managementController.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kargo.selectorLabels" . | nindent 8 }}
+        {{- include "kargo.managementController.labels" . | nindent 8 }}
+      annotations:
+        configmap/checksum: {{ include (print $.Template.BasePath "/management-controller/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccount: kargo-management-controller
+      {{- with .Values.managementController.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: management-controller
+        image: {{ include "kargo.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/usr/local/bin/kargo", "management-controller"]
+        envFrom:
+        - configMapRef:
+            name: kargo-management-controller
+        {{- if .Values.kubeconfigSecrets.kargo }}
+        volumeMounts:
+        - mountPath: /etc/kargo/kubeconfigs
+          name: kubeconfigs
+          readOnly: true
+        {{- end }}
+        resources:
+          {{- toYaml .Values.managementController.resources | nindent 10 }}
+      {{- if .Values.kubeconfigSecrets.kargo }}
+      volumes:
+      - name: kubeconfigs
+        projected:
+          sources:
+          - secret:
+              name: {{ .Values.kubeconfigSecrets.kargo }}
+              items:
+              - key: kubeconfig.yaml
+                path: kubeconfig.yaml
+                mode: 0644
+      {{- end }}
+      {{- with .Values.managementController.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.managementController.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

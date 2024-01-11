@@ -17,7 +17,7 @@ instance's _purpose_ and not necessarily its _location_.
 the rationale behind this choice.
 
 _Stages are Kargo's most important concept._ They can be linked together in a
-directed asyclic graph to describe a delivery pipeline. Typically, such a
+directed acyclic graph to describe a delivery pipeline. Typically, such a
 pipeline may feature a "test" or "dev" stage as its starting point, with one or
 more "prod" stages at the end.
 
@@ -207,9 +207,109 @@ spec:
       appNamespace: argocd
 ```
 
+#### Verifications
+
+The `spec.verification` field is used to describe optional verification
+processes that should be executed after a `Promotion` has successfully deployed
+`Freight` to a `Stage`, and if applicable, after the `Stage` has reached a
+healthy state.
+
+Verification processes are defined through _references_ to one or more 
+[Argo Rollouts `AnalysisTemplate` resources](https://argoproj.github.io/argo-rollouts/features/analysis/)
+that reside in the same project/namespace as the `Stage` resource.
+
+:::info
+Argo Rollouts `AnalysisTemplate` resources (and the `AnalysisRun` resources that
+are spawned from them) were intentionally built to be re-usable in contexts
+other than Argo Rollouts. Re-using this resource type to define verification
+processes means those processes benefit from this rich and battle-tested feature
+of Argo Rollouts.
+:::
+
+The following example depicts a `Stage` resource that references an
+`AnalysisTemplate` named `kargo-demo` to validate the `test` `Stage` after any
+successful `Promotion`:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  # ...
+  verification:
+    analysisTemplates:
+    - name: kargo-demo
+```
+
+It is also possible to specify additional labels, annotations, and arguments
+that should be applied to `AnalysisRun` resources spawned from the referenced
+`AnalysisTemplate`:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  # ...
+  verification:
+    analysisTemplates:
+    - name: kargo-demo
+    analysisRunMetadata:
+      labels:
+        foo: bar
+      annotations:
+        bat: baz
+    args:
+    - name: foo
+      value: bar
+```
+
+An `AnalysisTemplate` could be as simple as the following, which merely executes
+a Kubernetes `Job` that is defined inline:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  metrics:
+  - name: test
+    provider:
+      job:
+        metadata:
+        spec:
+          backoffLimit: 1
+          template:
+            spec:
+              containers:
+              - name: test
+                image: alpine:latest
+                command:
+                - sleep
+                - "10"
+              restartPolicy: Never
+```
+
+:::note
+Please consult the
+[relevant sections](https://argoproj.github.io/argo-rollouts/features/analysis/)
+of the Argo Rollouts documentation for comprehensive coverage of the full range
+of `AnalysisTemplate` capabilities.
+:::
+
 #### Status
 
 A `Stage` resource's `status` field records:
+
+* The current phase of the `Stage` resource's lifecycle.
+
+* Information about any in-progress `Promotion`.
 
 * The `Freight` currently deployed to the `Stage`.
 
@@ -218,10 +318,13 @@ A `Stage` resource's `status` field records:
 
 * The health status any any associated Argo CD `Application` resources.
 
+* The status of any in-progress of completed verification processes.
+
 For example:
 
 ```yaml
 status:
+  phase: Steady
   currentFreight:
     id: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
     images:
@@ -230,6 +333,11 @@ status:
     commits:
     - repoURL: https://github.com/example/kargo-demo.git
       id: 1234abc
+    verificationResult:
+      analysisRun:
+        namespace: kargo-demo
+        name: test.ab85b188-0ad5-43d9-a36d-ddcf63666183.47b33c0
+        phase: Successful
   health:
     argoCDApps:
     - healthStatus:
@@ -248,6 +356,11 @@ status:
     commits:
     - repoURL: https://github.com/example/kargo-demo.git
       id: 1234abc
+    verificationResult:
+      analysisRun:
+        namespace: kargo-demo
+        name: test.ab85b188-0ad5-43d9-a36d-ddcf63666183.47b33c0
+        phase: Successful
 ```
 
 ### `Freight` Resources

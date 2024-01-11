@@ -9,6 +9,7 @@ import {
   faEllipsisV,
   faEye,
   faEyeSlash,
+  faPencil,
   faRefresh,
   faTimeline
 } from '@fortawesome/free-solid-svg-icons';
@@ -19,10 +20,11 @@ import { graphlib, layout } from 'dagre';
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
-import { transport } from '@ui/config/transport';
+import { transportWithAuth } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import { getAlias } from '@ui/features/common/freight-label';
+import { useModal } from '@ui/features/common/modal/use-modal';
 import { ConfirmPromotionDialogue } from '@ui/features/freightline/confirm-promotion-dialogue';
 import { FreightContents } from '@ui/features/freightline/freight-contents';
 import { FreightItem, FreightMode } from '@ui/features/freightline/freight-item';
@@ -55,6 +57,7 @@ import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
 import { NodeType, NodesItemType } from './types';
+import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
 const lineThickness = 2;
 const nodeWidth = 150;
@@ -68,9 +71,11 @@ const getSeconds = (ts?: Timestamp): number => Number(ts?.seconds) || 0;
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
   const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
-  const { data: freightData, isLoading: isLoadingFreight } = useQuery(
-    queryFreight.useQuery({ project: name })
-  );
+  const {
+    data: freightData,
+    isLoading: isLoadingFreight,
+    refetch: refetchFreightData
+  } = useQuery(queryFreight.useQuery({ project: name }));
 
   const { data: warehouseData, isLoading: isLoadingWarehouses } = useQuery(
     listWarehouses.useQuery({ project: name })
@@ -91,6 +96,7 @@ export const ProjectDetails = () => {
     onSuccess: () => {
       message.success('Warehouse successfully refreshed');
       setPromotingStage(undefined);
+      refetchFreightData();
     }
   });
 
@@ -100,6 +106,8 @@ export const ProjectDetails = () => {
     false
   );
 
+  const { show } = useModal();
+
   React.useEffect(() => {
     if (!data || !isVisible || !warehouseData) {
       return;
@@ -108,7 +116,7 @@ export const ProjectDetails = () => {
     const cancel = new AbortController();
 
     const watchStages = async () => {
-      const promiseClient = createPromiseClient(KargoService, transport);
+      const promiseClient = createPromiseClient(KargoService, transportWithAuth);
       const stream = promiseClient.watchStages({ project: name }, { signal: cancel.signal });
       let stages = data.stages.slice();
 
@@ -141,7 +149,7 @@ export const ProjectDetails = () => {
     watchStages();
 
     const watchWarehouses = async () => {
-      const promiseClient = createPromiseClient(KargoService, transport);
+      const promiseClient = createPromiseClient(KargoService, transportWithAuth);
       const stream = promiseClient.watchWarehouses({ project: name }, { signal: cancel.signal });
       let warehouses = warehouseData?.warehouses || [];
       const refresh = {} as { [key: string]: boolean };
@@ -527,15 +535,19 @@ export const ProjectDetails = () => {
     return false;
   };
 
-  const onHover = (h: boolean, id: string) => {
+  const onHover = (h: boolean, id: string, isStage?: boolean) => {
     const stages = {} as { [key: string]: boolean };
     if (!h) {
       setHighlightedStages(stages);
       return;
     }
-    (stagesPerFreight[id] || []).forEach((stage) => {
-      stages[stage.metadata?.name || ''] = true;
-    });
+    if (isStage) {
+      stages[id] = true;
+    } else {
+      (stagesPerFreight[id] || []).forEach((stage) => {
+        stages[stage.metadata?.name || ''] = true;
+      });
+    }
     setHighlightedStages(stages);
   };
 
@@ -663,7 +675,28 @@ export const ProjectDetails = () => {
                                   message.success('Copied Freight Alias to clipboard');
                                 }
                               }
-                            : null
+                            : null,
+                          {
+                            key: '4',
+                            label: (
+                              <>
+                                <FontAwesomeIcon icon={faPencil} className='mr-2' /> Change Alias
+                              </>
+                            ),
+                            onClick: async () => {
+                              show((p) => (
+                                <UpdateFreightAliasModal
+                                  {...p}
+                                  freight={f || undefined}
+                                  project={name || ''}
+                                  onSubmit={() => {
+                                    refetchFreightData();
+                                    p.hide();
+                                  }}
+                                />
+                              ));
+                            }
+                          }
                         ]
                       }}
                     >
@@ -777,7 +810,7 @@ export const ProjectDetails = () => {
                                 }
                               : undefined
                           }
-                          onHover={(h) => onHover(h, node.data?.status?.currentFreight?.id || '')}
+                          onHover={(h) => onHover(h, node.data?.metadata?.name || '', true)}
                           approving={!!manuallyApproving}
                           highlighted={highlightedStages[node.data?.metadata?.name || '']}
                         />

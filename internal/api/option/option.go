@@ -21,12 +21,12 @@ func NewHandlerOption(
 ) (connect.HandlerOption, error) {
 	interceptors := []connect.Interceptor{
 		newLogInterceptor(logging.LoggerFromContext(ctx), loggingIgnorableMethods),
+		newErrorInterceptor(),
 	}
 	if !cfg.LocalMode {
 		authInterceptor, err := newAuthInterceptor(ctx, cfg, internalClient)
 		if err != nil {
-			return nil,
-				errors.Wrap(err, "error initializing authentication interceptor")
+			return nil, errors.Wrap(err, "initialize authentication interceptor")
 		}
 		interceptors = append(interceptors, authInterceptor)
 	}

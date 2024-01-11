@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -27,7 +27,7 @@ func TestStarVerification(t *testing.T) {
 			name: "error listing AnalysisRuns",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -51,7 +51,7 @@ func TestStarVerification(t *testing.T) {
 			name: "Analysis run already exists",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -81,7 +81,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -117,7 +117,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -153,7 +153,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -195,7 +195,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -244,7 +244,7 @@ func TestStarVerification(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						ID: "fake-id",
 					},
 				},
@@ -321,7 +321,7 @@ func TestGetVerificationInfo(t *testing.T) {
 			name: "error getting AnalysisRun",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							AnalysisRun: kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
@@ -350,7 +350,7 @@ func TestGetVerificationInfo(t *testing.T) {
 			name: "AnalysisRun not found",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							AnalysisRun: kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
@@ -379,7 +379,7 @@ func TestGetVerificationInfo(t *testing.T) {
 			name: "success",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.SimpleFreight{
+					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
 							AnalysisRun: kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
@@ -458,7 +458,7 @@ func TestFlattenTemplates(t *testing.T) {
 		orig := &rollouts.AnalysisTemplate{
 			Spec: rollouts.AnalysisTemplateSpec{
 				Metrics: []rollouts.Metric{metric("foo", "{{args.test}}")},
-				Args:    []rollouts.Argument{arg("test", pointer.String("true"))},
+				Args:    []rollouts.Argument{arg("test", ptr.To("true"))},
 			},
 		}
 		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{orig})
@@ -619,8 +619,8 @@ func TestFlattenTemplates(t *testing.T) {
 		require.Equal(t, err, fmt.Errorf("two Measurement Retention metric rules have the same name 'foo'"))
 	})
 	t.Run("Merge multiple args successfully", func(t *testing.T) {
-		fooArgs := arg("foo", pointer.String("true"))
-		barArgs := arg("bar", pointer.String("true"))
+		fooArgs := arg("foo", ptr.To("true"))
+		barArgs := arg("bar", ptr.To("true"))
 		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{
 			{
 				Spec: rollouts.AnalysisTemplateSpec{
@@ -640,7 +640,7 @@ func TestFlattenTemplates(t *testing.T) {
 		require.Equal(t, barArgs, template.Spec.Args[1])
 	})
 	t.Run(" Merge args with same name but only one has value", func(t *testing.T) {
-		fooArgsValue := arg("foo", pointer.String("true"))
+		fooArgsValue := arg("foo", ptr.To("true"))
 		fooArgsNoValue := arg("foo", nil)
 		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{
 			{
@@ -660,8 +660,8 @@ func TestFlattenTemplates(t *testing.T) {
 		require.Contains(t, template.Spec.Args, fooArgsValue)
 	})
 	t.Run("Error: merge args with same name and both have values", func(t *testing.T) {
-		fooArgs := arg("foo", pointer.String("true"))
-		fooArgsWithDiffValue := arg("foo", pointer.String("false"))
+		fooArgs := arg("foo", ptr.To("true"))
+		fooArgsWithDiffValue := arg("foo", ptr.To("false"))
 		template, err := flattenTemplates([]*rollouts.AnalysisTemplate{
 			{
 				Spec: rollouts.AnalysisTemplateSpec{
@@ -699,7 +699,7 @@ func TestMergeArgs(t *testing.T) {
 			nil, []rollouts.Argument{
 				{
 					Name:  "foo",
-					Value: pointer.String("bar"),
+					Value: ptr.To("bar"),
 				},
 				{
 					Name: "my-secret",
@@ -724,12 +724,12 @@ func TestMergeArgs(t *testing.T) {
 			[]rollouts.Argument{
 				{
 					Name:  "foo",
-					Value: pointer.String("overwrite"),
+					Value: ptr.To("overwrite"),
 				},
 			}, []rollouts.Argument{
 				{
 					Name:  "foo",
-					Value: pointer.String("bar"),
+					Value: ptr.To("bar"),
 				},
 			})
 		require.NoError(t, err)
@@ -758,11 +758,11 @@ func TestMergeArgs(t *testing.T) {
 			[]rollouts.Argument{
 				{
 					Name:  "foo",
-					Value: pointer.String("my-value"),
+					Value: ptr.To("my-value"),
 				},
 				{
 					Name:  "extra-arg",
-					Value: pointer.String("extra-value"),
+					Value: ptr.To("extra-value"),
 				},
 			}, []rollouts.Argument{
 				{

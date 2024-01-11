@@ -3,17 +3,21 @@ package stage
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
-func NewCommand(opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stage",
 		Short: "Manage stages",
 	}
-	cmd.AddCommand(newPromoteCommand(opt))
-	cmd.AddCommand(newEnableAutoPromotion(opt))
-	cmd.AddCommand(newDisableAutoPromotion(opt))
-	cmd.AddCommand(newPromoteSubscribersCommand(opt))
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
+
+	cmd.AddCommand(newPromoteCommand(cfg, opt))
+	cmd.AddCommand(newEnableAutoPromotion(cfg, opt))
+	cmd.AddCommand(newDisableAutoPromotion(cfg, opt))
+	cmd.AddCommand(newPromoteSubscribersCommand(cfg, opt))
 	return cmd
 }

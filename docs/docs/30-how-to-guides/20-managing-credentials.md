@@ -33,12 +33,15 @@ stringData:
 ```
 
 The `name` of such a secret is inconsequential and may follow any convention
-preferred by the user. The `namespace` of such a secret MUST match the namespace
-of the Kargo `Stage` resources that will use it.
+preferred by the user.
 
 :::info
 Kargo uses Kubernetes namespaces to demarcate project boundaries, so related
 `Stage` resources always share a namespace.
+
+Secrets representing credentials will typically exist in the same namespace as
+the `Stage` resources that will require them. There are exceptions to this rule,
+which are covered in the next section.
 :::
 
 The label key `kargo.akuity.io/secret-type` and its value, one of `repository`
@@ -67,6 +70,22 @@ field), MUST contain the following keys:
 :::caution
 Only username/password (or personal access token) authentication is
 fully-supported at this time.
+:::
+
+## Global Credentials
+
+In cases where one or more sets of credentials are needed widely across _all_
+Kargo projects, the administrator/operator installing Kargo may opt-in to
+designating one or more namespaces as homes for "global" credentials using the
+`controller.globalCredentials.namespaces` setting in Kargo's Helm chart.
+Refer to
+[the advanced section of the installation guide](./10-installing-kargo.md#advanced-installation)
+for more details.
+
+:::caution
+It is important to understand the security implications of this feature. Any
+credentials stored in a global credentials namespace will be available to _all_
+Kargo projects.
 :::
 
 ## Borrowing Credentials from Argo CD

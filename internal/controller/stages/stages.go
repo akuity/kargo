@@ -54,7 +54,7 @@ type reconciler struct {
 
 	checkHealthFn func(
 		context.Context,
-		kargoapi.SimpleFreight,
+		kargoapi.FreightReference,
 		[]kargoapi.ArgoCDAppUpdate,
 	) *kargoapi.Health
 
@@ -280,9 +280,21 @@ func SetupReconcilerWithManager(
 
 	logger := logging.LoggerFromContext(ctx)
 	// Watch Promotions that completed and enqueue owning Stage key
-	promoOwnerHandler := &handler.EnqueueRequestForOwner{OwnerType: &kargoapi.Stage{}, IsController: true}
+	promoOwnerHandler := handler.EnqueueRequestForOwner(
+		kargoMgr.GetScheme(),
+		kargoMgr.GetRESTMapper(),
+		&kargoapi.Stage{},
+		handler.OnlyControllerOwner(),
+	)
 	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
-	if err := c.Watch(&source.Kind{Type: &kargoapi.Promotion{}}, promoOwnerHandler, promoWentTerminal); err != nil {
+	if err := c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Promotion{},
+		),
+		promoOwnerHandler,
+		promoWentTerminal,
+	); err != nil {
 		return errors.Wrap(err, "unable to watch Promotions")
 	}
 
@@ -290,25 +302,40 @@ func SetupReconcilerWithManager(
 	// downstream Stages
 	verifiedFreightHandler := &verifiedFreightEventHandler{
 		kargoClient: kargoMgr.GetClient(),
-		logger:      logger,
 	}
-	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, verifiedFreightHandler); err != nil {
+	if err := c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Freight{},
+		),
+		verifiedFreightHandler,
+	); err != nil {
 		return errors.Wrap(err, "unable to watch Freight")
 	}
 
 	approveFreightHandler := &approvedFreightEventHandler{
 		kargoClient: kargoMgr.GetClient(),
-		logger:      logger,
 	}
-	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, approveFreightHandler); err != nil {
+	if err := c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Freight{},
+		),
+		approveFreightHandler,
+	); err != nil {
 		return errors.Wrap(err, "unable to watch Freight")
 	}
 
 	createdFreightEventHandler := &createdFreightEventHandler{
 		kargoClient: kargoMgr.GetClient(),
-		logger:      logger,
 	}
-	if err := c.Watch(&source.Kind{Type: &kargoapi.Freight{}}, createdFreightEventHandler); err != nil {
+	if err := c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Freight{},
+		),
+		createdFreightEventHandler,
+	); err != nil {
 		return errors.Wrap(err, "unable to watch Freight")
 	}
 
@@ -573,6 +600,13 @@ func (r *reconciler) syncNormalStage(
 				Debug("Stage health assessed")
 		} else {
 			freightLogger.Debug("Stage health deemed not applicable")
+		}
+
+		// If the Stage is healthy and no verification process is defined, then the
+		// Stage should transition to the Steady phase.
+		if (status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy) &&
+			stage.Spec.Verification == nil && status.Phase == kargoapi.StagePhaseVerifying {
+			status.Phase = kargoapi.StagePhaseSteady
 		}
 
 		// Initiate or follow-up on verification if required

@@ -93,12 +93,11 @@ func TestValidateCreate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.webhook.ValidateCreate(
-					context.Background(),
-					&kargoapi.PromotionPolicy{},
-				),
+			_, err := testCase.webhook.ValidateCreate(
+				context.Background(),
+				&kargoapi.PromotionPolicy{},
 			)
+			testCase.assertions(err)
 		})
 	}
 }
@@ -141,24 +140,20 @@ func TestValidateUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.webhook.ValidateUpdate(
-					context.Background(),
-					&kargoapi.PromotionPolicy{},
-					&kargoapi.PromotionPolicy{},
-				),
+			_, err := testCase.webhook.ValidateUpdate(
+				context.Background(),
+				&kargoapi.PromotionPolicy{},
+				&kargoapi.PromotionPolicy{},
 			)
+			testCase.assertions(err)
 		})
 	}
 }
 
 func TestValidateDelete(t *testing.T) {
 	w := &webhook{}
-	require.NoError(
-		t,
-		w.ValidateDelete(context.Background(),
-			&kargoapi.Promotion{}),
-	)
+	_, err := w.ValidateDelete(context.Background(), &kargoapi.Promotion{})
+	require.NoError(t, err)
 }
 
 func TestValidateStageUniqueness(t *testing.T) {

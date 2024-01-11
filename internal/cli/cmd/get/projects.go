@@ -11,11 +11,15 @@ import (
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newGetProjectsCommand(opt *option.Option) *cobra.Command {
+func newGetProjectsCommand(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "projects [NAME...]",
 		Aliases: []string{"project"},
@@ -30,9 +34,9 @@ kargo get projects -o json
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
-				return errors.New("get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 			resp, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
 			if err != nil {

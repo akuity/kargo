@@ -79,7 +79,14 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     url.searchParams.set('code_challenge_method', 'S256');
     url.searchParams.set('redirect_uri', redirectURI);
     url.searchParams.set('response_type', 'code');
-    url.searchParams.set('scope', oidcConfig.scopes.join(' '));
+    url.searchParams.set(
+      'scope',
+      [
+        ...oidcConfig.scopes,
+        // Add offline_access scope if it does not exist
+        ...(oidcConfig.scopes.includes('offline_access') ? [] : ['offline_access'])
+      ].join(' ')
+    );
 
     window.location.replace(url.toString());
   };
@@ -134,7 +141,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         return;
       }
 
-      onLogin(result.id_token);
+      onLogin(result.id_token, result.refresh_token);
     })();
   }, [as, client, location]);
 

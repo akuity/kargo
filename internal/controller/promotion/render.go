@@ -21,8 +21,8 @@ type kargoRenderMechanism struct {
 		ctx context.Context,
 		promo *kargoapi.Promotion,
 		update kargoapi.GitRepoUpdate,
-		newFreight kargoapi.SimpleFreight,
-	) (kargoapi.SimpleFreight, error)
+		newFreight kargoapi.FreightReference,
+	) (kargoapi.FreightReference, error)
 	getReadRefFn func(
 		update kargoapi.GitRepoUpdate,
 		commits []kargoapi.GitCommit,
@@ -60,8 +60,8 @@ func (b *kargoRenderMechanism) Promote(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 	promo *kargoapi.Promotion,
-	newFreight kargoapi.SimpleFreight,
-) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+	newFreight kargoapi.FreightReference,
+) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
 	updates := make([]kargoapi.GitRepoUpdate, 0, len(stage.Spec.PromotionMechanisms.GitRepoUpdates))
 	for _, update := range stage.Spec.PromotionMechanisms.GitRepoUpdates {
 		if update.Render != nil {
@@ -101,8 +101,8 @@ func (b *kargoRenderMechanism) doSingleUpdate(
 	ctx context.Context,
 	promo *kargoapi.Promotion,
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.SimpleFreight,
-) (kargoapi.SimpleFreight, error) {
+	newFreight kargoapi.FreightReference,
+) (kargoapi.FreightReference, error) {
 	logger := logging.LoggerFromContext(ctx).WithField("repo", update.RepoURL)
 
 	readRef, commitIndex, err := b.getReadRefFn(update, newFreight.Commits)

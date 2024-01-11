@@ -15,7 +15,7 @@ import (
 func TestCheckHealth(t *testing.T) {
 	testCases := []struct {
 		name             string
-		freight          kargoapi.SimpleFreight
+		freight          kargoapi.FreightReference
 		argoCDAppUpdates []kargoapi.ArgoCDAppUpdate
 		getArgoCDAppFn   func(
 			context.Context,
@@ -234,7 +234,7 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App not synced",
-			freight: kargoapi.SimpleFreight{
+			freight: kargoapi.FreightReference{
 				Commits: []kargoapi.GitCommit{
 					{
 						RepoURL: "fake-url",
@@ -297,7 +297,7 @@ func TestCheckHealth(t *testing.T) {
 
 		{
 			name: "Argo CD App healthy and synced",
-			freight: kargoapi.SimpleFreight{
+			freight: kargoapi.FreightReference{
 				Commits: []kargoapi.GitCommit{
 					{
 						RepoURL: "fake-url",

@@ -6,13 +6,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/printers"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
-func NewCommand(opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get (RESOURCE) [NAME]...",
 		Short: "Display one or many resources",
@@ -27,12 +28,15 @@ kargo get stages --project=my-project
 kargo get promotions --project=my-project --stage=my-stage
 `,
 	}
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
+
 	// Subcommands
-	cmd.AddCommand(newGetFreightCommand(opt))
-	cmd.AddCommand(newGetProjectsCommand(opt))
-	cmd.AddCommand(newGetPromotionsCommand(opt))
-	cmd.AddCommand(newGetStagesCommand(opt))
-	cmd.AddCommand(newGetWarehousesCommand(opt))
+	cmd.AddCommand(newGetFreightCommand(cfg, opt))
+	cmd.AddCommand(newGetProjectsCommand(cfg, opt))
+	cmd.AddCommand(newGetPromotionsCommand(cfg, opt))
+	cmd.AddCommand(newGetStagesCommand(cfg, opt))
+	cmd.AddCommand(newGetWarehousesCommand(cfg, opt))
 	return cmd
 }
 
@@ -49,7 +53,7 @@ func printObjects[T runtime.Object](opt *option.Option, objects []T) error {
 		Items: items,
 	}
 
-	if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") != "" {
+	if ptr.Deref(opt.PrintFlags.OutputFormat, "") != "" {
 		printer, err := opt.PrintFlags.ToPrinter()
 		if err != nil {
 			return errors.Wrap(err, "new printer")

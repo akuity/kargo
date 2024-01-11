@@ -9,7 +9,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -51,6 +54,14 @@ func newControllerCommand() *cobra.Command {
 
 			var kargoMgr manager.Manager
 			{
+				// If the env var is undefined, this will resolve to kubeconfig for the
+				// cluster the controller is running in.
+				//
+				// It is typically defined if this controller is running somewhere other
+				// than where the Kargo resources live. One example of this would be a
+				// sharded topology wherein Kargo controllers run on application
+				// clusters, with Kargo resources hosted in a centralized management
+				// cluster.
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
@@ -84,8 +95,10 @@ func newControllerCommand() *cobra.Command {
 				if kargoMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
-						Scheme:             scheme,
-						MetricsBindAddress: "0",
+						Scheme: scheme,
+						Metrics: server.Options{
+							BindAddress: "0",
+						},
 					},
 				); err != nil {
 					return errors.Wrap(err, "error initializing Kargo controller manager")
@@ -94,6 +107,14 @@ func newControllerCommand() *cobra.Command {
 
 			var argocdMgr manager.Manager
 			{
+				// If the env var is undefined, this will resolve to kubeconfig for the
+				// cluster the controller is running in.
+				//
+				// It is typically defined if this controller is running somewhere other
+				// than where the Argo CD resources live. Two examples of this would
+				// involve topologies wherein Kargo controllers run EITHER sharded
+				// across application clusters OR in a centralized management cluster,
+				// but with Argo CD deployed to a different management cluster.
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
 				if err != nil {
@@ -119,18 +140,25 @@ func newControllerCommand() *cobra.Command {
 					)
 				}
 
-				var watchNamespace string // Empty string means all namespaces
+				cacheOpts := cache.Options{} // Watches all namespaces by default
 				if types.MustParseBool(
 					os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"),
 				) {
-					watchNamespace = os.GetEnv("ARGOCD_NAMESPACE", "argocd")
+					watchNamespace := os.GetEnv("ARGOCD_NAMESPACE", "argocd")
+					if watchNamespace != "" {
+						cacheOpts.DefaultNamespaces = map[string]cache.Config{
+							watchNamespace: {},
+						}
+					}
 				}
 				if argocdMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
-						Scheme:             scheme,
-						MetricsBindAddress: "0",
-						Namespace:          watchNamespace,
+						Scheme: scheme,
+						Metrics: server.Options{
+							BindAddress: "0",
+						},
+						Cache: cacheOpts,
 					},
 				); err != nil {
 					return errors.Wrap(
@@ -142,8 +170,16 @@ func newControllerCommand() *cobra.Command {
 
 			var rolloutsMgr manager.Manager
 			{
+				// If the env var is undefined, this will resolve to kubeconfig for the
+				// cluster the controller is running in.
+				//
+				// It is typically defined if this controller is running somewhere other
+				// than a cluster suitable for executing Argo Rollouts AnalysesRuns and
+				// user-defined workloads. An example of this would be a a topology
+				// wherein the Kargo and Argo CD controllers both run in management
+				// clusters, that are a not suitable for for this purpose.
 				restCfg, err :=
-					kubernetes.GetRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
+					kubernetes.GetRestConfig(ctx, os.GetEnv("ROLLOUTS_KUBECONFIG", ""))
 				if err != nil {
 					return errors.Wrap(
 						err,
@@ -161,7 +197,7 @@ func newControllerCommand() *cobra.Command {
 					)
 				}
 
-				var watchNamespace string // Empty string means all namespaces
+				cacheOpts := cache.Options{} // Watches all namespaces by default
 				if shardName != "" {
 					// TODO: When NOT sharded, Kargo can simply create AnalysisRun
 					// resources in the project namespaces. When sharded, AnalysisRun
@@ -172,17 +208,22 @@ func newControllerCommand() *cobra.Command {
 					// this purpose. Note that the namespace does not need to be the same
 					// on every shard. This may be one of the weaker points in our tenancy
 					// model and can stand to be improved.
-					watchNamespace = os.GetEnv(
+					watchNamespace := os.GetEnv(
 						"ARGO_ROLLOUTS_ANALYSIS_RUNS_NAMESPACE",
 						"kargo-analysis-runs",
 					)
+					cacheOpts.DefaultNamespaces = map[string]cache.Config{
+						watchNamespace: {},
+					}
 				}
 				if rolloutsMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
-						Scheme:             scheme,
-						MetricsBindAddress: "0",
-						Namespace:          watchNamespace,
+						Scheme: scheme,
+						Metrics: server.Options{
+							BindAddress: "0",
+						},
+						Cache: cacheOpts,
 					},
 				); err != nil {
 					return errors.Wrap(
@@ -192,15 +233,16 @@ func newControllerCommand() *cobra.Command {
 				}
 			}
 
-			credentialsDbOpts := make([]credentials.KubernetesDatabaseOption, 0, 1)
+			var argoClientForCreds client.Client
 			if types.MustParseBool(
 				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
 			) {
-				credentialsDbOpts = append(credentialsDbOpts, credentials.WithArgoClient(argocdMgr.GetClient()))
+				argoClientForCreds = argocdMgr.GetClient()
 			}
 			credentialsDB := credentials.NewKubernetesDatabase(
 				kargoMgr.GetClient(),
-				credentialsDbOpts...,
+				argoClientForCreds,
+				credentials.KubernetesDatabaseConfigFromEnv(),
 			)
 
 			if err := analysis.SetupReconcilerWithManager(

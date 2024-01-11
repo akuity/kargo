@@ -1,9 +1,18 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/pkg/errors"
+)
 
 type ErrConfigNotFound struct {
 	Path string
+}
+
+func IsConfigNotFoundErr(target error) bool {
+	var err *ErrConfigNotFound
+	return errors.As(target, &err)
 }
 
 func NewConfigNotFoundErr(path string) error {

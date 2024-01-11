@@ -63,7 +63,7 @@ type helmer struct {
 // directory.
 func (h *helmer) apply(
 	update kargoapi.GitRepoUpdate,
-	newFreight kargoapi.SimpleFreight,
+	newFreight kargoapi.FreightReference,
 	homeDir string,
 	workingDir string,
 ) ([]string, error) {
@@ -157,7 +157,7 @@ func buildValuesFilesChanges(
 				fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 		case kargoapi.ImageUpdateValueTypeTag:
-			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = tag
+			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] = "'" + tag + "'"
 			fqImageRef = fmt.Sprintf("%s:%s", imageUpdate.Image, tag)
 		case kargoapi.ImageUpdateValueTypeImageAndDigest:
 			changesByFile[imageUpdate.ValuesFilePath][imageUpdate.Key] =

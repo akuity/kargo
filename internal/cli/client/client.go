@@ -17,20 +17,25 @@ import (
 // the address specified in local configuration, using credentials also
 // specified in local configuration UNLESS the specified options indicates that
 // the local server should be used instead.
-func GetClientFromConfig(ctx context.Context, opt *option.Option) (
+func GetClientFromConfig(
+	ctx context.Context,
+	cfg config.CLIConfig,
+	opt *option.Option,
+) (
 	svcv1alpha1connect.KargoServiceClient,
 	error,
 ) {
 	if opt.UseLocalServer {
 		return GetClient(opt.LocalServerAddress, "", opt.InsecureTLS), nil
 	}
-	cfg, err := config.LoadCLIConfig()
-	if err != nil {
-		return nil, err
+	if cfg.APIAddress == "" || cfg.BearerToken == "" {
+		return nil, errors.New(
+			"seems like you are not logged in; please use `kargo login` to authenticate",
+		)
 	}
 	skipTLSVerify := opt.InsecureTLS || cfg.InsecureSkipTLSVerify
-	if cfg, err =
-		newTokenRefresher().refreshToken(ctx, cfg, skipTLSVerify); err != nil {
+	cfg, err := newTokenRefresher().refreshToken(ctx, cfg, skipTLSVerify)
+	if err != nil {
 		return nil, errors.Wrap(err, "error refreshing token")
 	}
 	return GetClient(cfg.APIAddress, cfg.BearerToken, skipTLSVerify), nil

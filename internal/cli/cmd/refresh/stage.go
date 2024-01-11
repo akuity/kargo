@@ -8,21 +8,25 @@ import (
 	"github.com/spf13/cobra"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
-func newRefreshStageCommand(opt *option.Option) *cobra.Command {
-	var flag Flags
+func newRefreshStageCommand(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
+	var wait bool
 	cmd := &cobra.Command{
 		Use:     "stage (STAGE)",
 		Args:    option.ExactArgs(1),
 		Example: "kargo refresh stage --project=guestbook (STAGE)",
-		RunE:    refreshObject(opt, &flag, "stage"),
+		RunE:    refreshObject(cfg, opt, "stage", wait),
 	}
-	addRefreshFlags(cmd, &flag)
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Wait(cmd.Flags(), &wait)
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }
 

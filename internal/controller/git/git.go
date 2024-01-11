@@ -97,10 +97,11 @@ type Repo interface {
 // repo is an implementation of the Repo interface for interacting with a git
 // repository.
 type repo struct {
-	url           string
-	homeDir       string
-	dir           string
-	currentBranch string
+	url                   string
+	homeDir               string
+	dir                   string
+	currentBranch         string
+	insecureSkipTLSVerify bool
 }
 
 // CloneOptions represents options for cloning a git repository.
@@ -114,6 +115,10 @@ type CloneOptions struct {
 	// useful for speeding up the cloning process when all we care about is the
 	// latest commit from a single branch.
 	Shallow bool
+	// InsecureSkipTLSVerify specifies whether certificate verification errors
+	// should be ignored when cloning the repository. The setting will be
+	// remembered for subsequent interactions with the remote repository.
+	InsecureSkipTLSVerify bool
 }
 
 // Clone produces a local clone of the remote git repository at the specified
@@ -135,9 +140,10 @@ func Clone(
 		)
 	}
 	r := &repo{
-		url:     repoURL,
-		homeDir: homeDir,
-		dir:     filepath.Join(homeDir, "repo"),
+		url:                   repoURL,
+		homeDir:               homeDir,
+		dir:                   filepath.Join(homeDir, "repo"),
+		insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 	}
 	if err = r.setupAuth(repoCreds); err != nil {
 		return nil, err
@@ -517,6 +523,9 @@ func (r *repo) buildCommand(arg ...string) *exec.Cmd {
 		cmd.Env = []string{homeEnvVar}
 	} else {
 		cmd.Env = append(cmd.Env, homeEnvVar)
+	}
+	if r.insecureSkipTLSVerify {
+		cmd.Env = append(cmd.Env, "GIT_SSL_NO_VERIFY=true")
 	}
 	cmd.Dir = r.dir
 	return cmd

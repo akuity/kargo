@@ -252,7 +252,7 @@ func TestHelmerApply(t *testing.T) {
 					kargoapi.GitRepoUpdate{
 						Helm: &kargoapi.HelmPromotionMechanism{},
 					},
-					kargoapi.SimpleFreight{}, // The way the tests are structured, this value doesn't matter
+					kargoapi.FreightReference{}, // The way the tests are structured, this value doesn't matter
 					"",
 					"",
 				),
@@ -322,7 +322,7 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 		map[string]map[string]string{
 			"fake-values.yaml": {
 				"fake-key":        "fake-url:fake-tag",
-				"second-fake-key": "second-fake-tag",
+				"second-fake-key": "'second-fake-tag'",
 			},
 			"another-fake-values.yaml": {
 				"third-fake-key":  "third-fake-url@third-fake-digest",

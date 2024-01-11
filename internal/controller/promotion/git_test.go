@@ -26,7 +26,7 @@ func TestNewGitMechanism(t *testing.T) {
 		},
 		func(
 			update kargoapi.GitRepoUpdate,
-			newFreight kargoapi.SimpleFreight,
+			newFreight kargoapi.FreightReference,
 			homeDir string,
 			workingDir string,
 		) ([]string, error) {
@@ -56,8 +56,8 @@ func TestGitPromote(t *testing.T) {
 		promoMech  *gitMechanism
 		assertions func(
 			status *kargoapi.PromotionStatus,
-			newFreightIn kargoapi.SimpleFreight,
-			newFreightOut kargoapi.SimpleFreight,
+			newFreightIn kargoapi.FreightReference,
+			newFreightOut kargoapi.FreightReference,
 			err error,
 		)
 	}{
@@ -70,8 +70,8 @@ func TestGitPromote(t *testing.T) {
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -88,15 +88,15 @@ func TestGitPromote(t *testing.T) {
 					_ context.Context,
 					_ *kargoapi.Promotion,
 					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.SimpleFreight,
-				) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+					newFreight kargoapi.FreightReference,
+				) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
 					return nil, newFreight, errors.New("something went wrong")
 				},
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -114,15 +114,15 @@ func TestGitPromote(t *testing.T) {
 					_ context.Context,
 					_ *kargoapi.Promotion,
 					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.SimpleFreight,
-				) (*kargoapi.PromotionStatus, kargoapi.SimpleFreight, error) {
+					newFreight kargoapi.FreightReference,
+				) (*kargoapi.PromotionStatus, kargoapi.FreightReference, error) {
 					return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, newFreight, nil
 				},
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -132,7 +132,7 @@ func TestGitPromote(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightIn := kargoapi.SimpleFreight{}
+			newFreightIn := kargoapi.FreightReference{}
 			status, newFreightOut, err := testCase.promoMech.Promote(
 				context.Background(),
 				&kargoapi.Stage{
@@ -155,8 +155,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 		promoMech  *gitMechanism
 		assertions func(
 			status *kargoapi.PromotionStatus,
-			newFreightIn kargoapi.SimpleFreight,
-			newFreightOut kargoapi.SimpleFreight,
+			newFreightIn kargoapi.FreightReference,
+			newFreightOut kargoapi.FreightReference,
 			err error,
 		)
 	}{
@@ -172,8 +172,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -200,8 +200,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -227,7 +227,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 				gitCommitFn: func(
 					update kargoapi.GitRepoUpdate,
-					newFreight kargoapi.SimpleFreight,
+					newFreight kargoapi.FreightReference,
 					readRef string,
 					writeBranch string,
 					repo git.Repo,
@@ -237,8 +237,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -264,7 +264,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 				gitCommitFn: func(
 					update kargoapi.GitRepoUpdate,
-					newFreight kargoapi.SimpleFreight,
+					newFreight kargoapi.FreightReference,
 					readRef string,
 					writeBranch string,
 					repo git.Repo,
@@ -274,8 +274,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 			},
 			assertions: func(
 				status *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.SimpleFreight,
-				newFreightOut kargoapi.SimpleFreight,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -292,7 +292,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newFreightIn := kargoapi.SimpleFreight{
+			newFreightIn := kargoapi.FreightReference{
 				Commits: []kargoapi.GitCommit{{}},
 			}
 			status, newFreightOut, err := testCase.promoMech.doSingleUpdate(

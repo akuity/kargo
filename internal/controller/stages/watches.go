@@ -13,18 +13,19 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // verifiedFreightEventHandler is an event handler that enqueues downstream
 // Stages when Freight is marked as verified in a Stage, so that those Stages
 // can reconcile and possibly create a Promotion if auto-promotion is enabled.
 type verifiedFreightEventHandler struct {
-	logger      *log.Entry
 	kargoClient client.Client
 }
 
 // Create implements EventHandler.
 func (v *verifiedFreightEventHandler) Create(
+	context.Context,
 	event.CreateEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -33,6 +34,7 @@ func (v *verifiedFreightEventHandler) Create(
 
 // Delete implements EventHandler.
 func (v *verifiedFreightEventHandler) Delete(
+	context.Context,
 	event.DeleteEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -41,6 +43,7 @@ func (v *verifiedFreightEventHandler) Delete(
 
 // Generic implements EventHandler.
 func (v *verifiedFreightEventHandler) Generic(
+	context.Context,
 	event.GenericEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -49,21 +52,23 @@ func (v *verifiedFreightEventHandler) Generic(
 
 // Update implements EventHandler.
 func (v *verifiedFreightEventHandler) Update(
+	ctx context.Context,
 	evt event.UpdateEvent,
 	wq workqueue.RateLimitingInterface,
 ) {
+	logger := logging.LoggerFromContext(ctx)
 	if evt.ObjectOld == nil || evt.ObjectNew == nil {
-		v.logger.Errorf("Update event has no old or new object to update: %v", evt)
+		logger.Errorf("Update event has no old or new object to update: %v", evt)
 		return
 	}
 	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
 	if !ok {
-		v.logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
+		logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
 		return
 	}
 	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
 	if !ok {
-		v.logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
+		logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
 		return
 	}
 	newlyVerifiedStages := getNewlyVerifiedStages(oldFreight, newFreight)
@@ -71,7 +76,7 @@ func (v *verifiedFreightEventHandler) Update(
 	for _, newlyVerifiedStage := range newlyVerifiedStages {
 		stages := kargoapi.StageList{}
 		if err := v.kargoClient.List(
-			context.TODO(),
+			ctx,
 			&stages,
 			&client.ListOptions{
 				Namespace: newFreight.Namespace,
@@ -81,7 +86,7 @@ func (v *verifiedFreightEventHandler) Update(
 				),
 			},
 		); err != nil {
-			v.logger.Errorf(
+			logger.Errorf(
 				"Failed list Stages downstream from Stage %v in namespace %q",
 				evt.ObjectOld,
 				newFreight.Namespace,
@@ -101,7 +106,7 @@ func (v *verifiedFreightEventHandler) Update(
 				},
 			},
 		)
-		v.logger.WithFields(log.Fields{
+		logger.WithFields(log.Fields{
 			"namespace": newFreight.Namespace,
 			"stage":     downStreamStage,
 		}).Debug("enqueued downstream Stage for reconciliation")
@@ -122,12 +127,12 @@ func getNewlyVerifiedStages(old, new *kargoapi.Freight) []string {
 // Freight is marked as approved for them, so that those Stages can reconcile
 // and possibly create a Promotion if auto-promotion is enabled.
 type approvedFreightEventHandler struct {
-	logger      *log.Entry
 	kargoClient client.Client
 }
 
 // Create implements EventHandler.
 func (a *approvedFreightEventHandler) Create(
+	context.Context,
 	event.CreateEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -136,6 +141,7 @@ func (a *approvedFreightEventHandler) Create(
 
 // Delete implements EventHandler.
 func (a *approvedFreightEventHandler) Delete(
+	context.Context,
 	event.DeleteEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -144,6 +150,7 @@ func (a *approvedFreightEventHandler) Delete(
 
 // Generic implements EventHandler.
 func (a *approvedFreightEventHandler) Generic(
+	context.Context,
 	event.GenericEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -152,21 +159,23 @@ func (a *approvedFreightEventHandler) Generic(
 
 // Update implements EventHandler.
 func (a *approvedFreightEventHandler) Update(
+	ctx context.Context,
 	evt event.UpdateEvent,
 	wq workqueue.RateLimitingInterface,
 ) {
+	logger := logging.LoggerFromContext(ctx)
 	if evt.ObjectOld == nil || evt.ObjectNew == nil {
-		a.logger.Errorf("Update event has no old or new object to update: %v", evt)
+		logger.Errorf("Update event has no old or new object to update: %v", evt)
 		return
 	}
 	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
 	if !ok {
-		a.logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
+		logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
 		return
 	}
 	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
 	if !ok {
-		a.logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
+		logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
 		return
 	}
 	newlyApprovedStages := getNewlyApprovedStages(oldFreight, newFreight)
@@ -179,7 +188,7 @@ func (a *approvedFreightEventHandler) Update(
 				},
 			},
 		)
-		a.logger.WithFields(log.Fields{
+		logger.WithFields(log.Fields{
 			"namespace": newFreight.Namespace,
 			"stage":     stage,
 		}).Debug("enqueued Stage fir reconciliation")
@@ -201,19 +210,20 @@ func getNewlyApprovedStages(old, new *kargoapi.Freight) []string {
 // those Stages can reconcile and possibly create a Promotion if auto-promotion
 // is enabled.
 type createdFreightEventHandler struct {
-	logger      *log.Entry
 	kargoClient client.Client
 }
 
 // Create implements EventHandler.
 func (c *createdFreightEventHandler) Create(
+	ctx context.Context,
 	evt event.CreateEvent,
 	wq workqueue.RateLimitingInterface,
 ) {
+	logger := logging.LoggerFromContext(ctx)
 	freight := evt.Object.(*kargoapi.Freight) // nolint: forcetypeassert
 	// TODO: Get warehouse name freight.OwnerReferences
 	if len(freight.OwnerReferences) != 1 {
-		c.logger.Warnf(
+		logger.Warnf(
 			"Expected Freight %q to have exactly 1 OwnerReference, got %d",
 			freight.Name,
 			len(freight.OwnerReferences),
@@ -223,7 +233,7 @@ func (c *createdFreightEventHandler) Create(
 	warehouse := freight.OwnerReferences[0].Name
 	stages := kargoapi.StageList{}
 	if err := c.kargoClient.List(
-		context.TODO(),
+		ctx,
 		&stages,
 		&client.ListOptions{
 			Namespace: freight.Namespace,
@@ -233,7 +243,7 @@ func (c *createdFreightEventHandler) Create(
 			),
 		},
 	); err != nil {
-		c.logger.Errorf(
+		logger.Errorf(
 			"Failed list Stages subscribed to Warehouse %q in namespace %q",
 			warehouse,
 			freight.Namespace,
@@ -249,7 +259,7 @@ func (c *createdFreightEventHandler) Create(
 				},
 			},
 		)
-		c.logger.WithFields(log.Fields{
+		logger.WithFields(log.Fields{
 			"namespace": freight.Namespace,
 			"stage":     stage.Name,
 		}).Debug("enqueued Stage for reconciliation")
@@ -258,6 +268,7 @@ func (c *createdFreightEventHandler) Create(
 
 // Delete implements EventHandler.
 func (c *createdFreightEventHandler) Delete(
+	context.Context,
 	event.DeleteEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -266,6 +277,7 @@ func (c *createdFreightEventHandler) Delete(
 
 // Generic implements EventHandler.
 func (c *createdFreightEventHandler) Generic(
+	context.Context,
 	event.GenericEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -274,6 +286,7 @@ func (c *createdFreightEventHandler) Generic(
 
 // Update implements EventHandler.
 func (c *createdFreightEventHandler) Update(
+	context.Context,
 	event.UpdateEvent,
 	workqueue.RateLimitingInterface,
 ) {

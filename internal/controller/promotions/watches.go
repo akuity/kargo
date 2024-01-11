@@ -24,6 +24,7 @@ type EnqueueHighestPriorityPromotionHandler struct {
 
 // Create implements EventHandler.
 func (e *EnqueueHighestPriorityPromotionHandler) Create(
+	context.Context,
 	event.CreateEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -33,6 +34,7 @@ func (e *EnqueueHighestPriorityPromotionHandler) Create(
 // Delete implements EventHandler. In case a Running promotion
 // becomes deleted, we should enqueue the next one
 func (e *EnqueueHighestPriorityPromotionHandler) Delete(
+	_ context.Context,
 	evt event.DeleteEvent,
 	wq workqueue.RateLimitingInterface,
 ) {
@@ -48,6 +50,7 @@ func (e *EnqueueHighestPriorityPromotionHandler) Delete(
 
 // Generic implements EventHandler.
 func (e *EnqueueHighestPriorityPromotionHandler) Generic(
+	context.Context,
 	event.GenericEvent,
 	workqueue.RateLimitingInterface,
 ) {
@@ -57,6 +60,7 @@ func (e *EnqueueHighestPriorityPromotionHandler) Generic(
 // Update implements EventHandler. This should only be called with
 // a promo that transitioned from non-terminal to terminal.
 func (e *EnqueueHighestPriorityPromotionHandler) Update(
+	_ context.Context,
 	evt event.UpdateEvent,
 	wq workqueue.RateLimitingInterface,
 ) {

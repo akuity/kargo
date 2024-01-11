@@ -10,11 +10,15 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newProjectCommand(opt *option.Option) *cobra.Command {
+func newProjectCommand(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project [NAME]...",
 		Short: "Delete project by name",
@@ -25,9 +29,9 @@ kargo delete project my-project
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
-				return errors.New("get client from config")
+				return errors.Wrap(err, "get client from config")
 			}
 
 			var resErr error
@@ -44,6 +48,6 @@ kargo delete project my-project
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }

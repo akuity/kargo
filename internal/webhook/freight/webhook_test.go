@@ -23,6 +23,7 @@ func TestNewWebhook(t *testing.T) {
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.listFreightFn)
+	require.NotNil(t, w.listStagesFn)
 }
 
 func TestDefault(t *testing.T) {
@@ -181,9 +182,8 @@ func TestValidateCreate(t *testing.T) {
 	for _, testCase := range testCases {
 		tc := testCase // Avoid implicit memory aliasing
 		t.Run(testCase.name, func(t *testing.T) {
-			tc.assertions(
-				tc.webhook.ValidateCreate(context.Background(), &tc.freight),
-			)
+			_, err := tc.webhook.ValidateCreate(context.Background(), &tc.freight)
+			tc.assertions(err)
 		})
 	}
 }
@@ -315,13 +315,12 @@ func TestValidateUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			oldFreight, newFreight := testCase.setup()
-			testCase.assertions(
-				testCase.webhook.ValidateUpdate(
-					context.Background(),
-					oldFreight,
-					newFreight,
-				),
+			_, err := testCase.webhook.ValidateUpdate(
+				context.Background(),
+				oldFreight,
+				newFreight,
 			)
+			testCase.assertions(err)
 		})
 	}
 }
@@ -331,42 +330,57 @@ func TestValidateDelete(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
 	testCases := map[string]struct {
-		clientBuilderFunc func(*fake.ClientBuilder) *fake.ClientBuilder
-		input             *kargoapi.Freight
-		shouldErr         bool
+		input     *kargoapi.Freight
+		webhook   *webhook
+		shouldErr bool
 	}{
 		"idle freight": {
-			clientBuilderFunc: func(b *fake.ClientBuilder) *fake.ClientBuilder {
-				return b
-			},
 			input: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "fake-freight",
 				},
 				ID: "fake-id",
+			},
+			webhook: &webhook{
+				listStagesFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
 			},
 			shouldErr: false,
 		},
 		"in-use freight": {
-			clientBuilderFunc: func(b *fake.ClientBuilder) *fake.ClientBuilder {
-				return b.WithObjects(
-					&kargoapi.Stage{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "fake-stage",
-						},
-						Status: kargoapi.StageStatus{
-							CurrentFreight: &kargoapi.SimpleFreight{
-								ID: "fake-id",
-							},
-						},
-					},
-				)
-			},
 			input: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "fake-freight",
 				},
 				ID: "fake-id",
+			},
+			webhook: &webhook{
+				listStagesFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					stages, ok := objList.(*kargoapi.StageList)
+					require.True(t, ok)
+					stages.Items = []kargoapi.Stage{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "fake-stage",
+							},
+							Status: kargoapi.StageStatus{
+								CurrentFreight: &kargoapi.FreightReference{
+									ID: "fake-id",
+								},
+							},
+						},
+					}
+					return nil
+				},
 			},
 			shouldErr: true,
 		},
@@ -375,14 +389,7 @@ func TestValidateDelete(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-
-			ctx := context.Background()
-
-			w := newWebhook(
-				tc.clientBuilderFunc(fake.NewClientBuilder().WithScheme(scheme)).
-					Build(),
-			)
-			err := w.ValidateDelete(ctx, tc.input)
+			_, err := tc.webhook.ValidateDelete(context.Background(), tc.input)
 			if tc.shouldErr {
 				require.Error(t, err)
 				require.True(t, apierrors.IsForbidden(err))

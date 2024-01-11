@@ -5,7 +5,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	kubemetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/pkg/api/metav1"
 )
@@ -18,7 +18,7 @@ func FromListMetaProto(m *metav1.ListMeta) *kubemetav1.ListMeta {
 		SelfLink:           m.GetSelfLink(),
 		ResourceVersion:    m.GetResourceVersion(),
 		Continue:           m.GetContinue(),
-		RemainingItemCount: pointer.Int64(m.GetRemainingItemCount()),
+		RemainingItemCount: ptr.To(m.GetRemainingItemCount()),
 	}
 }
 
@@ -49,7 +49,7 @@ func FromObjectMetaProto(m *metav1.ObjectMeta) *kubemetav1.ObjectMeta {
 		Generation:                 m.GetGeneration(),
 		CreationTimestamp:          kubemetav1.NewTime(m.GetCreationTimestamp().AsTime()),
 		DeletionTimestamp:          deletionTimestamp,
-		DeletionGracePeriodSeconds: pointer.Int64(m.GetDeletionGracePeriodSeconds()),
+		DeletionGracePeriodSeconds: ptr.To(m.GetDeletionGracePeriodSeconds()),
 		Labels:                     m.GetLabels(),
 		Annotations:                m.GetAnnotations(),
 		OwnerReferences:            ownerRefs,
@@ -67,8 +67,8 @@ func FromOwnerReferenceProto(r *metav1.OwnerReference) *kubemetav1.OwnerReferenc
 		Kind:               r.GetKind(),
 		Name:               r.GetName(),
 		UID:                types.UID(r.GetUid()),
-		Controller:         pointer.Bool(r.GetController()),
-		BlockOwnerDeletion: pointer.Bool(r.GetBlockOwnerDeletion()),
+		Controller:         ptr.To(r.GetController()),
+		BlockOwnerDeletion: ptr.To(r.GetBlockOwnerDeletion()),
 	}
 }
 
@@ -120,13 +120,13 @@ func ToObjectMetaProto(m kubemetav1.ObjectMeta) *metav1.ObjectMeta {
 		managedFields[idx] = ToManagedFieldsEntryProto(f)
 	}
 	return &metav1.ObjectMeta{
-		Name:                       pointer.String(m.GetName()),
-		GenerateName:               pointer.String(m.GetGenerateName()),
-		Namespace:                  pointer.String(m.GetNamespace()),
-		SelfLink:                   pointer.String(m.GetSelfLink()),
-		Uid:                        pointer.String(string(m.GetUID())),
-		ResourceVersion:            pointer.String(m.GetResourceVersion()),
-		Generation:                 pointer.Int64(m.GetGeneration()),
+		Name:                       ptr.To(m.GetName()),
+		GenerateName:               ptr.To(m.GetGenerateName()),
+		Namespace:                  ptr.To(m.GetNamespace()),
+		SelfLink:                   ptr.To(m.GetSelfLink()),
+		Uid:                        ptr.To(string(m.GetUID())),
+		ResourceVersion:            ptr.To(m.GetResourceVersion()),
+		Generation:                 ptr.To(m.GetGeneration()),
 		CreationTimestamp:          timestamppb.New(m.GetCreationTimestamp().Time),
 		DeletionTimestamp:          deletionTimestamp,
 		DeletionGracePeriodSeconds: m.GetDeletionGracePeriodSeconds(),

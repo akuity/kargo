@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
@@ -34,7 +35,7 @@ type webhook struct {
 		client.Object,
 	) error
 
-	validateCreateOrUpdateFn func(*kargoapi.Stage) error
+	validateCreateOrUpdateFn func(*kargoapi.Stage) (admission.Warnings, error)
 
 	validateSpecFn func(*field.Path, *kargoapi.StageSpec) field.ErrorList
 }
@@ -60,11 +61,11 @@ func newWebhook(kubeClient client.Client) *webhook {
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 	if err :=
 		w.validateProjectFn(ctx, w.client, stageGroupKind, stage); err != nil {
-		return err
+		return nil, err
 	}
 	return w.validateCreateOrUpdateFn(stage)
 }
@@ -73,21 +74,26 @@ func (w *webhook) ValidateUpdate(
 	_ context.Context,
 	_ runtime.Object,
 	newObj runtime.Object,
-) error {
+) (admission.Warnings, error) {
 	stage := newObj.(*kargoapi.Stage) // nolint: forcetypeassert
 	return w.validateCreateOrUpdateFn(stage)
 }
 
-func (w *webhook) ValidateDelete(context.Context, runtime.Object) error {
+func (w *webhook) ValidateDelete(
+	context.Context,
+	runtime.Object,
+) (admission.Warnings, error) {
 	// No-op
-	return nil
+	return nil, nil
 }
 
-func (w *webhook) validateCreateOrUpdate(e *kargoapi.Stage) error {
-	if errs := w.validateSpecFn(field.NewPath("spec"), e.Spec); len(errs) > 0 {
-		return apierrors.NewInvalid(stageGroupKind, e.Name, errs)
+func (w *webhook) validateCreateOrUpdate(
+	s *kargoapi.Stage,
+) (admission.Warnings, error) {
+	if errs := w.validateSpecFn(field.NewPath("spec"), s.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(stageGroupKind, s.Name, errs)
 	}
-	return nil
+	return nil, nil
 }
 
 func (w *webhook) validateSpec(

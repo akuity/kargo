@@ -10,20 +10,17 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/printers"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type Flags struct {
-	Filenames []string
-}
-
-func NewCommand(opt *option.Option) *cobra.Command {
-	var flag Flags
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	var filenames []string
 	cmd := &cobra.Command{
 		Use:   "create [--project=project] -f (FILENAME)",
 		Short: "Create a resource from a file or from stdin",
@@ -36,24 +33,24 @@ kargo create project my-project
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if len(flag.Filenames) == 0 {
+			if len(filenames) == 0 {
 				return errors.New("filename is required")
 			}
 
-			manifest, err := option.ReadManifests(flag.Filenames...)
+			manifest, err := option.ReadManifests(filenames...)
 			if err != nil {
 				return errors.Wrap(err, "read manifests")
 			}
 
 			var printer printers.ResourcePrinter
-			if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") != "" {
+			if ptr.Deref(opt.PrintFlags.OutputFormat, "") != "" {
 				printer, err = opt.PrintFlags.ToPrinter()
 				if err != nil {
 					return errors.Wrap(err, "new printer")
 				}
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -96,9 +93,11 @@ kargo create project my-project
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Filenames("create", &flag.Filenames)(cmd.Flags())
+	option.Filenames(cmd.Flags(), &filenames, "apply")
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	// Subcommands
-	cmd.AddCommand(newProjectCommand(opt))
+	cmd.AddCommand(newProjectCommand(cfg, opt))
 	return cmd
 }

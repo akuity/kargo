@@ -163,7 +163,7 @@ message Promotion {
 
 message PromotionInfo {
   string name = 1 [json_name = "name"];
-  SimpleFreight freight = 2 [json_name = "freight"];
+  FreightReference freight = 2 [json_name = "freight"];
 }
 
 message PromotionList {
@@ -247,7 +247,7 @@ message VerifiedStage {
 message ApprovedStage {
 }
 
-message SimpleFreight {
+message FreightReference {
   string id = 1 [json_name = "id"];
   optional google.protobuf.Timestamp first_seen = 2 [json_name = "firstSeen"];
   repeated GitCommit commits = 4 [json_name = "commits"];
@@ -257,8 +257,8 @@ message SimpleFreight {
 }
 
 message StageStatus {
-  optional SimpleFreight current_freight = 2 [json_name = "currentFreight"];
-  repeated SimpleFreight history = 3 [json_name = "history"];
+  optional FreightReference current_freight = 2 [json_name = "currentFreight"];
+  repeated FreightReference history = 3 [json_name = "history"];
   string error = 4 [json_name = "error"];
   optional Health health = 5 [json_name = "health"];
   optional PromotionInfo current_promotion = 6 [json_name = "currentPromotion"];

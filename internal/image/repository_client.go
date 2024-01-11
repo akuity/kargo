@@ -28,12 +28,16 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-// maxMetadataConcurrency is the maximum number of concurrent goroutines that
-// can be used to fetch metadata. Per Go's documentation, goroutines are very
-// cheap (practical to spawn tens of thousands), AND we have a rate limiter in
-// place for each registry, so there's no reason for this number not to be
-// pretty large.
-const maxMetadataConcurrency = 1000
+const (
+	// maxMetadataConcurrency is the maximum number of concurrent goroutines that
+	// can be used to fetch metadata. Per Go's documentation, goroutines are very
+	// cheap (practical to spawn tens of thousands), AND we have a rate limiter in
+	// place for each registry, so there's no reason for this number not to be
+	// pretty large.
+	maxMetadataConcurrency = 1000
+
+	unknown = "unknown"
+)
 
 var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
 
@@ -532,6 +536,12 @@ func (r *repositoryClient) extractTagFromOCIManifest(
 		)
 	}
 
+	if info.OS == unknown || info.OS == "" || info.Arch == unknown || info.Arch == "" {
+		// This doesn't look like an image. It might be an attestation or something
+		// else. It's definitely not what we're looking for.
+		return nil, nil
+	}
+
 	if platform != nil &&
 		!platform.matches(info.OS, info.Arch, info.Variant) {
 		return nil, nil
@@ -580,8 +590,8 @@ func (r *repositoryClient) extractTagFromCollection(
 	refs := make([]distribution.Descriptor, 0, len(collection.References()))
 	for _, ref := range collection.References() {
 		if ref.Platform == nil ||
-			ref.Platform.OS == "unknown" || ref.Platform.OS == "" ||
-			ref.Platform.Architecture == "unknown" || ref.Platform.Architecture == "" {
+			ref.Platform.OS == unknown || ref.Platform.OS == "" ||
+			ref.Platform.Architecture == unknown || ref.Platform.Architecture == "" {
 			// This reference doesn't look like a reference to an image. It might
 			// be an attestation or something else. Skip it.
 			continue

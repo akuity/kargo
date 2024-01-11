@@ -8,18 +8,22 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newEnableAutoPromotion(opt *option.Option) *cobra.Command {
+func newEnableAutoPromotion(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "enable-auto-promotion --project=project (STAGE)",
-		Args: option.ExactArgs(2),
+		Args: option.ExactArgs(1),
 		Example: `
 # Enable auto-promotion on a stage for a specific project
 kargo stage enable-auto-promotion --project=my-project dev
@@ -40,17 +44,21 @@ kargo stage enable-auto-promotion dev
 			if stage == "" {
 				return errors.New("stage is required")
 			}
-			return setAutoPromotionForStage(ctx, opt, project, stage, true)
+			return setAutoPromotionForStage(ctx, cfg, opt, project, stage, true)
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }
 
-func newDisableAutoPromotion(opt *option.Option) *cobra.Command {
+func newDisableAutoPromotion(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "disable-auto-promotion --project=project (STAGE)",
-		Args: option.ExactArgs(2),
+		Args: option.ExactArgs(1),
 		Example: `
 # Disable auto-promotion on a stage for a specific project
 kargo stage disable-auto-promotion --project=my-project dev
@@ -71,15 +79,23 @@ kargo stage disable-auto-promotion dev
 			if stage == "" {
 				return errors.New("stage is required")
 			}
-			return setAutoPromotionForStage(ctx, opt, project, stage, false)
+			return setAutoPromotionForStage(ctx, cfg, opt, project, stage, false)
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }
 
-func setAutoPromotionForStage(ctx context.Context, opt *option.Option, project, stage string, enable bool) error {
-	kargoClient, err := client.GetClientFromConfig(ctx, opt)
+func setAutoPromotionForStage(
+	ctx context.Context,
+	cfg config.CLIConfig,
+	opt *option.Option,
+	project string,
+	stage string,
+	enable bool,
+) error {
+	kargoClient, err := client.GetClientFromConfig(ctx, cfg, opt)
 	if err != nil {
 		return err
 	}
@@ -93,7 +109,7 @@ func setAutoPromotionForStage(ctx context.Context, opt *option.Option, project, 
 	if err != nil {
 		return errors.Wrapf(err, "set auto promotion for stage: %q", stage)
 	}
-	if pointer.StringDeref(opt.PrintFlags.OutputFormat, "") == "" {
+	if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 		res := "Disabled"
 		if enable {
 			res = "Enabled"

@@ -124,6 +124,7 @@ Any approach you select should only:
 1. Launch a new, local Kubernetes cluster, if applicable
 1. Install cert-manager
 1. Install Argo CD
+1. Install Argo Rollouts
 1. Install Kargo
 :::
 
@@ -319,7 +320,6 @@ the previous section.
         kargo.akuity.io/secret-type: repository
     stringData:
       type: git
-      project: default
       url: ${GITOPS_REPO_URL}
       username: ${GITHUB_USERNAME}
       password: ${GITHUB_PAT}
@@ -437,10 +437,10 @@ the previous section.
     Sample output:
 
     ```shell
-    NAME   CURRENT FREIGHT   HEALTH    AGE
-    prod                     Healthy   20s
-    test                     Healthy   20s
-    uat                      Healthy   20s
+    NAME   CURRENT FREIGHT   HEALTH   PHASE           AGE
+    prod                              NotApplicable   20s
+    test                              NotApplicable   20s
+    uat                               NotApplicable   20s
     ```
 
 1. Our `Warehouse`, which subscribes to the `nginx` image repository, also
@@ -453,8 +453,8 @@ the previous section.
     Sample output:
 
     ```shell
-    NAME                                       AGE
-    47b33c0c92b54439e5eb7fb80ecc83f8626fe390   5m49s
+    NAME/ID                                    ALIAS              AGE
+    f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
     ```
     :::info
     `Freight` is a set of references to one or more versioned artifacts, which
@@ -480,13 +480,13 @@ the previous section.
 1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
     ```shell
-    kargo stage promote kargo-demo test --freight $FREIGHT_ID
+    kargo stage promote --project kargo-demo test --freight $FREIGHT_ID
     ```
 
     Sample output:
 
     ```shell
-    Promotion Created: "test.01haswttm2p4qwcenpnn5s1m96.b73f9d1"
+    Promotion Created: "test.01hj7grh2m556rqxq72ame6a3z.f5f87aa"
     ```
 
     Query for `Promotion` resources within our project to see one has been
@@ -501,7 +501,7 @@ the previous section.
 
     ```shell
     NAME                                      STAGE   FREIGHT                                    PHASE     AGE
-    test.01haswttm2p4qwcenpnn5s1m96.b73f9d1   test    b73f9d1afaca87254b64e64e5439557e86dcba79   Running   7s
+    test.01hj7grh2m556rqxq72ame6a3z.f5f87aa   test    f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   Running   7s
     ```
 
     Once the `Promotion` has succeeded, we can again view all `Stage` resources
@@ -515,13 +515,13 @@ the previous section.
     Sample output:
 
     ```shell
-    NAME   CURRENT FREIGHT                            HEALTH        AGE
-    prod                                              Healthy       6m55s
-    test   b73f9d1afaca87254b64e64e5439557e86dcba79   Progressing   6m55s
-    uat                                               Healthy       6m55s
+    NAME   CURRENT FREIGHT                            HEALTH    PHASE           AGE
+    prod                                                        NotApplicable   118s
+    test   f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   Healthy   Steady          119s
+    uat                                                         NotApplicable   118s
     ```
 
-    We can repeat the command above until our `Promotion` is in a `Healthy`
+    We can repeat the command above until our `test` `Stage` is in a `Healthy`
     state and we can further validate the success of this entire process by
     visiting the test instance of our site at
     [localhost:30081](http://localhost:30081).
@@ -540,9 +540,10 @@ the previous section.
     ```shell
     {
         "currentFreight": {
-            "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
+            "id": "f5f87aa23c9e97f43eb83dd63768ee41f5ba3766",
             "images": [
                 {
+                    "digest": "sha256:2bdc49f2f8ae8d8dc50ed00f2ee56d00385c6f8bc8a8b320d0a294d9e3b49026",
                     "repoURL": "nginx",
                     "tag": "1.25.3"
                 }
@@ -551,9 +552,10 @@ the previous section.
         ...
         "history": [
             {
-                "id": "b73f9d1afaca87254b64e64e5439557e86dcba79",
+                "id": "f5f87aa23c9e97f43eb83dd63768ee41f5ba3766",
                 "images": [
                     {
+                        "digest": "sha256:2bdc49f2f8ae8d8dc50ed00f2ee56d00385c6f8bc8a8b320d0a294d9e3b49026",
                         "repoURL": "nginx",
                         "tag": "1.25.3"
                     }
@@ -565,8 +567,15 @@ the previous section.
 
 1. If we look at our `Freight` in greater detail, we'll see that by virtue of
    the `test` `Stage` having achieved a `Healthy` state, the `Freight` is now
-   _qualified_ in `test`, which designates it as eligible for promotion to the
+   _verified_ in `test`, which designates it as eligible for promotion to the
    next `Stage` -- in our case, `uat`.
+
+    :::note
+    Although this example does not demonstrate it, it is also possible to verify
+    the `Freight` in a `Stage` using user-defined processes. See the
+    [relevant section](./15-concepts.md#verifications) of the concepts page to
+    learn more.
+    :::
 
     ```shell
     kargo get freight $FREIGHT_ID --project kargo-demo --output jsonpath-as-json={.status}
@@ -576,7 +585,7 @@ the previous section.
 
     ```shell
     {
-        "qualifications": {
+        "verifiedIn": {
             "test": {}
         }
     }

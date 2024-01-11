@@ -84,7 +84,13 @@ func SetupReconcilerWithManager(
 		pqs:         reconciler.pqs,
 	}
 	promoWentTerminal := kargo.NewPromoWentTerminalPredicate(logger)
-	if err := c.Watch(&source.Kind{Type: &kargoapi.Promotion{}}, priorityQueueHandler, promoWentTerminal); err != nil {
+	if err := c.Watch(
+		source.Kind(kargoMgr.GetCache(),
+			&kargoapi.Promotion{},
+		),
+		priorityQueueHandler,
+		promoWentTerminal,
+	); err != nil {
 		return errors.Wrap(err, "unable to watch Promotions")
 	}
 
@@ -325,7 +331,7 @@ func (r *reconciler) promote(
 		)
 	}
 
-	simpleTargetFreight := kargoapi.SimpleFreight{
+	simpleTargetFreight := kargoapi.FreightReference{
 		ID:      targetFreight.ID,
 		Commits: targetFreight.Commits,
 		Images:  targetFreight.Images,

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 helm install cert-manager cert-manager \
   --repo https://charts.jetstack.io \
   --version 1.11.5 \
@@ -18,6 +20,16 @@ helm install argocd argo-cd \
   --set notifications.enabled=false \
   --set server.service.type=NodePort \
   --set server.service.nodePortHttp=31443 \
+  --set server.extensions.enabled=true \
+  --set 'server.extensions.contents[0].name=argo-rollouts' \
+  --set 'server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar' \
+  --wait
+
+helm install argo-rollouts argo-rollouts \
+  --repo https://argoproj.github.io/argo-helm \
+  --version 2.33.0 \
+  --create-namespace \
+  --namespace argo-rollouts \
   --wait
 
 helm install kargo \

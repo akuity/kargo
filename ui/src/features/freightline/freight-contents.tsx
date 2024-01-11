@@ -20,7 +20,7 @@ export const FreightContents = (props: {
     } & React.PropsWithChildren
   ) => (
     <Tooltip
-      className={`flex items-center my-1 flex-col bg-neutral-800 rounded p-1 ${
+      className={`flex items-center my-1 flex-col bg-neutral-800 rounded p-1 w-full ${
         promoting && highlighted ? 'bg-transparent' : ''
       }`}
       overlay={props.overlay}
@@ -33,7 +33,7 @@ export const FreightContents = (props: {
 
   return (
     <div
-      className={`hover:text-white flex flex-col justify-center items-center font-mono text-xs flex-shrink min-w-min w-full ${
+      className={`hover:text-white flex flex-col justify-start items-center font-mono text-xs flex-shrink min-w-min w-full overflow-y-auto max-h-full ${
         highlighted ? 'text-white' : 'text-gray-500'
       }`}
     >

@@ -2,17 +2,23 @@ import { Code, ConnectError, Interceptor } from '@bufbuild/connect';
 import { createConnectTransport } from '@bufbuild/connect-web';
 import { notification } from 'antd';
 
+import { authTokenKey, redirectToQueryParam, refreshTokenKey } from './auth';
 import { paths } from './paths';
-
-export const authTokenKey = 'auth_token';
 
 const logout = () => {
   localStorage.removeItem(authTokenKey);
   window.location.replace(paths.login);
 };
 
-const authHandler: Interceptor = (next) => (req) => {
+const renewToken = () => {
+  window.location.replace(
+    `${paths.tokenRenew}?${redirectToQueryParam}=${window.location.pathname}`
+  );
+};
+
+const authHandler: Interceptor = (next) => async (req) => {
   const token = localStorage.getItem(authTokenKey);
+  const refreshToken = localStorage.getItem(refreshTokenKey);
   let isTokenExpired;
 
   try {
@@ -23,9 +29,13 @@ const authHandler: Interceptor = (next) => (req) => {
     throw new ConnectError('Invalid token');
   }
 
-  if (isTokenExpired) {
-    logout();
+  if (isTokenExpired && refreshToken) {
+    renewToken();
+    throw new ConnectError('Token expired');
+  }
 
+  if (isTokenExpired && !refreshToken) {
+    logout();
     throw new ConnectError('Token expired');
   }
 
@@ -56,6 +66,11 @@ const errorHandler: Interceptor = (next) => (req) => {
 };
 
 export const transport = createConnectTransport({
+  baseUrl: '',
+  interceptors: [errorHandler]
+});
+
+export const transportWithAuth = createConnectTransport({
   baseUrl: '',
   interceptors: [authHandler, errorHandler]
 });

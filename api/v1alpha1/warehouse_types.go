@@ -66,6 +66,10 @@ type GitSubscription struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	Branch string `json:"branch,omitempty"`
+	// InsecureSkipTLSVerify specifies whether certificate verification errors
+	// should be ignored when connecting to the repository. This should be enabled
+	// only with great caution.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
