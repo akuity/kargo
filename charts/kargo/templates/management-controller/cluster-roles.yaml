@@ -8,11 +8,30 @@ metadata:
     {{- include "kargo.managementController.labels" . | nindent 4 }}
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - kargo.akuity.io
   resources:
   - projects
   verbs:
+  - delete
   - get
   - list
   - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - projects/status
+  verbs:
+  - patch
+  - update
 {{- end }}  
