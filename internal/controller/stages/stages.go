@@ -773,7 +773,7 @@ func (r *reconciler) syncNormalStage(
 
 	promo := kargo.NewPromotion(*stage, latestFreight.ID)
 	if err :=
-		r.createPromotionFn(ctx, &promo, &client.CreateOptions{}); err != nil {
+		r.createPromotionFn(ctx, &promo); err != nil {
 		return status, errors.Wrapf(
 			err,
 			"error creating Promotion of Stage %q in namespace %q to Freight %q",

@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
@@ -70,6 +71,10 @@ func newManagementControllerCommand() *cobra.Command {
 				); err != nil {
 					return errors.Wrap(err, "error initializing Kargo controller manager")
 				}
+			}
+
+			if err := namespaces.SetupReconcilerWithManager(kargoMgr); err != nil {
+				return errors.Wrap(err, "error setting up Namespaces reconciler")
 			}
 
 			if err := projects.SetupReconcilerWithManager(kargoMgr); err != nil {
