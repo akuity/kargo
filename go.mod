@@ -14,7 +14,7 @@ require (
 	github.com/bacongobbler/browser v1.1.0
 	github.com/coreos/go-oidc/v3 v3.9.0
 	github.com/distribution/distribution/v3 v3.0.0-20230722181636-7b502560cad4
-	github.com/evanphx/json-patch/v5 v5.7.0
+	github.com/evanphx/json-patch/v5 v5.8.0
 	github.com/gobwas/glob v0.2.3
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/google/uuid v1.5.0
