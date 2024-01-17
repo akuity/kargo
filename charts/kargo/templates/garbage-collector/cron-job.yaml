@@ -13,7 +13,7 @@ spec:
   jobTemplate:
     metadata:
       labels:
-        {{- include "kargo.selectorLabels" . | nindent 8 }}
+        {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.garbageCollector.labels" . | nindent 8 }}
       annotations:
         configmap/checksum: {{ include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | sha256sum }}

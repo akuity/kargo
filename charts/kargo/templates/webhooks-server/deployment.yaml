@@ -13,7 +13,7 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.labels" . | nindent 6 }}
       {{- include "kargo.webhooksServer.labels" . | nindent 6 }}
   template:
     metadata:

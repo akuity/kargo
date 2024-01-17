@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "kargo.selectorLabels" . | nindent 8 }}
+        {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.controller.labels" . | nindent 8 }}
       annotations:
         configmap/checksum: {{ include (print $.Template.BasePath "/controller/configmap.yaml") . | sha256sum }}
