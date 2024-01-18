@@ -23,7 +23,6 @@ import (
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/api/validation"
 	httputil "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/kubeclient/manifest"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -107,9 +106,6 @@ type server struct {
 		freight *kargoapi.Freight,
 		alias string,
 	) error
-
-	// Common manifest parsing:
-	parseManifestFn manifest.ParseFunc
 }
 
 type Server interface {
@@ -139,7 +135,6 @@ func NewServer(
 	s.getVerifiedFreightFn =
 		s.getVerifiedFreight
 	s.patchFreightAliasFn = s.patchFreightAlias
-	s.parseManifestFn = manifest.NewParser(kubeClient.Scheme())
 	return s
 }
 

@@ -16,26 +16,15 @@ func (s *server) CreateOrUpdateResource(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.CreateOrUpdateResourceRequest],
 ) (*connect.Response[svcv1alpha1.CreateOrUpdateResourceResponse], error) {
-	cluster, namespaced, err := s.parseManifestFn(req.Msg.GetManifest())
+	projects, otherResources, err := splitYAML(req.Msg.GetManifest())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}
-
-	size := len(cluster) + len(namespaced)
-	res := make([]*svcv1alpha1.CreateOrUpdateResourceResult, 0, size)
-	for _, obj := range cluster {
-		res = append(res, s.createOrUpdateResource(ctx, obj))
-	}
-	for _, obj := range namespaced {
-		if err := s.validateProject(ctx, obj.GetNamespace()); err != nil {
-			res = append(res, &svcv1alpha1.CreateOrUpdateResourceResult{
-				Result: &svcv1alpha1.CreateOrUpdateResourceResult_Error{
-					Error: err.Error(),
-				},
-			})
-			continue
-		}
-		res = append(res, s.createOrUpdateResource(ctx, obj))
+	resources := append(projects, otherResources...)
+	res := make([]*svcv1alpha1.CreateOrUpdateResourceResult, 0, len(resources))
+	for _, r := range resources {
+		resource := r // Avoid implicit memory aliasing
+		res = append(res, s.createOrUpdateResource(ctx, &resource))
 	}
 	return &connect.Response[svcv1alpha1.CreateOrUpdateResourceResponse]{
 		Msg: &svcv1alpha1.CreateOrUpdateResourceResponse{
