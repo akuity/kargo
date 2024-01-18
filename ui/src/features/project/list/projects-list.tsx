@@ -17,7 +17,7 @@ export const ProjectsList = () => {
   return (
     <div className={styles.list}>
       {data.projects.map((project) => (
-        <ProjectItem key={project.name} name={project.name} />
+        <ProjectItem key={project.metadata?.name} name={project.metadata?.name} />
       ))}
     </div>
   );
