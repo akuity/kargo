@@ -43,6 +43,12 @@ the Kargo controller is running.
 | `kubeconfigSecrets.argocd`   | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.                   | `undefined` |
 | `kubeconfigSecrets.rollouts` | Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster that can execute Argo Rollouts AnalysisRuns. Used by Kargo controller(s) only. | `undefined` |
 
+### Labels
+
+| Name               | Description                                | Value |
+| ------------------ | ------------------------------------------ | ----- |
+| `additionalLabels` | Additional labels to add to all resources. | `{}`  |
+
 ### API
 
 | Name                                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Value                |

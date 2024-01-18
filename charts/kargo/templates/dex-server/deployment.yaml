@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "kargo.selectorLabels" . | nindent 8 }}
+        {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.dexServer.labels" . | nindent 8 }}
       annotations:
         secret/checksum: {{ include (print $.Template.BasePath "/dex-server/secret.yaml") . | sha256sum }}

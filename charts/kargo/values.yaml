@@ -47,6 +47,11 @@ kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.rollouts [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster that can execute Argo Rollouts AnalysisRuns. Used by Kargo controller(s) only.
   # rollouts: ""
 
+## @section Labels
+## @param additionalLabels Additional labels to add to all resources.
+additionalLabels: {}
+  # my-label: my-value
+
 ## @section API
 api:
   ## @param api.enabled Whether the API server is enabled.
