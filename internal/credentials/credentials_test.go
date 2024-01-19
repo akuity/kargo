@@ -255,9 +255,11 @@ func TestGet(t *testing.T) {
 
 			d := NewKubernetesDatabase(
 				testClient,
-				WithArgoCDNamespace(testArgoCDNameSpace),
-				WithArgoClient(testClient),
-				WithGlobalCredentialsNamespaces(testGlobalNamespaces),
+				testClient,
+				KubernetesDatabaseConfig{
+					ArgoCDNamespace:             testArgoCDNameSpace,
+					GlobalCredentialsNamespaces: testGlobalNamespaces,
+				},
 			)
 
 			creds, ok, err := d.Get(context.Background(), testNamespace, TypeImage, testURL)
