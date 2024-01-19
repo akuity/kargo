@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -22,6 +23,17 @@ func TestNewWebhook(t *testing.T) {
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.validateCreateOrUpdateFn)
 	require.NotNil(t, w.validateSpecFn)
+}
+
+func TestDefault(t *testing.T) {
+	stage := &kargoapi.Stage{}
+	w := &webhook{}
+	err := w.Default(context.Background(), stage)
+	require.NoError(t, err)
+	require.True(
+		t,
+		controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName),
+	)
 }
 
 func TestValidateCreate(t *testing.T) {
