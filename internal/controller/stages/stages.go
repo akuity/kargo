@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -182,6 +183,12 @@ type reconciler struct {
 		client.ObjectList,
 		...client.ListOption,
 	) error
+
+	// Stage deletion:
+
+	clearVerificationsFn func(context.Context, *kargoapi.Stage) error
+
+	clearApprovalsFn func(context.Context, *kargoapi.Stage) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Stage resources and
@@ -260,7 +267,9 @@ func SetupReconcilerWithManager(
 		WithEventFilter(
 			predicate.Funcs{
 				DeleteFunc: func(event.DeleteEvent) bool {
-					// We're not interested in any deletes
+					// We're not interested in any ACTUAL deletes. (We do care about
+					// updated where DeletionTimestamp is non-nil, but that's not a delete
+					// event.)
 					return false
 				},
 			},
@@ -393,6 +402,9 @@ func newReconciler(
 	r.getLatestVerifiedFreightFn = r.getLatestVerifiedFreight
 	r.getLatestApprovedFreightFn = r.getLatestApprovedFreight
 	r.listFreightFn = r.kargoClient.List
+	// Stage deletion:
+	r.clearVerificationsFn = r.clearVerifications
+	r.clearApprovalsFn = r.clearApprovals
 	return r
 }
 
@@ -432,7 +444,15 @@ func (r *reconciler) Reconcile(
 	logger.Debug("found Stage")
 
 	var newStatus kargoapi.StageStatus
-	if stage.Spec.PromotionMechanisms == nil {
+	if stage.DeletionTimestamp != nil {
+		newStatus, err = r.syncStageDelete(ctx, stage)
+		if err == nil && controllerutil.RemoveFinalizer(stage, kargoapi.FinalizerName) {
+			err = errors.Wrap(
+				r.kargoClient.Update(ctx, stage),
+				"error removing finalizer",
+			)
+		}
+	} else if stage.Spec.PromotionMechanisms == nil {
 		newStatus, err = r.syncControlFlowStage(ctx, stage)
 	} else {
 		newStatus, err = r.syncNormalStage(ctx, stage)
@@ -765,6 +785,116 @@ func (r *reconciler) syncNormalStage(
 	logger.WithField("promotion", promo.Name).Debug("created Promotion resource")
 
 	return status, nil
+}
+
+func (r *reconciler) syncStageDelete(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) (kargoapi.StageStatus, error) {
+	status := *stage.Status.DeepCopy()
+	status.ObservedGeneration = stage.Generation
+	if !controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName) {
+		return status, nil
+	}
+	if err := r.clearVerificationsFn(ctx, stage); err != nil {
+		return status, errors.Wrapf(
+			err,
+			"error clearing verifications for Stage %q in namespace %q",
+			stage.Name,
+			stage.Namespace,
+		)
+	}
+	err := r.clearApprovalsFn(ctx, stage)
+	return status, errors.Wrapf(
+		err,
+		"error clearing approvals for Stage %q in namespace %q",
+		stage.Name,
+		stage.Namespace,
+	)
+}
+
+func (r *reconciler) clearVerifications(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) error {
+	verified := kargoapi.FreightList{}
+	if err := r.listFreightFn(
+		ctx,
+		&verified,
+		&client.ListOptions{
+			Namespace: stage.Namespace,
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.FreightByVerifiedStagesIndexField,
+				stage.Name,
+			),
+		},
+	); err != nil {
+		return errors.Wrapf(
+			err,
+			"error listing Freight verified in Stage %q in namespace %q",
+			stage.Name,
+			stage.Namespace,
+		)
+	}
+	for _, f := range verified.Items {
+		freight := f // Avoid implicit memory aliasing
+		newStatus := *freight.Status.DeepCopy()
+		if newStatus.VerifiedIn == nil {
+			continue
+		}
+		delete(newStatus.VerifiedIn, stage.Name)
+		if err := r.patchFreightStatusFn(ctx, &freight, newStatus); err != nil {
+			return errors.Wrapf(
+				err,
+				"error patching status of Freight %q in namespace %q",
+				freight.Name,
+				freight.Namespace,
+			)
+		}
+	}
+	return nil
+}
+
+func (r *reconciler) clearApprovals(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) error {
+	approved := kargoapi.FreightList{}
+	if err := r.listFreightFn(
+		ctx,
+		&approved,
+		&client.ListOptions{
+			Namespace: stage.Namespace,
+			FieldSelector: fields.OneTermEqualSelector(
+				kubeclient.FreightApprovedForStagesIndexField,
+				stage.Name,
+			),
+		},
+	); err != nil {
+		return errors.Wrapf(
+			err,
+			"error listing Freight approved for Stage %q in namespace %q",
+			stage.Name,
+			stage.Namespace,
+		)
+	}
+	for _, f := range approved.Items {
+		freight := f // Avoid implicit memory aliasing
+		newStatus := *freight.Status.DeepCopy()
+		if newStatus.ApprovedFor == nil {
+			continue
+		}
+		delete(newStatus.ApprovedFor, stage.Name)
+		if err := r.patchFreightStatusFn(ctx, &freight, newStatus); err != nil {
+			return errors.Wrapf(
+				err,
+				"error patching status of Freight %q in namespace %q",
+				freight.Name,
+				freight.Namespace,
+			)
+		}
+	}
+	return nil
 }
 
 func (r *reconciler) hasNonTerminalPromotions(

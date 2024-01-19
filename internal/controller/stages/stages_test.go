@@ -55,6 +55,9 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.getLatestVerifiedFreightFn)
 	require.NotNil(t, e.getLatestApprovedFreightFn)
 	require.NotNil(t, e.listFreightFn)
+	// Stage deletion:
+	require.NotNil(t, e.clearVerificationsFn)
+	require.NotNil(t, e.clearApprovalsFn)
 }
 
 func TestSyncControlFlowStage(t *testing.T) {
@@ -966,6 +969,272 @@ func TestSyncNormalStage(t *testing.T) {
 			newStatus, err :=
 				testCase.reconciler.syncNormalStage(context.Background(), testCase.stage)
 			testCase.assertions(testCase.stage.Status, newStatus, err)
+		})
+	}
+}
+
+func TestSyncStageDelete(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(
+			initialStatus kargoapi.StageStatus,
+			newStatus kargoapi.StageStatus,
+			err error,
+		)
+	}{
+		{
+			name: "error clearing verifications",
+			reconciler: &reconciler{
+				clearVerificationsFn: func(context.Context, *kargoapi.Stage) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error clearing verifications for Stage")
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
+			name: "error clearing approvals",
+			reconciler: &reconciler{
+				clearVerificationsFn: func(context.Context, *kargoapi.Stage) error {
+					return nil
+				},
+				clearApprovalsFn: func(context.Context, *kargoapi.Stage) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error clearing approvals for Stage")
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				clearVerificationsFn: func(context.Context, *kargoapi.Stage) error {
+					return nil
+				},
+				clearApprovalsFn: func(context.Context, *kargoapi.Stage) error {
+					return nil
+				},
+			},
+			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
+				require.NoError(t, err)
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testStage := &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: []string{kargoapi.FinalizerName},
+				},
+			}
+			newStatus, err :=
+				testCase.reconciler.syncStageDelete(context.Background(), testStage)
+			testCase.assertions(testStage.Status, newStatus, err)
+		})
+	}
+}
+
+func TestClearVerification(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(error)
+	}{
+		{
+			name: "error listing verified Freight",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error listing Freight verified in Stage")
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "error patching Freight status",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{{
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{},
+						},
+					}}
+					return nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error patching status of Freight")
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{{
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{},
+						},
+					}}
+					return nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.clearVerifications(
+					context.Background(),
+					&kargoapi.Stage{},
+				),
+			)
+		})
+	}
+}
+
+func TestClearApprovals(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(error)
+	}{
+		{
+			name: "error listing approved Freight",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error listing Freight approved for Stage")
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "error patching Freight status",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{{
+						Status: kargoapi.FreightStatus{
+							ApprovedFor: map[string]kargoapi.ApprovedStage{},
+						},
+					}}
+					return nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error patching status of Freight")
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				listFreightFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					freight, ok := objList.(*kargoapi.FreightList)
+					require.True(t, ok)
+					freight.Items = []kargoapi.Freight{{
+						Status: kargoapi.FreightStatus{
+							ApprovedFor: map[string]kargoapi.ApprovedStage{},
+						},
+					}}
+					return nil
+				},
+				patchFreightStatusFn: func(
+					context.Context,
+					*kargoapi.Freight,
+					kargoapi.FreightStatus,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.reconciler.clearApprovals(
+					context.Background(),
+					&kargoapi.Stage{},
+				),
+			)
 		})
 	}
 }
