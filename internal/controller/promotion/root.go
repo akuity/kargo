@@ -27,7 +27,7 @@ type Mechanism interface {
 // NewMechanisms returns the entrypoint to a hierarchical tree of promotion
 // mechanisms.
 func NewMechanisms(
-	argoClient client.Client,
+	argocdClient client.Client,
 	credentialsDB credentials.Database,
 ) Mechanism {
 	return newCompositeMechanism(
@@ -39,6 +39,6 @@ func NewMechanisms(
 			newKustomizeMechanism(credentialsDB),
 			newHelmMechanism(credentialsDB),
 		),
-		newArgoCDMechanism(argoClient),
+		newArgoCDMechanism(argocdClient),
 	)
 }

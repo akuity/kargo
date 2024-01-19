@@ -21,7 +21,7 @@ func main() {
 		}
 		cfg = config.NewDefaultCLIConfig()
 	}
-	cmd, err := NewRootCommand(option.NewOption(cfg), &rootState{})
+	cmd, err := NewRootCommand(cfg, option.NewOption(cfg), &rootState{})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, errors.Wrap(err, "new root command"))
 		os.Exit(1)

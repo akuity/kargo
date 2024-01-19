@@ -1,7 +1,7 @@
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.21.5-bookworm as back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.21.6-bookworm as back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -33,7 +33,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.10.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.11.0 AS ui-builder
 
 RUN npm install --global pnpm
 WORKDIR /ui
@@ -86,7 +86,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.10.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.11.0 AS ui-dev
 
 RUN npm install --global pnpm
 WORKDIR /ui

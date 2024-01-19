@@ -11,11 +11,15 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newGetWarehousesCommand(opt *option.Option) *cobra.Command {
+func newGetWarehousesCommand(
+	cfg config.CLIConfig,
+	opt *option.Option,
+) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "warehouses --project=project [NAME...]",
 		Aliases: []string{"warehouse"},
@@ -38,7 +42,7 @@ kargo get warehouses --project=my-project my-warehouse
 				return errors.New("project is required")
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -83,7 +87,7 @@ kargo get warehouses --project=my-project my-warehouse
 			return resErr
 		},
 	}
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	opt.PrintFlags.AddFlags(cmd)
 	return cmd
 }

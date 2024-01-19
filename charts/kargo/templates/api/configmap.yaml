@@ -55,4 +55,5 @@ data:
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace }}
   ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ $val }},{{- end }}
   {{- end }}
+  ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.api.rollouts.integrationEnabled }}
 {{- end }}

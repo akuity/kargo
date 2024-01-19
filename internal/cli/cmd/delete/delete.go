@@ -13,16 +13,13 @@ import (
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-type Flags struct {
-	Filenames []string
-}
-
-func NewCommand(opt *option.Option) *cobra.Command {
-	var flag Flags
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	var filenames []string
 	cmd := &cobra.Command{
 		Use:   "delete [--project=project] -f (FILENAME)",
 		Short: "Delete resources by resources and names",
@@ -38,16 +35,16 @@ kargo delete -f stage.yaml
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if len(flag.Filenames) == 0 {
+			if len(filenames) == 0 {
 				return errors.New("filename is required")
 			}
 
-			manifest, err := option.ReadManifests(flag.Filenames...)
+			manifest, err := option.ReadManifests(filenames...)
 			if err != nil {
 				return errors.Wrap(err, "read manifests")
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -86,11 +83,13 @@ kargo delete -f stage.yaml
 			return goerrors.Join(deleteErrs...)
 		},
 	}
-	option.Filenames("delete", &flag.Filenames)(cmd.Flags())
+	option.Filenames(cmd.Flags(), &filenames, "apply")
+	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	// Subcommands
-	cmd.AddCommand(newProjectCommand(opt))
-	cmd.AddCommand(newStageCommand(opt))
-	cmd.AddCommand(newWarehouseCommand(opt))
+	cmd.AddCommand(newProjectCommand(cfg, opt))
+	cmd.AddCommand(newStageCommand(cfg, opt))
+	cmd.AddCommand(newWarehouseCommand(cfg, opt))
 	return cmd
 }

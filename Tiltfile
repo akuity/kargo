@@ -91,7 +91,9 @@ k8s_resource(
     'kargo-controller:rolebinding',
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
-    'kargo-controller-argocd:clusterrolebinding'
+    'kargo-controller-argocd:clusterrolebinding',
+    'kargo-controller-rollouts:clusterrole',
+    'kargo-controller-rollouts:clusterrolebinding'
   ],
   resource_deps=['back-end-compile']
 )
@@ -116,6 +118,19 @@ k8s_resource(
     'kargo-garbage-collector:clusterrolebinding',
     'kargo-garbage-collector:configmap',
     'kargo-garbage-collector:serviceaccount'
+  ],
+  resource_deps=['back-end-compile']
+)
+
+k8s_resource(
+  workload = 'kargo-management-controller',
+  new_name = 'management-controller',
+  labels = ['kargo'],
+  objects = [
+    'kargo-management-controller:clusterrole',
+    'kargo-management-controller:clusterrolebinding',
+    'kargo-management-controller:configmap',
+    'kargo-management-controller:serviceaccount'
   ],
   resource_deps=['back-end-compile']
 )
@@ -152,9 +167,10 @@ k8s_resource(
   new_name = 'crds',
   objects = [
     'freights.kargo.akuity.io:customresourcedefinition',
-    'stages.kargo.akuity.io:customresourcedefinition',
+    'projects.kargo.akuity.io:customresourcedefinition',
     'promotionpolicies.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition',
+    'stages.kargo.akuity.io:customresourcedefinition',
     'warehouses.kargo.akuity.io:customresourcedefinition'
   ],
   labels = ['kargo']

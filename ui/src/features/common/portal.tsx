@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 
 type PortalProps = {
   children: React.ReactElement;
-  container?: HTMLElement;
+  container?: HTMLElement | null;
   disablePortal?: boolean;
 };
 

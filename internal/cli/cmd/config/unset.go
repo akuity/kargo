@@ -10,7 +10,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
-func newUnsetCommand() *cobra.Command {
+func newUnsetCommand(cfg config.CLIConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unset",
 		Short: "Unset an individual value",
@@ -20,11 +20,6 @@ func newUnsetCommand() *cobra.Command {
 kargo config unset project my-project
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.LoadCLIConfig()
-			if err != nil {
-				return errors.Wrap(err, "ensure cli config")
-			}
-
 			key := strings.ToLower(args[0])
 			switch key {
 			case "project":

@@ -68,56 +68,39 @@ type Database interface {
 }
 
 // kubernetesDatabase is an implementation of the Database interface that
-// utilizes a Kubernetes controller runtime client to index and retrieve
-// credentials stored in Kubernetes Secrets.
+// utilizes a Kubernetes controller runtime client to retrieve credentials
+// stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	*kubernetesDatabaseConfig
+	kargoClient  client.Client
+	argocdClient client.Client // nil if credential borrowing is not enabled
+	cfg          KubernetesDatabaseConfig
 }
 
-// kubernetesDatabaseConfig is a configuration struct for the
-// kubernetesDatabase struct. It uses the functional options pattern to allow
-// for easy configuration.
-type kubernetesDatabaseConfig struct {
+// KubernetesDatabaseConfig represents configuration for a Kubernetes based
+// implementation of the Database interface.
+type KubernetesDatabaseConfig struct {
 	ArgoCDNamespace             string   `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
 	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
-
-	kargoClient client.Client
-	// it set we know that "borrowing ArgoCD creds" is enabled
-
-	argoClient client.Client
 }
 
-// KubernetesDatabaseOption is a functional option for configuring a
-// kubernetesDatabase. Options defined in credentials_options.go.
-type KubernetesDatabaseOption func(*kubernetesDatabaseConfig)
-
-func createConfig(opts ...KubernetesDatabaseOption) *kubernetesDatabaseConfig {
-	config := &kubernetesDatabaseConfig{}
-
-	// load from env if defined
-	envconfig.MustProcess("", config)
-
-	// apply user supplied options
-	for _, opt := range opts {
-		opt(config)
-	}
-
-	return config
+func KubernetesDatabaseConfigFromEnv() KubernetesDatabaseConfig {
+	cfg := KubernetesDatabaseConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
 }
 
 // NewKubernetesDatabase initializes and returns an implementation of the
 // Database interface that utilizes a Kubernetes controller runtime client to
-// index and retrieve Credentials stored in Kubernetes Secrets. This function
-// carries out the important task of indexing Credentials stored in Kubernetes
-// Secrets by repository type + URL.
+// retrieve Credentials stored in Kubernetes Secrets.
 func NewKubernetesDatabase(
 	kargoClient client.Client,
-	opts ...KubernetesDatabaseOption,
+	argocdClient client.Client,
+	cfg KubernetesDatabaseConfig,
 ) Database {
-	cfg := createConfig(opts...)
-	cfg.kargoClient = kargoClient
 	return &kubernetesDatabase{
-		kubernetesDatabaseConfig: cfg,
+		kargoClient:  kargoClient,
+		argocdClient: argocdClient,
+		cfg:          cfg,
 	}
 }
 
@@ -172,7 +155,7 @@ func (k *kubernetesDatabase) Get(
 	}
 
 	// Check global credentials namespaces for credentials
-	for _, globalCredsNamespace := range k.GlobalCredentialsNamespaces {
+	for _, globalCredsNamespace := range k.cfg.GlobalCredentialsNamespaces {
 		// Check shared creds namespace for credentials
 		if secret, err = getCredentialsSecret(
 			ctx,
@@ -212,7 +195,7 @@ func (k *kubernetesDatabase) Get(
 		}
 	}
 
-	if k.argoClient == nil {
+	if k.argocdClient == nil {
 		// We cannot borrow creds from from Argo CD
 		return creds, false, nil
 	}
@@ -220,8 +203,8 @@ func (k *kubernetesDatabase) Get(
 	// Check Argo CD's namespace for credentials
 	if secret, err = getCredentialsSecret(
 		ctx,
-		k.argoClient,
-		k.ArgoCDNamespace,
+		k.argocdClient,
+		k.cfg.ArgoCDNamespace,
 		labels.Set(map[string]string{
 			argoCDSecretTypeLabelKey: repositorySecretTypeLabelValue,
 		}).AsSelector(),
@@ -236,8 +219,8 @@ func (k *kubernetesDatabase) Get(
 		// Check Argo CD's namespace for credentials template
 		if secret, err = getCredentialsSecret(
 			ctx,
-			k.argoClient,
-			k.ArgoCDNamespace,
+			k.argocdClient,
+			k.cfg.ArgoCDNamespace,
 			labels.Set(map[string]string{
 				argoCDSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
 			}).AsSelector(),

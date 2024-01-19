@@ -602,12 +602,13 @@ spec:
                           type: string
                       type: object
                     type: array
-                  verificationResult:
+                  verificationInfo:
                     description: VerificationInfo is information about any verification
                       process that was associated with this Freight for this Stage.
                     properties:
                       analysisRun:
-                        description: AnalysisRunReference is a reference to an AnalysisRun.
+                        description: AnalysisRun is a reference to the Argo Rollouts
+                          AnalysisRun that implements the Verification process.
                         properties:
                           name:
                             description: Name is the name of the AnalysisRun.
@@ -624,8 +625,17 @@ spec:
                         - namespace
                         - phase
                         type: object
-                    required:
-                    - analysisRun
+                      message:
+                        description: Message may contain additional information about
+                          why the verification process is in its current phase.
+                        type: string
+                      phase:
+                        description: Phase describes the current phase of the Verification
+                          process. Generally, this will be a reflection of the underlying
+                          AnalysisRun's phase, however, there are exceptions to this,
+                          such as in the case where an AnalysisRun cannot be launched
+                          successfully.
+                        type: string
                     type: object
                 type: object
               currentPromotion:
@@ -724,13 +734,13 @@ spec:
                               type: string
                           type: object
                         type: array
-                      verificationResult:
+                      verificationInfo:
                         description: VerificationInfo is information about any verification
                           process that was associated with this Freight for this Stage.
                         properties:
                           analysisRun:
-                            description: AnalysisRunReference is a reference to an
-                              AnalysisRun.
+                            description: AnalysisRun is a reference to the Argo Rollouts
+                              AnalysisRun that implements the Verification process.
                             properties:
                               name:
                                 description: Name is the name of the AnalysisRun.
@@ -747,8 +757,18 @@ spec:
                             - namespace
                             - phase
                             type: object
-                        required:
-                        - analysisRun
+                          message:
+                            description: Message may contain additional information
+                              about why the verification process is in its current
+                              phase.
+                            type: string
+                          phase:
+                            description: Phase describes the current phase of the
+                              Verification process. Generally, this will be a reflection
+                              of the underlying AnalysisRun's phase, however, there
+                              are exceptions to this, such as in the case where an
+                              AnalysisRun cannot be launched successfully.
+                            type: string
                         type: object
                     type: object
                   name:
@@ -915,12 +935,13 @@ spec:
                             type: string
                         type: object
                       type: array
-                    verificationResult:
+                    verificationInfo:
                       description: VerificationInfo is information about any verification
                         process that was associated with this Freight for this Stage.
                       properties:
                         analysisRun:
-                          description: AnalysisRunReference is a reference to an AnalysisRun.
+                          description: AnalysisRun is a reference to the Argo Rollouts
+                            AnalysisRun that implements the Verification process.
                           properties:
                             name:
                               description: Name is the name of the AnalysisRun.
@@ -937,8 +958,17 @@ spec:
                           - namespace
                           - phase
                           type: object
-                      required:
-                      - analysisRun
+                        message:
+                          description: Message may contain additional information
+                            about why the verification process is in its current phase.
+                          type: string
+                        phase:
+                          description: Phase describes the current phase of the Verification
+                            process. Generally, this will be a reflection of the underlying
+                            AnalysisRun's phase, however, there are exceptions to
+                            this, such as in the case where an AnalysisRun cannot
+                            be launched successfully.
+                          type: string
                       type: object
                   type: object
                 type: array

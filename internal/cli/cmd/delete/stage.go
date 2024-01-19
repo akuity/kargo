@@ -10,11 +10,12 @@ import (
 	"golang.org/x/exp/slices"
 
 	"github.com/akuity/kargo/internal/cli/client"
+	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newStageCommand(opt *option.Option) *cobra.Command {
+func newStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stage [NAME]...",
 		Short: "Delete stage by name",
@@ -25,7 +26,7 @@ kargo delete stage --project=my-project my-stage
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -50,6 +51,6 @@ kargo delete stage --project=my-project my-stage
 		},
 	}
 	opt.PrintFlags.AddFlags(cmd)
-	option.Project(&opt.Project, opt.Project)(cmd.Flags())
+	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }

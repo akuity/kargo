@@ -32,6 +32,9 @@ helm.sh/chart: {{ include "kargo.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels }}
+{{- end }}
 {{- end -}}
 
 {{/*
@@ -46,16 +49,20 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: api
 {{- end -}}
 
-{{- define "kargo.dexServer.labels" -}}
-app.kubernetes.io/component: dex-server
-{{- end -}}
-
 {{- define "kargo.controller.labels" -}}
 app.kubernetes.io/component: controller
 {{- end -}}
 
+{{- define "kargo.dexServer.labels" -}}
+app.kubernetes.io/component: dex-server
+{{- end -}}
+
 {{- define "kargo.garbageCollector.labels" -}}
 app.kubernetes.io/component: garbage-collector
+{{- end -}}
+
+{{- define "kargo.managementController.labels" -}}
+app.kubernetes.io/component: management-controller
 {{- end -}}
 
 {{- define "kargo.webhooksServer.labels" -}}

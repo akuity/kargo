@@ -143,7 +143,7 @@ func FromFreightReferenceProto(s *v1alpha1.FreightReference) *kargoapi.FreightRe
 		Commits:          commits,
 		Images:           images,
 		Charts:           charts,
-		VerificationInfo: FromVerificationInfo(s.VerificationInfo),
+		VerificationInfo: FromVerificationInfoProto(s.VerificationInfo),
 	}
 }
 
@@ -654,13 +654,16 @@ func FromAnalysisRunArgumentProto(
 	}
 }
 
-func FromVerificationInfo(v *v1alpha1.VerificationInfo) *kargoapi.VerificationInfo {
+func FromVerificationInfoProto(v *v1alpha1.VerificationInfo) *kargoapi.VerificationInfo {
 	if v == nil {
 		return nil
 	}
-	k := &kargoapi.VerificationInfo{}
+	k := &kargoapi.VerificationInfo{
+		Phase:   kargoapi.VerificationPhase(v.Phase),
+		Message: v.Message,
+	}
 	if v.AnalysisRun != nil {
-		k.AnalysisRun = *FromAnalysisRunReferenceProto(v.AnalysisRun)
+		k.AnalysisRun = FromAnalysisRunReferenceProto(v.AnalysisRun)
 	}
 	return k
 }
@@ -1227,7 +1230,9 @@ func ToVerificationInfoProto(v *kargoapi.VerificationInfo) *v1alpha1.Verificatio
 		return nil
 	}
 	return &v1alpha1.VerificationInfo{
-		AnalysisRun: ToAnalysisRunReferenceProto(&v.AnalysisRun),
+		Phase:       string(v.Phase),
+		Message:     v.Message,
+		AnalysisRun: ToAnalysisRunReferenceProto(v.AnalysisRun),
 	}
 }
 

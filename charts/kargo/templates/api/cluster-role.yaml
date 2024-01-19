@@ -76,4 +76,12 @@ rules:
     verbs:
       - patch
       - update
+{{- if .Values.api.rollouts.integrationEnabled }}
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - analysistemplates
+    verbs:
+      - "*"
+{{- end }}
 {{- end }}
