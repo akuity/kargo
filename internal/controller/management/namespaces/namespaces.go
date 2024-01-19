@@ -12,7 +12,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
@@ -50,6 +52,16 @@ type reconciler struct {
 func SetupReconcilerWithManager(kargoMgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(kargoMgr).
 		For(&corev1.Namespace{}).
+		WithEventFilter(
+			predicate.Funcs{
+				DeleteFunc: func(event.DeleteEvent) bool {
+					// We're not interested in any ACTUAL deletes. (We do care about
+					// updated where DeletionTimestamp is non-nil, but that's not a
+					// delete event.)
+					return false
+				},
+			},
+		).
 		WithOptions(controller.CommonOptions()).
 		Complete(newReconciler(kargoMgr.GetClient()))
 }
