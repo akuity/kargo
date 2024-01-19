@@ -227,6 +227,12 @@ func TestGet(t *testing.T) {
 			found:    true,
 		},
 		{
+			name:     "namespace before global",
+			secrets:  []client.Object{secretInNamespacePrefix, secretInGlobalPrefix},
+			expected: secretInNamespacePrefix,
+			found:    true,
+		},
+		{
 			name:     "global before argocd",
 			secrets:  []client.Object{secretInGlobalPrefix, secretInArgoCDNamespacePrefix},
 			expected: secretInGlobalPrefix,
