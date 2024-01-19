@@ -8,4 +8,6 @@ const (
 	StageLabelKey   = "kargo.akuity.io/stage"
 
 	LabelTrueValue = "true"
+
+	FinalizerName = "kargo.akuity.io/finalizer"
 )
