@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -44,6 +45,7 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := newWebhook(mgr.GetClient())
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Stage{}).
+		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
 }
@@ -56,6 +58,12 @@ func newWebhook(kubeClient client.Client) *webhook {
 	w.validateCreateOrUpdateFn = w.validateCreateOrUpdate
 	w.validateSpecFn = w.validateSpec
 	return w
+}
+
+func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
+	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+	controllerutil.AddFinalizer(stage, kargoapi.FinalizerName)
+	return nil
 }
 
 func (w *webhook) ValidateCreate(
