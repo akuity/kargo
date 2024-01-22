@@ -15,6 +15,30 @@
     },
     "spec": {
       "description": "Spec describes a Project.",
+      "properties": {
+        "promotionPolicies": {
+          "description": "PromotionPolicies defines policies governing the promotion of Freight to specific Stages within this Project.",
+          "items": {
+            "description": "PromotionPolicy defines policies governing the promotion of Freight to a specific Stage.",
+            "properties": {
+              "enableAutoPromotion": {
+                "description": "EnableAutoPromotion indicates whether new Freight can automatically be promoted into the Stage referenced by the Stage field. Note: There are may be other conditions also required for an auto-promotion to occur. This field defaults to false, but is commonly set to true for Stages that subscribe to Warehouses instead of other, upstream Stages. This allows users to define Stages that are automatically updated as soon as new artifacts are detected.",
+                "type": "boolean"
+              },
+              "stage": {
+                "minLength": 1,
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "stage"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
       "type": "object"
     },
     "status": {
