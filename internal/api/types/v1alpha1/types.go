@@ -609,16 +609,7 @@ func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kargoapi.PromotionPo
 	if p == nil {
 		return nil
 	}
-	var objectMeta kubemetav1.ObjectMeta
-	if p.GetMetadata() != nil {
-		objectMeta = *typesmetav1.FromObjectMetaProto(p.GetMetadata())
-	}
 	return &kargoapi.PromotionPolicy{
-		TypeMeta: kubemetav1.TypeMeta{
-			APIVersion: kargoapi.GroupVersion.String(),
-			Kind:       "PromotionPolicy",
-		},
-		ObjectMeta:          objectMeta,
 		Stage:               p.GetStage(),
 		EnableAutoPromotion: p.GetEnableAutoPromotion(),
 	}
@@ -1187,13 +1178,7 @@ func ToPromotionProto(p kargoapi.Promotion) *v1alpha1.Promotion {
 }
 
 func ToPromotionPolicyProto(p kargoapi.PromotionPolicy) *v1alpha1.PromotionPolicy {
-	metadata := p.ObjectMeta.DeepCopy()
-	metadata.SetManagedFields(nil)
-
 	return &v1alpha1.PromotionPolicy{
-		ApiVersion:          p.APIVersion,
-		Kind:                p.Kind,
-		Metadata:            typesmetav1.ToObjectMetaProto(*metadata),
 		Stage:               p.Stage,
 		EnableAutoPromotion: p.EnableAutoPromotion,
 	}
