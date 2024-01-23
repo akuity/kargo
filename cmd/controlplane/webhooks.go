@@ -19,7 +19,6 @@ import (
 	"github.com/akuity/kargo/internal/webhook/freight"
 	"github.com/akuity/kargo/internal/webhook/project"
 	"github.com/akuity/kargo/internal/webhook/promotion"
-	"github.com/akuity/kargo/internal/webhook/promotionpolicy"
 	"github.com/akuity/kargo/internal/webhook/stage"
 	"github.com/akuity/kargo/internal/webhook/warehouse"
 )
@@ -73,10 +72,6 @@ func newWebhooksServerCommand() *cobra.Command {
 				return errors.Wrap(err, "new manager")
 			}
 
-			// Index PromotionPolicies by Stage
-			if err = kubeclient.IndexPromotionPoliciesByStage(ctx, mgr); err != nil {
-				return errors.Wrap(err, "index PromotionPolicies by Stage")
-			}
 			// Index Stages by Freight
 			if err = kubeclient.IndexStagesByFreight(ctx, mgr); err != nil {
 				return errors.Wrap(err, "index Stages by Freight")
@@ -90,9 +85,6 @@ func newWebhooksServerCommand() *cobra.Command {
 			}
 			if err = promotion.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "setup Promotion webhook")
-			}
-			if err = promotionpolicy.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "setup PromotionPolicy webhook")
 			}
 			if err = stage.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "setup Stage webhook")

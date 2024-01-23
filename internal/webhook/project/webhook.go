@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,13 +23,21 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-var projectGroupResource = schema.GroupResource{
-	Group:    kargoapi.GroupVersion.Group,
-	Resource: "projects",
-}
+var (
+	projectGroupKind = schema.GroupKind{
+		Group: kargoapi.GroupVersion.Group,
+		Kind:  "Project",
+	}
+	projectGroupResource = schema.GroupResource{
+		Group:    kargoapi.GroupVersion.Group,
+		Resource: "projects",
+	}
+)
 
 type webhook struct {
 	// The following behaviors are overridable for testing purposes:
+
+	validateSpecFn func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList
 
 	getNamespaceFn func(
 		context.Context,
@@ -52,22 +62,30 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 func newWebhook(kubeClient client.Client) *webhook {
-	return &webhook{
-		getNamespaceFn:    kubeClient.Get,
-		createNamespaceFn: kubeClient.Create,
-	}
+	w := &webhook{}
+	w.validateSpecFn = w.validateSpec
+	w.getNamespaceFn = kubeClient.Get
+	w.createNamespaceFn = kubeClient.Create
+	return w
 }
 
 func (w *webhook) ValidateCreate(
 	ctx context.Context,
 	obj runtime.Object,
 ) (admission.Warnings, error) {
+	project := obj.(*kargoapi.Project) // nolint: forcetypeassert
+
+	if errs := w.validateSpecFn(field.NewPath("spec"), project.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(projectGroupKind, project.Name, errs)
+	}
+
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
 		return nil, apierrors.NewInternalError(
 			errors.Wrap(err, "error getting admission request from context"),
 		)
 	}
+
 	if req.DryRun == nil || !*req.DryRun {
 		project := obj.(*kargoapi.Project) // nolint: forcetypeassert
 
@@ -148,10 +166,14 @@ func (w *webhook) ValidateCreate(
 }
 
 func (w *webhook) ValidateUpdate(
-	context.Context,
-	runtime.Object,
-	runtime.Object,
+	_ context.Context,
+	_ runtime.Object,
+	newObj runtime.Object,
 ) (admission.Warnings, error) {
+	project := newObj.(*kargoapi.Project) // nolint: forcetypeassert
+	if errs := w.validateSpecFn(field.NewPath("spec"), project.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(projectGroupKind, project.Name, errs)
+	}
 	return nil, nil
 }
 
@@ -160,4 +182,41 @@ func (w *webhook) ValidateDelete(
 	runtime.Object,
 ) (admission.Warnings, error) {
 	return nil, nil
+}
+
+func (w *webhook) validateSpec(
+	f *field.Path,
+	spec *kargoapi.ProjectSpec,
+) field.ErrorList {
+	if spec == nil { // nil spec is valid
+		return nil
+	}
+	return w.validatePromotionPolicies(
+		f.Child("promotionPolicies"),
+		spec.PromotionPolicies,
+	)
+}
+
+func (w *webhook) validatePromotionPolicies(
+	f *field.Path,
+	promotionPolicies []kargoapi.PromotionPolicy,
+) field.ErrorList {
+	stageNames := make(map[string]struct{}, len(promotionPolicies))
+	for _, promotionPolicy := range promotionPolicies {
+		if _, found := stageNames[promotionPolicy.Stage]; found {
+			return field.ErrorList{
+				field.Invalid(
+					f,
+					promotionPolicies,
+					fmt.Sprintf(
+						"multiple %s reference stage %s",
+						f.String(),
+						promotionPolicy.Stage,
+					),
+				),
+			}
+		}
+		stageNames[promotionPolicy.Stage] = struct{}{}
+	}
+	return nil
 }
