@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/utils/ptr"
 
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -99,14 +98,14 @@ func setAutoPromotionForStage(
 	if err != nil {
 		return err
 	}
-
-	resp, err := kargoClient.SetAutoPromotionForStage(ctx,
+	if _, err = kargoClient.SetAutoPromotionForStage(
+		ctx,
 		connect.NewRequest(&v1alpha1.SetAutoPromotionForStageRequest{
 			Project: project,
 			Stage:   stage,
 			Enable:  enable,
-		}))
-	if err != nil {
+		}),
+	); err != nil {
 		return errors.Wrapf(err, "set auto promotion for stage: %q", stage)
 	}
 	if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
@@ -114,15 +113,8 @@ func setAutoPromotionForStage(
 		if enable {
 			res = "Enabled"
 		}
-		fmt.Fprintf(opt.IOStreams.Out,
-			"%s AutoPromotion for Stage %q", res, resp.Msg.GetPromotionPolicy().GetStage())
+		fmt.Fprintf(opt.IOStreams.Out, "%s AutoPromotion for Stage %q\n", res, stage)
 		return nil
 	}
-	printer, err := opt.PrintFlags.ToPrinter()
-	if err != nil {
-		return errors.Wrap(err, "new printer")
-	}
-	policy := typesv1alpha1.FromPromotionPolicyProto(resp.Msg.GetPromotionPolicy())
-	_ = printer.PrintObj(policy, opt.IOStreams.Out)
 	return nil
 }
