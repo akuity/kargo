@@ -393,3 +393,90 @@ func TestCheckHealth(t *testing.T) {
 		})
 	}
 }
+
+func TestStageHealthForAppSync(t *testing.T) {
+	testCases := []struct {
+		name       string
+		app        *argocd.Application
+		revision   string
+		assertions func(kargoapi.HealthState)
+	}{
+		{
+			name: "revision is empty",
+			assertions: func(health kargoapi.HealthState) {
+				require.Equal(t, kargoapi.HealthStateHealthy, health)
+			},
+		},
+		{
+			name: "revision is specified; does not match app; still syncing",
+			app: &argocd.Application{
+				Operation: &argocd.Operation{
+					Sync: &argocd.SyncOperation{},
+				},
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "not-the-right-commit",
+					},
+				},
+			},
+			revision: "fake-commit",
+			assertions: func(health kargoapi.HealthState) {
+				require.Equal(t, kargoapi.HealthStateProgressing, health)
+			},
+		},
+		{
+			name: "revision is specified; does not match app; done syncing",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "not-the-right-commit",
+					},
+				},
+			},
+			revision: "fake-commit",
+			assertions: func(health kargoapi.HealthState) {
+				require.Equal(t, kargoapi.HealthStateUnhealthy, health)
+			},
+		},
+		{
+			name: "revision is specified; matches app; still syncing",
+			app: &argocd.Application{
+				Operation: &argocd.Operation{
+					Sync: &argocd.SyncOperation{},
+				},
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "fake-commit",
+					},
+				},
+			},
+			revision: "fake-commit",
+			assertions: func(health kargoapi.HealthState) {
+				require.Equal(t, kargoapi.HealthStateProgressing, health)
+			},
+		},
+		{
+			name: "revision is specified; matches app; done syncing",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revision: "fake-commit",
+					},
+				},
+			},
+			revision: "fake-commit",
+			assertions: func(health kargoapi.HealthState) {
+				require.Equal(t, kargoapi.HealthStateHealthy, health)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			health, _ := stageHealthForAppSync(
+				testCase.app,
+				testCase.revision,
+			)
+			testCase.assertions(health)
+		})
+	}
+}
