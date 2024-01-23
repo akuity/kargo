@@ -21,7 +21,6 @@ rules:
   resources:
   - freights
   - projects
-  - promotionpolicies
   - stages
   verbs:
   - get

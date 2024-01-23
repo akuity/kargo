@@ -50,7 +50,6 @@ rules:
       - kargo.akuity.io
     resources:
       - projects
-      - promotionpolicies
       - stages
       - warehouses
     verbs:

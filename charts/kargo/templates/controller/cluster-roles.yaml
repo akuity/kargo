@@ -18,6 +18,14 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - projects
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
   - freights
   - promotions
   verbs:
@@ -26,14 +34,6 @@ rules:
   - list
   - watch
   - patch
-- apiGroups:
-  - kargo.akuity.io
-  resources:
-  - promotionpolicies
-  verbs:
-  - get
-  - list
-  - watch
 - apiGroups:
   - kargo.akuity.io
   resources:

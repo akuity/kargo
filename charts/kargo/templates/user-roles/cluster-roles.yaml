@@ -24,7 +24,6 @@ rules:
   resources:
   - stages
   - promotions
-  - promotionpolicies
   verbs:
   - create
   - delete
@@ -63,7 +62,6 @@ rules:
   - kargo.akuity.io
   resources:
   - promotions
-  - promotionpolicies
   verbs:
   - get
   - list
@@ -92,7 +90,6 @@ rules:
   - kargo.akuity.io
   resources:
   - stages
-  - promotionpolicies
   verbs:
   - get
   - list
