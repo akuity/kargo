@@ -169,22 +169,26 @@ func stageHealthForAppSync(
 	app *argocd.Application,
 	revision string,
 ) (kargoapi.HealthState, string) {
-	if revision != "" && app.Status.Sync.Revision != revision {
-		if app.Operation != nil && app.Operation.Sync != nil {
-			return kargoapi.HealthStateProgressing,
-				fmt.Sprintf(
-					"Argo CD Application %q in namespace %q is being synced",
-					app.Name,
-					app.Namespace,
-				)
-		}
-		return kargoapi.HealthStateUnhealthy,
-			fmt.Sprintf(
-				"Argo CD Application %q in namespace %q is not synced to revision %q",
-				app.Name,
-				app.Namespace,
-				revision,
-			)
+	if revision == "" {
+		// No specific revision required
+		return kargoapi.HealthStateHealthy, ""
+	}
+	if app.Operation != nil && app.Operation.Sync != nil {
+		// Still syncing
+		return kargoapi.HealthStateProgressing, fmt.Sprintf(
+			"Argo CD Application %q in namespace %q is being synced",
+			app.Name,
+			app.Namespace,
+		)
+	}
+	// Done syncing
+	if app.Status.Sync.Revision != revision {
+		return kargoapi.HealthStateUnhealthy, fmt.Sprintf(
+			"Argo CD Application %q in namespace %q is not synced to revision %q",
+			app.Name,
+			app.Namespace,
+			revision,
+		)
 	}
 	return kargoapi.HealthStateHealthy, ""
 }
