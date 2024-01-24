@@ -168,7 +168,6 @@ k8s_resource(
   objects = [
     'freights.kargo.akuity.io:customresourcedefinition',
     'projects.kargo.akuity.io:customresourcedefinition',
-    'promotionpolicies.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition',
     'stages.kargo.akuity.io:customresourcedefinition',
     'warehouses.kargo.akuity.io:customresourcedefinition'
