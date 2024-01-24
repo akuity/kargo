@@ -5,8 +5,10 @@ import (
 	"flag"
 	"strconv"
 
+	"github.com/bombsimon/logrusr/v4"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/klog/v2"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/akuity/kargo/internal/os"
 )
@@ -23,6 +25,8 @@ func init() {
 	}
 	globalLogger.Logger.SetLevel(level)
 	SetKLogLevel(os.GetEnvInt("KLOG_LEVEL", 0))
+
+	runtimelog.SetLogger(logrusr.New(globalLogger))
 }
 
 // ContextWithLogger returns a context.Context that has been augmented with

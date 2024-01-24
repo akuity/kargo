@@ -52,6 +52,7 @@ require (
 )
 
 require (
+	github.com/bombsimon/logrusr/v4 v4.1.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	gopkg.in/evanphx/json-patch.v5 v5.6.0 // indirect
 	sigs.k8s.io/kustomize/api v0.16.0 // indirect
