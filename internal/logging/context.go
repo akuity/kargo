@@ -2,8 +2,11 @@ package logging
 
 import (
 	"context"
+	"flag"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/klog/v2"
 
 	"github.com/akuity/kargo/internal/os"
 )
@@ -19,6 +22,7 @@ func init() {
 		panic(err)
 	}
 	globalLogger.Logger.SetLevel(level)
+	SetKLogLevel(os.GetEnvInt("KLOG_LEVEL", 0))
 }
 
 // ContextWithLogger returns a context.Context that has been augmented with
@@ -35,4 +39,11 @@ func LoggerFromContext(ctx context.Context) *log.Entry {
 		return ctx.Value(loggerContextKey{}).(*log.Entry) // nolint: forcetypeassert
 	}
 	return globalLogger
+}
+
+// SetKLogLevel set the klog level for the k8s go-client
+func SetKLogLevel(klogLevel int) {
+	klog.InitFlags(nil)
+	klog.SetOutput(globalLogger.Writer())
+	_ = flag.Set("v", strconv.Itoa(klogLevel))
 }
