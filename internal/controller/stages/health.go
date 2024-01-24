@@ -6,6 +6,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/git"
 )
 
 func (r *reconciler) checkHealth(
@@ -118,8 +119,9 @@ func (r *reconciler) checkHealth(
 		}
 
 		var desiredRevision string
+		sourceGitRepoURL := git.NormalizeGitURL(app.Spec.Source.RepoURL)
 		for _, commit := range currentFreight.Commits {
-			if commit.RepoURL == app.Spec.Source.RepoURL {
+			if git.NormalizeGitURL(commit.RepoURL) == sourceGitRepoURL {
 				if commit.HealthCheckCommit != "" {
 					desiredRevision = commit.HealthCheckCommit
 				} else {
