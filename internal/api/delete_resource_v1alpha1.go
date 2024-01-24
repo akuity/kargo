@@ -15,26 +15,15 @@ func (s *server) DeleteResource(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteResourceRequest],
 ) (*connect.Response[svcv1alpha1.DeleteResourceResponse], error) {
-	cluster, namespaced, err := s.parseManifestFn(req.Msg.GetManifest())
+	projects, otherResources, err := splitYAML(req.Msg.GetManifest())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}
-
-	size := len(namespaced) + len(cluster)
-	res := make([]*svcv1alpha1.DeleteResourceResult, 0, size)
-	for _, obj := range namespaced {
-		if err := s.validateProject(ctx, obj.GetNamespace()); err != nil {
-			res = append(res, &svcv1alpha1.DeleteResourceResult{
-				Result: &svcv1alpha1.DeleteResourceResult_Error{
-					Error: err.Error(),
-				},
-			})
-			continue
-		}
-		res = append(res, s.deleteResource(ctx, obj))
-	}
-	for _, obj := range cluster {
-		res = append(res, s.deleteResource(ctx, obj))
+	resources := append(otherResources, projects...)
+	res := make([]*svcv1alpha1.DeleteResourceResult, 0, len(resources))
+	for _, r := range resources {
+		resource := r // Avoid implicit memory aliasing
+		res = append(res, s.deleteResource(ctx, &resource))
 	}
 	return &connect.Response[svcv1alpha1.DeleteResourceResponse]{
 		Msg: &svcv1alpha1.DeleteResourceResponse{

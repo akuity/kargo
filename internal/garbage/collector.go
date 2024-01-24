@@ -100,7 +100,7 @@ func (c *collector) Run(ctx context.Context) error {
 		&client.ListOptions{
 			LabelSelector: labels.Set(
 				map[string]string{
-					kargoapi.LabelProjectKey: "true",
+					kargoapi.ProjectLabelKey: "true",
 				},
 			).AsSelector(),
 		},

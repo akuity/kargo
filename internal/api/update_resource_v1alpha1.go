@@ -16,26 +16,15 @@ func (s *server) UpdateResource(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdateResourceRequest],
 ) (*connect.Response[svcv1alpha1.UpdateResourceResponse], error) {
-	cluster, namespaced, err := s.parseManifestFn(req.Msg.GetManifest())
+	projects, otherResources, err := splitYAML(req.Msg.GetManifest())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
 	}
-
-	size := len(cluster) + len(namespaced)
-	res := make([]*svcv1alpha1.UpdateResourceResult, 0, size)
-	for _, obj := range cluster {
-		res = append(res, s.updateResource(ctx, obj))
-	}
-	for _, obj := range namespaced {
-		if err := s.validateProject(ctx, obj.GetNamespace()); err != nil {
-			res = append(res, &svcv1alpha1.UpdateResourceResult{
-				Result: &svcv1alpha1.UpdateResourceResult_Error{
-					Error: err.Error(),
-				},
-			})
-			continue
-		}
-		res = append(res, s.updateResource(ctx, obj))
+	resources := append(projects, otherResources...)
+	res := make([]*svcv1alpha1.UpdateResourceResult, 0, len(resources))
+	for _, r := range resources {
+		resource := r // Avoid implicit memory aliasing
+		res = append(res, s.updateResource(ctx, &resource))
 	}
 	return &connect.Response[svcv1alpha1.UpdateResourceResponse]{
 		Msg: &svcv1alpha1.UpdateResourceResponse{

@@ -203,7 +203,6 @@ func (a *argoCDMechanism) doSingleUpdate(
 		ctx,
 		app,
 		patch,
-		&client.PatchOptions{},
 	); err != nil {
 		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
 	}

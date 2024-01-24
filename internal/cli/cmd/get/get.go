@@ -65,17 +65,18 @@ func printObjects[T runtime.Object](opt *option.Option, objects []T) error {
 	}
 
 	var t T
+	var printObj runtime.Object
 	switch any(t).(type) {
 	case *kargoapi.Freight:
-		table := newFreightTable(list)
-		return printers.NewTablePrinter(printers.PrintOptions{}).PrintObj(table, opt.IOStreams.Out)
+		printObj = newFreightTable(list)
+	case *kargoapi.Project:
+		printObj = newProjectTable(list)
 	case *kargoapi.Promotion:
-		table := newPromotionTable(list)
-		return printers.NewTablePrinter(printers.PrintOptions{}).PrintObj(table, opt.IOStreams.Out)
+		printObj = newPromotionTable(list)
 	case *kargoapi.Stage:
-		table := newStageTable(list)
-		return printers.NewTablePrinter(printers.PrintOptions{}).PrintObj(table, opt.IOStreams.Out)
+		printObj = newStageTable(list)
 	default:
-		return printers.NewTablePrinter(printers.PrintOptions{}).PrintObj(list, opt.IOStreams.Out)
+		printObj = list
 	}
+	return printers.NewTablePrinter(printers.PrintOptions{}).PrintObj(printObj, opt.IOStreams.Out)
 }

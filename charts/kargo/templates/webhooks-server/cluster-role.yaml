@@ -8,23 +8,31 @@ metadata:
     {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-    - ""
+  - ""
   resources:
-    - namespaces
+  - namespaces
   verbs:
-    - get
-    - list
-    - watch
+  - get
+  - list
+  - watch
 - apiGroups:
-    - kargo.akuity.io
+  - kargo.akuity.io
   resources:
-    - freights
-    - promotionpolicies
-    - stages
+  - freights
+  - projects
+  - promotionpolicies
+  - stages
   verbs:
-    - get
-    - list
-    - watch
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - project/status
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - authorization.k8s.io
   resources:

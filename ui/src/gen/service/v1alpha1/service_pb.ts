@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Freight, Promotion, PromotionPolicy, Stage, StageSpec, Warehouse, WarehouseSpec } from "../../v1alpha1/types_pb.js";
+import { Freight, Project, Promotion, PromotionPolicy, Stage, StageSpec, Warehouse, WarehouseSpec } from "../../v1alpha1/types_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -2677,49 +2677,6 @@ export class DeletePromotionPolicyResponse extends Message<DeletePromotionPolicy
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.Project
- */
-export class Project extends Message<Project> {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name = "";
-
-  /**
-   * @generated from field: google.protobuf.Timestamp create_time = 2;
-   */
-  createTime?: Timestamp;
-
-  constructor(data?: PartialMessage<Project>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.Project";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "create_time", kind: "message", T: Timestamp },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Project {
-    return new Project().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Project {
-    return new Project().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Project {
-    return new Project().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Project | PlainMessage<Project> | undefined, b: Project | PlainMessage<Project> | undefined): boolean {
-    return proto3.util.equals(Project, a, b);
-  }
-}
-
-/**
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateProjectRequest
  */
 export class CreateProjectRequest extends Message<CreateProjectRequest> {
@@ -2761,7 +2718,7 @@ export class CreateProjectRequest extends Message<CreateProjectRequest> {
  */
 export class CreateProjectResponse extends Message<CreateProjectResponse> {
   /**
-   * @generated from field: akuity.io.kargo.service.v1alpha1.Project project = 1;
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Project project = 1;
    */
   project?: Project;
 
@@ -2831,7 +2788,7 @@ export class ListProjectsRequest extends Message<ListProjectsRequest> {
  */
 export class ListProjectsResponse extends Message<ListProjectsResponse> {
   /**
-   * @generated from field: repeated akuity.io.kargo.service.v1alpha1.Project projects = 1;
+   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Project projects = 1;
    */
   projects: Project[] = [];
 

@@ -385,17 +385,12 @@ message DeletePromotionPolicyResponse {
   /* explicitly empty */
 }
 
-message Project {
-  string name = 1;
-  google.protobuf.Timestamp create_time = 2;
-}
-
 message CreateProjectRequest {
   string name = 1;
 }
 
 message CreateProjectResponse {
-  Project project = 1;
+  github.com.akuity.kargo.pkg.api.v1alpha1.Project project = 1;
 }
 
 message ListProjectsRequest {
@@ -403,7 +398,7 @@ message ListProjectsRequest {
 }
 
 message ListProjectsResponse {
-  repeated Project projects = 1;
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Project projects = 1;
 }
 
 message DeleteProjectRequest {
