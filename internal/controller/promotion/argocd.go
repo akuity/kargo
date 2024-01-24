@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -281,25 +282,29 @@ func applyArgoCDSourceUpdate(
 	newFreight kargoapi.SimpleFreight,
 	update kargoapi.ArgoCDSourceUpdate,
 ) (argocd.ApplicationSource, error) {
-	if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
-		return source, nil
-	}
-
-	if update.UpdateTargetRevision {
-		var done bool
-		for _, commit := range newFreight.Commits {
-			if commit.RepoURL == source.RepoURL {
-				source.TargetRevision = commit.ID
-				done = true
+	if source.Chart != "" || update.Chart != "" {
+		// Infer that we're dealing with a chart repo. No need to normalize the
+		// repo URL here.
+		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
+			return source, nil
+		}
+		for _, chart := range newFreight.Charts {
+			if chart.RegistryURL == source.RepoURL && chart.Name == source.Chart {
+				source.TargetRevision = chart.Version
 				break
 			}
 		}
-		if !done {
-			for _, chart := range newFreight.Charts {
-				if chart.RegistryURL == source.RepoURL && chart.Name == source.Chart {
-					source.TargetRevision = chart.Version
-					break
-				}
+	} else {
+		// We're dealing with a git repo, so we should normalize the repo URLs
+		// before comparing them.
+		sourceRepoURL := git.NormalizeGitURL(source.RepoURL)
+		if sourceRepoURL != git.NormalizeGitURL(update.RepoURL) {
+			return source, nil
+		}
+		for _, commit := range newFreight.Commits {
+			if git.NormalizeGitURL(commit.RepoURL) == sourceRepoURL {
+				source.TargetRevision = commit.ID
+				break
 			}
 		}
 	}

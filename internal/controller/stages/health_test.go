@@ -198,6 +198,9 @@ func TestCheckHealth(t *testing.T) {
 				string,
 			) (*argocd.Application, error) {
 				return &argocd.Application{
+					Spec: argocd.ApplicationSpec{
+						Source: &argocd.ApplicationSource{},
+					},
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
 							Status: argocd.HealthStatusDegraded,
