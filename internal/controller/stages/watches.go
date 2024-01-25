@@ -2,9 +2,12 @@ package stages
 
 import (
 	"context"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -191,7 +194,7 @@ func (a *approvedFreightEventHandler) Update(
 		logger.WithFields(log.Fields{
 			"namespace": newFreight.Namespace,
 			"stage":     stage,
-		}).Debug("enqueued Stage fir reconciliation")
+		}).Debug("enqueued Stage for reconciliation")
 	}
 }
 
@@ -291,4 +294,218 @@ func (c *createdFreightEventHandler) Update(
 	workqueue.RateLimitingInterface,
 ) {
 	// No-op
+}
+
+// updatedArgoCDAppHandler is an event handler that enqueues Stages associated
+// with an Argo CD Application whenever that Application's health or sync status
+// changes, so that those Stages can reconcile.
+type updatedArgoCDAppHandler struct {
+	kargoClient client.Client
+}
+
+// Create implements EventHandler.
+func (u *updatedArgoCDAppHandler) Create(
+	context.Context,
+	event.CreateEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Delete implements EventHandler.
+func (u *updatedArgoCDAppHandler) Delete(
+	context.Context,
+	event.DeleteEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Generic implements EventHandler.
+func (u *updatedArgoCDAppHandler) Generic(
+	context.Context,
+	event.GenericEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Update implements EventHandler.
+func (u *updatedArgoCDAppHandler) Update(
+	ctx context.Context,
+	e event.UpdateEvent,
+	wq workqueue.RateLimitingInterface,
+) {
+	if appHealthOrSyncStatusChanged(ctx, e) {
+		logger := logging.LoggerFromContext(ctx)
+		stages := &kargoapi.StageList{}
+		if err := u.kargoClient.List(
+			ctx,
+			stages,
+			&client.ListOptions{
+				FieldSelector: fields.OneTermEqualSelector(
+					kubeclient.StagesByArgoCDApplicationsIndexField,
+					fmt.Sprintf(
+						"%s:%s",
+						e.ObjectNew.GetNamespace(),
+						e.ObjectNew.GetName(),
+					),
+				),
+			},
+		); err != nil {
+			logger.Errorf(
+				"error listing Stages for Application %q in namespace %q: %s",
+				e.ObjectNew.GetNamespace(),
+				e.ObjectNew.GetName(),
+				err,
+			)
+		}
+		for _, stage := range stages.Items {
+			wq.Add(
+				reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: stage.Namespace,
+						Name:      stage.Name,
+					},
+				},
+			)
+			logger.WithFields(log.Fields{
+				"namespace": stage.Namespace,
+				"stage":     stage.Name,
+				"app":       e.ObjectNew.GetName(),
+			}).Debug("enqueued Stage for reconciliation")
+		}
+	}
+}
+
+func appHealthOrSyncStatusChanged(ctx context.Context, e event.UpdateEvent) bool {
+	logger := logging.LoggerFromContext(ctx)
+	if e.ObjectOld == nil {
+		logger.Errorf("Update event has no old object to update: %v", e)
+	}
+	if e.ObjectNew == nil {
+		logger.Errorf("Update event has no new object for update: %v", e)
+	}
+	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectNew)
+	if err != nil {
+		logger.Errorf("Failed to convert new app: %v", e.ObjectNew)
+	}
+	oldUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectOld)
+	if err != nil {
+		logger.Errorf("Failed to convert old app: %v", e.ObjectOld)
+	}
+	oldHealth, _, _ := unstructured.NestedString(oldUn, "status", "health", "status")
+	newHealth, _, _ := unstructured.NestedString(newUn, "status", "health", "status")
+	// TODO: switch from checking sync status to whether or not operation is complete
+	oldSync, _, _ := unstructured.NestedString(oldUn, "status", "sync", "status")
+	newSync, _, _ := unstructured.NestedString(newUn, "status", "sync", "status")
+	//_, oldOp := oldUn["operation"]
+	//_, newOp := newUn["operation"]
+	oldRev, _, _ := unstructured.NestedString(oldUn, "status", "sync", "revision")
+	newRev, _, _ := unstructured.NestedString(newUn, "status", "sync", "revision")
+	return newHealth != oldHealth || oldSync != newSync || oldRev != newRev
+}
+
+// phaseChangedAnalysisRunHandler is an event handler that enqueues Stages
+// associated with an Argo Rollouts AnalysisRun whenever that AnalysisRun's
+// phase changes.
+type phaseChangedAnalysisRunHandler struct {
+	kargoClient client.Client
+}
+
+// Create implements EventHandler.
+func (p *phaseChangedAnalysisRunHandler) Create(
+	context.Context,
+	event.CreateEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Delete implements EventHandler.
+func (p *phaseChangedAnalysisRunHandler) Delete(
+	context.Context,
+	event.DeleteEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Generic implements EventHandler.
+func (p *phaseChangedAnalysisRunHandler) Generic(
+	context.Context,
+	event.GenericEvent,
+	workqueue.RateLimitingInterface,
+) {
+	// No-op
+}
+
+// Update implements EventHandler.
+func (p *phaseChangedAnalysisRunHandler) Update(
+	ctx context.Context,
+	e event.UpdateEvent,
+	wq workqueue.RateLimitingInterface,
+) {
+	if analysisRunPhaseChanged(ctx, e) {
+		logger := logging.LoggerFromContext(ctx)
+		// Find the Stage associated with this AnalysisRun
+		stages := &kargoapi.StageList{}
+		if err := p.kargoClient.List(
+			ctx,
+			stages,
+			&client.ListOptions{
+				FieldSelector: fields.OneTermEqualSelector(
+					kubeclient.StagesByAnalysisRunIndexField,
+					fmt.Sprintf(
+						"%s:%s",
+						e.ObjectNew.GetNamespace(),
+						e.ObjectNew.GetName(),
+					),
+				),
+			},
+		); err != nil {
+			logger.Errorf(
+				"error listing Stages for AnalysisRun %q in namespace %q: %s",
+				e.ObjectNew.GetNamespace(),
+				e.ObjectNew.GetName(),
+				err,
+			)
+		}
+		for _, stage := range stages.Items {
+			wq.Add(
+				reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: stage.Namespace,
+						Name:      stage.Name,
+					},
+				},
+			)
+			logger.WithFields(log.Fields{
+				"namespace":   stage.Namespace,
+				"stage":       stage.Name,
+				"analysisRun": e.ObjectNew.GetName(),
+			}).Debug("enqueued Stage for reconciliation")
+		}
+	}
+}
+
+func analysisRunPhaseChanged(ctx context.Context, e event.UpdateEvent) bool {
+	logger := logging.LoggerFromContext(ctx)
+	if e.ObjectOld == nil {
+		logger.Errorf("Update event has no old object to update: %v", e)
+	}
+	if e.ObjectNew == nil {
+		logger.Errorf("Update event has no new object for update: %v", e)
+	}
+	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectNew)
+	if err != nil {
+		logger.Errorf("Failed to convert new AnalysisRun: %v", e.ObjectNew)
+	}
+	oldUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectOld)
+	if err != nil {
+		logger.Errorf("Failed to convert old AnalysisRun: %v", e.ObjectOld)
+	}
+	oldPhase, _, _ := unstructured.NestedString(oldUn, "status", "phase")
+	newPhase, _, _ := unstructured.NestedString(newUn, "status", "phase")
+	return newPhase != oldPhase
 }

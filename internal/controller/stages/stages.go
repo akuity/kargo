@@ -249,6 +249,16 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "index Stages by Warehouse")
 	}
 
+	// Index Stages by Argo CD Applications
+	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, shardName); err != nil {
+		return errors.Wrap(err, "index Stages by Argo CD Applications")
+	}
+
+	// Index Stages by AnalysisRun
+	if err := kubeclient.IndexStagesByAnalysisRun(ctx, kargoMgr, shardName); err != nil {
+		return errors.Wrap(err, "index Stages by Argo Rollouts AnalysisRun")
+	}
+
 	shardPredicate, err := controller.GetShardPredicate(shardName)
 	if err != nil {
 		return errors.Wrap(err, "error creating shard predicate")
@@ -354,6 +364,32 @@ func SetupReconcilerWithManager(
 		createdFreightEventHandler,
 	); err != nil {
 		return errors.Wrap(err, "unable to watch Freight")
+	}
+
+	updatedArgoCDAppHandler := &updatedArgoCDAppHandler{
+		kargoClient: kargoMgr.GetClient(),
+	}
+	if err := c.Watch(
+		source.Kind(
+			argocdMgr.GetCache(),
+			&argocd.Application{},
+		),
+		updatedArgoCDAppHandler,
+	); err != nil {
+		return errors.Wrap(err, "unable to watch Applications")
+	}
+
+	phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler{
+		kargoClient: kargoMgr.GetClient(),
+	}
+	if err := c.Watch(
+		source.Kind(
+			rolloutsMgr.GetCache(),
+			&rollouts.AnalysisRun{},
+		),
+		phaseChangedAnalysisRunHandler,
+	); err != nil {
+		return errors.Wrap(err, "unable to watch AnalysisRuns")
 	}
 
 	return nil
