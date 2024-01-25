@@ -11,6 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	libGit "github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -217,13 +218,14 @@ func getReadRef(
 	update kargoapi.GitRepoUpdate,
 	commits []kargoapi.GitCommit,
 ) (string, int, error) {
+	updateRepoURL := libGit.NormalizeGitURL(update.RepoURL)
 	for i, commit := range commits {
-		if commit.RepoURL == update.RepoURL {
+		if libGit.NormalizeGitURL(commit.RepoURL) == updateRepoURL {
 			if update.WriteBranch == commit.Branch && update.PullRequest == nil {
 				return "", -1, errors.Errorf(
 					"invalid update specified; cannot write to branch %q of repo %q "+
 						"because it will form a subscription loop",
-					update.RepoURL,
+					updateRepoURL,
 					update.WriteBranch,
 				)
 			}
