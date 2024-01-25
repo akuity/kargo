@@ -650,14 +650,16 @@ func (r *reconciler) syncNormalStage(
 				log.Debug("checking verification results")
 				status.CurrentFreight.VerificationInfo = r.getVerificationInfoFn(ctx, stage)
 			}
-			log.Debugf(
-				"verification phase is %s",
-				status.CurrentFreight.VerificationInfo.Phase,
-			)
-			if status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
-				// Verification is complete
-				status.Phase = kargoapi.StagePhaseSteady
-				log.Debug("verification is complete")
+			if status.CurrentFreight.VerificationInfo != nil {
+				log.Debugf(
+					"verification phase is %s",
+					status.CurrentFreight.VerificationInfo.Phase,
+				)
+				if status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
+					// Verification is complete
+					status.Phase = kargoapi.StagePhaseSteady
+					log.Debug("verification is complete")
+				}
 			}
 		}
 
