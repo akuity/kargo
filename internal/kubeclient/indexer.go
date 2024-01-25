@@ -60,7 +60,8 @@ func indexStagesByAnalysisRun(shardName string) client.IndexerFunc {
 
 		stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 		if stage.Status.CurrentFreight == nil ||
-			stage.Status.CurrentFreight.VerificationInfo == nil {
+			stage.Status.CurrentFreight.VerificationInfo == nil ||
+			stage.Status.CurrentFreight.VerificationInfo.AnalysisRun == nil {
 			return nil
 		}
 		return []string{
