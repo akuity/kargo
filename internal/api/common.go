@@ -37,8 +37,7 @@ func splitYAML(
 		if err := yaml.Unmarshal(ext.Raw, &resource); err != nil {
 			return nil, nil, errors.Wrap(err, "error unmarshaling manifest")
 		}
-		if (resource.GroupVersionKind().Group == kargoapi.GroupVersion.Group && resource.GetKind() == "Project") ||
-			(resource.GroupVersionKind().Group == "" && resource.GetKind() == "Namespace") {
+		if resource.GroupVersionKind().Group == kargoapi.GroupVersion.Group && resource.GetKind() == "Project" {
 			projects = append(projects, resource)
 		} else {
 			otherResources = append(otherResources, resource)
