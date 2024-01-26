@@ -82,7 +82,7 @@ webhooks:
   failurePolicy: Fail
 - name: project.kargo.akuity.io
   admissionReviewVersions: ["v1"]
-  sideEffects: None
+  sideEffects: NoneOnDryRun
   clientConfig:
     service:
       namespace: {{ .Release.Namespace }}
