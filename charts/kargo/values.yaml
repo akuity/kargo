@@ -103,7 +103,7 @@ api:
       enabled: true
       ## @param api.ingress.tls.selfSignedCert Whether to generate a self-signed certificate for use with the API server's Ingress resource. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-ingress-cert` **must** be provided in the same namespace as Kargo.
       selfSignedCert: true
-    ## @param api.ingress.pathType You may want to use `Prefix` for some controllers like AWS LoadBalancer Ingress controller which don't support wildcard paths when pathType is set to `ImplementationSpecific`
+    ## @param api.ingress.pathType You may want to use `Prefix` for some controllers like AWS LoadBalancer Ingress controller which don't support `/` as wildcard path when pathType is set to `ImplementationSpecific`
     pathType: ImplementationSpecific
 
   service:
