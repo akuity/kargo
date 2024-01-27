@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/approve"
 	cliconfigcmd "github.com/akuity/kargo/internal/cli/cmd/config"
 	"github.com/akuity/kargo/internal/cli/cmd/create"
+	"github.com/akuity/kargo/internal/cli/cmd/dashboard"
 	"github.com/akuity/kargo/internal/cli/cmd/delete"
 	"github.com/akuity/kargo/internal/cli/cmd/get"
 	"github.com/akuity/kargo/internal/cli/cmd/login"
@@ -107,6 +108,7 @@ func NewRootCommand(
 	cmd.AddCommand(stage.NewCommand(cfg, opt))
 	cmd.AddCommand(refresh.NewCommand(cfg, opt))
 	cmd.AddCommand(update.NewCommand(cfg, opt))
+	cmd.AddCommand(dashboard.NewCommand(cfg))
 	cmd.AddCommand(newVersionCommand(cfg, opt))
 	cmd.AddCommand(
 		cobracompletefig.CreateCompletionSpecCommand(
