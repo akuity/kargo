@@ -16,8 +16,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/controller/analysis"
-	"github.com/akuity/kargo/internal/controller/applications"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -264,28 +262,6 @@ func newControllerCommand() *cobra.Command {
 				argocdClientForCreds,
 				credentials.KubernetesDatabaseConfigFromEnv(),
 			)
-
-			if rolloutsMgr != nil {
-				if err := analysis.SetupReconcilerWithManager(
-					ctx,
-					kargoMgr,
-					rolloutsMgr,
-					shardName,
-				); err != nil {
-					return errors.Wrap(err, "error setting up AnalysisRuns reconciler")
-				}
-			}
-
-			if argocdMgr != nil {
-				if err := applications.SetupReconcilerWithManager(
-					ctx,
-					kargoMgr,
-					argocdMgr,
-					shardName,
-				); err != nil {
-					return errors.Wrap(err, "error setting up Applications reconciler")
-				}
-			}
 
 			if err := promotions.SetupReconcilerWithManager(
 				ctx,

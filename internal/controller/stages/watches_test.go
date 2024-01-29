@@ -1,6 +1,7 @@
-package applications
+package stages
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -8,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
-func TestAppHealthChangePredicate(t *testing.T) {
+func TestAppHealthOrSyncStatusChanged(t *testing.T) {
 	testCases := []struct {
 		name    string
 		old     map[string]any
@@ -126,14 +127,66 @@ func TestAppHealthChangePredicate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			p := AppHealthSyncStatusChangePredicate{}
-			newUn := &unstructured.Unstructured{Object: testCase.new}
-			oldUn := &unstructured.Unstructured{Object: testCase.old}
-			updated := p.Update(event.UpdateEvent{
-				ObjectNew: newUn,
-				ObjectOld: oldUn,
-			})
-			require.Equal(t, testCase.updated, updated)
+			e := event.UpdateEvent{
+				ObjectOld: &unstructured.Unstructured{Object: testCase.old},
+				ObjectNew: &unstructured.Unstructured{Object: testCase.new},
+			}
+			require.Equal(
+				t,
+				testCase.updated,
+				appHealthOrSyncStatusChanged(context.Background(), e),
+			)
+		})
+	}
+}
+
+func TestAnalysisRunPhaseChanged(t *testing.T) {
+	testCases := []struct {
+		name    string
+		old     map[string]any
+		new     map[string]any
+		updated bool
+	}{
+		{
+			name: "phase changed",
+			old: map[string]any{
+				"status": map[string]any{
+					"phase": "old-phase",
+				},
+			},
+			new: map[string]any{
+				"status": map[string]any{
+					"phase": "new-phase",
+				},
+			},
+			updated: true,
+		},
+		{
+			name: "phase did not change",
+			old: map[string]any{
+				"status": map[string]any{
+					"phase": "old-phase",
+				},
+			},
+			new: map[string]any{
+				"status": map[string]any{
+					"phase": "old-phase",
+				},
+			},
+			updated: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			e := event.UpdateEvent{
+				ObjectOld: &unstructured.Unstructured{Object: testCase.old},
+				ObjectNew: &unstructured.Unstructured{Object: testCase.new},
+			}
+			require.Equal(
+				t,
+				testCase.updated,
+				analysisRunPhaseChanged(context.Background(), e),
+			)
 		})
 	}
 }
