@@ -62,6 +62,7 @@ message GitCommit {
   optional string health_check_commit = 4 [json_name = "healthCheckCommit"];
   string message = 5 [json_name = "message"];
   string author = 6 [json_name = "author"];
+  string tag = 7 [json_name = "tag"];
 }
 
 message GitRepoUpdate {
@@ -77,6 +78,10 @@ message GitRepoUpdate {
 message GitSubscription {
   string repo_url = 1 [json_name = "repoURL"];
   string branch = 2 [json_name = "branch"];
+  string commit_selection_strategy = 3 [json_name = "commitSelectionStrategy"];
+  optional string semver_constraint = 4 [json_name = "semverConstraint"];
+  optional string allow_tags = 5 [json_name = "allowTags"];
+  repeated string ignore_tags = 6 [json_name = "ignoreTags"];
 }
 
 message Health {
