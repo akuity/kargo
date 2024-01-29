@@ -19,7 +19,7 @@ spec:
   - host: {{ .Values.api.host }}
     http:
       paths:
-      - pathType: ImplementationSpecific
+      - pathType: {{ .Values.api.ingress.pathType }}
         path: /
         backend:
           service:
