@@ -81,6 +81,9 @@ type GitCommit struct {
 	ID string `json:"id,omitempty"`
 	// Branch denotes the branch of the repository where this commit was found.
 	Branch string `json:"branch,omitempty"`
+	// Tag denotes a tag in the repository that matched selection criteria and
+	// resolved to this commit.
+	Tag string `json:"tag,omitempty"`
 	// HealthCheckCommit is the ID of a specific commit. When specified,
 	// assessments of Stage health will used this value (instead of ID) when
 	// determining if applicable sources of Argo CD Application resources
