@@ -220,6 +220,7 @@ func FromGitCommitProto(g *v1alpha1.GitCommit) *kargoapi.GitCommit {
 		RepoURL:           g.GetRepoUrl(),
 		ID:                g.GetId(),
 		Branch:            g.GetBranch(),
+		Tag:               g.GetTag(),
 		HealthCheckCommit: g.GetHealthCheckCommit(),
 	}
 }
@@ -321,8 +322,12 @@ func FromGitSubscriptionProto(s *v1alpha1.GitSubscription) *kargoapi.GitSubscrip
 		return nil
 	}
 	return &kargoapi.GitSubscription{
-		RepoURL: s.GetRepoUrl(),
-		Branch:  s.GetBranch(),
+		RepoURL:                 s.GetRepoUrl(),
+		CommitSelectionStrategy: kargoapi.CommitSelectionStrategy(s.GetCommitSelectionStrategy()),
+		Branch:                  s.GetBranch(),
+		SemverConstraint:        s.GetSemverConstraint(),
+		AllowTags:               s.GetAllowTags(),
+		IgnoreTags:              s.GetIgnoreTags(),
 	}
 }
 
@@ -793,8 +798,12 @@ func ToSubscriptionsProto(s kargoapi.Subscriptions) *v1alpha1.Subscriptions {
 
 func ToGitSubscriptionProto(g kargoapi.GitSubscription) *v1alpha1.GitSubscription {
 	return &v1alpha1.GitSubscription{
-		RepoUrl: g.RepoURL,
-		Branch:  g.Branch,
+		RepoUrl:                 g.RepoURL,
+		CommitSelectionStrategy: string(g.CommitSelectionStrategy),
+		Branch:                  g.Branch,
+		SemverConstraint:        proto.String(g.SemverConstraint),
+		AllowTags:               proto.String(g.AllowTags),
+		IgnoreTags:              g.IgnoreTags,
 	}
 }
 
@@ -1093,6 +1102,7 @@ func ToGitCommitProto(g kargoapi.GitCommit) *v1alpha1.GitCommit {
 		RepoUrl:           g.RepoURL,
 		Id:                g.ID,
 		Branch:            g.Branch,
+		Tag:               g.Tag,
 		HealthCheckCommit: proto.String(g.HealthCheckCommit),
 		Message:           g.Message,
 		Author:            g.Author,
