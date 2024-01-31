@@ -1506,9 +1506,9 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   stage = "";
 
   /**
-   * @generated from field: bool enable_auto_promotion = 5;
+   * @generated from field: bool auto_promotion_enabled = 5;
    */
-  enableAutoPromotion = false;
+  autoPromotionEnabled = false;
 
   constructor(data?: PartialMessage<PromotionPolicy>) {
     super();
@@ -1519,7 +1519,7 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 4, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "enable_auto_promotion", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "auto_promotion_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionPolicy {
