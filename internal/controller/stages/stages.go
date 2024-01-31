@@ -1050,9 +1050,9 @@ func (r *reconciler) isAutoPromotionPermitted(
 	}
 	for _, policy := range project.Spec.PromotionPolicies {
 		if policy.Stage == stageName {
-			logger.WithField("autoPromotionEnabled", policy.EnableAutoPromotion).
+			logger.WithField("autoPromotionEnabled", policy.AutoPromotionEnabled).
 				Debug("found PromotionPolicy associated with the Stage")
-			return policy.EnableAutoPromotion, nil
+			return policy.AutoPromotionEnabled, nil
 		}
 	}
 	return false, nil

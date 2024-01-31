@@ -1494,8 +1494,8 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 						Spec: &kargoapi.ProjectSpec{
 							PromotionPolicies: []kargoapi.PromotionPolicy{
 								{
-									Stage:               "fake-stage",
-									EnableAutoPromotion: false,
+									Stage:                "fake-stage",
+									AutoPromotionEnabled: false,
 								},
 							},
 						},
@@ -1515,8 +1515,8 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 						Spec: &kargoapi.ProjectSpec{
 							PromotionPolicies: []kargoapi.PromotionPolicy{
 								{
-									Stage:               "fake-stage",
-									EnableAutoPromotion: true,
+									Stage:                "fake-stage",
+									AutoPromotionEnabled: true,
 								},
 							},
 						},
