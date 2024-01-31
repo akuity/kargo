@@ -104,6 +104,7 @@ type ImageSubscription struct {
 	// will always be used. Care should be taken with leaving this field
 	// unspecified, as it can lead to the unanticipated rollout of breaking
 	// changes. Refer to Image Updater documentation for more details.
+	// More info: https://github.com/masterminds/semver#checking-version-constraints
 	//
 	//+kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty"`
@@ -150,6 +151,7 @@ type ChartSubscription struct {
 	// no constraints, which means the latest version of the chart will always be
 	// used. Care should be taken with leaving this field unspecified, as it can
 	// lead to the unanticipated rollout of breaking changes.
+	// More info: https://github.com/masterminds/semver#checking-version-constraints
 	//
 	//+kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty"`

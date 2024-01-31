@@ -437,6 +437,9 @@ spec:
   - git:
       repoURL: https://github.com/example/kargo-demo.git
 ```
+:::info
+Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
+:::
 
 ### `Promotion` Resources
 
