@@ -190,7 +190,7 @@ message PromotionMechanisms {
 
 message PromotionPolicy {
   string stage = 4 [json_name = "stage"];
-  bool enable_auto_promotion = 5 [json_name = "enableAutoPromotion"];
+  bool auto_promotion_enabled = 5 [json_name = "autoPromotionEnabled"];
 }
 
 message PromotionSpec {
