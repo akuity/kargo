@@ -610,8 +610,8 @@ func FromPromotionPolicyProto(p *v1alpha1.PromotionPolicy) *kargoapi.PromotionPo
 		return nil
 	}
 	return &kargoapi.PromotionPolicy{
-		Stage:               p.GetStage(),
-		EnableAutoPromotion: p.GetEnableAutoPromotion(),
+		Stage:                p.GetStage(),
+		AutoPromotionEnabled: p.GetAutoPromotionEnabled(),
 	}
 }
 
@@ -1179,8 +1179,8 @@ func ToPromotionProto(p kargoapi.Promotion) *v1alpha1.Promotion {
 
 func ToPromotionPolicyProto(p kargoapi.PromotionPolicy) *v1alpha1.PromotionPolicy {
 	return &v1alpha1.PromotionPolicy{
-		Stage:               p.Stage,
-		EnableAutoPromotion: p.EnableAutoPromotion,
+		Stage:                p.Stage,
+		AutoPromotionEnabled: p.AutoPromotionEnabled,
 	}
 }
 
