@@ -40,11 +40,17 @@ type reconciler struct {
 		*kargoapi.Warehouse,
 	) (*kargoapi.Freight, error)
 
-	getLatestCommitsFn func(
+	selectCommitsFn func(
 		ctx context.Context,
 		namespace string,
 		subs []kargoapi.RepoSubscription,
 	) ([]kargoapi.GitCommit, error)
+
+	getLastCommitIDFn func(repo git.Repo) (string, error)
+
+	listTagsFn func(repo git.Repo) ([]string, error)
+
+	checkoutTagFn func(repo git.Repo, tag string) error
 
 	getLatestImagesFn func(
 		ctx context.Context,
@@ -77,7 +83,7 @@ type reconciler struct {
 		creds *helm.Credentials,
 	) (string, error)
 
-	getLatestCommitMetaFn func(
+	selectCommitMetaFn func(
 		context.Context,
 		kargoapi.GitSubscription,
 		*git.RepoCredentials,
@@ -143,12 +149,15 @@ func newReconciler(
 		freightAliasGenerator: moniker.New(),
 	}
 	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
-	r.getLatestCommitsFn = r.getLatestCommits
+	r.selectCommitsFn = r.selectCommits
+	r.getLastCommitIDFn = r.getLastCommitID
+	r.listTagsFn = r.listTags
+	r.checkoutTagFn = r.checkoutTag
 	r.getLatestImagesFn = r.getLatestImages
 	r.getImageRefsFn = getImageRefs
 	r.getLatestChartsFn = r.getLatestCharts
 	r.getLatestChartVersionFn = helm.GetLatestChartVersion
-	r.getLatestCommitMetaFn = getLatestCommitMeta
+	r.selectCommitMetaFn = r.selectCommitMeta
 	r.getAvailableFreightAliasFn = r.getAvailableFreightAlias
 	r.createFreightFn = kubeClient.Create
 	return r
@@ -281,7 +290,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 ) (*kargoapi.Freight, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	latestCommits, err := r.getLatestCommitsFn(
+	selectedCommits, err := r.selectCommitsFn(
 		ctx,
 		warehouse.Namespace,
 		warehouse.Spec.Subscriptions,
@@ -320,7 +329,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 			Namespace:       warehouse.Namespace,
 			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},
-		Commits: latestCommits,
+		Commits: selectedCommits,
 		Images:  latestImages,
 		Charts:  latestCharts,
 	}

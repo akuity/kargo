@@ -70,6 +70,8 @@ type Repo interface {
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
+	// ListTags returns a slice of tags in the repository.
+	ListTags() ([]string, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
@@ -351,6 +353,24 @@ func (r *repo) LastCommitID() (string, error) {
 	shaBytes, err := libExec.Exec(r.buildCommand("rev-parse", "HEAD"))
 	return strings.TrimSpace(string(shaBytes)),
 		errors.Wrap(err, "error obtaining ID of last commit")
+}
+
+func (r *repo) ListTags() ([]string, error) {
+	if _, err :=
+		libExec.Exec(r.buildCommand("fetch", "origin", "--tags")); err != nil {
+		return nil, errors.Wrapf(err, "error fetching tags from repo %q", r.url)
+	}
+	tagsBytes, err := libExec.Exec(r.buildCommand("tag", "--list", "--sort", "-creatordate"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "error listing tags for repo %q", r.url)
+	}
+	tags := []string{}
+	scanner := bufio.NewScanner(bytes.NewReader(tagsBytes))
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		tags = append(tags, strings.TrimSpace(scanner.Text()))
+	}
+	return tags, nil
 }
 
 func (r *repo) CommitMessage(id string) (string, error) {
