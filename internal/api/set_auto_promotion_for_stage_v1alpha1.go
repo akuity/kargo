@@ -33,7 +33,7 @@ func (s *server) SetAutoPromotionForStage(
 	var set bool
 	for i, policy := range project.Spec.PromotionPolicies {
 		if policy.Stage == req.Msg.GetStage() {
-			project.Spec.PromotionPolicies[i].EnableAutoPromotion = req.Msg.GetEnable()
+			project.Spec.PromotionPolicies[i].AutoPromotionEnabled = req.Msg.GetEnable()
 			set = true
 			break
 		}
@@ -42,8 +42,8 @@ func (s *server) SetAutoPromotionForStage(
 		project.Spec.PromotionPolicies = append(
 			project.Spec.PromotionPolicies,
 			kargoapi.PromotionPolicy{
-				Stage:               req.Msg.GetStage(),
-				EnableAutoPromotion: req.Msg.GetEnable(),
+				Stage:                req.Msg.GetStage(),
+				AutoPromotionEnabled: req.Msg.GetEnable(),
 			},
 		)
 	}
