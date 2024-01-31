@@ -15,6 +15,7 @@ rules:
   - create
   - get
   - list
+  - update
   - watch
 - apiGroups:
   - kargo.akuity.io
