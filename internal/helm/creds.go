@@ -4,9 +4,9 @@ package helm
 // repository.
 type Credentials struct {
 	// Username identifies a principal, which combined with the value of the
-	// Password field, can be used for reading from some remote registry.
+	// Password field, can be used for reading from some remote repository.
 	Username string
 	// Password, when combined with the principal identified by the Username
-	// field, can be used for both reading from some remote registry.
+	// field, can be used for both reading from some remote repository.
 	Password string
 }

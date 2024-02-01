@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -12,7 +11,7 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func (r *reconciler) getLatestCharts(
+func (r *reconciler) selectCharts(
 	ctx context.Context,
 	namespace string,
 	subs []kargoapi.RepoSubscription,
@@ -26,18 +25,18 @@ func (r *reconciler) getLatestCharts(
 
 		sub := s.Chart
 
-		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-			"registry": sub.RegistryURL,
-			"chart":    sub.Name,
-		})
+		logger := logging.LoggerFromContext(ctx).WithField("repoURL", sub.RepoURL)
+		if sub.Name != "" {
+			logger = logger.WithField("chart", sub.Name)
+		}
 
 		creds, ok, err :=
-			r.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RegistryURL)
+			r.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RepoURL)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error obtaining credentials for chart registry %q",
-				sub.RegistryURL,
+				"error obtaining credentials for chart repository %q",
+				sub.RepoURL,
 			)
 		}
 
@@ -52,28 +51,41 @@ func (r *reconciler) getLatestCharts(
 			logger.Debug("found no credentials for chart repo")
 		}
 
-		vers, err := r.getLatestChartVersionFn(
+		vers, err := r.selectChartVersionFn(
 			ctx,
-			sub.RegistryURL,
+			sub.RepoURL,
 			sub.Name,
 			sub.SemverConstraint,
 			helmCreds,
 		)
 		if err != nil {
+			if sub.Name == "" {
+				return nil, errors.Wrapf(
+					err,
+					"error searching for latest version of chart in repository %q",
+					sub.RepoURL,
+				)
+			}
 			return nil, errors.Wrapf(
 				err,
-				"error searching for latest version of chart %q in registry %q",
+				"error searching for latest version of chart %q in repository %q",
 				sub.Name,
-				sub.RegistryURL,
+				sub.RepoURL,
 			)
 		}
 
 		if vers == "" {
 			logger.Error("found no suitable chart version")
+			if sub.Name == "" {
+				return nil, errors.Errorf(
+					"found no suitable version of chart in repository %q",
+					sub.RepoURL,
+				)
+			}
 			return nil, errors.Errorf(
-				"found no suitable version of chart %q in registry %q",
+				"found no suitable version of chart %q in repository %q",
 				sub.Name,
-				sub.RegistryURL,
+				sub.RepoURL,
 			)
 		}
 		logger.WithField("version", vers).
@@ -82,9 +94,9 @@ func (r *reconciler) getLatestCharts(
 		charts = append(
 			charts,
 			kargoapi.Chart{
-				RegistryURL: sub.RegistryURL,
-				Name:        sub.Name,
-				Version:     vers,
+				RepoURL: sub.RepoURL,
+				Name:    sub.Name,
+				Version: vers,
 			},
 		)
 	}

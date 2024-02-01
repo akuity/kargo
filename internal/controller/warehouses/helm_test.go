@@ -12,11 +12,11 @@ import (
 	"github.com/akuity/kargo/internal/helm"
 )
 
-func TestGetLatestCharts(t *testing.T) {
+func TestSelectCharts(t *testing.T) {
 	testCases := []struct {
-		name                    string
-		credentialsDB           credentials.Database
-		getLatestChartVersionFn func(
+		name                 string
+		credentialsDB        credentials.Database
+		selectChartVersionFn func(
 			context.Context,
 			string,
 			string,
@@ -26,7 +26,7 @@ func TestGetLatestCharts(t *testing.T) {
 		assertions func([]kargoapi.Chart, error)
 	}{
 		{
-			name: "error getting registry credentials",
+			name: "error getting repository credentials",
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(
 					context.Context,
@@ -43,7 +43,7 @@ func TestGetLatestCharts(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"error obtaining credentials for chart registry",
+					"error obtaining credentials for chart",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -61,7 +61,7 @@ func TestGetLatestCharts(t *testing.T) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
-			getLatestChartVersionFn: func(
+			selectChartVersionFn: func(
 				context.Context,
 				string,
 				string,
@@ -93,7 +93,7 @@ func TestGetLatestCharts(t *testing.T) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
-			getLatestChartVersionFn: func(
+			selectChartVersionFn: func(
 				context.Context,
 				string,
 				string,
@@ -120,7 +120,7 @@ func TestGetLatestCharts(t *testing.T) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
-			getLatestChartVersionFn: func(
+			selectChartVersionFn: func(
 				context.Context,
 				string,
 				string,
@@ -135,9 +135,9 @@ func TestGetLatestCharts(t *testing.T) {
 				require.Equal(
 					t,
 					kargoapi.Chart{
-						RegistryURL: "fake-url",
-						Name:        "fake-chart",
-						Version:     "1.0.0",
+						RepoURL: "fake-url",
+						Name:    "fake-chart",
+						Version: "1.0.0",
 					},
 					charts[0],
 				)
@@ -147,17 +147,17 @@ func TestGetLatestCharts(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := reconciler{
-				credentialsDB:           testCase.credentialsDB,
-				getLatestChartVersionFn: testCase.getLatestChartVersionFn,
+				credentialsDB:        testCase.credentialsDB,
+				selectChartVersionFn: testCase.selectChartVersionFn,
 			}
-			testCase.assertions(r.getLatestCharts(
+			testCase.assertions(r.selectCharts(
 				context.Background(),
 				"fake-namespace",
 				[]kargoapi.RepoSubscription{
 					{
 						Chart: &kargoapi.ChartSubscription{
-							RegistryURL: "fake-url",
-							Name:        "fake-chart",
+							RepoURL: "fake-url",
+							Name:    "fake-chart",
 						},
 					},
 				},

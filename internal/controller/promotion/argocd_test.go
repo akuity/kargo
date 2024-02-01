@@ -614,9 +614,9 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 			newFreight: kargoapi.FreightReference{
 				Charts: []kargoapi.Chart{
 					{
-						RegistryURL: "fake-url",
-						Name:        "fake-chart",
-						Version:     "fake-version",
+						RepoURL: "fake-url",
+						Name:    "fake-chart",
+						Version: "fake-version",
 					},
 				},
 			},

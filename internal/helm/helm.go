@@ -19,62 +19,67 @@ import (
 	libExec "github.com/akuity/kargo/internal/exec"
 )
 
-// GetLatestChartVersion connects to the Helm chart registry specified by
-// registryURL and retrieves all available versions of the chart found therein.
-// The registry can be either a classic chart registry (using HTTP/S) or an OCI
-// registry. If no semverConstraint is provided (empty string is passed), then
-// the version that is semantically greatest will be returned. If a
-// semverConstraint is specified, then the semantically greatest version
-// satisfying that constraint will be returned. If no version satisfies the
-// constraint, the empty string is returned. Provided credentials may be nil for
-// public registries, but must be non-nil for private registries.
-func GetLatestChartVersion(
+// SelectChartVersion connects to the Helm chart repository specified by
+// repoURL and retrieves all available versions of the chart found therein. The
+// repository can be either a classic chart repository (using HTTP/S) or a
+// repository within an OCI registry. Classic chart repositories can contain
+// differently named charts. When repoURL points to such a repository, the name
+// argument must specify the name of the chart within the repository. In the
+// case of a repository within an OCI registry, the URL implicitly points to a
+// specific chart and the name argument must be empty. If no semverConstraint is
+// provided (empty string is passed), then the version that is semantically
+// greatest will be returned. If a semverConstraint is specified, then the
+// semantically greatest version satisfying that constraint will be returned. If
+// no version satisfies the constraint, the empty string is returned. Provided
+// credentials may be nil for public repositories, but must be non-nil for
+// private repositories.
+func SelectChartVersion(
 	ctx context.Context,
-	registryURL string,
+	repoURL string,
 	chart string,
 	semverConstraint string,
 	creds *Credentials,
 ) (string, error) {
 	var versions []string
 	var err error
-	if strings.HasPrefix(registryURL, "http://") ||
-		strings.HasPrefix(registryURL, "https://") {
+	if strings.HasPrefix(repoURL, "http://") ||
+		strings.HasPrefix(repoURL, "https://") {
 		versions, err =
-			getChartVersionsFromClassicRegistry(registryURL, chart, creds)
-	} else if strings.HasPrefix(registryURL, "oci://") {
+			getChartVersionsFromClassicRepo(repoURL, chart, creds)
+	} else if strings.HasPrefix(repoURL, "oci://") {
 		versions, err =
-			getChartVersionsFromOCIRegistry(ctx, registryURL, chart, creds)
+			getChartVersionsFromOCIRepo(ctx, repoURL, creds)
 	} else {
-		return "", errors.Errorf("registry URL %q is invalid", registryURL)
+		return "", errors.Errorf("repository URL %q is invalid", repoURL)
 	}
 	if err != nil {
 		return "", errors.Wrapf(
 			err,
-			"error retrieving versions of chart %q from registry %q",
+			"error retrieving versions of chart %q from repository %q",
 			chart,
-			registryURL,
+			repoURL,
 		)
 	}
 	latestVersion, err := getLatestVersion(versions, semverConstraint)
 	return latestVersion, errors.Wrapf(
 		err,
-		"error determining latest version of chart %q from  registry %q",
+		"error determining latest version of chart %q from repository %q",
 		chart,
-		registryURL,
+		repoURL,
 	)
 }
 
-// getChartVersionsFromClassicRegistry connects to the classic (HTTP/S) chart
-// registry specified by registryURL and retrieves all available versions of the
-// specified chart. The provided registryURL MUST begin with protocol http:// or
-// https://. Provided credentials may be nil for public registries, but must be
-// non-nil for private registries.
-func getChartVersionsFromClassicRegistry(
-	registryURL string,
+// getChartVersionsFromClassicRepo connects to the classic (HTTP/S) chart
+// repository specified by repoURL and retrieves all available versions of the
+// specified chart. The provided repoURL MUST begin with protocol http:// or
+// https://. Provided credentials may be nil for public repositories, but must
+// be non-nil for private repositories.
+func getChartVersionsFromClassicRepo(
+	repoURL string,
 	chart string,
 	creds *Credentials,
 ) ([]string, error) {
-	indexURL := fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(registryURL, "/"))
+	indexURL := fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(repoURL, "/"))
 	req, err := http.NewRequest(http.MethodGet, indexURL, nil)
 	if err != nil {
 		return nil,
@@ -86,12 +91,12 @@ func getChartVersionsFromClassicRegistry(
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil,
-			errors.Wrapf(err, "error querying registry index at %q", indexURL)
+			errors.Wrapf(err, "error querying repository index at %q", indexURL)
 	}
 	if res.StatusCode != http.StatusOK {
 		return nil,
 			errors.Errorf(
-				"received unexpected HTTP %d when querying registry index at %q",
+				"received unexpected HTTP %d when querying repository index at %q",
 				res.StatusCode,
 				indexURL,
 			)
@@ -100,7 +105,7 @@ func getChartVersionsFromClassicRegistry(
 	resBodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil,
-			errors.Wrapf(err, "error reading registry index from %q", indexURL)
+			errors.Wrapf(err, "error reading repository index from %q", indexURL)
 	}
 	index := struct {
 		Entries map[string][]struct {
@@ -109,12 +114,12 @@ func getChartVersionsFromClassicRegistry(
 	}{}
 	if err = yaml.Unmarshal(resBodyBytes, &index); err != nil {
 		return nil,
-			errors.Wrapf(err, "error unmarshaling registry index from %q", indexURL)
+			errors.Wrapf(err, "error unmarshaling repository index from %q", indexURL)
 	}
 	entries, ok := index.Entries[chart]
 	if !ok {
 		return nil, errors.Errorf(
-			"no versions of chart %q found in registry index from %q",
+			"no versions of chart %q found in repository index from %q",
 			chart,
 			indexURL,
 		)
@@ -126,21 +131,21 @@ func getChartVersionsFromClassicRegistry(
 	return versions, nil
 }
 
-// getChartVersionsFromOCIRegistry connects to the OCI registry specified by
-// registryURL and retrieves all available versions of the specified chart.
-// Provided credentials may be nil for public registries, but must be non-nil
-// for private registries.
-func getChartVersionsFromOCIRegistry(
+// getChartVersionsFromOCIRepo connects to the OCI repository specified by
+// repoURL and retrieves all available versions of the specified chart. Provided
+// credentials may be nil for public repositories, but must be non-nil for
+// private repositories.
+func getChartVersionsFromOCIRepo(
 	ctx context.Context,
-	registryURL string,
-	chart string,
+	repoURL string,
 	creds *Credentials,
 ) ([]string, error) {
+	ref, err := registry.ParseReference(strings.TrimPrefix(repoURL, "oci://"))
+	if err != nil {
+		return nil, errors.Wrapf(err, "error parsing repository URL %q", repoURL)
+	}
 	rep := &remote.Repository{
-		Reference: registry.Reference{
-			Registry:   strings.TrimPrefix(registryURL, "oci://"),
-			Repository: chart,
-		},
+		Reference: ref,
 		Client: &auth.Client{
 			Credential: func(context.Context, string) (auth.Credential, error) {
 				if creds != nil {
@@ -159,9 +164,8 @@ func getChartVersionsFromOCIRegistry(
 			versions = append(versions, t...)
 			return nil
 		}),
-		"error retrieving versions of chart %q from registry %q",
-		chart,
-		registryURL,
+		"error retrieving versions of chart from repository %q",
+		repoURL,
 	)
 }
 

@@ -360,7 +360,7 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	err = os.WriteFile(
 		filepath.Join(testFooChartDir, "Chart.yaml"),
 		[]byte(`dependencies:
-- repository: fake-registry
+- repository: fake-repo
   name: fake-chart
   version: placeholder
 `),
@@ -376,10 +376,10 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 		filepath.Join(testBarChartDir, "Chart.yaml"),
 		// This fake chart has TWO dependencies -- one of which shouldn't be updated
 		[]byte(`dependencies:
-- repository: another-fake-registry
+- repository: another-fake-repo
   name: another-fake-chart
   version: placeholder
-- repository: yet-another-fake-registry
+- repository: yet-another-fake-repo
   name: yet-another-fake-chart
   version: placeholder
 `),
@@ -390,28 +390,28 @@ func TestBuildChartDependencyChanges(t *testing.T) {
 	// New charts
 	charts := []kargoapi.Chart{
 		{
-			RegistryURL: "fake-registry",
-			Name:        "fake-chart",
-			Version:     "fake-version",
+			RepoURL: "fake-repo",
+			Name:    "fake-chart",
+			Version: "fake-version",
 		},
 		{
-			RegistryURL: "another-fake-registry",
-			Name:        "another-fake-chart",
-			Version:     "another-fake-version",
+			RepoURL: "another-fake-repo",
+			Name:    "another-fake-chart",
+			Version: "another-fake-version",
 		},
 	}
 
 	// Instructions for how to update Chart.yaml files
 	chartUpdates := []kargoapi.HelmChartDependencyUpdate{
 		{
-			RegistryURL: "fake-registry",
-			Name:        "fake-chart",
-			ChartPath:   "charts/foo",
+			Repository: "fake-repo",
+			Name:       "fake-chart",
+			ChartPath:  "charts/foo",
 		},
 		{
-			RegistryURL: "another-fake-registry",
-			Name:        "another-fake-chart",
-			ChartPath:   "charts/bar",
+			Repository: "another-fake-repo",
+			Name:       "another-fake-chart",
+			ChartPath:  "charts/bar",
 		},
 		// Note there is no mention of how to update bar's second dependency, so
 		// we expect it to be left alone.
