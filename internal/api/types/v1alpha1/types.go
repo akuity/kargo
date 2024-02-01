@@ -219,6 +219,13 @@ func repoURLFromWriteOrRead(g *v1alpha1.GitCommit) string {
 	}
 }
 
+func branchFromWriteOrRead(g *v1alpha1.GitCommit) string {
+	r := g.GetWriteBranch()
+	if r == "" {
+		r = g.GetBranch()
+	}
+}
+
 func FromGitCommitProto(g *v1alpha1.GitCommit) *kargoapi.GitCommit {
 	if g == nil {
 		return nil
@@ -227,7 +234,7 @@ func FromGitCommitProto(g *v1alpha1.GitCommit) *kargoapi.GitCommit {
 	return &kargoapi.GitCommit{
 		RepoURL:           g.repoURLFromWriteOrRead(),
 		ID:                g.GetId(),
-		Branch:            g.GetBranch(),
+		Branch:            g.branchFromWriteOrRead(),
 		HealthCheckCommit: g.GetHealthCheckCommit(),
 	}
 }
@@ -330,7 +337,7 @@ func FromGitSubscriptionProto(s *v1alpha1.GitSubscription) *kargoapi.GitSubscrip
 	}
 	return &kargoapi.GitSubscription{
 		RepoURL: s.repoURLFromWriteOrRead(),
-		Branch:  s.GetBranch(),
+		Branch:  s.branchFromWriteOrRead(),
 	}
 }
 
