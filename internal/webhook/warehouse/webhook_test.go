@@ -490,8 +490,10 @@ func TestValidateChartSub(t *testing.T) {
 		assertions func(field.ErrorList)
 	}{
 		{
-			name: "invalid",
+			name: "invalid semverConstraint and oci repoURL with name",
 			sub: kargoapi.ChartSubscription{
+				RepoURL:          "oci://fake-url",
+				Name:             "should-not-be-here",
 				SemverConstraint: "bogus",
 			},
 			assertions: func(errs field.ErrorList) {
@@ -502,6 +504,33 @@ func TestValidateChartSub(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "chart.semverConstraint",
 							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "chart.name",
+							BadValue: "should-not-be-here",
+							Detail:   "must be empty if repoURL starts with oci://",
+						},
+					},
+					errs,
+				)
+			},
+		},
+
+		{
+			name: "https repoURL without name",
+			sub: kargoapi.ChartSubscription{
+				RepoURL: "https://fake-url",
+			},
+			assertions: func(errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "chart.name",
+							BadValue: "",
+							Detail:   "must be non-empty if repoURL starts with http:// or https://",
 						},
 					},
 					errs,

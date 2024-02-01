@@ -3,6 +3,7 @@ package warehouse
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -183,11 +184,35 @@ func (w *webhook) validateChartSub(
 	f *field.Path,
 	sub kargoapi.ChartSubscription,
 ) field.ErrorList {
+	errs := field.ErrorList{}
 	if err := validateSemverConstraint(
 		f.Child("semverConstraint"),
 		sub.SemverConstraint,
 	); err != nil {
-		return field.ErrorList{err}
+		errs = append(errs, err)
+	}
+	if strings.HasPrefix(sub.RepoURL, "oci://") && sub.Name != "" {
+		errs = append(
+			errs,
+			field.Invalid(
+				f.Child("name"),
+				sub.Name,
+				"must be empty if repoURL starts with oci://",
+			),
+		)
+	}
+	if (strings.HasPrefix(sub.RepoURL, "http://") || strings.HasPrefix(sub.RepoURL, "https://")) && sub.Name == "" {
+		errs = append(
+			errs,
+			field.Invalid(
+				f.Child("name"),
+				sub.Name,
+				"must be non-empty if repoURL starts with http:// or https://",
+			),
+		)
+	}
+	if len(errs) > 0 {
+		return errs
 	}
 	return nil
 }

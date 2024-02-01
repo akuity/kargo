@@ -25,7 +25,7 @@ export const RepoNode = ({ nodeData, children }: Props) => {
   const type = nodeData.type;
   const value =
     type === NodeType.REPO_CHART
-      ? nodeData.data.registryUrl
+      ? nodeData.data.repoUrl
       : type === NodeType.WAREHOUSE
         ? nodeData.data
         : nodeData.data.repoUrl;
@@ -43,7 +43,7 @@ export const RepoNode = ({ nodeData, children }: Props) => {
       <div className={styles.body}>
         {nodeData.type !== NodeType.WAREHOUSE && (
           <div className='mb-2'>
-            {nodeData.type === NodeType.REPO_CHART ? 'Registry URL' : 'Repo URL'}
+            Repo URL
             <Tooltip title={value}>
               <a
                 href={
