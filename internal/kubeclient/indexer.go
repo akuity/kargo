@@ -179,19 +179,6 @@ func StageAndFreightKey(stage, freight string) string {
 	return fmt.Sprintf("%s:%s", stage, freight)
 }
 
-func IndexPromotionPoliciesByStage(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(
-		ctx,
-		&kargoapi.PromotionPolicy{},
-		PromotionPoliciesByStageIndexField,
-		indexPromotionPoliciesByStage)
-}
-
-func indexPromotionPoliciesByStage(obj client.Object) []string {
-	policy := obj.(*kargoapi.PromotionPolicy) // nolint: forcetypeassert
-	return []string{policy.Stage}
-}
-
 func IndexFreightByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
 		ctx,

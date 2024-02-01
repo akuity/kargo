@@ -289,32 +289,6 @@ func TestIndexPromotionsByStage(t *testing.T) {
 	}
 }
 
-func TestIndexPromotionPoliciesByStage(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		name       string
-		policy     *kargoapi.PromotionPolicy
-		assertions func(*testing.T, []string)
-	}{
-		{
-			name: "promotion policy",
-			policy: &kargoapi.PromotionPolicy{
-				Stage: "fake-stage",
-			},
-			assertions: func(t *testing.T, res []string) {
-				require.Equal(t, []string{"fake-stage"}, res)
-			},
-		},
-	}
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			res := indexPromotionPoliciesByStage(tc.policy)
-			tc.assertions(t, res)
-		})
-	}
-}
-
 func TestIndexFreightByWarehouse(t *testing.T) {
 	testCases := []struct {
 		name     string

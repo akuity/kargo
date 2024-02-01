@@ -56,7 +56,7 @@ func SetupReconcilerWithManager(kargoMgr manager.Manager) error {
 			predicate.Funcs{
 				DeleteFunc: func(event.DeleteEvent) bool {
 					// We're not interested in any ACTUAL deletes. (We do care about
-					// updated where DeletionTimestamp is non-nil, but that's not a
+					// updates where DeletionTimestamp is non-nil, but that's not a
 					// delete event.)
 					return false
 				},

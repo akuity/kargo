@@ -189,16 +189,8 @@ message PromotionMechanisms {
 }
 
 message PromotionPolicy {
-  string api_version = 1 [json_name = "apiVersion"];
-  string kind = 2 [json_name = "kind"];
-  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3 [json_name = "metadata"];
   string stage = 4 [json_name = "stage"];
-  bool enable_auto_promotion = 5 [json_name = "enableAutoPromotion"];
-}
-
-message PromotionPolicyList {
-  github.com.akuity.kargo.pkg.api.metav1.ListMeta metadata = 1 [json_name = "metadata"];
-  repeated PromotionPolicy items = 2 [json_name = "items"];
+  bool auto_promotion_enabled = 5 [json_name = "autoPromotionEnabled"];
 }
 
 message PromotionSpec {

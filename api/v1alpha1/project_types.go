@@ -50,7 +50,25 @@ func (p *Project) GetStatus() *ProjectStatus {
 
 // ProjectSpec describes a Project.
 type ProjectSpec struct {
-	// TODO: Figure out the attributes of a ProjectSpec.
+	// PromotionPolicies defines policies governing the promotion of Freight to
+	// specific Stages within this Project.
+	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty"`
+}
+
+// PromotionPolicy defines policies governing the promotion of Freight to a
+// specific Stage.
+type PromotionPolicy struct {
+	//+kubebuilder:validation:MinLength=1
+	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Stage string `json:"stage"`
+	// AutoPromotionEnabled indicates whether new Freight can automatically be
+	// promoted into the Stage referenced by the Stage field. Note: There are may
+	// be other conditions also required for an auto-promotion to occur. This
+	// field defaults to false, but is commonly set to true for Stages that
+	// subscribe to Warehouses instead of other, upstream Stages. This allows
+	// users to define Stages that are automatically updated as soon as new
+	// artifacts are detected.
+	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
 }
 
 // ProjectStatus describes a Project's current status.

@@ -1501,29 +1501,14 @@ export class PromotionMechanisms extends Message<PromotionMechanisms> {
  */
 export class PromotionPolicy extends Message<PromotionPolicy> {
   /**
-   * @generated from field: string api_version = 1;
-   */
-  apiVersion = "";
-
-  /**
-   * @generated from field: string kind = 2;
-   */
-  kind = "";
-
-  /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
-   */
-  metadata?: ObjectMeta;
-
-  /**
    * @generated from field: string stage = 4;
    */
   stage = "";
 
   /**
-   * @generated from field: bool enable_auto_promotion = 5;
+   * @generated from field: bool auto_promotion_enabled = 5;
    */
-  enableAutoPromotion = false;
+  autoPromotionEnabled = false;
 
   constructor(data?: PartialMessage<PromotionPolicy>) {
     super();
@@ -1533,11 +1518,8 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "api_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "metadata", kind: "message", T: ObjectMeta },
     { no: 4, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "enable_auto_promotion", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "auto_promotion_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionPolicy {
@@ -1554,49 +1536,6 @@ export class PromotionPolicy extends Message<PromotionPolicy> {
 
   static equals(a: PromotionPolicy | PlainMessage<PromotionPolicy> | undefined, b: PromotionPolicy | PlainMessage<PromotionPolicy> | undefined): boolean {
     return proto3.util.equals(PromotionPolicy, a, b);
-  }
-}
-
-/**
- * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList
- */
-export class PromotionPolicyList extends Message<PromotionPolicyList> {
-  /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.metav1.ListMeta metadata = 1;
-   */
-  metadata?: ListMeta;
-
-  /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicy items = 2;
-   */
-  items: PromotionPolicy[] = [];
-
-  constructor(data?: PartialMessage<PromotionPolicyList>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.PromotionPolicyList";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "metadata", kind: "message", T: ListMeta },
-    { no: 2, name: "items", kind: "message", T: PromotionPolicy, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionPolicyList {
-    return new PromotionPolicyList().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PromotionPolicyList {
-    return new PromotionPolicyList().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PromotionPolicyList {
-    return new PromotionPolicyList().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PromotionPolicyList | PlainMessage<PromotionPolicyList> | undefined, b: PromotionPolicyList | PlainMessage<PromotionPolicyList> | undefined): boolean {
-    return proto3.util.equals(PromotionPolicyList, a, b);
   }
 }
 

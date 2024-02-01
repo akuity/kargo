@@ -46,7 +46,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.patchFreightStatusFn)
 	// Auto-promotion:
 	require.NotNil(t, e.isAutoPromotionPermittedFn)
-	require.NotNil(t, e.listPromoPoliciesFn)
+	require.NotNil(t, e.getProjectFn)
 	require.NotNil(t, e.createPromotionFn)
 	// Discovering latest Freight:
 	require.NotNil(t, e.getLatestAvailableFreightFn)
@@ -1439,38 +1439,46 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 		assertions func(bool, error)
 	}{
 		{
-			name: "error listing PromotionPolicies",
+			name: "error getting Project",
 			reconciler: &reconciler{
-				listPromoPoliciesFn: func(
+				getProjectFn: func(
 					context.Context,
-					client.ObjectList,
-					...client.ListOption,
-				) error {
-					return errors.New("something went wrong")
+					client.Client,
+					string,
+				) (*kargoapi.Project, error) {
+					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ bool, err error) {
+			assertions: func(allowed bool, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Contains(
-					t,
-					err.Error(),
-					"error listing PromotionPolicies for Stage",
-				)
+				require.Contains(t, err.Error(), "error finding Project")
+				require.False(t, allowed)
 			},
 		},
 		{
-			name: "no PromotionPolicies found",
+			name: "no Project found",
 			reconciler: &reconciler{
-				listPromoPoliciesFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					policies, ok := objList.(*kargoapi.PromotionPolicyList)
-					require.True(t, ok)
-					policies.Items = []kargoapi.PromotionPolicy{}
-					return nil
+				getProjectFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*kargoapi.Project, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(allowed bool, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "Project")
+				require.Contains(t, err.Error(), "not found")
+				require.False(t, allowed)
+			},
+		},
+		{
+			name: "defaults to not permitted",
+			reconciler: &reconciler{
+				getProjectFn: func(ctx context.Context, c client.Client, s string) (*kargoapi.Project, error) {
+					return &kargoapi.Project{}, nil
 				},
 			},
 			assertions: func(result bool, err error) {
@@ -1479,36 +1487,19 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 			},
 		},
 		{
-			name: "more than one PromotionPolicy found",
+			name: "explicitly not permitted",
 			reconciler: &reconciler{
-				listPromoPoliciesFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					policies, ok := objList.(*kargoapi.PromotionPolicyList)
-					require.True(t, ok)
-					policies.Items = []kargoapi.PromotionPolicy{{}, {}}
-					return nil
-				},
-			},
-			assertions: func(result bool, err error) {
-				require.NoError(t, err)
-				require.False(t, result)
-			},
-		},
-		{
-			name: "not permitted",
-			reconciler: &reconciler{
-				listPromoPoliciesFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					policies, ok := objList.(*kargoapi.PromotionPolicyList)
-					require.True(t, ok)
-					policies.Items = []kargoapi.PromotionPolicy{{}}
-					return nil
+				getProjectFn: func(ctx context.Context, c client.Client, s string) (*kargoapi.Project, error) {
+					return &kargoapi.Project{
+						Spec: &kargoapi.ProjectSpec{
+							PromotionPolicies: []kargoapi.PromotionPolicy{
+								{
+									Stage:                "fake-stage",
+									AutoPromotionEnabled: false,
+								},
+							},
+						},
+					}, nil
 				},
 			},
 			assertions: func(result bool, err error) {
@@ -1519,19 +1510,17 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 		{
 			name: "permitted",
 			reconciler: &reconciler{
-				listPromoPoliciesFn: func(
-					_ context.Context,
-					objList client.ObjectList,
-					_ ...client.ListOption,
-				) error {
-					policies, ok := objList.(*kargoapi.PromotionPolicyList)
-					require.True(t, ok)
-					policies.Items = []kargoapi.PromotionPolicy{
-						{
-							EnableAutoPromotion: true,
+				getProjectFn: func(ctx context.Context, c client.Client, s string) (*kargoapi.Project, error) {
+					return &kargoapi.Project{
+						Spec: &kargoapi.ProjectSpec{
+							PromotionPolicies: []kargoapi.PromotionPolicy{
+								{
+									Stage:                "fake-stage",
+									AutoPromotionEnabled: true,
+								},
+							},
 						},
-					}
-					return nil
+					}, nil
 				},
 			},
 			assertions: func(result bool, err error) {

@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -24,6 +25,7 @@ import (
 func TestNewWebhook(t *testing.T) {
 	w := newWebhook(fake.NewClientBuilder().Build())
 	require.NotNil(t, w)
+	require.NotNil(t, w.validateSpecFn)
 	require.NotNil(t, w.getNamespaceFn)
 	require.NotNil(t, w.createNamespaceFn)
 }
@@ -36,8 +38,32 @@ func TestValidateCreate(t *testing.T) {
 	}{
 
 		{
+			name: "error validating spec",
+			webhook: &webhook{
+				validateSpecFn: func(f *field.Path, promotionPolicies *kargoapi.ProjectSpec) field.ErrorList {
+					return field.ErrorList{
+						field.Invalid(
+							f,
+							promotionPolicies,
+							"something was invalid",
+						),
+					}
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(t, int32(http.StatusUnprocessableEntity), statusErr.ErrStatus.Code)
+			},
+		},
+
+		{
 			name: "error getting namespace",
 			webhook: &webhook{
+				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -58,6 +84,9 @@ func TestValidateCreate(t *testing.T) {
 		{
 			name: "namespace exists and is not owned by project",
 			webhook: &webhook{
+				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -78,6 +107,9 @@ func TestValidateCreate(t *testing.T) {
 		{
 			name: "namespace exists and is owned by project",
 			webhook: &webhook{
+				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -101,6 +133,9 @@ func TestValidateCreate(t *testing.T) {
 		{
 			name: "namespace does not exist; error creating it",
 			webhook: &webhook{
+				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -132,6 +167,9 @@ func TestValidateCreate(t *testing.T) {
 		{
 			name: "namespace does not exist; success creating it",
 			webhook: &webhook{
+				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -172,6 +210,65 @@ func TestValidateCreate(t *testing.T) {
 				},
 			)
 			testCase.assertions(err)
+		})
+	}
+}
+
+func TestValidateSpec(t *testing.T) {
+	testCases := []struct {
+		name       string
+		spec       *kargoapi.ProjectSpec
+		assertions func(*kargoapi.ProjectSpec, field.ErrorList)
+	}{
+		{
+			name: "nil",
+			assertions: func(_ *kargoapi.ProjectSpec, errs field.ErrorList) {
+				require.Nil(t, errs)
+			},
+		},
+		{
+			name: "invalid",
+			spec: &kargoapi.ProjectSpec{
+				// Has two conflicting PromotionPolicies...
+				PromotionPolicies: []kargoapi.PromotionPolicy{
+					{Stage: "fake-stage"},
+					{Stage: "fake-stage"},
+				},
+			},
+			assertions: func(spec *kargoapi.ProjectSpec, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.promotionPolicies",
+							BadValue: spec.PromotionPolicies,
+							Detail:   "multiple spec.promotionPolicies reference stage fake-stage",
+						},
+					},
+					errs,
+				)
+			},
+		},
+		{
+			name: "valid",
+			spec: &kargoapi.ProjectSpec{
+				PromotionPolicies: []kargoapi.PromotionPolicy{
+					{Stage: "fake-stage"},
+				},
+			},
+			assertions: func(_ *kargoapi.ProjectSpec, errs field.ErrorList) {
+				require.Nil(t, errs)
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.spec,
+				w.validateSpec(field.NewPath("spec"), testCase.spec),
+			)
 		})
 	}
 }

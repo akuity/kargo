@@ -92,24 +92,6 @@ const (
 	// KargoServiceWatchPromotionProcedure is the fully-qualified name of the KargoService's
 	// WatchPromotion RPC.
 	KargoServiceWatchPromotionProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchPromotion"
-	// KargoServiceSetAutoPromotionForStageProcedure is the fully-qualified name of the KargoService's
-	// SetAutoPromotionForStage RPC.
-	KargoServiceSetAutoPromotionForStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/SetAutoPromotionForStage"
-	// KargoServiceCreatePromotionPolicyProcedure is the fully-qualified name of the KargoService's
-	// CreatePromotionPolicy RPC.
-	KargoServiceCreatePromotionPolicyProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreatePromotionPolicy"
-	// KargoServiceListPromotionPoliciesProcedure is the fully-qualified name of the KargoService's
-	// ListPromotionPolicies RPC.
-	KargoServiceListPromotionPoliciesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListPromotionPolicies"
-	// KargoServiceGetPromotionPolicyProcedure is the fully-qualified name of the KargoService's
-	// GetPromotionPolicy RPC.
-	KargoServiceGetPromotionPolicyProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetPromotionPolicy"
-	// KargoServiceUpdatePromotionPolicyProcedure is the fully-qualified name of the KargoService's
-	// UpdatePromotionPolicy RPC.
-	KargoServiceUpdatePromotionPolicyProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdatePromotionPolicy"
-	// KargoServiceDeletePromotionPolicyProcedure is the fully-qualified name of the KargoService's
-	// DeletePromotionPolicy RPC.
-	KargoServiceDeletePromotionPolicyProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeletePromotionPolicy"
 	// KargoServiceCreateProjectProcedure is the fully-qualified name of the KargoService's
 	// CreateProject RPC.
 	KargoServiceCreateProjectProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateProject"
@@ -119,6 +101,9 @@ const (
 	// KargoServiceDeleteProjectProcedure is the fully-qualified name of the KargoService's
 	// DeleteProject RPC.
 	KargoServiceDeleteProjectProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteProject"
+	// KargoServiceSetAutoPromotionForStageProcedure is the fully-qualified name of the KargoService's
+	// SetAutoPromotionForStage RPC.
+	KargoServiceSetAutoPromotionForStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/SetAutoPromotionForStage"
 	// KargoServiceQueryFreightProcedure is the fully-qualified name of the KargoService's QueryFreight
 	// RPC.
 	KargoServiceQueryFreightProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/QueryFreight"
@@ -180,15 +165,10 @@ type KargoServiceClient interface {
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionsResponse], error)
 	GetPromotion(context.Context, *connect.Request[v1alpha1.GetPromotionRequest]) (*connect.Response[v1alpha1.GetPromotionResponse], error)
 	WatchPromotion(context.Context, *connect.Request[v1alpha1.WatchPromotionRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionResponse], error)
-	SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
-	CreatePromotionPolicy(context.Context, *connect.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect.Response[v1alpha1.CreatePromotionPolicyResponse], error)
-	ListPromotionPolicies(context.Context, *connect.Request[v1alpha1.ListPromotionPoliciesRequest]) (*connect.Response[v1alpha1.ListPromotionPoliciesResponse], error)
-	GetPromotionPolicy(context.Context, *connect.Request[v1alpha1.GetPromotionPolicyRequest]) (*connect.Response[v1alpha1.GetPromotionPolicyResponse], error)
-	UpdatePromotionPolicy(context.Context, *connect.Request[v1alpha1.UpdatePromotionPolicyRequest]) (*connect.Response[v1alpha1.UpdatePromotionPolicyResponse], error)
-	DeletePromotionPolicy(context.Context, *connect.Request[v1alpha1.DeletePromotionPolicyRequest]) (*connect.Response[v1alpha1.DeletePromotionPolicyResponse], error)
 	CreateProject(context.Context, *connect.Request[v1alpha1.CreateProjectRequest]) (*connect.Response[v1alpha1.CreateProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
+	SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
@@ -317,36 +297,6 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceWatchPromotionProcedure,
 			opts...,
 		),
-		setAutoPromotionForStage: connect.NewClient[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse](
-			httpClient,
-			baseURL+KargoServiceSetAutoPromotionForStageProcedure,
-			opts...,
-		),
-		createPromotionPolicy: connect.NewClient[v1alpha1.CreatePromotionPolicyRequest, v1alpha1.CreatePromotionPolicyResponse](
-			httpClient,
-			baseURL+KargoServiceCreatePromotionPolicyProcedure,
-			opts...,
-		),
-		listPromotionPolicies: connect.NewClient[v1alpha1.ListPromotionPoliciesRequest, v1alpha1.ListPromotionPoliciesResponse](
-			httpClient,
-			baseURL+KargoServiceListPromotionPoliciesProcedure,
-			opts...,
-		),
-		getPromotionPolicy: connect.NewClient[v1alpha1.GetPromotionPolicyRequest, v1alpha1.GetPromotionPolicyResponse](
-			httpClient,
-			baseURL+KargoServiceGetPromotionPolicyProcedure,
-			opts...,
-		),
-		updatePromotionPolicy: connect.NewClient[v1alpha1.UpdatePromotionPolicyRequest, v1alpha1.UpdatePromotionPolicyResponse](
-			httpClient,
-			baseURL+KargoServiceUpdatePromotionPolicyProcedure,
-			opts...,
-		),
-		deletePromotionPolicy: connect.NewClient[v1alpha1.DeletePromotionPolicyRequest, v1alpha1.DeletePromotionPolicyResponse](
-			httpClient,
-			baseURL+KargoServiceDeletePromotionPolicyProcedure,
-			opts...,
-		),
 		createProject: connect.NewClient[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse](
 			httpClient,
 			baseURL+KargoServiceCreateProjectProcedure,
@@ -360,6 +310,11 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 		deleteProject: connect.NewClient[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteProjectProcedure,
+			opts...,
+		),
+		setAutoPromotionForStage: connect.NewClient[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse](
+			httpClient,
+			baseURL+KargoServiceSetAutoPromotionForStageProcedure,
 			opts...,
 		),
 		queryFreight: connect.NewClient[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse](
@@ -443,15 +398,10 @@ type kargoServiceClient struct {
 	watchPromotions          *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
 	getPromotion             *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
 	watchPromotion           *connect.Client[v1alpha1.WatchPromotionRequest, v1alpha1.WatchPromotionResponse]
-	setAutoPromotionForStage *connect.Client[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse]
-	createPromotionPolicy    *connect.Client[v1alpha1.CreatePromotionPolicyRequest, v1alpha1.CreatePromotionPolicyResponse]
-	listPromotionPolicies    *connect.Client[v1alpha1.ListPromotionPoliciesRequest, v1alpha1.ListPromotionPoliciesResponse]
-	getPromotionPolicy       *connect.Client[v1alpha1.GetPromotionPolicyRequest, v1alpha1.GetPromotionPolicyResponse]
-	updatePromotionPolicy    *connect.Client[v1alpha1.UpdatePromotionPolicyRequest, v1alpha1.UpdatePromotionPolicyResponse]
-	deletePromotionPolicy    *connect.Client[v1alpha1.DeletePromotionPolicyRequest, v1alpha1.DeletePromotionPolicyResponse]
 	createProject            *connect.Client[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse]
 	listProjects             *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
 	deleteProject            *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
+	setAutoPromotionForStage *connect.Client[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse]
 	queryFreight             *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
 	deleteFreight            *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
 	approveFreight           *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
@@ -571,37 +521,6 @@ func (c *kargoServiceClient) WatchPromotion(ctx context.Context, req *connect.Re
 	return c.watchPromotion.CallServerStream(ctx, req)
 }
 
-// SetAutoPromotionForStage calls
-// akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage.
-func (c *kargoServiceClient) SetAutoPromotionForStage(ctx context.Context, req *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {
-	return c.setAutoPromotionForStage.CallUnary(ctx, req)
-}
-
-// CreatePromotionPolicy calls akuity.io.kargo.service.v1alpha1.KargoService.CreatePromotionPolicy.
-func (c *kargoServiceClient) CreatePromotionPolicy(ctx context.Context, req *connect.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect.Response[v1alpha1.CreatePromotionPolicyResponse], error) {
-	return c.createPromotionPolicy.CallUnary(ctx, req)
-}
-
-// ListPromotionPolicies calls akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionPolicies.
-func (c *kargoServiceClient) ListPromotionPolicies(ctx context.Context, req *connect.Request[v1alpha1.ListPromotionPoliciesRequest]) (*connect.Response[v1alpha1.ListPromotionPoliciesResponse], error) {
-	return c.listPromotionPolicies.CallUnary(ctx, req)
-}
-
-// GetPromotionPolicy calls akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionPolicy.
-func (c *kargoServiceClient) GetPromotionPolicy(ctx context.Context, req *connect.Request[v1alpha1.GetPromotionPolicyRequest]) (*connect.Response[v1alpha1.GetPromotionPolicyResponse], error) {
-	return c.getPromotionPolicy.CallUnary(ctx, req)
-}
-
-// UpdatePromotionPolicy calls akuity.io.kargo.service.v1alpha1.KargoService.UpdatePromotionPolicy.
-func (c *kargoServiceClient) UpdatePromotionPolicy(ctx context.Context, req *connect.Request[v1alpha1.UpdatePromotionPolicyRequest]) (*connect.Response[v1alpha1.UpdatePromotionPolicyResponse], error) {
-	return c.updatePromotionPolicy.CallUnary(ctx, req)
-}
-
-// DeletePromotionPolicy calls akuity.io.kargo.service.v1alpha1.KargoService.DeletePromotionPolicy.
-func (c *kargoServiceClient) DeletePromotionPolicy(ctx context.Context, req *connect.Request[v1alpha1.DeletePromotionPolicyRequest]) (*connect.Response[v1alpha1.DeletePromotionPolicyResponse], error) {
-	return c.deletePromotionPolicy.CallUnary(ctx, req)
-}
-
 // CreateProject calls akuity.io.kargo.service.v1alpha1.KargoService.CreateProject.
 func (c *kargoServiceClient) CreateProject(ctx context.Context, req *connect.Request[v1alpha1.CreateProjectRequest]) (*connect.Response[v1alpha1.CreateProjectResponse], error) {
 	return c.createProject.CallUnary(ctx, req)
@@ -615,6 +534,12 @@ func (c *kargoServiceClient) ListProjects(ctx context.Context, req *connect.Requ
 // DeleteProject calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject.
 func (c *kargoServiceClient) DeleteProject(ctx context.Context, req *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error) {
 	return c.deleteProject.CallUnary(ctx, req)
+}
+
+// SetAutoPromotionForStage calls
+// akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage.
+func (c *kargoServiceClient) SetAutoPromotionForStage(ctx context.Context, req *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {
+	return c.setAutoPromotionForStage.CallUnary(ctx, req)
 }
 
 // QueryFreight calls akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight.
@@ -699,15 +624,10 @@ type KargoServiceHandler interface {
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest], *connect.ServerStream[v1alpha1.WatchPromotionsResponse]) error
 	GetPromotion(context.Context, *connect.Request[v1alpha1.GetPromotionRequest]) (*connect.Response[v1alpha1.GetPromotionResponse], error)
 	WatchPromotion(context.Context, *connect.Request[v1alpha1.WatchPromotionRequest], *connect.ServerStream[v1alpha1.WatchPromotionResponse]) error
-	SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
-	CreatePromotionPolicy(context.Context, *connect.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect.Response[v1alpha1.CreatePromotionPolicyResponse], error)
-	ListPromotionPolicies(context.Context, *connect.Request[v1alpha1.ListPromotionPoliciesRequest]) (*connect.Response[v1alpha1.ListPromotionPoliciesResponse], error)
-	GetPromotionPolicy(context.Context, *connect.Request[v1alpha1.GetPromotionPolicyRequest]) (*connect.Response[v1alpha1.GetPromotionPolicyResponse], error)
-	UpdatePromotionPolicy(context.Context, *connect.Request[v1alpha1.UpdatePromotionPolicyRequest]) (*connect.Response[v1alpha1.UpdatePromotionPolicyResponse], error)
-	DeletePromotionPolicy(context.Context, *connect.Request[v1alpha1.DeletePromotionPolicyRequest]) (*connect.Response[v1alpha1.DeletePromotionPolicyResponse], error)
 	CreateProject(context.Context, *connect.Request[v1alpha1.CreateProjectRequest]) (*connect.Response[v1alpha1.CreateProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
+	SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
@@ -832,36 +752,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		svc.WatchPromotion,
 		opts...,
 	)
-	kargoServiceSetAutoPromotionForStageHandler := connect.NewUnaryHandler(
-		KargoServiceSetAutoPromotionForStageProcedure,
-		svc.SetAutoPromotionForStage,
-		opts...,
-	)
-	kargoServiceCreatePromotionPolicyHandler := connect.NewUnaryHandler(
-		KargoServiceCreatePromotionPolicyProcedure,
-		svc.CreatePromotionPolicy,
-		opts...,
-	)
-	kargoServiceListPromotionPoliciesHandler := connect.NewUnaryHandler(
-		KargoServiceListPromotionPoliciesProcedure,
-		svc.ListPromotionPolicies,
-		opts...,
-	)
-	kargoServiceGetPromotionPolicyHandler := connect.NewUnaryHandler(
-		KargoServiceGetPromotionPolicyProcedure,
-		svc.GetPromotionPolicy,
-		opts...,
-	)
-	kargoServiceUpdatePromotionPolicyHandler := connect.NewUnaryHandler(
-		KargoServiceUpdatePromotionPolicyProcedure,
-		svc.UpdatePromotionPolicy,
-		opts...,
-	)
-	kargoServiceDeletePromotionPolicyHandler := connect.NewUnaryHandler(
-		KargoServiceDeletePromotionPolicyProcedure,
-		svc.DeletePromotionPolicy,
-		opts...,
-	)
 	kargoServiceCreateProjectHandler := connect.NewUnaryHandler(
 		KargoServiceCreateProjectProcedure,
 		svc.CreateProject,
@@ -875,6 +765,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServiceDeleteProjectHandler := connect.NewUnaryHandler(
 		KargoServiceDeleteProjectProcedure,
 		svc.DeleteProject,
+		opts...,
+	)
+	kargoServiceSetAutoPromotionForStageHandler := connect.NewUnaryHandler(
+		KargoServiceSetAutoPromotionForStageProcedure,
+		svc.SetAutoPromotionForStage,
 		opts...,
 	)
 	kargoServiceQueryFreightHandler := connect.NewUnaryHandler(
@@ -976,24 +871,14 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetPromotionHandler.ServeHTTP(w, r)
 		case KargoServiceWatchPromotionProcedure:
 			kargoServiceWatchPromotionHandler.ServeHTTP(w, r)
-		case KargoServiceSetAutoPromotionForStageProcedure:
-			kargoServiceSetAutoPromotionForStageHandler.ServeHTTP(w, r)
-		case KargoServiceCreatePromotionPolicyProcedure:
-			kargoServiceCreatePromotionPolicyHandler.ServeHTTP(w, r)
-		case KargoServiceListPromotionPoliciesProcedure:
-			kargoServiceListPromotionPoliciesHandler.ServeHTTP(w, r)
-		case KargoServiceGetPromotionPolicyProcedure:
-			kargoServiceGetPromotionPolicyHandler.ServeHTTP(w, r)
-		case KargoServiceUpdatePromotionPolicyProcedure:
-			kargoServiceUpdatePromotionPolicyHandler.ServeHTTP(w, r)
-		case KargoServiceDeletePromotionPolicyProcedure:
-			kargoServiceDeletePromotionPolicyHandler.ServeHTTP(w, r)
 		case KargoServiceCreateProjectProcedure:
 			kargoServiceCreateProjectHandler.ServeHTTP(w, r)
 		case KargoServiceListProjectsProcedure:
 			kargoServiceListProjectsHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteProjectProcedure:
 			kargoServiceDeleteProjectHandler.ServeHTTP(w, r)
+		case KargoServiceSetAutoPromotionForStageProcedure:
+			kargoServiceSetAutoPromotionForStageHandler.ServeHTTP(w, r)
 		case KargoServiceQueryFreightProcedure:
 			kargoServiceQueryFreightHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteFreightProcedure:
@@ -1109,30 +994,6 @@ func (UnimplementedKargoServiceHandler) WatchPromotion(context.Context, *connect
 	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) CreatePromotionPolicy(context.Context, *connect.Request[v1alpha1.CreatePromotionPolicyRequest]) (*connect.Response[v1alpha1.CreatePromotionPolicyResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreatePromotionPolicy is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) ListPromotionPolicies(context.Context, *connect.Request[v1alpha1.ListPromotionPoliciesRequest]) (*connect.Response[v1alpha1.ListPromotionPoliciesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionPolicies is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) GetPromotionPolicy(context.Context, *connect.Request[v1alpha1.GetPromotionPolicyRequest]) (*connect.Response[v1alpha1.GetPromotionPolicyResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionPolicy is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) UpdatePromotionPolicy(context.Context, *connect.Request[v1alpha1.UpdatePromotionPolicyRequest]) (*connect.Response[v1alpha1.UpdatePromotionPolicyResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdatePromotionPolicy is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) DeletePromotionPolicy(context.Context, *connect.Request[v1alpha1.DeletePromotionPolicyRequest]) (*connect.Response[v1alpha1.DeletePromotionPolicyResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeletePromotionPolicy is not implemented"))
-}
-
 func (UnimplementedKargoServiceHandler) CreateProject(context.Context, *connect.Request[v1alpha1.CreateProjectRequest]) (*connect.Response[v1alpha1.CreateProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateProject is not implemented"))
 }
@@ -1143,6 +1004,10 @@ func (UnimplementedKargoServiceHandler) ListProjects(context.Context, *connect.R
 
 func (UnimplementedKargoServiceHandler) DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error) {

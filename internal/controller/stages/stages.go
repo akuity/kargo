@@ -134,11 +134,11 @@ type reconciler struct {
 		stageName string,
 	) (bool, error)
 
-	listPromoPoliciesFn func(
+	getProjectFn func(
 		context.Context,
-		client.ObjectList,
-		...client.ListOption,
-	) error
+		client.Client,
+		string,
+	) (*kargoapi.Project, error)
 
 	createPromotionFn func(
 		context.Context,
@@ -210,11 +210,6 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "index Promotions by Stage and Freight")
 	}
 
-	// Index PromotionPolicies by Stage
-	if err := kubeclient.IndexPromotionPoliciesByStage(ctx, kargoMgr); err != nil {
-		return errors.Wrap(err, "index PromotionPolicies by Stage")
-	}
-
 	// Index Freight by Warehouse
 	if err := kubeclient.IndexFreightByWarehouse(ctx, kargoMgr); err != nil {
 		return errors.Wrap(err, "index Freight by Warehouse")
@@ -278,7 +273,7 @@ func SetupReconcilerWithManager(
 			predicate.Funcs{
 				DeleteFunc: func(event.DeleteEvent) bool {
 					// We're not interested in any ACTUAL deletes. (We do care about
-					// updated where DeletionTimestamp is non-nil, but that's not a delete
+					// updates where DeletionTimestamp is non-nil, but that's not a delete
 					// event.)
 					return false
 				},
@@ -429,7 +424,7 @@ func newReconciler(
 	r.patchFreightStatusFn = r.patchFreightStatus
 	// Auto-promotion:
 	r.isAutoPromotionPermittedFn = r.isAutoPromotionPermitted
-	r.listPromoPoliciesFn = r.kargoClient.List
+	r.getProjectFn = kargoapi.GetProject
 	r.createPromotionFn = kargoClient.Create
 	// Discovering latest Freight:
 	r.getLatestAvailableFreightFn = r.getLatestAvailableFreight
@@ -1042,39 +1037,25 @@ func (r *reconciler) isAutoPromotionPermitted(
 	stageName string,
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
-	policies := kargoapi.PromotionPolicyList{}
-	if err := r.listPromoPoliciesFn(
-		ctx,
-		&policies,
-		&client.ListOptions{
-			Namespace: namespace,
-			FieldSelector: fields.Set(map[string]string{
-				kubeclient.PromotionPoliciesByStageIndexField: stageName,
-			}).AsSelector(),
-		},
-	); err != nil {
-		return false, errors.Wrapf(
-			err,
-			"error listing PromotionPolicies for Stage %q in namespace %q",
-			stageName,
-			namespace,
-		)
+	project, err := r.getProjectFn(ctx, r.kargoClient, namespace)
+	if err != nil {
+		return false, errors.Wrapf(err, "error finding Project %q", namespace)
 	}
-	if len(policies.Items) == 0 {
-		logger.Debug("no PromotionPolicy is associated with the Stage")
+	if project == nil {
+		return false, errors.Errorf("Project %q not found", namespace)
+	}
+	if project.Spec == nil || len(project.Spec.PromotionPolicies) == 0 {
+		logger.Debug("found no PromotionPolicy associated with the Stage")
 		return false, nil
 	}
-	if len(policies.Items) > 1 {
-		logger.Debug("multiple PromotionPolicies are associated with the Stage")
-		return false, nil
+	for _, policy := range project.Spec.PromotionPolicies {
+		if policy.Stage == stageName {
+			logger.WithField("autoPromotionEnabled", policy.AutoPromotionEnabled).
+				Debug("found PromotionPolicy associated with the Stage")
+			return policy.AutoPromotionEnabled, nil
+		}
 	}
-	if !policies.Items[0].EnableAutoPromotion {
-		logger.Debug(
-			"PromotionPolicy does not enable auto-promotion for the Stage",
-		)
-		return false, nil
-	}
-	return true, nil
+	return false, nil
 }
 
 func (r *reconciler) getLatestAvailableFreight(
