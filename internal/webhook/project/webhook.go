@@ -51,6 +51,12 @@ type webhook struct {
 		client.Object,
 		...client.CreateOption,
 	) error
+
+	updateNamespaceFn func(
+		context.Context,
+		client.Object,
+		...client.UpdateOption,
+	) error
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -66,6 +72,7 @@ func newWebhook(kubeClient client.Client) *webhook {
 	w.validateSpecFn = w.validateSpec
 	w.getNamespaceFn = kubeClient.Get
 	w.createNamespaceFn = kubeClient.Create
+	w.updateNamespaceFn = kubeClient.Update
 	return w
 }
 
@@ -94,6 +101,12 @@ func (w *webhook) ValidateCreate(
 			"name":    project.Name,
 		})
 
+		ownerRef := metav1.NewControllerRef(
+			project,
+			kargoapi.GroupVersion.WithKind("Project"),
+		)
+		ownerRef.BlockOwnerDeletion = ptr.To(false)
+
 		// We handle creation of a Project's associated namespace synchronously in
 		// this webhook so that the namespace is guaranteed to exist before
 		// other resources (appearing below the Project) in a manifest will not fail
@@ -110,12 +123,29 @@ func (w *webhook) ValidateCreate(
 		); err == nil {
 			// We found an existing namespace with the same name as the Project. If it's
 			// owned by this Project then it was created on a previous attempt to
-			// reconcile this Project, but otherwise, this is a problem.
+			// reconcile this Project, but otherwise, this could be a problem.
 			for _, ownerRef := range ns.OwnerReferences {
 				if ownerRef.UID == project.UID {
 					logger.Debug("namespace exists and is owned by this Project")
 					return nil, nil
 				}
+			}
+			if ns.Labels != nil &&
+				ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue &&
+				len(ns.OwnerReferences) == 0 {
+				logger.Debug(
+					"namespace exists, but is not owned by this Project, but has the " +
+						"project label; Project will take it over",
+				)
+				ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+				controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
+				if err = w.updateNamespaceFn(ctx, ns); err != nil {
+					return nil, apierrors.NewInternalError(
+						errors.Wrapf(err, "error updating namespace %q", project.Name),
+					)
+				}
+				logger.Debug("updated namespace with Project as owner")
+				return nil, nil
 			}
 			return nil, apierrors.NewConflict(
 				projectGroupResource,
@@ -135,11 +165,6 @@ func (w *webhook) ValidateCreate(
 
 		logger.Debug("namespace does not exist yet; creating namespace")
 
-		ownerRef := metav1.NewControllerRef(
-			project,
-			kargoapi.GroupVersion.WithKind("Project"),
-		)
-		ownerRef.BlockOwnerDeletion = ptr.To(false)
 		ns = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: project.Name,
