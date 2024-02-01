@@ -345,14 +345,22 @@ type HelmImageUpdate struct {
 // HelmChartDependencyUpdate describes how a specific Helm chart that is used
 // as a subchart of an umbrella chart can be updated.
 type HelmChartDependencyUpdate struct {
-	// RegistryURL along with Name identify a subchart of the umbrella chart at
-	// ChartPath whose version should be updated.
+	// Repository along with Name identifies a subchart of the umbrella chart at
+	// ChartPath whose version should be updated. The values of both fields should
+	// exactly match the values of the fields of the same names in a dependency
+	// expressed in the Chart.yaml of the umbrella chart at ChartPath. i.e. Do not
+	// match the values of these two fields to your Warehouse; match them to the
+	// Chart.yaml. This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
-	RegistryURL string `json:"registryURL"`
-	// Name along with RegistryURL identify a subchart of the umbrella chart at
-	// ChartPath whose version should be updated.
+	Repository string `json:"repository"`
+	// Name along with Repository identifies a subchart of the umbrella chart at
+	// ChartPath whose version should be updated. The values of both fields should
+	// exactly match the values of the fields of the same names in a dependency
+	// expressed in the Chart.yaml of the umbrella chart at ChartPath. i.e. Do not
+	// match the values of these two fields to your Warehouse; match them to the
+	// Chart.yaml. This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
@@ -397,19 +405,24 @@ func (a *ArgoCDAppUpdate) AppNamespaceOrDefault() string {
 // ArgoCDSourceUpdate describes updates that should be applied to one of an Argo
 // CD Application resource's sources.
 type ArgoCDSourceUpdate struct {
-	// RepoURL identifies which of the Argo CD Application's sources this update
-	// is intended for. Note: As of Argo CD 2.6, Application's can use multiple
-	// sources.
+	// RepoURL along with the Chart field identifies which of an Argo CD
+	// Application's sources this update is intended for. Note: As of Argo CD 2.6,
+	// Applications can use multiple sources. When the source to be updated
+	// references a Helm chart repository, the values of the RepoURL and Chart
+	// fields should exactly match the values of the fields of the same names in
+	// the source. i.e. Do not match the values of these two fields to your
+	// Warehouse; match them to the Application source you wish to update. This is
+	// a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
 	RepoURL string `json:"repoURL"`
-	// Chart specifies a chart within a Helm chart registry if RepoURL points to a
-	// Helm chart registry. Application sources that point directly at a chart do
-	// so through a combination of their own RepoURL (registry) and Chart fields,
-	// so BOTH of those are used as criteria in selecting an Application source to
-	// update. This field MUST always be used when RepoURL points at a Helm chart
-	// registry. This field MUST never be used when RepoURL points at a Git
-	// repository.
+	// Chart along with the RepoURL field identifies which of an Argo CD
+	// Application's sources this update is intended for. Note: As of Argo CD 2.6,
+	// Applications can use multiple sources. When the source to be updated
+	// references a Helm chart repository, the values of the RepoURL and Chart
+	// fields should exactly match the values of the fields of the same names in
+	// the source. i.e. Do not match the values of these two fields to your
+	// Warehouse; match them to the Application source you wish to update.
 	//
 	//+kubebuilder:validation:Optional
 	Chart string `json:"chart,omitempty"`
@@ -592,8 +605,13 @@ type Image struct {
 
 // Chart describes a specific version of a Helm chart.
 type Chart struct {
-	// RepoURL specifies the remote registry in which this chart is located.
-	RegistryURL string `json:"registryURL,omitempty"`
+	// RepoURL specifies the URL of a Helm chart repository. Classic chart
+	// repositories (using HTTP/S) can contain differently named charts. When this
+	// field points to such a repository, the Name field will specify the name of
+	// the chart within the repository. In the case of a repository within an OCI
+	// registry, the URL implicitly points to a specific chart and the Name field
+	// will be empty.
+	RepoURL string `json:"repoURL,omitempty"`
 	// Name specifies the name of the chart.
 	Name string `json:"name,omitempty"`
 	// Version specifies a particular version of the chart.
