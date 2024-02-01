@@ -230,7 +230,7 @@ func FromGitCommitProto(g *v1alpha1.GitCommit) *kargoapi.GitCommit {
 	if g == nil {
 		return nil
 	}
-	a := func() int {   { return 1 } return 2 }()
+
 	return &kargoapi.GitCommit{
 		RepoURL:           g.repoURLFromWriteOrRead(),
 		ID:                g.GetId(),
