@@ -319,9 +319,9 @@ export class KargoRenderPromotionMechanism extends Message<KargoRenderPromotionM
  */
 export class Chart extends Message<Chart> {
   /**
-   * @generated from field: string registry_url = 1 [json_name = "registryURL"];
+   * @generated from field: string repo_url = 1 [json_name = "repoURL"];
    */
-  registryUrl = "";
+  repoUrl = "";
 
   /**
    * @generated from field: string name = 2;
@@ -341,7 +341,7 @@ export class Chart extends Message<Chart> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Chart";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "registry_url", jsonName: "registryURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
@@ -368,9 +368,9 @@ export class Chart extends Message<Chart> {
  */
 export class ChartSubscription extends Message<ChartSubscription> {
   /**
-   * @generated from field: string registry_url = 1 [json_name = "registryURL"];
+   * @generated from field: string repo_url = 1 [json_name = "repoURL"];
    */
-  registryUrl = "";
+  repoUrl = "";
 
   /**
    * @generated from field: optional string name = 2;
@@ -390,7 +390,7 @@ export class ChartSubscription extends Message<ChartSubscription> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "registry_url", jsonName: "registryURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "semver_constraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
@@ -826,9 +826,9 @@ export class ArgoCDAppSyncStatus extends Message<ArgoCDAppSyncStatus> {
  */
 export class HelmChartDependencyUpdate extends Message<HelmChartDependencyUpdate> {
   /**
-   * @generated from field: string registry_url = 1 [json_name = "registryURL"];
+   * @generated from field: string repository = 1 [json_name = "repositoryURL"];
    */
-  registryUrl = "";
+  repository = "";
 
   /**
    * @generated from field: string name = 2;
@@ -848,7 +848,7 @@ export class HelmChartDependencyUpdate extends Message<HelmChartDependencyUpdate
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.HelmChartDependencyUpdate";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "registry_url", jsonName: "registryURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "repository", jsonName: "repositoryURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "chart_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
