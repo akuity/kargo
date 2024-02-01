@@ -213,6 +213,12 @@ type GitRepoUpdate struct {
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=`^(\w+([-/]\w+)*)?$`
 	ReadBranch string `json:"readBranch,omitempty"`
+	// WriteRepoURL specifies the particular repo to write to on the specified WriteBranch
+	// updated. This is a required field.
+	//
+	//+kubebuilder:validation:MinLength=1
+	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+	WriteRepoURL string `json:"writeRepoURL"`
 	// WriteBranch specifies the particular branch of the repository to be
 	// updated. This is a required field.
 	//

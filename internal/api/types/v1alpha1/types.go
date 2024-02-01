@@ -212,12 +212,20 @@ func FromWarehouseStatusProto(s *v1alpha1.WarehouseStatus) *kargoapi.WarehouseSt
 	return &kargoapi.WarehouseStatus{}
 }
 
+func repoURLFromWriteOrRead(g *v1alpha1.GitCommit) string {
+	r := g.GetWriteRepoUrl()
+	if r == "" {
+		r = g.GetRepoUrl()
+	}
+}
+
 func FromGitCommitProto(g *v1alpha1.GitCommit) *kargoapi.GitCommit {
 	if g == nil {
 		return nil
 	}
+	a := func() int {   { return 1 } return 2 }()
 	return &kargoapi.GitCommit{
-		RepoURL:           g.GetRepoUrl(),
+		RepoURL:           g.repoURLFromWriteOrRead(),
 		ID:                g.GetId(),
 		Branch:            g.GetBranch(),
 		HealthCheckCommit: g.GetHealthCheckCommit(),
@@ -229,7 +237,7 @@ func FromImageProto(i *v1alpha1.Image) *kargoapi.Image {
 		return nil
 	}
 	return &kargoapi.Image{
-		RepoURL: i.GetRepoUrl(),
+		RepoURL: i.repoURLFromWriteOrRead(),
 		Tag:     i.GetTag(),
 		Digest:  i.GetDigest(),
 	}
@@ -321,7 +329,7 @@ func FromGitSubscriptionProto(s *v1alpha1.GitSubscription) *kargoapi.GitSubscrip
 		return nil
 	}
 	return &kargoapi.GitSubscription{
-		RepoURL: s.GetRepoUrl(),
+		RepoURL: s.repoURLFromWriteOrRead(),
 		Branch:  s.GetBranch(),
 	}
 }
@@ -331,7 +339,7 @@ func FromImageSubscriptionProto(s *v1alpha1.ImageSubscription) *kargoapi.ImageSu
 		return nil
 	}
 	return &kargoapi.ImageSubscription{
-		RepoURL:              s.GetRepoUrl(),
+		RepoURL:              s.repoURLFromWriteOrRead(),
 		TagSelectionStrategy: kargoapi.ImageTagSelectionStrategy(s.GetTagSelectionStrategy()),
 		SemverConstraint:     s.GetSemverConstraint(),
 		AllowTags:            s.GetAllowTags(),
@@ -374,8 +382,9 @@ func FromGitRepoUpdateProto(u *v1alpha1.GitRepoUpdate) *kargoapi.GitRepoUpdate {
 		return nil
 	}
 	return &kargoapi.GitRepoUpdate{
-		RepoURL:     u.GetRepoUrl(),
+		RepoURL:     u.repoURLFromWriteOrRead(),
 		ReadBranch:  u.GetReadBranch(),
+		WriteRepoURL:u.GetWriteRepoUrl(),
 		WriteBranch: u.GetWriteBranch(),
 		Render:      FromKargoRenderPromotionMechanismProto(u.GetRender()),
 		Kustomize:   FromKustomizePromotionMechanismProto(u.GetKustomize()),
@@ -497,7 +506,7 @@ func FromArgoCDSourceUpdateProto(u *v1alpha1.ArgoCDSourceUpdate) *kargoapi.ArgoC
 		return nil
 	}
 	return &kargoapi.ArgoCDSourceUpdate{
-		RepoURL:              u.GetRepoUrl(),
+		RepoURL:              u.repoURLFromWriteOrRead(),
 		Chart:                u.GetChart(),
 		UpdateTargetRevision: u.GetUpdateTargetRevision(),
 		Kustomize:            FromArgoCDKustomizeProto(u.GetKustomize()),

@@ -54,8 +54,14 @@ require (
 
 require (
 	github.com/distribution/reference v0.5.0 // indirect
+	github.com/golang/glog v1.1.2 // indirect
+	github.com/llparse/controller-gen v0.0.0-20180131011002-7a38c4658cb4 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/tools v0.16.1 // indirect
 	gopkg.in/evanphx/json-patch.v5 v5.6.0 // indirect
+	k8s.io/code-generator v0.29.0 // indirect
+	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	sigs.k8s.io/kustomize/api v0.16.0 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.16.0 // indirect
 )
