@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-	"fmt"
+	"path"
 	"sort"
 
 	"connectrpc.com/connect"
@@ -98,7 +98,7 @@ func (s *server) QueryFreight(
 	case GroupByGitRepository:
 		freightGroups = groupByGitRepo(freight, req.Msg.GetGroup())
 	case GroupByChartRepository:
-		freightGroups = groupByChartRepo(freight, req.Msg.GetGroup())
+		freightGroups = groupByChart(freight, req.Msg.GetGroup())
 	default:
 		freightGroups = noGroupBy(freight)
 	}
@@ -283,16 +283,17 @@ func groupByGitRepo(
 	return groups
 }
 
-func groupByChartRepo(
+func groupByChart(
 	freight []kargoapi.Freight,
 	group string,
 ) map[string]*svcv1alpha1.FreightList {
 	groups := make(map[string]*svcv1alpha1.FreightList)
 	for _, f := range freight {
 		for _, c := range f.Charts {
-			repoURL := fmt.Sprintf("%s/%s", c.RegistryURL, c.Name)
-			if group == "" || repoURL == group {
-				groups[repoURL] = appendToFreightList(groups[repoURL], f)
+			// path.Join accounts for the possibility that chart.Name is empty
+			key := path.Join(c.RepoURL, c.Name)
+			if group == "" || key == group {
+				groups[key] = appendToFreightList(groups[key], f)
 			}
 		}
 	}
@@ -376,7 +377,8 @@ func getRepoAndTag(s *apiv1alpha1.Freight) (string, string, *semver.Version) {
 		repo = s.Images[0].RepoUrl
 		tag = s.Images[0].Tag
 	} else if len(s.Charts) > 0 {
-		repo = s.Charts[0].RegistryUrl + "/" + s.Charts[0].Name
+		// path.Join accounts for the possibility that chart.Name is empty
+		repo = path.Join(s.Charts[0].RepoUrl, s.Charts[0].Name)
 		tag = s.Charts[0].Version
 	} else {
 		return "", "", nil
