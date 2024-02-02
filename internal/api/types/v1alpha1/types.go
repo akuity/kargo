@@ -241,9 +241,9 @@ func FromChartProto(c *v1alpha1.Chart) *kargoapi.Chart {
 		return nil
 	}
 	return &kargoapi.Chart{
-		RegistryURL: c.GetRegistryUrl(),
-		Name:        c.GetName(),
-		Version:     c.GetVersion(),
+		RepoURL: c.GetRepoUrl(),
+		Name:    c.GetName(),
+		Version: c.GetVersion(),
 	}
 }
 
@@ -350,7 +350,7 @@ func FromChartSubscriptionProto(s *v1alpha1.ChartSubscription) *kargoapi.ChartSu
 		return nil
 	}
 	return &kargoapi.ChartSubscription{
-		RegistryURL:      s.GetRegistryUrl(),
+		RepoURL:          s.GetRepoUrl(),
 		Name:             s.GetName(),
 		SemverConstraint: s.GetSemverConstraint(),
 	}
@@ -476,9 +476,9 @@ func FromHelmChartDependencyUpdateProto(
 		return nil
 	}
 	return &kargoapi.HelmChartDependencyUpdate{
-		RegistryURL: u.GetRegistryUrl(),
-		Name:        u.GetName(),
-		ChartPath:   u.GetChartPath(),
+		Repository: u.GetRepository(),
+		Name:       u.GetName(),
+		ChartPath:  u.GetChartPath(),
 	}
 }
 
@@ -820,7 +820,7 @@ func ToImageSubscriptionProto(i kargoapi.ImageSubscription) *v1alpha1.ImageSubsc
 
 func ToChartSubscriptionProto(c kargoapi.ChartSubscription) *v1alpha1.ChartSubscription {
 	return &v1alpha1.ChartSubscription{
-		RegistryUrl:      c.RegistryURL,
+		RepoUrl:          c.RepoURL,
 		Name:             proto.String(c.Name),
 		SemverConstraint: proto.String(c.SemverConstraint),
 	}
@@ -923,9 +923,9 @@ func ToHelmImageUpdateProto(h kargoapi.HelmImageUpdate) *v1alpha1.HelmImageUpdat
 
 func ToHelmChartDependencyUpdateProto(h kargoapi.HelmChartDependencyUpdate) *v1alpha1.HelmChartDependencyUpdate {
 	return &v1alpha1.HelmChartDependencyUpdate{
-		RegistryUrl: h.RegistryURL,
-		Name:        h.Name,
-		ChartPath:   h.ChartPath,
+		Repository: h.Repository,
+		Name:       h.Name,
+		ChartPath:  h.ChartPath,
 	}
 }
 
@@ -1119,9 +1119,9 @@ func ToImageProto(i kargoapi.Image) *v1alpha1.Image {
 
 func ToChartProto(c kargoapi.Chart) *v1alpha1.Chart {
 	return &v1alpha1.Chart{
-		RegistryUrl: c.RegistryURL,
-		Name:        c.Name,
-		Version:     c.Version,
+		RepoUrl: c.RepoURL,
+		Name:    c.Name,
+		Version: c.Version,
 	}
 }
 
