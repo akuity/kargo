@@ -39,9 +39,13 @@ spec:
                 name:
                   description: Name specifies the name of the chart.
                   type: string
-                registryURL:
-                  description: RepoURL specifies the remote registry in which this
-                    chart is located.
+                repoURL:
+                  description: RepoURL specifies the URL of a Helm chart repository.
+                    Classic chart repositories (using HTTP/S) can contain differently
+                    named charts. When this field points to such a repository, the
+                    Name field will specify the name of the chart within the repository.
+                    In the case of a repository within an OCI registry, the URL implicitly
+                    points to a specific chart and the Name field will be empty.
                   type: string
                 version:
                   description: Version specifies a particular version of the chart.

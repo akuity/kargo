@@ -3,6 +3,7 @@ package promotion
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/gobwas/glob"
@@ -295,11 +296,21 @@ func applyArgoCDSourceUpdate(
 	if source.Chart != "" || update.Chart != "" {
 		// Infer that we're dealing with a chart repo. No need to normalize the
 		// repo URL here.
-		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
+
+		// Kargo uses the "oci://" prefix, but Argo CD does not.
+		if source.RepoURL != strings.TrimPrefix(update.RepoURL, "oci://") || source.Chart != update.Chart {
 			return source, nil
 		}
+		// If we get to here, we have confirmed that this update is applicable to
+		// this source.
+		//
+		// Now find the chart in the new freight that corresponds to this
+		// source.
 		for _, chart := range newFreight.Charts {
-			if chart.RegistryURL == source.RepoURL && chart.Name == source.Chart {
+			// path.Join accounts for the possibility that chart.Name is empty
+			//
+			// Kargo uses the "oci://" prefix, but Argo CD does not.
+			if path.Join(strings.TrimPrefix(chart.RepoURL, "oci://"), chart.Name) == path.Join(source.RepoURL, source.Chart) {
 				source.TargetRevision = chart.Version
 				break
 			}
@@ -311,6 +322,10 @@ func applyArgoCDSourceUpdate(
 		if sourceRepoURL != git.NormalizeGitURL(update.RepoURL) {
 			return source, nil
 		}
+		// If we get to here, we have confirmed that this update is applicable to
+		// this source.
+		//
+		// Now find the commit in the new freight that corresponds to this source.
 		for _, commit := range newFreight.Commits {
 			if git.NormalizeGitURL(commit.RepoURL) == sourceRepoURL {
 				source.TargetRevision = commit.ID

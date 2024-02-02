@@ -180,17 +180,23 @@ type ImageSubscription struct {
 
 // ChartSubscription defines a subscription to a Helm chart repository.
 type ChartSubscription struct {
-	// RegistryURL specifies the URL of a Helm chart registry. It may be a classic
-	// chart registry (using HTTP/S) OR an OCI registry. This field is required.
+	// RepoURL specifies the URL of a Helm chart repository. It may be a classic
+	// chart repository (using HTTP/S) OR a repository within an OCI registry.
+	// Classic chart repositories can contain differently named charts. When this
+	// field points to such a repository, the Name field MUST also be used
+	// to specify the name of the desired chart within that repository. In the
+	// case of a repository within an OCI registry, the URL implicitly points to
+	// a specific chart and the Name field MUST NOT be used. The RepoURL field is
+	// required.
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
-	RegistryURL string `json:"registryURL"`
-	// Name specifies a Helm chart to subscribe to within the Helm chart registry
-	// specified by the RegistryURL field. This field is required.
-	//
-	//+kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	RepoURL string `json:"repoURL"`
+	// Name specifies the name of a Helm chart to subscribe to within a classic
+	// chart repository specified by the RepoURL field. This field is required
+	// when the RepoURL field points to a classic chart repository and MUST
+	// otherwise be empty.
+	Name string `json:"name,omitempty"`
 	// SemverConstraint specifies constraints on what new chart versions are
 	// permissible. This field is optional. When left unspecified, there will be
 	// no constraints, which means the latest version of the chart will always be

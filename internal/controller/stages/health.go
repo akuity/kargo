@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"path"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
@@ -119,21 +120,24 @@ func (r *reconciler) checkHealth(
 		}
 
 		var desiredRevision string
-		sourceGitRepoURL := git.NormalizeGitURL(app.Spec.Source.RepoURL)
-		for _, commit := range currentFreight.Commits {
-			if git.NormalizeGitURL(commit.RepoURL) == sourceGitRepoURL {
-				if commit.HealthCheckCommit != "" {
-					desiredRevision = commit.HealthCheckCommit
-				} else {
-					desiredRevision = commit.ID
+		if app.Spec.Source.Chart == "" {
+			// This source points to a git repository
+			sourceGitRepoURL := git.NormalizeGitURL(app.Spec.Source.RepoURL)
+			for _, commit := range currentFreight.Commits {
+				if git.NormalizeGitURL(commit.RepoURL) == sourceGitRepoURL {
+					if commit.HealthCheckCommit != "" {
+						desiredRevision = commit.HealthCheckCommit
+					} else {
+						desiredRevision = commit.ID
+					}
 				}
+				break
 			}
-			break
-		}
-		if desiredRevision == "" {
+		} else {
+			// This source points to a Helm chart
 			for _, chart := range currentFreight.Charts {
-				if chart.RegistryURL == app.Spec.Source.RepoURL &&
-					chart.Name == app.Spec.Source.Chart {
+				// path.Join accounts for the possibility that chart.Name is empty
+				if path.Join(chart.RepoURL, chart.Name) == path.Join(app.Spec.Source.RepoURL, app.Spec.Source.Chart) {
 					desiredRevision = chart.Version
 					break
 				}

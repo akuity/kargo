@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"crypto/sha1"
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 
@@ -62,7 +63,12 @@ func (f *Freight) UpdateID() {
 	for _, chart := range f.Charts {
 		artifacts = append(
 			artifacts,
-			fmt.Sprintf("%s/%s:%s", chart.RegistryURL, chart.Name, chart.Version),
+			fmt.Sprintf(
+				"%s:%s",
+				// path.Join accounts for the possibility that chart.Name is empty
+				path.Join(chart.RepoURL, chart.Name),
+				chart.Version,
+			),
 		)
 	}
 	sort.Strings(artifacts)

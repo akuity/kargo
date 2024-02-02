@@ -69,15 +69,15 @@ type reconciler struct {
 		creds *image.Credentials,
 	) (string, string, error)
 
-	getLatestChartsFn func(
+	selectChartsFn func(
 		ctx context.Context,
 		namespace string,
 		subs []kargoapi.RepoSubscription,
 	) ([]kargoapi.Chart, error)
 
-	getLatestChartVersionFn func(
+	selectChartVersionFn func(
 		ctx context.Context,
-		registryURL string,
+		repoURL string,
 		chart string,
 		semverConstraint string,
 		creds *helm.Credentials,
@@ -155,8 +155,8 @@ func newReconciler(
 	r.checkoutTagFn = r.checkoutTag
 	r.getLatestImagesFn = r.getLatestImages
 	r.getImageRefsFn = getImageRefs
-	r.getLatestChartsFn = r.getLatestCharts
-	r.getLatestChartVersionFn = helm.GetLatestChartVersion
+	r.selectChartsFn = r.selectCharts
+	r.selectChartVersionFn = helm.SelectChartVersion
 	r.selectCommitMetaFn = r.selectCommitMeta
 	r.getAvailableFreightAliasFn = r.getAvailableFreightAlias
 	r.createFreightFn = kubeClient.Create
@@ -310,7 +310,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 	}
 	logger.Debug("synced image repo subscriptions")
 
-	latestCharts, err := r.getLatestChartsFn(
+	selectedCharts, err := r.selectChartsFn(
 		ctx,
 		warehouse.Namespace,
 		warehouse.Spec.Subscriptions,
@@ -331,7 +331,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 		},
 		Commits: selectedCommits,
 		Images:  latestImages,
-		Charts:  latestCharts,
+		Charts:  selectedCharts,
 	}
 	freight.UpdateID()
 	freight.ObjectMeta.Name = freight.ID

@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -36,7 +36,7 @@ func TestGet(t *testing.T) {
 	const testURLPrefix = "myrepo.com"
 	const testURL = testURLPrefix + "/myrepo/myimage"
 	secretInNamespaceExact := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-namespace-exact",
 			Namespace: testNamespace,
 			Labels: map[string]string{
@@ -51,7 +51,7 @@ func TestGet(t *testing.T) {
 		},
 	}
 	secretInNamespacePrefix := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-namespace-prefix",
 			Namespace: testNamespace,
 			Labels: map[string]string{
@@ -66,7 +66,7 @@ func TestGet(t *testing.T) {
 		},
 	}
 	secretInGlobalExact := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-global-exact",
 			Namespace: testGlobalNamespaces[0],
 			Labels: map[string]string{
@@ -81,7 +81,7 @@ func TestGet(t *testing.T) {
 		},
 	}
 	secretInGlobalPrefix := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-global-prefix",
 			Namespace: testGlobalNamespaces[0],
 			Labels: map[string]string{
@@ -96,7 +96,7 @@ func TestGet(t *testing.T) {
 		},
 	}
 	secretInArgoCDNamespaceExact := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-argocd-exact",
 			Namespace: testArgoCDNameSpace,
 			Labels: map[string]string{
@@ -114,7 +114,7 @@ func TestGet(t *testing.T) {
 		},
 	}
 	secretInArgoCDNamespacePrefix := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-argocd-prefix",
 			Namespace: testArgoCDNameSpace,
 			Labels: map[string]string{
@@ -132,7 +132,7 @@ func TestGet(t *testing.T) {
 		},
 	}
 	secretInArgoCDNamespacePrefixMissingAuthorization := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-argocd-prefix",
 			Namespace: testArgoCDNameSpace,
 			Labels: map[string]string{
@@ -147,7 +147,7 @@ func TestGet(t *testing.T) {
 		},
 	}
 	secretInArgoCDNamespacePrefixWrongAuthorization := &corev1.Secret{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-argocd-prefix",
 			Namespace: testArgoCDNameSpace,
 			Labels: map[string]string{
@@ -274,113 +274,232 @@ func TestGet(t *testing.T) {
 }
 
 func TestGetCredentialsSecret(t *testing.T) {
+	const testSecretName = "fake-secret"
 	const testNamespace = "fake-namespace"
-	const testURLPrefix = "https://github.com/example"
-	const testURL = testURLPrefix + "/example.git"
-	const bogusTestURL = "https://github.com/bogus/bogus.git"
-	testClient := fake.NewClientBuilder().WithObjects(
-		&corev1.Secret{ // Should never match because it has no data
-			ObjectMeta: v1.ObjectMeta{
-				Name:      "creds-0",
-				Namespace: testNamespace,
-			},
-		},
-		&corev1.Secret{ // Should never match because its the wrong type of repo
-			ObjectMeta: v1.ObjectMeta{
-				Name:      "creds-1",
-				Namespace: testNamespace,
-			},
-			Data: map[string][]byte{
-				"type": []byte(TypeImage),
-				"url":  []byte(testURL),
-			},
-		},
-		&corev1.Secret{ // Should never match because its missing the url field
-			ObjectMeta: v1.ObjectMeta{
-				Name:      "creds-2",
-				Namespace: testNamespace,
-			},
-			Data: map[string][]byte{
-				"type": []byte(TypeGit),
-			},
-		},
-		&corev1.Secret{ // Should be an exact match
-			ObjectMeta: v1.ObjectMeta{
-				Name:      "creds-3",
-				Namespace: testNamespace,
-			},
-			Data: map[string][]byte{
-				"type": []byte(TypeGit),
-				"url":  []byte(testURL),
-			},
-		},
-		&corev1.Secret{ // Should be a prefix match
-			ObjectMeta: v1.ObjectMeta{
-				Name:      "creds-4",
-				Namespace: testNamespace,
-			},
-			Data: map[string][]byte{
-				"type": []byte(TypeGit),
-				"url":  []byte(testURLPrefix),
-			},
-		},
-	).Build()
+	testSecretMetadata := metav1.ObjectMeta{
+		Name:      testSecretName,
+		Namespace: testNamespace,
+	}
 	testCases := []struct {
-		name              string
-		repoURL           string
-		acceptPrefixMatch bool
-		assertions        func(*corev1.Secret, error)
+		name          string
+		secrets       []client.Object
+		repoType      Type
+		repoURL       string
+		prefixMatch   bool
+		shouldBeFound bool
 	}{
 		{
-			name:              "exact match not found",
-			repoURL:           bogusTestURL,
-			acceptPrefixMatch: false,
-			assertions: func(secret *corev1.Secret, err error) {
-				require.NoError(t, err)
-				require.Nil(t, secret)
-			},
+			name:          "no secrets found",
+			secrets:       []client.Object{},
+			repoType:      TypeGit,
+			repoURL:       "https://github.com/example",
+			shouldBeFound: false,
 		},
 		{
-			name:              "exact match found",
-			repoURL:           testURL,
-			acceptPrefixMatch: false,
-			assertions: func(secret *corev1.Secret, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, secret)
+			name: "no secrets of correct type",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeImage),
+						// This is not a realistic URL for an image, but we're trying to
+						// prove that type matters.
+						"url": []byte("https://github.com/example/example"),
+					},
+				},
 			},
+			repoType:      TypeGit,
+			repoURL:       "https://github.com/example/example",
+			shouldBeFound: false,
 		},
 		{
-			name:              "prefix match not found",
-			repoURL:           bogusTestURL,
-			acceptPrefixMatch: true,
-			assertions: func(secret *corev1.Secret, err error) {
-				require.NoError(t, err)
-				require.Nil(t, secret)
+			name: "exact git repo URL match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeGit),
+						"url":  []byte("https://github.com/example/example"),
+					},
+				},
 			},
+			repoType:      TypeGit,
+			repoURL:       "https://github.com/example/example",
+			shouldBeFound: true,
 		},
 		{
-			name:              "prefix match found",
-			repoURL:           testURL,
-			acceptPrefixMatch: true,
-			assertions: func(secret *corev1.Secret, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, secret)
+			name: "normalized git repo URL match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeGit),
+						"url":  []byte("https://github.com/example/example"),
+					},
+				},
 			},
+			repoType:      TypeGit,
+			repoURL:       "https://github.com/example/example.git",
+			shouldBeFound: true,
+		},
+		{
+			name: "git repo URL prefix match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeGit),
+						"url":  []byte("https://github.com/example"),
+					},
+				},
+			},
+			repoType:      TypeGit,
+			repoURL:       "https://github.com/example/example",
+			prefixMatch:   true,
+			shouldBeFound: true,
+		},
+		{
+			name: "exact image repo URL match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeImage),
+						"url":  []byte("ghcr.io/example/example"),
+					},
+				},
+			},
+			repoType:      TypeImage,
+			repoURL:       "ghcr.io/example/example",
+			shouldBeFound: true,
+		},
+		{
+			name: "image repo URL prefix match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeImage),
+						"url":  []byte("ghcr.io/example"),
+					},
+				},
+			},
+			repoType:      TypeImage,
+			repoURL:       "ghcr.io/example/example",
+			prefixMatch:   true,
+			shouldBeFound: true,
+		},
+		{
+			name: "exact chart repo https URL match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeHelm),
+						"url":  []byte("https://chart-museum.example.com/example"),
+					},
+				},
+			},
+			repoType:      TypeHelm,
+			repoURL:       "https://chart-museum.example.com/example",
+			shouldBeFound: true,
+		},
+		{
+			name: "chart repo https URL prefix match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeHelm),
+						"url":  []byte("https://chart-museum.example.com"),
+					},
+				},
+			},
+			repoType:      TypeHelm,
+			repoURL:       "https://chart-museum.example.com/example",
+			prefixMatch:   true,
+			shouldBeFound: true,
+		},
+		{
+			name: "exact chart repo oci URL match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeHelm),
+						"url":  []byte("oci://ghcr.io/example/example"),
+					},
+				},
+			},
+			repoType:      TypeHelm,
+			repoURL:       "oci://ghcr.io/example/example",
+			shouldBeFound: true,
+		},
+		{
+			name: "chart repo oci URL prefix match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeHelm),
+						"url":  []byte("oci://ghcr.io/example"),
+					},
+				},
+			},
+			repoType:      TypeHelm,
+			repoURL:       "oci://ghcr.io/example/example",
+			prefixMatch:   true,
+			shouldBeFound: true,
+		},
+		{
+			name: "normalized chart repo oci URL match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeHelm),
+						"url":  []byte("ghcr.io/example/example"),
+					},
+				},
+			},
+			repoType:      TypeHelm,
+			repoURL:       "oci://ghcr.io/example/example",
+			shouldBeFound: true,
+		},
+		{
+			name: "normalized chart repo oci URL prefix match",
+			secrets: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: testSecretMetadata,
+					Data: map[string][]byte{
+						"type": []byte(TypeHelm),
+						"url":  []byte("ghcr.io/example"),
+					},
+				},
+			},
+			repoType:      TypeHelm,
+			repoURL:       "oci://ghcr.io/example/example",
+			prefixMatch:   true,
+			shouldBeFound: true,
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				getCredentialsSecret(
-					context.Background(),
-					testClient,
-					testNamespace,
-					labels.Everything(),
-					TypeGit,
-					testCase.repoURL,
-					testCase.acceptPrefixMatch,
-				),
+			secret, err := getCredentialsSecret(
+				context.Background(),
+				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
+				testNamespace,
+				labels.Everything(),
+				testCase.repoType,
+				testCase.repoURL,
+				testCase.prefixMatch,
 			)
+			require.NoError(t, err)
+			if testCase.shouldBeFound {
+				require.NotNil(t, secret)
+			} else {
+				require.Nil(t, secret)
+			}
 		})
 	}
 }

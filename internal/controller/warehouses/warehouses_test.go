@@ -35,8 +35,8 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.checkoutTagFn)
 	require.NotNil(t, e.getLatestImagesFn)
 	require.NotNil(t, e.getImageRefsFn)
-	require.NotNil(t, e.getLatestChartsFn)
-	require.NotNil(t, e.getLatestChartVersionFn)
+	require.NotNil(t, e.selectChartsFn)
+	require.NotNil(t, e.selectChartVersionFn)
 	require.NotNil(t, e.selectCommitMetaFn)
 	require.NotNil(t, e.getAvailableFreightAliasFn)
 	require.NotNil(t, e.createFreightFn)
@@ -281,7 +281,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				) ([]kargoapi.Image, error) {
 					return nil, nil
 				},
-				getLatestChartsFn: func(
+				selectChartsFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
@@ -327,16 +327,16 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 						},
 					}, nil
 				},
-				getLatestChartsFn: func(
+				selectChartsFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
 				) ([]kargoapi.Chart, error) {
 					return []kargoapi.Chart{
 						{
-							RegistryURL: "fake-registry",
-							Name:        "fake-chart",
-							Version:     "fake-version",
+							RepoURL: "fake-repo",
+							Name:    "fake-chart",
+							Version: "fake-version",
 						},
 					}, nil
 				},
@@ -371,9 +371,9 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 						},
 						Charts: []kargoapi.Chart{
 							{
-								RegistryURL: "fake-registry",
-								Name:        "fake-chart",
-								Version:     "fake-version",
+								RepoURL: "fake-repo",
+								Name:    "fake-chart",
+								Version: "fake-version",
 							},
 						},
 					},

@@ -303,26 +303,26 @@ func TestQueryFreight(t *testing.T) {
 					freight.Items = []kargoapi.Freight{
 						{
 							Charts: []kargoapi.Chart{{
-								RegistryURL: "fake-registry-url",
-								Name:        "fake-chart-name",
+								RepoURL: "fake-repo-url",
+								Name:    "fake-chart-name",
 							}},
 						},
 						{
 							Charts: []kargoapi.Chart{{
-								RegistryURL: "fake-registry-url",
-								Name:        "fake-chart-name",
+								RepoURL: "fake-repo-url",
+								Name:    "fake-chart-name",
 							}},
 						},
 						{
 							Charts: []kargoapi.Chart{{
-								RegistryURL: "fake-registry-url",
-								Name:        "another-fake-chart-name",
+								RepoURL: "fake-repo-url",
+								Name:    "another-fake-chart-name",
 							}},
 						},
 						{
 							Charts: []kargoapi.Chart{{
-								RegistryURL: "fake-registry-url",
-								Name:        "another-fake-chart-name",
+								RepoURL: "fake-repo-url",
+								Name:    "another-fake-chart-name",
 							}},
 						},
 					}
@@ -337,12 +337,12 @@ func TestQueryFreight(t *testing.T) {
 				require.Len(t, res.Msg.GetGroups(), 2)
 				require.Len(
 					t,
-					res.Msg.GetGroups()["fake-registry-url/fake-chart-name"].Freight,
+					res.Msg.GetGroups()["fake-repo-url/fake-chart-name"].Freight,
 					2,
 				)
 				require.Len(
 					t,
-					res.Msg.GetGroups()["fake-registry-url/another-fake-chart-name"].Freight,
+					res.Msg.GetGroups()["fake-repo-url/another-fake-chart-name"].Freight,
 					2,
 				)
 			},
@@ -759,30 +759,30 @@ func TestGroupByGitRepo(t *testing.T) {
 	}
 }
 
-func TestGroupByChartRepo(t *testing.T) {
+func TestGroupByChart(t *testing.T) {
 	testFreight := []kargoapi.Freight{
 		{
 			Charts: []kargoapi.Chart{{
-				RegistryURL: "fake-registry-url",
-				Name:        "fake-chart",
+				RepoURL: "fake-repo-url",
+				Name:    "fake-chart",
 			}},
 		},
 		{
 			Charts: []kargoapi.Chart{{
-				RegistryURL: "fake-registry-url",
-				Name:        "fake-chart",
+				RepoURL: "fake-repo-url",
+				Name:    "fake-chart",
 			}},
 		},
 		{
 			Charts: []kargoapi.Chart{{
-				RegistryURL: "another-fake-registry-url",
-				Name:        "fake-chart",
+				RepoURL: "another-fake-repo-url",
+				Name:    "fake-chart",
 			}},
 		},
 		{
 			Charts: []kargoapi.Chart{{
-				RegistryURL: "another-fake-registry-url",
-				Name:        "fake-chart",
+				RepoURL: "another-fake-repo-url",
+				Name:    "fake-chart",
 			}},
 		},
 	}
@@ -796,22 +796,22 @@ func TestGroupByChartRepo(t *testing.T) {
 			group: "",
 			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups, 2)
-				require.Len(t, groups["fake-registry-url/fake-chart"].Freight, 2)
-				require.Len(t, groups["another-fake-registry-url/fake-chart"].Freight, 2)
+				require.Len(t, groups["fake-repo-url/fake-chart"].Freight, 2)
+				require.Len(t, groups["another-fake-repo-url/fake-chart"].Freight, 2)
 			},
 		},
 		{
 			name:  "with group filter",
-			group: "fake-registry-url/fake-chart",
+			group: "fake-repo-url/fake-chart",
 			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups, 1)
-				require.Len(t, groups["fake-registry-url/fake-chart"].Freight, 2)
+				require.Len(t, groups["fake-repo-url/fake-chart"].Freight, 2)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(groupByChartRepo(testFreight, testCase.group))
+			testCase.assertions(groupByChart(testFreight, testCase.group))
 		})
 	}
 }
