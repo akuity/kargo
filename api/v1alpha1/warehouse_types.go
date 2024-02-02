@@ -2,6 +2,16 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+// +kubebuilder:validation:Enum={Lexical,NewestFromBranch,NewestTag,SemVer}
+type CommitSelectionStrategy string
+
+const (
+	CommitSelectionStrategyLexical          CommitSelectionStrategy = "Lexical"
+	CommitSelectionStrategyNewestFromBranch CommitSelectionStrategy = "NewestFromBranch"
+	CommitSelectionStrategyNewestTag        CommitSelectionStrategy = "NewestTag"
+	CommitSelectionStrategySemVer           CommitSelectionStrategy = "SemVer"
+)
+
 // +kubebuilder:validation:Enum={Digest,Lexical,NewestBuild,SemVer}
 type ImageTagSelectionStrategy string
 
@@ -59,13 +69,48 @@ type GitSubscription struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL"`
-	// Branch references a particular branch of the repository. This field is
-	// optional. When not specified, the subscription is implicitly to the
-	// repository's default branch.
+	// CommitSelectionStrategy specifies the rules for how to identify the newest
+	// commit of interest in the repository specified by the RepoURL field. This
+	// field is optional. When left unspecified, the field is implicitly treated
+	// as if its value were "NewestFromBranch".
+	//
+	// +kubebuilder:default=NewestFromBranch
+	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty"`
+	// Branch references a particular branch of the repository. The value in this
+	// field only has any effect when the CommitSelectionStrategy is
+	// NewestFromBranch or left unspecified (which is implicitly the same as
+	// NewestFromBranch). This field is optional. When left unspecified, (and the
+	// CommitSelectionStrategy is NewestFromBranch or unspecified), the
+	// subscription is implicitly to the repository's default branch.
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
 	Branch string `json:"branch,omitempty"`
+	// SemverConstraint specifies constraints on what new tagged commits are
+	// considered in determining the newest commit of interest. The value in this
+	// field only has any effect when the CommitSelectionStrategy is SemVer. This
+	// field is optional. When left unspecified, there will be no constraints,
+	// which means the latest semantically tagged commit will always be used. Care
+	// should be taken with leaving this field unspecified, as it can lead to the
+	// unanticipated rollout of breaking changes.
+	//
+	//+kubebuilder:validation:Optional
+	SemverConstraint string `json:"semverConstraint,omitempty"`
+	// AllowTags is a regular expression that can optionally be used to limit the
+	// tags that are considered in determining the newest commit of interest. The
+	// value in this field only has any effect when the CommitSelectionStrategy is
+	// Lexical, NewestTag, or SemVer. This field is optional.
+	//
+	//+kubebuilder:validation:Optional
+	AllowTags string `json:"allowTags,omitempty"`
+	// IgnoreTags is a list of tags that must be ignored when determining the
+	// newest commit of interest. No regular expressions or glob patterns are
+	// supported yet. The value in this field only has any effect when the
+	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
+	// optional.
+	//
+	//+kubebuilder:validation:Optional
+	IgnoreTags []string `json:"ignoreTags,omitempty"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.

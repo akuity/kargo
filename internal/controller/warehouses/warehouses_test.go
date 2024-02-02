@@ -29,12 +29,15 @@ func TestNewReconciler(t *testing.T) {
 
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, e.getLatestFreightFromReposFn)
-	require.NotNil(t, e.getLatestCommitsFn)
+	require.NotNil(t, e.selectCommitsFn)
+	require.NotNil(t, e.getLastCommitIDFn)
+	require.NotNil(t, e.listTagsFn)
+	require.NotNil(t, e.checkoutTagFn)
 	require.NotNil(t, e.getLatestImagesFn)
 	require.NotNil(t, e.getImageRefsFn)
 	require.NotNil(t, e.getLatestChartsFn)
 	require.NotNil(t, e.getLatestChartVersionFn)
-	require.NotNil(t, e.getLatestCommitMetaFn)
+	require.NotNil(t, e.selectCommitMetaFn)
 	require.NotNil(t, e.getAvailableFreightAliasFn)
 	require.NotNil(t, e.createFreightFn)
 }
@@ -217,7 +220,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 		{
 			name: "error getting latest git commits",
 			reconciler: &reconciler{
-				getLatestCommitsFn: func(
+				selectCommitsFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
@@ -235,7 +238,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 		{
 			name: "error getting latest images",
 			reconciler: &reconciler{
-				getLatestCommitsFn: func(
+				selectCommitsFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
@@ -264,7 +267,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 		{
 			name: "error getting latest charts",
 			reconciler: &reconciler{
-				getLatestCommitsFn: func(
+				selectCommitsFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
@@ -300,7 +303,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 		{
 			name: "success",
 			reconciler: &reconciler{
-				getLatestCommitsFn: func(
+				selectCommitsFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,

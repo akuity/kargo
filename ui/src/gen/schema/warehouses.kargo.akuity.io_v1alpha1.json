@@ -49,11 +49,33 @@
               "git": {
                 "description": "Git describes a subscriptions to a Git repository.",
                 "properties": {
+                  "allowTags": {
+                    "description": "AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.",
+                    "type": "string"
+                  },
                   "branch": {
-                    "description": "Branch references a particular branch of the repository. This field is optional. When not specified, the subscription is implicitly to the repository's default branch.",
+                    "description": "Branch references a particular branch of the repository. The value in this field only has any effect when the CommitSelectionStrategy is NewestFromBranch or left unspecified (which is implicitly the same as NewestFromBranch). This field is optional. When left unspecified, (and the CommitSelectionStrategy is NewestFromBranch or unspecified), the subscription is implicitly to the repository's default branch.",
                     "minLength": 1,
                     "pattern": "^\\w+([-/]\\w+)*$",
                     "type": "string"
+                  },
+                  "commitSelectionStrategy": {
+                    "default": "NewestFromBranch",
+                    "description": "CommitSelectionStrategy specifies the rules for how to identify the newest commit of interest in the repository specified by the RepoURL field. This field is optional. When left unspecified, the field is implicitly treated as if its value were \"NewestFromBranch\".",
+                    "enum": [
+                      "Lexical",
+                      "NewestFromBranch",
+                      "NewestTag",
+                      "SemVer"
+                    ],
+                    "type": "string"
+                  },
+                  "ignoreTags": {
+                    "description": "IgnoreTags is a list of tags that must be ignored when determining the newest commit of interest. No regular expressions or glob patterns are supported yet. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
                   },
                   "insecureSkipTLSVerify": {
                     "description": "InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution.",
@@ -63,6 +85,10 @@
                     "description": "URL is the repository's URL. This is a required field.",
                     "minLength": 1,
                     "pattern": "^https://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
+                    "type": "string"
+                  },
+                  "semverConstraint": {
+                    "description": "SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. The value in this field only has any effect when the CommitSelectionStrategy is SemVer. This field is optional. When left unspecified, there will be no constraints, which means the latest semantically tagged commit will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes.",
                     "type": "string"
                   }
                 },

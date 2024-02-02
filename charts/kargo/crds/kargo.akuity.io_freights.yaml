@@ -80,6 +80,10 @@ spec:
                 repoURL:
                   description: RepoURL is the URL of a Git repository.
                   type: string
+                tag:
+                  description: Tag denotes a tag in the repository that matched selection
+                    criteria and resolved to this commit.
+                  type: string
               type: object
             type: array
           id:
