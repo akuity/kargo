@@ -33,7 +33,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.getLastCommitIDFn)
 	require.NotNil(t, e.listTagsFn)
 	require.NotNil(t, e.checkoutTagFn)
-	require.NotNil(t, e.getLatestImagesFn)
+	require.NotNil(t, e.selectImagesFn)
 	require.NotNil(t, e.getImageRefsFn)
 	require.NotNil(t, e.selectChartsFn)
 	require.NotNil(t, e.selectChartVersionFn)
@@ -245,7 +245,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				) ([]kargoapi.GitCommit, error) {
 					return nil, nil
 				},
-				getLatestImagesFn: func(
+				selectImagesFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
@@ -274,7 +274,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				) ([]kargoapi.GitCommit, error) {
 					return nil, nil
 				},
-				getLatestImagesFn: func(
+				selectImagesFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
@@ -315,7 +315,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 						},
 					}, nil
 				},
-				getLatestImagesFn: func(
+				selectImagesFn: func(
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,

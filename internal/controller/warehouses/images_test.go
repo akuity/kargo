@@ -13,7 +13,7 @@ import (
 	"github.com/akuity/kargo/internal/image"
 )
 
-func TestGetLatestImages(t *testing.T) {
+func TestSelectImages(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -100,7 +100,7 @@ func TestGetLatestImages(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.reconciler.getLatestImages(
+				testCase.reconciler.selectImages(
 					context.Background(),
 					"fake-namespace",
 					[]kargoapi.RepoSubscription{

@@ -52,7 +52,7 @@ type reconciler struct {
 
 	checkoutTagFn func(repo git.Repo, tag string) error
 
-	getLatestImagesFn func(
+	selectImagesFn func(
 		ctx context.Context,
 		namespace string,
 		subs []kargoapi.RepoSubscription,
@@ -153,7 +153,7 @@ func newReconciler(
 	r.getLastCommitIDFn = r.getLastCommitID
 	r.listTagsFn = r.listTags
 	r.checkoutTagFn = r.checkoutTag
-	r.getLatestImagesFn = r.getLatestImages
+	r.selectImagesFn = r.selectImages
 	r.getImageRefsFn = getImageRefs
 	r.selectChartsFn = r.selectCharts
 	r.selectChartVersionFn = helm.SelectChartVersion
@@ -300,7 +300,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 	}
 	logger.Debug("synced git repo subscriptions")
 
-	latestImages, err := r.getLatestImagesFn(
+	selectedImages, err := r.selectImagesFn(
 		ctx,
 		warehouse.Namespace,
 		warehouse.Spec.Subscriptions,
@@ -330,7 +330,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},
 		Commits: selectedCommits,
-		Images:  latestImages,
+		Images:  selectedImages,
 		Charts:  selectedCharts,
 	}
 	freight.UpdateID()
