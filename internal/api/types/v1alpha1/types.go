@@ -336,12 +336,12 @@ func FromImageSubscriptionProto(s *v1alpha1.ImageSubscription) *kargoapi.ImageSu
 		return nil
 	}
 	return &kargoapi.ImageSubscription{
-		RepoURL:              s.GetRepoUrl(),
-		TagSelectionStrategy: kargoapi.ImageTagSelectionStrategy(s.GetTagSelectionStrategy()),
-		SemverConstraint:     s.GetSemverConstraint(),
-		AllowTags:            s.GetAllowTags(),
-		IgnoreTags:           s.GetIgnoreTags(),
-		Platform:             s.GetPlatform(),
+		RepoURL:                s.GetRepoUrl(),
+		ImageSelectionStrategy: kargoapi.ImageSelectionStrategy(s.GetImageSelectionStrategy()),
+		SemverConstraint:       s.GetSemverConstraint(),
+		AllowTags:              s.GetAllowTags(),
+		IgnoreTags:             s.GetIgnoreTags(),
+		Platform:               s.GetPlatform(),
 	}
 }
 
@@ -809,12 +809,12 @@ func ToGitSubscriptionProto(g kargoapi.GitSubscription) *v1alpha1.GitSubscriptio
 
 func ToImageSubscriptionProto(i kargoapi.ImageSubscription) *v1alpha1.ImageSubscription {
 	return &v1alpha1.ImageSubscription{
-		RepoUrl:              i.RepoURL,
-		TagSelectionStrategy: string(i.TagSelectionStrategy),
-		SemverConstraint:     proto.String(i.SemverConstraint),
-		AllowTags:            proto.String(i.AllowTags),
-		IgnoreTags:           i.IgnoreTags,
-		Platform:             proto.String(i.Platform),
+		RepoUrl:                i.RepoURL,
+		ImageSelectionStrategy: string(i.ImageSelectionStrategy),
+		SemverConstraint:       proto.String(i.SemverConstraint),
+		AllowTags:              proto.String(i.AllowTags),
+		IgnoreTags:             i.IgnoreTags,
+		Platform:               proto.String(i.Platform),
 	}
 }
 
