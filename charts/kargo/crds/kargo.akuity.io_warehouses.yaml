@@ -176,6 +176,19 @@ spec:
                           items:
                             type: string
                           type: array
+                        imageSelectionStrategy:
+                          default: SemVer
+                          description: ImageSelectionStrategy specifies the rules
+                            for how to identify the newest version of the image specified
+                            by the RepoURL field. This field is optional. When left
+                            unspecified, the field is implicitly treated as if its
+                            value were "SemVer".
+                          enum:
+                          - Digest
+                          - Lexical
+                          - NewestBuild
+                          - SemVer
+                          type: string
                         platform:
                           description: Platform is a string of the form <os>/<arch>
                             that limits the tags that can be considered when searching
@@ -198,29 +211,16 @@ spec:
                         semverConstraint:
                           description: 'SemverConstraint specifies constraints on
                             what new image versions are permissible. The value in
-                            this field only has any effect when the TagSelectionStrategy
+                            this field only has any effect when the ImageSelectionStrategy
                             is SemVer or left unspecified (which is implicitly the
                             same as SemVer). This field is also optional. When left
-                            unspecified, (and the TagSelectionStrategy is SemVer or
-                            unspecified), there will be no constraints, which means
+                            unspecified, (and the ImageSelectionStrategy is SemVer
+                            or unspecified), there will be no constraints, which means
                             the latest semantically tagged version of an image will
                             always be used. Care should be taken with leaving this
                             field unspecified, as it can lead to the unanticipated
                             rollout of breaking changes. Refer to Image Updater documentation
                             for more details. More info: https://github.com/masterminds/semver#checking-version-constraints'
-                          type: string
-                        tagSelectionStrategy:
-                          default: SemVer
-                          description: TagSelectionStrategy specifies the rules for
-                            how to identify the newest version of the image specified
-                            by the RepoURL field. This field is optional. When left
-                            unspecified, the field is implicitly treated as if its
-                            value were "SemVer".
-                          enum:
-                          - Digest
-                          - Lexical
-                          - NewestBuild
-                          - SemVer
                           type: string
                       required:
                       - repoURL
