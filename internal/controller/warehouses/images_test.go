@@ -35,7 +35,7 @@ func TestSelectImages(t *testing.T) {
 				getImageRefsFn: func(
 					context.Context,
 					string,
-					kargoapi.ImageTagSelectionStrategy,
+					kargoapi.ImageSelectionStrategy,
 					string,
 					string,
 					[]string,
@@ -50,7 +50,7 @@ func TestSelectImages(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"error getting latest suitable tag for image",
+					"error getting latest suitable image",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -72,7 +72,7 @@ func TestSelectImages(t *testing.T) {
 				getImageRefsFn: func(
 					context.Context,
 					string,
-					kargoapi.ImageTagSelectionStrategy,
+					kargoapi.ImageSelectionStrategy,
 					string,
 					string,
 					[]string,
@@ -116,7 +116,7 @@ func TestSelectImages(t *testing.T) {
 	}
 }
 
-func TestFetImageSourceURL(t *testing.T) {
+func TestGetImageSourceURL(t *testing.T) {
 	const testURLPrefix = "fake-url-prefix"
 	testCases := []struct {
 		name        string
