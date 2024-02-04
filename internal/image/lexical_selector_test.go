@@ -7,27 +7,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewLexicalTagSelector(t *testing.T) {
+func TestNewLexicalSelector(t *testing.T) {
 	testAllowRegex := regexp.MustCompile("fake-regex")
 	testIgnore := []string{"fake-ignore"}
 	testPlatform := &platformConstraint{
 		os:   "linux",
 		arch: "amd64",
 	}
-	s := newLexicalTagSelector(nil, testAllowRegex, testIgnore, testPlatform)
-	selector, ok := s.(*lexicalTagSelector)
+	s := newLexicalSelector(nil, testAllowRegex, testIgnore, testPlatform)
+	selector, ok := s.(*lexicalSelector)
 	require.True(t, ok)
 	require.Equal(t, testAllowRegex, selector.allowRegex)
 	require.Equal(t, testIgnore, selector.ignore)
 	require.Equal(t, testPlatform, selector.platform)
 }
 
-func TestSortTagsNamesLexically(t *testing.T) {
-	tagNames := []string{"a", "z", "b", "y", "c", "x", "d", "w", "e", "v"}
-	sortTagNamesLexically(tagNames)
+func TestSortTagsLexically(t *testing.T) {
+	tags := []string{"a", "z", "b", "y", "c", "x", "d", "w", "e", "v"}
+	sortTagsLexically(tags)
 	require.Equal(
 		t,
 		[]string{"z", "y", "x", "w", "v", "e", "d", "c", "b", "a"},
-		tagNames,
+		tags,
 	)
 }

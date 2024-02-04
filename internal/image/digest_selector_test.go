@@ -6,15 +6,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewDigestTagSelector(t *testing.T) {
+func TestNewDigestSelector(t *testing.T) {
 	const testConstraint = "fake-constraint"
 	testPlatform := &platformConstraint{
 		os:   "linux",
 		arch: "amd64",
 	}
-	s, err := newDigestTagSelector(nil, testConstraint, testPlatform)
+	s, err := newDigestSelector(nil, testConstraint, testPlatform)
 	require.NoError(t, err)
-	selector, ok := s.(*digestTagSelector)
+	selector, ok := s.(*digestSelector)
 	require.True(t, ok)
 	require.Equal(t, testConstraint, selector.constraint)
 	require.Equal(t, testPlatform, selector.platform)

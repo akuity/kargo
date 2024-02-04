@@ -8,7 +8,7 @@ import (
 )
 
 // platformConstraint represents an operating system, system architecture, and
-// (optionally) variant thereof that can be used to filter tags by platform.
+// (optionally) variant thereof that can be used to filter images by platform.
 type platformConstraint struct {
 	os      string
 	arch    string

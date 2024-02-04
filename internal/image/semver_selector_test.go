@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewSemVerTagSelector(t *testing.T) {
+func TestNewSemVerSelector(t *testing.T) {
 	testAllowRegex := regexp.MustCompile("fake-regex")
 	testIgnore := []string{"fake-ignore"}
 	testPlatform := &platformConstraint{
@@ -17,12 +17,12 @@ func TestNewSemVerTagSelector(t *testing.T) {
 	testCases := []struct {
 		name       string
 		constraint string
-		assertions func(s TagSelector, err error)
+		assertions func(s Selector, err error)
 	}{
 		{
 			name:       "invalid semver constraint",
 			constraint: "invalid",
-			assertions: func(s TagSelector, err error) {
+			assertions: func(s Selector, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing semver constraint")
 			},
@@ -30,9 +30,9 @@ func TestNewSemVerTagSelector(t *testing.T) {
 		{
 			name:       "no semver constraint",
 			constraint: "",
-			assertions: func(s TagSelector, err error) {
+			assertions: func(s Selector, err error) {
 				require.NoError(t, err)
-				selector, ok := s.(*semVerTagSelector)
+				selector, ok := s.(*semVerSelector)
 				require.True(t, ok)
 				require.Equal(t, testAllowRegex, selector.allowRegex)
 				require.Equal(t, testIgnore, selector.ignore)
@@ -43,9 +43,9 @@ func TestNewSemVerTagSelector(t *testing.T) {
 		{
 			name:       "valid semver constraint",
 			constraint: "^1.24",
-			assertions: func(s TagSelector, err error) {
+			assertions: func(s Selector, err error) {
 				require.NoError(t, err)
-				selector, ok := s.(*semVerTagSelector)
+				selector, ok := s.(*semVerSelector)
 				require.True(t, ok)
 				require.Equal(t, testAllowRegex, selector.allowRegex)
 				require.Equal(t, testIgnore, selector.ignore)
@@ -57,7 +57,7 @@ func TestNewSemVerTagSelector(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				newSemVerTagSelector(
+				newSemVerSelector(
 					nil,
 					testAllowRegex,
 					testIgnore,
@@ -69,30 +69,30 @@ func TestNewSemVerTagSelector(t *testing.T) {
 	}
 }
 
-func TestSortTagsBySemver(t *testing.T) {
-	tags := []Tag{
-		newTag("5.0.0", nil, ""),
-		newTag("0.0.1", nil, ""),
-		newTag("0.2.1", nil, ""),
-		newTag("0.1.1", nil, ""),
-		newTag("1.1.1", nil, ""),
-		newTag("7.0.6", nil, ""),
-		newTag("1.0.0", nil, ""),
-		newTag("1.0.2", nil, ""),
+func TestSortImagesBySemver(t *testing.T) {
+	images := []Image{
+		newImage("5.0.0", nil, ""),
+		newImage("0.0.1", nil, ""),
+		newImage("0.2.1", nil, ""),
+		newImage("0.1.1", nil, ""),
+		newImage("1.1.1", nil, ""),
+		newImage("7.0.6", nil, ""),
+		newImage("1.0.0", nil, ""),
+		newImage("1.0.2", nil, ""),
 	}
-	sortTagsBySemVer(tags)
+	sortImagesBySemVer(images)
 	require.Equal(
 		t,
-		[]Tag{
-			newTag("7.0.6", nil, ""),
-			newTag("5.0.0", nil, ""),
-			newTag("1.1.1", nil, ""),
-			newTag("1.0.2", nil, ""),
-			newTag("1.0.0", nil, ""),
-			newTag("0.2.1", nil, ""),
-			newTag("0.1.1", nil, ""),
-			newTag("0.0.1", nil, ""),
+		[]Image{
+			newImage("7.0.6", nil, ""),
+			newImage("5.0.0", nil, ""),
+			newImage("1.1.1", nil, ""),
+			newImage("1.0.2", nil, ""),
+			newImage("1.0.0", nil, ""),
+			newImage("0.2.1", nil, ""),
+			newImage("0.1.1", nil, ""),
+			newImage("0.0.1", nil, ""),
 		},
-		tags,
+		images,
 	)
 }
