@@ -154,6 +154,22 @@ api:
         tag: v2.37.0
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
+
+      ## @param api.oidc.dex.envVars Add environments to the Dex pod, for example to get Secrets in.
+      envVars: []
+      # - name: SOME_ENV_VAR
+      #   value: value
+      # - name: SOME_ENV_VAR2
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: secret-name
+      #       key: secret-key
+      # - name: SOME_ENV_VAR3
+      #   valueFrom:
+      #     configMapKeyRef:
+      #       name: config-map-name
+      #       key: config-map-key
+
       probes:
         ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
         enabled: true
