@@ -592,6 +592,16 @@ export class GitSubscription extends Message<GitSubscription> {
    */
   ignoreTags: string[] = [];
 
+  /**
+   * @generated from field: repeated string scan_paths = 7;
+   */
+  scanPaths: string[] = [];
+
+  /**
+   * @generated from field: repeated string ignore_paths = 8;
+   */
+  ignorePaths: string[] = [];
+
   constructor(data?: PartialMessage<GitSubscription>) {
     super();
     proto3.util.initPartial(data, this);
@@ -606,6 +616,8 @@ export class GitSubscription extends Message<GitSubscription> {
     { no: 4, name: "semver_constraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "allow_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignore_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "scan_paths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 8, name: "ignore_paths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitSubscription {

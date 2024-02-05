@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/pkg/errors"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -26,8 +27,17 @@ func (r *reconciler) selectCommits(
 	ctx context.Context,
 	namespace string,
 	subs []kargoapi.RepoSubscription,
+	lastFreight *kargoapi.FreightReference,
 ) ([]kargoapi.GitCommit, error) {
 	latestCommits := make([]kargoapi.GitCommit, 0, len(subs))
+
+	repoCommitMappings := map[string]string{}
+	if lastFreight != nil {
+		for _, commit := range lastFreight.Commits {
+			repoCommitMappings[commit.RepoURL+"#"+commit.Branch] = commit.ID
+		}
+	}
+
 	for _, s := range subs {
 		if s.Git == nil {
 			continue
@@ -55,7 +65,9 @@ func (r *reconciler) selectCommits(
 			logger.Debug("found no credentials for git repo")
 		}
 
-		gm, err := r.selectCommitMetaFn(ctx, *s.Git, repoCreds)
+		baseCommit := repoCommitMappings[sub.RepoURL+"#"+sub.Branch]
+
+		gm, err := r.selectCommitMetaFn(ctx, *s.Git, repoCreds, baseCommit)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error determining latest commit ID of git repo %q: %w",
@@ -86,6 +98,7 @@ func (r *reconciler) selectCommitMeta(
 	ctx context.Context,
 	sub kargoapi.GitSubscription,
 	creds *git.RepoCredentials,
+	baseCommit string,
 ) (*gitMeta, error) {
 	logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 	if creds == nil {
@@ -94,20 +107,26 @@ func (r *reconciler) selectCommitMeta(
 	if sub.CommitSelectionStrategy == "" {
 		sub.CommitSelectionStrategy = kargoapi.CommitSelectionStrategyNewestFromBranch
 	}
+	// when scanPaths and/or ignorePaths filters are used we can't use shallow clone
+	// as we need diffs between HEAD and a baseCommit which depth in git history is unknown
+	var shallowClone bool = true
+	if (len(sub.ScanPaths) != 0 || len(sub.IgnorePaths) != 0) && baseCommit != "" {
+		shallowClone = false
+	}
 	repo, err := git.Clone(
 		sub.RepoURL,
 		*creds,
 		&git.CloneOptions{
 			Branch:                sub.Branch,
 			SingleBranch:          true,
-			Shallow:               true,
+			Shallow:               shallowClone,
 			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error cloning git repo %q: %w", sub.RepoURL, err)
 	}
-	selectedTag, selectedCommit, err := r.selectTagAndCommitID(repo, sub)
+	selectedTag, selectedCommit, err := r.selectTagAndCommitID(repo, sub, baseCommit)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error selecting commit from git repo %q: %w",
@@ -136,20 +155,54 @@ func (r *reconciler) selectCommitMeta(
 func (r *reconciler) selectTagAndCommitID(
 	repo git.Repo,
 	sub kargoapi.GitSubscription,
+	baseCommit string,
 ) (string, string, error) {
+
 	if sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch {
 		// In this case, there is nothing to do except return the commit ID at the
-		// head of the branch.
+		// head of the branch unless there are scanPaths/ignorePaths configured to
+		// handle.
 		commit, err := r.getLastCommitIDFn(repo)
 		if err != nil {
-			return "", "", fmt.Errorf(
-				"error determining commit ID at head of branch %q in git repo %q: %w",
-				sub.Branch,
-				sub.RepoURL,
-				err,
-			)
+			return "", "",
+				errors.Wrapf(err, "error determining commit ID at head of branch %q in git repo %q",
+					sub.Branch,
+					sub.RepoURL)
 		}
+		// In case scanPaths/ignorePaths filters are configured in a git subscription
+		// below if clause deals with it. There is a special case - Warehouse has not
+		// produced any Freight yet, this is sorted by creating Freight based on last
+		// commit without applying filters.
+		if (sub.ScanPaths != nil || sub.IgnorePaths != nil) && baseCommit != "" {
+
+			// getting actual diffPaths since baseCommit
+			diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
+			if err != nil {
+				return "", "",
+					errors.Wrapf(err, "error getting diffs since commit %q in git repo %q",
+						baseCommit,
+						sub.RepoURL)
+			}
+
+			matchesPathsFilters, err := matchesPathsFilters(sub.ScanPaths, sub.IgnorePaths, diffs)
+			if err != nil {
+				return "", "",
+					errors.Wrapf(err, "error checking scanPaths/ignorePaths match for commit %q in git repo %q",
+						commit,
+						sub.RepoURL)
+			}
+
+			if !matchesPathsFilters {
+				return "", "",
+					errors.Errorf("Commit %q not applicable due to scanPaths/ignorePaths configuration in repo %q",
+						commit,
+						sub.RepoURL,
+					)
+			}
+		}
+
 		return "", commit, nil
+
 	}
 
 	tags, err := r.listTagsFn(repo) // These are ordered newest to oldest
@@ -232,6 +285,86 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
+// pathsFilterPositive returns true when ScanPaths and/or IgnorePaths
+// filters match one or more commit diffs and new Freight is
+// to be produced. It returns false otherwise.
+func matchesPathsFilters(scanPaths []string, ignorePaths []string, diffs []string) (bool, error) {
+
+	scanPathsRegexps, err := compileRegexps(scanPaths)
+	if err != nil {
+		return false, errors.Wrapf(
+			err,
+			"error compiling scanPaths regexps",
+		)
+	}
+
+	ignorePathsRegexps, err := compileRegexps(ignorePaths)
+	if err != nil {
+		return false, errors.Wrapf(
+			err,
+			"error compiling ignorePaths regexps",
+		)
+	}
+
+	filteredDiffs := make([]string, 0, len(diffs))
+	for _, diffPath := range diffs {
+		// matchesScanPaths case is a bit different from matchesIgnorePaths
+		// in the way that if scanPaths string array is empty - it matches
+		// ANY change so we need to have a check for that
+		var matchesScanPaths bool
+		if scanPaths == nil {
+			matchesScanPaths = true
+		} else {
+			matchesScanPaths = matchesRegexpList(diffPath, scanPathsRegexps)
+		}
+		matchesIgnorePaths := matchesRegexpList(diffPath, ignorePathsRegexps)
+		// combined filter decision, positive for matching scanPaths and
+		// unmatching ignorePaths
+		if matchesScanPaths && !matchesIgnorePaths {
+			filteredDiffs = append(filteredDiffs, diffPath)
+		}
+	}
+	if len(filteredDiffs) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+// compileRegexps is a general purpose function taking a slice of strings
+// as argument and compiling them into a slice of *regexp.Regexp. It
+// returns the compiled regexps in case of success and if it fails to compile
+// a string - nil and error is returned
+func compileRegexps(regexpStrings []string) (regexps []*regexp.Regexp, err error) {
+	regexpsSlice := make([]*regexp.Regexp, 0, len(regexpStrings))
+	for _, regexpString := range regexpStrings {
+		regex, err := regexp.Compile(regexpString)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"error compiling string %q into a regular expression",
+				regexpString,
+			)
+		}
+		regexpsSlice = append(regexpsSlice, regex)
+	}
+	return regexpsSlice, nil
+}
+
+// matchesRegexpList is a general purpose function iterating given slice of
+// *regexp.Regexp (regexpList) to check if any of regexps match
+// stringToMatch string, if match is found it returns true and if match
+// is not found it returns false.
+func matchesRegexpList(stringToMatch string, regexpList []*regexp.Regexp) bool {
+	foundMatch := false
+	for _, regex := range regexpList {
+		if regex == nil || regex.MatchString(stringToMatch) {
+			foundMatch = true
+			break
+		}
+	}
+	return foundMatch
+}
+
 // selectLexicallyLastTag sorts the provided tag name in reverse lexicographic
 // order and returns the first tag name in the sorted list. If the list is
 // empty, it returns an empty string.
@@ -298,4 +431,8 @@ func (r *reconciler) listTags(repo git.Repo) ([]string, error) {
 
 func (r *reconciler) checkoutTag(repo git.Repo, tag string) error {
 	return repo.Checkout(tag)
+}
+
+func (r *reconciler) getDiffPathsSinceCommitID(repo git.Repo, commitId string) ([]string, error) {
+	return repo.GetDiffPathsSinceCommitID(commitId)
 }

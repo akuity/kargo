@@ -125,7 +125,21 @@ type GitSubscription struct {
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.
-	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,7,opt,name=insecureSkipTLSVerify"`
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// ScanPaths is a list of regular expressions that can optinally be used to
+	// limit file paths in repository, changes in which will result in creation of
+	// new freight. When not specified - changes in any path will produce new
+	// freight, it is equivalent to having a ScanPaths with an entry of ".*"
+	// When both ScanPaths and IgnorePaths are specified and match same path/paths,
+	// IgnorePaths will prevail over ScanPaths.
+	//+kubebuilder:validation:Optional
+	ScanPaths []string `json:"scanPaths,omitempty"`
+	// IgnorePaths is an optional list of regular expressions used to specify paths
+	// in git repository, changes in which should never produce new freight. When used
+	// in conjuction with ScanPaths, both matching same path/paths, IgnorePaths takes
+	// precedence over ScanPaths.
+	//+kubebuilder:validation:Optional
+	IgnorePaths []string `json:"ignorePaths,omitempty"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -230,7 +244,9 @@ type WarehouseStatus struct {
 	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// LastFreight refers to the last Freight produced by this Warehouse
+	LastFreight *FreightReference `json:"lastFreight,omitempty"`
 }
 
 //+kubebuilder:object:root=true
