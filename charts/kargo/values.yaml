@@ -157,18 +157,11 @@ api:
 
       ## @param api.oidc.dex.envVars Add environments to the Dex pod, for example to get Secrets in.
       envVars: []
-      # - name: SOME_ENV_VAR
-      #   value: value
-      # - name: SOME_ENV_VAR2
+      # - name: CLIENT_SECRET
       #   valueFrom:
       #     secretKeyRef:
-      #       name: secret-name
-      #       key: secret-key
-      # - name: SOME_ENV_VAR3
-      #   valueFrom:
-      #     configMapKeyRef:
-      #       name: config-map-name
-      #       key: config-map-key
+      #       name: github-dex
+      #       key: dex.github.clientSecret
 
       probes:
         ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
