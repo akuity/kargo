@@ -361,30 +361,38 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "unable to watch Freight")
 	}
 
-	updatedArgoCDAppHandler := &updatedArgoCDAppHandler{
-		kargoClient: kargoMgr.GetClient(),
-	}
-	if err := c.Watch(
-		source.Kind(
-			argocdMgr.GetCache(),
-			&argocd.Application{},
-		),
-		updatedArgoCDAppHandler,
-	); err != nil {
-		return errors.Wrap(err, "unable to watch Applications")
+	// If Argo CD integration is disabled, this manager will be nil and we won't
+	// care about this watch anyway.
+	if argocdMgr != nil {
+		updatedArgoCDAppHandler := &updatedArgoCDAppHandler{
+			kargoClient: kargoMgr.GetClient(),
+		}
+		if err := c.Watch(
+			source.Kind(
+				argocdMgr.GetCache(),
+				&argocd.Application{},
+			),
+			updatedArgoCDAppHandler,
+		); err != nil {
+			return errors.Wrap(err, "unable to watch Applications")
+		}
 	}
 
-	phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler{
-		kargoClient: kargoMgr.GetClient(),
-	}
-	if err := c.Watch(
-		source.Kind(
-			rolloutsMgr.GetCache(),
-			&rollouts.AnalysisRun{},
-		),
-		phaseChangedAnalysisRunHandler,
-	); err != nil {
-		return errors.Wrap(err, "unable to watch AnalysisRuns")
+	// If Argo Rollouts integration is disabled, this manager will be nil and we
+	// won't care about this watch anyway.
+	if rolloutsMgr != nil {
+		phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler{
+			kargoClient: kargoMgr.GetClient(),
+		}
+		if err := c.Watch(
+			source.Kind(
+				rolloutsMgr.GetCache(),
+				&rollouts.AnalysisRun{},
+			),
+			phaseChangedAnalysisRunHandler,
+		); err != nil {
+			return errors.Wrap(err, "unable to watch AnalysisRuns")
+		}
 	}
 
 	return nil
