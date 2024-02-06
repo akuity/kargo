@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func (r *reconciler) getLatestImages(
+func (r *reconciler) selectImages(
 	ctx context.Context,
 	namespace string,
 	subs []kargoapi.RepoSubscription,
