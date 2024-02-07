@@ -194,16 +194,13 @@ func (r *reconciler) getVerificationInfo(
 	}
 }
 
-// getAnalysisRunNamespace infers whether this controller is running in a shard.
-// If it is not running in a shard, it returns the namespace of the provided Stage
-// as the appropriate namespace for an AnalysisRun. If it is running in a shard,
-// it returns the hard-coded namespace "analysis-runs" since Project namespaces
-// are not available on the shards.
+// getAnalysisRunNamespace determines the namespace in which to create the
+// AnalysisRun resources.
 func (r *reconciler) getAnalysisRunNamespace(stage *kargoapi.Stage) string {
-	if r.shardName == "" {
+	if r.cfg.AnalysisRunsNamespace == "" {
 		return stage.Namespace
 	}
-	return "analysis-runs" // TODO: KR: Do not hardcode this
+	return r.cfg.AnalysisRunsNamespace
 }
 
 func (r *reconciler) buildAnalysisRun(
@@ -233,8 +230,8 @@ func (r *reconciler) buildAnalysisRun(
 		numLabels = len(stage.Spec.Verification.AnalysisRunMetadata.Labels)
 		numAnnotations = len(stage.Spec.Verification.AnalysisRunMetadata.Annotations)
 	}
-	// Kargo will add up two lbls of its own, so size the map accordingly
-	lbls := make(map[string]string, numLabels+2)
+	// Kargo will add up to three labels of its own, so size the map accordingly
+	lbls := make(map[string]string, numLabels+3)
 	annotations := make(map[string]string, numAnnotations)
 	if stage.Spec.Verification.AnalysisRunMetadata != nil {
 		for k, v := range stage.Spec.Verification.AnalysisRunMetadata.Labels {
@@ -246,6 +243,9 @@ func (r *reconciler) buildAnalysisRun(
 	}
 	lbls[kargoapi.StageLabelKey] = stage.Name
 	lbls[kargoapi.FreightLabelKey] = stage.Status.CurrentFreight.ID
+	if r.cfg.RolloutsControllerInstanceID != "" {
+		lbls["argo-rollouts.argoproj.io/controller-instance-id"] = r.cfg.RolloutsControllerInstanceID
+	}
 
 	// Flatten templates into a single template
 	template, err := flattenTemplates(templates)

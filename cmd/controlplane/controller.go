@@ -208,7 +208,8 @@ func newControllerCommand() *cobra.Command {
 						)
 					}
 					cacheOpts := cache.Options{} // Watches all namespaces by default
-					if shardName != "" {
+					analysisRunsNamespace := os.GetEnv("ROLLOUTS_ANALYSIS_RUNS_NAMESPACE", "")
+					if analysisRunsNamespace != "" {
 						// TODO: When NOT sharded, Kargo can simply create AnalysisRun
 						// resources in the project namespaces. When sharded, AnalysisRun
 						// resources must be created IN the shard clusters (not the Kargo
@@ -218,12 +219,8 @@ func newControllerCommand() *cobra.Command {
 						// this purpose. Note that the namespace does not need to be the same
 						// on every shard. This may be one of the weaker points in our tenancy
 						// model and can stand to be improved.
-						watchNamespace := os.GetEnv(
-							"ARGO_ROLLOUTS_ANALYSIS_RUNS_NAMESPACE",
-							"kargo-analysis-runs",
-						)
 						cacheOpts.DefaultNamespaces = map[string]cache.Config{
-							watchNamespace: {},
+							analysisRunsNamespace: {},
 						}
 					}
 					if rolloutsMgr, err = ctrl.NewManager(
@@ -278,7 +275,7 @@ func newControllerCommand() *cobra.Command {
 				kargoMgr,
 				argocdMgr,
 				rolloutsMgr,
-				shardName,
+				stages.ReconcilerConfigFromEnv(),
 			); err != nil {
 				return errors.Wrap(err, "error setting up Stages reconciler")
 			}

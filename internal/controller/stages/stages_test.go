@@ -17,47 +17,52 @@ import (
 )
 
 func TestNewReconciler(t *testing.T) {
+	testCfg := ReconcilerConfig{
+		AnalysisRunsNamespace:        "fake-namespace",
+		RolloutsControllerInstanceID: "fake-instance-id",
+	}
 	kubeClient := fake.NewClientBuilder().Build()
-	e := newReconciler(
+	r := newReconciler(
 		kubeClient,
 		kubeClient,
 		kubeClient,
-		"",
+		testCfg,
 	)
-	require.NotNil(t, e.kargoClient)
-	require.NotNil(t, e.argocdClient)
+	require.Equal(t, testCfg, r.cfg)
+	require.NotNil(t, r.kargoClient)
+	require.NotNil(t, r.argocdClient)
 	// Assert that all overridable behaviors were initialized to a default:
 	// Loop guard:
-	require.NotNil(t, e.hasNonTerminalPromotionsFn)
-	require.NotNil(t, e.listPromosFn)
+	require.NotNil(t, r.hasNonTerminalPromotionsFn)
+	require.NotNil(t, r.listPromosFn)
 	// Health checks:
-	require.NotNil(t, e.checkHealthFn)
-	require.NotNil(t, e.getArgoCDAppFn)
+	require.NotNil(t, r.checkHealthFn)
+	require.NotNil(t, r.getArgoCDAppFn)
 	// Freight verification:
-	require.NotNil(t, e.startVerificationFn)
-	require.NotNil(t, e.getVerificationInfoFn)
-	require.NotNil(t, e.getAnalysisTemplateFn)
-	require.NotNil(t, e.listAnalysisRunsFn)
-	require.NotNil(t, e.buildAnalysisRunFn)
-	require.NotNil(t, e.createAnalysisRunFn)
-	require.NotNil(t, e.getAnalysisRunFn)
-	require.NotNil(t, e.getFreightFn)
-	require.NotNil(t, e.verifyFreightInStageFn)
-	require.NotNil(t, e.patchFreightStatusFn)
+	require.NotNil(t, r.startVerificationFn)
+	require.NotNil(t, r.getVerificationInfoFn)
+	require.NotNil(t, r.getAnalysisTemplateFn)
+	require.NotNil(t, r.listAnalysisRunsFn)
+	require.NotNil(t, r.buildAnalysisRunFn)
+	require.NotNil(t, r.createAnalysisRunFn)
+	require.NotNil(t, r.getAnalysisRunFn)
+	require.NotNil(t, r.getFreightFn)
+	require.NotNil(t, r.verifyFreightInStageFn)
+	require.NotNil(t, r.patchFreightStatusFn)
 	// Auto-promotion:
-	require.NotNil(t, e.isAutoPromotionPermittedFn)
-	require.NotNil(t, e.getProjectFn)
-	require.NotNil(t, e.createPromotionFn)
+	require.NotNil(t, r.isAutoPromotionPermittedFn)
+	require.NotNil(t, r.getProjectFn)
+	require.NotNil(t, r.createPromotionFn)
 	// Discovering latest Freight:
-	require.NotNil(t, e.getLatestAvailableFreightFn)
-	require.NotNil(t, e.getLatestFreightFromWarehouseFn)
-	require.NotNil(t, e.getAllVerifiedFreightFn)
-	require.NotNil(t, e.getLatestVerifiedFreightFn)
-	require.NotNil(t, e.getLatestApprovedFreightFn)
-	require.NotNil(t, e.listFreightFn)
+	require.NotNil(t, r.getLatestAvailableFreightFn)
+	require.NotNil(t, r.getLatestFreightFromWarehouseFn)
+	require.NotNil(t, r.getAllVerifiedFreightFn)
+	require.NotNil(t, r.getLatestVerifiedFreightFn)
+	require.NotNil(t, r.getLatestApprovedFreightFn)
+	require.NotNil(t, r.listFreightFn)
 	// Stage deletion:
-	require.NotNil(t, e.clearVerificationsFn)
-	require.NotNil(t, e.clearApprovalsFn)
+	require.NotNil(t, r.clearVerificationsFn)
+	require.NotNil(t, r.clearApprovalsFn)
 }
 
 func TestSyncControlFlowStage(t *testing.T) {
