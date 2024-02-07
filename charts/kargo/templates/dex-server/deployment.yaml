@@ -28,7 +28,7 @@ spec:
       {{- end }}
       {{- with .Values.api.oidc.dex.image.pullSecrets }}
       imagePullSecrets:
-        {{ toYaml . | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
       - name: dex-server

@@ -11,7 +11,7 @@ image:
   tag: ""
   ## @param image.pullPolicy Image pull policy
   pullPolicy: IfNotPresent
-  ## @param api.oidc.dex.image.pullSecrets List of image pull secrets.
+  ## @param api.oidc.dex.image.pullSecrets List of imagePullSecrets for Dex. Example: - name: regred
   pullSecrets: []
 
 ## @section RBAC
@@ -156,7 +156,7 @@ api:
         tag: v2.37.0
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
-        ## @param api.oidc.dex.image.pullSecrets List of image pull secrets for Dex.
+        ## @param api.oidc.dex.image.pullSecrets List of imagePullSecrets for Dex. Example: - name: regred
         pullSecrets: []
       probes:
         ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
