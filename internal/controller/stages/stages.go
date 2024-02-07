@@ -5,6 +5,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
@@ -27,13 +28,26 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+// ReconcilerConfig represents configuration for the stage reconciler.
+type ReconcilerConfig struct {
+	ShardName                    string `envconfig:"SHARD_NAME"`
+	AnalysisRunsNamespace        string `envconfig:"ROLLOUTS_ANALYSIS_RUNS_NAMESPACE"`
+	RolloutsControllerInstanceID string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
+}
+
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	cfg := ReconcilerConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // reconciler reconciles Stage resources.
 type reconciler struct {
 	kargoClient    client.Client
 	argocdClient   client.Client
 	rolloutsClient client.Client
 
-	shardName string
+	cfg ReconcilerConfig
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -198,7 +212,7 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
 	rolloutsMgr manager.Manager,
-	shardName string,
+	cfg ReconcilerConfig,
 ) error {
 	// Index Promotions in non-terminal states by Stage
 	if err := kubeclient.IndexNonTerminalPromotionsByStage(ctx, kargoMgr); err != nil {
@@ -245,16 +259,16 @@ func SetupReconcilerWithManager(
 	}
 
 	// Index Stages by Argo CD Applications
-	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, shardName); err != nil {
+	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
 		return errors.Wrap(err, "index Stages by Argo CD Applications")
 	}
 
 	// Index Stages by AnalysisRun
-	if err := kubeclient.IndexStagesByAnalysisRun(ctx, kargoMgr, shardName); err != nil {
+	if err := kubeclient.IndexStagesByAnalysisRun(ctx, kargoMgr, cfg.ShardName); err != nil {
 		return errors.Wrap(err, "index Stages by Argo Rollouts AnalysisRun")
 	}
 
-	shardPredicate, err := controller.GetShardPredicate(shardName)
+	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
 	if err != nil {
 		return errors.Wrap(err, "error creating shard predicate")
 	}
@@ -293,7 +307,7 @@ func SetupReconcilerWithManager(
 				kargoMgr.GetClient(),
 				argocdClient,
 				rolloutsClient,
-				shardName,
+				cfg,
 			),
 		)
 	if err != nil {
@@ -402,13 +416,13 @@ func newReconciler(
 	kargoClient client.Client,
 	argocdClient client.Client,
 	rolloutsClient client.Client,
-	shardName string,
+	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:    kargoClient,
 		argocdClient:   argocdClient,
 		rolloutsClient: rolloutsClient,
-		shardName:      shardName,
+		cfg:            cfg,
 	}
 	// The following default behaviors are overridable for testing purposes:
 	// Loop guard:
