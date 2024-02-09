@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -38,4 +39,19 @@ func GetShardPredicate(shard string) (predicate.Predicate, error) {
 		),
 	)
 	return pred, errors.Wrap(err, "error creating shard selector predicate")
+}
+
+func GetShardRequirement(shard string) (*labels.Requirement, error) {
+	req, err := labels.NewRequirement(kargoapi.ShardLabelKey, selection.Equals, []string{shard})
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating shard label selector")
+	}
+	if shard == "" {
+		req, err = labels.NewRequirement(kargoapi.ShardLabelKey, selection.DoesNotExist, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "error creating default label selector")
+		}
+	}
+
+	return req, nil
 }
