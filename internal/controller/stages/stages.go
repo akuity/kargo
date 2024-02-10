@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -203,6 +204,8 @@ type reconciler struct {
 	clearVerificationsFn func(context.Context, *kargoapi.Stage) error
 
 	clearApprovalsFn func(context.Context, *kargoapi.Stage) error
+
+	shardRequirement *labels.Requirement
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Stage resources and
@@ -273,6 +276,11 @@ func SetupReconcilerWithManager(
 		return errors.Wrap(err, "error creating shard predicate")
 	}
 
+	shardRequirement, err := controller.GetShardRequirement(cfg.ShardName)
+	if err != nil {
+		return errors.Wrap(err, "error creating shard selector")
+	}
+	shardSelector := labels.NewSelector().Add(*shardRequirement)
 	var argocdClient, rolloutsClient client.Client
 	if argocdMgr != nil {
 		argocdClient = argocdMgr.GetClient()
@@ -308,6 +316,7 @@ func SetupReconcilerWithManager(
 				argocdClient,
 				rolloutsClient,
 				cfg,
+				shardRequirement,
 			),
 		)
 	if err != nil {
@@ -337,7 +346,8 @@ func SetupReconcilerWithManager(
 	// Watch Freight that has been marked as verified in a Stage and enqueue
 	// downstream Stages
 	verifiedFreightHandler := &verifiedFreightEventHandler{
-		kargoClient: kargoMgr.GetClient(),
+		kargoClient:   kargoMgr.GetClient(),
+		shardSelector: shardSelector,
 	}
 	if err := c.Watch(
 		source.Kind(
@@ -363,7 +373,8 @@ func SetupReconcilerWithManager(
 	}
 
 	createdFreightEventHandler := &createdFreightEventHandler{
-		kargoClient: kargoMgr.GetClient(),
+		kargoClient:   kargoMgr.GetClient(),
+		shardSelector: shardSelector,
 	}
 	if err := c.Watch(
 		source.Kind(
@@ -379,7 +390,8 @@ func SetupReconcilerWithManager(
 	// care about this watch anyway.
 	if argocdMgr != nil {
 		updatedArgoCDAppHandler := &updatedArgoCDAppHandler{
-			kargoClient: kargoMgr.GetClient(),
+			kargoClient:   kargoMgr.GetClient(),
+			shardSelector: shardSelector,
 		}
 		if err := c.Watch(
 			source.Kind(
@@ -396,7 +408,8 @@ func SetupReconcilerWithManager(
 	// won't care about this watch anyway.
 	if rolloutsMgr != nil {
 		phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler{
-			kargoClient: kargoMgr.GetClient(),
+			kargoClient:   kargoMgr.GetClient(),
+			shardSelector: shardSelector,
 		}
 		if err := c.Watch(
 			source.Kind(
@@ -417,12 +430,14 @@ func newReconciler(
 	argocdClient client.Client,
 	rolloutsClient client.Client,
 	cfg ReconcilerConfig,
+	shardRequirement *labels.Requirement,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient:    kargoClient,
-		argocdClient:   argocdClient,
-		rolloutsClient: rolloutsClient,
-		cfg:            cfg,
+		kargoClient:      kargoClient,
+		argocdClient:     argocdClient,
+		rolloutsClient:   rolloutsClient,
+		cfg:              cfg,
+		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
 	// Loop guard:
@@ -492,6 +507,12 @@ func (r *reconciler) Reconcile(
 		// Ignore if not found. This can happen if the Stage was deleted after the
 		// current reconciliation request was issued.
 		result.RequeueAfter = 0 // Do not requeue
+		return result, nil
+	}
+
+	if ok := r.shardRequirement.Matches(labels.Set(stage.Labels)); !ok {
+		// Ignore if stage does not belong to given shard
+		result.RequeueAfter = 0
 		return result, nil
 	}
 	logger.Debug("found Stage")
