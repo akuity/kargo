@@ -38,7 +38,7 @@
     "typescript": "^5.3.3",
     "vite": "^5.0.12",
     "vite-tsconfig-paths": "^4.2.3",
-    "vitest": "^0.34.6",
+    "vitest": "^1.2.2",
     "zx": "^7.2.3"
   },
   "packageManager": "pnpm@8.1.0",
@@ -58,7 +58,7 @@
     "antd": "^5.13.0",
     "classnames": "^2.5.1",
     "dagre": "^0.8.5",
-    "date-fns": "^2.30.0",
+    "date-fns": "^3.3.1",
     "monaco-editor": "^0.45.0",
     "monaco-yaml": "^5.1.0",
     "oauth4webapi": "^2.6.0",
