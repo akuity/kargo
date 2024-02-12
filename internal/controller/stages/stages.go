@@ -714,7 +714,12 @@ func (r *reconciler) syncNormalStage(
 		}
 
 		// Initiate or follow-up on verification if required
-		if status.Phase == kargoapi.StagePhaseVerifying && stage.Spec.Verification != nil {
+		// NOTE: If stage cache is stale, phase can be StagePhaseNotApplicable
+		//       even though current freight is not empty in that case
+		//       check if verification step is necessary and if yes execute
+		//       step irrespective of phase
+		if (status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable) &&
+			stage.Spec.Verification != nil {
 			if status.CurrentFreight.VerificationInfo == nil {
 				if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
 					log.Debug("starting verification")
