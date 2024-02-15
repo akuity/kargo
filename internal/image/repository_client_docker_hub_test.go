@@ -30,11 +30,11 @@ func TestGetChallengeManager(t *testing.T) {
 	require.NotNil(t, challengeManager)
 }
 
-func TestGetTagNames(t *testing.T) {
+func TestGetTags(t *testing.T) {
 	client, err := newRepositoryClient("debian", getDockerHubCreds())
 	require.NoError(t, err)
 	require.NotNil(t, client)
-	tags, err := client.getTagNames(context.Background())
+	tags, err := client.getTags(context.Background())
 	require.NoError(t, err)
 	require.NotEmpty(t, tags)
 }
@@ -45,7 +45,7 @@ func TestGetManifestByTag(t *testing.T) {
 	require.NotNil(t, client)
 	// Note: This is only going to come back with a manifest list. It won't
 	// follow the references found therein.
-	manifest, err := client.getManifestByTagName(context.Background(), "latest")
+	manifest, err := client.getManifestByTag(context.Background(), "latest")
 	require.NoError(t, err)
 	require.NotNil(t, manifest)
 }

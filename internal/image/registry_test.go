@@ -19,7 +19,7 @@ func TestNewRegistry(t *testing.T) {
 		r.apiAddress,
 	)
 	require.Empty(t, r.defaultNamespace)
-	require.NotNil(t, r.tagCache)
+	require.NotNil(t, r.imageCache)
 }
 
 func TestGetRegistry(t *testing.T) {

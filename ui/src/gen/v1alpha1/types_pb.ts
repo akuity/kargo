@@ -1095,9 +1095,9 @@ export class ImageSubscription extends Message<ImageSubscription> {
   repoUrl = "";
 
   /**
-   * @generated from field: string tag_selection_strategy = 2 [json_name = "imageTagSelectionStrategy"];
+   * @generated from field: string image_selection_strategy = 2;
    */
-  tagSelectionStrategy = "";
+  imageSelectionStrategy = "";
 
   /**
    * @generated from field: optional string semver_constraint = 3;
@@ -1128,7 +1128,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "tag_selection_strategy", jsonName: "imageTagSelectionStrategy", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "image_selection_strategy", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "semver_constraint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "allow_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "ignore_tags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },

@@ -22,7 +22,7 @@ import (
 // - DOCKER_HUB_USERNAME
 // - DOCKER_HUB_USERNAME (personal access token)
 
-func TestSelectTagDockerHub(t *testing.T) {
+func TestSelectImageDockerHub(t *testing.T) {
 	const debianRepo = "debian"
 	const platform = "linux/amd64"
 
@@ -32,47 +32,47 @@ func TestSelectTagDockerHub(t *testing.T) {
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	t.Run("digest strategy miss", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyDigest,
-			&TagSelectorOptions{
+			SelectionStrategyDigest,
+			&SelectorOptions{
 				Constraint: "fake-constraint",
 				Creds:      getDockerHubCreds(),
 			},
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, tag)
+		require.Nil(t, image)
 
 	})
 
 	t.Run("digest strategy success", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyDigest,
-			&TagSelectorOptions{
+			SelectionStrategyDigest,
+			&SelectorOptions{
 				Constraint: "bookworm",
 				Creds:      getDockerHubCreds(),
 			},
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
 
-		require.NotNil(t, tag)
-		require.Equal(t, "bookworm", tag.Name)
-		require.NotEmpty(t, tag.Digest)
-		require.NotNil(t, tag.CreatedAt)
+		require.NotNil(t, image)
+		require.Equal(t, "bookworm", image.Tag)
+		require.NotEmpty(t, image.Digest)
+		require.NotNil(t, image.CreatedAt)
 	})
 
 	t.Run("digest strategy miss with platform constraint", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyDigest,
-			&TagSelectorOptions{
+			SelectionStrategyDigest,
+			&SelectorOptions{
 				Constraint: "bookworm",
 				Platform:   "linux/made-up-arch",
 				Creds:      getDockerHubCreds(),
@@ -80,16 +80,16 @@ func TestSelectTagDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, tag)
+		require.Nil(t, image)
 	})
 
 	t.Run("digest strategy success with platform constraint", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyDigest,
-			&TagSelectorOptions{
+			SelectionStrategyDigest,
+			&SelectorOptions{
 				Constraint: "bookworm",
 				Platform:   platform,
 				Creds:      getDockerHubCreds(),
@@ -97,56 +97,56 @@ func TestSelectTagDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
 
-		require.NotNil(t, tag)
-		require.Equal(t, "bookworm", tag.Name)
-		require.NotEmpty(t, tag.Digest)
-		require.NotNil(t, tag.CreatedAt)
+		require.NotNil(t, image)
+		require.Equal(t, "bookworm", image.Tag)
+		require.NotEmpty(t, image.Digest)
+		require.NotNil(t, image.CreatedAt)
 	})
 
 	t.Run("lexical strategy miss", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyLexical,
-			&TagSelectorOptions{
+			SelectionStrategyLexical,
+			&SelectorOptions{
 				AllowRegex: "nothing-matches-this",
 				Creds:      getDockerHubCreds(),
 			},
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, tag)
+		require.Nil(t, image)
 	})
 
 	t.Run("lexical strategy success", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyLexical,
-			&TagSelectorOptions{
+			SelectionStrategyLexical,
+			&SelectorOptions{
 				Creds: getDockerHubCreds(),
 			},
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
 
-		require.NotNil(t, tag)
+		require.NotNil(t, image)
 		// So far, this is lexically the last Debian release
-		require.Contains(t, tag.Name, "wheezy")
-		require.NotEmpty(t, tag.Digest)
-		require.NotNil(t, tag.CreatedAt)
+		require.Contains(t, image.Tag, "wheezy")
+		require.NotEmpty(t, image.Digest)
+		require.NotNil(t, image.CreatedAt)
 	})
 
 	t.Run("lexical strategy miss with platform constraint", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyLexical,
-			&TagSelectorOptions{
+			SelectionStrategyLexical,
+			&SelectorOptions{
 				// Note: If we go older than jessie, we don't seem to get the correct
 				// digest, but jessie is ancient, so for now I am chalking it up to
 				// something having to do with the evolution of the Docker Hub API over
@@ -158,16 +158,16 @@ func TestSelectTagDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, tag)
+		require.Nil(t, image)
 	})
 
 	t.Run("lexical strategy success with platform constraint", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyLexical,
-			&TagSelectorOptions{
+			SelectionStrategyLexical,
+			&SelectorOptions{
 				AllowRegex: "^jessie",
 				Platform:   platform,
 				Creds:      getDockerHubCreds(),
@@ -175,56 +175,56 @@ func TestSelectTagDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
 
-		require.NotNil(t, tag)
-		require.Contains(t, tag.Name, "jessie")
-		require.NotEmpty(t, tag.Digest)
-		require.NotNil(t, tag.CreatedAt)
+		require.NotNil(t, image)
+		require.Contains(t, image.Tag, "jessie")
+		require.NotEmpty(t, image.Digest)
+		require.NotNil(t, image.CreatedAt)
 	})
 
 	t.Run("newest build strategy miss", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyNewestBuild,
-			&TagSelectorOptions{
+			SelectionStrategyNewestBuild,
+			&SelectorOptions{
 				AllowRegex: "nothing-matches-this",
 				Creds:      getDockerHubCreds(),
 			},
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, tag)
+		require.Nil(t, image)
 	})
 
 	t.Run("newest build strategy success", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyNewestBuild,
-			&TagSelectorOptions{
+			SelectionStrategyNewestBuild,
+			&SelectorOptions{
 				AllowRegex: `^bookworm-202310\d\d$`,
 				Creds:      getDockerHubCreds(),
 			},
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
 
-		require.NotNil(t, tag)
-		require.Contains(t, tag.Name, "bookworm-202310")
-		require.NotEmpty(t, tag.Digest)
-		require.NotNil(t, tag.CreatedAt)
+		require.NotNil(t, image)
+		require.Contains(t, image.Tag, "bookworm-202310")
+		require.NotEmpty(t, image.Digest)
+		require.NotNil(t, image.CreatedAt)
 	})
 
 	t.Run("newest build strategy miss with platform constraint", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyNewestBuild,
-			&TagSelectorOptions{
+			SelectionStrategyNewestBuild,
+			&SelectorOptions{
 				AllowRegex: `^bookworm-202310\d\d$`,
 				Platform:   "linux/made-up-arch",
 				Creds:      getDockerHubCreds(),
@@ -232,16 +232,16 @@ func TestSelectTagDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, tag)
+		require.Nil(t, image)
 	})
 
 	t.Run("newest build strategy success with platform constraint", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategyNewestBuild,
-			&TagSelectorOptions{
+			SelectionStrategyNewestBuild,
+			&SelectorOptions{
 				AllowRegex: `^bookworm-202310\d\d$`,
 				Platform:   platform,
 				Creds:      getDockerHubCreds(),
@@ -249,60 +249,60 @@ func TestSelectTagDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
 
-		require.NotNil(t, tag)
-		require.Contains(t, tag.Name, "bookworm-202310")
-		require.NotEmpty(t, tag.Digest)
-		require.NotNil(t, tag.CreatedAt)
+		require.NotNil(t, image)
+		require.Contains(t, image.Tag, "bookworm-202310")
+		require.NotEmpty(t, image.Digest)
+		require.NotNil(t, image.CreatedAt)
 	})
 
 	t.Run("semver strategy miss", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategySemVer,
-			&TagSelectorOptions{
+			SelectionStrategySemVer,
+			&SelectorOptions{
 				Constraint: "^99.0",
 				Creds:      getDockerHubCreds(),
 			},
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, tag)
+		require.Nil(t, image)
 	})
 
 	t.Run("semver strategy success", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategySemVer,
-			&TagSelectorOptions{
+			SelectionStrategySemVer,
+			&SelectorOptions{
 				Constraint: "^12.0",
 				Creds:      getDockerHubCreds(),
 			},
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
 
-		require.NotNil(t, tag)
-		semVer, err := semver.NewVersion(tag.Name)
+		require.NotNil(t, image)
+		semVer, err := semver.NewVersion(image.Tag)
 		require.NoError(t, err)
 		min := semver.MustParse("12.0.0")
 		require.True(t, semVer.GreaterThan(min) || semVer.Equal(min))
 		require.True(t, semVer.LessThan(semver.MustParse("13.0.0")))
-		require.NotEmpty(t, tag.Digest)
-		require.NotNil(t, tag.CreatedAt)
+		require.NotEmpty(t, image.Digest)
+		require.NotNil(t, image.CreatedAt)
 	})
 
 	t.Run("semver strategy miss with platform constraint", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategySemVer,
-			&TagSelectorOptions{
+			SelectionStrategySemVer,
+			&SelectorOptions{
 				Constraint: "^12.0",
 				Platform:   "linux/made-up-arch",
 				Creds:      getDockerHubCreds(),
@@ -310,16 +310,16 @@ func TestSelectTagDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
-		require.Nil(t, tag)
+		require.Nil(t, image)
 	})
 
 	t.Run("semver strategy success with platform constraint", func(t *testing.T) {
-		s, err := NewTagSelector(
+		s, err := NewSelector(
 			debianRepo,
-			TagSelectionStrategySemVer,
-			&TagSelectorOptions{
+			SelectionStrategySemVer,
+			&SelectorOptions{
 				Constraint: "^12.0",
 				Platform:   platform,
 				Creds:      getDockerHubCreds(),
@@ -327,16 +327,16 @@ func TestSelectTagDockerHub(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		tag, err := s.SelectTag(ctx)
+		image, err := s.Select(ctx)
 		require.NoError(t, err)
 
-		require.NotNil(t, tag)
-		semVer, err := semver.NewVersion(tag.Name)
+		require.NotNil(t, image)
+		semVer, err := semver.NewVersion(image.Tag)
 		require.NoError(t, err)
 		min := semver.MustParse("12.0.0")
 		require.True(t, semVer.GreaterThan(min) || semVer.Equal(min))
 		require.True(t, semVer.LessThan(semver.MustParse("13.0.0")))
-		require.NotEmpty(t, tag.Digest)
-		require.NotNil(t, tag.CreatedAt)
+		require.NotEmpty(t, image.Digest)
+		require.NotNil(t, image.CreatedAt)
 	})
 }
