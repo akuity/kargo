@@ -41,7 +41,7 @@ func selectKustomizeUpdates(updates []kargoapi.GitRepoUpdate) []kargoapi.GitRepo
 // kustomizer is a helper struct whose sole purpose is to close over several
 // other functions that are used in the implementation of the apply() function.
 type kustomizer struct {
-	setImageFn func(dir, image, fqImageRef string) error
+	setImageFn func(dir, fqImageRef string) error
 }
 
 // apply uses Kustomize to carry out the provided update in the specified
@@ -70,7 +70,7 @@ func (k *kustomizer) apply(
 			continue
 		}
 		dir := filepath.Join(workingDir, imgUpdate.Path)
-		if err := k.setImageFn(dir, imgUpdate.Image, fqImageRef); err != nil {
+		if err := k.setImageFn(dir, fqImageRef); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"error updating image %q to %q using Kustomize",
