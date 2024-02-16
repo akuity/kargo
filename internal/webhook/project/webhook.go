@@ -121,9 +121,9 @@ func (w *webhook) ValidateCreate(
 			types.NamespacedName{Name: project.Name},
 			ns,
 		); err == nil {
-			// We found an existing namespace with the same name as the Project. If it's
-			// owned by this Project then it was created on a previous attempt to
-			// reconcile this Project, but otherwise, this could be a problem.
+			// We found an existing namespace with the same name as the Project. If
+			// it's owned by this Project then it was created on a previous attempt to
+			// create this Project, but otherwise, this could be a problem.
 			for _, ownerRef := range ns.OwnerReferences {
 				if ownerRef.UID == project.UID {
 					logger.Debug("namespace exists and is owned by this Project")
