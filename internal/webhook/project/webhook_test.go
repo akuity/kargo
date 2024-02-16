@@ -26,6 +26,7 @@ func TestNewWebhook(t *testing.T) {
 	w := newWebhook(fake.NewClientBuilder().Build())
 	require.NotNil(t, w)
 	require.NotNil(t, w.validateSpecFn)
+	require.NotNil(t, w.ensureNamespaceFn)
 	require.NotNil(t, w.getNamespaceFn)
 	require.NotNil(t, w.createNamespaceFn)
 	require.NotNil(t, w.updateNamespaceFn)
@@ -37,15 +38,14 @@ func TestValidateCreate(t *testing.T) {
 		webhook    *webhook
 		assertions func(error)
 	}{
-
 		{
 			name: "error validating spec",
 			webhook: &webhook{
-				validateSpecFn: func(f *field.Path, promotionPolicies *kargoapi.ProjectSpec) field.ErrorList {
+				validateSpecFn: func(f *field.Path, spec *kargoapi.ProjectSpec) field.ErrorList {
 					return field.ErrorList{
 						field.Invalid(
 							f,
-							promotionPolicies,
+							spec,
 							"something was invalid",
 						),
 					}
@@ -58,6 +58,112 @@ func TestValidateCreate(t *testing.T) {
 				require.Equal(t, int32(http.StatusUnprocessableEntity), statusErr.ErrStatus.Code)
 			},
 		},
+		{
+			name: "error ensuring namespace",
+			webhook: &webhook{
+				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
+					return nil
+				},
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return apierrors.NewInternalError(errors.New("something went wrong"))
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(t, int32(http.StatusInternalServerError), statusErr.ErrStatus.Code)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		ctx := admission.NewContextWithRequest(
+			context.Background(),
+			admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					DryRun: ptr.To(false),
+				},
+			},
+		)
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := testCase.webhook.ValidateCreate(
+				ctx,
+				&kargoapi.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						UID: types.UID("fake-uid"),
+					},
+				},
+			)
+			testCase.assertions(err)
+		})
+	}
+}
+
+func TestValidateSpec(t *testing.T) {
+	testCases := []struct {
+		name       string
+		spec       *kargoapi.ProjectSpec
+		assertions func(*kargoapi.ProjectSpec, field.ErrorList)
+	}{
+		{
+			name: "nil",
+			assertions: func(_ *kargoapi.ProjectSpec, errs field.ErrorList) {
+				require.Nil(t, errs)
+			},
+		},
+		{
+			name: "invalid",
+			spec: &kargoapi.ProjectSpec{
+				// Has two conflicting PromotionPolicies...
+				PromotionPolicies: []kargoapi.PromotionPolicy{
+					{Stage: "fake-stage"},
+					{Stage: "fake-stage"},
+				},
+			},
+			assertions: func(spec *kargoapi.ProjectSpec, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.promotionPolicies",
+							BadValue: spec.PromotionPolicies,
+							Detail:   "multiple spec.promotionPolicies reference stage fake-stage",
+						},
+					},
+					errs,
+				)
+			},
+		},
+		{
+			name: "valid",
+			spec: &kargoapi.ProjectSpec{
+				PromotionPolicies: []kargoapi.PromotionPolicy{
+					{Stage: "fake-stage"},
+				},
+			},
+			assertions: func(_ *kargoapi.ProjectSpec, errs field.ErrorList) {
+				require.Nil(t, errs)
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.spec,
+				w.validateSpec(field.NewPath("spec"), testCase.spec),
+			)
+		})
+	}
+}
+
+func TestEnsureNamespace(t *testing.T) {
+	testCases := []struct {
+		name       string
+		webhook    *webhook
+		assertions func(error)
+	}{
 
 		{
 			name: "error getting namespace",
@@ -275,73 +381,15 @@ func TestValidateCreate(t *testing.T) {
 			},
 		)
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := testCase.webhook.ValidateCreate(
-				ctx,
-				&kargoapi.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						UID: types.UID("fake-uid"),
-					},
-				},
-			)
-			testCase.assertions(err)
-		})
-	}
-}
-
-func TestValidateSpec(t *testing.T) {
-	testCases := []struct {
-		name       string
-		spec       *kargoapi.ProjectSpec
-		assertions func(*kargoapi.ProjectSpec, field.ErrorList)
-	}{
-		{
-			name: "nil",
-			assertions: func(_ *kargoapi.ProjectSpec, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-		{
-			name: "invalid",
-			spec: &kargoapi.ProjectSpec{
-				// Has two conflicting PromotionPolicies...
-				PromotionPolicies: []kargoapi.PromotionPolicy{
-					{Stage: "fake-stage"},
-					{Stage: "fake-stage"},
-				},
-			},
-			assertions: func(spec *kargoapi.ProjectSpec, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.promotionPolicies",
-							BadValue: spec.PromotionPolicies,
-							Detail:   "multiple spec.promotionPolicies reference stage fake-stage",
+			testCase.assertions(
+				testCase.webhook.ensureNamespace(
+					ctx,
+					&kargoapi.Project{
+						ObjectMeta: metav1.ObjectMeta{
+							UID: types.UID("fake-uid"),
 						},
 					},
-					errs,
-				)
-			},
-		},
-		{
-			name: "valid",
-			spec: &kargoapi.ProjectSpec{
-				PromotionPolicies: []kargoapi.PromotionPolicy{
-					{Stage: "fake-stage"},
-				},
-			},
-			assertions: func(_ *kargoapi.ProjectSpec, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.spec,
-				w.validateSpec(field.NewPath("spec"), testCase.spec),
+				),
 			)
 		})
 	}

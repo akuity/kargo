@@ -39,6 +39,8 @@ type webhook struct {
 
 	validateSpecFn func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList
 
+	ensureNamespaceFn func(context.Context, *kargoapi.Project) error
+
 	getNamespaceFn func(
 		context.Context,
 		types.NamespacedName,
@@ -70,6 +72,7 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 func newWebhook(kubeClient client.Client) *webhook {
 	w := &webhook{}
 	w.validateSpecFn = w.validateSpec
+	w.ensureNamespaceFn = w.ensureNamespace
 	w.getNamespaceFn = kubeClient.Get
 	w.createNamespaceFn = kubeClient.Create
 	w.updateNamespaceFn = kubeClient.Update
@@ -93,101 +96,11 @@ func (w *webhook) ValidateCreate(
 		)
 	}
 
-	if req.DryRun == nil || !*req.DryRun {
-		project := obj.(*kargoapi.Project) // nolint: forcetypeassert
-
-		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-			"project": project.Name,
-			"name":    project.Name,
-		})
-
-		ownerRef := metav1.NewControllerRef(
-			project,
-			kargoapi.GroupVersion.WithKind("Project"),
-		)
-		ownerRef.BlockOwnerDeletion = ptr.To(false)
-
-		// We handle creation of a Project's associated namespace synchronously in
-		// this webhook so that the namespace is guaranteed to exist before
-		// other resources (appearing below the Project) in a manifest will not fail
-		// to create due to the namespace not existing yet.
-
-		// There is no guarantee that just because this is a create request that
-		// there wasn't a previous attempt to create this Project that failed. If
-		// that is the case, the namespace may already exist.
-		ns := &corev1.Namespace{}
-		if err = w.getNamespaceFn(
-			ctx,
-			types.NamespacedName{Name: project.Name},
-			ns,
-		); err == nil {
-			// We found an existing namespace with the same name as the Project. If
-			// it's owned by this Project then it was created on a previous attempt to
-			// create this Project, but otherwise, this could be a problem.
-			for _, ownerRef := range ns.OwnerReferences {
-				if ownerRef.UID == project.UID {
-					logger.Debug("namespace exists and is owned by this Project")
-					return nil, nil
-				}
-			}
-			if ns.Labels != nil &&
-				ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue &&
-				len(ns.OwnerReferences) == 0 {
-				logger.Debug(
-					"namespace exists, but is not owned by this Project, but has the " +
-						"project label; Project will take it over",
-				)
-				ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-				controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
-				if err = w.updateNamespaceFn(ctx, ns); err != nil {
-					return nil, apierrors.NewInternalError(
-						errors.Wrapf(err, "error updating namespace %q", project.Name),
-					)
-				}
-				logger.Debug("updated namespace with Project as owner")
-				return nil, nil
-			}
-			return nil, apierrors.NewConflict(
-				projectGroupResource,
-				project.Name,
-				errors.Errorf(
-					"failed to initialize Project %q because namespace %q already exists",
-					project.Name,
-					project.Name,
-				),
-			)
-		}
-		if !apierrors.IsNotFound(err) {
-			return nil, apierrors.NewInternalError(
-				errors.Wrapf(err, "error getting namespace %q", project.Name),
-			)
-		}
-
-		logger.Debug("namespace does not exist yet; creating namespace")
-
-		ns = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: project.Name,
-				Labels: map[string]string{
-					kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
-				},
-				OwnerReferences: []metav1.OwnerReference{*ownerRef},
-			},
-		}
-		// Project namespaces are owned by a Project. Deleting a Project
-		// automatically deletes the namespace. But we also want this to work in the
-		// other direction, where that behavior is not automatic. We add a finalizer
-		// to the namespace and use our own namespace reconciler to clear it after
-		// deleting the Project.
-		controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
-		if err := w.createNamespaceFn(ctx, ns); err != nil {
-			return nil, apierrors.NewInternalError(
-				errors.Wrapf(err, "error creating namespace %q", project.Name),
-			)
-		}
-		logger.Debug("created namespace")
+	if req.DryRun != nil && *req.DryRun {
+		return nil, nil
 	}
-	return nil, nil
+
+	return nil, w.ensureNamespaceFn(ctx, project)
 }
 
 func (w *webhook) ValidateUpdate(
@@ -243,5 +156,104 @@ func (w *webhook) validatePromotionPolicies(
 		}
 		stageNames[promotionPolicy.Stage] = struct{}{}
 	}
+	return nil
+}
+
+func (w *webhook) ensureNamespace(
+	ctx context.Context,
+	project *kargoapi.Project,
+) error {
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
+		"project": project.Name,
+		"name":    project.Name,
+	})
+
+	ownerRef := metav1.NewControllerRef(
+		project,
+		kargoapi.GroupVersion.WithKind("Project"),
+	)
+	ownerRef.BlockOwnerDeletion = ptr.To(false)
+
+	// We handle creation of a Project's associated namespace synchronously in
+	// this webhook so that the namespace is guaranteed to exist before
+	// other resources (appearing below the Project) in a manifest will not fail
+	// to create due to the namespace not existing yet.
+
+	// There is no guarantee that just because this is a create request that
+	// there wasn't a previous attempt to create this Project that failed. If
+	// that is the case, the namespace may already exist.
+	ns := &corev1.Namespace{}
+	err := w.getNamespaceFn(
+		ctx,
+		types.NamespacedName{Name: project.Name},
+		ns,
+	)
+	if err == nil {
+		// We found an existing namespace with the same name as the Project. If
+		// it's owned by this Project then it was created on a previous attempt to
+		// create this Project, but otherwise, this could be a problem.
+		for _, ownerRef := range ns.OwnerReferences {
+			if ownerRef.UID == project.UID {
+				logger.Debug("namespace exists and is owned by this Project")
+				return nil
+			}
+		}
+		if ns.Labels != nil &&
+			ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue &&
+			len(ns.OwnerReferences) == 0 {
+			logger.Debug(
+				"namespace exists, but is not owned by this Project, but has the " +
+					"project label; Project will take it over",
+			)
+			ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+			controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
+			if err = w.updateNamespaceFn(ctx, ns); err != nil {
+				return apierrors.NewInternalError(
+					errors.Wrapf(err, "error updating namespace %q", project.Name),
+				)
+			}
+			logger.Debug("updated namespace with Project as owner")
+			return nil
+		}
+		return apierrors.NewConflict(
+			projectGroupResource,
+			project.Name,
+			errors.Errorf(
+				"failed to initialize Project %q because namespace %q already exists",
+				project.Name,
+				project.Name,
+			),
+		)
+	}
+	if !apierrors.IsNotFound(err) {
+		return apierrors.NewInternalError(
+			errors.Wrapf(err, "error getting namespace %q", project.Name),
+		)
+	}
+
+	logger.Debug("namespace does not exist yet; creating namespace")
+
+	ns = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: project.Name,
+			Labels: map[string]string{
+				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+			},
+			OwnerReferences: []metav1.OwnerReference{*ownerRef},
+		},
+	}
+	// Project namespaces are owned by a Project. Deleting a Project
+	// automatically deletes the namespace. But we also want this to work in the
+	// other direction, where that behavior is not automatic. We add a finalizer
+	// to the namespace and use our own namespace reconciler to clear it after
+	// deleting the Project.
+	controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
+	if err := w.createNamespaceFn(ctx, ns); err != nil {
+		return apierrors.NewInternalError(
+			errors.Wrapf(err, "error creating namespace %q", project.Name),
+		)
+	}
+	logger.Debug("created namespace")
+
 	return nil
 }
