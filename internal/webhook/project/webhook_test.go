@@ -23,12 +23,18 @@ import (
 )
 
 func TestNewWebhook(t *testing.T) {
-	w := newWebhook(fake.NewClientBuilder().Build())
+	testCfg := WebhookConfig{
+		KargoNamespace: "fake-namespace",
+	}
+	w := newWebhook(fake.NewClientBuilder().Build(), testCfg)
 	require.NotNil(t, w)
+	require.Equal(t, testCfg, w.cfg)
 	require.NotNil(t, w.validateSpecFn)
 	require.NotNil(t, w.ensureNamespaceFn)
+	require.NotNil(t, w.ensureSecretPermissionsFn)
 	require.NotNil(t, w.getNamespaceFn)
 	require.NotNil(t, w.createNamespaceFn)
+	require.NotNil(t, w.createRoleBindingFn)
 }
 
 func TestValidateCreate(t *testing.T) {
@@ -337,6 +343,89 @@ func TestEnsureNamespace(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				testCase.webhook.ensureNamespace(
+					ctx,
+					&kargoapi.Project{
+						ObjectMeta: metav1.ObjectMeta{
+							UID: types.UID("fake-uid"),
+						},
+					},
+				),
+			)
+		})
+	}
+}
+
+func TestEnsureSecretPermissions(t *testing.T) {
+	testCases := []struct {
+		name       string
+		webhook    *webhook
+		assertions func(error)
+	}{
+		{
+			name: "error creating role binding",
+			webhook: &webhook{
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(
+					t,
+					int32(http.StatusInternalServerError),
+					statusErr.ErrStatus.Code,
+				)
+			},
+		},
+		{
+			name: "role binding already exists",
+			webhook: &webhook{
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "success creating role binding",
+			webhook: &webhook{
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		ctx := admission.NewContextWithRequest(
+			context.Background(),
+			admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					DryRun: ptr.To(false),
+				},
+			},
+		)
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.webhook.ensureSecretPermissions(
 					ctx,
 					&kargoapi.Project{
 						ObjectMeta: metav1.ObjectMeta{

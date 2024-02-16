@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,12 +35,29 @@ var (
 	}
 )
 
+type WebhookConfig struct {
+	KargoNamespace string `envconfig:"KARGO_NAMESPACE" required:"true"`
+}
+
+func WebhookConfigFromEnv() WebhookConfig {
+	cfg := WebhookConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 type webhook struct {
+	cfg WebhookConfig
+
 	// The following behaviors are overridable for testing purposes:
 
 	validateSpecFn func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList
 
 	ensureNamespaceFn func(context.Context, *kargoapi.Project) error
+
+	ensureSecretPermissionsFn func(
+		context.Context,
+		*kargoapi.Project,
+	) error
 
 	getNamespaceFn func(
 		context.Context,
@@ -52,22 +71,32 @@ type webhook struct {
 		client.Object,
 		...client.CreateOption,
 	) error
+
+	createRoleBindingFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
 }
 
-func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := newWebhook(mgr.GetClient())
+func SetupWebhookWithManager(mgr ctrl.Manager, cfg WebhookConfig) error {
+	w := newWebhook(mgr.GetClient(), cfg)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Project{}).
 		WithValidator(w).
 		Complete()
 }
 
-func newWebhook(kubeClient client.Client) *webhook {
-	w := &webhook{}
+func newWebhook(kubeClient client.Client, cfg WebhookConfig) *webhook {
+	w := &webhook{
+		cfg: cfg,
+	}
 	w.validateSpecFn = w.validateSpec
 	w.ensureNamespaceFn = w.ensureNamespace
+	w.ensureSecretPermissionsFn = w.ensureSecretPermissions
 	w.getNamespaceFn = kubeClient.Get
 	w.createNamespaceFn = kubeClient.Create
+	w.createRoleBindingFn = kubeClient.Create
 	return w
 }
 
@@ -95,7 +124,16 @@ func (w *webhook) ValidateCreate(
 	// We synchronously ensure the existence of a namespace with the same name as
 	// the Project because resources following the Project in a manifest are
 	// likely to be scoped to that namespace.
-	return nil, w.ensureNamespaceFn(ctx, project)
+	if err := w.ensureNamespaceFn(ctx, project); err != nil {
+		return nil, err
+	}
+
+	// Ensure the Kargo API server receives permissions to manage secrets in the
+	// Project namespace just in time. This prevents us from having to give the
+	// Kargo API server carte blanche access to all secrets in the cluster. We do
+	// this synchronously because Secrets are likely to follow the Project in a
+	// manifest.
+	return nil, w.ensureSecretPermissionsFn(ctx, project)
 }
 
 func (w *webhook) ValidateUpdate(
@@ -232,6 +270,56 @@ func (w *webhook) ensureNamespace(
 		)
 	}
 	logger.Debug("created namespace")
+
+	return nil
+}
+
+func (w *webhook) ensureSecretPermissions(
+	ctx context.Context,
+	project *kargoapi.Project,
+) error {
+	const roleBindingName = "kargo-api-server-manage-project-secrets"
+
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
+		"project":     project.Name,
+		"name":        project.Name,
+		"namespace":   project.Name,
+		"roleBinding": roleBindingName,
+	})
+
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleBindingName,
+			Namespace: project.Name,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "kargo-secret-manager",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-api",
+				Namespace: w.cfg.KargoNamespace,
+			},
+		},
+	}
+	if err := w.createRoleBindingFn(ctx, roleBinding); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			logger.Debug("role binding already exists in project namespace")
+			return nil
+		}
+		return apierrors.NewInternalError(
+			errors.Wrapf(
+				err,
+				"error creating role binding %q in project namespace %q",
+				roleBinding.Name,
+				project.Name,
+			),
+		)
+	}
+	logger.Debug("granted API server access to manage project secrets")
 
 	return nil
 }

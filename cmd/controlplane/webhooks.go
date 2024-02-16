@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	authzv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -47,6 +48,9 @@ func newWebhooksServerCommand() *cobra.Command {
 			if err = corev1.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "add corev1 to scheme")
 			}
+			if err = rbacv1.AddToScheme(scheme); err != nil {
+				return errors.Wrap(err, "add rbacv1 to scheme")
+			}
 			if err = authzv1.AddToScheme(scheme); err != nil {
 				return errors.Wrap(err, "add authzv1 to scheme")
 			}
@@ -80,7 +84,10 @@ func newWebhooksServerCommand() *cobra.Command {
 			if err = freight.SetupWebhookWithManager(mgr); err != nil {
 				return errors.Wrap(err, "setup Freight webhook")
 			}
-			if err = project.SetupWebhookWithManager(mgr); err != nil {
+			if err = project.SetupWebhookWithManager(
+				mgr,
+				project.WebhookConfigFromEnv(),
+			); err != nil {
 				return errors.Wrap(err, "setup Project webhook")
 			}
 			if err = promotion.SetupWebhookWithManager(mgr); err != nil {
