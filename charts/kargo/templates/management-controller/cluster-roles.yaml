@@ -19,6 +19,12 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - "*"
+- apiGroups:
   - kargo.akuity.io
   resources:
   - projects
