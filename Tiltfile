@@ -58,6 +58,7 @@ k8s_resource(
     'kargo-admin:clusterrole',
     'kargo-developer:clusterrole',
     'kargo-promoter:clusterrole',
+    'kargo-secret-manager:clusterrole',
     'kargo-selfsigned-cert-issuer:issuer'
   ]
 )
