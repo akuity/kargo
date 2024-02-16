@@ -87,8 +87,6 @@ k8s_resource(
     'kargo-controller:clusterrole',
     'kargo-controller:clusterrolebinding',
     'kargo-controller:configmap',
-    'kargo-controller:role',
-    'kargo-controller:rolebinding',
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
     'kargo-controller-argocd:clusterrolebinding',
