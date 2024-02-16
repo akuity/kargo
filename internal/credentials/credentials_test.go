@@ -15,22 +15,19 @@ import (
 func TestNewKubernetesDatabase(t *testing.T) {
 	testClient := fake.NewClientBuilder().Build()
 	testCfg := KubernetesDatabaseConfig{
-		ArgoCDNamespace:             "fake-namespace",
-		GlobalCredentialsNamespaces: []string{"another-fake-namespace"},
+		GlobalCredentialsNamespaces: []string{"fake-namespace"},
 	}
-	d := NewKubernetesDatabase(testClient, testClient, testCfg)
+	d := NewKubernetesDatabase(testClient, testCfg)
 	require.NotNil(t, d)
 	k, ok := d.(*kubernetesDatabase)
 	require.True(t, ok)
 	require.Same(t, testClient, k.kargoClient)
-	require.Same(t, testClient, k.argocdClient)
 	require.Equal(t, testCfg, k.cfg)
 }
 
 // TestGet simply validates that, given a set of valid/matching secrets in
 // various namespaces, the correct secret is returned (order of precedence)
 func TestGet(t *testing.T) {
-	const testArgoCDNameSpace = "argocd"
 	const testNamespace = "fake-namespace"
 	var testGlobalNamespaces = []string{"kargo"}
 	const testURLPrefix = "myrepo.com"
@@ -95,76 +92,6 @@ func TestGet(t *testing.T) {
 			"url":      []byte(testURLPrefix),
 		},
 	}
-	secretInArgoCDNamespaceExact := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "in-argocd-exact",
-			Namespace: testArgoCDNameSpace,
-			Labels: map[string]string{
-				argoCDSecretTypeLabelKey: repositorySecretTypeLabelValue,
-			},
-			Annotations: map[string]string{
-				authorizedProjectsAnnotationKey: testNamespace,
-			},
-		},
-		Data: map[string][]byte{
-			"type":     []byte(TypeImage),
-			"username": []byte("in-argocd-exact"),
-			"password": []byte("fake-password"),
-			"url":      []byte(testURL),
-		},
-	}
-	secretInArgoCDNamespacePrefix := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "in-argocd-prefix",
-			Namespace: testArgoCDNameSpace,
-			Labels: map[string]string{
-				argoCDSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
-			},
-			Annotations: map[string]string{
-				authorizedProjectsAnnotationKey: testNamespace,
-			},
-		},
-		Data: map[string][]byte{
-			"type":     []byte(TypeImage),
-			"username": []byte("in-argocd-prefix"),
-			"password": []byte("fake-password"),
-			"url":      []byte(testURLPrefix),
-		},
-	}
-	secretInArgoCDNamespacePrefixMissingAuthorization := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "in-argocd-prefix",
-			Namespace: testArgoCDNameSpace,
-			Labels: map[string]string{
-				argoCDSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
-			},
-		},
-		Data: map[string][]byte{
-			"type":     []byte(TypeImage),
-			"username": []byte("in-argocd-prefix"),
-			"password": []byte("fake-password"),
-			"url":      []byte(testURLPrefix),
-		},
-	}
-	secretInArgoCDNamespacePrefixWrongAuthorization := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "in-argocd-prefix",
-			Namespace: testArgoCDNameSpace,
-			Labels: map[string]string{
-				argoCDSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
-			},
-			Annotations: map[string]string{
-				authorizedProjectsAnnotationKey: "someotherproject",
-			},
-		},
-		Data: map[string][]byte{
-			"type":     []byte(TypeImage),
-			"username": []byte("in-argocd-prefix"),
-			"password": []byte("fake-password"),
-			"url":      []byte(testURLPrefix),
-		},
-	}
-
 	testCases := []struct {
 		name     string
 		secrets  []client.Object
@@ -196,18 +123,6 @@ func TestGet(t *testing.T) {
 			found:    true,
 		},
 		{
-			name:     "single secret in argocd namespace exact",
-			secrets:  []client.Object{secretInArgoCDNamespaceExact},
-			expected: secretInArgoCDNamespaceExact,
-			found:    true,
-		},
-		{
-			name:     "single secret in argocd namespace prefix",
-			secrets:  []client.Object{secretInArgoCDNamespacePrefix},
-			expected: secretInArgoCDNamespacePrefix,
-			found:    true,
-		},
-		{
 			name:     "in namespace exact before prefix",
 			secrets:  []client.Object{secretInNamespaceExact, secretInNamespacePrefix},
 			expected: secretInNamespaceExact,
@@ -220,32 +135,10 @@ func TestGet(t *testing.T) {
 			found:    true,
 		},
 		{
-			name:     "argocd exact before prefix",
-			secrets:  []client.Object{secretInArgoCDNamespaceExact, secretInArgoCDNamespacePrefix},
-			expected: secretInArgoCDNamespaceExact,
-			found:    true,
-		},
-		{
 			name:     "namespace before global",
 			secrets:  []client.Object{secretInNamespacePrefix, secretInGlobalPrefix},
 			expected: secretInNamespacePrefix,
 			found:    true,
-		},
-		{
-			name:     "global before argocd",
-			secrets:  []client.Object{secretInGlobalPrefix, secretInArgoCDNamespacePrefix},
-			expected: secretInGlobalPrefix,
-			found:    true,
-		},
-		{
-			name:    "argocd credential with missing auth",
-			secrets: []client.Object{secretInArgoCDNamespacePrefixMissingAuthorization},
-			found:   false,
-		},
-		{
-			name:    "argocd credential with wrong auth",
-			secrets: []client.Object{secretInArgoCDNamespacePrefixWrongAuthorization},
-			found:   false,
 		},
 	}
 
@@ -255,9 +148,7 @@ func TestGet(t *testing.T) {
 
 			d := NewKubernetesDatabase(
 				testClient,
-				testClient,
 				KubernetesDatabaseConfig{
-					ArgoCDNamespace:             testArgoCDNameSpace,
 					GlobalCredentialsNamespaces: testGlobalNamespaces,
 				},
 			)
