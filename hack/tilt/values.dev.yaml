@@ -23,3 +23,5 @@ controller:
   logLevel: DEBUG
 managementController:
   logLevel: DEBUG
+webhooksServer:
+  logLevel: DEBUG
