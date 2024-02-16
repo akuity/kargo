@@ -22,7 +22,6 @@ data:
   ARGOCD_KUBECONFIG: /etc/kargo/kubeconfigs/argocd-kubeconfig.yaml
   {{- end }}
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace }}
-  ARGOCD_ENABLE_CREDENTIAL_BORROWING: {{ quote .Values.controller.argocd.enableCredentialBorrowing }}
   ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY: {{ quote .Values.controller.argocd.watchArgocdNamespaceOnly }}
   {{- end }}
   ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.controller.rollouts.integrationEnabled }}
