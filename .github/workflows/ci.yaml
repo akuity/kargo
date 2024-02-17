@@ -13,7 +13,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.6-bookworm
+      image: golang:1.22.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
   lint-go:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.6-bookworm
+      image: golang:1.22.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.6-bookworm
+      image: golang:1.22.0-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
   lint-proto:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.6-bookworm
+      image: golang:1.22.0-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,7 +85,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.6-bookworm
+      image: golang:1.22.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -111,7 +111,7 @@ jobs:
     - name: Install buf
       run: go install github.com/bufbuild/buf/cmd/buf@v1.26.1
     - name: Install controller-gen
-      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.13.0
+      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
     - name: Run Codegen
       run: make codegen
     - name: Git stuff
@@ -141,7 +141,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.21.6-bookworm
+      image: golang:1.22.0-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
