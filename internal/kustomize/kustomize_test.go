@@ -1,7 +1,6 @@
 package kustomize
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -10,9 +9,8 @@ import (
 
 func TestBuildSetImageCmd(t *testing.T) {
 	const testDir = "/some-dir"
-	const testImage = "some-image"
 	const testImageRef = "some-image:some-tag"
-	cmd := buildSetImageCmd(testDir, testImage, testImageRef)
+	cmd := buildSetImageCmd(testDir, testImageRef)
 	require.NotNil(t, cmd)
 	require.True(t, strings.HasSuffix(cmd.Path, "kustomize"))
 	require.Equal(
@@ -22,7 +20,7 @@ func TestBuildSetImageCmd(t *testing.T) {
 			"edit",
 			"set",
 			"image",
-			fmt.Sprintf("%s=%s", testImage, testImageRef),
+			testImageRef,
 		},
 		cmd.Args,
 	)

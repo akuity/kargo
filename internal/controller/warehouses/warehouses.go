@@ -61,7 +61,7 @@ type reconciler struct {
 	getImageRefsFn func(
 		ctx context.Context,
 		repoURL string,
-		tagSelectionStrategy kargoapi.ImageTagSelectionStrategy,
+		imageSelectionStrategy kargoapi.ImageSelectionStrategy,
 		semverConstraint string,
 		allowTagsRegex string,
 		ignoreTags []string,

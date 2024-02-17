@@ -13,17 +13,9 @@ import (
 )
 
 const (
-	// authorizedProjectsAnnotationKey is the key for an annotation used by owners
-	// of Secrets in Argo CD's namespace to indicate consent to be borrowed by
-	// specific Kargo projects.
-	authorizedProjectsAnnotationKey = "kargo.akuity.io/authorized-projects"
-
 	// kargoSecretTypeLabelKey is the key for a label used to identify the type
 	// of credentials stored in a Secret.
 	kargoSecretTypeLabelKey = "kargo.akuity.io/secret-type" // nolint: gosec
-	// argoCDSecretTypeLabelKey is the key for a label used to identify the type
-	// of credentials stored in a Secret within Argo CD's namespace.
-	argoCDSecretTypeLabelKey = "argocd.argoproj.io/secret-type" // nolint: gosec
 	// repositorySecretTypeLabelValue denotes that a secret contains credentials
 	// for a repository that is an exact match on the normalized URL.
 	repositorySecretTypeLabelValue = "repository"
@@ -71,15 +63,13 @@ type Database interface {
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type kubernetesDatabase struct {
-	kargoClient  client.Client
-	argocdClient client.Client // nil if credential borrowing is not enabled
-	cfg          KubernetesDatabaseConfig
+	kargoClient client.Client
+	cfg         KubernetesDatabaseConfig
 }
 
 // KubernetesDatabaseConfig represents configuration for a Kubernetes based
 // implementation of the Database interface.
 type KubernetesDatabaseConfig struct {
-	ArgoCDNamespace             string   `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
 	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
 }
 
@@ -94,13 +84,11 @@ func KubernetesDatabaseConfigFromEnv() KubernetesDatabaseConfig {
 // retrieve Credentials stored in Kubernetes Secrets.
 func NewKubernetesDatabase(
 	kargoClient client.Client,
-	argocdClient client.Client,
 	cfg KubernetesDatabaseConfig,
 ) Database {
 	return &kubernetesDatabase{
-		kargoClient:  kargoClient,
-		argocdClient: argocdClient,
-		cfg:          cfg,
+		kargoClient: kargoClient,
+		cfg:         cfg,
 	}
 }
 
@@ -129,57 +117,13 @@ func (k *kubernetesDatabase) Get(
 	); err != nil {
 		return creds, false, err
 	}
-	// Found creds in namespace
-	if secret != nil {
-		return secretToCreds(secret), true, nil
-	}
 
-	// Check namespace for credentials template
-	if secret, err = getCredentialsSecret(
-		ctx,
-		k.kargoClient,
-		namespace,
-		labels.Set(map[string]string{
-			kargoSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
-		}).AsSelector(),
-		credType,
-		repoURL,
-		true, // repoURL is a prefix
-	); err != nil {
-		return creds, false, err
-	}
-
-	// Found template creds in namespace
-	if secret != nil {
-		return secretToCreds(secret), true, nil
-	}
-
-	// Check global credentials namespaces for credentials
-	for _, globalCredsNamespace := range k.cfg.GlobalCredentialsNamespaces {
-		// Check shared creds namespace for credentials
+	if secret == nil {
+		// Check namespace for credentials template
 		if secret, err = getCredentialsSecret(
 			ctx,
 			k.kargoClient,
-			globalCredsNamespace,
-			labels.Set(map[string]string{
-				kargoSecretTypeLabelKey: repositorySecretTypeLabelValue,
-			}).AsSelector(),
-			credType,
-			repoURL,
-			false, // repoURL is not a prefix
-		); err != nil {
-			return creds, false, err
-		}
-		// Found creds in global creds namespace
-		if secret != nil {
-			return secretToCreds(secret), true, nil
-		}
-
-		// Check shared creds namespace for credentials template
-		if secret, err = getCredentialsSecret(
-			ctx,
-			k.kargoClient,
-			globalCredsNamespace,
+			namespace,
 			labels.Set(map[string]string{
 				kargoSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
 			}).AsSelector(),
@@ -189,46 +133,46 @@ func (k *kubernetesDatabase) Get(
 		); err != nil {
 			return creds, false, err
 		}
-
-		if secret != nil {
-			return secretToCreds(secret), true, nil
-		}
-	}
-
-	if k.argocdClient == nil {
-		// We cannot borrow creds from from Argo CD
-		return creds, false, nil
-	}
-
-	// Check Argo CD's namespace for credentials
-	if secret, err = getCredentialsSecret(
-		ctx,
-		k.argocdClient,
-		k.cfg.ArgoCDNamespace,
-		labels.Set(map[string]string{
-			argoCDSecretTypeLabelKey: repositorySecretTypeLabelValue,
-		}).AsSelector(),
-		credType,
-		repoURL,
-		false, // repoURL is not a prefix
-	); err != nil {
-		return creds, false, err
 	}
 
 	if secret == nil {
-		// Check Argo CD's namespace for credentials template
-		if secret, err = getCredentialsSecret(
-			ctx,
-			k.argocdClient,
-			k.cfg.ArgoCDNamespace,
-			labels.Set(map[string]string{
-				argoCDSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
-			}).AsSelector(),
-			credType,
-			repoURL,
-			true, // repoURL is a prefix
-		); err != nil || secret == nil {
-			return creds, false, err
+		// Check global credentials namespaces for credentials
+		for _, globalCredsNamespace := range k.cfg.GlobalCredentialsNamespaces {
+			// Check shared creds namespace for credentials
+			if secret, err = getCredentialsSecret(
+				ctx,
+				k.kargoClient,
+				globalCredsNamespace,
+				labels.Set(map[string]string{
+					kargoSecretTypeLabelKey: repositorySecretTypeLabelValue,
+				}).AsSelector(),
+				credType,
+				repoURL,
+				false, // repoURL is not a prefix
+			); err != nil {
+				return creds, false, err
+			}
+			if secret != nil {
+				break
+			}
+
+			// Check shared creds namespace for credentials template
+			if secret, err = getCredentialsSecret(
+				ctx,
+				k.kargoClient,
+				globalCredsNamespace,
+				labels.Set(map[string]string{
+					kargoSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
+				}).AsSelector(),
+				credType,
+				repoURL,
+				true, // repoURL is a prefix
+			); err != nil {
+				return creds, false, err
+			}
+			if secret != nil {
+				break
+			}
 		}
 	}
 
@@ -236,21 +180,7 @@ func (k *kubernetesDatabase) Get(
 		return creds, false, nil
 	}
 
-	// This Secret represents credentials borrowed from Argo CD. We need to look
-	// at its annotations to see if this is authorized by the Secret's owner.
-	// If it's not annotated properly, we'll treat it as we didn't find it.
-	allowedProjectsStr, ok := secret.Annotations[authorizedProjectsAnnotationKey]
-	if !ok {
-		return creds, false, nil
-	}
-	allowedProjects := strings.Split(allowedProjectsStr, ",")
-	for _, allowedProject := range allowedProjects {
-		if strings.TrimSpace(allowedProject) == namespace {
-			return secretToCreds(secret), true, nil
-		}
-	}
-
-	return creds, false, nil
+	return secretToCreds(secret), true, nil
 }
 
 func getCredentialsSecret(

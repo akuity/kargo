@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -248,15 +247,8 @@ func newControllerCommand() *cobra.Command {
 				log.Info("Argo Rollouts integration is disabled")
 			}
 
-			var argocdClientForCreds client.Client
-			if types.MustParseBool(
-				os.GetEnv("ARGOCD_ENABLE_CREDENTIAL_BORROWING", "false"),
-			) && argocdMgr != nil {
-				argocdClientForCreds = argocdMgr.GetClient()
-			}
 			credentialsDB := credentials.NewKubernetesDatabase(
 				kargoMgr.GetClient(),
-				argocdClientForCreds,
 				credentials.KubernetesDatabaseConfigFromEnv(),
 			)
 

@@ -85,7 +85,7 @@ func TestKustomizerApply(t *testing.T) {
 				},
 			},
 			kustomizer: &kustomizer{
-				setImageFn: func(string, string, string) error {
+				setImageFn: func(string, string) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -108,7 +108,7 @@ func TestKustomizerApply(t *testing.T) {
 				},
 			},
 			kustomizer: &kustomizer{
-				setImageFn: func(string, string, string) error {
+				setImageFn: func(string, string) error {
 					return nil
 				},
 			},
@@ -137,7 +137,7 @@ func TestKustomizerApply(t *testing.T) {
 				},
 			},
 			kustomizer: &kustomizer{
-				setImageFn: func(string, string, string) error {
+				setImageFn: func(string, string) error {
 					return nil
 				},
 			},

@@ -37,24 +37,24 @@ func TestNewRepository(t *testing.T) {
 	require.NotEmpty(t, client.image)
 	require.NotNil(t, client.repo)
 	// Make sure default behaviors are set
-	require.NotNil(t, client.getTagByNameFn)
-	require.NotNil(t, client.getTagByDigestFn)
-	require.NotNil(t, client.getManifestByTagNameFn)
+	require.NotNil(t, client.getImageByTagFn)
+	require.NotNil(t, client.getImageByDigestFn)
+	require.NotNil(t, client.getManifestByTagFn)
 	require.NotNil(t, client.getManifestByDigestFn)
-	require.NotNil(t, client.extractTagFromManifestFn)
-	require.NotNil(t, client.extractTagFromV1ManifestFn)
-	require.NotNil(t, client.extractTagFromV2ManifestFn)
-	require.NotNil(t, client.extractTagFromOCIManifestFn)
-	require.NotNil(t, client.extractTagFromCollectionFn)
+	require.NotNil(t, client.extractImageFromManifestFn)
+	require.NotNil(t, client.extractImageFromV1ManifestFn)
+	require.NotNil(t, client.extractImageFromV2ManifestFn)
+	require.NotNil(t, client.extractImageFromOCIManifestFn)
+	require.NotNil(t, client.extractImageFromCollectionFn)
 	require.NotNil(t, client.getBlobFn)
 }
 
-func TestGetTagByName(t *testing.T) {
+func TestGetImageByTag(t *testing.T) {
 	timePtr := func(t time.Time) *time.Time {
 		return &t
 	}
 
-	testTag := Tag{
+	testImage := Image{
 		CreatedAt: timePtr(time.Now().UTC()),
 	}
 	testRegistry := &registry{}
@@ -63,51 +63,51 @@ func TestGetTagByName(t *testing.T) {
 		name       string
 		tag        string
 		client     *repositoryClient
-		assertions func(*Tag, error)
+		assertions func(*Image, error)
 	}{
 		{
 			name: "error getting manifest for tag",
 			tag:  "fake-tag",
 			client: &repositoryClient{
 				registry: testRegistry,
-				getManifestByTagNameFn: func(
+				getManifestByTagFn: func(
 					context.Context,
 					string,
 				) (distribution.Manifest, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error retrieving manifest")
 				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
 		{
-			name: "error extracting tag from manifest",
+			name: "error extracting image from manifest",
 			tag:  "fake-tag",
 			client: &repositoryClient{
 				registry: testRegistry,
-				getManifestByTagNameFn: func(
+				getManifestByTagFn: func(
 					context.Context,
 					string,
 				) (distribution.Manifest, error) {
 					return &ocischema.DeserializedManifest{}, nil
 				},
-				extractTagFromManifestFn: func(
+				extractImageFromManifestFn: func(
 					context.Context,
 					distribution.Manifest,
 					*platformConstraint,
-				) (*Tag, error) {
+				) (*Image, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
 					err.Error(),
-					"error extracting tag from manifest",
+					"error extracting image from manifest",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -118,30 +118,30 @@ func TestGetTagByName(t *testing.T) {
 			client: &repositoryClient{
 				image:    "fake-image",
 				registry: testRegistry,
-				getManifestByTagNameFn: func(
+				getManifestByTagFn: func(
 					context.Context,
 					string,
 				) (distribution.Manifest, error) {
 					return &ocischema.DeserializedManifest{}, nil
 				},
-				extractTagFromManifestFn: func(
+				extractImageFromManifestFn: func(
 					context.Context,
 					distribution.Manifest,
 					*platformConstraint,
-				) (*Tag, error) {
-					return &testTag, nil
+				) (*Image, error) {
+					return &testImage, nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testTag, *tag)
+				require.Equal(t, testImage, *image)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.client.getTagByName(
+				testCase.client.getImageByTag(
 					context.Background(),
 					testCase.tag,
 					nil,
@@ -151,21 +151,21 @@ func TestGetTagByName(t *testing.T) {
 	}
 }
 
-func TestGetTagByDigest(t *testing.T) {
+func TestGetImageByDigest(t *testing.T) {
 	timePtr := func(t time.Time) *time.Time {
 		return &t
 	}
 
-	testTag := Tag{
+	testImage := Image{
 		CreatedAt: timePtr(time.Now().UTC()),
 	}
 	testRegistry := &registry{
-		tagCache: cache.New(0, 0),
+		imageCache: cache.New(0, 0),
 	}
 	const testCachedDigest = "fake-cached-digest"
-	testRegistry.tagCache.Set(
+	testRegistry.imageCache.Set(
 		testCachedDigest,
-		testTag,
+		testImage,
 		cache.DefaultExpiration,
 	)
 
@@ -173,7 +173,7 @@ func TestGetTagByDigest(t *testing.T) {
 		name       string
 		digest     digest.Digest
 		client     *repositoryClient
-		assertions func(*Tag, error)
+		assertions func(*Image, error)
 	}{
 		{
 			name:   "cache hit",
@@ -181,9 +181,9 @@ func TestGetTagByDigest(t *testing.T) {
 			client: &repositoryClient{
 				registry: testRegistry,
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testTag, *tag)
+				require.Equal(t, testImage, *image)
 			},
 		},
 		{
@@ -198,14 +198,14 @@ func TestGetTagByDigest(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error retrieving manifest")
 				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
 		{
-			name:   "error extracting tag from manifest",
+			name:   "error extracting image from manifest",
 			digest: "fake-digest",
 			client: &repositoryClient{
 				registry: testRegistry,
@@ -215,20 +215,20 @@ func TestGetTagByDigest(t *testing.T) {
 				) (distribution.Manifest, error) {
 					return &ocischema.DeserializedManifest{}, nil
 				},
-				extractTagFromManifestFn: func(
+				extractImageFromManifestFn: func(
 					context.Context,
 					distribution.Manifest,
 					*platformConstraint,
-				) (*Tag, error) {
+				) (*Image, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
 					err.Error(),
-					"error extracting tag from manifest",
+					"error extracting image from manifest",
 				)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -245,24 +245,24 @@ func TestGetTagByDigest(t *testing.T) {
 				) (distribution.Manifest, error) {
 					return &ocischema.DeserializedManifest{}, nil
 				},
-				extractTagFromManifestFn: func(
+				extractImageFromManifestFn: func(
 					context.Context,
 					distribution.Manifest,
 					*platformConstraint,
-				) (*Tag, error) {
-					return &testTag, nil
+				) (*Image, error) {
+					return &testImage, nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testTag, *tag)
+				require.Equal(t, testImage, *image)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.client.getTagByDigest(
+				testCase.client.getImageByDigest(
 					context.Background(),
 					testCase.digest,
 					nil,
@@ -272,12 +272,12 @@ func TestGetTagByDigest(t *testing.T) {
 	}
 }
 
-func TestExtractTagFromManifest(t *testing.T) {
+func TestExtractImageFromManifest(t *testing.T) {
 	timePtr := func(t time.Time) *time.Time {
 		return &t
 	}
 
-	testTag := Tag{
+	testImage := Image{
 		CreatedAt: timePtr(time.Now().UTC()),
 	}
 
@@ -290,11 +290,11 @@ func TestExtractTagFromManifest(t *testing.T) {
 			name:     "V1 manifest",
 			manifest: &schema1.SignedManifest{}, // nolint: staticcheck
 			client: &repositoryClient{
-				extractTagFromV1ManifestFn: func(
+				extractImageFromV1ManifestFn: func(
 					*schema1.SignedManifest, // nolint: staticcheck
 					*platformConstraint,
-				) (*Tag, error) {
-					return &testTag, nil
+				) (*Image, error) {
+					return &testImage, nil
 				},
 			},
 		},
@@ -302,12 +302,12 @@ func TestExtractTagFromManifest(t *testing.T) {
 			name:     "V2 manifest",
 			manifest: &schema2.DeserializedManifest{},
 			client: &repositoryClient{
-				extractTagFromV2ManifestFn: func(
+				extractImageFromV2ManifestFn: func(
 					context.Context,
 					*schema2.DeserializedManifest,
 					*platformConstraint,
-				) (*Tag, error) {
-					return &testTag, nil
+				) (*Image, error) {
+					return &testImage, nil
 				},
 			},
 		},
@@ -315,12 +315,12 @@ func TestExtractTagFromManifest(t *testing.T) {
 			name:     "OCI manifest",
 			manifest: &ocischema.DeserializedManifest{},
 			client: &repositoryClient{
-				extractTagFromOCIManifestFn: func(
+				extractImageFromOCIManifestFn: func(
 					context.Context,
 					*ocischema.DeserializedManifest,
 					*platformConstraint,
-				) (*Tag, error) {
-					return &testTag, nil
+				) (*Image, error) {
+					return &testImage, nil
 				},
 			},
 		},
@@ -328,12 +328,12 @@ func TestExtractTagFromManifest(t *testing.T) {
 			name:     "manifest list",
 			manifest: &manifestlist.DeserializedManifestList{},
 			client: &repositoryClient{
-				extractTagFromCollectionFn: func(
+				extractImageFromCollectionFn: func(
 					context.Context,
 					distribution.Manifest,
 					*platformConstraint,
-				) (*Tag, error) {
-					return &testTag, nil
+				) (*Image, error) {
+					return &testImage, nil
 				},
 			},
 		},
@@ -341,31 +341,31 @@ func TestExtractTagFromManifest(t *testing.T) {
 			name:     "image index",
 			manifest: &ocischema.DeserializedImageIndex{},
 			client: &repositoryClient{
-				extractTagFromCollectionFn: func(
+				extractImageFromCollectionFn: func(
 					context.Context,
 					distribution.Manifest,
 					*platformConstraint,
-				) (*Tag, error) {
-					return &testTag, nil
+				) (*Image, error) {
+					return &testImage, nil
 				},
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			tag, err := testCase.client.extractTagFromManifest(
+			image, err := testCase.client.extractImageFromManifest(
 				context.Background(),
 				testCase.manifest,
 				nil,
 			)
 			require.NoError(t, err)
-			require.NotNil(t, tag)
-			require.Equal(t, testTag, *tag)
+			require.NotNil(t, image)
+			require.Equal(t, testImage, *image)
 		})
 	}
 }
 
-func TestExtractTagFromV1Manifest(t *testing.T) {
+func TestExtractImageFromV1Manifest(t *testing.T) {
 	testTime := time.Now().UTC()
 	testTimeStr := testTime.Format(time.RFC3339Nano)
 	testCases := []struct {
@@ -373,13 +373,13 @@ func TestExtractTagFromV1Manifest(t *testing.T) {
 		platform   *platformConstraint
 		manifest   *schema1.SignedManifest // nolint: staticcheck
 		client     *repositoryClient
-		assertions func(*Tag, error)
+		assertions func(*Image, error)
 	}{
 		{
 			name:     "manifest has no history",
 			manifest: &schema1.SignedManifest{}, // nolint: staticcheck
 			client:   &repositoryClient{},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -400,7 +400,7 @@ func TestExtractTagFromV1Manifest(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error unmarshaling V1 manifest")
 			},
@@ -421,9 +421,9 @@ func TestExtractTagFromV1Manifest(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.Nil(t, tag)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -438,7 +438,7 @@ func TestExtractTagFromV1Manifest(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing createdAt timestamp")
 			},
@@ -456,18 +456,18 @@ func TestExtractTagFromV1Manifest(t *testing.T) {
 				},
 			},
 			client: &repositoryClient{},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, tag)
-				require.NotNil(t, tag.CreatedAt)
-				require.Equal(t, testTime, *tag.CreatedAt)
-				require.NotNil(t, tag.Digest)
+				require.NotNil(t, image)
+				require.NotNil(t, image.CreatedAt)
+				require.Equal(t, testTime, *image.CreatedAt)
+				require.NotNil(t, image.Digest)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(testCase.client.extractTagFromV1Manifest(
+			testCase.assertions(testCase.client.extractImageFromV1Manifest(
 				testCase.manifest,
 				testCase.platform,
 			),
@@ -476,14 +476,14 @@ func TestExtractTagFromV1Manifest(t *testing.T) {
 	}
 }
 
-func TestExtractTagFromV2Manifest(t *testing.T) {
+func TestExtractImageFromV2Manifest(t *testing.T) {
 	testTime := time.Now().UTC()
 	testTimeStr := testTime.Format(time.RFC3339Nano)
 	testCases := []struct {
 		name       string
 		platform   *platformConstraint
 		client     *repositoryClient
-		assertions func(*Tag, error)
+		assertions func(*Image, error)
 	}{
 		{
 			name: "error fetching blob",
@@ -492,7 +492,7 @@ func TestExtractTagFromV2Manifest(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error fetching blob")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -505,7 +505,7 @@ func TestExtractTagFromV2Manifest(t *testing.T) {
 					return []byte("junk"), nil
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error unmarshaling blob")
 			},
@@ -521,9 +521,9 @@ func TestExtractTagFromV2Manifest(t *testing.T) {
 					return []byte(`{"os": "linux", "architecture": "arm64"}`), nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.Nil(t, tag)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -533,7 +533,7 @@ func TestExtractTagFromV2Manifest(t *testing.T) {
 					return []byte(`{"created": "junk"}`), nil
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing createdAt timestamp")
 			},
@@ -547,19 +547,19 @@ func TestExtractTagFromV2Manifest(t *testing.T) {
 					), nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, tag)
-				require.NotNil(t, tag.CreatedAt)
-				require.Equal(t, testTime, *tag.CreatedAt)
-				require.NotNil(t, tag.Digest)
+				require.NotNil(t, image)
+				require.NotNil(t, image.CreatedAt)
+				require.Equal(t, testTime, *image.CreatedAt)
+				require.NotNil(t, image.Digest)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.client.extractTagFromV2Manifest(
+				testCase.client.extractImageFromV2Manifest(
 					context.Background(),
 					&schema2.DeserializedManifest{},
 					testCase.platform,
@@ -569,14 +569,14 @@ func TestExtractTagFromV2Manifest(t *testing.T) {
 	}
 }
 
-func TestExtractTagFromOCIManifest(t *testing.T) {
+func TestExtractImageFromOCIManifest(t *testing.T) {
 	testTime := time.Now().UTC()
 	testTimeStr := testTime.Format(time.RFC3339Nano)
 	testCases := []struct {
 		name       string
 		platform   *platformConstraint
 		client     *repositoryClient
-		assertions func(*Tag, error)
+		assertions func(*Image, error)
 	}{
 		{
 			name: "error fetching blob",
@@ -585,7 +585,7 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error fetching blob")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -598,7 +598,7 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 					return []byte("junk"), nil
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error unmarshaling blob")
 			},
@@ -610,9 +610,9 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 					return []byte(`{"os": "", "architecture": ""}`), nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.Nil(t, tag)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -626,9 +626,9 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 					return []byte(`{"os": "linux", "architecture": "arm64"}`), nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.Nil(t, tag)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -638,7 +638,7 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 					return []byte(`{"os": "linux", "architecture": "arm64", "created": "junk"}`), nil
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing createdAt timestamp")
 			},
@@ -652,19 +652,19 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 					), nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, tag)
-				require.NotNil(t, tag.CreatedAt)
-				require.Equal(t, testTime, *tag.CreatedAt)
-				require.NotNil(t, tag.Digest)
+				require.NotNil(t, image)
+				require.NotNil(t, image.CreatedAt)
+				require.Equal(t, testTime, *image.CreatedAt)
+				require.NotNil(t, image.Digest)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.client.extractTagFromOCIManifest(
+				testCase.client.extractImageFromOCIManifest(
 					context.Background(),
 					&ocischema.DeserializedManifest{},
 					testCase.platform,
@@ -674,7 +674,7 @@ func TestExtractTagFromOCIManifest(t *testing.T) {
 	}
 }
 
-func TestExtractTagFromCollection(t *testing.T) {
+func TestExtractImageFromCollection(t *testing.T) {
 	timePtr := func(t time.Time) *time.Time {
 		return &t
 	}
@@ -686,13 +686,13 @@ func TestExtractTagFromCollection(t *testing.T) {
 		collection distribution.Manifest
 		platform   *platformConstraint
 		client     *repositoryClient
-		assertions func(*Tag, error)
+		assertions func(*Image, error)
 	}{
 		{
 			name:       "empty V2 manifest list or OCI index",
 			collection: &manifestlist.DeserializedManifestList{},
 			client:     &repositoryClient{},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "empty V2 manifest list or OCI index")
 			},
@@ -716,9 +716,9 @@ func TestExtractTagFromCollection(t *testing.T) {
 				arch: "amd64",
 			},
 			client: &repositoryClient{},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.Nil(t, tag)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -746,7 +746,7 @@ func TestExtractTagFromCollection(t *testing.T) {
 				arch: "amd64",
 			},
 			client: &repositoryClient{},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -756,7 +756,7 @@ func TestExtractTagFromCollection(t *testing.T) {
 			},
 		},
 		{
-			name: "with platform constraint -- error getting tag by digest",
+			name: "with platform constraint -- error getting image by digest",
 			collection: &manifestlist.DeserializedManifestList{
 				ManifestList: manifestlist.ManifestList{
 					Manifests: []manifestlist.ManifestDescriptor{
@@ -774,25 +774,25 @@ func TestExtractTagFromCollection(t *testing.T) {
 				arch: "amd64",
 			},
 			client: &repositoryClient{
-				getTagByDigestFn: func(
+				getImageByDigestFn: func(
 					context.Context,
 					digest.Digest,
 					*platformConstraint,
-				) (*Tag, error) {
+				) (*Image, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
 					err.Error(),
-					"error getting tag from manifest",
+					"error getting image from manifest",
 				)
 			},
 		},
 		{
-			name: "with platform constraint -- no tag found",
+			name: "with platform constraint -- no image found",
 			collection: &manifestlist.DeserializedManifestList{
 				ManifestList: manifestlist.ManifestList{
 					Manifests: []manifestlist.ManifestDescriptor{
@@ -810,15 +810,15 @@ func TestExtractTagFromCollection(t *testing.T) {
 				arch: "amd64",
 			},
 			client: &repositoryClient{
-				getTagByDigestFn: func(
+				getImageByDigestFn: func(
 					context.Context,
 					digest.Digest,
 					*platformConstraint,
-				) (*Tag, error) {
+				) (*Image, error) {
 					return nil, nil
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "expected manifest for digest")
 				require.Contains(t, err.Error(), "to match platform")
@@ -843,25 +843,25 @@ func TestExtractTagFromCollection(t *testing.T) {
 				arch: "amd64",
 			},
 			client: &repositoryClient{
-				getTagByDigestFn: func(
+				getImageByDigestFn: func(
 					context.Context,
 					digest.Digest,
 					*platformConstraint,
-				) (*Tag, error) {
-					return &Tag{
+				) (*Image, error) {
+					return &Image{
 						CreatedAt: timePtr(testNow),
 					}, nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, tag)
-				require.NotNil(t, tag.CreatedAt)
-				require.Equal(t, testNow, *tag.CreatedAt)
+				require.NotNil(t, image)
+				require.NotNil(t, image.CreatedAt)
+				require.Equal(t, testNow, *image.CreatedAt)
 			},
 		},
 		{
-			name: "without platform constraint -- error getting tag by digest",
+			name: "without platform constraint -- error getting image by digest",
 			collection: &manifestlist.DeserializedManifestList{
 				ManifestList: manifestlist.ManifestList{
 					Manifests: []manifestlist.ManifestDescriptor{
@@ -875,25 +875,25 @@ func TestExtractTagFromCollection(t *testing.T) {
 				},
 			},
 			client: &repositoryClient{
-				getTagByDigestFn: func(
+				getImageByDigestFn: func(
 					context.Context,
 					digest.Digest,
 					*platformConstraint,
-				) (*Tag, error) {
+				) (*Image, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
 					err.Error(),
-					"error getting tag from manifest",
+					"error getting image from manifest",
 				)
 			},
 		},
 		{
-			name: "without platform constraint -- no tag found",
+			name: "without platform constraint -- no image found",
 			collection: &manifestlist.DeserializedManifestList{
 				ManifestList: manifestlist.ManifestList{
 					Manifests: []manifestlist.ManifestDescriptor{
@@ -907,17 +907,17 @@ func TestExtractTagFromCollection(t *testing.T) {
 				},
 			},
 			client: &repositoryClient{
-				getTagByDigestFn: func(
+				getImageByDigestFn: func(
 					context.Context,
 					digest.Digest,
 					*platformConstraint,
-				) (*Tag, error) {
+				) (*Image, error) {
 					return nil, nil
 				},
 			},
-			assertions: func(_ *Tag, err error) {
+			assertions: func(_ *Image, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "found no tag for manifest")
+				require.Contains(t, err.Error(), "found no image for manifest")
 			},
 		},
 		{
@@ -935,28 +935,28 @@ func TestExtractTagFromCollection(t *testing.T) {
 				},
 			},
 			client: &repositoryClient{
-				getTagByDigestFn: func(
+				getImageByDigestFn: func(
 					context.Context,
 					digest.Digest,
 					*platformConstraint,
-				) (*Tag, error) {
-					return &Tag{
+				) (*Image, error) {
+					return &Image{
 						CreatedAt: &testNow,
 					}, nil
 				},
 			},
-			assertions: func(tag *Tag, err error) {
+			assertions: func(image *Image, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, tag)
-				require.NotNil(t, tag.CreatedAt)
-				require.Equal(t, testNow, *tag.CreatedAt)
+				require.NotNil(t, image)
+				require.NotNil(t, image.CreatedAt)
+				require.Equal(t, testNow, *image.CreatedAt)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.client.extractTagFromCollection(
+				testCase.client.extractImageFromCollection(
 					context.Background(),
 					testCase.collection,
 					testCase.platform,

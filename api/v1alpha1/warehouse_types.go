@@ -13,13 +13,13 @@ const (
 )
 
 // +kubebuilder:validation:Enum={Digest,Lexical,NewestBuild,SemVer}
-type ImageTagSelectionStrategy string
+type ImageSelectionStrategy string
 
 const (
-	ImageTagSelectionStrategyDigest      ImageTagSelectionStrategy = "Digest"
-	ImageTagSelectionStrategyLexical     ImageTagSelectionStrategy = "Lexical"
-	ImageTagSelectionStrategyNewestBuild ImageTagSelectionStrategy = "NewestBuild"
-	ImageTagSelectionStrategySemVer      ImageTagSelectionStrategy = "SemVer"
+	ImageSelectionStrategyDigest      ImageSelectionStrategy = "Digest"
+	ImageSelectionStrategyLexical     ImageSelectionStrategy = "Lexical"
+	ImageSelectionStrategyNewestBuild ImageSelectionStrategy = "NewestBuild"
+	ImageSelectionStrategySemVer      ImageSelectionStrategy = "SemVer"
 )
 
 //+kubebuilder:object:root=true
@@ -133,18 +133,18 @@ type ImageSubscription struct {
 	//+kubebuilder:validation:Optional
 	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	GitRepoURL string `json:"gitRepoURL,omitempty"`
-	// TagSelectionStrategy specifies the rules for how to identify the newest version
+	// ImageSelectionStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
 	//
 	// +kubebuilder:default=SemVer
-	TagSelectionStrategy ImageTagSelectionStrategy `json:"tagSelectionStrategy,omitempty"`
+	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty"`
 	// SemverConstraint specifies constraints on what new image versions are
 	// permissible. The value in this field only has any effect when the
-	// TagSelectionStrategy is SemVer or left unspecified (which is implicitly the
-	// same as SemVer). This field is also optional. When left unspecified, (and
-	// the TagSelectionStrategy is SemVer or unspecified), there will be no
+	// ImageSelectionStrategy is SemVer or left unspecified (which is implicitly
+	// the same as SemVer). This field is also optional. When left unspecified,
+	// (and the ImageSelectionStrategy is SemVer or unspecified), there will be no
 	// constraints, which means the latest semantically tagged version of an image
 	// will always be used. Care should be taken with leaving this field
 	// unspecified, as it can lead to the unanticipated rollout of breaking
