@@ -74,7 +74,8 @@ k8s_resource(
     'kargo-api:clusterrolebinding',
     'kargo-api:configmap',
     'kargo-api:secret',
-    'kargo-api:serviceaccount'
+    'kargo-api:serviceaccount',
+    'kargo-secret-manager:clusterrole'
   ],
   resource_deps=['back-end-compile','dex-server']
 )
