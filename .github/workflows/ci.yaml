@@ -111,7 +111,7 @@ jobs:
     - name: Install buf
       run: go install github.com/bufbuild/buf/cmd/buf@v1.26.1
     - name: Install controller-gen
-      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.13.0
+      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
     - name: Run Codegen
       run: make codegen
     - name: Git stuff
