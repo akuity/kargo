@@ -29,7 +29,6 @@ func TestNewWebhook(t *testing.T) {
 	require.NotNil(t, w.ensureNamespaceFn)
 	require.NotNil(t, w.getNamespaceFn)
 	require.NotNil(t, w.createNamespaceFn)
-	require.NotNil(t, w.updateNamespaceFn)
 }
 
 func TestValidateCreate(t *testing.T) {
@@ -189,80 +188,7 @@ func TestEnsureNamespace(t *testing.T) {
 		},
 
 		{
-			name: "namespace exists, is not owned by project, but is labeled " +
-				"as a project; error updating namespace",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns, ok := obj.(*corev1.Namespace)
-					require.True(t, ok)
-					ns.Labels = map[string]string{
-						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
-					}
-					return nil
-				},
-				updateNamespaceFn: func(
-					context.Context,
-					client.Object,
-					...client.UpdateOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(err error) {
-				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
-				require.Equal(
-					t,
-					int32(http.StatusInternalServerError),
-					statusErr.ErrStatus.Code,
-				)
-			},
-		},
-
-		{
-			name: "namespace exists, is not owned by project, but is labeled " +
-				"as a project; success updating namespace",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns, ok := obj.(*corev1.Namespace)
-					require.True(t, ok)
-					ns.Labels = map[string]string{
-						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
-					}
-					return nil
-				},
-				updateNamespaceFn: func(
-					context.Context,
-					client.Object,
-					...client.UpdateOption,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(err error) {
-				require.NoError(t, err)
-			},
-		},
-
-		{
-			name: "namespace exists, is not owned by project, and is not labeled as a project",
+			name: "namespace exists, has no owner, but isn't labeled as a project",
 			webhook: &webhook{
 				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
 					return nil
@@ -285,7 +211,7 @@ func TestEnsureNamespace(t *testing.T) {
 		},
 
 		{
-			name: "namespace exists and is owned by project",
+			name: "namespace exists and has one owner that isn't the Project",
 			webhook: &webhook{
 				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
 					return nil
@@ -299,14 +225,42 @@ func TestEnsureNamespace(t *testing.T) {
 					ns := obj.(*corev1.Namespace) // nolint: forcetypeassert
 					ns.OwnerReferences = []metav1.OwnerReference{
 						{
-							UID: types.UID("fake-uid"),
+							UID: types.UID("wrong-fake-uid"),
 						},
 					}
 					return nil
 				},
 			},
 			assertions: func(err error) {
-				require.NoError(t, err)
+				require.Error(t, err)
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(t, int32(http.StatusConflict), statusErr.ErrStatus.Code)
+			},
+		},
+
+		{
+			name: "namespace has multiple owners",
+			webhook: &webhook{
+				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
+					return nil
+				},
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns := obj.(*corev1.Namespace) // nolint: forcetypeassert
+					ns.OwnerReferences = []metav1.OwnerReference{{}, {}}
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				statusErr, ok := err.(*apierrors.StatusError)
+				require.True(t, ok)
+				require.Equal(t, int32(http.StatusConflict), statusErr.ErrStatus.Code)
 			},
 		},
 

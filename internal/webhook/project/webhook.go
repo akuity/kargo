@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -53,12 +52,6 @@ type webhook struct {
 		client.Object,
 		...client.CreateOption,
 	) error
-
-	updateNamespaceFn func(
-		context.Context,
-		client.Object,
-		...client.UpdateOption,
-	) error
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -75,7 +68,6 @@ func newWebhook(kubeClient client.Client) *webhook {
 	w.ensureNamespaceFn = w.ensureNamespace
 	w.getNamespaceFn = kubeClient.Get
 	w.createNamespaceFn = kubeClient.Create
-	w.updateNamespaceFn = kubeClient.Update
 	return w
 }
 
@@ -100,6 +92,9 @@ func (w *webhook) ValidateCreate(
 		return nil, nil
 	}
 
+	// We synchronously ensure the existence of a namespace with the same name as
+	// the Project because resources following the Project in a manifest are
+	// likely to be scoped to that namespace.
 	return nil, w.ensureNamespaceFn(ctx, project)
 }
 
@@ -159,6 +154,10 @@ func (w *webhook) validatePromotionPolicies(
 	return nil
 }
 
+// ensureNamespace is used to ensure the existence of a namespace with the same
+// name as the Project. If the namespace does not exist, it is created. If the
+// namespace exists, it is checked for any ownership conflicts with the Project
+// and will return an error if any are found.
 func (w *webhook) ensureNamespace(
 	ctx context.Context,
 	project *kargoapi.Project,
@@ -168,20 +167,6 @@ func (w *webhook) ensureNamespace(
 		"name":    project.Name,
 	})
 
-	ownerRef := metav1.NewControllerRef(
-		project,
-		kargoapi.GroupVersion.WithKind("Project"),
-	)
-	ownerRef.BlockOwnerDeletion = ptr.To(false)
-
-	// We handle creation of a Project's associated namespace synchronously in
-	// this webhook so that the namespace is guaranteed to exist before
-	// other resources (appearing below the Project) in a manifest will not fail
-	// to create due to the namespace not existing yet.
-
-	// There is no guarantee that just because this is a create request that
-	// there wasn't a previous attempt to create this Project that failed. If
-	// that is the case, the namespace may already exist.
 	ns := &corev1.Namespace{}
 	err := w.getNamespaceFn(
 		ctx,
@@ -189,41 +174,28 @@ func (w *webhook) ensureNamespace(
 		ns,
 	)
 	if err == nil {
-		// We found an existing namespace with the same name as the Project. If
-		// it's owned by this Project then it was created on a previous attempt to
-		// create this Project, but otherwise, this could be a problem.
-		for _, ownerRef := range ns.OwnerReferences {
-			if ownerRef.UID == project.UID {
-				logger.Debug("namespace exists and is owned by this Project")
-				return nil
-			}
-		}
-		if ns.Labels != nil &&
-			ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue &&
-			len(ns.OwnerReferences) == 0 {
-			logger.Debug(
-				"namespace exists, but is not owned by this Project, but has the " +
-					"project label; Project will take it over",
+		// We found an existing namespace with the same name as the Project. Check
+		// for possible conflicts before proceeding.
+		//
+		// No owner, but not a Project namespace:
+		if (len(ns.OwnerReferences) == 0 &&
+			(ns.Labels == nil || ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue)) ||
+			// Not owned by this Project:
+			(len(ns.OwnerReferences) == 1 && ns.OwnerReferences[0].UID != project.UID) ||
+			// Multiple owners:
+			len(ns.OwnerReferences) > 1 {
+			return apierrors.NewConflict(
+				projectGroupResource,
+				project.Name,
+				errors.Errorf(
+					"failed to initialize Project %q because namespace %q already exists",
+					project.Name,
+					project.Name,
+				),
 			)
-			ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-			controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
-			if err = w.updateNamespaceFn(ctx, ns); err != nil {
-				return apierrors.NewInternalError(
-					errors.Wrapf(err, "error updating namespace %q", project.Name),
-				)
-			}
-			logger.Debug("updated namespace with Project as owner")
-			return nil
 		}
-		return apierrors.NewConflict(
-			projectGroupResource,
-			project.Name,
-			errors.Errorf(
-				"failed to initialize Project %q because namespace %q already exists",
-				project.Name,
-				project.Name,
-			),
-		)
+		logger.Debug("namespace exists but no conflict was found")
+		return nil
 	}
 	if !apierrors.IsNotFound(err) {
 		return apierrors.NewInternalError(
@@ -231,7 +203,7 @@ func (w *webhook) ensureNamespace(
 		)
 	}
 
-	logger.Debug("namespace does not exist yet; creating namespace")
+	logger.Debug("namespace does not exist; creating it")
 
 	ns = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -239,7 +211,13 @@ func (w *webhook) ensureNamespace(
 			Labels: map[string]string{
 				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
 			},
-			OwnerReferences: []metav1.OwnerReference{*ownerRef},
+			// Note: We no longer use an owner reference here. If we did, and too
+			// much time were to pass between namespace creation and the completion of
+			// this webhook, Kubernetes would notice the absence of the owner, mistake
+			// the namespace for an orphan, and delete it. We do still want the
+			// Project to own the namespace, but we rely on the Project reconciler in
+			// the management controller to establish that relationship
+			// asynchronously.
 		},
 	}
 	// Project namespaces are owned by a Project. Deleting a Project
