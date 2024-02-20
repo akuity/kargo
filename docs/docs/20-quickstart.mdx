@@ -220,10 +220,10 @@ UAT, and production.
 
 ### Create Argo CD `Application` Resources
 
-In this step, we will create three Argo CD `Application` resources that deploy
-the sample application at three different stages of its lifecycle, with three
-slightly different configurations, to three different namespaces in our local
-cluster:
+In this step, we will use an Argo CD `ApplicationSet` resource to create and
+manage three Argo CD `Application` resources that deploy the sample application
+at three different stages of its lifecycle, with three slightly different
+configurations, to three different namespaces in our local cluster:
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -298,18 +298,25 @@ the previous section.
       --insecure-skip-tls-verify
     ```
 
-1. Next, we'll create a Kargo project, which is really a specially labeled
-   Kubernetes `Namespace`:
+1. Next, we'll create several Kargo resource:
+
+    1. A `Project`, which, when reconciled, will effect all boilerplate project
+       initialization, including the creation of a specially-labeled `Namespace`
+       with the same name as the `Project`
+
+    1. A `Secret` containing credentials for our GitOps repository
+
+    1. A `Warehouse` that subscribes to a container image repository
+
+    1. Three `Stage` resources -- `test`, `uat`, and `prod`
 
     ```shell
-    kargo create project kargo-demo
-    ```
-
-1. To create some credentials (a Kubernetes `Secret`) for writing to our GitOps
-   repository, we will fall back on `kubectl`:
-
-    ```shell
-    cat <<EOF | kubectl apply -f -
+    cat <<EOF | kargo apply -f -
+    apiVersion: kargo.akuity.io/v1alpha1
+    kind: Project
+    metadata:
+      name: kargo-demo
+    ---
     apiVersion: v1
     kind: Secret
     type: Opaque
@@ -323,23 +330,7 @@ the previous section.
       url: ${GITOPS_REPO_URL}
       username: ${GITHUB_USERNAME}
       password: ${GITHUB_PAT}
-    EOF
-    ```
-
-    :::info
-    Falling back on `kubectl` for credential management is necessary at this
-    time because the Kargo API server lacks sufficient permissions to manage
-    Kubernetes `Secret` resources.
-
-    This will be addressed in future versions.
-    :::
-
-1. Next, returning to the `kargo` CLI, we create a `Warehouse` and three Kargo
-   `Stage` resources. All of this his can be thought of as an orchestration
-   layer for our GitOps repository and Argo CD `Application` resources.
-
-    ```shell
-    cat <<EOF | kargo apply -f -
+    ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Warehouse
     metadata:
@@ -418,7 +409,6 @@ the previous section.
   :::info
   Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
   :::
-
 
 1. Use the CLI to view our `Warehouse` resource:
 
