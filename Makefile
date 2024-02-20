@@ -82,6 +82,13 @@ test-unit:
 		./...
 
 ################################################################################
+# Dependency management                                                        #
+################################################################################
+.PHONY: deps-tools
+deps-tools:
+	./hack/install-tools.sh
+
+################################################################################
 # Builds                                                                       #
 #                                                                              #
 # These targets are used by our continuous integration and release processes.  #
