@@ -20,7 +20,7 @@ export const FreightContents = (props: {
     } & React.PropsWithChildren
   ) => (
     <Tooltip
-      className={`flex items-center my-1 flex-col bg-neutral-800 rounded p-1 w-full ${
+      className={`flex items-center my-1 flex-col bg-neutral-800 rounded p-1 w-20 max-w-20 overflow-x-hidden ${
         promoting && highlighted ? 'bg-transparent' : ''
       }`}
       overlay={props.overlay}
@@ -33,7 +33,7 @@ export const FreightContents = (props: {
 
   return (
     <div
-      className={`hover:text-white flex flex-col justify-start items-center font-mono text-xs flex-shrink min-w-min w-full overflow-y-auto max-h-full ${
+      className={`hover:text-white flex flex-col justify-start items-center font-mono text-xs flex-shrink min-w-min w-20 overflow-y-auto max-h-full ${
         highlighted ? 'text-white' : 'text-gray-500'
       }`}
     >
@@ -54,7 +54,7 @@ export const FreightContents = (props: {
           title={`${i.repoUrl}:${i.tag}`}
           icon={faDocker}
         >
-          <div>{i.tag}</div>
+          <div>ffac537e6cbbf934b08745a378932722df287a53</div>
         </FreightContentItem>
       ))}
     </div>
