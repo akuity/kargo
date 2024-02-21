@@ -54,7 +54,7 @@ export const FreightContents = (props: {
           title={`${i.repoUrl}:${i.tag}`}
           icon={faDocker}
         >
-          <div>ffac537e6cbbf934b08745a378932722df287a53</div>
+          <div>{i.tag}</div>
         </FreightContentItem>
       ))}
     </div>
