@@ -82,7 +82,7 @@
                   "repoURL": {
                     "description": "URL is the repository's URL. This is a required field.",
                     "minLength": 1,
-                    "pattern": "^https://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
+                    "pattern": "^https?://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
                     "type": "string"
                   },
                   "semverConstraint": {
@@ -104,7 +104,7 @@
                   },
                   "gitRepoURL": {
                     "description": "GitRepoURL optionally specifies the URL of a Git repository that contains\nthe source code for the image repository referenced by the RepoURL field.\nWhen this is specified, Kargo MAY be able to infer and link to the exact\nrevision of that source code that was used to build the image.",
-                    "pattern": "^https://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
+                    "pattern": "^https?://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
                     "type": "string"
                   },
                   "ignoreTags": {
