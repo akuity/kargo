@@ -101,9 +101,9 @@ func (k *kubernetesDatabase) Get(
 ) (Credentials, bool, error) {
 	creds := Credentials{}
 
-	// If we are dealing with an insecure HTTP endpoint (of type Git),
+	// If we are dealing with an insecure HTTP endpoint (of any type),
 	// refuse to return any credentials
-	if credType == TypeGit && strings.HasPrefix(repoURL, "http://") {
+	if strings.HasPrefix(repoURL, "http://") {
 		logger := logging.LoggerFromContext(ctx).WithField("repoURL", repoURL)
 		logger.Warnf("refused to get credentials for insecure HTTP endpoint")
 
