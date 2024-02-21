@@ -67,7 +67,7 @@ type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+	//+kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL"`
 	// CommitSelectionStrategy specifies the rules for how to identify the newest
 	// commit of interest in the repository specified by the RepoURL field. This
@@ -131,7 +131,7 @@ type ImageSubscription struct {
 	// revision of that source code that was used to build the image.
 	//
 	//+kubebuilder:validation:Optional
-	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+	//+kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	GitRepoURL string `json:"gitRepoURL,omitempty"`
 	// ImageSelectionStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When

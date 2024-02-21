@@ -32,6 +32,8 @@ func TestGet(t *testing.T) {
 	var testGlobalNamespaces = []string{"kargo"}
 	const testURLPrefix = "myrepo.com"
 	const testURL = testURLPrefix + "/myrepo/myimage"
+	const insecureTestURL = "http://" + testURL
+
 	secretInNamespaceExact := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "in-namespace-exact",
@@ -92,53 +94,93 @@ func TestGet(t *testing.T) {
 			"url":      []byte(testURLPrefix),
 		},
 	}
+	secretWithInsecureURL := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "insecure-http-endpoint",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				kargoSecretTypeLabelKey: repositorySecretTypeLabelValue,
+			},
+		},
+		Data: map[string][]byte{
+			"type":     []byte(TypeGit),
+			"username": []byte("insecure-http-endpoint"),
+			"password": []byte("fake-password"),
+			"url":      []byte(insecureTestURL),
+		},
+	}
+
 	testCases := []struct {
 		name     string
 		secrets  []client.Object
+		credType Type
+		repo     string
 		expected *corev1.Secret
 		found    bool
 	}{
 		{
 			name:     "single secret in namespace exact",
 			secrets:  []client.Object{secretInNamespaceExact},
+			credType: TypeImage,
+			repo:     testURL,
 			expected: secretInNamespaceExact,
 			found:    true,
 		},
 		{
 			name:     "single secret in namespace prefix",
 			secrets:  []client.Object{secretInNamespacePrefix},
+			credType: TypeImage,
+			repo:     testURL,
 			expected: secretInNamespacePrefix,
 			found:    true,
 		},
 		{
 			name:     "single secret in global namespace exact",
 			secrets:  []client.Object{secretInGlobalExact},
+			credType: TypeImage,
+			repo:     testURL,
 			expected: secretInGlobalExact,
 			found:    true,
 		},
 		{
 			name:     "single secret in global namespace prefix",
 			secrets:  []client.Object{secretInGlobalPrefix},
+			credType: TypeImage,
+			repo:     testURL,
 			expected: secretInGlobalPrefix,
 			found:    true,
 		},
 		{
 			name:     "in namespace exact before prefix",
 			secrets:  []client.Object{secretInNamespaceExact, secretInNamespacePrefix},
+			credType: TypeImage,
+			repo:     testURL,
 			expected: secretInNamespaceExact,
 			found:    true,
 		},
 		{
 			name:     "global exact before prefix",
 			secrets:  []client.Object{secretInGlobalExact, secretInGlobalPrefix},
+			credType: TypeImage,
+			repo:     testURL,
 			expected: secretInGlobalExact,
 			found:    true,
 		},
 		{
 			name:     "namespace before global",
 			secrets:  []client.Object{secretInNamespacePrefix, secretInGlobalPrefix},
+			credType: TypeImage,
+			repo:     testURL,
 			expected: secretInNamespacePrefix,
 			found:    true,
+		},
+		{
+			name:     "insecure HTTP endpoint",
+			secrets:  []client.Object{secretWithInsecureURL}, // Matches but should not be returned
+			credType: TypeGit,
+			repo:     insecureTestURL,
+			expected: nil,
+			found:    false,
 		},
 	}
 
@@ -153,15 +195,16 @@ func TestGet(t *testing.T) {
 				},
 			)
 
-			creds, ok, err := d.Get(context.Background(), testNamespace, TypeImage, testURL)
+			creds, ok, err := d.Get(context.Background(), testNamespace, testCase.credType, testCase.repo)
 			require.NoError(t, err)
 			require.Equal(t, testCase.found, ok)
 			if testCase.found {
 				require.Equal(t, string(testCase.expected.Data["username"]), creds.Username)
+			} else {
+				require.Empty(t, creds)
 			}
 		})
 	}
-
 }
 
 func TestGetCredentialsSecret(t *testing.T) {
