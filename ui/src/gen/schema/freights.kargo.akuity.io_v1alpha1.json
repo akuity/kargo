@@ -3,7 +3,7 @@
   "description": "Freight represents a collection of versioned artifacts.",
   "properties": {
     "apiVersion": {
-      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "description": "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
       "type": "string"
     },
     "charts": {
@@ -16,7 +16,7 @@
             "type": "string"
           },
           "repoURL": {
-            "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart\nrepositories (using HTTP/S) can contain differently named charts. When this\nfield points to such a repository, the Name field will specify the name of\nthe chart within the repository. In the case of a repository within an OCI\nregistry, the URL implicitly points to a specific chart and the Name field\nwill be empty.",
+            "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty.",
             "type": "string"
           },
           "version": {
@@ -42,11 +42,11 @@
             "type": "string"
           },
           "healthCheckCommit": {
-            "description": "HealthCheckCommit is the ID of a specific commit. When specified,\nassessments of Stage health will used this value (instead of ID) when\ndetermining if applicable sources of Argo CD Application resources\nassociated with the Stage are or are not synced to this commit. Note that\nthere are cases (as in that of Kargo Render being utilized as a promotion\nmechanism) wherein the value of this field may differ from the commit ID\nfound in the ID field.",
+            "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Kargo Render being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
             "type": "string"
           },
           "id": {
-            "description": "ID is the ID of a specific commit in the Git repository specified by\nRepoURL.",
+            "description": "ID is the ID of a specific commit in the Git repository specified by RepoURL.",
             "type": "string"
           },
           "message": {
@@ -58,7 +58,7 @@
             "type": "string"
           },
           "tag": {
-            "description": "Tag denotes a tag in the repository that matched selection criteria and\nresolved to this commit.",
+            "description": "Tag denotes a tag in the repository that matched selection criteria and resolved to this commit.",
             "type": "string"
           }
         },
@@ -67,7 +67,7 @@
       "type": "array"
     },
     "id": {
-      "description": "ID is a system-assigned value that is derived deterministically from the\ncontents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their IDs.",
+      "description": "ID is a system-assigned value that is derived deterministically from the contents of the Freight. i.e. Two pieces of Freight can be compared for equality by comparing their IDs.",
       "type": "string"
     },
     "images": {
@@ -76,11 +76,11 @@
         "description": "Image describes a specific version of a container image.",
         "properties": {
           "digest": {
-            "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
+            "description": "Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag.",
             "type": "string"
           },
           "gitRepoURL": {
-            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+            "description": "GitRepoURL specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field if Kargo was able to infer it.",
             "type": "string"
           },
           "repoURL": {
@@ -88,7 +88,7 @@
             "type": "string"
           },
           "tag": {
-            "description": "Tag identifies a specific version of the image in the repository specified\nby RepoURL.",
+            "description": "Tag identifies a specific version of the image in the repository specified by RepoURL.",
             "type": "string"
           }
         },
@@ -97,7 +97,7 @@
       "type": "array"
     },
     "kind": {
-      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "description": "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
       "type": "string"
     },
     "metadata": {
@@ -108,10 +108,10 @@
       "properties": {
         "approvedFor": {
           "additionalProperties": {
-            "description": "ApprovedStage describes a Stage for which Freight has been (manually)\napproved.",
+            "description": "ApprovedStage describes a Stage for which Freight has been (manually) approved.",
             "type": "object"
           },
-          "description": "ApprovedFor describes the Stages for which this Freight has been approved\npreemptively/manually by a user. This is useful for hotfixes, where one\nmight wish to promote a piece of Freight to a given Stage without\ntransiting the entire pipeline.",
+          "description": "ApprovedFor describes the Stages for which this Freight has been approved preemptively/manually by a user. This is useful for hotfixes, where one might wish to promote a piece of Freight to a given Stage without transiting the entire pipeline.",
           "type": "object"
         },
         "verifiedIn": {
@@ -119,7 +119,7 @@
             "description": "VerifiedStage describes a Stage in which Freight has been verified.",
             "type": "object"
           },
-          "description": "VerifiedIn describes the Stages in which this Freight has been verified\nthrough promotion and subsequent health checks.",
+          "description": "VerifiedIn describes the Stages in which this Freight has been verified through promotion and subsequent health checks.",
           "type": "object"
         }
       },

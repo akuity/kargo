@@ -13,7 +13,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -47,10 +46,9 @@ func newVersionCommand(
 					serverVersion = resp.Msg.GetVersionInfo()
 				}
 			}
-			cliVersion := typesv1alpha1.ToVersionProto(versionpkg.GetVersion())
-
+			cliVersion := svcv1alpha1.ToVersionProto(versionpkg.GetVersion())
 			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
-				fmt.Println("Client Version:", cliVersion.GetVersion())
+				fmt.Println("Client Version:", cliVersion.Version)
 				if serverVersion != nil {
 					fmt.Println("Server Version:", serverVersion.GetVersion())
 				}

@@ -63,7 +63,11 @@ lint-go:
 
 .PHONY: lint-proto
 lint-proto:
+	# Vendor go dependencies to build protobuf definitions
+	go mod vendor
 	buf lint api --error-format=$(BUF_LINT_ERROR_FORMAT)
+	# Clean up vendor directory
+	rm -r $(CURDIR)/vendor
 
 .PHONY: lint-charts
 lint-charts:
@@ -204,7 +208,7 @@ DOCKER_CMD := $(CONTAINER_RUNTIME) run \
 
 .PHONY: hack-build-dev-tools
 hack-build-dev-tools:
-	$(CONTAINER_RUNTIME) build -f Dockerfile.dev -t kargo:dev-tools .
+	$(CONTAINER_RUNTIME) build --load -f Dockerfile.dev -t kargo:dev-tools .
 
 .PHONY: hack-lint
 hack-lint: hack-build-dev-tools
@@ -247,6 +251,7 @@ hack-build:
 		--build-arg GIT_COMMIT=$(shell git rev-parse HEAD) \
 		--build-arg GIT_TREE_STATE=$(shell if [ -z "`git status --porcelain`" ]; then echo "clean" ; else echo "dirty"; fi) \
 		--tag $(IMAGE_REPO):$(IMAGE_TAG) \
+		--load \
 		.
 
 .PHONY: hack-build-cli

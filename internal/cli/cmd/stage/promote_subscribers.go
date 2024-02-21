@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/utils/ptr"
 
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -62,7 +61,7 @@ kargo stage promote-subscribers dev --freight=abc123
 			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 				if res != nil && res.Msg != nil {
 					for _, p := range res.Msg.GetPromotions() {
-						fmt.Fprintf(opt.IOStreams.Out, "Promotion Created: %q\n", *p.Metadata.Name)
+						fmt.Fprintf(opt.IOStreams.Out, "Promotion Created: %q\n", p.Name)
 					}
 				}
 				if promoteErr != nil {
@@ -76,8 +75,7 @@ kargo stage promote-subscribers dev --freight=abc123
 				return errors.Wrap(printerErr, "new printer")
 			}
 			for _, p := range res.Msg.GetPromotions() {
-				kubeP := typesv1alpha1.FromPromotionProto(p)
-				_ = printer.PrintObj(kubeP, opt.IOStreams.Out)
+				_ = printer.PrintObj(p, opt.IOStreams.Out)
 			}
 			return promoteErr
 		},

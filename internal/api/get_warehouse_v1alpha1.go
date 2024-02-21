@@ -9,7 +9,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -35,6 +34,6 @@ func (s *server) GetWarehouse(
 		return nil, errors.Wrap(err, "get warehouse")
 	}
 	return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
-		Warehouse: typesv1alpha1.ToWarehouseProto(warehouse),
+		Warehouse: &warehouse,
 	}), nil
 }

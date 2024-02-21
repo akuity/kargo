@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/duration"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -62,17 +61,15 @@ kargo get freight --project=my-project my-freight
 			res := make([]*kargoapi.Freight, 0, len(freight.Freight))
 			var resErr error
 			if len(names) == 0 {
-				for _, f := range freight.Freight {
-					res = append(res, typesv1alpha1.FromFreightProto(f))
-				}
+				res = append(res, freight.Freight...)
 			} else {
 				freightByName := make(map[string]*kargoapi.Freight, len(freight.Freight))
 				freightByAlias := make(map[string]*kargoapi.Freight, len(freight.Freight))
-				for _, f := range freight.Freight {
-					fr := typesv1alpha1.FromFreightProto(f)
-					freightByName[f.GetMetadata().GetName()] = fr
-					if f.GetMetadata().GetLabels() != nil {
-						freightByAlias[f.GetMetadata().GetLabels()[kargoapi.AliasLabelKey]] = fr
+				for i := range freight.Freight {
+					fr := freight.Freight[i]
+					freightByName[fr.Name] = fr
+					if fr.GetLabels() != nil {
+						freightByAlias[fr.GetLabels()[kargoapi.AliasLabelKey]] = fr
 					}
 				}
 				selectedFreight := make(map[string]struct{}, len(names))

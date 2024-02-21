@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -36,7 +35,7 @@ func (s *server) CreateStage(
 				Namespace: req.Msg.GetTyped().GetProject(),
 				Name:      req.Msg.GetTyped().GetName(),
 			},
-			Spec: typesv1alpha1.FromStageSpecProto(req.Msg.GetTyped().GetSpec()),
+			Spec: req.Msg.GetTyped().GetSpec(),
 		}
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
@@ -52,6 +51,6 @@ func (s *server) CreateStage(
 		return nil, errors.Wrap(err, "create stage")
 	}
 	return connect.NewResponse(&svcv1alpha1.CreateStageResponse{
-		Stage: typesv1alpha1.ToStageProto(stage),
+		Stage: &stage,
 	}), nil
 }

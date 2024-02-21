@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -31,7 +30,7 @@ func (s *server) UpdateWarehouse(
 				Namespace: req.Msg.GetTyped().GetProject(),
 				Name:      req.Msg.GetTyped().GetName(),
 			},
-			Spec: typesv1alpha1.FromWarehouseSpecProto(req.Msg.GetTyped().GetSpec()),
+			Spec: req.Msg.GetTyped().GetSpec(),
 		}
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("warehouse should not be empty"))
@@ -55,6 +54,6 @@ func (s *server) UpdateWarehouse(
 		return nil, errors.Wrap(err, "update warehouse")
 	}
 	return connect.NewResponse(&svcv1alpha1.UpdateWarehouseResponse{
-		Warehouse: typesv1alpha1.ToWarehouseProto(warehouse),
+		Warehouse: &warehouse,
 	}), nil
 }

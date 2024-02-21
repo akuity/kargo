@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/duration"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -60,13 +59,12 @@ kargo get stages --project=my-project my-stage
 			res := make([]*kargoapi.Stage, 0, len(resp.Msg.GetStages()))
 			var resErr error
 			if len(names) == 0 {
-				for _, s := range resp.Msg.GetStages() {
-					res = append(res, typesv1alpha1.FromStageProto(s))
-				}
+				res = append(res, resp.Msg.GetStages()...)
 			} else {
 				stagesByName := make(map[string]*kargoapi.Stage, len(resp.Msg.GetStages()))
-				for _, s := range resp.Msg.GetStages() {
-					stagesByName[s.GetMetadata().GetName()] = typesv1alpha1.FromStageProto(s)
+				for i := range resp.Msg.GetStages() {
+					s := resp.Msg.GetStages()[i]
+					stagesByName[s.Name] = s
 				}
 				for _, name := range names {
 					if stage, ok := stagesByName[name]; ok {

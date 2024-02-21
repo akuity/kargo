@@ -59,8 +59,8 @@ func waitForWarehouse(
 		if msg == nil || msg.Warehouse == nil {
 			return errors.New("unexpected response")
 		}
-		if msg.Warehouse.Metadata.Annotations == nil ||
-			msg.Warehouse.Metadata.Annotations[kargoapi.AnnotationKeyRefresh] == "" {
+		if msg.Warehouse.GetAnnotations() == nil ||
+			msg.Warehouse.GetAnnotations()[kargoapi.AnnotationKeyRefresh] == "" {
 			return nil
 		}
 	}

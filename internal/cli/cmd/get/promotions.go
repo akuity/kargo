@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/duration"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -69,13 +68,12 @@ kargo get promotions --project=my-project some-promotion
 			res := make([]*kargoapi.Promotion, 0, len(resp.Msg.GetPromotions()))
 			var resErr error
 			if len(names) == 0 {
-				for _, p := range resp.Msg.GetPromotions() {
-					res = append(res, typesv1alpha1.FromPromotionProto(p))
-				}
+				res = append(res, resp.Msg.GetPromotions()...)
 			} else {
 				promotionsByName := make(map[string]*kargoapi.Promotion, len(resp.Msg.GetPromotions()))
-				for _, p := range resp.Msg.GetPromotions() {
-					promotionsByName[p.GetMetadata().GetName()] = typesv1alpha1.FromPromotionProto(p)
+				for i := range resp.Msg.GetPromotions() {
+					p := resp.Msg.GetPromotions()[i]
+					promotionsByName[p.GetName()] = p
 				}
 				for _, name := range names {
 					if promo, ok := promotionsByName[name]; ok {

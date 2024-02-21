@@ -59,8 +59,8 @@ func waitForStage(
 		if msg == nil || msg.Stage == nil {
 			return errors.New("unexpected response")
 		}
-		if msg.Stage.Metadata.Annotations == nil ||
-			msg.Stage.Metadata.Annotations[kargoapi.AnnotationKeyRefresh] == "" {
+		if msg.Stage.GetAnnotations() == nil ||
+			msg.Stage.GetAnnotations()[kargoapi.AnnotationKeyRefresh] == "" {
 			return nil
 		}
 	}

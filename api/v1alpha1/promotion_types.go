@@ -10,22 +10,22 @@ const (
 	// PromotionPhasePending denotes a Promotion that has not been executed yet.
 	// i.e. It is currently waiting in a queue. Queues are stage-specific and
 	// prioritized by Promotion creation time.
-	PromotionPhasePending PromotionPhase = "Pending"
+	PromotionPhasePending	PromotionPhase	= "Pending"
 	// PromotionPhaseRunning denotes a Promotion that is actively being executed.
 	//
 	// TODO: "Active" is the operative word here. We are leaving room for the
 	// possibility in the near future that an in-progress Promotion might be
 	// paused/suspended pending some user action.
-	PromotionPhaseRunning PromotionPhase = "Running"
+	PromotionPhaseRunning	PromotionPhase	= "Running"
 	// PromotionPhaseSucceeded denotes a Promotion that has been successfully
 	// executed.
-	PromotionPhaseSucceeded PromotionPhase = "Succeeded"
+	PromotionPhaseSucceeded	PromotionPhase	= "Succeeded"
 	// PromotionPhaseFailed denotes a Promotion that has failed
-	PromotionPhaseFailed PromotionPhase = "Failed"
+	PromotionPhaseFailed	PromotionPhase	= "Failed"
 	// PromotionPhaseErrored denotes a Promotion that has failed for technical
 	// reasons. Further information about the failure can be found in the
 	// Promotion's status.
-	PromotionPhaseErrored PromotionPhase = "Errored"
+	PromotionPhaseErrored	PromotionPhase	= "Errored"
 )
 
 // IsTerminal returns true if the PromotionPhase is a terminal one.
@@ -49,16 +49,16 @@ func (p *PromotionPhase) IsTerminal() bool {
 // Promotion represents a request to transition a particular Stage into a
 // particular Freight.
 type Promotion struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta		`json:",inline"`
+	metav1.ObjectMeta	`json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec describes the desired transition of a specific Stage into a specific
 	// Freight.
 	//
 	//+kubebuilder:validation:Required
-	Spec *PromotionSpec `json:"spec"`
+	Spec	*PromotionSpec	`json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the current state of the transition represented by this
 	// Promotion.
-	Status PromotionStatus `json:"status,omitempty"`
+	Status	PromotionStatus	`json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 func (p *Promotion) GetStatus() *PromotionStatus {
@@ -74,27 +74,27 @@ type PromotionSpec struct {
 	//
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Stage string `json:"stage"`
+	Stage	string	`json:"stage,omitempty" protobuf:"bytes,1,opt,name=stage"`
 	// Freight specifies the piece of Freight to be promoted into the Stage
 	// referenced by the Stage field.
 	//
 	//+kubebuilder:validation:MinLength=1
-	Freight string `json:"freight"`
+	Freight	string	`json:"freight,omitempty" protobuf:"bytes,2,opt,name=freight"`
 }
 
 // PromotionStatus describes the current state of the transition represented by
 // a Promotion.
 type PromotionStatus struct {
 	// Phase describes where the Promotion currently is in its lifecycle.
-	Phase PromotionPhase `json:"phase,omitempty"`
+	Phase	PromotionPhase	`json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// Message is a display message about the promotion, including any errors
 	// preventing the Promotion controller from executing this Promotion.
 	// i.e. If the Phase field has a value of Failed, this field can be expected
 	// to explain why.
-	Message string `json:"message,omitempty"`
+	Message	string	`json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
 	// Metadata holds arbitrary metadata set by promotion mechanisms
 	// (e.g. for display purposes, or internal bookkeeping)
-	Metadata map[string]string `json:"metadata,omitempty"`
+	Metadata	map[string]string	`json:"metadata,omitempty" protobuf:"bytes,3,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // WithPhase returns a copy of PromotionStatus with the given phase
@@ -108,7 +108,7 @@ func (p *PromotionStatus) WithPhase(phase PromotionPhase) *PromotionStatus {
 
 // PromotionList contains a list of Promotion
 type PromotionList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Promotion `json:"items"`
+	metav1.TypeMeta	`json:",inline"`
+	metav1.ListMeta	`json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Items		[]Promotion	`json:"items,omitempty" protobuf:"bytes,2,rep,name=items"`
 }

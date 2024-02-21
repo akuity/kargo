@@ -13,7 +13,6 @@ import (
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -68,7 +67,7 @@ func (s *server) WatchWarehouses(
 				return errors.Wrap(err, "from unstructured")
 			}
 			if err := stream.Send(&svcv1alpha1.WatchWarehousesResponse{
-				Warehouse: typesv1alpha1.ToWarehouseProto(*warehouse),
+				Warehouse: warehouse,
 				Type:      string(e.Type),
 			}); err != nil {
 				return errors.Wrap(err, "send response")

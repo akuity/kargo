@@ -4,8 +4,8 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Freight, Project, Promotion, Stage, StageSpec, Warehouse, WarehouseSpec } from "../../v1alpha1/types_pb.js";
+import { Message, proto3 } from "@bufbuild/protobuf";
+import { Freight, Project, Promotion, Stage, StageSpec, Warehouse, WarehouseSpec } from "../../v1alpha1/generated_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -70,11 +70,6 @@ export class VersionInfo extends Message<VersionInfo> {
   gitTreeDirty = false;
 
   /**
-   * @generated from field: google.protobuf.Timestamp build_time = 4;
-   */
-  buildTime?: Timestamp;
-
-  /**
    * @generated from field: string go_version = 5;
    */
   goVersion = "";
@@ -89,6 +84,13 @@ export class VersionInfo extends Message<VersionInfo> {
    */
   platform = "";
 
+  /**
+   * version_build_time represents build time in RFC 3339 format.
+   *
+   * @generated from field: string version_build_time = 8;
+   */
+  versionBuildTime = "";
+
   constructor(data?: PartialMessage<VersionInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -100,10 +102,10 @@ export class VersionInfo extends Message<VersionInfo> {
     { no: 1, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "git_commit", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "git_tree_dirty", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "build_time", kind: "message", T: Timestamp },
     { no: 5, name: "go_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "compiler", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "platform", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "version_build_time", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VersionInfo {
@@ -520,7 +522,7 @@ export class TypedStageSpec extends Message<TypedStageSpec> {
   name = "";
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 3;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.StageSpec spec = 3;
    */
   spec?: StageSpec;
 
@@ -1112,7 +1114,7 @@ export class CreateStageRequest extends Message<CreateStageRequest> {
  */
 export class CreateStageResponse extends Message<CreateStageResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
    */
   stage?: Stage;
 
@@ -1186,7 +1188,7 @@ export class ListStagesRequest extends Message<ListStagesRequest> {
  */
 export class ListStagesResponse extends Message<ListStagesResponse> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Stage stages = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
    */
   stages: Stage[] = [];
 
@@ -1266,7 +1268,7 @@ export class GetStageRequest extends Message<GetStageRequest> {
  */
 export class GetStageResponse extends Message<GetStageResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
    */
   stage?: Stage;
 
@@ -1346,7 +1348,7 @@ export class WatchStagesRequest extends Message<WatchStagesRequest> {
  */
 export class WatchStagesResponse extends Message<WatchStagesResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
    */
   stage?: Stage;
 
@@ -1439,7 +1441,7 @@ export class UpdateStageRequest extends Message<UpdateStageRequest> {
  */
 export class UpdateStageResponse extends Message<UpdateStageResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
    */
   stage?: Stage;
 
@@ -1601,7 +1603,7 @@ export class PromoteStageRequest extends Message<PromoteStageRequest> {
  */
 export class PromoteStageResponse extends Message<PromoteStageResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
    */
   promotion?: Promotion;
 
@@ -1687,7 +1689,7 @@ export class PromoteSubscribersRequest extends Message<PromoteSubscribersRequest
  */
 export class PromoteSubscribersResponse extends Message<PromoteSubscribersResponse> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
    */
   promotions: Promotion[] = [];
 
@@ -1767,7 +1769,7 @@ export class RefreshStageRequest extends Message<RefreshStageRequest> {
  */
 export class RefreshStageResponse extends Message<RefreshStageResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
    */
   stage?: Stage;
 
@@ -1902,7 +1904,7 @@ export class ListPromotionsRequest extends Message<ListPromotionsRequest> {
  */
 export class ListPromotionsResponse extends Message<ListPromotionsResponse> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
    */
   promotions: Promotion[] = [];
 
@@ -1982,7 +1984,7 @@ export class WatchPromotionsRequest extends Message<WatchPromotionsRequest> {
  */
 export class WatchPromotionsResponse extends Message<WatchPromotionsResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
    */
   promotion?: Promotion;
 
@@ -2068,7 +2070,7 @@ export class GetPromotionRequest extends Message<GetPromotionRequest> {
  */
 export class GetPromotionResponse extends Message<GetPromotionResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
    */
   promotion?: Promotion;
 
@@ -2148,7 +2150,7 @@ export class WatchPromotionRequest extends Message<WatchPromotionRequest> {
  */
 export class WatchPromotionResponse extends Message<WatchPromotionResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
    */
   promotion?: Promotion;
 
@@ -2310,7 +2312,7 @@ export class CreateProjectRequest extends Message<CreateProjectRequest> {
  */
 export class CreateProjectResponse extends Message<CreateProjectResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Project project = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Project project = 1;
    */
   project?: Project;
 
@@ -2380,7 +2382,7 @@ export class ListProjectsRequest extends Message<ListProjectsRequest> {
  */
 export class ListProjectsResponse extends Message<ListProjectsResponse> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Project projects = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Project projects = 1;
    */
   projects: Project[] = [];
 
@@ -2667,7 +2669,7 @@ export class DeleteFreightResponse extends Message<DeleteFreightResponse> {
  */
 export class FreightList extends Message<FreightList> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
    */
   freight: Freight[] = [];
 
@@ -2823,7 +2825,7 @@ export class ListWarehousesRequest extends Message<ListWarehousesRequest> {
  */
 export class ListWarehousesResponse extends Message<ListWarehousesResponse> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouses = 1;
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.Warehouse warehouses = 1;
    */
   warehouses: Warehouse[] = [];
 
@@ -2903,7 +2905,7 @@ export class GetWarehouseRequest extends Message<GetWarehouseRequest> {
  */
 export class GetWarehouseResponse extends Message<GetWarehouseResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
    */
   warehouse?: Warehouse;
 
@@ -2983,7 +2985,7 @@ export class WatchWarehousesRequest extends Message<WatchWarehousesRequest> {
  */
 export class WatchWarehousesResponse extends Message<WatchWarehousesResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
    */
   warehouse?: Warehouse;
 
@@ -3036,7 +3038,7 @@ export class TypedWarehouseSpec extends Message<TypedWarehouseSpec> {
   name = "";
 
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec spec = 3;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.WarehouseSpec spec = 3;
    */
   spec?: WarehouseSpec;
 
@@ -3125,7 +3127,7 @@ export class CreateWarehouseRequest extends Message<CreateWarehouseRequest> {
  */
 export class CreateWarehouseResponse extends Message<CreateWarehouseResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
    */
   warehouse?: Warehouse;
 
@@ -3212,7 +3214,7 @@ export class UpdateWarehouseRequest extends Message<UpdateWarehouseRequest> {
  */
 export class UpdateWarehouseResponse extends Message<UpdateWarehouseResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
    */
   warehouse?: Warehouse;
 
@@ -3368,7 +3370,7 @@ export class RefreshWarehouseRequest extends Message<RefreshWarehouseRequest> {
  */
 export class RefreshWarehouseResponse extends Message<RefreshWarehouseResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
    */
   warehouse?: Warehouse;
 

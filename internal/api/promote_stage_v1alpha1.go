@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/kargo"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -87,6 +86,6 @@ func (s *server) PromoteStage(
 		return nil, errors.Wrap(err, "create promotion")
 	}
 	return connect.NewResponse(&svcv1alpha1.PromoteStageResponse{
-		Promotion: typesv1alpha1.ToPromotionProto(promotion),
+		Promotion: &promotion,
 	}), nil
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/utils/ptr"
 
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -45,7 +44,7 @@ kargo create project my-project
 				return errors.Wrap(err, "create project")
 			}
 
-			project := typesv1alpha1.FromProjectProto(resp.Msg.GetProject())
+			project := resp.Msg.GetProject()
 
 			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Created: %q\n", name)

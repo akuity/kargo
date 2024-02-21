@@ -9,7 +9,6 @@ import (
 	"golang.org/x/exp/slices"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -62,15 +61,13 @@ kargo get warehouses --project=my-project my-warehouse
 			res := make([]*kargoapi.Warehouse, 0, len(resp.Msg.GetWarehouses()))
 			var resErr error
 			if len(names) == 0 {
-				for _, w := range resp.Msg.GetWarehouses() {
-					res = append(res, typesv1alpha1.FromWarehouseProto(w))
-				}
+				res = append(res, resp.Msg.GetWarehouses()...)
 			} else {
 				warehousesByName :=
 					make(map[string]*kargoapi.Warehouse, len(resp.Msg.GetWarehouses()))
-				for _, w := range resp.Msg.GetWarehouses() {
-					warehousesByName[w.GetMetadata().GetName()] =
-						typesv1alpha1.FromWarehouseProto(w)
+				for i := range resp.Msg.GetWarehouses() {
+					w := resp.Msg.GetWarehouses()[i]
+					warehousesByName[w.Name] = w
 				}
 				for _, name := range names {
 					if warehouse, ok := warehousesByName[name]; ok {

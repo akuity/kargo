@@ -2,11 +2,11 @@ syntax = "proto3";
 
 package akuity.io.kargo.service.v1alpha1;
 
-import "google/protobuf/timestamp.proto";
+// Use RFC 3339 formatted string instead of Timestamp for gogo/proto interoperability.
+// import "google/protobuf/timestamp.proto";
+import "v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
-
-import "v1alpha1/types.proto";
 
 service KargoService {
   rpc GetVersionInfo(GetVersionInfoRequest) returns (GetVersionInfoResponse);
@@ -75,10 +75,15 @@ message VersionInfo {
   string version = 1;
   string git_commit = 2;
   bool git_tree_dirty = 3;
-  google.protobuf.Timestamp build_time = 4;
+
+  // google.protobuf.Timestamp build_time = 4;
+
   string go_version = 5;
   string compiler = 6;
   string platform = 7;
+
+  // version_build_time represents build time in RFC 3339 format.
+  string version_build_time = 8;
 }
 
 message GetVersionInfoRequest {}
@@ -123,7 +128,7 @@ message AdminLoginResponse {
 message TypedStageSpec {
   string project = 1;
   string name = 2;
-  github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 3;
+  github.com.akuity.kargo.api.v1alpha1.StageSpec spec = 3;
 }
 
 message CreateResourceRequest {
@@ -195,7 +200,7 @@ message CreateStageRequest {
 }
 
 message CreateStageResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
 message ListStagesRequest {
@@ -203,7 +208,7 @@ message ListStagesRequest {
 }
 
 message ListStagesResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Stage stages = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
 }
 
 message GetStageRequest {
@@ -212,7 +217,7 @@ message GetStageRequest {
 }
 
 message GetStageResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
 message WatchStagesRequest {
@@ -221,7 +226,7 @@ message WatchStagesRequest {
 }
 
 message WatchStagesResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
   string type = 2;
 }
 
@@ -233,7 +238,7 @@ message UpdateStageRequest {
 }
 
 message UpdateStageResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
 message DeleteStageRequest {
@@ -252,7 +257,7 @@ message PromoteStageRequest {
 }
 
 message PromoteStageResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
 }
 
 message PromoteSubscribersRequest {
@@ -262,7 +267,7 @@ message PromoteSubscribersRequest {
 }
 
 message PromoteSubscribersResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
 }
 
 message RefreshStageRequest {
@@ -271,7 +276,7 @@ message RefreshStageRequest {
 }
 
 message RefreshStageResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
 message TypedPromotionPolicySpec {
@@ -287,7 +292,7 @@ message ListPromotionsRequest {
 }
 
 message ListPromotionsResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
 }
 
 message WatchPromotionsRequest {
@@ -296,7 +301,7 @@ message WatchPromotionsRequest {
 }
 
 message WatchPromotionsResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
   string type = 2;
 }
 
@@ -306,7 +311,7 @@ message GetPromotionRequest {
 }
 
 message GetPromotionResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
 }
 
 message WatchPromotionRequest {
@@ -315,7 +320,7 @@ message WatchPromotionRequest {
 }
 
 message WatchPromotionResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
   string type = 2;
 }
 
@@ -334,7 +339,7 @@ message CreateProjectRequest {
 }
 
 message CreateProjectResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Project project = 1;
+  github.com.akuity.kargo.api.v1alpha1.Project project = 1;
 }
 
 message ListProjectsRequest {
@@ -342,7 +347,7 @@ message ListProjectsRequest {
 }
 
 message ListProjectsResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Project projects = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Project projects = 1;
 }
 
 message DeleteProjectRequest {
@@ -376,7 +381,7 @@ message DeleteFreightResponse {
 }
 
 message FreightList {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
 }
 
 message UpdateFreightAliasRequest {
@@ -394,7 +399,7 @@ message ListWarehousesRequest {
 }
 
 message ListWarehousesResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouses = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Warehouse warehouses = 1;
 }
 
 message GetWarehouseRequest {
@@ -403,7 +408,7 @@ message GetWarehouseRequest {
 }
 
 message GetWarehouseResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 message WatchWarehousesRequest {
@@ -412,14 +417,14 @@ message WatchWarehousesRequest {
 }
 
 message WatchWarehousesResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
   string type = 2;
 }
 
 message TypedWarehouseSpec {
   string project = 1;
   string name = 2;
-  github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec spec = 3;
+  github.com.akuity.kargo.api.v1alpha1.WarehouseSpec spec = 3;
 }
 
 message CreateWarehouseRequest {
@@ -430,7 +435,7 @@ message CreateWarehouseRequest {
 }
 
 message CreateWarehouseResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 message UpdateWarehouseRequest {
@@ -441,7 +446,7 @@ message UpdateWarehouseRequest {
 }
 
 message UpdateWarehouseResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 message DeleteWarehouseRequest {
@@ -459,7 +464,7 @@ message RefreshWarehouseRequest {
 }
 
 message RefreshWarehouseResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 message ApproveFreightRequest {

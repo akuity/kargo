@@ -111,14 +111,14 @@ func TestRefreshStage(t *testing.T) {
 			}
 			require.NoError(t, err)
 			stage := res.Msg.GetStage()
-			annotation := stage.Metadata.Annotations[kargoapi.AnnotationKeyRefresh]
+			annotation := stage.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
 			refreshTime, err := time.Parse(time.RFC3339, annotation)
 			require.NoError(t, err)
 			// Make sure we set timestamp is close to now
 			// Assume it doesn't take 3 seconds to run this unit test.
 			require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
-			require.Equal(t, ts.req.GetProject(), stage.GetMetadata().GetNamespace())
-			require.Equal(t, ts.req.GetName(), stage.GetMetadata().GetName())
+			require.Equal(t, ts.req.GetProject(), stage.Namespace)
+			require.Equal(t, ts.req.GetName(), stage.Name)
 		})
 	}
 }
