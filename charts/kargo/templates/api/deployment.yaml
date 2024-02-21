@@ -38,7 +38,7 @@ spec:
             - configMapRef:
                 name: kargo-api
             - secretRef:
-                name: kargo-api
+                name: {{ .Values.api.secret.name | default "kargo-api" }}
           ports:
             - name: h2c
               containerPort: 8080
