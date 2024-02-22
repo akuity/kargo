@@ -31,8 +31,6 @@ func NewHandlerOption(
 		interceptors = append(interceptors, authInterceptor)
 	}
 	return connect.WithHandlerOptions(
-		connect.WithCodec(newJSONCodec("json")),
-		connect.WithCodec(newJSONCodec("json; charset=utf-8")),
 		connect.WithInterceptors(interceptors...),
 		connect.WithRecover(
 			func(ctx context.Context, spec connect.Spec, header http.Header, r any) error {

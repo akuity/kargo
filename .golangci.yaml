@@ -7,7 +7,6 @@ run:
   skip-files:
     - api/.*/*_types.go
     - api/.*/groupversion_info.go
-    - internal/proto/jsonpb/.*.go
 
 linters:
   disable-all: true
