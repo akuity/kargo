@@ -3,7 +3,7 @@ import {
   GitSubscription,
   ImageSubscription,
   Stage
-} from '@ui/gen/v1alpha1/types_pb';
+} from '@ui/gen/v1alpha1/generated_pb';
 
 export enum NodeType {
   STAGE,

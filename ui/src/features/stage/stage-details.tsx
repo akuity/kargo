@@ -4,7 +4,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { Subscriptions } from '@ui/features/stage/subscriptions';
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { ManifestPreview } from './manifest-preview';
 import { Promotions } from './promotions';

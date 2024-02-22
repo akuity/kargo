@@ -13,7 +13,7 @@ import { paths } from '@ui/config/paths';
 import { FreightLabel } from '@ui/features/common/freight-label';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionType } from '@ui/features/freightline/freightline';
-import { Freight, Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import * as styles from './stage-node.module.less';
 
