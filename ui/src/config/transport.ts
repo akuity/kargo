@@ -1,5 +1,5 @@
 import { Code, ConnectError, Interceptor } from '@bufbuild/connect';
-import { createGrpcWebTransport } from '@bufbuild/connect-web';
+import { createConnectTransport } from '@bufbuild/connect-web';
 import { notification } from 'antd';
 
 import { authTokenKey, redirectToQueryParam, refreshTokenKey } from './auth';
@@ -65,12 +65,14 @@ const errorHandler: Interceptor = (next) => (req) => {
   }
 };
 
-export const transport = createGrpcWebTransport({
+export const transport = createConnectTransport({
   baseUrl: '',
+  useBinaryFormat: true,
   interceptors: [errorHandler]
 });
 
-export const transportWithAuth = createGrpcWebTransport({
+export const transportWithAuth = createConnectTransport({
   baseUrl: '',
-  interceptors: [authHandler, errorHandler]
+  useBinaryFormat: true,
+  interceptors: [authHandler, errorHandler],
 });
