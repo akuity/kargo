@@ -6,6 +6,16 @@ description: Find out more about key Kargo concepts - stages, freight, warehouse
 
 ## The Basics
 
+### What is a Project
+
+A **project** is a collection of related Kargo resources that describe one or
+more delivery pipelines and is the basic unit of organization and tenancy in
+Kargo.
+
+RBAC rules are also defined at the project level and project administrators
+may use projects to define policies, such as whether a **stage** is eligible
+for automatic promotions of new **freight**.
+
 ### What is a Stage?
 
 When you hear the term “environment”, what you envision will depend
@@ -53,31 +63,100 @@ subscribes, the warehouse produces a new piece of freight.
 
 A **promotion** is a request to move a piece of freight into a specified stage.
 
-### What is a Promotion Policy?
-
-A **promotion policy**, at present, determines only whether a specific stage is
-eligible to for new freight to be automatically promoted into it.
-
 ## Corresponding Resource Types
 
 Each of Kargo's fundamental concepts maps directly onto a custom Kubernetes
 resource type.
 
-:::info
-Related resources must be grouped together in a single project, which is a
-specially labeled Kubernetes `Namespace`. In our examples, we group all of our
-resources together in a `kargo-demo` namespace.
+### `Project` Resources
+
+As of Kargo `v0.4.0`, each Kargo project is represented by a cluster-scoped
+Kubernetes resource of type `Project`. Reconciliation of such a resource effects
+all boilerplate project initialization, including the creation of a
+specially-labeled `Namespace` with the same name as the `Project`. All resources
+belonging to a given `Project` should be grouped together in that `Namespace`.
+
+A minimal `Project` resource looks like the following:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-demo
+```
+
+:::note
+Deletion of a `Project` resource results in the deletion of the corresponding
+`Namespace`. For convenience, the inverse is also true -- deletion of a
+project's `Namespace` results in the deletion of the corresponding `Project`
+resource.
 :::
+
+:::info
+There are compelling advantages to using `Project` resources instead of
+permitting users to create `Namespace` resources directly:
+
+* The required label indicating a `Namespace` is a Kargo project cannot be
+  forgotten or misapplied.
+
+* Users can be granted permission to indirectly create `Namespace` resources for
+  Kargo projects _only_ without being granted more general permissions to create
+  _any_ new `Namespace` directly.
+
+* In future releases, _additional_ boilerplate configuration will be created at
+  the time of `Project` creation. This will include things such as project-level
+  RBAC resources and `ServiceAccount` resources.
+:::
+
+:::info
+In future releases, the team also expects to also aggregate project-level status
+and statistics in `Project` resources.
+:::
+
+#### Promotion Policies
+
+A `Project` resource can additionally define project-level configuration. At
+present, this only includes **promotion policies** that describe which `Stage`s
+are eligible for automatic promotion of newly qualified `Freight`.
+
+:::note
+Promotion policies are defined at the project-level because users with
+permission to update `Stage` resources in a given project `Namespace` may _not_
+have permission to create `Promotion` resources. Defining promotion policies at
+the project-level therefore restricts such users from enabling automatic
+promotions for a `Stage` to which they may lack permission to promote to
+manually. It leaves decisions about eligibility for auto-promotion squarely in
+the hands of someone like a "project admin."
+:::
+
+In the example below, the `test` and `uat` `Stage`s are eligible for automatic
+promotion of newly qualified `Freight`, but any other `Stage`s in the `Project`
+are not:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-demo
+spec:
+  promotionPolicies:
+  - stage: test
+    autoPromotionEnabled: true
+  - stage: uat
+    autoPromotionEnabled: true
+```
 
 ### `Stage` Resources
 
 Each Kargo stage is represented by a Kubernetes resource of type `Stage`.
 
-A `Stage` resource's `spec` field decomposes into two main areas of concern:
+A `Stage` resource's `spec` field decomposes into three main areas of concern:
 
 * Subscriptions
 
 * Promotion mechanisms
+
+* Verification
 
 The following sections will explore each of these in greater detail.
 
@@ -87,15 +166,24 @@ The `spec.subscriptions` field is used to describe the sources from which a
 `Stage` obtains `Freight`. These subscriptions can be to a single `Warehouse` or
 to one or more "upstream" `Stage` resources.
 
-For each `Stage`, the Kargo controller will periodically check its subscriptions
-for new _qualified_ `Freight`.
+For each `Stage`, the Kargo controller will periodically check for `Freight`
+resources that are newly qualified for promotion to that `Stage`.
 
-For a `Stage` subscribed directly to a `Warehouse`, _any_ new `Freight` resource
-from that `Warehouse` is considered qualified.
+For any `Stage` subscribed directly to a `Warehouse`, _any_ new `Freight`
+resource from that `Warehouse` is tacitly consider to have been _verified_
+upstream, and is therefore immediately qualified for promotion to such a
+`Stage`.
 
-For a `Stage` subscribed to one or more "upstream" `Stage`s, `Freight` is
-qualified only after those "upstream" `Stage` resources have reached a healthy
-state while hosting that `Freight`.
+For a `Stage` subscribed to one or more "upstream" `Stage` resources, `Freight`
+is qualified for promotion to that `Stage` after being _verified_ in at least
+one of the upstream `Stage`s. Alternatively, users with adequate permissions may
+manually _approve_ `Freight` for promotion to any given `Stage` without
+requiring upstream verification.
+
+:::tip
+Explicit approvals are a useful method for applying the occasional "hotfix"
+without waiting for a `Freight` resource to traverse the entirety of a pipeline.
+:::
 
 In the following example, the `test` `Stage` subscribes to a single `Warehouse`:
 
@@ -216,7 +304,7 @@ healthy state.
 
 Verification processes are defined through _references_ to one or more 
 [Argo Rollouts `AnalysisTemplate` resources](https://argoproj.github.io/argo-rollouts/features/analysis/)
-that reside in the same project/namespace as the `Stage` resource.
+that reside in the same `Project`/`Namespace` as the `Stage` resource.
 
 :::info
 Argo Rollouts `AnalysisTemplate` resources (and the `AnalysisRun` resources that
@@ -383,8 +471,8 @@ admission webhook.) The `id` and `metadata.name` fields, therefore, are both
 "fingerprints," deterministically derived from the `Freight`'s contents.
 
 A `Freight` resource's `status` field records a list of `Stage` resources in
-which the `Freight` has been _qualified_. A `Freight` resource is qualified in
-any `Stage` that reached a healthy state while hosting it.
+which the `Freight` has been _verified_ and a separate list of `Stage` resources
+for which the `Freight` has been manually _approved_.
 
 `Freight` resources look similar to the following:
 
@@ -402,8 +490,10 @@ commits:
 - repoURL: https://github.com/example/kargo-demo.git
   id: 1234abc
 status:
-  qualifications:
+  verifiedIn:
     test: {}
+  approvedFor:
+    prod: {}
 ```
 
 ### `Warehouse` Resources
@@ -478,41 +568,6 @@ status:
   phase: Succeeded
 ```
 
-### `PromotionPolicy` Resources
-
-Each Kargo promotion policy is represented by a Kubernetes resource of type
-`PromotionPolicy`.
-
-A `PromotionPolicy` resource's two most important fields are its `stage` and
-`enableAutoPromotion` fields, which, respectively, identify a `Stage` and
-indicate whether that `Stage` should be eligible to automatically receive new
-`Freight`.
-
-The following example shows a `PromotionPolicy` resource that enables automatic
-promotions to the `test` `Stage`:
-
-```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: PromotionPolicy
-metadata:
-  name: test
-  namespace: kargo-demo
-stage: test
-enableAutoPromotion: true
-```
-
-Kargo considers auto-promotion disabled by default for any `Stage` that does not
-have a corresponding `PromotionPolicy` resource. If a `Stage` has multiple
-corresponding `PromotionPolicy` resources, then the policy is considered
-ambiguous and auto-promotion will be considered disabled by default.
-
-:::note
-Promotion policies are represented by a separate resource type (instead of being
-a field on a `Stage` resource) because the users with authority to decide what
-`Stage` resources should be eligible for auto-promotion may not be the same
-users with authority to define the `Stage` resources themselves.
-:::
-
 ## Role-Based Access Control
 
 As with all resource types in Kubernetes, permissions to perform various actions
@@ -523,9 +578,9 @@ For all Kargo resource types, Kubernetes RBAC functions exactly as one would
 expect, with one notable exception.
 
 Often, it is necessary to grant a user permission to create `Promotion`
-resources that reference certain `Stage`s, but not others. To address this,
-Kargo utilizes an admission control webhook that conducts access reviews to
-determine if a user creating a `Promotion` resource has the virtual `promote`
+resources that reference certain `Stage` resources, but not others. To address
+this, Kargo utilizes an admission control webhook that conducts access reviews
+to determine if a user creating a `Promotion` resource has the virtual `promote`
 verb for the `Stage` referenced by the `Promotion` resource.
 
 :::info
