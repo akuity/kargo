@@ -251,7 +251,7 @@ type KargoRenderPromotionMechanism struct {
 	// not use digests by default.)
 	//
 	//+kubebuilder:validation:Optional
-	Images []KargoRenderImageUpdate `json:"images"`
+	Images []KargoRenderImageUpdate `json:"images,omitempty"`
 }
 
 // KargoRenderImageUpdate describes how an image can be incorporated into a
