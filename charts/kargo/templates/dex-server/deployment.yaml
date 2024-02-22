@@ -26,6 +26,10 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.api.oidc.dex.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: dex-server
         image: {{ .Values.api.oidc.dex.image.repository }}:{{ .Values.api.oidc.dex.image.tag }}
