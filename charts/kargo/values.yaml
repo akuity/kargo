@@ -155,8 +155,8 @@ api:
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
 
-      ## @param api.oidc.dex.envVars Add environments to the Dex pod, for example to get Secrets in.
-      envVars: []
+      ## @param api.oidc.dex.env Add additional environment variables to Dex pods. This is convenient, for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      env: []
       # - name: CLIENT_SECRET
       #   valueFrom:
       #     secretKeyRef:
@@ -183,7 +183,7 @@ api:
       #   type: google
       #   config:
       #     clientID: <your client ID>
-      #     clientSecret: <your client secret>
+      #     clientSecret: "$CLIENT_SECRET"
       #     redirectURI: <http(s)>://<api.host>/dex/callback
       ## GitHub Example
       # - id: github
@@ -191,7 +191,7 @@ api:
       #   type: github
       #   config:
       #     clientID: <your client ID>
-      #     clientSecret: <your client secret>
+      #     clientSecret: "$CLIENT_SECRET"
       #     redirectURI: <http(s)>://<api.host>/dex/callback
 
       ## @param api.oidc.dex.resources Resources limits and requests for the Dex server containers.

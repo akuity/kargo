@@ -33,7 +33,7 @@ spec:
         command: ["dex", "serve"]
         args: ["/etc/dex/config.yaml"]
         env:
-        {{- with .Values.api.oidc.dex.envVars }}
+        {{- with .Values.api.oidc.dex.env }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
         volumeMounts:
