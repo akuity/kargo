@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "Project is a resource type that reconciles to a specially labeled namespace and other TODO: TBD project-level resources.",
+  "description": "Project is a resource type that reconciles to a specially labeled namespace\nand other TODO: TBD project-level resources.",
   "properties": {
     "apiVersion": {
-      "description": "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
       "type": "string"
     },
     "kind": {
-      "description": "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
       "type": "string"
     },
     "metadata": {
@@ -17,12 +17,12 @@
       "description": "Spec describes a Project.",
       "properties": {
         "promotionPolicies": {
-          "description": "PromotionPolicies defines policies governing the promotion of Freight to specific Stages within this Project.",
+          "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within this Project.",
           "items": {
-            "description": "PromotionPolicy defines policies governing the promotion of Freight to a specific Stage.",
+            "description": "PromotionPolicy defines policies governing the promotion of Freight to a\nspecific Stage.",
             "properties": {
               "autoPromotionEnabled": {
-                "description": "AutoPromotionEnabled indicates whether new Freight can automatically be promoted into the Stage referenced by the Stage field. Note: There are may be other conditions also required for an auto-promotion to occur. This field defaults to false, but is commonly set to true for Stages that subscribe to Warehouses instead of other, upstream Stages. This allows users to define Stages that are automatically updated as soon as new artifacts are detected.",
+                "description": "AutoPromotionEnabled indicates whether new Freight can automatically be\npromoted into the Stage referenced by the Stage field. Note: There are may\nbe other conditions also required for an auto-promotion to occur. This\nfield defaults to false, but is commonly set to true for Stages that\nsubscribe to Warehouses instead of other, upstream Stages. This allows\nusers to define Stages that are automatically updated as soon as new\nartifacts are detected.",
                 "type": "boolean"
               },
               "stage": {
@@ -42,7 +42,7 @@
       "description": "Status describes the Project's current status.",
       "properties": {
         "message": {
-          "description": "Message is a display message about the Project, including any errors preventing the Project from being reconciled. i.e. If the Phase field has a value of CreationFailed, this field can be expected to explain why.",
+          "description": "Message is a display message about the Project, including any errors\npreventing the Project from being reconciled. i.e. If the Phase field has a\nvalue of CreationFailed, this field can be expected to explain why.",
           "type": "string"
         },
         "phase": {
