@@ -27,7 +27,6 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
-  name: kargo-api-server-manage-project-secrets
   verbs:
   - create
 - apiGroups:
