@@ -178,6 +178,8 @@ codegen-proto:
 	go run $(CURDIR)/hack/codegen/prototag/main.go \
 		-src-dir=$(CURDIR)/pkg/api/v1alpha1 \
 		-dst-dir=$(CURDIR)/api/v1alpha1
+	# Format code
+	golangci-lint run ./... --fix
 
 	# Generate protobuf code (UI)
 	buf generate api \
