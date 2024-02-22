@@ -1,7 +1,7 @@
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.21.6-bookworm as back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.22.0-bookworm as back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -33,7 +33,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.11.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.11.1 AS ui-builder
 
 RUN npm install --global pnpm
 WORKDIR /ui
@@ -68,7 +68,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.34 as back-end-dev
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.35 as back-end-dev
 
 USER root
 
@@ -86,7 +86,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.11.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.11.1 AS ui-dev
 
 RUN npm install --global pnpm
 WORKDIR /ui
@@ -103,7 +103,7 @@ CMD ["pnpm", "dev"]
 # - the official image we publish
 # - purposefully last so that it is the default target when building
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.34 as final
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.35 as final
 
 USER root
 

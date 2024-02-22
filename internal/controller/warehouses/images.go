@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -52,7 +53,7 @@ func (r *reconciler) selectImages(
 		tag, digest, err := r.getImageRefsFn(
 			ctx,
 			sub.RepoURL,
-			sub.TagSelectionStrategy,
+			sub.ImageSelectionStrategy,
 			sub.SemverConstraint,
 			sub.AllowTags,
 			sub.IgnoreTags, // TODO: KR: Fix this
@@ -62,7 +63,7 @@ func (r *reconciler) selectImages(
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error getting latest suitable tag for image %q",
+				"error getting latest suitable image %q",
 				sub.RepoURL,
 			)
 		}
@@ -75,8 +76,10 @@ func (r *reconciler) selectImages(
 				Digest:     digest,
 			},
 		)
-		logger.WithField("tag", tag).
-			Debug("found latest suitable image tag")
+		logger.WithFields(log.Fields{
+			"tag":    tag,
+			"digest": digest,
+		}).Debug("found latest suitable image")
 	}
 	return imgs, nil
 }
@@ -101,17 +104,17 @@ func getGithubImageSourceURL(gitRepoURL, tag string) string {
 func getImageRefs(
 	ctx context.Context,
 	repoURL string,
-	tagSelectionStrategy kargoapi.ImageTagSelectionStrategy,
+	imageSelectionStrategy kargoapi.ImageSelectionStrategy,
 	constraint string,
 	allowTagsRegex string,
 	ignoreTags []string,
 	platform string,
 	creds *image.Credentials,
 ) (string, string, error) {
-	tc, err := image.NewTagSelector(
+	imageSelector, err := image.NewSelector(
 		repoURL,
-		image.TagSelectionStrategy(tagSelectionStrategy),
-		&image.TagSelectorOptions{
+		image.SelectionStrategy(imageSelectionStrategy),
+		&image.SelectorOptions{
 			Constraint: constraint,
 			AllowRegex: allowTagsRegex,
 			Ignore:     ignoreTags,
@@ -122,20 +125,20 @@ func getImageRefs(
 	if err != nil {
 		return "", "", errors.Wrapf(
 			err,
-			"error creating tag constraint for image %q",
+			"error creating image selector for image %q",
 			repoURL,
 		)
 	}
-	tag, err := tc.SelectTag(ctx)
+	img, err := imageSelector.Select(ctx)
 	if err != nil {
 		return "", "", errors.Wrapf(
 			err,
-			"error fetching newest applicable tag for image %q",
+			"error fetching newest applicable image %q",
 			repoURL,
 		)
 	}
-	if tag == nil {
-		return "", "", errors.Errorf("found no applicable tags for image %q", repoURL)
+	if img == nil {
+		return "", "", errors.Errorf("found no applicable image %q", repoURL)
 	}
-	return tag.Name, tag.Digest.String(), nil
+	return img.Tag, img.Digest.String(), nil
 }

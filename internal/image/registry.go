@@ -19,7 +19,7 @@ var dockerRegistry = &registry{
 	imagePrefix:      "docker.io",
 	apiAddress:       "https://registry-1.docker.io",
 	defaultNamespace: "library",
-	tagCache: cache.New(
+	imageCache: cache.New(
 		30*time.Minute, // Default ttl for each entry
 		time.Hour,      // Cleanup interval
 	),
@@ -45,7 +45,7 @@ type registry struct {
 	imagePrefix      string
 	apiAddress       string
 	defaultNamespace string
-	tagCache         *cache.Cache
+	imageCache       *cache.Cache
 	rateLimiter      ratelimit.Limiter
 }
 
@@ -55,7 +55,7 @@ func newRegistry(imagePrefix string) *registry {
 		name:        imagePrefix,
 		imagePrefix: imagePrefix,
 		apiAddress:  fmt.Sprintf("https://%s", imagePrefix),
-		tagCache: cache.New(
+		imageCache: cache.New(
 			30*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),

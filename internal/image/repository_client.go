@@ -53,8 +53,8 @@ var knownMediaTypes = []string{
 	ociv1.MediaTypeImageIndex,
 }
 
-// repositoryClient is a client for retrieving tag information from a specific
-// image container repository.
+// repositoryClient is a client for retrieving information from a specific image
+// container repository.
 type repositoryClient struct {
 	registry *registry
 	image    string
@@ -62,19 +62,19 @@ type repositoryClient struct {
 
 	// The following behaviors are overridable for testing purposes:
 
-	getTagByNameFn func(
+	getImageByTagFn func(
 		context.Context,
 		string,
 		*platformConstraint,
-	) (*Tag, error)
+	) (*Image, error)
 
-	getTagByDigestFn func(
+	getImageByDigestFn func(
 		context.Context,
 		digest.Digest,
 		*platformConstraint,
-	) (*Tag, error)
+	) (*Image, error)
 
-	getManifestByTagNameFn func(
+	getManifestByTagFn func(
 		context.Context,
 		string,
 	) (distribution.Manifest, error)
@@ -84,34 +84,34 @@ type repositoryClient struct {
 		digest.Digest,
 	) (distribution.Manifest, error)
 
-	extractTagFromManifestFn func(
+	extractImageFromManifestFn func(
 		context.Context,
 		distribution.Manifest,
 		*platformConstraint,
-	) (*Tag, error)
+	) (*Image, error)
 
-	extractTagFromV1ManifestFn func(
+	extractImageFromV1ManifestFn func(
 		*schema1.SignedManifest, // nolint: staticcheck
 		*platformConstraint,
-	) (*Tag, error)
+	) (*Image, error)
 
-	extractTagFromV2ManifestFn func(
+	extractImageFromV2ManifestFn func(
 		context.Context,
 		*schema2.DeserializedManifest,
 		*platformConstraint,
-	) (*Tag, error)
+	) (*Image, error)
 
-	extractTagFromOCIManifestFn func(
+	extractImageFromOCIManifestFn func(
 		context.Context,
 		*ocischema.DeserializedManifest,
 		*platformConstraint,
-	) (*Tag, error)
+	) (*Image, error)
 
-	extractTagFromCollectionFn func(
+	extractImageFromCollectionFn func(
 		context.Context,
 		distribution.Manifest,
 		*platformConstraint,
-	) (*Tag, error)
+	) (*Image, error)
 
 	getBlobFn func(context.Context, digest.Digest) ([]byte, error)
 }
@@ -185,15 +185,15 @@ func newRepositoryClient(
 		repo:     repo,
 	}
 
-	r.getTagByNameFn = r.getTagByName
-	r.getTagByDigestFn = r.getTagByDigest
-	r.getManifestByTagNameFn = r.getManifestByTagName
+	r.getImageByTagFn = r.getImageByTag
+	r.getImageByDigestFn = r.getImageByDigest
+	r.getManifestByTagFn = r.getManifestByTag
 	r.getManifestByDigestFn = r.getManifestByDigest
-	r.extractTagFromManifestFn = r.extractTagFromManifest
-	r.extractTagFromV1ManifestFn = r.extractTagFromV1Manifest
-	r.extractTagFromV2ManifestFn = r.extractTagFromV2Manifest
-	r.extractTagFromOCIManifestFn = r.extractTagFromOCIManifest
-	r.extractTagFromCollectionFn = r.extractTagFromCollection
+	r.extractImageFromManifestFn = r.extractImageFromManifest
+	r.extractImageFromV1ManifestFn = r.extractImageFromV1Manifest
+	r.extractImageFromV2ManifestFn = r.extractImageFromV2Manifest
+	r.extractImageFromOCIManifestFn = r.extractImageFromOCIManifest
+	r.extractImageFromCollectionFn = r.extractImageFromCollection
 	r.getBlobFn = r.getBlob
 
 	return r, nil
@@ -232,104 +232,104 @@ var getChallengeManager = func(
 		errors.Wrap(err, "error configuring challenge manager")
 }
 
-// getTagNames retrieves a list of all tag names from the repository.
-func (r *repositoryClient) getTagNames(ctx context.Context) ([]string, error) {
+// getTags retrieves a list of all tags from the repository.
+func (r *repositoryClient) getTags(ctx context.Context) ([]string, error) {
 	logger := logging.LoggerFromContext(ctx)
 	logger.Trace("retrieving tags for image")
 	tagSvc := r.repo.Tags(ctx)
-	tTags, err := tagSvc.All(ctx)
+	tags, err := tagSvc.All(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "error retrieving tags from repository")
 	}
-	return tTags, nil
+	return tags, nil
 }
 
-// getTagByName retrieves a tag by name. This function uses no cache since tags
-// can be mutable.
-func (r *repositoryClient) getTagByName(
+// getImageByTag retrieves an Image by tag. This function uses no cache since
+// tags can be mutable.
+func (r *repositoryClient) getImageByTag(
 	ctx context.Context,
-	tagName string,
+	tag string,
 	platform *platformConstraint,
-) (*Tag, error) {
-	manifest, err := r.getManifestByTagNameFn(ctx, tagName)
+) (*Image, error) {
+	manifest, err := r.getManifestByTagFn(ctx, tag)
 	if err != nil {
 		return nil,
-			errors.Wrapf(err, "error retrieving manifest %s", tagName)
+			errors.Wrapf(err, "error retrieving manifest for tag %s", tag)
 	}
-	tag, err := r.extractTagFromManifestFn(ctx, manifest, platform)
+	image, err := r.extractImageFromManifestFn(ctx, manifest, platform)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
-			"error extracting tag from manifest %q",
-			tagName,
+			"error extracting image from manifest for tag %q",
+			tag,
 		)
 	}
-	if tag != nil {
-		tag.Name = tagName
+	if image != nil {
+		image.Tag = tag
 	}
-	return tag, nil
+	return image, nil
 }
 
-// getTagByDigest retrieves a tag for a given digest. This function uses a cache
-// since information retrieved by digest will never change.
-func (r *repositoryClient) getTagByDigest(
+// getImageByDigest retrieves an Image for a given digest. This function uses a
+// cache since information retrieved by digest will never change.
+func (r *repositoryClient) getImageByDigest(
 	ctx context.Context,
 	d digest.Digest,
 	platform *platformConstraint,
-) (*Tag, error) {
+) (*Image, error) {
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("retrieving tag for manifest %s", d)
+	logger.Tracef("retrieving image for manifest %s", d)
 
-	if entry, exists := r.registry.tagCache.Get(d.String()); exists {
-		tag := entry.(Tag) // nolint: forcetypeassert
-		return &tag, nil
+	if entry, exists := r.registry.imageCache.Get(d.String()); exists {
+		image := entry.(Image) // nolint: forcetypeassert
+		return &image, nil
 	}
 
-	logger.Tracef("tag for manifest %s NOT found in cache", d)
+	logger.Tracef("image for manifest %s NOT found in cache", d)
 
 	manifest, err := r.getManifestByDigestFn(ctx, d)
 	if err != nil {
 		return nil,
 			errors.Wrapf(err, "error retrieving manifest %s", d)
 	}
-	tag, err := r.extractTagFromManifestFn(ctx, manifest, platform)
+	image, err := r.extractImageFromManifestFn(ctx, manifest, platform)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
-			"error extracting tag from manifest %s",
+			"error extracting image from manifest %s",
 			d,
 		)
 	}
 
-	if tag != nil {
-		// Cache the tag
-		r.registry.tagCache.Set(d.String(), *tag, cache.DefaultExpiration)
-		logger.Tracef("cached tag for manifest %s", d)
+	if image != nil {
+		// Cache the image
+		r.registry.imageCache.Set(d.String(), *image, cache.DefaultExpiration)
+		logger.Tracef("cached image for manifest %s", d)
 	}
 
-	return tag, nil
+	return image, nil
 }
 
 // getManifestByTag retrieves a manifest for a given tag.
-func (r *repositoryClient) getManifestByTagName(
+func (r *repositoryClient) getManifestByTag(
 	ctx context.Context,
-	tagName string,
+	tag string,
 ) (distribution.Manifest, error) {
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("retrieving manifest for tag %q from repository", tagName)
+	logger.Tracef("retrieving manifest for tag %q from repository", tag)
 	manifestSvc, err := r.repo.Manifests(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting manifest service")
 	}
 	manifest, err := manifestSvc.Get(
 		ctx,
-		digest.FromString(tagName),
-		distribution.WithTag(tagName),
+		digest.FromString(tag),
+		distribution.WithTag(tag),
 		distribution.WithManifestMediaTypes(knownMediaTypes),
 	)
 	if err != nil {
 		return nil,
-			errors.Wrapf(err, "error retrieving manifest for tag %q", tagName)
+			errors.Wrapf(err, "error retrieving manifest for tag %q", tag)
 	}
 	return manifest, nil
 }
@@ -356,23 +356,23 @@ func (r *repositoryClient) getManifestByDigest(
 	return manifest, nil
 }
 
-// extractTagFromManifest extracts tag information from a given manifest. V1
+// extractImageFromManifest extracts an Image from a given manifest. V1
 // (legacy), V2, and OCI manifests are supported as well as manifest lists and
 // indices (e.g. for multi-arch images).
-func (r *repositoryClient) extractTagFromManifest(
+func (r *repositoryClient) extractImageFromManifest(
 	ctx context.Context,
 	manifest distribution.Manifest,
 	platform *platformConstraint,
-) (*Tag, error) {
+) (*Image, error) {
 	switch m := manifest.(type) {
 	case *schema1.SignedManifest: //nolint: staticcheck
-		return r.extractTagFromV1ManifestFn(m, platform)
+		return r.extractImageFromV1ManifestFn(m, platform)
 	case *schema2.DeserializedManifest:
-		return r.extractTagFromV2ManifestFn(ctx, m, platform)
+		return r.extractImageFromV2ManifestFn(ctx, m, platform)
 	case *ocischema.DeserializedManifest:
-		return r.extractTagFromOCIManifestFn(ctx, m, platform)
+		return r.extractImageFromOCIManifestFn(ctx, m, platform)
 	case *manifestlist.DeserializedManifestList, *ocischema.DeserializedImageIndex:
-		return r.extractTagFromCollectionFn(ctx, manifest, platform)
+		return r.extractImageFromCollectionFn(ctx, manifest, platform)
 	default:
 		return nil, errors.Errorf("invalid manifest type %T", manifest)
 	}
@@ -386,13 +386,13 @@ type manifestInfo struct {
 	Created string `json:"created"`
 }
 
-// extractTagFromV1Manifest extracts tag information from a given V1 manifest.
-// It is valid for this function to return nil if the manifest does not match
-// the specified platform, if any.
-func (r *repositoryClient) extractTagFromV1Manifest(
+// extractImageFromV1Manifest extracts an Image from a given V1 manifest. It is
+// valid for this function to return nil if the manifest does not match the
+// specified platform, if any.
+func (r *repositoryClient) extractImageFromV1Manifest(
 	manifest *schema1.SignedManifest, // nolint: staticcheck
 	platform *platformConstraint,
-) (*Tag, error) {
+) (*Image, error) {
 	// We need this to calculate the digest
 	_, manifestBytes, err := manifest.Payload() // nolint: staticcheck
 	if err != nil {
@@ -401,7 +401,7 @@ func (r *repositoryClient) extractTagFromV1Manifest(
 	digest := digest.FromBytes(manifestBytes)
 
 	logger := logging.LoggerFromContext(context.Background())
-	logger.Tracef("extracting tag from V1 manifest %s", digest)
+	logger.Tracef("extracting image from V1 manifest %s", digest)
 
 	if len(manifest.History) == 0 {
 		return nil,
@@ -430,20 +430,20 @@ func (r *repositoryClient) extractTagFromV1Manifest(
 		)
 	}
 
-	return &Tag{
+	return &Image{
 		Digest:    digest,
 		CreatedAt: &createdAt,
 	}, nil
 }
 
-// extractTagFromV2Manifest extracts tag information from a given V2 manifest.
-// It is valid for this function to return nil if the manifest does not match
-// the specified platform, if any.
-func (r *repositoryClient) extractTagFromV2Manifest(
+// extractImageFromV2Manifest extracts an Image from a given V2 manifest. It is
+// valid for this function to return nil if the manifest does not match the
+// specified platform, if any.
+func (r *repositoryClient) extractImageFromV2Manifest(
 	ctx context.Context,
 	manifest *schema2.DeserializedManifest,
 	platform *platformConstraint,
-) (*Tag, error) {
+) (*Image, error) {
 	// We need this to calculate the digest
 	_, manifestBytes, err := manifest.Payload()
 	if err != nil {
@@ -453,7 +453,7 @@ func (r *repositoryClient) extractTagFromV2Manifest(
 	digest := digest.FromBytes(manifestBytes)
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("extracting tag from V2 manifest %s", digest)
+	logger.Tracef("extracting image from V2 manifest %s", digest)
 
 	// This referenced config object has platform information and creation
 	// timestamp
@@ -492,20 +492,20 @@ func (r *repositoryClient) extractTagFromV2Manifest(
 		)
 	}
 
-	return &Tag{
+	return &Image{
 		Digest:    digest,
 		CreatedAt: &createdAt,
 	}, nil
 }
 
-// extractTagFromOCIManifest extracts tag information from a given OCI manifest.
-// It is valid for this function to return nil if the manifest does not match
-// the specified platform, if any.
-func (r *repositoryClient) extractTagFromOCIManifest(
+// extractImageFromOCIManifest extracts an Image from a given OCI manifest. It
+// is valid for this function to return nil if the manifest does not match the
+// specified platform, if any.
+func (r *repositoryClient) extractImageFromOCIManifest(
 	ctx context.Context,
 	manifest *ocischema.DeserializedManifest,
 	platform *platformConstraint,
-) (*Tag, error) {
+) (*Image, error) {
 	// We need this to calculate the digest
 	_, manifestBytes, err := manifest.Payload()
 	if err != nil {
@@ -514,7 +514,7 @@ func (r *repositoryClient) extractTagFromOCIManifest(
 	digest := digest.FromBytes(manifestBytes)
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("extracting tag from OCI manifest %s", digest)
+	logger.Tracef("extracting image from OCI manifest %s", digest)
 
 	// This referenced config object has platform information and creation
 	// timestamp
@@ -559,21 +559,21 @@ func (r *repositoryClient) extractTagFromOCIManifest(
 		)
 	}
 
-	return &Tag{
+	return &Image{
 		Digest:    digest,
 		CreatedAt: &createdAt,
 	}, nil
 }
 
-// extractTagFromCollection extracts tag information from a V2 manifest list or
-// OCI index. It is valid for this function to return nil if no manifest in the
-// list or index matches the specified platform, if any. This function assumes
-// it is only ever invoked with a manifest list or index.
-func (r *repositoryClient) extractTagFromCollection(
+// extractImageFromCollection extracts an Image from a V2 manifest list or OCI
+// index. It is valid for this function to return nil if no manifest in the list
+// or index matches the specified platform, if any. This function assumes it is
+// only ever invoked with a manifest list or index.
+func (r *repositoryClient) extractImageFromCollection(
 	ctx context.Context,
 	collection distribution.Manifest,
 	platform *platformConstraint,
-) (*Tag, error) {
+) (*Image, error) {
 	// We need this to calculate the digest. Note that this is the digest of the
 	// list or index.
 	_, manifestBytes, err := collection.Payload()
@@ -584,7 +584,7 @@ func (r *repositoryClient) extractTagFromCollection(
 
 	logger := logging.LoggerFromContext(ctx)
 	logger.Tracef(
-		"extracting tag from V2 manifest list or OCI index %s",
+		"extracting image from V2 manifest list or OCI index %s",
 		digest,
 	)
 
@@ -635,15 +635,15 @@ func (r *repositoryClient) extractTagFromCollection(
 			)
 		}
 		ref := matchedRefs[0]
-		tag, err := r.getTagByDigestFn(ctx, ref.Digest, platform)
+		image, err := r.getImageByDigestFn(ctx, ref.Digest, platform)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error getting tag from manifest %s",
+				"error getting image from manifest %s",
 				ref.Digest,
 			)
 		}
-		if tag == nil {
+		if image == nil {
 			// This really shouldn't happen.
 			return nil, errors.Errorf(
 				"expected manifest for digest %v to match platform %q, but it did not",
@@ -651,8 +651,8 @@ func (r *repositoryClient) extractTagFromCollection(
 				platform.String(),
 			)
 		}
-		tag.Digest = digest
-		return tag, nil
+		image.Digest = digest
+		return image, nil
 	}
 
 	// If we get to here there was no platform constraint.
@@ -662,27 +662,27 @@ func (r *repositoryClient) extractTagFromCollection(
 	// recently pushed manifest's createdAt timestamp.
 	var createdAt *time.Time
 	for _, ref := range refs {
-		tag, err := r.getTagByDigestFn(ctx, ref.Digest, platform)
+		image, err := r.getImageByDigestFn(ctx, ref.Digest, platform)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"error getting tag from manifest %s",
+				"error getting image from manifest %s",
 				ref.Digest,
 			)
 		}
-		if tag == nil {
+		if image == nil {
 			// This really shouldn't happen.
 			return nil, errors.Errorf(
-				"found no tag for manifest %s",
+				"found no image for manifest %s",
 				ref.Digest,
 			)
 		}
-		if createdAt == nil || tag.CreatedAt.After(*createdAt) {
-			createdAt = tag.CreatedAt
+		if createdAt == nil || image.CreatedAt.After(*createdAt) {
+			createdAt = image.CreatedAt
 		}
 	}
 
-	return &Tag{
+	return &Image{
 		Digest:    digest,
 		CreatedAt: createdAt,
 	}, nil

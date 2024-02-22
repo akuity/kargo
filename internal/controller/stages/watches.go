@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -23,7 +24,8 @@ import (
 // Stages when Freight is marked as verified in a Stage, so that those Stages
 // can reconcile and possibly create a Promotion if auto-promotion is enabled.
 type verifiedFreightEventHandler struct {
-	kargoClient client.Client
+	kargoClient   client.Client
+	shardSelector labels.Selector
 }
 
 // Create implements EventHandler.
@@ -87,6 +89,7 @@ func (v *verifiedFreightEventHandler) Update(
 					kubeclient.StagesByUpstreamStagesIndexField,
 					newlyVerifiedStage,
 				),
+				LabelSelector: v.shardSelector,
 			},
 		); err != nil {
 			logger.Errorf(
@@ -213,7 +216,8 @@ func getNewlyApprovedStages(old, new *kargoapi.Freight) []string {
 // those Stages can reconcile and possibly create a Promotion if auto-promotion
 // is enabled.
 type createdFreightEventHandler struct {
-	kargoClient client.Client
+	kargoClient   client.Client
+	shardSelector labels.Selector
 }
 
 // Create implements EventHandler.
@@ -244,6 +248,7 @@ func (c *createdFreightEventHandler) Create(
 				kubeclient.StagesByWarehouseIndexField,
 				warehouse,
 			),
+			LabelSelector: c.shardSelector,
 		},
 	); err != nil {
 		logger.Errorf(
@@ -300,7 +305,8 @@ func (c *createdFreightEventHandler) Update(
 // with an Argo CD Application whenever that Application's health or sync status
 // changes, so that those Stages can reconcile.
 type updatedArgoCDAppHandler struct {
-	kargoClient client.Client
+	kargoClient   client.Client
+	shardSelector labels.Selector
 }
 
 // Create implements EventHandler.
@@ -351,6 +357,7 @@ func (u *updatedArgoCDAppHandler) Update(
 						e.ObjectNew.GetName(),
 					),
 				),
+				LabelSelector: u.shardSelector,
 			},
 		); err != nil {
 			logger.Errorf(
@@ -410,7 +417,8 @@ func appHealthOrSyncStatusChanged(ctx context.Context, e event.UpdateEvent) bool
 // associated with an Argo Rollouts AnalysisRun whenever that AnalysisRun's
 // phase changes.
 type phaseChangedAnalysisRunHandler struct {
-	kargoClient client.Client
+	kargoClient   client.Client
+	shardSelector labels.Selector
 }
 
 // Create implements EventHandler.
@@ -462,6 +470,7 @@ func (p *phaseChangedAnalysisRunHandler) Update(
 						e.ObjectNew.GetName(),
 					),
 				),
+				LabelSelector: p.shardSelector,
 			},
 		); err != nil {
 			logger.Errorf(

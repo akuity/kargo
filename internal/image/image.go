@@ -7,23 +7,23 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-// Tag is a representation of a container image Tag.
-type Tag struct {
-	Name      string
+// Image is a representation of a container image.
+type Image struct {
+	Tag       string
 	Digest    digest.Digest
 	CreatedAt *time.Time
 	semVer    *semver.Version
 }
 
-// newTag initializes and returns a tag.
-func newTag(name string, date *time.Time, digest digest.Digest) Tag {
-	t := Tag{
-		Name:      name,
+// newImage initializes and returns an Image.
+func newImage(tag string, date *time.Time, digest digest.Digest) Image {
+	t := Image{
+		Tag:       tag,
 		CreatedAt: date,
 		Digest:    digest,
 	}
 	// It's ok if the tag doesn't parse as semver, but if it does, store it
-	if sv, err := semver.NewVersion(name); err == nil {
+	if sv, err := semver.NewVersion(tag); err == nil {
 		t.semVer = sv
 	}
 	return t

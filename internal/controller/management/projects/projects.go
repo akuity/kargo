@@ -3,9 +3,18 @@ package projects
 import (
 	"context"
 
+	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -16,8 +25,19 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+type ReconcilerConfig struct {
+	KargoNamespace string `envconfig:"KARGO_NAMESPACE" required:"true"`
+}
+
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	cfg := ReconcilerConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // reconciler reconciles Project resources.
 type reconciler struct {
+	cfg    ReconcilerConfig
 	client client.Client
 
 	// The following behaviors are overridable for testing purposes:
@@ -33,16 +53,51 @@ type reconciler struct {
 		*kargoapi.Project,
 	) (kargoapi.ProjectStatus, error)
 
+	ensureNamespaceFn func(
+		context.Context,
+		*kargoapi.Project,
+	) (kargoapi.ProjectStatus, error)
+
 	patchProjectStatusFn func(
 		context.Context,
 		*kargoapi.Project,
 		kargoapi.ProjectStatus,
 	) error
+
+	getNamespaceFn func(
+		context.Context,
+		types.NamespacedName,
+		client.Object,
+		...client.GetOption,
+	) error
+
+	createNamespaceFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
+
+	updateNamespaceFn func(
+		context.Context,
+		client.Object,
+		...client.UpdateOption,
+	) error
+
+	ensureSecretPermissionsFn func(context.Context, *kargoapi.Project) error
+
+	createRoleBindingFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
 // registers it with the provided Manager.
-func SetupReconcilerWithManager(kargoMgr manager.Manager) error {
+func SetupReconcilerWithManager(
+	kargoMgr manager.Manager,
+	cfg ReconcilerConfig,
+) error {
 	return ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
 		WithEventFilter(
@@ -54,16 +109,23 @@ func SetupReconcilerWithManager(kargoMgr manager.Manager) error {
 			},
 		).
 		WithOptions(controller.CommonOptions()).
-		Complete(newReconciler(kargoMgr.GetClient()))
+		Complete(newReconciler(kargoMgr.GetClient(), cfg))
 }
 
-func newReconciler(kubeClient client.Client) *reconciler {
+func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r := &reconciler{
+		cfg:    cfg,
 		client: kubeClient,
 	}
 	r.getProjectFn = kargoapi.GetProject
 	r.syncProjectFn = r.syncProject
+	r.ensureNamespaceFn = r.ensureNamespace
 	r.patchProjectStatusFn = r.patchProjectStatus
+	r.getNamespaceFn = r.client.Get
+	r.createNamespaceFn = r.client.Create
+	r.updateNamespaceFn = r.client.Update
+	r.ensureSecretPermissionsFn = r.ensureSecretPermissions
+	r.createRoleBindingFn = r.client.Create
 	return r
 }
 
@@ -136,15 +198,151 @@ func (r *reconciler) Reconcile(
 }
 
 func (r *reconciler) syncProject(
-	_ context.Context,
+	ctx context.Context,
+	project *kargoapi.Project,
+) (kargoapi.ProjectStatus, error) {
+	status, err := r.ensureNamespaceFn(ctx, project)
+	if err != nil {
+		return status, errors.Wrap(err, "error ensuring namespace")
+	}
+
+	if err = r.ensureSecretPermissionsFn(ctx, project); err != nil {
+		return status, errors.Wrap(err, "error ensuring secret permissions")
+	}
+
+	status.Phase = kargoapi.ProjectPhaseReady
+	return status, nil
+}
+
+func (r *reconciler) ensureNamespace(
+	ctx context.Context,
 	project *kargoapi.Project,
 ) (kargoapi.ProjectStatus, error) {
 	status := *project.Status.DeepCopy()
-	// TODO: This used to create the Project's associated namespace, but the
-	// webhook now does that. This remains because it is where we will add
-	// creation of other Project-owned resources in the future.
-	status.Phase = kargoapi.ProjectPhaseReady
+
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
+		"project": project.Name,
+	})
+
+	ownerRef := metav1.NewControllerRef(
+		project,
+		kargoapi.GroupVersion.WithKind("Project"),
+	)
+	ownerRef.BlockOwnerDeletion = ptr.To(false)
+
+	ns := &corev1.Namespace{}
+	err := r.getNamespaceFn(
+		ctx,
+		types.NamespacedName{Name: project.Name},
+		ns,
+	)
+	if err == nil {
+		// We found an existing namespace with the same name as the Project.
+		for _, ownerRef := range ns.OwnerReferences {
+			if ownerRef.UID == project.UID {
+				logger.Debug("namespace exists and is owned by this Project")
+				return status, nil
+			}
+		}
+		if ns.Labels != nil &&
+			ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue &&
+			len(ns.OwnerReferences) == 0 {
+			logger.Debug(
+				"namespace exists, but is not owned by this Project, but has the " +
+					"project label; Project will adopt it",
+			)
+			ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+			controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
+			if err = r.updateNamespaceFn(ctx, ns); err != nil {
+				return status,
+					errors.Wrapf(err, "error updating namespace %q", project.Name)
+			}
+			logger.Debug("updated namespace with Project as owner")
+			return status, nil
+		}
+		status.Phase = kargoapi.ProjectPhaseInitializationFailed
+		return status, errors.Errorf(
+			"failed to initialize Project %q because namespace %q already exists",
+			project.Name,
+			project.Name,
+		)
+	}
+	if !apierrors.IsNotFound(err) {
+		return status, errors.Wrapf(err, "error getting namespace %q", project.Name)
+	}
+
+	logger.Debug("namespace does not exist yet; creating namespace")
+
+	ns = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: project.Name,
+			Labels: map[string]string{
+				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+			},
+			OwnerReferences: []metav1.OwnerReference{*ownerRef},
+		},
+	}
+	// Project namespaces are owned by a Project. Deleting a Project automatically
+	// deletes the namespace. But we also want this to work in the other
+	// direction, where that behavior is not automatic. We add a finalizer to the
+	// namespace and use our own namespace reconciler to clear it after deleting
+	// the Project.
+	controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
+	if err := r.createNamespaceFn(ctx, ns); err != nil {
+		return status,
+			errors.Wrapf(err, "error creating namespace %q", project.Name)
+	}
+	logger.Debug("created namespace")
+
 	return status, nil
+}
+
+func (r *reconciler) ensureSecretPermissions(
+	ctx context.Context,
+	project *kargoapi.Project,
+) error {
+	const roleBindingName = "kargo-api-server-manage-project-secrets"
+
+	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
+		"project":     project.Name,
+		"name":        project.Name,
+		"namespace":   project.Name,
+		"roleBinding": roleBindingName,
+	})
+
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleBindingName,
+			Namespace: project.Name,
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "kargo-secret-manager",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-api",
+				Namespace: r.cfg.KargoNamespace,
+			},
+		},
+	}
+	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			logger.Debug("role binding already exists in project namespace")
+			return nil
+		}
+		return errors.Wrapf(
+			err,
+			"error creating role binding %q in project namespace %q",
+			roleBinding.Name,
+			project.Name,
+		)
+	}
+	logger.Debug("granted API server access to manage project secrets")
+
+	return nil
 }
 
 func (r *reconciler) patchProjectStatus(

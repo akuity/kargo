@@ -195,7 +195,7 @@ type GitRepoUpdate struct {
 	// RepoURL is the URL of the repository to update. This is a required field.
 	//
 	//+kubebuilder:validation:MinLength=1
-	//+kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+	//+kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	RepoURL string `json:"repoURL"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
@@ -251,7 +251,7 @@ type KargoRenderPromotionMechanism struct {
 	// not use digests by default.)
 	//
 	//+kubebuilder:validation:Optional
-	Images []KargoRenderImageUpdate `json:"images"`
+	Images []KargoRenderImageUpdate `json:"images,omitempty"`
 }
 
 // KargoRenderImageUpdate describes how an image can be incorporated into a

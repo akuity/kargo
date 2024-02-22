@@ -5,9 +5,11 @@ import (
 	"sort"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,13 +29,26 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+// ReconcilerConfig represents configuration for the stage reconciler.
+type ReconcilerConfig struct {
+	ShardName                    string `envconfig:"SHARD_NAME"`
+	AnalysisRunsNamespace        string `envconfig:"ROLLOUTS_ANALYSIS_RUNS_NAMESPACE"`
+	RolloutsControllerInstanceID string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
+}
+
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	cfg := ReconcilerConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // reconciler reconciles Stage resources.
 type reconciler struct {
 	kargoClient    client.Client
 	argocdClient   client.Client
 	rolloutsClient client.Client
 
-	shardName string
+	cfg ReconcilerConfig
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -189,6 +204,8 @@ type reconciler struct {
 	clearVerificationsFn func(context.Context, *kargoapi.Stage) error
 
 	clearApprovalsFn func(context.Context, *kargoapi.Stage) error
+
+	shardRequirement *labels.Requirement
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Stage resources and
@@ -198,7 +215,7 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
 	rolloutsMgr manager.Manager,
-	shardName string,
+	cfg ReconcilerConfig,
 ) error {
 	// Index Promotions in non-terminal states by Stage
 	if err := kubeclient.IndexNonTerminalPromotionsByStage(ctx, kargoMgr); err != nil {
@@ -245,20 +262,25 @@ func SetupReconcilerWithManager(
 	}
 
 	// Index Stages by Argo CD Applications
-	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, shardName); err != nil {
+	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
 		return errors.Wrap(err, "index Stages by Argo CD Applications")
 	}
 
 	// Index Stages by AnalysisRun
-	if err := kubeclient.IndexStagesByAnalysisRun(ctx, kargoMgr, shardName); err != nil {
+	if err := kubeclient.IndexStagesByAnalysisRun(ctx, kargoMgr, cfg.ShardName); err != nil {
 		return errors.Wrap(err, "index Stages by Argo Rollouts AnalysisRun")
 	}
 
-	shardPredicate, err := controller.GetShardPredicate(shardName)
+	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
 	if err != nil {
 		return errors.Wrap(err, "error creating shard predicate")
 	}
 
+	shardRequirement, err := controller.GetShardRequirement(cfg.ShardName)
+	if err != nil {
+		return errors.Wrap(err, "error creating shard selector")
+	}
+	shardSelector := labels.NewSelector().Add(*shardRequirement)
 	var argocdClient, rolloutsClient client.Client
 	if argocdMgr != nil {
 		argocdClient = argocdMgr.GetClient()
@@ -293,7 +315,8 @@ func SetupReconcilerWithManager(
 				kargoMgr.GetClient(),
 				argocdClient,
 				rolloutsClient,
-				shardName,
+				cfg,
+				shardRequirement,
 			),
 		)
 	if err != nil {
@@ -323,7 +346,8 @@ func SetupReconcilerWithManager(
 	// Watch Freight that has been marked as verified in a Stage and enqueue
 	// downstream Stages
 	verifiedFreightHandler := &verifiedFreightEventHandler{
-		kargoClient: kargoMgr.GetClient(),
+		kargoClient:   kargoMgr.GetClient(),
+		shardSelector: shardSelector,
 	}
 	if err := c.Watch(
 		source.Kind(
@@ -349,7 +373,8 @@ func SetupReconcilerWithManager(
 	}
 
 	createdFreightEventHandler := &createdFreightEventHandler{
-		kargoClient: kargoMgr.GetClient(),
+		kargoClient:   kargoMgr.GetClient(),
+		shardSelector: shardSelector,
 	}
 	if err := c.Watch(
 		source.Kind(
@@ -365,7 +390,8 @@ func SetupReconcilerWithManager(
 	// care about this watch anyway.
 	if argocdMgr != nil {
 		updatedArgoCDAppHandler := &updatedArgoCDAppHandler{
-			kargoClient: kargoMgr.GetClient(),
+			kargoClient:   kargoMgr.GetClient(),
+			shardSelector: shardSelector,
 		}
 		if err := c.Watch(
 			source.Kind(
@@ -382,7 +408,8 @@ func SetupReconcilerWithManager(
 	// won't care about this watch anyway.
 	if rolloutsMgr != nil {
 		phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler{
-			kargoClient: kargoMgr.GetClient(),
+			kargoClient:   kargoMgr.GetClient(),
+			shardSelector: shardSelector,
 		}
 		if err := c.Watch(
 			source.Kind(
@@ -402,13 +429,15 @@ func newReconciler(
 	kargoClient client.Client,
 	argocdClient client.Client,
 	rolloutsClient client.Client,
-	shardName string,
+	cfg ReconcilerConfig,
+	shardRequirement *labels.Requirement,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient:    kargoClient,
-		argocdClient:   argocdClient,
-		rolloutsClient: rolloutsClient,
-		shardName:      shardName,
+		kargoClient:      kargoClient,
+		argocdClient:     argocdClient,
+		rolloutsClient:   rolloutsClient,
+		cfg:              cfg,
+		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
 	// Loop guard:
@@ -478,6 +507,12 @@ func (r *reconciler) Reconcile(
 		// Ignore if not found. This can happen if the Stage was deleted after the
 		// current reconciliation request was issued.
 		result.RequeueAfter = 0 // Do not requeue
+		return result, nil
+	}
+
+	if ok := r.shardRequirement.Matches(labels.Set(stage.Labels)); !ok {
+		// Ignore if stage does not belong to given shard
+		result.RequeueAfter = 0
 		return result, nil
 	}
 	logger.Debug("found Stage")
@@ -679,7 +714,12 @@ func (r *reconciler) syncNormalStage(
 		}
 
 		// Initiate or follow-up on verification if required
-		if status.Phase == kargoapi.StagePhaseVerifying && stage.Spec.Verification != nil {
+		// NOTE: If stage cache is stale, phase can be StagePhaseNotApplicable
+		//       even though current freight is not empty in that case
+		//       check if verification step is necessary and if yes execute
+		//       step irrespective of phase
+		if (status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable) &&
+			stage.Spec.Verification != nil {
 			if status.CurrentFreight.VerificationInfo == nil {
 				if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
 					log.Debug("starting verification")

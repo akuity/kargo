@@ -140,11 +140,6 @@ kargo update freight-alias \
 This can also be accomplished via `kubectl` commands `apply`, `edit`, `patch`,
 etc.
 
-:::note
-Aliases cannot currently be updated via the Kargo UI, but this will be addressed
-in the `v0.4.0` release.
-:::
-
 ## Manual Approvals
 
 The [concepts doc](http://localhost:3000/concepts#verifications) describes the
@@ -160,19 +155,18 @@ arise, in which case it may sometimes be desirable to bypass one or more
 `Stage`s in the pipeline.
 
 To enable this, Kargo provides the ability to manually approve a `Freight`
-resource for promotion to any given `Stage`. At present, this can be
-accomplished only through the Kargo UI:
+resource for promotion to any given `Stage`. This is conveniently accomplished
+via the Kargo CLI:
 
-1. Click the three dots in the upper-right corner of any `Freight` resource
-   select __Manually Approve__.
-
-1. Click on the `Stage` resource for which you wish to approve the `Freight`.
+```shell
+kargo approve \
+  --freight f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
+  --stage prod \
+  --project kargo-demo
+```
 
 :::note
-Manual approvals cannot currently be granted via the Kargo CLI, but this will be
-addressed in the `v0.4.0` release.
-
-Manual approvals also cannot be granted via `kubectl` due to technical factors
+Manual approvals cannot be granted via `kubectl` due to technical factors
 preventing `kubectl` from updating `status` subresources of Kargo resources.
 :::
 

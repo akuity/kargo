@@ -8,29 +8,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewNewestBuildTagSelector(t *testing.T) {
+func TestNewNewestBuildSelector(t *testing.T) {
 	testAllowRegex := regexp.MustCompile("fake-regex")
 	testIgnore := []string{"fake-ignore"}
 	testPlatform := &platformConstraint{
 		os:   "linux",
 		arch: "amd64",
 	}
-	s := newNewestBuildTagSelector(nil, testAllowRegex, testIgnore, testPlatform)
-	selector, ok := s.(*newestBuildTagSelector)
+	s := newNewestBuildSelector(nil, testAllowRegex, testIgnore, testPlatform)
+	selector, ok := s.(*newestBuildSelector)
 	require.True(t, ok)
 	require.Equal(t, testAllowRegex, selector.allowRegex)
 	require.Equal(t, testIgnore, selector.ignore)
 	require.Equal(t, testPlatform, selector.platform)
 }
 
-func TestSortTagsByDate(t *testing.T) {
+func TestSortImagesByDate(t *testing.T) {
 	timePtr := func(t time.Time) *time.Time {
 		return &t
 	}
 
 	now := time.Now().UTC()
 
-	tags := []Tag{
+	images := []Image{
 		{CreatedAt: &now},
 		{CreatedAt: timePtr(now.Add(time.Hour))},
 		{CreatedAt: timePtr(now.Add(5 * time.Hour))},
@@ -41,11 +41,11 @@ func TestSortTagsByDate(t *testing.T) {
 		{CreatedAt: timePtr(now.Add(3 * time.Hour))},
 	}
 
-	sortTagsByDate(tags)
+	sortImagesByDate(images)
 
 	require.Equal(
 		t,
-		[]Tag{
+		[]Image{
 			{CreatedAt: timePtr(now.Add(24 * time.Hour))},
 			{CreatedAt: timePtr(now.Add(8 * time.Hour))},
 			{CreatedAt: timePtr(now.Add(7 * time.Hour))},
@@ -55,6 +55,6 @@ func TestSortTagsByDate(t *testing.T) {
 			{CreatedAt: timePtr(now.Add(time.Hour))},
 			{CreatedAt: &now},
 		},
-		tags,
+		images,
 	)
 }

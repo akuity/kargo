@@ -12,11 +12,24 @@ rules:
   resources:
   - namespaces
   verbs:
+  - create
   - get
   - list
   - patch
   - update
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - "*"
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - create
 - apiGroups:
   - kargo.akuity.io
   resources:
