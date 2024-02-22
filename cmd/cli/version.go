@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -29,32 +30,24 @@ func newVersionCommand(
 		Use: "version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+			printToStdout := ptr.Deref(opt.PrintFlags.OutputFormat, "") == ""
+
+			cliVersion := typesv1alpha1.ToVersionProto(versionpkg.GetVersion())
+			if printToStdout {
+				fmt.Println("Client Version:", cliVersion.GetVersion())
+			}
 
 			var serverVersion *svcv1alpha1.VersionInfo
-			if !opt.UseLocalServer {
-				if cfg.APIAddress != "" && cfg.BearerToken != "" {
-					kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
-					if err != nil {
-						return errors.Wrap(err, "get client from config")
-					}
-					resp, err := kargoSvcCli.GetVersionInfo(
-						ctx,
-						connect.NewRequest(&svcv1alpha1.GetVersionInfoRequest{}),
-					)
-					if err != nil {
-						return errors.Wrap(err, "get version info from server")
-					}
-					serverVersion = resp.Msg.GetVersionInfo()
-				}
+			var serverErr error
+			if !opt.UseLocalServer && !opt.ClientVersionOnly {
+				serverVersion, serverErr = getServerVersion(ctx, cfg, opt)
 			}
-			cliVersion := typesv1alpha1.ToVersionProto(versionpkg.GetVersion())
 
-			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
-				fmt.Println("Client Version:", cliVersion.GetVersion())
+			if printToStdout {
 				if serverVersion != nil {
 					fmt.Println("Server Version:", serverVersion.GetVersion())
 				}
-				return nil
+				return serverErr
 			}
 
 			printer, err := opt.PrintFlags.ToPrinter()
@@ -68,12 +61,38 @@ func newVersionCommand(
 			if err != nil {
 				return errors.Wrap(err, "map component versions to runtime object")
 			}
-			return printer.PrintObj(obj, opt.IOStreams.Out)
+
+			if err := printer.PrintObj(obj, opt.IOStreams.Out); err != nil {
+				return errors.Wrap(err, "printing object")
+			}
+			return serverErr
 		},
 	}
+
 	opt.PrintFlags.AddFlags(cmd)
 	option.InsecureTLS(cmd.PersistentFlags(), opt)
+	option.ClientVersion(cmd.PersistentFlags(), opt)
 	return cmd
+}
+
+func getServerVersion(ctx context.Context, cfg config.CLIConfig, opt *option.Option) (*svcv1alpha1.VersionInfo, error) {
+	if cfg.APIAddress == "" || cfg.BearerToken == "" {
+		return nil, nil
+	}
+
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+	if err != nil {
+		return nil, errors.Wrap(err, "get client from config")
+	}
+	resp, err := kargoSvcCli.GetVersionInfo(
+		ctx,
+		connect.NewRequest(&svcv1alpha1.GetVersionInfoRequest{}),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "get version info from server")
+	}
+
+	return resp.Msg.GetVersionInfo(), nil
 }
 
 func componentVersionsToRuntimeObject(v *svcv1alpha1.ComponentVersions) (runtime.Object, error) {
