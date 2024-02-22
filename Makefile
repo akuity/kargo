@@ -42,6 +42,9 @@ endif
 # Kargo development activities inside WSL2.
 GOOS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 GOARCH ?= $(shell uname -m)
+ifeq ($(GOARCH), x86_64)
+	override GOARCH = amd64
+endif
 
 ################################################################################
 # Tests                                                                        #

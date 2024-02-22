@@ -373,7 +373,7 @@ message GitRepoUpdate {
   // RepoURL is the URL of the repository to update. This is a required field.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+  // +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
   optional string repoURL = 1;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors
@@ -422,7 +422,7 @@ message GitSubscription {
   // URL is the repository's URL. This is a required field.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+  // +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
   optional string repoURL = 1;
 
   // CommitSelectionStrategy specifies the rules for how to identify the newest
@@ -604,7 +604,7 @@ message ImageSubscription {
   // revision of that source code that was used to build the image.
   //
   // +kubebuilder:validation:Optional
-  // +kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+  // +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
   optional string gitRepoURL = 2;
 
   // ImageSelectionStrategy specifies the rules for how to identify the newest version

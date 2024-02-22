@@ -131,7 +131,7 @@ spec:
                           description: URL is the repository's URL. This is a required
                             field.
                           minLength: 1
-                          pattern: ^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
+                          pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
                           type: string
                         semverConstraint:
                           description: SemverConstraint specifies constraints on what
@@ -162,7 +162,7 @@ spec:
                             this is specified, Kargo MAY be able to infer and link
                             to the exact revision of that source code that was used
                             to build the image.
-                          pattern: ^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
+                          pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
                           type: string
                         ignoreTags:
                           description: IgnoreTags is a list of tags that must be ignored

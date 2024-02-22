@@ -56,7 +56,7 @@ import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
-import { NodeType, NodesItemType } from './types';
+import { NodeType, NodesItemType, NodesRepoType } from './types';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
 const lineThickness = 2;
@@ -222,6 +222,8 @@ export const ProjectDetails = () => {
     g.setGraph({ rankdir: 'LR' });
     g.setDefaultEdgeLabel(() => ({}));
 
+    const warehouseNodeMap = {} as { [key: string]: NodesRepoType };
+
     const myNodes = data.stages
       .slice()
       .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0)
@@ -237,13 +239,24 @@ export const ProjectDetails = () => {
         const warehouseName = stage.spec?.subscriptions?.warehouse;
         if (warehouseName) {
           const cur = warehouseMap[warehouseName];
-          n.push({
-            data: cur?.metadata?.name || '',
-            stageName: stage.metadata?.name || '',
-            warehouseName: cur?.metadata?.name || '',
-            refreshing: !!cur?.metadata?.annotations['kargo.akuity.io/refresh'],
-            type: NodeType.WAREHOUSE
-          });
+          if (!warehouseNodeMap[warehouseName] && cur) {
+            warehouseNodeMap[warehouseName] = {
+              data: cur?.metadata?.name || '',
+              stageNames: [stage.metadata?.name || ''],
+              warehouseName: cur?.metadata?.name || '',
+              refreshing: !!cur?.metadata?.annotations['kargo.akuity.io/refresh'],
+              type: NodeType.WAREHOUSE
+            };
+          } else {
+            const stageNames = [
+              ...(warehouseNodeMap[warehouseName]?.stageNames || []),
+              stage.metadata?.name || ''
+            ];
+            warehouseNodeMap[warehouseName] = {
+              ...warehouseNodeMap[warehouseName],
+              stageNames
+            };
+          }
           if (!hideSubscriptions) {
             cur?.spec?.subscriptions?.forEach((sub) => {
               const type = sub.chart
@@ -254,7 +267,7 @@ export const ProjectDetails = () => {
               n.push({
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 data: sub.chart || sub.image || sub.git || ({} as any),
-                stageName: stage.metadata?.name || '',
+                stageNames: [stage.metadata?.name || ''],
                 warehouseName: cur.metadata?.name || '',
                 type
               });
@@ -265,8 +278,9 @@ export const ProjectDetails = () => {
         return n;
       });
 
+    myNodes.push(...Object.values(warehouseNodeMap));
     const parentIndexFor: { [key: string]: number } = {};
-    const subscriberIndexFor: { [key: string]: number } = {};
+    const subscribersIndexFor: { [key: string]: number } = {};
 
     myNodes.forEach((item, index) => {
       if (item.type === NodeType.STAGE) {
@@ -288,17 +302,19 @@ export const ProjectDetails = () => {
         });
 
         if (item.type === NodeType.WAREHOUSE) {
-          let subsIndex = subscriberIndexFor[item.stageName];
-          if (subsIndex === undefined) {
-            subsIndex = myNodes.findIndex((node) => {
-              return node.type === NodeType.STAGE && node.data.metadata?.name === item.stageName;
-            });
-            subscriberIndexFor[item.stageName] = subsIndex;
+          for (const stageName of item.stageNames) {
+            let subsIndex = subscribersIndexFor[stageName];
+            if (subsIndex === undefined) {
+              subsIndex = myNodes.findIndex((cur) => {
+                return cur.type === NodeType.STAGE && cur.data.metadata?.name === stageName;
+              });
+              subscribersIndexFor[stageName] = subsIndex;
+            }
+            // draw edge between warehouse and stage(s)
+            g.setEdge(String(index), String(subsIndex));
           }
-          g.setEdge(String(index), String(subsIndex));
-        }
-
-        if (item.type !== NodeType.WAREHOUSE) {
+        } else {
+          // this is a subscription node
           let parentIndex = parentIndexFor[item.warehouseName];
           if (parentIndex === undefined) {
             parentIndex = myNodes.findIndex((node) => {

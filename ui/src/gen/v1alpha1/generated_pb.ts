@@ -1324,7 +1324,7 @@ export class GitRepoUpdate extends Message<GitRepoUpdate> {
    * RepoURL is the URL of the repository to update. This is a required field.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+   * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -1443,7 +1443,7 @@ export class GitSubscription extends Message<GitSubscription> {
    * URL is the repository's URL. This is a required field.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+   * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -1924,7 +1924,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
    * revision of that source code that was used to build the image.
    *
    * +kubebuilder:validation:Optional
-   * +kubebuilder:validation:Pattern=`^https://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
+   * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
    *
    * @generated from field: optional string gitRepoURL = 2;
    */

@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -99,6 +100,15 @@ func (k *kubernetesDatabase) Get(
 	repoURL string,
 ) (Credentials, bool, error) {
 	creds := Credentials{}
+
+	// If we are dealing with an insecure HTTP endpoint (of any type),
+	// refuse to return any credentials
+	if strings.HasPrefix(repoURL, "http://") {
+		logger := logging.LoggerFromContext(ctx).WithField("repoURL", repoURL)
+		logger.Warnf("refused to get credentials for insecure HTTP endpoint")
+
+		return creds, false, nil
+	}
 
 	var secret *corev1.Secret
 	var err error
