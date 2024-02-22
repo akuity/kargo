@@ -1,19 +1,19 @@
 package svcv1alpha1
 
 import (
-	"time"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/akuity/kargo/internal/version"
 )
 
 func ToVersionProto(v version.Version) *VersionInfo {
 	return &VersionInfo{
-		Version:          v.Version,
-		GitCommit:        v.GitCommit,
-		GitTreeDirty:     v.GitTreeDirty,
-		GoVersion:        v.GoVersion,
-		Compiler:         v.Compiler,
-		Platform:         v.Platform,
-		VersionBuildTime: v.BuildDate.UTC().Format(time.RFC3339),
+		Version:      v.Version,
+		GitCommit:    v.GitCommit,
+		GitTreeDirty: v.GitTreeDirty,
+		BuildTime:    timestamppb.New(v.BuildDate),
+		GoVersion:    v.GoVersion,
+		Compiler:     v.Compiler,
+		Platform:     v.Platform,
 	}
 }

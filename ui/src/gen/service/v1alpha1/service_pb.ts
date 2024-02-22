@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3 } from "@bufbuild/protobuf";
+import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, StageSpec, Warehouse, WarehouseSpec } from "../../v1alpha1/generated_pb.js";
 
 /**
@@ -70,6 +70,11 @@ export class VersionInfo extends Message<VersionInfo> {
   gitTreeDirty = false;
 
   /**
+   * @generated from field: google.protobuf.Timestamp build_time = 4;
+   */
+  buildTime?: Timestamp;
+
+  /**
    * @generated from field: string go_version = 5;
    */
   goVersion = "";
@@ -84,13 +89,6 @@ export class VersionInfo extends Message<VersionInfo> {
    */
   platform = "";
 
-  /**
-   * version_build_time represents build time in RFC 3339 format.
-   *
-   * @generated from field: string version_build_time = 8;
-   */
-  versionBuildTime = "";
-
   constructor(data?: PartialMessage<VersionInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -102,10 +100,10 @@ export class VersionInfo extends Message<VersionInfo> {
     { no: 1, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "git_commit", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "git_tree_dirty", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "build_time", kind: "message", T: Timestamp },
     { no: 5, name: "go_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "compiler", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "platform", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "version_build_time", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VersionInfo {

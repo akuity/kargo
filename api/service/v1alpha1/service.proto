@@ -2,8 +2,7 @@ syntax = "proto3";
 
 package akuity.io.kargo.service.v1alpha1;
 
-// Use RFC 3339 formatted string instead of Timestamp for gogo/proto interoperability.
-// import "google/protobuf/timestamp.proto";
+import "google/protobuf/timestamp.proto";
 import "v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
@@ -75,15 +74,10 @@ message VersionInfo {
   string version = 1;
   string git_commit = 2;
   bool git_tree_dirty = 3;
-
-  // google.protobuf.Timestamp build_time = 4;
-
+  google.protobuf.Timestamp build_time = 4;
   string go_version = 5;
   string compiler = 6;
   string platform = 7;
-
-  // version_build_time represents build time in RFC 3339 format.
-  string version_build_time = 8;
 }
 
 message GetVersionInfoRequest {}
