@@ -108,6 +108,10 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3
+      with:
+        version: "25.3"
     - name: Install buf
       run: go install github.com/bufbuild/buf/cmd/buf@v1.26.1
     - name: Install controller-gen
