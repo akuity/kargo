@@ -152,15 +152,22 @@ codegen:
 DOCKER_CMD := $(CONTAINER_RUNTIME) run \
 	-it \
 	--rm \
-	-v gomodcache:/go/pkg/mod \
+	-v gomodcache:/home/user/gocache \
 	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
 	-v /workspaces/kargo/ui/node_modules \
 	-w /workspaces/kargo \
 	kargo:dev-tools
 
+DEV_TOOLS_BUILD_OPTS =
+ifeq ($(GOOS),linux)
+	DEV_TOOLS_BUILD_OPTS += --build-arg USER_ID=$(shell id -u)
+	DEV_TOOLS_BUILD_OPTS += --build-arg GROUP_ID=$(shell id -g)
+endif
+
 .PHONY: hack-build-dev-tools
 hack-build-dev-tools:
-	$(CONTAINER_RUNTIME) build -f Dockerfile.dev -t kargo:dev-tools .
+	$(CONTAINER_RUNTIME) build $(DEV_TOOLS_BUILD_OPTS) \
+ 		-f Dockerfile.dev -t kargo:dev-tools .
 
 .PHONY: hack-lint
 hack-lint: hack-build-dev-tools
