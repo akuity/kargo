@@ -1,11 +1,13 @@
 package option
 
 import (
+	"bytes"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
+
+	"github.com/akuity/kargo/internal/proto/jsonpb"
 )
 
 var (
@@ -14,19 +16,16 @@ var (
 
 type jsonCodec struct {
 	name string
-	m    *protojson.MarshalOptions
-	um   *protojson.UnmarshalOptions
+	m    *jsonpb.Marshaler
+	um   *jsonpb.Unmarshaler
 }
 
 func newJSONCodec(name string) connect.Codec {
 	return &jsonCodec{
 		name: name,
-		m: &protojson.MarshalOptions{
-			UseProtoNames:   true,
-			EmitUnpopulated: false,
-		},
-		um: &protojson.UnmarshalOptions{
-			DiscardUnknown: true,
+		m:    &jsonpb.Marshaler{},
+		um: &jsonpb.Unmarshaler{
+			AllowUnknownFields: true,
 		},
 	}
 }
@@ -36,19 +35,24 @@ func (c *jsonCodec) Name() string {
 }
 
 func (c *jsonCodec) Marshal(msg any) ([]byte, error) {
-	m, ok := msg.(proto.Message)
+	pb, ok := msg.(proto.Message)
 	if !ok {
 		return nil, errNotProto(msg)
 	}
-	return c.m.Marshal(m)
+
+	var buf bytes.Buffer
+	if err := c.m.Marshal(&buf, pb); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func (c *jsonCodec) Unmarshal(data []byte, msg any) error {
-	m, ok := msg.(proto.Message)
+	pb, ok := msg.(proto.Message)
 	if !ok {
 		return errNotProto(msg)
 	}
-	return c.um.Unmarshal(data, m)
+	return c.um.Unmarshal(bytes.NewReader(data), pb)
 }
 
 func errNotProto(msg any) error {

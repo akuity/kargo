@@ -1,0 +1,31 @@
+diff --git a/jsonpb/jsonpb.go b/jsonpb/jsonpb.go
+index e8134ec8..38a5dfab 100644
+--- a/jsonpb/jsonpb.go
++++ b/jsonpb/jsonpb.go
+@@ -108,6 +108,7 @@ func defaultResolveAny(typeUrl string) (proto.Message, error) {
+ // parsed.
+ //
+ // The JSON marshaling must follow the proto to JSON specification:
++//
+ //	https://developers.google.com/protocol-buffers/docs/proto3#json
+ type JSONPBMarshaler interface {
+ 	MarshalJSONPB(*Marshaler) ([]byte, error)
+@@ -119,6 +120,7 @@ type JSONPBMarshaler interface {
+ // produced.
+ //
+ // The JSON unmarshaling must follow the JSON to proto specification:
++//
+ //	https://developers.google.com/protocol-buffers/docs/proto3#json
+ type JSONPBUnmarshaler interface {
+ 	UnmarshalJSONPB(*Unmarshaler, []byte) error
+@@ -822,6 +824,10 @@ func (u *Unmarshaler) unmarshalValue(target reflect.Value, inputValue json.RawMe
+ 		return u.unmarshalValue(target.Elem(), inputValue, prop)
+ 	}
+
++	if jsu, ok := target.Addr().Interface().(json.Unmarshaler); ok {
++		return jsu.UnmarshalJSON(inputValue)
++	}
++
+ 	if jsu, ok := target.Addr().Interface().(JSONPBUnmarshaler); ok {
+ 		return jsu.UnmarshalJSONPB(u, []byte(inputValue))
+ 	}
