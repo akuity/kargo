@@ -15,6 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -39,7 +40,7 @@ kargo delete -f stage.yaml
 				return errors.New("filename is required")
 			}
 
-			manifest, err := option.ReadManifests(filenames...)
+			manifest, err := yaml.Read(filenames)
 			if err != nil {
 				return errors.Wrap(err, "read manifests")
 			}
