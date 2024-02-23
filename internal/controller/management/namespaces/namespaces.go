@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -82,13 +81,6 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	result := ctrl.Result{
-		// Note: If there is a failure, controller runtime ignores this and uses
-		// progressive backoff instead. So this value only prevents requeueing
-		// a Namespace if THIS reconciliation succeeds.
-		RequeueAfter: 0,
-	}
-
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"project": req.NamespacedName.Name,
 	})
@@ -98,22 +90,19 @@ func (r *reconciler) Reconcile(
 	// Find the Namespace
 	ns := &corev1.Namespace{}
 	if err := r.getNamespaceFn(ctx, req.NamespacedName, ns); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Ignore if not found. This can happen if the Namespace was deleted after
-			// the current reconciliation request was issued.
-			return result, nil
-		}
-		return result, err
+		// Ignore if not found. This can happen if the Namespace was deleted after
+		// the current reconciliation request was issued.
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// We're only interested in deletes
 	if ns.DeletionTimestamp == nil {
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 	logger.Debug("Namespace is being deleted")
 
 	if !controllerutil.ContainsFinalizer(ns, kargoapi.FinalizerName) {
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 	logger.Debug("Namespace needs finalizing")
 
@@ -128,13 +117,13 @@ func (r *reconciler) Reconcile(
 			},
 		),
 	); err != nil {
-		return result, errors.Wrapf(err, "error deleting Project %q", ns.Name)
+		return ctrl.Result{}, errors.Wrapf(err, "error deleting Project %q", ns.Name)
 	}
 	if controllerutil.RemoveFinalizer(ns, kargoapi.FinalizerName) {
 		if err := r.updateNamespaceFn(ctx, ns); err != nil {
-			return result, errors.Wrap(err, "error removing finalizer")
+			return ctrl.Result{}, errors.Wrap(err, "error removing finalizer")
 		}
 	}
 	logger.Debug("done reconciling Namespace")
-	return result, nil
+	return ctrl.Result{}, nil
 }
