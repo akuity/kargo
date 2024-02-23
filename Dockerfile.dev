@@ -22,3 +22,25 @@ RUN go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
     && apt-get update && apt-get install nodejs -y \
     && curl -fsSL https://get.pnpm.io/install.sh | bash \
     && mv /root/.local/share/pnpm/pnpm /usr/bin
+
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# To ensure mounts end up with the right permissions on Linux systems,
+# create a non-root user with the provided UID and GUID.
+RUN addgroup --gid ${GROUP_ID} user \
+    && adduser --disabled-password --gecos '' --uid ${USER_ID} --gid ${GROUP_ID} user \
+    && mkdir -p /workspaces/kargo/ui/node_modules \
+    && chown -R ${USER_ID}:${GROUP_ID} /workspaces/kargo
+
+USER user
+
+# Configure user writable Go Mod cache path and prepare it to ensure
+# it does not end up being owned by root when mounted
+ENV GOMODCACHE=/home/user/gocache
+RUN mkdir -p $GOMODCACHE
+
+# Configure user writable "global" NPM bin directory,
+# and add to path
+ENV NPM_CONFIG_PREFIX=/home/user/.npm-global
+ENV PATH=$NPM_CONFIG_PREFIX/bin:$PATH
