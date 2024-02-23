@@ -17,20 +17,20 @@ import (
 
 // Freight represents a collection of versioned artifacts.
 type Freight struct {
-	metav1.TypeMeta		`json:",inline"`
-	metav1.ObjectMeta	`json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// ID is a system-assigned value that is derived deterministically from the
 	// contents of the Freight. i.e. Two pieces of Freight can be compared for
 	// equality by comparing their IDs.
-	ID	string	`json:"id,omitempty" protobuf:"bytes,2,opt,name=id"`
+	ID string `json:"id,omitempty" protobuf:"bytes,2,opt,name=id"`
 	// Commits describes specific Git repository commits.
-	Commits	[]GitCommit	`json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
+	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.
-	Images	[]Image	`json:"images,omitempty" protobuf:"bytes,4,rep,name=images"`
+	Images []Image `json:"images,omitempty" protobuf:"bytes,4,rep,name=images"`
 	// Charts describes specific versions of specific Helm charts.
-	Charts	[]Chart	`json:"charts,omitempty" protobuf:"bytes,5,rep,name=charts"`
+	Charts []Chart `json:"charts,omitempty" protobuf:"bytes,5,rep,name=charts"`
 	// Status describes the current status of this Freight.
-	Status	FreightStatus	`json:"status,omitempty" protobuf:"bytes,6,opt,name=status"`
+	Status FreightStatus `json:"status,omitempty" protobuf:"bytes,6,opt,name=status"`
 }
 
 func (f *Freight) GetStatus() *FreightStatus {
@@ -81,15 +81,15 @@ func (f *Freight) UpdateID() {
 // GitCommit describes a specific commit from a specific Git repository.
 type GitCommit struct {
 	// RepoURL is the URL of a Git repository.
-	RepoURL	string	`json:"repoURL,omitempty" protobuf:"bytes,1,opt,name=repoURL"`
+	RepoURL string `json:"repoURL,omitempty" protobuf:"bytes,1,opt,name=repoURL"`
 	// ID is the ID of a specific commit in the Git repository specified by
 	// RepoURL.
-	ID	string	`json:"id,omitempty" protobuf:"bytes,2,opt,name=id"`
+	ID string `json:"id,omitempty" protobuf:"bytes,2,opt,name=id"`
 	// Branch denotes the branch of the repository where this commit was found.
-	Branch	string	`json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
+	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
 	// Tag denotes a tag in the repository that matched selection criteria and
 	// resolved to this commit.
-	Tag	string	`json:"tag,omitempty" protobuf:"bytes,4,opt,name=tag"`
+	Tag string `json:"tag,omitempty" protobuf:"bytes,4,opt,name=tag"`
 	// HealthCheckCommit is the ID of a specific commit. When specified,
 	// assessments of Stage health will used this value (instead of ID) when
 	// determining if applicable sources of Argo CD Application resources
@@ -97,23 +97,23 @@ type GitCommit struct {
 	// there are cases (as in that of Kargo Render being utilized as a promotion
 	// mechanism) wherein the value of this field may differ from the commit ID
 	// found in the ID field.
-	HealthCheckCommit	string	`json:"healthCheckCommit,omitempty" protobuf:"bytes,5,opt,name=healthCheckCommit"`
+	HealthCheckCommit string `json:"healthCheckCommit,omitempty" protobuf:"bytes,5,opt,name=healthCheckCommit"`
 	// Message is the git commit message
-	Message	string	`json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
+	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
 	// Author is the git commit author
-	Author	string	`json:"author,omitempty" protobuf:"bytes,7,opt,name=author"`
+	Author string `json:"author,omitempty" protobuf:"bytes,7,opt,name=author"`
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.
 type FreightStatus struct {
 	// VerifiedIn describes the Stages in which this Freight has been verified
 	// through promotion and subsequent health checks.
-	VerifiedIn	map[string]VerifiedStage	`json:"verifiedIn,omitempty" protobuf:"bytes,1,rep,name=verifiedIn" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	VerifiedIn map[string]VerifiedStage `json:"verifiedIn,omitempty" protobuf:"bytes,1,rep,name=verifiedIn" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// ApprovedFor describes the Stages for which this Freight has been approved
 	// preemptively/manually by a user. This is useful for hotfixes, where one
 	// might wish to promote a piece of Freight to a given Stage without
 	// transiting the entire pipeline.
-	ApprovedFor	map[string]ApprovedStage	`json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // VerifiedStage describes a Stage in which Freight has been verified.
@@ -127,7 +127,7 @@ type ApprovedStage struct{}
 
 // FreightList is a list of Freight resources.
 type FreightList struct {
-	metav1.TypeMeta	`json:",inline"`
-	metav1.ListMeta	`json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items		[]Freight	`json:"items,omitempty" protobuf:"bytes,2,rep,name=items"`
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Items           []Freight `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

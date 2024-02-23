@@ -31,6 +31,9 @@
                 "type": "string"
               }
             },
+            "required": [
+              "stage"
+            ],
             "type": "object"
           },
           "type": "array"

@@ -28,6 +28,10 @@
           "type": "string"
         }
       },
+      "required": [
+        "freight",
+        "stage"
+      ],
       "type": "object"
     },
     "status": {
@@ -52,5 +56,8 @@
       "type": "object"
     }
   },
+  "required": [
+    "spec"
+  ],
   "type": "object"
 }

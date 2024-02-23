@@ -81,6 +81,8 @@ spec:
                             lead to the unanticipated rollout of breaking changes.
                             More info: https://github.com/masterminds/semver#checking-version-constraints
                           type: string
+                      required:
+                      - repoURL
                       type: object
                     git:
                       description: Git describes a subscriptions to a Git repository.
@@ -148,6 +150,8 @@ spec:
                             should be taken with leaving this field unspecified, as it can lead to the
                             unanticipated rollout of breaking changes.
                           type: string
+                      required:
+                      - repoURL
                       type: object
                     image:
                       description: Image describes a subscription to container image
@@ -219,10 +223,14 @@ spec:
                             changes. Refer to Image Updater documentation for more details.
                             More info: https://github.com/masterminds/semver#checking-version-constraints
                           type: string
+                      required:
+                      - repoURL
                       type: object
                   type: object
                 minItems: 1
                 type: array
+            required:
+            - subscriptions
             type: object
           status:
             description: Status describes the Warehouse's most recently observed state.
@@ -239,6 +247,8 @@ spec:
                 format: int64
                 type: integer
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

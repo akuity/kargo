@@ -118,13 +118,6 @@ jobs:
       uses: arduino/setup-protoc@v3
       with:
         version: "25.3"
-    - name: Install linter
-      env:
-        GOLANGCI_LINT_VERSION: 1.54.2
-      working-directory: /usr/local/bin
-      run: |
-        curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz \
-        | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint --strip-components=1
     - name: Git stuff
       # As of go 1.20, this seems to be necessary for invoking git commands
       # within the container

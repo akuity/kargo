@@ -73,12 +73,20 @@
                                     "type": "string"
                                   }
                                 },
+                                "required": [
+                                  "image",
+                                  "key",
+                                  "value"
+                                ],
                                 "type": "object"
                               },
                               "minItems": 1,
                               "type": "array"
                             }
                           },
+                          "required": [
+                            "images"
+                          ],
                           "type": "object"
                         },
                         "kustomize": {
@@ -99,12 +107,18 @@
                                     "type": "boolean"
                                   }
                                 },
+                                "required": [
+                                  "image"
+                                ],
                                 "type": "object"
                               },
                               "minItems": 1,
                               "type": "array"
                             }
                           },
+                          "required": [
+                            "images"
+                          ],
                           "type": "object"
                         },
                         "repoURL": {
@@ -117,11 +131,17 @@
                           "type": "boolean"
                         }
                       },
+                      "required": [
+                        "repoURL"
+                      ],
                       "type": "object"
                     },
                     "type": "array"
                   }
                 },
+                "required": [
+                  "appName"
+                ],
                 "type": "object"
               },
               "type": "array"
@@ -157,6 +177,11 @@
                               "type": "string"
                             }
                           },
+                          "required": [
+                            "chartPath",
+                            "name",
+                            "repository"
+                          ],
                           "type": "object"
                         },
                         "type": "array"
@@ -194,6 +219,12 @@
                               "type": "string"
                             }
                           },
+                          "required": [
+                            "image",
+                            "key",
+                            "value",
+                            "valuesFilePath"
+                          ],
                           "type": "object"
                         },
                         "type": "array"
@@ -229,12 +260,19 @@
                               "type": "boolean"
                             }
                           },
+                          "required": [
+                            "image",
+                            "path"
+                          ],
                           "type": "object"
                         },
                         "minItems": 1,
                         "type": "array"
                       }
                     },
+                    "required": [
+                      "images"
+                    ],
                     "type": "object"
                   },
                   "pullRequest": {
@@ -270,6 +308,9 @@
                               "type": "boolean"
                             }
                           },
+                          "required": [
+                            "image"
+                          ],
                           "type": "object"
                         },
                         "type": "array"
@@ -290,6 +331,10 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "repoURL",
+                  "writeBranch"
+                ],
                 "type": "object"
               },
               "type": "array"
@@ -312,6 +357,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "name"
+                ],
                 "type": "object"
               },
               "type": "array"
@@ -356,6 +404,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "name"
+                ],
                 "type": "object"
               },
               "type": "array"
@@ -374,6 +425,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "name"
+                ],
                 "type": "object"
               },
               "type": "array"
@@ -382,6 +436,9 @@
           "type": "object"
         }
       },
+      "required": [
+        "subscriptions"
+      ],
       "type": "object"
     },
     "status": {
@@ -499,6 +556,11 @@
                       "type": "string"
                     }
                   },
+                  "required": [
+                    "name",
+                    "namespace",
+                    "phase"
+                  ],
                   "type": "object"
                 },
                 "message": {
@@ -630,6 +692,11 @@
                           "type": "string"
                         }
                       },
+                      "required": [
+                        "name",
+                        "namespace",
+                        "phase"
+                      ],
                       "type": "object"
                     },
                     "message": {
@@ -651,6 +718,10 @@
               "type": "string"
             }
           },
+          "required": [
+            "freight",
+            "name"
+          ],
           "type": "object"
         },
         "error": {
@@ -675,6 +746,9 @@
                         "type": "string"
                       }
                     },
+                    "required": [
+                      "status"
+                    ],
                     "type": "object"
                   },
                   "name": {
@@ -701,9 +775,16 @@
                         "type": "string"
                       }
                     },
+                    "required": [
+                      "status"
+                    ],
                     "type": "object"
                   }
                 },
+                "required": [
+                  "name",
+                  "namespace"
+                ],
                 "type": "object"
               },
               "type": "array"
@@ -836,6 +917,11 @@
                         "type": "string"
                       }
                     },
+                    "required": [
+                      "name",
+                      "namespace",
+                      "phase"
+                    ],
                     "type": "object"
                   },
                   "message": {
@@ -869,5 +955,8 @@
       "type": "object"
     }
   },
+  "required": [
+    "spec"
+  ],
   "type": "object"
 }

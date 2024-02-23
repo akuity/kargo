@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"testing"
 
+	"github.com/fatih/structtag"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,18 +16,20 @@ func TestExtractStructFieldTagByJSONName(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := TagMap{
-		"Message": map[string]string{
-			"withJSONAndProtoTag": "`json:\"withJSONAndProtoTag\" protobuf:\"bytes,1,opt,name=withJSONAndProtoTag\"`",
-			// Tags must be sorted
-			"withUnorderedJSONAndProtoTag": "`json:\"withUnorderedJSONAndProtoTag\" protobuf:\"bytes,2,opt,name=withUnorderedJSONAndProtoTag\"`", //nolint:lll
-			"withJSONTag":                  "`json:\"withJSONTag\"`",
+		"Message": map[string]*structtag.Tags{
+			"withJSONAndProtoTag": mustParseStructTags(
+				`json:"withJSONAndProtoTag" protobuf:"bytes,1,opt,name=withJSONAndProtoTag"`),
+			"withJSONOmitEmptyAndProtoTag": mustParseStructTags(
+				`json:"withJSONOmitEmptyAndProtoTag,omitempty" protobuf:"bytes,2,opt,name=withUnorderedJSONAndProtoTag"`),
+			"withJSONTag":          mustParseStructTags(`json:"withJSONTag"`),
+			"withJSONOmitEmptyTag": mustParseStructTags(`json:"withJSONOmitEmptyTag,omitempty"`),
 		},
 	}
 
 	actual := make(TagMap)
 	extractor := ExtractStructFieldTagByJSONName(actual)
 	ast.Walk(extractor, f)
-	require.Equal(t, expected, actual)
+	equalTagMap(t, expected, actual)
 }
 
 func TestInjectStructFieldTagByJSONName(t *testing.T) {
@@ -34,24 +37,44 @@ func TestInjectStructFieldTagByJSONName(t *testing.T) {
 	srcFS := token.NewFileSet()
 	src, err := parser.ParseFile(srcFS, "testdata/generated.go", nil, parser.ParseComments)
 	require.NoError(t, err)
-	expectedTagMap := make(TagMap)
-	ast.Walk(ExtractStructFieldTagByJSONName(expectedTagMap), src)
+	srcTagMap := make(TagMap)
+	ast.Walk(ExtractStructFieldTagByJSONName(srcTagMap), src)
 
 	// Prepare destination file to be injected
 	dstFS := token.NewFileSet()
 	dst, err := parser.ParseFile(dstFS, "testdata/structs.go", nil, parser.ParseComments)
 	require.NoError(t, err)
 
-	// Ensure that tags not injected yet
-	dstTagMap := make(TagMap)
-	ast.Walk(ExtractStructFieldTagByJSONName(dstTagMap), dst)
-	require.NotEqual(t, dstTagMap, expectedTagMap)
-
 	// Inject tags to dst
-	ast.Walk(InjectStructFieldTagByJSONName(expectedTagMap), dst)
+	ast.Walk(InjectStructFieldTagByJSONName(srcTagMap), dst)
+	actualTagMap := make(TagMap)
+	ast.Walk(ExtractStructFieldTagByJSONName(actualTagMap), dst)
 
-	// Check that tags were injected to the destination file correctly
-	injectedTagMap := make(TagMap)
-	ast.Walk(ExtractStructFieldTagByJSONName(injectedTagMap), dst)
-	require.Equal(t, expectedTagMap, injectedTagMap)
+	// Validate if tags are injected correctly
+	expectedFS := token.NewFileSet()
+	expected, err := parser.ParseFile(expectedFS, "testdata/expected.go", nil, parser.ParseComments)
+	require.NoError(t, err)
+	expectedTagMap := make(TagMap)
+	ast.Walk(ExtractStructFieldTagByJSONName(expectedTagMap), expected)
+	equalTagMap(t, expectedTagMap, actualTagMap)
+}
+
+func mustParseStructTags(input string) *structtag.Tags {
+	t, err := structtag.Parse(input)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+func equalTagMap(t *testing.T, expected, actual TagMap) {
+	require.Len(t, actual, len(expected))
+	for k, v := range expected {
+		require.Contains(t, actual, k)
+		require.Len(t, actual[k], len(v))
+		for fk, fv := range v {
+			require.Contains(t, actual[k], fk)
+			require.EqualValues(t, fv.Tags(), actual[k][fk].Tags())
+		}
+	}
 }

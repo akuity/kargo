@@ -154,9 +154,15 @@ spec:
                                           - ImageAndDigest
                                           - Digest
                                           type: string
+                                      required:
+                                      - image
+                                      - key
+                                      - value
                                       type: object
                                     minItems: 1
                                     type: array
+                                required:
+                                - images
                                 type: object
                               kustomize:
                                 description: Kustomize describes updates to the source's
@@ -182,9 +188,13 @@ spec:
                                             UseDigest specifies whether the image's digest should be used instead of
                                             its tag.
                                           type: boolean
+                                      required:
+                                      - image
                                       type: object
                                     minItems: 1
                                     type: array
+                                required:
+                                - images
                                 type: object
                               repoURL:
                                 description: |-
@@ -205,8 +215,12 @@ spec:
                                   commit (if RepoURL references a git repository) or chart version (if
                                   RepoURL references a chart repository).
                                 type: boolean
+                            required:
+                            - repoURL
                             type: object
                           type: array
+                      required:
+                      - appName
                       type: object
                     type: array
                   gitRepoUpdates:
@@ -261,6 +275,10 @@ spec:
                                     minLength: 1
                                     pattern: ^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$
                                     type: string
+                                required:
+                                - chartPath
+                                - name
+                                - repository
                                 type: object
                               type: array
                             images:
@@ -312,6 +330,11 @@ spec:
                                     minLength: 1
                                     pattern: ^[\w-\.]+(/[\w-\.]+)*$
                                     type: string
+                                required:
+                                - image
+                                - key
+                                - value
+                                - valuesFilePath
                                 type: object
                               type: array
                           type: object
@@ -352,9 +375,14 @@ spec:
                                       UseDigest specifies whether the image's digest should be used instead of
                                       its tag.
                                     type: boolean
+                                required:
+                                - image
+                                - path
                                 type: object
                               minItems: 1
                               type: array
+                          required:
+                          - images
                           type: object
                         pullRequest:
                           description: PullRequest will generate a pull request instead
@@ -402,6 +430,8 @@ spec:
                                       UseDigest specifies whether the image's digest should be used instead of
                                       its tag.
                                     type: boolean
+                                required:
+                                - image
                                 type: object
                               type: array
                           type: object
@@ -418,6 +448,9 @@ spec:
                           minLength: 1
                           pattern: ^\w+([-/]\w+)*$
                           type: string
+                      required:
+                      - repoURL
+                      - writeBranch
                       type: object
                     type: array
                 type: object
@@ -439,6 +472,8 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
+                      required:
+                      - name
                       type: object
                     type: array
                   warehouse:
@@ -482,6 +517,8 @@ spec:
                             Name is the name of the AnalysisTemplate in the same project/namespace as
                             the Stage.
                           type: string
+                      required:
+                      - name
                       type: object
                     type: array
                   args:
@@ -497,9 +534,13 @@ spec:
                         value:
                           description: Value is the value of the argument.
                           type: string
+                      required:
+                      - name
                       type: object
                     type: array
                 type: object
+            required:
+            - subscriptions
             type: object
           status:
             description: Status describes the Stage's current and recent Freight,
@@ -630,6 +671,10 @@ spec:
                             description: Phase is the last observed phase of the AnalysisRun
                               referenced by Name.
                             type: string
+                        required:
+                        - name
+                        - namespace
+                        - phase
                         type: object
                       message:
                         description: |-
@@ -773,6 +818,10 @@ spec:
                                 description: Phase is the last observed phase of the
                                   AnalysisRun referenced by Name.
                                 type: string
+                            required:
+                            - name
+                            - namespace
+                            - phase
                             type: object
                           message:
                             description: |-
@@ -791,6 +840,9 @@ spec:
                   name:
                     description: Name is the name of the Promotion
                     type: string
+                required:
+                - freight
+                - name
                 type: object
               error:
                 description: |-
@@ -814,6 +866,8 @@ spec:
                               type: string
                             status:
                               type: string
+                          required:
+                          - status
                           type: object
                         name:
                           description: Name is the name of the ArgoCD Application.
@@ -833,7 +887,12 @@ spec:
                               type: array
                             status:
                               type: string
+                          required:
+                          - status
                           type: object
+                      required:
+                      - name
+                      - namespace
                       type: object
                     type: array
                   issues:
@@ -977,6 +1036,10 @@ spec:
                               description: Phase is the last observed phase of the
                                 AnalysisRun referenced by Name.
                               type: string
+                          required:
+                          - name
+                          - namespace
+                          - phase
                           type: object
                         message:
                           description: |-
@@ -1003,6 +1066,8 @@ spec:
                 description: Phase describes where the Stage currently is in its lifecycle.
                 type: string
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

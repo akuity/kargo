@@ -39,6 +39,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "repoURL"
+                ],
                 "type": "object"
               },
               "git": {
@@ -87,6 +90,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "repoURL"
+                ],
                 "type": "object"
               },
               "image": {
@@ -134,6 +140,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "repoURL"
+                ],
                 "type": "object"
               }
             },
@@ -143,6 +152,9 @@
           "type": "array"
         }
       },
+      "required": [
+        "subscriptions"
+      ],
       "type": "object"
     },
     "status": {
@@ -163,5 +175,8 @@
       "type": "object"
     }
   },
+  "required": [
+    "spec"
+  ],
   "type": "object"
 }

@@ -179,7 +179,7 @@ codegen-proto:
 		-src-dir=$(CURDIR)/pkg/api/v1alpha1 \
 		-dst-dir=$(CURDIR)/api/v1alpha1
 	# Format code
-	golangci-lint run ./... --fix
+	gofmt -s -w api/v1alpha1
 
 	# Generate protobuf code (UI)
 	buf generate api \

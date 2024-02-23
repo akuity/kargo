@@ -42,8 +42,8 @@ func (v *structFieldVisitor) Visit(n ast.Node) ast.Visitor {
 	return v
 }
 
-// TagMap is a map of struct name -> field json name -> field tag value
-type TagMap map[string]map[string]string
+// TagMap is a map of struct name -> field json name -> field tags
+type TagMap map[string]map[string]*structtag.Tags
 
 // ExtractStructFieldTagByJSONName returns an ast.Visitor that
 // extracts struct field tag value by field's JSON name to tagMap.
@@ -56,7 +56,7 @@ func ExtractStructFieldTagByJSONName(tagMap TagMap) ast.Visitor {
 		callback: func(spec *ast.TypeSpec, field *ast.Field) {
 			structName := spec.Name.Name
 			if _, ok := tagMap[structName]; !ok {
-				tagMap[structName] = make(map[string]string)
+				tagMap[structName] = make(map[string]*structtag.Tags)
 			}
 
 			tags, err := parseFieldTags(field)
@@ -67,10 +67,7 @@ func ExtractStructFieldTagByJSONName(tagMap TagMap) ast.Visitor {
 			if !ok {
 				return
 			}
-
-			// Sort tags to ensure consistent output
-			sort.Sort(tags)
-			tagMap[structName][key] = fmt.Sprintf("`%s`", tags.String())
+			tagMap[structName][key] = tags
 		},
 	}
 }
@@ -86,19 +83,33 @@ func InjectStructFieldTagByJSONName(tagMap TagMap) ast.Visitor {
 			}
 
 			structName := spec.Name.Name
-			tags, err := parseFieldTags(field)
+			structTags, err := parseFieldTags(field)
 			if err != nil {
 				panic(err)
 			}
-			key, ok := getJSONName(tags)
+			key, ok := getJSONName(structTags)
 			if !ok {
 				return
 			}
-			tag, ok := tagMap[structName][key]
+
+			input, ok := tagMap[structName][key]
 			if !ok {
 				return
 			}
-			field.Tag.Value = tag
+			for idx := range input.Tags() {
+				tag := input.Tags()[idx]
+				// Do not override json tag
+				if tag.Key == "json" {
+					continue
+				}
+				if err := structTags.Set(tag); err != nil {
+					panic(err)
+				}
+			}
+
+			// Sort tags to ensure consistent output
+			sort.Sort(structTags)
+			field.Tag.Value = fmt.Sprintf("`%s`", structTags.String())
 		},
 	}
 }

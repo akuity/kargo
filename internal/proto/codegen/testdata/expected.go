@@ -1,5 +1,5 @@
-//go:build testdata_generated
-// +build testdata_generated
+//go:build testdata_expected
+// +build testdata_expected
 
 package testdata
 
