@@ -178,8 +178,6 @@ codegen-proto:
 	go run $(CURDIR)/hack/codegen/prototag/main.go \
 		-src-dir=$(CURDIR)/pkg/api/v1alpha1 \
 		-dst-dir=$(CURDIR)/api/v1alpha1
-	# Format code
-	gofmt -s -w api/v1alpha1
 
 	# Generate protobuf code (UI)
 	buf generate api \

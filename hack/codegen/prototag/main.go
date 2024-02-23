@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
-	"go/printer"
 	"go/token"
 	"io/fs"
 	"os"
@@ -57,7 +57,7 @@ func injectTags(pkgDir string, tagMap codegen.TagMap) error {
 		if err != nil {
 			return errors.Wrapf(err, "open file %s", fileName)
 		}
-		if err := printer.Fprint(file, fileSet, f); err != nil {
+		if err := format.Node(file, fileSet, f); err != nil {
 			return errors.Wrapf(err, "write file %s", fileName)
 		}
 	}
