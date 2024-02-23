@@ -21,8 +21,8 @@ func ReadManifests(filenames ...string) ([]byte, error) {
 		}
 		var fileBytes []byte
 		if fileInfo.IsDir() {
-			dirEntries, err := os.ReadDir(filename)
-			if err != nil {
+			var dirEntries []os.DirEntry
+			if dirEntries, err = os.ReadDir(filename); err != nil {
 				return nil, err
 			}
 			dirFiles := make([]string, 0, len(dirEntries))
