@@ -482,15 +482,6 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	result := ctrl.Result{
-		// Note: If there is a failure, controller runtime ignores this and uses
-		// progressive backoff instead. So this value only affects when we will
-		// reconcile next if THIS reconciliation succeeds.
-		//
-		// TODO: Make this configurable
-		RequeueAfter: 5 * time.Minute,
-	}
-
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"namespace": req.NamespacedName.Namespace,
 		"stage":     req.NamespacedName.Name,
@@ -501,19 +492,17 @@ func (r *reconciler) Reconcile(
 	// Find the Stage
 	stage, err := kargoapi.GetStage(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
-		return result, err
+		return ctrl.Result{}, err
 	}
 	if stage == nil {
 		// Ignore if not found. This can happen if the Stage was deleted after the
 		// current reconciliation request was issued.
-		result.RequeueAfter = 0 // Do not requeue
-		return result, nil
+		return ctrl.Result{}, nil // Do not requeue
 	}
 
 	if ok := r.shardRequirement.Matches(labels.Set(stage.Labels)); !ok {
 		// Ignore if stage does not belong to given shard
-		result.RequeueAfter = 0
-		return result, nil
+		return ctrl.Result{}, err
 	}
 	logger.Debug("found Stage")
 
@@ -562,9 +551,16 @@ func (r *reconciler) Reconcile(
 	}
 	logger.Debug("done reconciling Stage")
 
-	// Controller runtime automatically gives us a progressive backoff if err is
-	// not nil
-	return result, err
+	// If we do have an error at this point, return it so controller runtime
+	// retries with a progressive backoff.
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Everything succeeded, look for new changes on the defined interval.
+	//
+	// TODO: Make this configurable
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
 func (r *reconciler) syncControlFlowStage(

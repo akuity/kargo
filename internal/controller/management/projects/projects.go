@@ -135,13 +135,6 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	result := ctrl.Result{
-		// Note: If there is a failure, controller runtime ignores this and uses
-		// progressive backoff instead. So this value only prevents requeueing
-		// a Project if THIS reconciliation succeeds.
-		RequeueAfter: 0,
-	}
-
 	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
 		"project": req.NamespacedName.Name,
 	})
@@ -151,22 +144,22 @@ func (r *reconciler) Reconcile(
 	// Find the Project
 	project, err := r.getProjectFn(ctx, r.client, req.NamespacedName.Name)
 	if err != nil {
-		return result, err
+		return ctrl.Result{}, err
 	}
 	if project == nil {
 		// Ignore if not found. This can happen if the Project was deleted after the
 		// current reconciliation request was issued.
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	if project.DeletionTimestamp != nil {
 		logger.Debug("Project is being deleted; nothing to do")
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	if project.Status.Phase.IsTerminal() {
 		logger.Debugf("Project is %s; nothing to do", project.Status.Phase)
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	newStatus, err := r.syncProjectFn(ctx, project)
@@ -194,7 +187,7 @@ func (r *reconciler) Reconcile(
 
 	// Controller runtime automatically gives us a progressive backoff if err is
 	// not nil
-	return result, err
+	return ctrl.Result{}, err
 }
 
 func (r *reconciler) syncProject(
