@@ -69,8 +69,6 @@ lint-proto:
 	# Vendor go dependencies to build protobuf definitions
 	go mod vendor
 	buf lint api --error-format=$(BUF_LINT_ERROR_FORMAT)
-	# Clean up vendor directory
-	rm -r $(CURDIR)/vendor
 
 .PHONY: lint-charts
 lint-charts:
@@ -178,6 +176,8 @@ codegen-proto:
 	go run $(CURDIR)/hack/codegen/prototag/main.go \
 		-src-dir=$(CURDIR)/pkg/api/v1alpha1 \
 		-dst-dir=$(CURDIR)/api/v1alpha1
+	# Clean up intermediate file
+	rm -r $(CURDIR)/pkg/api/v1alpha1
 
 	# Generate protobuf code (UI)
 	buf generate api \
@@ -185,10 +185,6 @@ codegen-proto:
         --template=buf.ui.gen.yaml
 	pnpm --dir=ui install --dev
 	pnpm run --dir=ui generate:proto-extensions
-
-	# Clean up resources
-	rm -r $(CURDIR)/vendor
-	rm -r $(CURDIR)/pkg/api/v1alpha1
 
 .PHONY: codegen-ui
 codegen-ui:
