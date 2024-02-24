@@ -169,15 +169,6 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	result := ctrl.Result{
-		// Note: If there is a failure, controller runtime ignores this and uses
-		// progressive backoff instead. So this value only affects when we will
-		// reconcile next if THIS reconciliation succeeds.
-		//
-		// TODO: Make this configurable
-		RequeueAfter: 5 * time.Minute,
-	}
-
 	logger := logging.LoggerFromContext(ctx)
 
 	logger = logger.WithFields(log.Fields{
@@ -190,12 +181,12 @@ func (r *reconciler) Reconcile(
 	// Find the Warehouse
 	warehouse, err := kargoapi.GetWarehouse(ctx, r.client, req.NamespacedName)
 	if err != nil {
-		return result, err
+		return ctrl.Result{}, err
 	}
 	if warehouse == nil {
 		// Ignore if not found. This can happen if the Warehouse was deleted after
 		// the current reconciliation request was issued.
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	newStatus, err := r.syncWarehouse(ctx, warehouse)
@@ -229,7 +220,14 @@ func (r *reconciler) Reconcile(
 
 	// Controller runtime automatically gives us a progressive backoff if err is
 	// not nil
-	return result, err
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Everything succeeded, look for new changes on the defined interval.
+	//
+	// TODO: Make this configurable
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
 func (r *reconciler) syncWarehouse(

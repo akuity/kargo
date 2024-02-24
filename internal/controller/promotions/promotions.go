@@ -129,15 +129,6 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	result := ctrl.Result{
-		// Note: If there is a failure, controller runtime ignores this and uses
-		// progressive backoff instead. So this value only prevents requeueing
-		// a Promotion if THIS reconciliation succeeds. Also note that we may
-		// update this to a non-zero value if the Promotion is Running and requires
-		// us to follow up on it.
-		RequeueAfter: 0,
-	}
-
 	logger := logging.LoggerFromContext(ctx)
 
 	// Note that initialization occurs here because we basically know that the
@@ -156,7 +147,7 @@ func (r *reconciler) Reconcile(
 		}
 	})
 	if err != nil {
-		return result, errors.Wrap(err, "error initializing Promotion queues")
+		return ctrl.Result{}, errors.Wrap(err, "error initializing Promotion queues")
 	}
 
 	ctx = logging.ContextWithLogger(ctx, logger)
@@ -164,12 +155,12 @@ func (r *reconciler) Reconcile(
 	// Find the Promotion
 	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
-		return result, err
+		return ctrl.Result{}, err
 	}
 	if promo == nil || promo.Status.Phase.IsTerminal() {
 		// Ignore if not found or already finished. Promo might be nil if the
 		// Promotion was deleted after the current reconciliation request was issued.
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	logger = logger.WithFields(log.Fields{
@@ -190,9 +181,9 @@ func (r *reconciler) Reconcile(
 				err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 					status.Phase = kargoapi.PromotionPhasePending
 				})
-				return result, err
+				return ctrl.Result{}, err
 			}
-			return result, nil
+			return ctrl.Result{}, nil
 		}
 		logger.Infof("began promotion")
 	}
@@ -203,7 +194,7 @@ func (r *reconciler) Reconcile(
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
 		}); err != nil {
-			return result, err
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -238,13 +229,6 @@ func (r *reconciler) Reconcile(
 	if newStatus.Phase.IsTerminal() {
 		logger.Infof("promotion %s", newStatus.Phase)
 	}
-	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
-		// If the promotion is still running, we'll need to periodically check on
-		// it.
-		//
-		// TODO: Make this configurable
-		result.RequeueAfter = 5 * time.Minute
-	}
 
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
@@ -255,9 +239,20 @@ func (r *reconciler) Reconcile(
 	if clearRefreshErr := kargoapi.ClearPromotionRefresh(ctx, r.kargoClient, promo); clearRefreshErr != nil {
 		logger.Errorf("error clearing Promotion refresh annotation: %s", clearRefreshErr)
 	}
+	if err != nil {
+		// Controller runtime automatically gives us a progressive backoff if err is
+		// not nil
+		return ctrl.Result{}, err
+	}
 
-	// Controller runtime automatically gives us a progressive backoff if err is not nil
-	return result, err
+	// If the promotion is still running, we'll need to periodically check on
+	// it.
+	//
+	// TODO: Make this configurable
+	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
+		return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	}
+	return ctrl.Result{}, nil
 }
 
 func (r *reconciler) promote(

@@ -11,6 +11,9 @@ image:
   tag: ""
   ## @param image.pullPolicy Image pull policy
   pullPolicy: IfNotPresent
+  ## @param image.pullSecrets List of imagePullSecrets.
+  pullSecrets: []
+  # - name: regcred
 
 ## @section RBAC
 rbac:
@@ -158,6 +161,18 @@ api:
         tag: v2.37.0
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
+        ## @param api.oidc.dex.image.pullSecrets List of imagePullSecrets.
+        pullSecrets: []
+        # - name: regcred
+
+      ## @param api.oidc.dex.env Add additional environment variables to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      env: []
+      # - name: CLIENT_SECRET
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: github-dex
+      #       key: dex.github.clientSecret
+
       probes:
         ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
         enabled: true
@@ -178,7 +193,7 @@ api:
       #   type: google
       #   config:
       #     clientID: <your client ID>
-      #     clientSecret: <your client secret>
+      #     clientSecret: "$CLIENT_SECRET"
       #     redirectURI: <http(s)>://<api.host>/dex/callback
       ## GitHub Example
       # - id: github
@@ -186,7 +201,7 @@ api:
       #   type: github
       #   config:
       #     clientID: <your client ID>
-      #     clientSecret: <your client secret>
+      #     clientSecret: "$CLIENT_SECRET"
       #     redirectURI: <http(s)>://<api.host>/dex/callback
 
       ## @param api.oidc.dex.resources Resources limits and requests for the Dex server containers.
