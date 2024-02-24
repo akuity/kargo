@@ -1,3 +1,7 @@
+// `prototag` is a tool to manage `protobuf` tags in the Kubebuilder structs.
+//
+// It extracts `protobuf` tags from the `buf` generated Go files and
+// inject to the Kubebuilder structs.
 package main
 
 import (
