@@ -133,7 +133,6 @@ nightly-cli:
 ################################################################################
 # Code generation: To be run after modifications to API types                  #
 ################################################################################
-APIMACHINERY_PKGS=k8s.io/apimachinery/pkg/util/intstr,+k8s.io/apimachinery/pkg/api/resource,+k8s.io/apimachinery/pkg/runtime/schema,+k8s.io/apimachinery/pkg/runtime,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/api/core/v1,k8s.io/api/batch/v1
 
 .PHONY: codegen
 codegen: deps-tools codegen-proto codegen-controller codegen-ui codegen-docs
@@ -157,34 +156,7 @@ codegen-docs:
 
 .PHONY: codegen-proto
 codegen-proto:
-	# Vendor dependencies for protobuf code generation
-	go mod tidy
-	go mod vendor
-
-	# Generate protobuf code from Kubebuilder structs
-	GOPATH=${GOPATH} go-to-protobuf \
-		--go-header-file=./hack/boilerplate.go.txt \
-		--packages=github.com/akuity/kargo/api/v1alpha1 \
-		--apimachinery-packages=${APIMACHINERY_PKGS} \
-		--proto-import $(CURDIR)/vendor
-	# Copy generated code to the working directory
-	cp -R ${GOPATH}/src/github.com/akuity/kargo/api $(CURDIR)
-
-	# Generate protobuf code (Go)
-	buf generate api
-	# Inject generated protobuf tag to Kubebuilder structs
-	go run $(CURDIR)/hack/codegen/prototag/main.go \
-		-src-dir=$(CURDIR)/pkg/api/v1alpha1 \
-		-dst-dir=$(CURDIR)/api/v1alpha1
-	# Clean up intermediate file
-	rm -r $(CURDIR)/pkg/api/v1alpha1
-
-	# Generate protobuf code (UI)
-	buf generate api \
-		--include-imports \
-        --template=buf.ui.gen.yaml
-	pnpm --dir=ui install --dev
-	pnpm run --dir=ui generate:proto-extensions
+	./hack/codegen/proto.sh
 
 .PHONY: codegen-ui
 codegen-ui:
