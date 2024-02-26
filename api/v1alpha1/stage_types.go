@@ -511,9 +511,9 @@ type StageStatus struct {
 	History FreightReferenceStack `json:"history,omitempty"`
 	// Health is the Stage's last observed health.
 	Health *Health `json:"health,omitempty"`
-	// Error describes any errors that are preventing the Stage controller
+	// Message describes any errors that are preventing the Stage controller
 	// from assessing Stage health or from finding new Freight.
-	Error string `json:"error,omitempty"`
+	Message string `json:"message,omitempty"`
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
