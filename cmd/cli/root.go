@@ -26,7 +26,6 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/logout"
 	"github.com/akuity/kargo/internal/cli/cmd/promote"
 	"github.com/akuity/kargo/internal/cli/cmd/refresh"
-	"github.com/akuity/kargo/internal/cli/cmd/stage"
 	"github.com/akuity/kargo/internal/cli/cmd/update"
 	clicfg "github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -106,7 +105,6 @@ func NewRootCommand(
 	cmd.AddCommand(get.NewCommand(cfg, opt))
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(logout.NewCommand())
-	cmd.AddCommand(stage.NewCommand(cfg, opt))
 	cmd.AddCommand(refresh.NewCommand(cfg, opt))
 	cmd.AddCommand(update.NewCommand(cfg, opt))
 	cmd.AddCommand(dashboard.NewCommand(cfg))
