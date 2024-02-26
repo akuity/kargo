@@ -15,9 +15,7 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	option.InsecureTLS(cmd.PersistentFlags(), opt)
 	option.LocalServer(cmd.PersistentFlags(), opt)
 
-	cmd.AddCommand(newPromoteCommand(cfg, opt))
 	cmd.AddCommand(newEnableAutoPromotion(cfg, opt))
 	cmd.AddCommand(newDisableAutoPromotion(cfg, opt))
-	cmd.AddCommand(newPromoteSubscribersCommand(cfg, opt))
 	return cmd
 }

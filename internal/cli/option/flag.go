@@ -31,6 +31,10 @@ func Stage(fs *pflag.FlagSet, stage *string) {
 	fs.StringVar(stage, "stage", "", "Stage")
 }
 
+func SubscribersOf(fs *pflag.FlagSet, subscribersOf *string) {
+	fs.StringVar(subscribersOf, "subscribers-of", "", "Subscribers of a Stage")
+}
+
 func Freight(fs *pflag.FlagSet, freight *string) {
 	fs.StringVar(freight, "freight", "", "Freight ID")
 }

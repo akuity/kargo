@@ -66,3 +66,12 @@ func MinimumNArgs(n int) cobra.PositionalArgs {
 		return nil
 	}
 }
+
+// NoArgs is a wrapper around cobra.NoArgs to additionally print usage string
+func NoArgs(cmd *cobra.Command, args []string) error {
+	if err := cobra.NoArgs(cmd, args); err != nil {
+		fmt.Println(cmd.UsageString())
+		return err
+	}
+	return nil
+}
