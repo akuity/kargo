@@ -101,9 +101,6 @@ const (
 	// KargoServiceDeleteProjectProcedure is the fully-qualified name of the KargoService's
 	// DeleteProject RPC.
 	KargoServiceDeleteProjectProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteProject"
-	// KargoServiceSetAutoPromotionForStageProcedure is the fully-qualified name of the KargoService's
-	// SetAutoPromotionForStage RPC.
-	KargoServiceSetAutoPromotionForStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/SetAutoPromotionForStage"
 	// KargoServiceQueryFreightProcedure is the fully-qualified name of the KargoService's QueryFreight
 	// RPC.
 	KargoServiceQueryFreightProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/QueryFreight"
@@ -168,7 +165,6 @@ type KargoServiceClient interface {
 	CreateProject(context.Context, *connect.Request[v1alpha1.CreateProjectRequest]) (*connect.Response[v1alpha1.CreateProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
-	SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
@@ -312,11 +308,6 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceDeleteProjectProcedure,
 			opts...,
 		),
-		setAutoPromotionForStage: connect.NewClient[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse](
-			httpClient,
-			baseURL+KargoServiceSetAutoPromotionForStageProcedure,
-			opts...,
-		),
 		queryFreight: connect.NewClient[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse](
 			httpClient,
 			baseURL+KargoServiceQueryFreightProcedure,
@@ -377,42 +368,41 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // kargoServiceClient implements KargoServiceClient.
 type kargoServiceClient struct {
-	getVersionInfo           *connect.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
-	getConfig                *connect.Client[v1alpha1.GetConfigRequest, v1alpha1.GetConfigResponse]
-	getPublicConfig          *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
-	adminLogin               *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
-	createResource           *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
-	createOrUpdateResource   *connect.Client[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse]
-	updateResource           *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
-	deleteResource           *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
-	createStage              *connect.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
-	listStages               *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
-	getStage                 *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
-	watchStages              *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
-	updateStage              *connect.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
-	deleteStage              *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
-	promoteStage             *connect.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
-	promoteSubscribers       *connect.Client[v1alpha1.PromoteSubscribersRequest, v1alpha1.PromoteSubscribersResponse]
-	refreshStage             *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
-	listPromotions           *connect.Client[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse]
-	watchPromotions          *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
-	getPromotion             *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
-	watchPromotion           *connect.Client[v1alpha1.WatchPromotionRequest, v1alpha1.WatchPromotionResponse]
-	createProject            *connect.Client[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse]
-	listProjects             *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
-	deleteProject            *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
-	setAutoPromotionForStage *connect.Client[v1alpha1.SetAutoPromotionForStageRequest, v1alpha1.SetAutoPromotionForStageResponse]
-	queryFreight             *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
-	deleteFreight            *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
-	approveFreight           *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
-	updateFreightAlias       *connect.Client[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse]
-	listWarehouses           *connect.Client[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse]
-	getWarehouse             *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
-	watchWarehouses          *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
-	createWarehouse          *connect.Client[v1alpha1.CreateWarehouseRequest, v1alpha1.CreateWarehouseResponse]
-	updateWarehouse          *connect.Client[v1alpha1.UpdateWarehouseRequest, v1alpha1.UpdateWarehouseResponse]
-	deleteWarehouse          *connect.Client[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse]
-	refreshWarehouse         *connect.Client[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse]
+	getVersionInfo         *connect.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
+	getConfig              *connect.Client[v1alpha1.GetConfigRequest, v1alpha1.GetConfigResponse]
+	getPublicConfig        *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
+	adminLogin             *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
+	createResource         *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
+	createOrUpdateResource *connect.Client[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse]
+	updateResource         *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
+	deleteResource         *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
+	createStage            *connect.Client[v1alpha1.CreateStageRequest, v1alpha1.CreateStageResponse]
+	listStages             *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
+	getStage               *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
+	watchStages            *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
+	updateStage            *connect.Client[v1alpha1.UpdateStageRequest, v1alpha1.UpdateStageResponse]
+	deleteStage            *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
+	promoteStage           *connect.Client[v1alpha1.PromoteStageRequest, v1alpha1.PromoteStageResponse]
+	promoteSubscribers     *connect.Client[v1alpha1.PromoteSubscribersRequest, v1alpha1.PromoteSubscribersResponse]
+	refreshStage           *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
+	listPromotions         *connect.Client[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse]
+	watchPromotions        *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
+	getPromotion           *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
+	watchPromotion         *connect.Client[v1alpha1.WatchPromotionRequest, v1alpha1.WatchPromotionResponse]
+	createProject          *connect.Client[v1alpha1.CreateProjectRequest, v1alpha1.CreateProjectResponse]
+	listProjects           *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
+	deleteProject          *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
+	queryFreight           *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
+	deleteFreight          *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
+	approveFreight         *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
+	updateFreightAlias     *connect.Client[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse]
+	listWarehouses         *connect.Client[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse]
+	getWarehouse           *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
+	watchWarehouses        *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
+	createWarehouse        *connect.Client[v1alpha1.CreateWarehouseRequest, v1alpha1.CreateWarehouseResponse]
+	updateWarehouse        *connect.Client[v1alpha1.UpdateWarehouseRequest, v1alpha1.UpdateWarehouseResponse]
+	deleteWarehouse        *connect.Client[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse]
+	refreshWarehouse       *connect.Client[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse]
 }
 
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
@@ -536,12 +526,6 @@ func (c *kargoServiceClient) DeleteProject(ctx context.Context, req *connect.Req
 	return c.deleteProject.CallUnary(ctx, req)
 }
 
-// SetAutoPromotionForStage calls
-// akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage.
-func (c *kargoServiceClient) SetAutoPromotionForStage(ctx context.Context, req *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {
-	return c.setAutoPromotionForStage.CallUnary(ctx, req)
-}
-
 // QueryFreight calls akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight.
 func (c *kargoServiceClient) QueryFreight(ctx context.Context, req *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error) {
 	return c.queryFreight.CallUnary(ctx, req)
@@ -627,7 +611,6 @@ type KargoServiceHandler interface {
 	CreateProject(context.Context, *connect.Request[v1alpha1.CreateProjectRequest]) (*connect.Response[v1alpha1.CreateProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
-	SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
@@ -767,11 +750,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		svc.DeleteProject,
 		opts...,
 	)
-	kargoServiceSetAutoPromotionForStageHandler := connect.NewUnaryHandler(
-		KargoServiceSetAutoPromotionForStageProcedure,
-		svc.SetAutoPromotionForStage,
-		opts...,
-	)
 	kargoServiceQueryFreightHandler := connect.NewUnaryHandler(
 		KargoServiceQueryFreightProcedure,
 		svc.QueryFreight,
@@ -877,8 +855,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceListProjectsHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteProjectProcedure:
 			kargoServiceDeleteProjectHandler.ServeHTTP(w, r)
-		case KargoServiceSetAutoPromotionForStageProcedure:
-			kargoServiceSetAutoPromotionForStageHandler.ServeHTTP(w, r)
 		case KargoServiceQueryFreightProcedure:
 			kargoServiceQueryFreightHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteFreightProcedure:
@@ -1004,10 +980,6 @@ func (UnimplementedKargoServiceHandler) ListProjects(context.Context, *connect.R
 
 func (UnimplementedKargoServiceHandler) DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) SetAutoPromotionForStage(context.Context, *connect.Request[v1alpha1.SetAutoPromotionForStageRequest]) (*connect.Response[v1alpha1.SetAutoPromotionForStageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error) {
