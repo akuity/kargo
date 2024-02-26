@@ -90,7 +90,7 @@ func FromStageStatusProto(s *v1alpha1.StageStatus) *kargoapi.StageStatus {
 		CurrentFreight: FromFreightReferenceProto(s.GetCurrentFreight()),
 		History:        history,
 		Health:         FromHealthProto(s.GetHealth()),
-		Error:          s.GetError(),
+		Message:        s.GetMessage(),
 	}
 }
 
@@ -760,7 +760,7 @@ func ToStageProto(e kargoapi.Stage) *v1alpha1.Stage {
 			CurrentPromotion: currentPromotion,
 			History:          history,
 			Health:           health,
-			Error:            e.Status.Error,
+			Message:          e.Status.Message,
 		},
 	}
 }
@@ -1082,7 +1082,7 @@ func ToWarehouseProto(w kargoapi.Warehouse) *v1alpha1.Warehouse {
 	var status *v1alpha1.WarehouseStatus
 	if w.GetStatus() != nil {
 		status = &v1alpha1.WarehouseStatus{
-			Error:              w.GetStatus().Error,
+			Message:            w.GetStatus().Message,
 			ObservedGeneration: w.GetStatus().ObservedGeneration,
 		}
 	}
