@@ -303,6 +303,11 @@ func (w *webhook) ensureSecretPermissions(
 				Name:      "kargo-api",
 				Namespace: w.cfg.KargoNamespace,
 			},
+			{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-admin",
+				Namespace: w.cfg.KargoNamespace,
+			},
 		},
 	}
 	if err := w.createRoleBindingFn(ctx, roleBinding); err != nil {

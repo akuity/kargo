@@ -319,6 +319,11 @@ func (r *reconciler) ensureSecretPermissions(
 				Name:      "kargo-api",
 				Namespace: r.cfg.KargoNamespace,
 			},
+			{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-admin",
+				Namespace: r.cfg.KargoNamespace,
+			},
 		},
 	}
 	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
