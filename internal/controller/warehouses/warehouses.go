@@ -191,7 +191,7 @@ func (r *reconciler) Reconcile(
 
 	newStatus, err := r.syncWarehouse(ctx, warehouse)
 	if err != nil {
-		newStatus.Error = err.Error()
+		newStatus.Message = err.Error()
 		logger.Errorf("error syncing Warehouse: %s", err)
 	}
 
@@ -236,7 +236,7 @@ func (r *reconciler) syncWarehouse(
 ) (kargoapi.WarehouseStatus, error) {
 	status := *warehouse.Status.DeepCopy()
 	status.ObservedGeneration = warehouse.Generation
-	status.Error = "" // Clear any previous error
+	status.Message = "" // Clear any previous error
 
 	logger := logging.LoggerFromContext(ctx)
 

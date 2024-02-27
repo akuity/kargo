@@ -268,7 +268,7 @@ message FreightReference {
 message StageStatus {
   optional FreightReference current_freight = 2 [json_name = "currentFreight"];
   repeated FreightReference history = 3 [json_name = "history"];
-  string error = 4 [json_name = "error"];
+  string message = 4 [json_name = "message"];
   optional Health health = 5 [json_name = "health"];
   optional PromotionInfo current_promotion = 6 [json_name = "currentPromotion"];
   string phase = 7 [json_name = "phase"];
@@ -296,7 +296,7 @@ message WarehouseSpec {
 }
 
 message WarehouseStatus {
-  string error = 1 [json_name = "error"];
+  string message = 1 [json_name = "message"];
   int64 observed_generation = 2 [json_name = "observedGeneration"];
 }
 

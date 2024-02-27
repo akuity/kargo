@@ -2129,9 +2129,9 @@ export class StageStatus extends Message<StageStatus> {
   history: FreightReference[] = [];
 
   /**
-   * @generated from field: string error = 4;
+   * @generated from field: string message = 4;
    */
-  error = "";
+  message = "";
 
   /**
    * @generated from field: optional github.com.akuity.kargo.pkg.api.v1alpha1.Health health = 5;
@@ -2158,7 +2158,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 2, name: "current_freight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
-    { no: 4, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "health", kind: "message", T: Health, opt: true },
     { no: 6, name: "current_promotion", kind: "message", T: PromotionInfo, opt: true },
     { no: 7, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -2364,9 +2364,9 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
  */
 export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
-   * @generated from field: string error = 1;
+   * @generated from field: string message = 1;
    */
-  error = "";
+  message = "";
 
   /**
    * @generated from field: int64 observed_generation = 2;
@@ -2381,7 +2381,7 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "observed_generation", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
