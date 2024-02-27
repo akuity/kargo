@@ -9,7 +9,7 @@ import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
-import { createStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
 import { getStageYAMLExample } from './utils/stage-yaml-example';
@@ -24,7 +24,7 @@ const formSchema = z.object({
 
 export const CreateStageModal = ({ visible, hide, project }: Props) => {
   const { mutateAsync, isPending } = useMutation({
-    ...createStage.useMutation(),
+    ...createResource.useMutation(),
     onSuccess: () => hide()
   });
 
@@ -36,11 +36,9 @@ export const CreateStageModal = ({ visible, hide, project }: Props) => {
   });
 
   const onSubmit = handleSubmit(async (data) => {
+    const textEncoder = new TextEncoder();
     await mutateAsync({
-      stage: {
-        case: 'yaml',
-        value: data.value
-      }
+      manifest: textEncoder.encode(data.value)
     });
   });
 
