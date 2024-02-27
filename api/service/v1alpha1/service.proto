@@ -46,7 +46,6 @@ service KargoService {
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
-  rpc SetAutoPromotionForStage(SetAutoPromotionForStageRequest) returns (SetAutoPromotionForStageResponse);
 
   /* Freight APIs */
 
@@ -317,16 +316,6 @@ message WatchPromotionRequest {
 message WatchPromotionResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
   string type = 2;
-}
-
-message SetAutoPromotionForStageRequest {
-  string project = 1;
-  string stage = 2;
-  bool enable = 3;
-}
-
-message SetAutoPromotionForStageResponse {
-  /* explicitly empty */
 }
 
 message CreateProjectRequest {

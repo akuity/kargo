@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateProjectRequest, CreateProjectResponse, CreateResourceRequest, CreateResourceResponse, CreateStageRequest, CreateStageResponse, CreateWarehouseRequest, CreateWarehouseResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateStageRequest, UpdateStageResponse, UpdateWarehouseRequest, UpdateWarehouseResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateProjectRequest, CreateProjectResponse, CreateResourceRequest, CreateResourceResponse, CreateStageRequest, CreateStageResponse, CreateWarehouseRequest, CreateWarehouseResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateStageRequest, UpdateStageResponse, UpdateWarehouseRequest, UpdateWarehouseResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -370,23 +370,6 @@ export const deleteProject = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).deleteProject;
-
-/**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage
- */
-export const setAutoPromotionForStage = createQueryService({
-  service: {
-    methods: {
-      setAutoPromotionForStage: {
-        name: "SetAutoPromotionForStage",
-        kind: MethodKind.Unary,
-        I: SetAutoPromotionForStageRequest,
-        O: SetAutoPromotionForStageResponse,
-      },
-    },
-    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
-  },
-}).setAutoPromotionForStage;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight
