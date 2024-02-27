@@ -15,10 +15,34 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+type deleteWarehouseOptions struct {
+	*option.Option
+}
+
+// addFlags adds the flags for the delete warehouse options to the provided
+// command.
+func (o *deleteWarehouseOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+
+	option.Project(cmd.Flags(), &o.Project, o.Project,
+		"The Project for which to delete Warehouses. If not set, the default project will be used.")
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *deleteWarehouseOptions) validate() error {
+	if o.Project == "" {
+		return errors.New("project is required")
+	}
+	return nil
+}
+
 func newWarehouseCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {
+	cmdOpts := &deleteWarehouseOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:   "warehouse [NAME]...",
 		Short: "Delete warehouse by name",
@@ -29,14 +53,14 @@ kargo delete warehouse --project=my-project my-warehouse
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
-			if err != nil {
-				return errors.Wrap(err, "get client from config")
+
+			if err := cmdOpts.validate(); err != nil {
+				return err
 			}
 
-			project := opt.Project
-			if project == "" {
-				return errors.New("project is required")
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, cmdOpts.Option)
+			if err != nil {
+				return errors.Wrap(err, "get client from config")
 			}
 
 			var resErr error
@@ -45,7 +69,7 @@ kargo delete warehouse --project=my-project my-warehouse
 					ctx,
 					connect.NewRequest(
 						&v1alpha1.DeleteWarehouseRequest{
-							Project: project,
+							Project: cmdOpts.Project,
 							Name:    name,
 						},
 					),
@@ -53,12 +77,14 @@ kargo delete warehouse --project=my-project my-warehouse
 					resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
 					continue
 				}
-				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Warehouse Deleted: %q\n", name)
+				_, _ = fmt.Fprintf(cmdOpts.IOStreams.Out, "Warehouse Deleted: %q\n", name)
 			}
 			return resErr
 		},
 	}
-	opt.PrintFlags.AddFlags(cmd)
-	option.Project(cmd.Flags(), opt, opt.Project)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }

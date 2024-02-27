@@ -1,6 +1,8 @@
 package update
 
 import (
+	goerrors "errors"
+
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -11,11 +13,48 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+type updateFreightAliasOptions struct {
+	*option.Option
+
+	Alias string
+}
+
+// addFlags adds the flags for the update freight alias options to the provided
+// command.
+func (o *updateFreightAliasOptions) addFlags(cmd *cobra.Command) {
+	option.Project(cmd.Flags(), &o.Project, o.Project,
+		"The Project for which to list Promotions. If not set, the default project will be used.")
+	cmd.Flags().StringVar(&o.Alias, "alias", "", "A unique alias for the Freight")
+
+	if err := cmd.MarkFlagRequired("alias"); err != nil {
+		panic(errors.Wrap(err, "could not mark alias flag as required"))
+	}
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *updateFreightAliasOptions) validate() error {
+	var errs []error
+
+	if o.Project == "" {
+		errs = append(errs, errors.New("project is required"))
+	}
+
+	// While the alias flag is marked as required, a user could still provide
+	// an empty string. This is a check to ensure that the flag is not empty.
+	if o.Alias == "" {
+		errs = append(errs, errors.New("alias is required"))
+	}
+
+	return goerrors.Join(errs...)
+}
+
 func newUpdateFreightAliasCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {
-	var alias string
+	cmdOpts := &updateFreightAliasOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:   "freight [--project=project] (NAME) --alias=alias",
 		Args:  option.ExactArgs(1),
@@ -31,13 +70,8 @@ kargo update freight abc123 --alias=my-new-alias
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := opt.Project
-			if project == "" {
-				return errors.New("project is required")
-			}
-
-			if alias == "" {
-				return errors.New("alias is required")
+			if err := cmdOpts.validate(); err != nil {
+				return err
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
@@ -49,9 +83,9 @@ kargo update freight abc123 --alias=my-new-alias
 				ctx,
 				connect.NewRequest(
 					&v1alpha1.UpdateFreightAliasRequest{
-						Project: project,
+						Project: cmdOpts.Project,
 						Freight: args[0],
-						Alias:   alias,
+						Alias:   cmdOpts.Alias,
 					},
 				),
 			); err != nil {
@@ -62,9 +96,8 @@ kargo update freight abc123 --alias=my-new-alias
 		},
 	}
 
-	option.Project(cmd.Flags(), opt, opt.Project)
-
-	cmd.Flags().StringVar(&alias, "alias", "", "A unique alias for the Freight")
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
 
 	return cmd
 }

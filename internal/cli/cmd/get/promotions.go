@@ -20,11 +20,37 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+type getPromotionsOptions struct {
+	*option.Option
+
+	Stage string
+}
+
+// addFlags adds the flags for the get promotions options to the provided command.
+func (o *getPromotionsOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+
+	option.Project(cmd.Flags(), &o.Project, o.Project,
+		"The Project for which to list Promotions. If not set, the default project will be used.")
+	option.Stage(cmd.Flags(), &o.Stage,
+		"The Stage for which to list Promotions. If not set, all stages will be listed.")
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *getPromotionsOptions) validate() error {
+	if o.Project == "" {
+		return errors.New("project is required")
+	}
+	return nil
+}
+
 func newGetPromotionsCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {
-	var stage string
+	cmdOpts := &getPromotionsOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:     "promotions --project=project [--stage=stage] [NAME...]",
 		Aliases: []string{"promotion", "promos", "promo"},
@@ -45,18 +71,18 @@ kargo get promotions --project=my-project some-promotion
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := opt.Project
-			if project == "" {
-				return errors.New("project is required")
-			}
-			req := &v1alpha1.ListPromotionsRequest{
-				Project: project,
-			}
-			if stage != "" {
-				req.Stage = proto.String(stage)
+			if err := cmdOpts.validate(); err != nil {
+				return err
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+			req := &v1alpha1.ListPromotionsRequest{
+				Project: cmdOpts.Project,
+			}
+			if cmdOpts.Stage != "" {
+				req.Stage = proto.String(cmdOpts.Stage)
+			}
+
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, cmdOpts.Option)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -85,15 +111,16 @@ kargo get promotions --project=my-project some-promotion
 					}
 				}
 			}
-			if err := printObjects(opt, res); err != nil {
+			if err := printObjects(cmdOpts.Option, res); err != nil {
 				return err
 			}
 			return resErr
 		},
 	}
-	option.Project(cmd.Flags(), opt, opt.Project)
-	option.Stage(cmd.Flags(), &stage)
-	opt.PrintFlags.AddFlags(cmd)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }
 

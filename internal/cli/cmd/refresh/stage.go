@@ -16,17 +16,14 @@ import (
 
 func newRefreshStageCommand(
 	cfg config.CLIConfig,
-	opt *option.Option,
+	opt *refreshOptions,
 ) *cobra.Command {
-	var wait bool
 	cmd := &cobra.Command{
 		Use:     "stage (STAGE)",
 		Args:    option.ExactArgs(1),
 		Example: "kargo refresh stage --project=guestbook (STAGE)",
-		RunE:    refreshObject(cfg, opt, "stage", wait),
+		RunE:    refreshObject(cfg, opt, refreshResourceTypeStage),
 	}
-	option.Wait(cmd.Flags(), &wait)
-	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }
 

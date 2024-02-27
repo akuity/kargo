@@ -19,10 +19,33 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+type getStagesOptions struct {
+	*option.Option
+}
+
+// addFlags adds the flags for the get stages options to the provided command.
+func (o *getStagesOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+
+	option.Project(cmd.Flags(), &o.Project, o.Project,
+		"The Project for which to list Stages. If not set, the default project will be used.")
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *getStagesOptions) validate() error {
+	if o.Project == "" {
+		return errors.New("project is required")
+	}
+	return nil
+}
+
 func newGetStagesCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {
+	cmdOpts := &getStagesOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:     "stages --project=project [NAME...]",
 		Aliases: []string{"stage"},
@@ -40,17 +63,16 @@ kargo get stages --project=my-project my-stage
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := opt.Project
-			if project == "" {
-				return errors.New("project is required")
+			if err := cmdOpts.validate(); err != nil {
+				return err
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, cmdOpts.Option)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
 			resp, err := kargoSvcCli.ListStages(ctx, connect.NewRequest(&v1alpha1.ListStagesRequest{
-				Project: project,
+				Project: cmdOpts.Project,
 			}))
 			if err != nil {
 				return errors.Wrap(err, "list stages")
@@ -76,14 +98,16 @@ kargo get stages --project=my-project my-stage
 					}
 				}
 			}
-			if err := printObjects(opt, res); err != nil {
+			if err := printObjects(cmdOpts.Option, res); err != nil {
 				return err
 			}
 			return resErr
 		},
 	}
-	option.Project(cmd.Flags(), opt, opt.Project)
-	opt.PrintFlags.AddFlags(cmd)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }
 

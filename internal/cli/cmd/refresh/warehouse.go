@@ -16,17 +16,14 @@ import (
 
 func newRefreshWarehouseCommand(
 	cfg config.CLIConfig,
-	opt *option.Option,
+	opt *refreshOptions,
 ) *cobra.Command {
-	var wait bool
 	cmd := &cobra.Command{
 		Use:     "warehouse (WAREHOUSE)",
 		Args:    option.ExactArgs(1),
 		Example: "kargo warehouse refresh --project=guestbook (WAREHOUSE)",
-		RunE:    refreshObject(cfg, opt, "warehouse", wait),
+		RunE:    refreshObject(cfg, opt, refreshResourceTypeWarehouse),
 	}
-	option.Wait(cmd.Flags(), &wait)
-	option.Project(cmd.Flags(), opt, opt.Project)
 	return cmd
 }
 

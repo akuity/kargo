@@ -1,6 +1,7 @@
 package promote
 
 import (
+	goerrors "errors"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -15,10 +16,62 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+// promotionOptions holds the options for the promote command.
+type promotionOptions struct {
+	*option.Option
+
+	Freight       string
+	Stage         string
+	SubscribersOf string
+}
+
+// addFlags adds the flags for the promotion options to the provided command.
+func (o *promotionOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+
+	// TODO: Factor out server flags to a higher level (root?) as they are
+	//   common to almost all commands.
+	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
+	option.LocalServer(cmd.PersistentFlags(), o.Option)
+
+	option.Project(cmd.Flags(), &o.Project, o.Project,
+		"The Project the Freight belongs to. If not set, the default project will be used.")
+	option.Freight(cmd.Flags(), &o.Freight, "The ID of the Freight to promote.")
+	option.Stage(cmd.Flags(), &o.Stage, fmt.Sprintf("The Stage to promote the Freight to. If set, --%s "+
+		"must not be set.", option.SubscribersOfFlag))
+	option.SubscribersOf(cmd.Flags(), &o.SubscribersOf, fmt.Sprintf("The Stage from which the subscribers "+
+		"will be used to promote the Freight to. If set, --%s must not be set.", option.StageFlag))
+
+	if err := cmd.MarkFlagRequired(option.FreightFlag); err != nil {
+		panic(errors.Wrap(err, "could not mark freight flag as required"))
+	}
+	cmd.MarkFlagsOneRequired(option.StageFlag, option.SubscribersOfFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.StageFlag, option.SubscribersOfFlag)
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *promotionOptions) validate() error {
+	var errs []error
+
+	if o.Project == "" {
+		errs = append(errs, errors.New("project is required"))
+	}
+
+	// While the flags are marked as required, a user could still provide an
+	// empty string. This is a check to ensure that the flags are not empty.
+	if o.Freight == "" {
+		errs = append(errs, errors.New("freight is required"))
+	}
+	if o.Stage == "" && o.SubscribersOf == "" {
+		errs = append(errs, errors.New("stage or subscribers-of is required"))
+	}
+
+	return goerrors.Join(errs...)
+}
+
 func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
-	var freight string
-	var stage string
-	var subscribersOf string
+	cmdOpts := &promotionOptions{Option: opt}
 
 	cmd := &cobra.Command{
 		Use:   "promote [--project=project] --freight=freight-id [--stage=stage] [--subscribers-of=stage]",
@@ -42,17 +95,8 @@ kargo promote --freight=abc123 --subscribers-of=dev
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := opt.Project
-			if project == "" {
-				return errors.New("project is required")
-			}
-
-			if freight == "" {
-				return errors.New("freight is required")
-			}
-
-			if stage != "" && subscribersOf != "" {
-				return errors.New("stage and subscribers-of can not be supplied simultaneously")
+			if err := cmdOpts.validate(); err != nil {
+				return err
 			}
 
 			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
@@ -61,37 +105,37 @@ kargo promote --freight=abc123 --subscribers-of=dev
 			}
 
 			switch {
-			case stage != "":
+			case cmdOpts.Stage != "":
 				res, err := kargoSvcCli.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
-					Project: project,
-					Name:    stage,
-					Freight: freight,
+					Project: cmdOpts.Project,
+					Name:    cmdOpts.Stage,
+					Freight: cmdOpts.Freight,
 				}))
 				if err != nil {
 					return errors.Wrap(err, "promote stage")
 				}
-				if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
-					fmt.Fprintf(opt.IOStreams.Out,
+				if ptr.Deref(cmdOpts.PrintFlags.OutputFormat, "") == "" {
+					fmt.Fprintf(cmdOpts.IOStreams.Out,
 						"Promotion Created: %q\n", res.Msg.GetPromotion().GetMetadata().GetName())
 					return nil
 				}
-				printer, err := opt.PrintFlags.ToPrinter()
+				printer, err := cmdOpts.PrintFlags.ToPrinter()
 				if err != nil {
 					return errors.Wrap(err, "new printer")
 				}
 				promo := typesv1alpha1.FromPromotionProto(res.Msg.GetPromotion())
-				_ = printer.PrintObj(promo, opt.IOStreams.Out)
+				_ = printer.PrintObj(promo, cmdOpts.IOStreams.Out)
 				return nil
-			case subscribersOf != "":
+			case cmdOpts.SubscribersOf != "":
 				res, promoteErr := kargoSvcCli.PromoteSubscribers(ctx, connect.NewRequest(&v1alpha1.PromoteSubscribersRequest{
-					Project: project,
-					Stage:   subscribersOf,
-					Freight: freight,
+					Project: cmdOpts.Project,
+					Stage:   cmdOpts.SubscribersOf,
+					Freight: cmdOpts.Freight,
 				}))
-				if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
+				if ptr.Deref(cmdOpts.PrintFlags.OutputFormat, "") == "" {
 					if res != nil && res.Msg != nil {
 						for _, p := range res.Msg.GetPromotions() {
-							fmt.Fprintf(opt.IOStreams.Out, "Promotion Created: %q\n", *p.Metadata.Name)
+							fmt.Fprintf(cmdOpts.IOStreams.Out, "Promotion Created: %q\n", *p.Metadata.Name)
 						}
 					}
 					if promoteErr != nil {
@@ -100,29 +144,22 @@ kargo promote --freight=abc123 --subscribers-of=dev
 					return nil
 				}
 
-				printer, printerErr := opt.PrintFlags.ToPrinter()
+				printer, printerErr := cmdOpts.PrintFlags.ToPrinter()
 				if printerErr != nil {
 					return errors.Wrap(printerErr, "new printer")
 				}
 				for _, p := range res.Msg.GetPromotions() {
 					kubeP := typesv1alpha1.FromPromotionProto(p)
-					_ = printer.PrintObj(kubeP, opt.IOStreams.Out)
+					_ = printer.PrintObj(kubeP, cmdOpts.IOStreams.Out)
 				}
 				return promoteErr
-			default:
-				return errors.New("stage or subscribers-of is required")
 			}
+			return nil
 		},
 	}
 
-	opt.PrintFlags.AddFlags(cmd)
-	option.InsecureTLS(cmd.PersistentFlags(), opt)
-	option.LocalServer(cmd.PersistentFlags(), opt)
-
-	option.Freight(cmd.Flags(), &freight)
-	option.Stage(cmd.Flags(), &stage)
-	option.SubscribersOf(cmd.Flags(), &subscribersOf)
-	option.Project(cmd.Flags(), opt, opt.Project)
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
 
 	return cmd
 }

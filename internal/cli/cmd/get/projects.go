@@ -19,10 +19,21 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+type getProjectsOptions struct {
+	*option.Option
+}
+
+// addFlags adds the flags for the get projects options to the provided command.
+func (o *getProjectsOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+}
+
 func newGetProjectsCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {
+	cmdOpts := &getProjectsOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:     "projects [NAME...]",
 		Aliases: []string{"project"},
@@ -37,7 +48,7 @@ kargo get projects -o json
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, cmdOpts.Option)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -66,13 +77,16 @@ kargo get projects -o json
 					}
 				}
 			}
-			if err := printObjects(opt, res); err != nil {
+			if err := printObjects(cmdOpts.Option, res); err != nil {
 				return err
 			}
 			return resErr
 		},
 	}
-	opt.PrintFlags.AddFlags(cmd)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }
 

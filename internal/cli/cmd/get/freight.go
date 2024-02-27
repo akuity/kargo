@@ -19,10 +19,33 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+type getFreightOptions struct {
+	*option.Option
+}
+
+// addFlags adds the flags for the get freight options to the provided command.
+func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+
+	option.Project(cmd.Flags(), &o.Project, o.Project,
+		"The Project for which to list Freight. If not set, the default project will be used.")
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *getFreightOptions) validate() error {
+	if o.Project == "" {
+		return errors.New("project is required")
+	}
+	return nil
+}
+
 func newGetFreightCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {
+	cmdOpts := &getFreightOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:   "freight --project=project [NAME...]",
 		Short: "Display one or many pieces of freight",
@@ -39,17 +62,16 @@ kargo get freight --project=my-project my-freight
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			project := opt.Project
-			if project == "" {
-				return errors.New("project is required")
+			if err := cmdOpts.validate(); err != nil {
+				return err
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, cmdOpts.Option)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
 			resp, err := kargoSvcCli.QueryFreight(ctx, connect.NewRequest(&v1alpha1.QueryFreightRequest{
-				Project: project,
+				Project: cmdOpts.Project,
 			}))
 			if err != nil {
 				return errors.Wrap(err, "query freight")
@@ -92,14 +114,16 @@ kargo get freight --project=my-project my-freight
 					}
 				}
 			}
-			if err := printObjects(opt, res); err != nil {
+			if err := printObjects(cmdOpts.Option, res); err != nil {
 				return err
 			}
 			return resErr
 		},
 	}
-	option.Project(cmd.Flags(), opt, opt.Project)
-	opt.PrintFlags.AddFlags(cmd)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }
 

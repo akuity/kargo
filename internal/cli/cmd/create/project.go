@@ -18,7 +18,18 @@ import (
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+type createProjectOptions struct {
+	*option.Option
+}
+
+// addFlags adds the flags for the create project options to the provided command.
+func (o *createProjectOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+}
+
 func newProjectCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	cmdOpts := &createProjectOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:   "project (NAME)",
 		Short: "Create a project",
@@ -35,7 +46,7 @@ kargo create project my-project
 				return errors.New("name is required")
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, cmdOpts.Option)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -72,17 +83,20 @@ kargo create project my-project
 				return errors.Wrap(err, "unmarshal project")
 			}
 
-			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
-				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Created: %q\n", name)
+			if ptr.Deref(cmdOpts.PrintFlags.OutputFormat, "") == "" {
+				_, _ = fmt.Fprintf(cmdOpts.IOStreams.Out, "Project Created: %q\n", name)
 				return nil
 			}
-			printer, err := opt.PrintFlags.ToPrinter()
+			printer, err := cmdOpts.PrintFlags.ToPrinter()
 			if err != nil {
 				return errors.Wrap(err, "new printer")
 			}
-			return printer.PrintObj(project, opt.IOStreams.Out)
+			return printer.PrintObj(project, cmdOpts.IOStreams.Out)
 		},
 	}
-	opt.PrintFlags.AddFlags(cmd)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }

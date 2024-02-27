@@ -36,10 +36,41 @@ const defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST
 //go:embed assets
 var assets embed.FS
 
+type loginOptions struct {
+	*option.Option
+
+	UseAdmin      bool
+	UseKubeconfig bool
+	UseSSO        bool
+	Password      string
+	CallbackPort  int
+}
+
+// addFlags adds the flags for the login options to the provided command.
+func (o *loginOptions) addFlags(cmd *cobra.Command) {
+	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
+
+	cmd.Flags().BoolVar(&o.UseAdmin, "admin", false,
+		"Log in as the Kargo admin user. If set, --kubeconfig and --sso must not be set.")
+	cmd.Flags().BoolVar(&o.UseKubeconfig, "kubeconfig", false,
+		"Log in using a token obtained from the local Kubernetes configuration's current context. "+
+			"If set, --admin and --sso must not be set.")
+	cmd.Flags().StringVar(&o.Password, "password", "",
+		"Specify the password for non-interactive admin user login. Only used when --admin is specified.")
+	cmd.Flags().BoolVar(&o.UseSSO, "sso", false,
+		"Log in using OpenID Connect and the server's configured identity provider. "+
+			"If set, --admin and --kubeconfig must not be set.")
+	cmd.Flags().IntVar(&o.CallbackPort, "port", 0,
+		"Port to use for the callback URL; 0 selects any available, unprivileged port. "+
+			"Only used when --sso is specified.")
+
+	cmd.MarkFlagsOneRequired("admin", "kubeconfig", "sso")
+	cmd.MarkFlagsMutuallyExclusive("admin", "kubeconfig", "sso")
+}
+
 func NewCommand(opt *option.Option) *cobra.Command {
-	var useAdmin, useKubeconfig, useSSO bool
-	var password string
-	var callbackPort int
+	cmdOpts := &loginOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:     "login server-address",
 		Args:    option.ExactArgs(1),
@@ -48,53 +79,43 @@ func NewCommand(opt *option.Option) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			var flagCount int
-			if useAdmin {
-				flagCount++
-			}
-			if useKubeconfig {
-				flagCount++
-			}
-			if useSSO {
-				flagCount++
-			}
-			if flagCount != 1 {
-				return errors.Errorf(
-					"please specify exactly one of --admin, --kubeconfig, or --sso",
-				)
-			}
-
 			serverAddress := args[0]
+
 			var bearerToken, refreshToken string
 			var err error
-			if useAdmin {
+
+			switch {
+			case cmdOpts.UseAdmin:
 				for {
-					if password != "" {
+					if cmdOpts.Password != "" {
 						break
 					}
 					prompt := &survey.Password{
 						Message: "Admin user password",
 					}
-					if err = survey.AskOne(prompt, &password); err != nil {
+					if err = survey.AskOne(prompt, &cmdOpts.Password); err != nil {
 						return err
 					}
 				}
-				if bearerToken, err =
-					adminLogin(ctx, serverAddress, password, opt.InsecureTLS); err != nil {
+				if bearerToken, err = adminLogin(ctx, serverAddress, cmdOpts.Password, cmdOpts.InsecureTLS); err != nil {
 					return err
 				}
-			} else if useKubeconfig {
+			case cmdOpts.UseKubeconfig:
 				if bearerToken, err = kubeconfigLogin(ctx); err != nil {
 					return err
 				}
-			} else {
-				if bearerToken, refreshToken, err =
-					ssoLogin(ctx, serverAddress, callbackPort, opt.InsecureTLS); err != nil {
+			case cmdOpts.UseSSO:
+				if bearerToken, refreshToken, err = ssoLogin(
+					ctx, serverAddress, cmdOpts.CallbackPort, cmdOpts.InsecureTLS,
+				); err != nil {
 					return err
 				}
+			default:
+				// This should never happen.
+				return errors.New("internal error: no login method selected")
 			}
 
-			if opt.InsecureTLS {
+			if cmdOpts.InsecureTLS {
 				// When the user specifies during login that they want to ignore cert
 				// warnings, we will force them to periodically re-assess that choice
 				// by NOT using refresh tokens and requiring them to re-authenticate
@@ -108,53 +129,16 @@ func NewCommand(opt *option.Option) *cobra.Command {
 					APIAddress:            serverAddress,
 					BearerToken:           bearerToken,
 					RefreshToken:          refreshToken,
-					InsecureSkipTLSVerify: opt.InsecureTLS,
+					InsecureSkipTLSVerify: cmdOpts.InsecureTLS,
 				},
 			)
 			return errors.Wrap(err, "error persisting configuration")
 		},
 	}
-	cmd.Flags().BoolVarP(
-		&useAdmin,
-		"admin",
-		"a",
-		false,
-		"Log in as the Kargo admin user; mutually exclusive with --kubeconfig and "+
-			"--sso",
-	)
-	cmd.Flags().BoolVarP(
-		&useKubeconfig,
-		"kubeconfig",
-		"k",
-		false,
-		"Log in using a token obtained from the local Kubernetes configuration's "+
-			"current context; mutually exclusive with --admin and --sso",
-	)
-	cmd.Flags().StringVarP(
-		&password,
-		"password",
-		"P",
-		"",
-		"Specify the password for non-interactive admin user login; only used "+
-			"with --admin",
-	)
-	cmd.Flags().IntVarP(
-		&callbackPort,
-		"port",
-		"p",
-		0,
-		"Port to use for the callback URL; 0 selects any available, "+
-			"unprivileged port; only used with --sso",
-	)
-	cmd.Flags().BoolVarP(
-		&useSSO,
-		"sso",
-		"s",
-		false,
-		"Log in using OpenID Connect and the server's configured identity "+
-			"provider; mutually exclusive with --admin and --kubeconfig",
-	)
-	option.InsecureTLS(cmd.PersistentFlags(), opt)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }
 

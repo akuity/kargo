@@ -20,8 +20,49 @@ import (
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+type createOptions struct {
+	*option.Option
+
+	Filenames []string
+}
+
+// addFlags adds the flags for the create options to the provided command.
+func (o *createOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+
+	// TODO: Factor out server flags to a higher level (root?) as they are
+	//   common to almost all commands.
+	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
+	option.LocalServer(cmd.PersistentFlags(), o.Option)
+
+	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to create resource(s).")
+
+	if err := cmd.MarkFlagRequired(option.FilenameFlag); err != nil {
+		panic(errors.Wrap(err, "could not mark filename flag as required"))
+	}
+	if err := cmd.MarkFlagFilename(option.FilenameFlag, ".yaml", ".yml"); err != nil {
+		panic(errors.Wrap(err, "could not mark filename flag as filename"))
+	}
+	if err := cmd.MarkFlagDirname(option.FilenameFlag); err != nil {
+		panic(errors.Wrap(err, "could not mark filename flag as dirname"))
+	}
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *createOptions) validate() error {
+	// While the filename flag is marked as required, a user could still
+	// provide an empty string. This is a check to ensure that the flag is
+	// not empty.
+	if len(o.Filenames) == 0 {
+		return errors.New("filename is required")
+	}
+	return nil
+}
+
 func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
-	var filenames []string
+	cmdOpts := &createOptions{Option: opt}
+
 	cmd := &cobra.Command{
 		Use:   "create [--project=project] -f (FILENAME)",
 		Short: "Create a resource from a file or from stdin",
@@ -34,24 +75,25 @@ kargo create project my-project
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			if len(filenames) == 0 {
-				return errors.New("filename is required")
+
+			if err := cmdOpts.validate(); err != nil {
+				return err
 			}
 
-			manifest, err := yaml.Read(filenames)
+			manifest, err := yaml.Read(cmdOpts.Filenames)
 			if err != nil {
 				return errors.Wrap(err, "read manifests")
 			}
 
 			var printer printers.ResourcePrinter
-			if ptr.Deref(opt.PrintFlags.OutputFormat, "") != "" {
-				printer, err = opt.PrintFlags.ToPrinter()
+			if ptr.Deref(cmdOpts.PrintFlags.OutputFormat, "") != "" {
+				printer, err = cmdOpts.PrintFlags.ToPrinter()
 				if err != nil {
 					return errors.Wrap(err, "new printer")
 				}
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, cmdOpts.Option)
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
@@ -76,7 +118,7 @@ kargo create project my-project
 			for _, r := range successRes {
 				var obj unstructured.Unstructured
 				if err := sigyaml.Unmarshal(r.CreatedResourceManifest, &obj); err != nil {
-					fmt.Fprintf(opt.IOStreams.ErrOut, "%s",
+					fmt.Fprintf(cmdOpts.IOStreams.ErrOut, "%s",
 						errors.Wrap(err, "Error: unmarshal created manifest"))
 					continue
 				}
@@ -85,20 +127,20 @@ kargo create project my-project
 						Namespace: obj.GetNamespace(),
 						Name:      obj.GetName(),
 					}.String()
-					fmt.Fprintf(opt.IOStreams.Out, "%s Created: %q\n", obj.GetKind(), name)
+					fmt.Fprintf(cmdOpts.IOStreams.Out, "%s Created: %q\n", obj.GetKind(), name)
 					continue
 				}
-				_ = printer.PrintObj(&obj, opt.IOStreams.Out)
+				_ = printer.PrintObj(&obj, cmdOpts.IOStreams.Out)
 			}
 			return goerrors.Join(createErrs...)
 		},
 	}
-	opt.PrintFlags.AddFlags(cmd)
-	option.Filenames(cmd.Flags(), &filenames, "apply")
-	option.InsecureTLS(cmd.PersistentFlags(), opt)
-	option.LocalServer(cmd.PersistentFlags(), opt)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
 
 	// Subcommands
 	cmd.AddCommand(newProjectCommand(cfg, opt))
+
 	return cmd
 }
