@@ -146,6 +146,22 @@ api:
     ## @param api.oidc.cliClientID The client ID for the OIDC client used by CLI (optional). Needed by some OIDC providers (such as Dex) that require a separate Client ID for web app login vs. CLI login (`http://localhost`). If Dex is enabled, this value will be ignored and cli client ID will be automatically configured. If Dex is not enabled, and a different client app is configured for localhost CLI login, this should be the client ID configured in the IdP.
     cliClientID:
 
+    admins:
+      ## @param api.oidc.admins.subs Subjects having any of these values in their sub claim will automatically be Kargo admins.
+      subs: []
+      ## @param api.oidc.admins.emails Subjects having any of these values in their email claim will automatically be Kargo admins.
+      emails: []
+      ## @param api.oidc.admins.groups Subjects having any of these values in their groups claim will automatically be Kargo admins.
+      groups: []
+
+    viewers:
+      ## @param api.oidc.viewers.subs Subjects having any of these values in their sub claim will automatically receive read-only access to all Kargo resources.
+      subs: []
+      ## @param api.oidc.viewers.emails Subjects having any of these values in their email claim will automatically receive read-only access to all Kargo resources.
+      emails: []
+      ## @param api.oidc.viewers.groups Subjects having any of these values in their groups claim will automatically receive read-only access to all Kargo resources.
+      groups: []
+
     globalServiceAccounts:
       ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.
       namespaces: []
