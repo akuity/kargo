@@ -30,8 +30,9 @@ func Read(paths []string) ([]byte, error) {
 		}
 	}
 	var allBytes [][]byte
+	pathsRead := make(map[string]struct{})
 	for _, path := range paths {
-		readBytes, err := read(path, paths)
+		readBytes, err := read(path, paths, pathsRead)
 		if err != nil {
 			return nil, err
 		}
@@ -44,20 +45,32 @@ func Read(paths []string) ([]byte, error) {
 
 // read recursively reads all files represented by the given path, provided they
 // have a .yaml or .yml extension. entryPaths represents a broader selection of
-// files that is being read and is used in logic to avoid duplicate file reads
-// and infinite recursion due to symlinks. It is assumed that path and all
-// entryPaths are absolute paths with no trailing slash. It is further assumed
-// that no entryPaths are themselves symlinks.
-func read(path string, entryPaths []string) ([][]byte, error) {
+// files that is being read and is used in logic to avoid infinite recursion due
+// to symlinks. pathsRead tracks file and directory paths that have been read in
+// order to prevent duplicate reads due to symlinks. It is assumed that path and
+// all entryPaths are absolute paths with no trailing slash. It is further
+// assumed that no entryPaths are themselves symlinks.
+func read(
+	path string,
+	entryPaths []string,
+	pathsRead map[string]struct{},
+) ([][]byte, error) {
 	evaledPath, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		return nil, err
+	}
+	if _, alreadyRead := pathsRead[evaledPath]; alreadyRead {
+		return nil, nil
 	}
 	// If evaledPath is different from path, then path is a symlink. This is fine
 	// as long as the symlink target is not already contained within the
 	// entryPaths. Otherwise, we ignore the symlink because in the best case, what
 	// it points to is already being read, and in the worst case, it would cause
 	// infinite recursion.
+	//
+	// Note: We do not worry about the case where the symlink target is a
+	// directory that contains directories or files that are already being read.
+	// We allow that, but use the pathsRead map to prevent duplicate reads.
 	if evaledPath != path && isPathInPaths(evaledPath, entryPaths) {
 		return nil, nil
 	}
@@ -74,6 +87,7 @@ func read(path string, entryPaths []string) ([][]byte, error) {
 		if readBytes, err = os.ReadFile(path); err != nil {
 			return nil, err
 		}
+		pathsRead[evaledPath] = struct{}{}
 		return [][]byte{readBytes}, nil
 	}
 	// path points to a directory. Read all files in the directory.
@@ -83,7 +97,8 @@ func read(path string, entryPaths []string) ([][]byte, error) {
 		return nil, err
 	}
 	for _, dirEntry := range dirEntries {
-		readBytes, err := read(filepath.Join(path, dirEntry.Name()), entryPaths)
+		readBytes, err :=
+			read(filepath.Join(path, dirEntry.Name()), entryPaths, pathsRead)
 		if err != nil {
 			return nil, err
 		}
@@ -91,6 +106,7 @@ func read(path string, entryPaths []string) ([][]byte, error) {
 		// resizing the byte slices themselves.
 		allBytes = append(allBytes, readBytes...)
 	}
+	pathsRead[evaledPath] = struct{}{}
 	return allBytes, nil
 }
 

@@ -21,7 +21,8 @@ func TestRead(t *testing.T) {
 	// │   ├── c.yaml
 	// │   ├── d.yaml -> d/d.yaml
 	// │   ├── e.yaml -> e
-	// │   └── f -> c
+	// │   ├── f -> c
+	// │   └── g -> "testRootPath"
 	// ├── d
 	// │   └── d.yaml
 	// └── e
@@ -187,7 +188,51 @@ func TestRead(t *testing.T) {
 	err = os.Symlink(cDir, filepath.Join(cDir, "f"))
 	require.NoError(t, err)
 	t.Run("symlink to a directory already being read", func(t *testing.T) {
+		// This tests that symlinks don't cause infinite recursion.
 		result, err = Read([]string{aDir, cDir})
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			bytes.Join(
+				[][]byte{
+					aFileBytes,
+					bFileBytes,
+					cFileBytes,
+					dFileBytes,
+					eFileBytes,
+				},
+				sep,
+			),
+			result,
+		)
+	})
+
+	gLink := filepath.Join(cDir, "g")
+	err = os.Symlink(testRootPath, gLink)
+	t.Run("symlink to a directory above files being read", func(t *testing.T) {
+		// This tests that symlinks don't ever cause duplicate reads.
+		result, err = Read([]string{aDir, cDir})
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			bytes.Join(
+				[][]byte{
+					aFileBytes,
+					bFileBytes,
+					cFileBytes,
+					dFileBytes,
+					eFileBytes,
+				},
+				sep,
+			),
+			result,
+		)
+	})
+
+	err = os.Remove(gLink)
+	require.NoError(t, err)
+	t.Run("deliberate attempt at duplicate read doesn't actually duplicate resources", func(t *testing.T) {
+		result, err = Read([]string{aDir, cDir, aDir, cDir})
 		require.NoError(t, err)
 		require.Equal(
 			t,
