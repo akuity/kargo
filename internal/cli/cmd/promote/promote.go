@@ -32,11 +32,11 @@ kargo promote --project=my-project --freight=abc123 --stage=dev
 kargo promote --project=my-project --freight=abc123 --subscribers-of=dev
 
 # Promote a freight to a stage for the default project
-kargo config set project my-project
+kargo config set-project my-project
 kargo promote --freight=abc123 --stage=dev
 
 # Promote a freight to subscribers of a stage for the default project
-kargo config set project my-project
+kargo config set-project my-project
 kargo promote --freight=abc123 --subscribers-of=dev
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -25,7 +25,7 @@ func newUpdateFreightAliasCommand(
 kargo update freight --project=my-project abc123 --alias=my-new-alias
 
 # Update the alias of a freight for the default project
-kargo config set project my-project
+kargo config set-project my-project
 kargo update freight abc123 --alias=my-new-alias
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
