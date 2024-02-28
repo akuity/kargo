@@ -10,7 +10,7 @@ import (
 func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update a freight alias",
+		Short: "Update a resource",
 	}
 	option.InsecureTLS(cmd.PersistentFlags(), opt)
 	option.LocalServer(cmd.PersistentFlags(), opt)
