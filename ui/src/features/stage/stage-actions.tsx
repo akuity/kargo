@@ -64,7 +64,7 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
 
   const { data: config } = useQuery(getConfig.useQuery());
   const argoCDAppsLinks = React.useMemo(() => {
-    const shardKey = stage?.metadata?.annotations['kargo.akuity.io/shard'] || '';
+    const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
     const shard = config?.argocdShards?.[shardKey];
 
     if (!shard || !stage.spec?.promotionMechanisms?.argocdAppUpdates.length) {
