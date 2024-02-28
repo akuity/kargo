@@ -10,23 +10,21 @@ import (
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
-func newSetCommand(cfg config.CLIConfig) *cobra.Command {
+func newSetProjectCommand(cfg config.CLIConfig) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "set",
-		Short: "Set an individual value",
-		Args:  option.MinimumNArgs(2),
+		Use:   "set-project",
+		Short: "Set the default project",
+		Args:  option.ExactArgs(1),
 		Example: `
 # Set a default project
-kargo config set project my-project
+kargo config set-project my-project
+
+# Unset a default project
+kargo config set-project ""
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			key := strings.ToLower(args[0])
-			switch key {
-			case "project":
-				cfg.Project = args[1]
-			default:
-				return errors.Errorf("unknown key %q", key)
-			}
+			project := strings.TrimSpace(strings.ToLower(args[0]))
+			cfg.Project = project
 
 			if err := config.SaveCLIConfig(cfg); err != nil {
 				return errors.Wrap(err, "save cli config")
