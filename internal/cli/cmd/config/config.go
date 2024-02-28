@@ -14,7 +14,5 @@ func NewCommand(cfg config.CLIConfig) *cobra.Command {
 
 	// Subcommands
 	cmd.AddCommand(newSetProjectCommand(cfg))
-	cmd.AddCommand(newSetCommand(cfg))
-	cmd.AddCommand(newUnsetCommand(cfg))
 	return cmd
 }
