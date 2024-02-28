@@ -56,8 +56,11 @@ k8s_resource(
   labels = ['kargo'],
   objects = [
     'kargo-admin:clusterrole',
-    'kargo-developer:clusterrole',
-    'kargo-promoter:clusterrole',
+    'kargo-admin:clusterrolebinding',
+    'kargo-admin:serviceaccount',
+    'kargo-viewer:clusterrole',
+    'kargo-viewer:serviceaccount',
+    'kargo-viewer:clusterrolebinding',
     'kargo-selfsigned-cert-issuer:issuer'
   ]
 )

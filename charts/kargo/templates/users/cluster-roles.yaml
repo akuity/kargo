@@ -1,4 +1,4 @@
-{{- if .Values.rbac.installClusterRoles }}
+{{- if and .Values.api.enabled .Values.rbac.installClusterRoles }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -7,97 +7,108 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - rbac.authorization.k8s.io
+  - ""
   resources:
-  - roles
-  - rolebindings
+  - namespaces
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - freights
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - projects
   - stages
+  - warehouses
+  verbs:
+  - "*"
+- apiGroups:
+  - kargo.akuity.io
+  resources:
   - promotions
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
-  - update
   - watch
+{{- if .Values.api.rollouts.integrationEnabled }}
 - apiGroups:
-  - kargo.akuity.io
+  - argoproj.io
   resources:
-  - stages
+  - analysistemplates
   verbs:
-  - promote
+  - "*"
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kargo-developer
+  name: kargo-viewer
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - kargo.akuity.io
+  - ""
   resources:
-  - stages
+  - namespaces
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - freights
+  - projects
   - promotions
-  verbs:
-  - get
-  - list
-  - watch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: kargo-promoter
-  labels:
-    {{- include "kargo.labels" . | nindent 4 }}
-rules:
-- apiGroups:
-  - kargo.akuity.io
-  resources:
-  - promotions
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - kargo.akuity.io
-  resources:
   - stages
+  - warehouses
   verbs:
   - get
   - list
   - watch
+{{- if .Values.api.rollouts.integrationEnabled }}
 - apiGroups:
-  - kargo.akuity.io
+  - argoproj.io
   resources:
-  - stages
+  - analysistemplates
   verbs:
-  - promote
+  - get
+  - list
+  - watch
+{{- end }}
 {{- end }}
