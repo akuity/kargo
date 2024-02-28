@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/akuity/kargo/internal/api"
@@ -86,7 +87,7 @@ func NewRootCommand(
 		},
 	}
 
-	opt.IOStreams = &genericclioptions.IOStreams{
+	opt.IOStreams = &genericiooptions.IOStreams{
 		In:     cmd.InOrStdin(),
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
