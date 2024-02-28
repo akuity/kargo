@@ -7,9 +7,11 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	sigyaml "sigs.k8s.io/yaml"
 
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -37,15 +39,38 @@ kargo create project my-project
 			if err != nil {
 				return errors.Wrap(err, "get client from config")
 			}
-			resp, err := kargoSvcCli.CreateProject(ctx,
-				connect.NewRequest(&kargosvcapi.CreateProjectRequest{
+
+			project := &kargoapi.Project{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: kargoapi.GroupVersion.String(),
+					Kind:       "Project",
+				},
+				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
-				}))
+				},
+			}
+			projectBytes, err := sigyaml.Marshal(project)
 			if err != nil {
-				return errors.Wrap(err, "create project")
+				return errors.Wrap(err, "marshal project")
 			}
 
-			project := typesv1alpha1.FromProjectProto(resp.Msg.GetProject())
+			resp, err := kargoSvcCli.CreateResource(
+				ctx,
+				connect.NewRequest(
+					&kargosvcapi.CreateResourceRequest{
+						Manifest: projectBytes,
+					},
+				),
+			)
+			if err != nil {
+				return errors.Wrap(err, "create resource")
+			}
+
+			project = &kargoapi.Project{}
+			projectBytes = resp.Msg.GetResults()[0].GetCreatedResourceManifest()
+			if err = sigyaml.Unmarshal(projectBytes, project); err != nil {
+				return errors.Wrap(err, "unmarshal project")
+			}
 
 			if ptr.Deref(opt.PrintFlags.OutputFormat, "") == "" {
 				_, _ = fmt.Fprintf(opt.IOStreams.Out, "Project Created: %q\n", name)

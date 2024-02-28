@@ -11,7 +11,7 @@ import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import {
   listStages,
-  updateStage
+  updateResource
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
@@ -32,7 +32,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
   const stage = data?.stages.find((item) => item.metadata?.name === stageName);
 
   const { mutateAsync, isPending } = useMutation({
-    ...updateStage.useMutation(),
+    ...updateResource.useMutation(),
     onSuccess: () => hide()
   });
 
@@ -44,11 +44,9 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
   });
 
   const onSubmit = handleSubmit(async (data) => {
+    const textEncoder = new TextEncoder();
     await mutateAsync({
-      stage: {
-        case: 'yaml',
-        value: prepareStageToSave(stage, data.value)
-      }
+      manifest: textEncoder.encode(prepareStageToSave(stage, data.value))
     });
   });
 
