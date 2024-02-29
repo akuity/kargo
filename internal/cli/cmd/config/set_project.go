@@ -10,7 +10,15 @@ import (
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
+type setProjectOptions struct {
+	Config config.CLIConfig
+
+	Project string
+}
+
 func newSetProjectCommand(cfg config.CLIConfig) *cobra.Command {
+	cmdOpts := &setProjectOptions{Config: cfg}
+
 	cmd := &cobra.Command{
 		Use:   "set-project",
 		Short: "Set the default project",
@@ -23,14 +31,26 @@ kargo config set-project my-project
 kargo config set-project ""
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			project := strings.TrimSpace(strings.ToLower(args[0]))
-			cfg.Project = project
+			cmdOpts.complete(args)
 
-			if err := config.SaveCLIConfig(cfg); err != nil {
-				return errors.Wrap(err, "save cli config")
-			}
-			return nil
+			return cmdOpts.run()
 		},
 	}
 	return cmd
+}
+
+// complete sets the options from the command arguments.
+func (o *setProjectOptions) complete(args []string) {
+	o.Project = strings.TrimSpace(strings.ToLower(args[0]))
+}
+
+// run sets the default project in the CLI configuration using the provided
+// options.
+func (o *setProjectOptions) run() error {
+	o.Config.Project = o.Project
+
+	if err := config.SaveCLIConfig(o.Config); err != nil {
+		return errors.Wrap(err, "save cli config")
+	}
+	return nil
 }

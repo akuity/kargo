@@ -28,10 +28,13 @@ kargo get stages --project=my-project
 kargo get promotions --project=my-project --stage=my-stage
 `,
 	}
+
+	// TODO: Factor out server flags to a higher level (root?) as they are
+	//   common to almost all commands.
 	option.InsecureTLS(cmd.PersistentFlags(), opt)
 	option.LocalServer(cmd.PersistentFlags(), opt)
 
-	// Subcommands
+	// Register subcommands.
 	cmd.AddCommand(newGetFreightCommand(cfg, opt))
 	cmd.AddCommand(newGetProjectsCommand(cfg, opt))
 	cmd.AddCommand(newGetPromotionsCommand(cfg, opt))

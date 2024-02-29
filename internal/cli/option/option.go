@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/config"
@@ -22,7 +23,7 @@ type Option struct {
 
 	Project string
 
-	IOStreams  *genericclioptions.IOStreams
+	IOStreams  *genericiooptions.IOStreams
 	PrintFlags *genericclioptions.PrintFlags
 }
 
