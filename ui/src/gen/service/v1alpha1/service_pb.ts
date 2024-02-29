@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Freight, Project, Promotion, Stage, StageSpec, Warehouse, WarehouseSpec } from "../../v1alpha1/types_pb.js";
+import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/types_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -502,55 +502,6 @@ export class AdminLoginResponse extends Message<AdminLoginResponse> {
 
   static equals(a: AdminLoginResponse | PlainMessage<AdminLoginResponse> | undefined, b: AdminLoginResponse | PlainMessage<AdminLoginResponse> | undefined): boolean {
     return proto3.util.equals(AdminLoginResponse, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.TypedStageSpec
- */
-export class TypedStageSpec extends Message<TypedStageSpec> {
-  /**
-   * @generated from field: string project = 1;
-   */
-  project = "";
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 3;
-   */
-  spec?: StageSpec;
-
-  constructor(data?: PartialMessage<TypedStageSpec>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.TypedStageSpec";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "spec", kind: "message", T: StageSpec },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypedStageSpec {
-    return new TypedStageSpec().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypedStageSpec {
-    return new TypedStageSpec().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypedStageSpec {
-    return new TypedStageSpec().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: TypedStageSpec | PlainMessage<TypedStageSpec> | undefined, b: TypedStageSpec | PlainMessage<TypedStageSpec> | undefined): boolean {
-    return proto3.util.equals(TypedStageSpec, a, b);
   }
 }
 
@@ -1626,61 +1577,6 @@ export class RefreshStageResponse extends Message<RefreshStageResponse> {
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec
- */
-export class TypedPromotionPolicySpec extends Message<TypedPromotionPolicySpec> {
-  /**
-   * @generated from field: string project = 1;
-   */
-  project = "";
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: string stage = 3;
-   */
-  stage = "";
-
-  /**
-   * @generated from field: bool enable_auto_promotion = 4;
-   */
-  enableAutoPromotion = false;
-
-  constructor(data?: PartialMessage<TypedPromotionPolicySpec>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.TypedPromotionPolicySpec";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "enable_auto_promotion", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypedPromotionPolicySpec {
-    return new TypedPromotionPolicySpec().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypedPromotionPolicySpec {
-    return new TypedPromotionPolicySpec().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypedPromotionPolicySpec {
-    return new TypedPromotionPolicySpec().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: TypedPromotionPolicySpec | PlainMessage<TypedPromotionPolicySpec> | undefined, b: TypedPromotionPolicySpec | PlainMessage<TypedPromotionPolicySpec> | undefined): boolean {
-    return proto3.util.equals(TypedPromotionPolicySpec, a, b);
-  }
-}
-
-/**
  * @generated from message akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
  */
 export class ListPromotionsRequest extends Message<ListPromotionsRequest> {
@@ -2688,55 +2584,6 @@ export class WatchWarehousesResponse extends Message<WatchWarehousesResponse> {
 
   static equals(a: WatchWarehousesResponse | PlainMessage<WatchWarehousesResponse> | undefined, b: WatchWarehousesResponse | PlainMessage<WatchWarehousesResponse> | undefined): boolean {
     return proto3.util.equals(WatchWarehousesResponse, a, b);
-  }
-}
-
-/**
- * @generated from message akuity.io.kargo.service.v1alpha1.TypedWarehouseSpec
- */
-export class TypedWarehouseSpec extends Message<TypedWarehouseSpec> {
-  /**
-   * @generated from field: string project = 1;
-   */
-  project = "";
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec spec = 3;
-   */
-  spec?: WarehouseSpec;
-
-  constructor(data?: PartialMessage<TypedWarehouseSpec>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.TypedWarehouseSpec";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "spec", kind: "message", T: WarehouseSpec },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypedWarehouseSpec {
-    return new TypedWarehouseSpec().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypedWarehouseSpec {
-    return new TypedWarehouseSpec().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypedWarehouseSpec {
-    return new TypedWarehouseSpec().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: TypedWarehouseSpec | PlainMessage<TypedWarehouseSpec> | undefined, b: TypedWarehouseSpec | PlainMessage<TypedWarehouseSpec> | undefined): boolean {
-    return proto3.util.equals(TypedWarehouseSpec, a, b);
   }
 }
 
