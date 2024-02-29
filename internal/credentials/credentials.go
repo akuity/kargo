@@ -2,27 +2,18 @@ package credentials
 
 import (
 	"context"
+	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
-)
-
-const (
-	// kargoSecretTypeLabelKey is the key for a label used to identify the type
-	// of credentials stored in a Secret.
-	kargoSecretTypeLabelKey = "kargo.akuity.io/secret-type" // nolint: gosec
-	// repositorySecretTypeLabelValue denotes that a secret contains credentials
-	// for a repository that is an exact match on the normalized URL.
-	repositorySecretTypeLabelValue = "repository"
-	// repoCredsSecretTypeLabelValue denotes that a secret contains credentials
-	// for any repository whose URL begins with a specific prefix.
-	repoCredsSecretTypeLabelValue = "repo-creds" // nolint: gosec
 )
 
 // Type is a string type used to represent a type of Credentials.
@@ -35,6 +26,10 @@ const (
 	TypeHelm Type = "helm"
 	// TypeImage represents credentials for an image repository.
 	TypeImage Type = "image"
+
+	// credentialTypeLabelKey is the key for a label used to identify the type
+	// of credentials stored in a Secret.
+	credentialTypeLabelKey = "kargo.akuity.io/cred-type" // nolint: gosec
 )
 
 // Credentials generically represents any type of repository credential.
@@ -77,6 +72,7 @@ type KubernetesDatabaseConfig struct {
 func KubernetesDatabaseConfigFromEnv() KubernetesDatabaseConfig {
 	cfg := KubernetesDatabaseConfig{}
 	envconfig.MustProcess("", &cfg)
+	sort.StringSlice(cfg.GlobalCredentialsNamespaces).Sort()
 	return cfg
 }
 
@@ -106,7 +102,6 @@ func (k *kubernetesDatabase) Get(
 	if strings.HasPrefix(repoURL, "http://") {
 		logger := logging.LoggerFromContext(ctx).WithField("repoURL", repoURL)
 		logger.Warnf("refused to get credentials for insecure HTTP endpoint")
-
 		return creds, false, nil
 	}
 
@@ -114,69 +109,23 @@ func (k *kubernetesDatabase) Get(
 	var err error
 
 	// Check namespace for credentials
-	if secret, err = getCredentialsSecret(
+	if secret, err = k.getCredentialsSecret(
 		ctx,
-		k.kargoClient,
 		namespace,
-		labels.Set(map[string]string{
-			kargoSecretTypeLabelKey: repositorySecretTypeLabelValue,
-		}).AsSelector(),
 		credType,
 		repoURL,
-		false, // repoURL is not a prefix
 	); err != nil {
 		return creds, false, err
 	}
 
 	if secret == nil {
-		// Check namespace for credentials template
-		if secret, err = getCredentialsSecret(
-			ctx,
-			k.kargoClient,
-			namespace,
-			labels.Set(map[string]string{
-				kargoSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
-			}).AsSelector(),
-			credType,
-			repoURL,
-			true, // repoURL is a prefix
-		); err != nil {
-			return creds, false, err
-		}
-	}
-
-	if secret == nil {
 		// Check global credentials namespaces for credentials
 		for _, globalCredsNamespace := range k.cfg.GlobalCredentialsNamespaces {
-			// Check shared creds namespace for credentials
-			if secret, err = getCredentialsSecret(
+			if secret, err = k.getCredentialsSecret(
 				ctx,
-				k.kargoClient,
 				globalCredsNamespace,
-				labels.Set(map[string]string{
-					kargoSecretTypeLabelKey: repositorySecretTypeLabelValue,
-				}).AsSelector(),
 				credType,
 				repoURL,
-				false, // repoURL is not a prefix
-			); err != nil {
-				return creds, false, err
-			}
-			if secret != nil {
-				break
-			}
-
-			// Check shared creds namespace for credentials template
-			if secret, err = getCredentialsSecret(
-				ctx,
-				k.kargoClient,
-				globalCredsNamespace,
-				labels.Set(map[string]string{
-					kargoSecretTypeLabelKey: repoCredsSecretTypeLabelValue,
-				}).AsSelector(),
-				credType,
-				repoURL,
-				true, // repoURL is a prefix
 			); err != nil {
 				return creds, false, err
 			}
@@ -193,39 +142,42 @@ func (k *kubernetesDatabase) Get(
 	return secretToCreds(secret), true, nil
 }
 
-func getCredentialsSecret(
+func (k *kubernetesDatabase) getCredentialsSecret(
 	ctx context.Context,
-	kubeClient client.Client,
 	namespace string,
-	labelSelector labels.Selector,
 	credType Type,
 	repoURL string,
-	acceptPrefixMatch bool,
 ) (*corev1.Secret, error) {
 	repoURL = normalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
 		git.NormalizeGitURL(repoURL), // This should be safe even on non-Git URLs
 	)
 
 	secrets := corev1.SecretList{}
-	if err := kubeClient.List(
+	if err := k.kargoClient.List(
 		ctx,
 		&secrets,
 		&client.ListOptions{
-			Namespace:     namespace,
-			LabelSelector: labelSelector,
+			Namespace: namespace,
+			LabelSelector: labels.Set(map[string]string{
+				credentialTypeLabelKey: string(credType),
+			}).AsSelector(),
 		},
 	); err != nil {
 		return nil, err
 	}
-	// Scan for the credentials we're looking for
+
+	// Sort the secrets so they're considered in the same order every time this
+	// function is called.
+	sort.Slice(secrets.Items, func(i, j int) bool {
+		return secrets.Items[i].Name < secrets.Items[j].Name
+	})
+
+	// Scan for an exact match
 	for _, secret := range secrets.Items {
 		if secret.Data == nil {
 			continue
 		}
-		if typeBytes, ok := secret.Data["type"]; !ok || Type(typeBytes) != credType {
-			continue
-		}
-		urlBytes, ok := secret.Data["url"]
+		urlBytes, ok := secret.Data["repoURL"]
 		if !ok {
 			continue
 		}
@@ -234,13 +186,35 @@ func getCredentialsSecret(
 				string(urlBytes),
 			),
 		)
-		if acceptPrefixMatch && strings.HasPrefix(repoURL, url) {
-			return &secret, nil
-		}
-		if !acceptPrefixMatch && url == repoURL {
+		if url == repoURL {
 			return &secret, nil
 		}
 	}
+
+	logger := logging.LoggerFromContext(ctx)
+
+	// Scan for a pattern match
+	for _, secret := range secrets.Items {
+		if secret.Data == nil {
+			continue
+		}
+		patternBytes, ok := secret.Data["repoURLPattern"]
+		if !ok {
+			continue
+		}
+		regex, err := regexp.Compile(string(patternBytes))
+		if err != nil {
+			logger.WithFields(log.Fields{
+				"namespace": namespace,
+				"secret":    secret.Name,
+			}).Warn("failed to compile regex for credential secret")
+			continue
+		}
+		if regex.MatchString(repoURL) {
+			return &secret, nil
+		}
+	}
+
 	return nil, nil
 }
 

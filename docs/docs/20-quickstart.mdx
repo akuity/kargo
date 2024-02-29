@@ -324,10 +324,9 @@ the previous section.
       name: kargo-demo-repo
       namespace: kargo-demo
       labels:
-        kargo.akuity.io/secret-type: repository
+        kargo.akuity.io/cred-type: git
     stringData:
-      type: git
-      url: ${GITOPS_REPO_URL}
+      repoURL: ${GITOPS_REPO_URL}
       username: ${GITHUB_USERNAME}
       password: ${GITHUB_PAT}
     ---
