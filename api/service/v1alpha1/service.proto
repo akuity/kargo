@@ -114,12 +114,6 @@ message AdminLoginResponse {
   string id_token = 1;
 }
 
-message TypedStageSpec {
-  string project = 1;
-  string name = 2;
-  github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec spec = 3;
-}
-
 message CreateResourceRequest {
   bytes manifest = 1;
 }
@@ -246,13 +240,6 @@ message RefreshStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
 }
 
-message TypedPromotionPolicySpec {
-  string project = 1;
-  string name = 2;
-  string stage = 3;
-  bool enable_auto_promotion = 4;
-}
-
 message ListPromotionsRequest {
   string project = 1;
   optional string stage = 2;
@@ -368,12 +355,6 @@ message WatchWarehousesRequest {
 message WatchWarehousesResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
   string type = 2;
-}
-
-message TypedWarehouseSpec {
-  string project = 1;
-  string name = 2;
-  github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec spec = 3;
 }
 
 message DeleteWarehouseRequest {
