@@ -21,6 +21,7 @@ kargo update freight --project=my-project abc123 --alias=my-new-alias
 	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	// Register subcommands.
+	cmd.AddCommand(newUpdateCredentialsCommand(cfg, opt))
 	cmd.AddCommand(newUpdateFreightAliasCommand(cfg, opt))
 
 	return cmd

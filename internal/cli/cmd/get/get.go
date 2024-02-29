@@ -3,6 +3,7 @@ package get
 import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/printers"
@@ -36,6 +37,7 @@ kargo get promotions --project=my-project --stage=my-stage
 	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	// Register subcommands.
+	cmd.AddCommand(newGetCredentialsCommand(cfg, opt))
 	cmd.AddCommand(newGetFreightCommand(cfg, opt))
 	cmd.AddCommand(newGetProjectsCommand(cfg, opt))
 	cmd.AddCommand(newGetPromotionsCommand(cfg, opt))
@@ -71,6 +73,8 @@ func printObjects[T runtime.Object](opt *option.Option, objects []T) error {
 	var t T
 	var printObj runtime.Object
 	switch any(t).(type) {
+	case *corev1.Secret:
+		printObj = newCredentialsTable(list)
 	case *kargoapi.Freight:
 		printObj = newFreightTable(list)
 	case *kargoapi.Project:

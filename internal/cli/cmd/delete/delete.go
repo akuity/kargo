@@ -66,6 +66,7 @@ kargo delete warehouse --project=my-project my-warehouse
 	cmdOpts.addFlags(cmd)
 
 	// Register subcommands.
+	cmd.AddCommand(newDeleteCredentialsCommand(cfg, opt))
 	cmd.AddCommand(newProjectCommand(cfg, opt))
 	cmd.AddCommand(newStageCommand(cfg, opt))
 	cmd.AddCommand(newWarehouseCommand(cfg, opt))
