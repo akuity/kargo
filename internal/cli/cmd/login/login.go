@@ -44,6 +44,32 @@ type loginOptions struct {
 	UseSSO        bool
 	Password      string
 	CallbackPort  int
+	ServerAddress string
+}
+
+func NewCommand(opt *option.Option) *cobra.Command {
+	cmdOpts := &loginOptions{Option: opt}
+
+	cmd := &cobra.Command{
+		Use:     "login server-address",
+		Args:    option.ExactArgs(1),
+		Short:   "Log in to a Kargo API server",
+		Example: "kargo login https://kargo.example.com --sso",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmdOpts.complete(args)
+
+			if err := cmdOpts.validate(); err != nil {
+				return err
+			}
+
+			return cmdOpts.run(cmd.Context())
+		},
+	}
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
+	return cmd
 }
 
 // addFlags adds the flags for the login options to the provided command.
@@ -68,78 +94,74 @@ func (o *loginOptions) addFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive("admin", "kubeconfig", "sso")
 }
 
-func NewCommand(opt *option.Option) *cobra.Command {
-	cmdOpts := &loginOptions{Option: opt}
+// complete sets the options from the command arguments.
+func (o *loginOptions) complete(args []string) {
+	o.ServerAddress = strings.TrimSpace(args[0])
+}
 
-	cmd := &cobra.Command{
-		Use:     "login server-address",
-		Args:    option.ExactArgs(1),
-		Short:   "Log in to a Kargo API server",
-		Example: "kargo login https://kargo.example.com --sso",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *loginOptions) validate() error {
+	if o.ServerAddress == "" {
+		return errors.New("server address is required")
+	}
+	return nil
+}
 
-			serverAddress := args[0]
+// run logs in to the Kargo API server using the method specified by the options.
+func (o *loginOptions) run(ctx context.Context) error {
+	var bearerToken, refreshToken string
+	var err error
 
-			var bearerToken, refreshToken string
-			var err error
-
-			switch {
-			case cmdOpts.UseAdmin:
-				for {
-					if cmdOpts.Password != "" {
-						break
-					}
-					prompt := &survey.Password{
-						Message: "Admin user password",
-					}
-					if err = survey.AskOne(prompt, &cmdOpts.Password); err != nil {
-						return err
-					}
-				}
-				if bearerToken, err = adminLogin(ctx, serverAddress, cmdOpts.Password, cmdOpts.InsecureTLS); err != nil {
-					return err
-				}
-			case cmdOpts.UseKubeconfig:
-				if bearerToken, err = kubeconfigLogin(ctx); err != nil {
-					return err
-				}
-			case cmdOpts.UseSSO:
-				if bearerToken, refreshToken, err = ssoLogin(
-					ctx, serverAddress, cmdOpts.CallbackPort, cmdOpts.InsecureTLS,
-				); err != nil {
-					return err
-				}
-			default:
-				// This should never happen.
-				return errors.New("internal error: no login method selected")
+	switch {
+	case o.UseAdmin:
+		for {
+			if o.Password != "" {
+				break
 			}
-
-			if cmdOpts.InsecureTLS {
-				// When the user specifies during login that they want to ignore cert
-				// warnings, we will force them to periodically re-assess that choice
-				// by NOT using refresh tokens and requiring them to re-authenticate
-				// instead. Since we plan not to use the refresh token for such a case,
-				// it's more secure to throw it away immediately.
-				refreshToken = ""
+			prompt := &survey.Password{
+				Message: "Admin user password",
 			}
-
-			err = libConfig.SaveCLIConfig(
-				libConfig.CLIConfig{
-					APIAddress:            serverAddress,
-					BearerToken:           bearerToken,
-					RefreshToken:          refreshToken,
-					InsecureSkipTLSVerify: cmdOpts.InsecureTLS,
-				},
-			)
-			return errors.Wrap(err, "error persisting configuration")
-		},
+			if err = survey.AskOne(prompt, &o.Password); err != nil {
+				return err
+			}
+		}
+		if bearerToken, err = adminLogin(ctx, o.ServerAddress, o.Password, o.InsecureTLS); err != nil {
+			return err
+		}
+	case o.UseKubeconfig:
+		if bearerToken, err = kubeconfigLogin(ctx); err != nil {
+			return err
+		}
+	case o.UseSSO:
+		if bearerToken, refreshToken, err = ssoLogin(
+			ctx, o.ServerAddress, o.CallbackPort, o.InsecureTLS,
+		); err != nil {
+			return err
+		}
+	default:
+		// This should never happen.
+		return errors.New("internal error: no login method selected")
 	}
 
-	// Register the option flags on the command.
-	cmdOpts.addFlags(cmd)
+	if o.InsecureTLS {
+		// When the user specifies during login that they want to ignore cert
+		// warnings, we will force them to periodically re-assess that choice
+		// by NOT using refresh tokens and requiring them to re-authenticate
+		// instead. Since we plan not to use the refresh token for such a case,
+		// it's more secure to throw it away immediately.
+		refreshToken = ""
+	}
 
-	return cmd
+	err = libConfig.SaveCLIConfig(
+		libConfig.CLIConfig{
+			APIAddress:            o.ServerAddress,
+			BearerToken:           bearerToken,
+			RefreshToken:          refreshToken,
+			InsecureSkipTLSVerify: o.InsecureTLS,
+		},
+	)
+	return errors.Wrap(err, "error persisting configuration")
 }
 
 func adminLogin(

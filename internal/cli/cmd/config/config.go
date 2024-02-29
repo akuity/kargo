@@ -12,7 +12,8 @@ func NewCommand(cfg config.CLIConfig) *cobra.Command {
 		Short: "Manage Kargo CLI configuration",
 	}
 
-	// Subcommands
+	// Register subcommands.
 	cmd.AddCommand(newSetProjectCommand(cfg))
+
 	return cmd
 }

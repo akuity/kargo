@@ -34,7 +34,7 @@ kargo get promotions --project=my-project --stage=my-stage
 	option.InsecureTLS(cmd.PersistentFlags(), opt)
 	option.LocalServer(cmd.PersistentFlags(), opt)
 
-	// Subcommands
+	// Register subcommands.
 	cmd.AddCommand(newGetFreightCommand(cfg, opt))
 	cmd.AddCommand(newGetProjectsCommand(cfg, opt))
 	cmd.AddCommand(newGetPromotionsCommand(cfg, opt))

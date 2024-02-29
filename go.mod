@@ -34,7 +34,6 @@ require (
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	go.uber.org/ratelimit v0.3.0
 	golang.org/x/crypto v0.20.0
-	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de
 	golang.org/x/net v0.21.0
 	golang.org/x/oauth2 v0.17.0
 	golang.org/x/sync v0.6.0
@@ -54,6 +53,7 @@ require (
 require (
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
+	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de // indirect
 	gopkg.in/evanphx/json-patch.v5 v5.6.0 // indirect
 	sigs.k8s.io/kustomize/api v0.16.0 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.16.0 // indirect

@@ -1,6 +1,8 @@
 package refresh
 
 import (
+	"context"
+	goerrors "errors"
 	"fmt"
 	"strings"
 
@@ -14,10 +16,31 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+const (
+	refreshResourceTypeWarehouse = "warehouse"
+	refreshResourceTypeStage     = "stage"
+)
+
 type refreshOptions struct {
 	*option.Option
+	Config config.CLIConfig
 
-	Wait bool
+	ResourceType string
+	Name         string
+	Wait         bool
+}
+
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "refresh",
+		Short: "Refresh a stage or warehouse",
+	}
+
+	// Register subcommands.
+	cmd.AddCommand(newRefreshWarehouseCommand(cfg, opt))
+	cmd.AddCommand(newRefreshStageCommand(cfg, opt))
+
+	return cmd
 }
 
 // addFlags adds the flags for the refresh options to the provided command.
@@ -27,93 +50,73 @@ func (o *refreshOptions) addFlags(cmd *cobra.Command) {
 	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
 	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
-	option.Project(cmd.PersistentFlags(), &o.Project, o.Project,
+	option.Project(cmd.Flags(), &o.Project, o.Project,
 		"The Project the resource belongs to. If not set, the default project will be used.")
-	option.Wait(cmd.PersistentFlags(), &o.Wait, false, "Wait for the refresh to complete.")
+	option.Wait(cmd.Flags(), &o.Wait, false, "Wait for the refresh to complete.")
+}
+
+// complete sets the resource type for the refresh options, and further parses
+// the command arguments to set the resource name.
+func (o *refreshOptions) complete(resourceType string, args []string) {
+	o.ResourceType = resourceType
+	o.Name = strings.TrimSpace(args[0])
 }
 
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
 func (o *refreshOptions) validate() error {
+	var errs []error
+
+	if o.ResourceType == "" {
+		errs = append(errs, errors.New("resource type is required"))
+	}
+
 	if o.Project == "" {
-		return errors.New("project is required")
-	}
-	return nil
-}
-
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
-	cmdOpts := &refreshOptions{Option: opt}
-
-	cmd := &cobra.Command{
-		Use:   "refresh",
-		Short: "Refresh a stage or warehouse",
+		errs = append(errs, errors.New("project is required"))
 	}
 
-	cmd.AddCommand(newRefreshWarehouseCommand(cfg, cmdOpts))
-	cmd.AddCommand(newRefreshStageCommand(cfg, cmdOpts))
+	if o.Name == "" {
+		errs = append(errs, errors.New("name is required"))
+	}
 
-	// Register the option flags on the (root) command.
-	cmdOpts.addFlags(cmd)
-
-	return cmd
+	return goerrors.Join(errs...)
 }
 
-const (
-	refreshResourceTypeWarehouse = "warehouse"
-	refreshResourceTypeStage     = "stage"
-)
+// run performs the refresh operation based on the provided options.
+func (o *refreshOptions) run(ctx context.Context) error {
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	if err != nil {
+		return err
+	}
 
-func refreshObject(
-	cfg config.CLIConfig,
-	opt *refreshOptions,
-	resourceType string,
-) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		ctx := cmd.Context()
+	switch o.ResourceType {
+	case refreshResourceTypeWarehouse:
+		_, err = kargoSvcCli.RefreshWarehouse(ctx, connect.NewRequest(&v1alpha1.RefreshWarehouseRequest{
+			Project: o.Project,
+			Name:    o.Name,
+		}))
 
-		name := strings.TrimSpace(args[0])
-		if name == "" {
-			return errors.New("name is required")
-		}
+	case refreshResourceTypeStage:
+		_, err = kargoSvcCli.RefreshStage(ctx, connect.NewRequest(&v1alpha1.RefreshStageRequest{
+			Project: o.Project,
+			Name:    o.Name,
+		}))
+	}
+	if err != nil {
+		return errors.Wrapf(err, "refresh %s", o.ResourceType)
+	}
 
-		if err := opt.validate(); err != nil {
-			return err
-		}
-
-		kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt.Option)
-		if err != nil {
-			return err
-		}
-
-		switch resourceType {
+	if o.Wait {
+		switch o.ResourceType {
 		case refreshResourceTypeWarehouse:
-			_, err = kargoSvcCli.RefreshWarehouse(ctx, connect.NewRequest(&v1alpha1.RefreshWarehouseRequest{
-				Project: opt.Project,
-				Name:    name,
-			}))
-
+			err = waitForWarehouse(ctx, kargoSvcCli, o.Project, o.Name)
 		case refreshResourceTypeStage:
-			_, err = kargoSvcCli.RefreshStage(ctx, connect.NewRequest(&v1alpha1.RefreshStageRequest{
-				Project: opt.Project,
-				Name:    name,
-			}))
+			err = waitForStage(ctx, kargoSvcCli, o.Project, o.Name)
 		}
 		if err != nil {
-			return errors.Wrapf(err, "refresh %s", resourceType)
+			return errors.Wrapf(err, "wait %s", o.ResourceType)
 		}
-
-		if opt.Wait {
-			switch resourceType {
-			case refreshResourceTypeWarehouse:
-				err = waitForWarehouse(ctx, kargoSvcCli, opt.Project, name)
-			case refreshResourceTypeStage:
-				err = waitForStage(ctx, kargoSvcCli, opt.Project, name)
-			}
-			if err != nil {
-				return errors.Wrapf(err, "wait %s", resourceType)
-			}
-		}
-		fmt.Printf("%s '%s/%s' refreshed\n", resourceType, opt.Project, name)
-		return nil
 	}
+	fmt.Printf("%s '%s/%s' refreshed\n", o.ResourceType, o.Project, o.Name)
+	return nil
 }

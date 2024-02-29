@@ -1,13 +1,14 @@
 package delete
 
 import (
+	"context"
 	goerrors "errors"
 	"fmt"
+	"slices"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
@@ -17,27 +18,16 @@ import (
 
 type deleteStageOptions struct {
 	*option.Option
-}
+	Config config.CLIConfig
 
-// addFlags adds the flags for the delete stage options to the provided command.
-func (o *deleteStageOptions) addFlags(cmd *cobra.Command) {
-	o.PrintFlags.AddFlags(cmd)
-
-	option.Project(cmd.Flags(), &o.Project, o.Project,
-		"The Project for which to delete Stages. If not set, the default project will be used.")
-}
-
-// validate performs validation of the options. If the options are invalid, an
-// error is returned.
-func (o *deleteStageOptions) validate() error {
-	if o.Project == "" {
-		return errors.New("project is required")
-	}
-	return nil
+	Names []string
 }
 
 func newStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
-	cmdOpts := &deleteStageOptions{Option: opt}
+	cmdOpts := &deleteStageOptions{
+		Option: opt,
+		Config: cfg,
+	}
 
 	cmd := &cobra.Command{
 		Use:   "stage [NAME]...",
@@ -48,29 +38,13 @@ func newStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 kargo delete stage --project=my-project my-stage
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+			cmdOpts.complete(args)
 
 			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
-			if err != nil {
-				return errors.Wrap(err, "get client from config")
-			}
-
-			var resErr error
-			for _, name := range slices.Compact(args) {
-				if _, err := kargoSvcCli.DeleteStage(ctx, connect.NewRequest(&v1alpha1.DeleteStageRequest{
-					Project: cmdOpts.Project,
-					Name:    name,
-				})); err != nil {
-					resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
-					continue
-				}
-				_, _ = fmt.Fprintf(cmdOpts.IOStreams.Out, "Stage Deleted: %q\n", name)
-			}
-			return resErr
+			return cmdOpts.run(cmd.Context())
 		},
 	}
 
@@ -78,4 +52,54 @@ kargo delete stage --project=my-project my-stage
 	cmdOpts.addFlags(cmd)
 
 	return cmd
+}
+
+// addFlags adds the flags for the delete stage options to the provided command.
+func (o *deleteStageOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+
+	option.Project(cmd.Flags(), &o.Project, o.Project,
+		"The Project for which to delete Stages. If not set, the default project will be used.")
+}
+
+// complete sets the options from the command arguments.
+func (o *deleteStageOptions) complete(args []string) {
+	o.Names = slices.Compact(args)
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *deleteStageOptions) validate() error {
+	var errs []error
+
+	if o.Project == "" {
+		errs = append(errs, errors.New("project is required"))
+	}
+
+	if len(o.Names) == 0 {
+		errs = append(errs, errors.New("name is required"))
+	}
+
+	return goerrors.Join(errs...)
+}
+
+// run removes the stage(s) from the project based on the options.
+func (o *deleteStageOptions) run(ctx context.Context) error {
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	if err != nil {
+		return errors.Wrap(err, "get client from config")
+	}
+
+	var resErr error
+	for _, name := range o.Names {
+		if _, err := kargoSvcCli.DeleteStage(ctx, connect.NewRequest(&v1alpha1.DeleteStageRequest{
+			Project: o.Project,
+			Name:    name,
+		})); err != nil {
+			resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
+			continue
+		}
+		_, _ = fmt.Fprintf(o.IOStreams.Out, "Stage Deleted: %q\n", name)
+	}
+	return resErr
 }

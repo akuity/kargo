@@ -8,22 +8,41 @@ import (
 	"github.com/akuity/kargo/internal/cli/config"
 )
 
+type dashboardOptions struct {
+	Config config.CLIConfig
+}
+
 func NewCommand(cfg config.CLIConfig) *cobra.Command {
+	cmdOpts := &dashboardOptions{Config: cfg}
+
 	return &cobra.Command{
 		Use:     "dashboard",
 		Short:   "Open the Kargo Dashboard in your default browser.",
 		Example: "kargo logout",
 		RunE: func(*cobra.Command, []string) error {
-			if cfg.APIAddress == "" {
-				return errors.New(
-					"seems like you are not logged in; please use `kargo login` to authenticate",
-				)
+			if err := cmdOpts.validate(); err != nil {
+				return err
 			}
-
-			return errors.Wrap(
-				browser.Open(cfg.APIAddress),
-				"error opening dashboard in default browser",
-			)
+			return cmdOpts.run()
 		},
 	}
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *dashboardOptions) validate() error {
+	if o.Config.APIAddress == "" {
+		return errors.New(
+			"seems like you are not logged in; please use `kargo login` to authenticate",
+		)
+	}
+	return nil
+}
+
+// run opens the Kargo Dashboard in the default browser.
+func (o *dashboardOptions) run() error {
+	return errors.Wrap(
+		browser.Open(o.Config.APIAddress),
+		"error opening dashboard in default browser",
+	)
 }

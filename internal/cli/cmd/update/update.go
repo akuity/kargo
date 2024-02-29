@@ -15,6 +15,8 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	option.InsecureTLS(cmd.PersistentFlags(), opt)
 	option.LocalServer(cmd.PersistentFlags(), opt)
 
+	// Register subcommands.
 	cmd.AddCommand(newUpdateFreightAliasCommand(cfg, opt))
+
 	return cmd
 }

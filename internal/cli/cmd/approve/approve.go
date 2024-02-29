@@ -1,6 +1,7 @@
 package approve
 
 import (
+	"context"
 	goerrors "errors"
 
 	"connectrpc.com/connect"
@@ -15,9 +16,35 @@ import (
 
 type approvalOptions struct {
 	*option.Option
+	Config config.CLIConfig
 
 	Freight string
 	Stage   string
+}
+
+func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	cmdOpts := &approvalOptions{
+		Option: opt,
+		Config: cfg,
+	}
+
+	cmd := &cobra.Command{
+		Use:     "approve --project=project --freight=freight --stage=stage",
+		Short:   "Manually approve freight for promotion to a stage",
+		Example: "kargo approve --project=project --freight=abc1234 --stage=qa",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := cmdOpts.validate(); err != nil {
+				return err
+			}
+
+			return cmdOpts.run(cmd.Context())
+		},
+	}
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
+	return cmd
 }
 
 // addFlags adds the flags for the approval options to the provided command.
@@ -62,43 +89,24 @@ func (o *approvalOptions) validate() error {
 	return goerrors.Join(errs...)
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
-	cmdOpts := &approvalOptions{Option: opt}
-
-	cmd := &cobra.Command{
-		Use:     "approve --project=project --freight=freight --stage=stage",
-		Short:   "Manually approve freight for promotion to a stage",
-		Example: "kargo approve --project=project --freight=abc1234 --stage=qa",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			ctx := cmd.Context()
-
-			if err := cmdOpts.validate(); err != nil {
-				return err
-			}
-
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, cmdOpts.Option)
-			if err != nil {
-				return errors.Wrap(err, "get client from config")
-			}
-
-			if _, err = kargoSvcCli.ApproveFreight(
-				ctx,
-				connect.NewRequest(
-					&v1alpha1.ApproveFreightRequest{
-						Project: cmdOpts.Project,
-						Id:      cmdOpts.Freight,
-						Stage:   cmdOpts.Stage,
-					},
-				),
-			); err != nil {
-				return errors.Wrap(err, "approve freight")
-			}
-			return nil
-		},
+// run performs the approval of a freight based on the options.
+func (o *approvalOptions) run(ctx context.Context) error {
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	if err != nil {
+		return errors.Wrap(err, "get client from config")
 	}
 
-	// Register the option flags on the command.
-	cmdOpts.addFlags(cmd)
-
-	return cmd
+	if _, err = kargoSvcCli.ApproveFreight(
+		ctx,
+		connect.NewRequest(
+			&v1alpha1.ApproveFreightRequest{
+				Project: o.Project,
+				Id:      o.Freight,
+				Stage:   o.Stage,
+			},
+		),
+	); err != nil {
+		return errors.Wrap(err, "approve freight")
+	}
+	return nil
 }

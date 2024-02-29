@@ -14,16 +14,30 @@ import (
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
-func newRefreshStageCommand(
-	cfg config.CLIConfig,
-	opt *refreshOptions,
-) *cobra.Command {
+func newRefreshStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	cmdOpts := &refreshOptions{
+		Option: opt,
+		Config: cfg,
+	}
+
 	cmd := &cobra.Command{
 		Use:     "stage (STAGE)",
 		Args:    option.ExactArgs(1),
 		Example: "kargo refresh stage --project=guestbook (STAGE)",
-		RunE:    refreshObject(cfg, opt, refreshResourceTypeStage),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmdOpts.complete(refreshResourceTypeStage, args)
+
+			if err := cmdOpts.validate(); err != nil {
+				return err
+			}
+
+			return cmdOpts.run(cmd.Context())
+		},
 	}
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }
 
