@@ -5,6 +5,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	corev1 "k8s.io/api/core/v1"
 	kubemetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -1274,5 +1275,33 @@ func ToAnalysisRunReferenceProto(a *kargoapi.AnalysisRunReference) *v1alpha1.Ana
 		Namespace: a.Namespace,
 		Name:      a.Name,
 		Phase:     a.Phase,
+	}
+}
+
+func ToSecretProto(s *corev1.Secret) *v1alpha1.Secret {
+	if s == nil {
+		return nil
+	}
+	return &v1alpha1.Secret{
+		ApiVersion: s.APIVersion,
+		Kind:       s.Kind,
+		Metadata:   typesmetav1.ToObjectMetaProto(s.ObjectMeta),
+		Type:       string(s.Type),
+		StringData: s.StringData,
+	}
+}
+
+func FromSecretProto(s *v1alpha1.Secret) *corev1.Secret {
+	if s == nil {
+		return nil
+	}
+	return &corev1.Secret{
+		TypeMeta: kubemetav1.TypeMeta{
+			APIVersion: s.ApiVersion,
+			Kind:       s.Kind,
+		},
+		ObjectMeta: *typesmetav1.FromObjectMetaProto(s.Metadata),
+		Type:       corev1.SecretType(s.Type),
+		StringData: s.StringData,
 	}
 }
