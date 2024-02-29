@@ -33,7 +33,7 @@ require (
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	github.com/withfig/autocomplete-tools/integrations/cobra v1.2.1
 	go.uber.org/ratelimit v0.3.0
-	golang.org/x/crypto v0.19.0
+	golang.org/x/crypto v0.20.0
 	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de
 	golang.org/x/net v0.21.0
 	golang.org/x/oauth2 v0.17.0
