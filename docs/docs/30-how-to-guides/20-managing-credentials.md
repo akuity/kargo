@@ -41,7 +41,7 @@ The `name` of such a `Secret` is inconsequential and may follow any convention
 preferred by the user.
 
 :::info
-Kargo uses Kubernetes `Namespace`s to demarcate project boundaries. `Secret`s
+Kargo uses Kubernetes `Namespace`s to mark project boundaries. `Secret`s
 representing credentials will typically exist in the same `Namespace` as the
 `Stage` resources that will require them. There are exceptions to this, which
 are covered in the next section.
