@@ -7,14 +7,17 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -89,6 +92,22 @@ func newControllerCommand() *cobra.Command {
 						"error adding Kargo API to Kargo controller manager scheme",
 					)
 				}
+
+				secretReq, err := controller.GetCredentialsRequirement()
+				if err != nil {
+					return errors.Wrap(err, "error secret label requirement")
+				}
+
+				cacheOpts := cache.Options{
+					ByObject: map[client.Object]cache.ByObject{
+						// Only watch Secrets matching the label requirements
+						// for credentials.
+						&corev1.Secret{}: {
+							Label: labels.NewSelector().Add(*secretReq),
+						},
+					},
+				}
+
 				if kargoMgr, err = ctrl.NewManager(
 					restCfg,
 					ctrl.Options{
@@ -96,6 +115,7 @@ func newControllerCommand() *cobra.Command {
 						Metrics: server.Options{
 							BindAddress: "0",
 						},
+						Cache: cacheOpts,
 					},
 				); err != nil {
 					return errors.Wrap(err, "error initializing Kargo controller manager")

@@ -41,7 +41,7 @@ func TestGet(t *testing.T) {
 	)
 
 	testLabels := map[string]string{
-		credentialTypeLabelKey: string(testCredType),
+		CredentialTypeLabelKey: testCredType.String(),
 	}
 
 	projectCredentialWithRepoURL := &corev1.Secret{

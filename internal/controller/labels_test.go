@@ -5,10 +5,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 func TestGetShardPredicate(t *testing.T) {
@@ -54,6 +56,65 @@ func TestGetShardPredicate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(GetShardPredicate(testCase.shardName))
+		})
+	}
+}
+
+func TestGetCredentialsRequirement(t *testing.T) {
+	testCases := []struct {
+		name    string
+		labels  labels.Set
+		matches bool
+	}{
+		{
+			name: "credential type label set to git",
+			labels: labels.Set{
+				credentials.CredentialTypeLabelKey: credentials.TypeGit.String(),
+			},
+			matches: true,
+		},
+		{
+			name: "credential type label set to helm and other labels",
+			labels: labels.Set{
+				credentials.CredentialTypeLabelKey: credentials.TypeHelm.String(),
+				"other":                            "label",
+			},
+			matches: true,
+		},
+		{
+			name: "credential type label set to image",
+			labels: labels.Set{
+				credentials.CredentialTypeLabelKey: credentials.TypeImage.String(),
+			},
+			matches: true,
+		},
+		{
+			name: "credential type label set to unknown type",
+			labels: labels.Set{
+				credentials.CredentialTypeLabelKey: "unknown",
+			},
+			matches: false,
+		},
+		{
+			name: "with other labels but no credential type label",
+			labels: labels.Set{
+				"other":   "label",
+				"another": "label",
+			},
+			matches: false,
+		},
+		{
+			name:    "no labels",
+			labels:  nil,
+			matches: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, err := GetCredentialsRequirement()
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			require.Equal(t, testCase.matches, got.Matches(testCase.labels))
 		})
 	}
 }
