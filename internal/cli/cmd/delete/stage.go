@@ -34,10 +34,10 @@ func newStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 		Short: "Delete stage by name",
 		Args:  option.MinimumNArgs(1),
 		Example: `
-# Delete a stage in a project
+# Delete a stage
 kargo delete stage --project=my-project my-stage
 
-# Delete multiple stages in a project
+# Delete multiple stages
 kargo delete stage --project=my-project my-stage1 my-stage2
 
 # Delete a stage in the default project

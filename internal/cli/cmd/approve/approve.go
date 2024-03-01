@@ -33,10 +33,10 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 		Short: "Manually approve freight for promotion to a stage",
 		Args:  option.NoArgs,
 		Example: `
-# Approve a freight in a project to the QA stage
+# Approve a piece of freight for the QA stage
 kargo approve --project=my-project --freight=abc1234 --stage=qa
 
-# Approve a freight in the default project to the QA stage
+# Approve a piece of freight for the QA stage in the default project
 kargo config set-project my-project
 kargo approve --freight=abc1234 --stage=qa
 `,

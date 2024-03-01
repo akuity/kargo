@@ -24,7 +24,7 @@ func newRefreshStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Com
 		Use:  "stage [--project=project] NAME [--wait]",
 		Args: option.ExactArgs(1),
 		Example: `
-# Refresh a stage in a project
+# Refresh a stage
 kargo refresh stage --project=my-project my-stage
 
 # Refresh a stage and wait for it to complete

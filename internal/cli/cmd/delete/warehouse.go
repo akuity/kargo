@@ -34,10 +34,10 @@ func newWarehouseCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Comman
 		Short: "Delete warehouse by name",
 		Args:  option.MinimumNArgs(1),
 		Example: `
-# Delete a warehouse in a project
+# Delete a warehouse
 kargo delete warehouse --project=my-project my-warehouse
 
-# Delete multiple warehouses in a project
+# Delete multiple warehouses
 kargo delete warehouse --project=my-project my-warehouse1 my-warehouse2
 
 # Delete a warehouse in the default project

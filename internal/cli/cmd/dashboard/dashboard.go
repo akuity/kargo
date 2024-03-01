@@ -21,7 +21,7 @@ func NewCommand(cfg config.CLIConfig) *cobra.Command {
 		Short: "Open the Kargo Dashboard in your default browser",
 		Args:  option.NoArgs,
 		Example: `
-# Open the Kargo Dashboard
+# Open the Kargo Dashboard in the browser
 kargo dashboard
 `,
 		RunE: func(*cobra.Command, []string) error {

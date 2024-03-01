@@ -24,7 +24,7 @@ func newRefreshWarehouseCommand(cfg config.CLIConfig, opt *option.Option) *cobra
 		Use:  "warehouse [--project=project] NAME [--wait]",
 		Args: option.ExactArgs(1),
 		Example: `
-# Refresh a warehouse in a project
+# Refresh a warehouse
 kargo refresh warehouse --project=my-project my-warehouse
 
 # Refresh a warehouse and wait for it to complete
