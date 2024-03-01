@@ -12,12 +12,18 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 // Type is a string type used to represent a type of Credentials.
 type Type string
+
+// String returns the string representation of a Type.
+func (t Type) String() string {
+	return string(t)
+}
 
 const (
 	// TypeGit represents credentials for a Git repository.
@@ -26,10 +32,6 @@ const (
 	TypeHelm Type = "helm"
 	// TypeImage represents credentials for an image repository.
 	TypeImage Type = "image"
-
-	// credentialTypeLabelKey is the key for a label used to identify the type
-	// of credentials stored in a Secret.
-	credentialTypeLabelKey = "kargo.akuity.io/cred-type" // nolint: gosec
 )
 
 // Credentials generically represents any type of repository credential.
@@ -159,7 +161,7 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 		&client.ListOptions{
 			Namespace: namespace,
 			LabelSelector: labels.Set(map[string]string{
-				credentialTypeLabelKey: string(credType),
+				kargoapi.CredentialTypeLabelKey: credType.String(),
 			}).AsSelector(),
 		},
 	); err != nil {
