@@ -33,9 +33,9 @@ func newProjectCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command 
 	}
 
 	cmd := &cobra.Command{
-		Use:   "project (NAME)",
+		Use:   "project NAME",
 		Short: "Create a project",
-		Args:  option.MinimumNArgs(1),
+		Args:  option.ExactArgs(1),
 		Example: `
 # Create project
 kargo create project my-project

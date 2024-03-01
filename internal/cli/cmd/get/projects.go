@@ -34,7 +34,7 @@ func newGetProjectsCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Comm
 	}
 
 	cmd := &cobra.Command{
-		Use:     "projects [NAME...]",
+		Use:     "projects [NAME ...]",
 		Aliases: []string{"project"},
 		Short:   "Display one or many projects",
 		Example: `

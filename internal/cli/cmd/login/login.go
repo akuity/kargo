@@ -51,10 +51,22 @@ func NewCommand(opt *option.Option) *cobra.Command {
 	cmdOpts := &loginOptions{Option: opt}
 
 	cmd := &cobra.Command{
-		Use:     "login server-address",
-		Args:    option.ExactArgs(1),
-		Short:   "Log in to a Kargo API server",
-		Example: "kargo login https://kargo.example.com --sso",
+		Use:   "login SERVER_ADDRESS (--admin | --kubeconfig | --sso)",
+		Args:  option.ExactArgs(1),
+		Short: "Log in to a Kargo API server",
+		Example: `
+# Log in using SSO
+kargo login https://kargo.example.com --sso
+
+# Log in using the admin user
+kargo login https://kargo.example.com --admin
+
+# Log in using the local kubeconfig
+kargo login https://kargo.example.com --kubeconfig
+
+# Log in using the local kubeconfig and ignore cert warnings
+kargo login https://kargo.example.com --kubeconfig --insecure-tls
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

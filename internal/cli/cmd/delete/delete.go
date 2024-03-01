@@ -34,17 +34,24 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete [--project=project] -f (FILENAME)",
-		Short: "Delete resources by resources and names",
+		Use:   "delete (-f FILENAME | TYPE (NAME ...))",
+		Short: "Delete resources by file and names",
+		Args:  option.NoArgs,
 		Example: `
+# Delete a stage using the data in stage.yaml
+kargo delete -f stage.yaml
+
+# Delete the YAML resources in the stages directory
+kargo delete -f stages/
+
 # Delete a project
 kargo delete project my-project
 
 # Delete a stage
 kargo delete stage --project=my-project my-stage
 
-# Delete a stage using the data in stage.yaml
-kargo delete -f stage.yaml
+# Delete a warehouse
+kargo delete warehouse --project=my-project my-warehouse
 `,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {

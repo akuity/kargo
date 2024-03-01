@@ -29,9 +29,17 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "approve --project=project --freight=freight --stage=stage",
-		Short:   "Manually approve freight for promotion to a stage",
-		Example: "kargo approve --project=project --freight=abc1234 --stage=qa",
+		Use:   "approve [--project=project] --freight=freight --stage=stage",
+		Short: "Manually approve freight for promotion to a stage",
+		Args:  option.NoArgs,
+		Example: `
+# Approve a freight in a project to the QA stage
+kargo approve --project=my-project --freight=abc1234 --stage=qa
+
+# Approve a freight in the default project to the QA stage
+kargo config set-project my-project
+kargo approve --freight=abc1234 --stage=qa
+`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

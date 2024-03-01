@@ -34,7 +34,7 @@ func newGetFreightCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Comma
 	}
 
 	cmd := &cobra.Command{
-		Use:   "freight --project=project [NAME...]",
+		Use:   "freight [--project=project] [NAME ...]",
 		Short: "Display one or many pieces of freight",
 		Example: `
 # List all freight in the project
@@ -45,6 +45,10 @@ kargo get freight --project=my-project -o json
 
 # Get a single piece of freight in the project
 kargo get freight --project=my-project my-freight
+
+# List all freight in the default project
+kargo config set-project my-project
+kargo get freight
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)

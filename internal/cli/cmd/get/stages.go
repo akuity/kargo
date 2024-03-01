@@ -34,7 +34,7 @@ func newGetStagesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Comman
 	}
 
 	cmd := &cobra.Command{
-		Use:     "stages --project=project [NAME...]",
+		Use:     "stages [--project=project] [NAME ...]",
 		Aliases: []string{"stage"},
 		Short:   "Display one or many stages",
 		Example: `
@@ -46,6 +46,10 @@ kargo get stages --project=my-project -o json
 
 # Get a stage in the project
 kargo get stages --project=my-project my-stage
+
+# List all stages in the default project
+kargo config set-project my-project
+kargo get stages
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)

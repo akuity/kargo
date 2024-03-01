@@ -30,12 +30,19 @@ func newStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "stage [NAME]...",
+		Use:   "stage [--project=project] (NAME ...)",
 		Short: "Delete stage by name",
 		Args:  option.MinimumNArgs(1),
 		Example: `
-# Delete stage
+# Delete a stage in a project
 kargo delete stage --project=my-project my-stage
+
+# Delete multiple stages in a project
+kargo delete stage --project=my-project my-stage1 my-stage2
+
+# Delete a stage in the default project
+kargo config set-project my-project
+kargo delete stage my-stage
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)

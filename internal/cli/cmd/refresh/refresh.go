@@ -32,8 +32,16 @@ type refreshOptions struct {
 
 func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "refresh",
+		Use:   "refresh TYPE NAME [--wait]",
 		Short: "Refresh a stage or warehouse",
+		Args:  option.NoArgs,
+		Example: `
+# Refresh a warehouse
+kargo refresh warehouse --project=my-project my-warehouse
+
+# Refresh a stage
+kargo refresh stage --project=my-project my-stage
+`,
 	}
 
 	// Register subcommands.

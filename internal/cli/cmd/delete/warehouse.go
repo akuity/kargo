@@ -30,12 +30,19 @@ func newWarehouseCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Comman
 	}
 
 	cmd := &cobra.Command{
-		Use:   "warehouse [NAME]...",
+		Use:   "warehouse [--project=project] (NAME ...)",
 		Short: "Delete warehouse by name",
 		Args:  option.MinimumNArgs(1),
 		Example: `
-# Delete warehouse
+# Delete a warehouse in a project
 kargo delete warehouse --project=my-project my-warehouse
+
+# Delete multiple warehouses in a project
+kargo delete warehouse --project=my-project my-warehouse1 my-warehouse2
+
+# Delete a warehouse in the default project
+kargo config set-project my-project
+kargo delete warehouse my-warehouse
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
