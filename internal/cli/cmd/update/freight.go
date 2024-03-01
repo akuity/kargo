@@ -30,7 +30,7 @@ func newUpdateFreightAliasCommand(cfg config.CLIConfig, opt *option.Option) *cob
 	}
 
 	cmd := &cobra.Command{
-		Use:   "freight [--project=project] (NAME) --alias=alias",
+		Use:   "freight [--project=project] NAME --alias=alias",
 		Args:  option.ExactArgs(1),
 		Short: "Update (the alias of) a Freight",
 		Example: `

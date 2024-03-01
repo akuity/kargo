@@ -20,7 +20,7 @@ func newSetProjectCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &setProjectOptions{Config: cfg}
 
 	cmd := &cobra.Command{
-		Use:   "set-project",
+		Use:   "set-project NAME",
 		Short: "Set the default project",
 		Args:  option.ExactArgs(1),
 		Example: `

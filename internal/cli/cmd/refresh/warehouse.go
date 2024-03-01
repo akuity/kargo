@@ -21,9 +21,19 @@ func newRefreshWarehouseCommand(cfg config.CLIConfig, opt *option.Option) *cobra
 	}
 
 	cmd := &cobra.Command{
-		Use:     "warehouse (WAREHOUSE)",
-		Args:    option.ExactArgs(1),
-		Example: "kargo warehouse refresh --project=guestbook (WAREHOUSE)",
+		Use:  "warehouse [--project=project] NAME [--wait]",
+		Args: option.ExactArgs(1),
+		Example: `
+# Refresh a warehouse
+kargo refresh warehouse --project=my-project my-warehouse
+
+# Refresh a warehouse and wait for it to complete
+kargo refresh warehouse --project=my-project my-warehouse --wait
+
+# Refresh a warehouse in the default project
+kargo config set-project my-project
+kargo refresh warehouse my-warehouse
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(refreshResourceTypeWarehouse, args)
 

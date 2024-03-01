@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/option"
 )
 
 type dashboardOptions struct {
@@ -16,9 +17,13 @@ func NewCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &dashboardOptions{Config: cfg}
 
 	return &cobra.Command{
-		Use:     "dashboard",
-		Short:   "Open the Kargo Dashboard in your default browser.",
-		Example: "kargo logout",
+		Use:   "dashboard",
+		Short: "Open the Kargo Dashboard in your default browser",
+		Args:  option.NoArgs,
+		Example: `
+# Open the Kargo Dashboard in the browser
+kargo dashboard
+`,
 		RunE: func(*cobra.Command, []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

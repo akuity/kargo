@@ -36,7 +36,7 @@ func newGetPromotionsCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Co
 	}
 
 	cmd := &cobra.Command{
-		Use:     "promotions --project=project [--stage=stage] [NAME...]",
+		Use:     "promotions [--project=project] [--stage=stage] [NAME ...]",
 		Aliases: []string{"promotion", "promos", "promo"},
 		Short:   "Display one or many promotions",
 		Example: `
@@ -51,6 +51,10 @@ kargo get promotions --project=my-project --stage=my-stage
 
 # Get a promotion in the project
 kargo get promotions --project=my-project some-promotion
+
+# List all promotions in the default project
+kargo config set-project my-project
+kargo get promotions
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)

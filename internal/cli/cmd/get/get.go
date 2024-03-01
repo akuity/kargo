@@ -15,8 +15,9 @@ import (
 
 func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get (RESOURCE) [NAME]...",
+		Use:   "get TYPE [NAME ...]",
 		Short: "Display one or many resources",
+		Args:  option.NoArgs,
 		Example: `
 # List all projects
 kargo get projects

@@ -30,12 +30,15 @@ func newProjectCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command 
 	}
 
 	cmd := &cobra.Command{
-		Use:   "project [NAME]...",
+		Use:   "project (NAME ...)",
 		Short: "Delete project by name",
 		Args:  option.MinimumNArgs(1),
 		Example: `
-# Delete project
+# Delete a project
 kargo delete project my-project
+
+# Delete multiple projects
+kargo delete project my-project1 my-project2
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -69,7 +72,7 @@ func (o *deleteProjectOptions) complete(args []string) {
 // error is returned.
 func (o *deleteProjectOptions) validate() error {
 	if len(o.Names) == 0 {
-		return goerrors.New("name is required")
+		return errors.New("name is required")
 	}
 	return nil
 }

@@ -35,13 +35,14 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "create [--project=project] -f (FILENAME)",
+		Use:   "create -f FILENAME",
 		Short: "Create a resource from a file or from stdin",
+		Args:  option.NoArgs,
 		Example: `
 # Create a stage using the data in stage.yaml
 kargo create -f stage.yaml
 
-# Create project
+# Create a project
 kargo create project my-project
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -21,9 +21,19 @@ func newRefreshStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Com
 	}
 
 	cmd := &cobra.Command{
-		Use:     "stage (STAGE)",
-		Args:    option.ExactArgs(1),
-		Example: "kargo refresh stage --project=guestbook (STAGE)",
+		Use:  "stage [--project=project] NAME [--wait]",
+		Args: option.ExactArgs(1),
+		Example: `
+# Refresh a stage
+kargo refresh stage --project=my-project my-stage
+
+# Refresh a stage and wait for it to complete
+kargo refresh stage --project=my-project my-stage --wait
+
+# Refresh a stage in the default project
+kargo config set-project my-project
+kargo refresh stage my-stage
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(refreshResourceTypeStage, args)
 

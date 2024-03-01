@@ -35,11 +35,15 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "apply [--project=project] -f (FILENAME)",
+		Use:   "apply -f FILENAME",
 		Short: "Apply a resource from a file or from stdin",
+		Args:  option.NoArgs,
 		Example: `
 # Apply a stage using the data in stage.yaml
 kargo apply -f stage.yaml
+
+# Apply the YAML resources in the stages directory
+kargo apply -f stages/
 `,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {

@@ -31,7 +31,7 @@ func newGetWarehousesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Co
 	}
 
 	cmd := &cobra.Command{
-		Use:     "warehouses --project=project [NAME...]",
+		Use:     "warehouses [--project=project] [NAME ...]",
 		Aliases: []string{"warehouse"},
 		Short:   "Display one or many warehouses",
 		Example: `
@@ -43,6 +43,10 @@ kargo get warehouses --project=my-project -o json
 
 # Get a warehouse in the project
 kargo get warehouses --project=my-project my-warehouse
+
+# List all warehouses in the default project
+kargo config set-project my-project
+kargo get warehouses
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)

@@ -36,7 +36,7 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "version",
+		Use:   "version [--client]",
 		Short: "Show the client and server version information",
 		Args:  option.NoArgs,
 		Example: `

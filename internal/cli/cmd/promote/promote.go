@@ -33,7 +33,7 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "promote [--project=project] --freight=freight-id [--stage=stage] [--subscribers-of=stage]",
+		Use:   "promote [--project=project] --freight=freight (--stage=stage | --subscribers-of=stage)",
 		Short: "Manage the promotion of freight",
 		Args:  option.NoArgs,
 		Example: `
