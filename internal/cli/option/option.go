@@ -19,8 +19,6 @@ type Option struct {
 	LocalServerAddress string
 	UseLocalServer     bool
 
-	ClientVersionOnly bool
-
 	Project string
 
 	IOStreams  *genericiooptions.IOStreams

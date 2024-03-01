@@ -41,10 +41,6 @@ func LocalServer(fs *pflag.FlagSet, opt *Option) {
 	fs.BoolVar(&opt.UseLocalServer, "local-server", false, "Use local server")
 }
 
-func ClientVersion(fs *pflag.FlagSet, opt *Option) {
-	fs.BoolVar(&opt.ClientVersionOnly, "client", false, "If true, shows client version only (no server required)")
-}
-
 // Project adds the ProjectFlag and ProjectShortFlag to the provided flag set.
 func Project(fs *pflag.FlagSet, project *string, defaultProject, usage string) {
 	fs.StringVarP(project, ProjectFlag, ProjectShortFlag, defaultProject, usage)
