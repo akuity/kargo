@@ -9,6 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestNewKubernetesDatabase(t *testing.T) {
@@ -41,7 +43,7 @@ func TestGet(t *testing.T) {
 	)
 
 	testLabels := map[string]string{
-		CredentialTypeLabelKey: testCredType.String(),
+		kargoapi.CredentialTypeLabelKey: testCredType.String(),
 	}
 
 	projectCredentialWithRepoURL := &corev1.Secret{

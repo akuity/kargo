@@ -61,7 +61,7 @@ func GetShardRequirement(shard string) (*labels.Requirement, error) {
 // resources that have a credential type label set to one of the supported
 // credential types.
 func GetCredentialsRequirement() (*labels.Requirement, error) {
-	req, err := labels.NewRequirement(credentials.CredentialTypeLabelKey, selection.In, []string{
+	req, err := labels.NewRequirement(kargoapi.CredentialTypeLabelKey, selection.In, []string{
 		credentials.TypeGit.String(),
 		credentials.TypeHelm.String(),
 		credentials.TypeImage.String(),

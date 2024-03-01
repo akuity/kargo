@@ -69,29 +69,29 @@ func TestGetCredentialsRequirement(t *testing.T) {
 		{
 			name: "credential type label set to git",
 			labels: labels.Set{
-				credentials.CredentialTypeLabelKey: credentials.TypeGit.String(),
+				kargoapi.CredentialTypeLabelKey: credentials.TypeGit.String(),
 			},
 			matches: true,
 		},
 		{
 			name: "credential type label set to helm and other labels",
 			labels: labels.Set{
-				credentials.CredentialTypeLabelKey: credentials.TypeHelm.String(),
-				"other":                            "label",
+				kargoapi.CredentialTypeLabelKey: credentials.TypeHelm.String(),
+				"other":                         "label",
 			},
 			matches: true,
 		},
 		{
 			name: "credential type label set to image",
 			labels: labels.Set{
-				credentials.CredentialTypeLabelKey: credentials.TypeImage.String(),
+				kargoapi.CredentialTypeLabelKey: credentials.TypeImage.String(),
 			},
 			matches: true,
 		},
 		{
 			name: "credential type label set to unknown type",
 			labels: labels.Set{
-				credentials.CredentialTypeLabelKey: "unknown",
+				kargoapi.CredentialTypeLabelKey: "unknown",
 			},
 			matches: false,
 		},
