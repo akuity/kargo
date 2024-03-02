@@ -44,6 +44,7 @@ kargo get promotions --project=my-project
 
 # List all promotions in my-project in JSON output format
 kargo get promotions --project=my-project -o json
+
 # List all promotions for the QA stage in my-project
 kargo get promotions --project=my-project --stage=qa
 
