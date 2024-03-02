@@ -2,13 +2,11 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -22,27 +20,40 @@ func (s *server) DeleteFreight(
 	}
 
 	name := req.Msg.GetName()
-	if err := validateFieldNotEmpty("name", name); err != nil {
-		return nil, err
+	alias := req.Msg.GetAlias()
+	if (name == "" && alias == "") || (name != "" && alias != "") {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("exactly one of name or alias should not be empty"),
+		)
 	}
 
 	if err := s.validateProjectExists(ctx, project); err != nil {
 		return nil, err
 	}
 
-	if err := s.client.Delete(ctx, &kargoapi.Freight{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetName(),
-		},
-	}); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, connect.NewError(
-				connect.CodeNotFound,
-				errors.Errorf("freight %q not found", req.Msg.GetName()),
-			)
+	freight, err := s.getFreightByNameOrAliasFn(
+		ctx,
+		s.client,
+		project,
+		name,
+		alias,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "get freight")
+	}
+	if freight == nil {
+		if name != "" {
+			err = fmt.Errorf("freight %q not found in namespace %q", name, project)
+		} else {
+			err = fmt.Errorf("freight with alias %q not found in namespace %q", alias, project)
 		}
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+
+	if err := s.client.Delete(ctx, freight); err != nil {
 		return nil, errors.Wrap(err, "delete freight")
 	}
+
 	return connect.NewResponse(&svcv1alpha1.DeleteFreightResponse{}), nil
 }

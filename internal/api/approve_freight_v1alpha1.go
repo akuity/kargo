@@ -23,9 +23,14 @@ func (s *server) ApproveFreight(
 		return nil, err
 	}
 
-	freightID := req.Msg.GetId()
-	if err := validateFieldNotEmpty("id", freightID); err != nil {
-		return nil, err
+	name := req.Msg.GetName()
+	alias := req.Msg.GetAlias()
+	if (name == "" && alias == "") ||
+		(name != "" && alias != "") {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("exactly one of name or alias should not be empty"),
+		)
 	}
 
 	stageName := req.Msg.GetStage()
@@ -37,28 +42,39 @@ func (s *server) ApproveFreight(
 		return nil, err
 	}
 
-	var freight kargoapi.Freight
-	freightKey := client.ObjectKey{
-		Namespace: project,
-		Name:      freightID,
-	}
-	if err := s.client.Get(ctx, freightKey, &freight); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound,
-				fmt.Errorf("freight %q not found", freightKey.String()))
-		}
+	freight, err := s.getFreightByNameOrAliasFn(
+		ctx,
+		s.client,
+		project,
+		name,
+		alias,
+	)
+	if err != nil {
 		return nil, errors.Wrap(err, "get freight")
 	}
-
-	var stage kargoapi.Stage
-	key := client.ObjectKey{
-		Namespace: project,
-		Name:      stageName,
+	if freight == nil {
+		if name != "" {
+			err = fmt.Errorf("freight %q not found in namespace %q", name, project)
+		} else {
+			err = fmt.Errorf("freight with alias %q not found in namespace %q", alias, project)
+		}
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
-	if err := s.client.Get(ctx, key, &stage); err != nil {
+
+	stage := &kargoapi.Stage{}
+	if err := s.client.Get(
+		ctx,
+		client.ObjectKey{
+			Namespace: project,
+			Name:      stageName,
+		},
+		stage,
+	); err != nil {
 		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound,
-				fmt.Errorf("stage %q not found", key.String()))
+			return nil, connect.NewError(
+				connect.CodeNotFound,
+				fmt.Errorf("stage %q not found", stageName),
+			)
 		}
 		return nil, errors.Wrap(err, "get stage")
 	}
@@ -77,7 +93,7 @@ func (s *server) ApproveFreight(
 	if err := kubeclient.PatchStatus(
 		ctx,
 		s.client,
-		&freight,
+		freight,
 		func(status *kargoapi.FreightStatus) {
 			*status = newStatus
 		},

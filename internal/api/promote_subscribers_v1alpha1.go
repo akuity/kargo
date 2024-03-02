@@ -35,8 +35,12 @@ func (s *server) PromoteSubscribers(
 	}
 
 	freightName := req.Msg.GetFreight()
-	if err := validateFieldNotEmpty("freight", freightName); err != nil {
-		return nil, err
+	freightAlias := req.Msg.GetFreightAlias()
+	if (freightName == "" && freightAlias == "") || (freightName != "" && freightAlias != "") {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("exactly one of freightName or freightAlias should not be empty"),
+		)
 	}
 
 	if err := s.validateProjectExistsFn(ctx, project); err != nil {
@@ -73,27 +77,23 @@ func (s *server) PromoteSubscribers(
 	// Stage, then they should approve the Freight for the downstream Stage(s).
 	// Expect a nil if the specified Freight is not found or doesn't meet these
 	// conditions. Errors are indicative only of internal problems.
-	var freight *kargoapi.Freight
-	freight, err = s.getFreightFn(
+	freight, err := s.getFreightByNameOrAliasFn(
 		ctx,
 		s.client,
-		types.NamespacedName{
-			Namespace: project,
-			Name:      freightName,
-		},
+		project,
+		freightName,
+		freightAlias,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "get freight")
 	}
 	if freight == nil {
-		return nil, connect.NewError(
-			connect.CodeNotFound,
-			errors.Errorf(
-				"Freight %q not found in namespace %q",
-				freightName,
-				project,
-			),
-		)
+		if freightName != "" {
+			err = fmt.Errorf("freight %q not found in namespace %q", freightName, project)
+		} else {
+			err = fmt.Errorf("freight with alias %q not found in namespace %q", freightAlias, project)
+		}
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	if !s.isFreightAvailableFn(
 		freight,
