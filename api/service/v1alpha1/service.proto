@@ -215,9 +215,10 @@ message DeleteStageResponse {
 
 message PromoteStageRequest {
   string project = 1;
-  string name = 2;
+  string stage = 2;
   string freight = 3;
-  }
+  string freight_alias = 4 [json_name = "freightAlias"];
+}
 
 message PromoteStageResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
@@ -227,7 +228,8 @@ message PromoteSubscribersRequest {
   string project = 1;
   string stage = 2;
   string freight = 3;
-  }
+  string freight_alias = 4 [json_name = "freightAlias"];
+}
 
 message PromoteSubscribersResponse {
   repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
@@ -306,8 +308,9 @@ message ListProjectsResponse {
 
 message ApproveFreightRequest {
   string project = 1;
-  string id = 2;
-  string stage = 3;
+  string name = 2;
+  string alias = 3;
+  string stage = 4;
 }
 
 message ApproveFreightResponse {
@@ -317,6 +320,7 @@ message ApproveFreightResponse {
 message DeleteFreightRequest {
   string project = 1;
   string name = 2;
+  string alias = 3;
 }
 
 message DeleteFreightResponse {
@@ -352,8 +356,9 @@ message FreightList {
 
 message UpdateFreightAliasRequest {
   string project = 1;
-  string freight = 2;
-  string alias = 3;
+  string name = 2;
+  string old_alias = 3 [json_name = "oldAlias"];
+  string new_alias = 4 [json_name = "newAlias"];
 }
 
 message UpdateFreightAliasResponse {
