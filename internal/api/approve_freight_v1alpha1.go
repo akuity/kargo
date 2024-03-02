@@ -18,20 +18,29 @@ func (s *server) ApproveFreight(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ApproveFreightRequest],
 ) (*connect.Response[svcv1alpha1.ApproveFreightResponse], error) {
-	stageName := req.Msg.GetStage()
-	projectName := req.Msg.GetProject()
-
-	if err := validateProjectAndStageNonEmpty(projectName, stageName); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
-	if err := s.validateProject(ctx, projectName); err != nil {
+
+	freightID := req.Msg.GetId()
+	if err := validateFieldNotEmpty("id", freightID); err != nil {
+		return nil, err
+	}
+
+	stageName := req.Msg.GetStage()
+	if err := validateFieldNotEmpty("stage", stageName); err != nil {
+		return nil, err
+	}
+
+	if err := s.validateProjectExists(ctx, project); err != nil {
 		return nil, err
 	}
 
 	var freight kargoapi.Freight
 	freightKey := client.ObjectKey{
-		Namespace: projectName,
-		Name:      req.Msg.GetId(),
+		Namespace: project,
+		Name:      freightID,
 	}
 	if err := s.client.Get(ctx, freightKey, &freight); err != nil {
 		if kubeerr.IsNotFound(err) {
@@ -43,7 +52,7 @@ func (s *server) ApproveFreight(
 
 	var stage kargoapi.Stage
 	key := client.ObjectKey{
-		Namespace: projectName,
+		Namespace: project,
 		Name:      stageName,
 	}
 	if err := s.client.Get(ctx, key, &stage); err != nil {

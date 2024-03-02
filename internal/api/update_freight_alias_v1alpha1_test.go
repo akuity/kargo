@@ -34,7 +34,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 			},
 		},
 		{
-			name: "Freight not specified",
+			name: "neither name nor existing alias specified",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
 				Project: "fake-project",
 			},
@@ -47,7 +47,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 			},
 		},
 		{
-			name: "alias not specified",
+			name: "new alias not specified",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
 				Project: "fake-project",
 				Freight: "fake-freight",
@@ -68,7 +68,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Alias:   "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -85,7 +85,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Alias:   "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightFn: func(
@@ -112,7 +112,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Alias:   "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightFn: func(
@@ -140,7 +140,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Alias:   "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightFn: func(
@@ -174,7 +174,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Alias:   "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightFn: func(
@@ -225,7 +225,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Alias:   "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightFn: func(
@@ -266,7 +266,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Alias:   "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightFn: func(

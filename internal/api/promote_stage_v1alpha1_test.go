@@ -36,14 +36,14 @@ func TestPromoteStage(t *testing.T) {
 			},
 		},
 		{
-			name: "error validating project",
+			name: "error validating project exists",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
 				Name:    "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -63,7 +63,7 @@ func TestPromoteStage(t *testing.T) {
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -90,7 +90,7 @@ func TestPromoteStage(t *testing.T) {
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -121,7 +121,7 @@ func TestPromoteStage(t *testing.T) {
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -165,7 +165,7 @@ func TestPromoteStage(t *testing.T) {
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -213,7 +213,7 @@ func TestPromoteStage(t *testing.T) {
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -264,7 +264,7 @@ func TestPromoteStage(t *testing.T) {
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -318,7 +318,7 @@ func TestPromoteStage(t *testing.T) {
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(

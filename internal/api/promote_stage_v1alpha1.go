@@ -18,18 +18,31 @@ func (s *server) PromoteStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.PromoteStageRequest],
 ) (*connect.Response[svcv1alpha1.PromoteStageResponse], error) {
-	if err := validateProjectAndStageNonEmpty(req.Msg.GetProject(), req.Msg.GetName()); err != nil {
-		return nil, err // This already returns a connect.Error
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
+		return nil, err
 	}
-	if err := s.validateProjectFn(ctx, req.Msg.GetProject()); err != nil {
-		return nil, err // This already returns a connect.Error
+
+	stageName := req.Msg.GetName()
+	if err := validateFieldNotEmpty("name", stageName); err != nil {
+		return nil, err
 	}
+
+	freightName := req.Msg.GetFreight()
+	if err := validateFieldNotEmpty("freight", freightName); err != nil {
+		return nil, err
+	}
+
+	if err := s.validateProjectExistsFn(ctx, project); err != nil {
+		return nil, err
+	}
+
 	stage, err := s.getStageFn(
 		ctx,
 		s.client,
 		types.NamespacedName{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetName(),
+			Namespace: project,
+			Name:      stageName,
 		},
 	)
 	if err != nil {
@@ -40,8 +53,8 @@ func (s *server) PromoteStage(
 			connect.CodeNotFound,
 			errors.Errorf(
 				"Stage %q not found in namespace %q",
-				req.Msg.GetName(),
-				req.Msg.GetProject(),
+				stageName,
+				project,
 			),
 		)
 	}
@@ -50,8 +63,8 @@ func (s *server) PromoteStage(
 		ctx,
 		s.client,
 		types.NamespacedName{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetFreight(),
+			Namespace: project,
+			Name:      freightName,
 		},
 	)
 	if err != nil {
@@ -62,8 +75,8 @@ func (s *server) PromoteStage(
 			connect.CodeNotFound,
 			errors.Errorf(
 				"Freight %q not found in namespace %q",
-				req.Msg.GetFreight(),
-				req.Msg.GetProject(),
+				freightName,
+				project,
 			),
 		)
 	}
@@ -76,13 +89,13 @@ func (s *server) PromoteStage(
 			connect.CodeInvalidArgument,
 			errors.Errorf(
 				"Freight %q is not available to Stage %q",
-				req.Msg.GetFreight(),
-				req.Msg.GetName(),
+				freightName,
+				stageName,
 			),
 		)
 	}
 
-	promotion := kargo.NewPromotion(*stage, req.Msg.GetFreight())
+	promotion := kargo.NewPromotion(*stage, freightName)
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
 		return nil, errors.Wrap(err, "create promotion")
 	}

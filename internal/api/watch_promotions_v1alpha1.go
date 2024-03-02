@@ -21,17 +21,21 @@ func (s *server) WatchPromotions(
 	req *connect.Request[svcv1alpha1.WatchPromotionsRequest],
 	stream *connect.ServerStream[svcv1alpha1.WatchPromotionsResponse],
 ) error {
-	if req.Msg.GetProject() == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
-	}
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return err
 	}
 
-	if req.Msg.GetStage() != "" {
+	if err := s.validateProjectExists(ctx, project); err != nil {
+		return err
+	}
+
+	stage := req.Msg.GetStage()
+
+	if stage != "" {
 		if err := s.client.Get(ctx, client.ObjectKey{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetStage(),
+			Namespace: project,
+			Name:      stage,
 		}, &kargoapi.Stage{}); err != nil {
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
@@ -40,7 +44,7 @@ func (s *server) WatchPromotions(
 		}
 	}
 
-	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, req.Msg.GetProject(), metav1.ListOptions{})
+	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, project, metav1.ListOptions{})
 	if err != nil {
 		return errors.Wrap(err, "watch promotion")
 	}
@@ -63,7 +67,7 @@ func (s *server) WatchPromotions(
 			}
 			// FIXME: Current (dynamic) client doesn't support filtering with indexed field by indexer,
 			// so manually filter stage here.
-			if req.Msg.GetStage() != "" && req.Msg.GetStage() != promotion.Spec.Stage {
+			if stage != "" && stage != promotion.Spec.Stage {
 				continue
 			}
 			if err := stream.Send(&svcv1alpha1.WatchPromotionsResponse{

@@ -16,12 +16,20 @@ func (s *server) DeleteFreight(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteFreightRequest],
 ) (*connect.Response[svcv1alpha1.DeleteFreightResponse], error) {
-	if err := validateProjectAndFreightName(req.Msg.GetProject(), req.Msg.GetName()); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+
+	name := req.Msg.GetName()
+	if err := validateFieldNotEmpty("name", name); err != nil {
 		return nil, err
 	}
+
+	if err := s.validateProjectExists(ctx, project); err != nil {
+		return nil, err
+	}
+
 	if err := s.client.Delete(ctx, &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: req.Msg.GetProject(),

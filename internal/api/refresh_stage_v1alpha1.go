@@ -15,16 +15,22 @@ func (s *server) RefreshStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.RefreshStageRequest],
 ) (*connect.Response[svcv1alpha1.RefreshStageResponse], error) {
-	if err := validateProjectAndStageNonEmpty(req.Msg.GetProject(), req.Msg.GetName()); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+	name := req.Msg.GetName()
+	if err := validateFieldNotEmpty("name", name); err != nil {
+		return nil, err
+	}
+
+	if err := s.validateProjectExists(ctx, project); err != nil {
 		return nil, err
 	}
 
 	objKey := client.ObjectKey{
-		Namespace: req.Msg.GetProject(),
-		Name:      req.Msg.GetName(),
+		Namespace: project,
+		Name:      name,
 	}
 	stage, err := kargoapi.RefreshStage(ctx, s.client, objKey)
 	if err != nil {
@@ -33,7 +39,7 @@ func (s *server) RefreshStage(
 	// If there is a current promotion then refresh it too.
 	if stage.Status.CurrentPromotion != nil {
 		if _, err := kargoapi.RefreshPromotion(ctx, s.client, client.ObjectKey{
-			Namespace: req.Msg.GetProject(),
+			Namespace: project,
 			Name:      stage.Status.CurrentPromotion.Name,
 		}); err != nil {
 			return nil, err
