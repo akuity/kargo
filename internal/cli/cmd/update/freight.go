@@ -3,7 +3,6 @@ package update
 import (
 	"context"
 	goerrors "errors"
-	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
@@ -19,8 +18,9 @@ type updateFreightAliasOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Name  string
-	Alias string
+	Name     string
+	OldAlias string
+	NewAlias string
 }
 
 func newUpdateFreightAliasCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
@@ -30,20 +30,25 @@ func newUpdateFreightAliasCommand(cfg config.CLIConfig, opt *option.Option) *cob
 	}
 
 	cmd := &cobra.Command{
-		Use:   "freight [--project=project] NAME --alias=alias",
-		Args:  option.ExactArgs(1),
-		Short: "Update (the alias of) a Freight",
+		Use:   "freight [--project=project] (--name=name | --old-alias=old-alias) --new-alias=new-alias",
+		Short: "Update the alias of a piece of freight",
+		Args:  option.NoArgs,
 		Example: `
-# Update the alias of a freight for a specified project
-kargo update freight --project=my-project abc123 --alias=my-new-alias
+# Update the alias of a piece of freight specified by name
+kargo update freight --project=my-project --name=abc1234 --new-alias=frozen-fox
 
-# Update the alias of a freight for the default project
+# Update the alias of a piece of freight specified by its existing alias
+kargo update freight --project=my-project --old-alias=wonky-wombat --new-alias=frozen-fox
+
+# Update the alias of a piece of freight specified by name in the default project
 kargo config set-project my-project
-kargo update freight abc123 --alias=my-new-alias
+kargo update freight --name=abc123 --new-alias=frozen-fox
+
+# Update the alias of a piece of freight specified by its existing alias in the default project
+kargo config set-project my-project
+kargo update freight --old-alias=wonky-wombat --new-alias=frozen-fox
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(args)
-
 			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
@@ -61,39 +66,40 @@ kargo update freight abc123 --alias=my-new-alias
 // addFlags adds the flags for the update freight alias options to the provided
 // command.
 func (o *updateFreightAliasOptions) addFlags(cmd *cobra.Command) {
-	option.Project(cmd.Flags(), &o.Project, o.Project,
-		"The Project for which to list Promotions. If not set, the default project will be used.")
-	cmd.Flags().StringVar(&o.Alias, "alias", "", "A unique alias for the Freight")
+	option.Project(
+		cmd.Flags(), &o.Project, o.Project,
+		"The project the freight belongs to. If not set, the default project will be used.",
+	)
+	option.Name(cmd.Flags(), &o.Name, "The name of the freight to to be updated.")
+	option.OldAlias(cmd.Flags(), &o.OldAlias, "The existing alias of the freight to be updated.")
+	option.NewAlias(cmd.Flags(), &o.NewAlias, "The new alias to be assigned to the freight.")
 
-	if err := cmd.MarkFlagRequired("alias"); err != nil {
-		panic(errors.Wrap(err, "could not mark alias flag as required"))
+	if err := cmd.MarkFlagRequired(option.NewAliasFlag); err != nil {
+		panic(errors.Wrapf(err, "could not mark %s flag as required", option.NewAliasFlag))
 	}
-}
 
-// complete sets the options from the command arguments.
-func (o *updateFreightAliasOptions) complete(args []string) {
-	o.Name = strings.TrimSpace(args[0])
+	cmd.MarkFlagsOneRequired(option.NameFlag, option.OldAliasFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.OldAliasFlag)
 }
 
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
 func (o *updateFreightAliasOptions) validate() error {
 	var errs []error
-
+	// While the flags are marked as required, a user could still provide an empty
+	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
-		errs = append(errs, errors.New("project is required"))
+		errs = append(errs, errors.Errorf("%s is required", option.ProjectFlag))
 	}
-
-	if o.Name == "" {
-		errs = append(errs, errors.New("name is required"))
+	if o.Name == "" && o.OldAlias == "" {
+		errs = append(
+			errs,
+			errors.Errorf("either %s or %s is required", option.NameFlag, option.OldAliasFlag),
+		)
 	}
-
-	// While the alias flag is marked as required, a user could still provide
-	// an empty string. This is a check to ensure that the flag is not empty.
-	if o.Alias == "" {
-		errs = append(errs, errors.New("alias is required"))
+	if o.NewAlias == "" {
+		errs = append(errs, errors.Errorf("%s is required", option.NewAliasFlag))
 	}
-
 	return goerrors.Join(errs...)
 }
 
@@ -108,9 +114,10 @@ func (o *updateFreightAliasOptions) run(ctx context.Context) error {
 		ctx,
 		connect.NewRequest(
 			&v1alpha1.UpdateFreightAliasRequest{
-				Project: o.Project,
-				Freight: o.Name,
-				Alias:   o.Alias,
+				Project:  o.Project,
+				Name:     o.Name,
+				OldAlias: o.OldAlias,
+				NewAlias: o.NewAlias,
 			},
 		),
 	); err != nil {
