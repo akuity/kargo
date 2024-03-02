@@ -60,6 +60,13 @@ service KargoService {
   rpc WatchWarehouses(WatchWarehousesRequest) returns (stream WatchWarehousesResponse);
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
   rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
+
+  /* Credential APIs */
+  rpc CreateCredentials(CreateCredentialsRequest) returns (CreateCredentialsResponse);
+  rpc DeleteCredentials(DeleteCredentialsRequest) returns (DeleteCredentialsResponse);
+  rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
+  rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
+  rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
 }
 
 message ComponentVersions {
@@ -410,3 +417,56 @@ message RefreshWarehouseResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
 }
 
+message CreateCredentialsRequest {
+  string project = 1;
+  string name = 2;
+  string type = 3;
+  string repo_url = 4 [json_name = "repoURL"];
+  string repo_url_pattern = 5 [json_name = "repoURLPattern"];
+  string username = 6;
+  string password = 7;
+}
+
+message CreateCredentialsResponse {
+  /* explicitly empty */
+}
+
+message DeleteCredentialsRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteCredentialsResponse {
+  /* explicitly empty */
+}
+
+message GetCredentialsRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message GetCredentialsResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+}
+
+message ListCredentialsRequest {
+  string project = 1;
+}
+
+message ListCredentialsResponse {
+  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+}
+
+message UpdateCredentialsRequest {
+  string project = 1;
+  string name = 2;
+  string type = 3;
+  string repo_url = 4 [json_name = "repoURL"];
+  string repo_url_pattern = 5 [json_name = "repoURLPattern"];
+  string username = 6;
+  string password = 7;
+}
+
+message UpdateCredentialsResponse {
+  /* explicitly empty */
+}

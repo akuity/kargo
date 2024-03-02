@@ -331,3 +331,12 @@ message AnalysisRunReference {
   string name = 2 [json_name = "name"];
   string phase = 3 [json_name = "phase"];
 }
+
+// TODO: Don't define this ourselves
+message Secret {
+  string api_version = 1 [json_name = "apiVersion"];
+  string kind = 2 [json_name = "kind"];
+  github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3 [json_name = "metadata"];
+  string type = 4 [json_name = "type"];
+  map<string, string> string_data = 5 [json_name = "stringData"];
+}
