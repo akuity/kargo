@@ -43,6 +43,9 @@ kargo get projects
 
 # List all projects in JSON output format
 kargo get projects -o json
+
+# Get a single project by name
+kargo get project my-project
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -73,34 +76,51 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	resp, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
-	if err != nil {
-		return errors.Wrap(err, "list projects")
+
+	if len(o.Names) == 0 {
+
+		var resp *connect.Response[v1alpha1.ListProjectsResponse]
+		if resp, err = kargoSvcCli.ListProjects(
+			ctx,
+			connect.NewRequest(&v1alpha1.ListProjectsRequest{}),
+		); err != nil {
+			return errors.Wrap(err, "list projects")
+		}
+		res := make([]*kargoapi.Project, 0, len(resp.Msg.GetProjects()))
+		for _, project := range resp.Msg.GetProjects() {
+			res = append(res, typesv1alpha1.FromProjectProto(project))
+		}
+		return printObjects(o.Option, res)
+
 	}
 
-	res := make([]*kargoapi.Project, 0, len(resp.Msg.GetProjects()))
-	var resErr error
-	if len(o.Names) == 0 {
-		for _, p := range resp.Msg.GetProjects() {
-			res = append(res, typesv1alpha1.FromProjectProto(p))
+	res := make([]*kargoapi.Project, 0, len(o.Names))
+	errs := make([]error, 0, len(o.Names))
+	for _, name := range o.Names {
+		var resp *connect.Response[v1alpha1.GetProjectResponse]
+		if resp, err = kargoSvcCli.GetProject(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.GetProjectRequest{
+					Name: name,
+				},
+			),
+		); err != nil {
+			errs = append(errs, err)
+			continue
 		}
-	} else {
-		projectsByName := make(map[string]*kargoapi.Project, len(resp.Msg.GetProjects()))
-		for _, p := range resp.Msg.GetProjects() {
-			projectsByName[p.Metadata.GetName()] = typesv1alpha1.FromProjectProto(p)
-		}
-		for _, name := range o.Names {
-			if promo, ok := projectsByName[name]; ok {
-				res = append(res, promo)
-			} else {
-				resErr = goerrors.Join(err, errors.Errorf("project %q not found", name))
-			}
-		}
+		res = append(res, typesv1alpha1.FromProjectProto(resp.Msg.GetProject()))
 	}
-	if err := printObjects(o.Option, res); err != nil {
-		return err
+
+	if err = printObjects(o.Option, res); err != nil {
+		return errors.Wrap(err, "print credentials")
 	}
-	return resErr
+
+	if len(errs) == 0 {
+		return nil
+	}
+
+	return goerrors.Join(errs...)
 }
 
 func newProjectTable(list *metav1.List) *metav1.Table {

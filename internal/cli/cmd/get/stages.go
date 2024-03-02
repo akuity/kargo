@@ -38,18 +38,22 @@ func newGetStagesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Comman
 		Aliases: []string{"stage"},
 		Short:   "Display one or many stages",
 		Example: `
-# List all stages in the project
+# List all stages in my-project
 kargo get stages --project=my-project
 
-# List all stages in JSON output format
+# List all stages in my-project in JSON output format
 kargo get stages --project=my-project -o json
 
-# Get a stage in the project
-kargo get stages --project=my-project my-stage
+# Get the QA stage in my-project
+kargo get stage --project=my-project qa
 
 # List all stages in the default project
 kargo config set-project my-project
 kargo get stages
+
+# Get a the QA stage in the default project
+kargo config set-project my-project
+kargo get stage qa
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -72,8 +76,10 @@ kargo get stages
 func (o *getStagesOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
-		"The Project for which to list Stages. If not set, the default project will be used.")
+	option.Project(
+		cmd.Flags(), &o.Project, o.Project,
+		"The project for which to list stages. If not set, the default project will be used.",
+	)
 }
 
 // complete sets the options from the command arguments.
@@ -96,36 +102,56 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	resp, err := kargoSvcCli.ListStages(ctx, connect.NewRequest(&v1alpha1.ListStagesRequest{
-		Project: o.Project,
-	}))
-	if err != nil {
-		return errors.Wrap(err, "list stages")
+
+	if len(o.Names) == 0 {
+
+		var resp *connect.Response[v1alpha1.ListStagesResponse]
+		if resp, err = kargoSvcCli.ListStages(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.ListStagesRequest{
+					Project: o.Project,
+				},
+			),
+		); err != nil {
+			return errors.Wrap(err, "list stages")
+		}
+		res := make([]*kargoapi.Stage, 0, len(resp.Msg.GetStages()))
+		for _, stage := range resp.Msg.GetStages() {
+			res = append(res, typesv1alpha1.FromStageProto(stage))
+		}
+		return printObjects(o.Option, res)
+
 	}
 
-	res := make([]*kargoapi.Stage, 0, len(resp.Msg.GetStages()))
-	var resErr error
-	if len(o.Names) == 0 {
-		for _, s := range resp.Msg.GetStages() {
-			res = append(res, typesv1alpha1.FromStageProto(s))
+	res := make([]*kargoapi.Stage, 0, len(o.Names))
+	errs := make([]error, 0, len(o.Names))
+	for _, name := range o.Names {
+		var resp *connect.Response[v1alpha1.GetStageResponse]
+		if resp, err = kargoSvcCli.GetStage(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.GetStageRequest{
+					Project: o.Project,
+					Name:    name,
+				},
+			),
+		); err != nil {
+			errs = append(errs, err)
+			continue
 		}
-	} else {
-		stagesByName := make(map[string]*kargoapi.Stage, len(resp.Msg.GetStages()))
-		for _, s := range resp.Msg.GetStages() {
-			stagesByName[s.GetMetadata().GetName()] = typesv1alpha1.FromStageProto(s)
-		}
-		for _, name := range o.Names {
-			if stage, ok := stagesByName[name]; ok {
-				res = append(res, stage)
-			} else {
-				resErr = goerrors.Join(err, errors.Errorf("stage %q not found", name))
-			}
-		}
+		res = append(res, typesv1alpha1.FromStageProto(resp.Msg.GetStage()))
 	}
-	if err := printObjects(o.Option, res); err != nil {
-		return err
+
+	if err = printObjects(o.Option, res); err != nil {
+		return errors.Wrap(err, "print stages")
 	}
-	return resErr
+
+	if len(errs) == 0 {
+		return nil
+	}
+
+	return goerrors.Join(errs...)
 }
 
 func newStageTable(list *metav1.List) *metav1.Table {
