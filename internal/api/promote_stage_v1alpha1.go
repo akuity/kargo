@@ -34,7 +34,7 @@ func (s *server) PromoteStage(
 	if (freightName == "" && freightAlias == "") || (freightName != "" && freightAlias != "") {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.New("exactly one of freightName or freightAlias should not be empty"),
+			errors.New("exactly one of freight or freightAlias should not be empty"),
 		)
 	}
 
