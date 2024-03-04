@@ -39,7 +39,7 @@ type server struct {
 	// The following behaviors are overridable for testing purposes:
 
 	// Common validations:
-	validateProjectFn func(
+	validateProjectExistsFn func(
 		ctx context.Context,
 		project string,
 	) error
@@ -56,10 +56,12 @@ type server struct {
 		client.Client,
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
-	getFreightFn func(
+	getFreightByNameOrAliasFn func(
 		ctx context.Context,
 		c client.Client,
-		namespacedName types.NamespacedName,
+		project string,
+		name string,
+		alias string,
 	) (*kargoapi.Freight, error)
 	isFreightAvailableFn func(
 		freight *kargoapi.Freight,
@@ -122,10 +124,10 @@ func NewServer(
 		client:         kubeClient,
 		internalClient: internalClient,
 	}
-	s.validateProjectFn = s.validateProject
+	s.validateProjectExistsFn = s.validateProjectExists
 	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = kargoapi.GetStage
-	s.getFreightFn = kargoapi.GetFreight
+	s.getFreightByNameOrAliasFn = kargoapi.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = kargoapi.IsFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findStageSubscribersFn = s.findStageSubscribers

@@ -41,14 +41,16 @@ service KargoService {
 
   /* Project APIs */
 
-  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
 
   /* Freight APIs */
 
-  rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
-  rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
   rpc ApproveFreight(ApproveFreightRequest) returns (ApproveFreightResponse);
+  rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
+  rpc GetFreight(GetFreightRequest) returns (GetFreightResponse);
+  rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
   rpc UpdateFreightAlias(UpdateFreightAliasRequest) returns (UpdateFreightAliasResponse);
 
   /* Warehouse APIs */
@@ -213,8 +215,9 @@ message DeleteStageResponse {
 
 message PromoteStageRequest {
   string project = 1;
-  string name = 2;
+  string stage = 2;
   string freight = 3;
+  string freight_alias = 4 [json_name = "freightAlias"];
 }
 
 message PromoteStageResponse {
@@ -225,6 +228,7 @@ message PromoteSubscribersRequest {
   string project = 1;
   string stage = 2;
   string freight = 3;
+  string freight_alias = 4 [json_name = "freightAlias"];
 }
 
 message PromoteSubscribersResponse {
@@ -278,6 +282,22 @@ message WatchPromotionResponse {
   string type = 2;
 }
 
+message DeleteProjectRequest {
+  string name = 1;
+}
+
+message DeleteProjectResponse {
+  /* explicitly empty */
+}
+
+message GetProjectRequest {
+  string name = 1;
+}
+
+message GetProjectResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Project project = 1;
+}
+
 message ListProjectsRequest {
   /* explicitly empty */
 }
@@ -286,12 +306,35 @@ message ListProjectsResponse {
   repeated github.com.akuity.kargo.pkg.api.v1alpha1.Project projects = 1;
 }
 
-message DeleteProjectRequest {
-  string name = 1;
+message ApproveFreightRequest {
+  string project = 1;
+  string name = 2;
+  string alias = 3;
+  string stage = 4;
 }
 
-message DeleteProjectResponse {
+message ApproveFreightResponse {
   /* explicitly empty */
+}
+
+message DeleteFreightRequest {
+  string project = 1;
+  string name = 2;
+  string alias = 3;
+}
+
+message DeleteFreightResponse {
+  /* explicitly empty */
+}
+
+message GetFreightRequest {
+  string project = 1;
+  string name = 2;
+  string alias = 3;
+}
+
+message GetFreightResponse {
+  github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
 }
 
 message QueryFreightRequest {
@@ -307,23 +350,15 @@ message QueryFreightResponse {
   map<string, FreightList> groups = 1;
 }
 
-message DeleteFreightRequest {
-  string project = 1;
-  string name = 2;
-}
-
-message DeleteFreightResponse {
-  /* explicitly empty */
-}
-
 message FreightList {
   repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
 }
 
 message UpdateFreightAliasRequest {
   string project = 1;
-  string freight = 2;
-  string alias = 3;
+  string name = 2;
+  string old_alias = 3 [json_name = "oldAlias"];
+  string new_alias = 4 [json_name = "newAlias"];
 }
 
 message UpdateFreightAliasResponse {
@@ -375,12 +410,3 @@ message RefreshWarehouseResponse {
   github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
 }
 
-message ApproveFreightRequest {
-  string project = 1;
-  string id = 2;
-  string stage = 3;
-}
-
-message ApproveFreightResponse {
-  /* explicitly empty */
-}

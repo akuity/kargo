@@ -18,51 +18,46 @@ func (s *server) UpdateFreightAlias(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdateFreightAliasRequest],
 ) (*connect.Response[svcv1alpha1.UpdateFreightAliasResponse], error) {
-	if req.Msg.GetProject() == "" {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
+		return nil, err
+	}
+
+	name := req.Msg.GetName()
+	oldAlias := req.Msg.GetOldAlias()
+	if (name == "" && oldAlias == "") || (name != "" && oldAlias != "") {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.New("project should not be empty"),
+			errors.New("exactly one of name or oldAlias should not be empty"),
 		)
 	}
 
-	if req.Msg.GetFreight() == "" {
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			errors.New("freight should not be empty"),
-		)
+	newAlias := req.Msg.GetNewAlias()
+	if err := validateFieldNotEmpty("newAlias", newAlias); err != nil {
+		return nil, err
 	}
 
-	if req.Msg.GetAlias() == "" {
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			errors.New("alias should not be empty"),
-		)
-	}
-
-	if err := s.validateProjectFn(ctx, req.Msg.GetProject()); err != nil {
+	if err := s.validateProjectExistsFn(ctx, project); err != nil {
 		return nil, err // This already returns a connect.Error
 	}
 
-	freight, err := s.getFreightFn(
+	freight, err := s.getFreightByNameOrAliasFn(
 		ctx,
 		s.client,
-		types.NamespacedName{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetFreight(),
-		},
+		project,
+		name,
+		oldAlias,
 	)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, errors.Wrap(err, "get freight")
 	}
 	if freight == nil {
-		return nil, connect.NewError(
-			connect.CodeNotFound,
-			errors.Errorf(
-				"Freight %q not found in namespace %q",
-				req.Msg.GetFreight(),
-				req.Msg.GetProject(),
-			),
-		)
+		if name != "" {
+			err = fmt.Errorf("freight %q not found in namespace %q", name, project)
+		} else {
+			err = fmt.Errorf("freight with alias %q not found in namespace %q", oldAlias, project)
+		}
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
 	// Make sure this alias isn't already used by some other piece of Freight
@@ -70,8 +65,8 @@ func (s *server) UpdateFreightAlias(
 	if err = s.listFreightFn(
 		ctx,
 		&freightList,
-		client.InNamespace(req.Msg.GetProject()),
-		client.MatchingLabels{kargoapi.AliasLabelKey: req.Msg.GetAlias()},
+		client.InNamespace(project),
+		client.MatchingLabels{kargoapi.AliasLabelKey: newAlias},
 	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -83,14 +78,14 @@ func (s *server) UpdateFreightAlias(
 			connect.CodeAlreadyExists,
 			errors.Errorf(
 				"alias %q already used by another piece of Freight in namespace %q",
-				req.Msg.GetAlias(),
-				req.Msg.GetProject(),
+				newAlias,
+				project,
 			),
 		)
 	}
 
 	// Proceed with the update
-	if err = s.patchFreightAliasFn(ctx, freight, req.Msg.GetAlias()); err != nil {
+	if err = s.patchFreightAliasFn(ctx, freight, newAlias); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 

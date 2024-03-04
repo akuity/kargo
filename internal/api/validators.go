@@ -10,7 +10,17 @@ import (
 	"github.com/akuity/kargo/internal/api/validation"
 )
 
-func (s *server) validateProject(ctx context.Context, project string) error {
+func validateFieldNotEmpty(fieldName string, fieldValue string) error {
+	if fieldValue == "" {
+		return connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.Errorf("%s should not be empty", fieldName),
+		)
+	}
+	return nil
+}
+
+func (s *server) validateProjectExists(ctx context.Context, project string) error {
 	if err := s.externalValidateProjectFn(ctx, s.client, project); err != nil {
 		if errors.Is(err, validation.ErrProjectNotFound) {
 			return connect.NewError(connect.CodeNotFound, err)
@@ -20,36 +30,6 @@ func (s *server) validateProject(ctx context.Context, project string) error {
 			return connect.NewError(connect.CodeInvalidArgument, err)
 		}
 		return errors.Wrap(err, "validate project")
-	}
-	return nil
-}
-
-func validateProjectAndStageNonEmpty(project string, stage string) error {
-	if project == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
-	}
-	if stage == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("stage should not be empty"))
-	}
-	return nil
-}
-
-func validateProjectAndWarehouseName(project, name string) error {
-	if project == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
-	}
-	if name == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
-	}
-	return nil
-}
-
-func validateProjectAndFreightName(project, name string) error {
-	if project == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
-	}
-	if name == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("freight should not be empty"))
 	}
 	return nil
 }

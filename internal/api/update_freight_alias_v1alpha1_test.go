@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -34,7 +33,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 			},
 		},
 		{
-			name: "Freight not specified",
+			name: "neither name nor existing alias specified",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
 				Project: "fake-project",
 			},
@@ -47,10 +46,10 @@ func TestUpdateFreightAlias(t *testing.T) {
 			},
 		},
 		{
-			name: "alias not specified",
+			name: "new alias not specified",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
 				Project: "fake-project",
-				Freight: "fake-freight",
+				Name:    "fake-freight",
 			},
 			server: &server{},
 			assertions: func(err error) {
@@ -63,12 +62,12 @@ func TestUpdateFreightAlias(t *testing.T) {
 		{
 			name: "error validating project",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
-				Project: "fake-project",
-				Freight: "fake-freight",
-				Alias:   "fake-alias",
+				Project:  "fake-project",
+				Name:     "fake-freight",
+				NewAlias: "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -80,45 +79,42 @@ func TestUpdateFreightAlias(t *testing.T) {
 		{
 			name: "error getting Freight",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
-				Project: "fake-project",
-				Freight: "fake-freight",
-				Alias:   "fake-alias",
+				Project:  "fake-project",
+				Name:     "fake-freight",
+				NewAlias: "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeInternal, connErr.Code())
-				require.Equal(t, "something went wrong", connErr.Message())
+				require.Contains(t, err.Error(), "something went wrong")
 			},
 		},
 		{
-			name: "Freight not found",
+			name: "freight not found",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
-				Project: "fake-project",
-				Freight: "fake-freight",
-				Alias:   "fake-alias",
+				Project:  "fake-project",
+				Name:     "fake-freight",
+				NewAlias: "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return nil, nil
 				},
@@ -128,25 +124,25 @@ func TestUpdateFreightAlias(t *testing.T) {
 				connErr, ok := err.(*connect.Error)
 				require.True(t, ok)
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
-				require.Contains(t, connErr.Message(), "Freight")
+				require.Contains(t, connErr.Message(), "freight")
 				require.Contains(t, connErr.Message(), "not found in namespace")
 			},
 		},
 		{
-			name: "error listing Freight",
+			name: "error listing freight",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
-				Project: "fake-project",
-				Freight: "fake-freight",
-				Alias:   "fake-alias",
+				Project:  "fake-project",
+				Name:     "fake-freight",
+				NewAlias: "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
@@ -169,18 +165,18 @@ func TestUpdateFreightAlias(t *testing.T) {
 		{
 			name: "alias is not unique",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
-				Project: "fake-project",
-				Freight: "fake-freight",
-				Alias:   "fake-alias",
+				Project:  "fake-project",
+				Name:     "fake-freight",
+				NewAlias: "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{
 						ObjectMeta: metav1.ObjectMeta{
@@ -220,18 +216,18 @@ func TestUpdateFreightAlias(t *testing.T) {
 		{
 			name: "error patching Freight",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
-				Project: "fake-project",
-				Freight: "fake-freight",
-				Alias:   "fake-alias",
+				Project:  "fake-project",
+				Name:     "fake-freight",
+				NewAlias: "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
@@ -261,18 +257,18 @@ func TestUpdateFreightAlias(t *testing.T) {
 		{
 			name: "success",
 			req: &svcv1alpha1.UpdateFreightAliasRequest{
-				Project: "fake-project",
-				Freight: "fake-freight",
-				Alias:   "fake-alias",
+				Project:  "fake-project",
+				Name:     "fake-freight",
+				NewAlias: "fake-alias",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},

@@ -17,15 +17,17 @@ func (s *server) ListStages(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListStagesRequest],
 ) (*connect.Response[svcv1alpha1.ListStagesResponse], error) {
-	if req.Msg.GetProject() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
+		return nil, err
 	}
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+
+	if err := s.validateProjectExists(ctx, project); err != nil {
 		return nil, err
 	}
 
 	var list kargoapi.StageList
-	if err := s.client.List(ctx, &list, client.InNamespace(req.Msg.GetProject())); err != nil {
+	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
 		return nil, errors.Wrap(err, "list stages")
 	}
 

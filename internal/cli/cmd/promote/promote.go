@@ -21,7 +21,8 @@ type promotionOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Freight       string
+	FreightName   string
+	FreightAlias  string
 	Stage         string
 	SubscribersOf string
 }
@@ -33,23 +34,38 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "promote [--project=project] --freight=freight (--stage=stage | --subscribers-of=stage)",
-		Short: "Manage the promotion of freight",
+		Use: "promote [--project=project] (--freight=freight | --freight-alias=alias) " +
+			"(--stage=stage | --subscribers-of=stage)",
+		Short: "Promote a piece of freight",
 		Args:  option.NoArgs,
 		Example: `
-# Promote a freight to a stage for a specific project
-kargo promote --project=my-project --freight=abc123 --stage=dev
+# Promote a piece of freight specified by name to the QA stage
+kargo promote --project=my-project --freight=abc123 --stage=qa
 
-# Promote a freight to subscribers of a stage for a specific project
-kargo promote --project=my-project --freight=abc123 --subscribers-of=dev
+# Promote a piece of freight specified by alias to the QA stage
+kargo promote --project=my-project --freight-alias=wonky-wombat --stage=qa
 
-# Promote a freight to a stage for the default project
+# Promote a piece of freight specified by name to subscribers of the QA stage
+kargo promote --project=my-project --freight=abc123 --subscribers-of=qa
+
+# Promote a piece of freight specified by alias to subscribers of the QA stage
+kargo promote --project=my-project --freight-alias=wonky-wombat --subscribers-of=qa
+
+# Promote a piece of freight specified by name to the QA stage in the default project
 kargo config set-project my-project
-kargo promote --freight=abc123 --stage=dev
+kargo promote --freight=abc123 --stage=qa
 
-# Promote a freight to subscribers of a stage for the default project
+# Promote a piece of freight specified by alias to the QA stage in the default project
 kargo config set-project my-project
-kargo promote --freight=abc123 --subscribers-of=dev
+kargo promote --freight-alias=wonky-wombat --stage=qa
+
+# Promote a piece of freight specified by name to subscribers of the QA stage in the default project
+kargo config set-project my-project
+kargo promote --freight=abc123 --subscribers-of=qa
+
+# Promote a piece of freight specified by alias to subscribers of the QA stage in the default project
+kargo config set-project my-project
+kargo promote --freight-alias=wonky-wombat --subscribers-of=qas
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -75,17 +91,30 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
 	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
-		"The Project the Freight belongs to. If not set, the default project will be used.")
-	option.Freight(cmd.Flags(), &o.Freight, "The ID of the Freight to promote.")
-	option.Stage(cmd.Flags(), &o.Stage, fmt.Sprintf("The Stage to promote the Freight to. If set, --%s "+
-		"must not be set.", option.SubscribersOfFlag))
-	option.SubscribersOf(cmd.Flags(), &o.SubscribersOf, fmt.Sprintf("The Stage from which the subscribers "+
-		"will be used to promote the Freight to. If set, --%s must not be set.", option.StageFlag))
+	option.Project(
+		cmd.Flags(), &o.Project, o.Project,
+		"The project the freight belongs to. If not set, the default project will be used.",
+	)
+	option.Freight(cmd.Flags(), &o.FreightName, "The name of piece of freight to promote.")
+	option.FreightAlias(cmd.Flags(), &o.FreightAlias, "The alias of piece of freight to promote.")
+	option.Stage(
+		cmd.Flags(), &o.Stage,
+		fmt.Sprintf(
+			"The stage to promote the freight to. If set, --%s must not be set.",
+			option.SubscribersOfFlag,
+		),
+	)
+	option.SubscribersOf(
+		cmd.Flags(), &o.SubscribersOf,
+		fmt.Sprintf(
+			"The stage whose subscribers freight should be promoted to. If set, --%s must not be set.",
+			option.StageFlag,
+		),
+	)
 
-	if err := cmd.MarkFlagRequired(option.FreightFlag); err != nil {
-		panic(errors.Wrap(err, "could not mark freight flag as required"))
-	}
+	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.FreightFlag, option.FreightAliasFlag)
+
 	cmd.MarkFlagsOneRequired(option.StageFlag, option.SubscribersOfFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.StageFlag, option.SubscribersOfFlag)
 }
@@ -94,20 +123,23 @@ func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 // error is returned.
 func (o *promotionOptions) validate() error {
 	var errs []error
-
+	// While the flags are marked as required, a user could still provide an empty
+	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
-		errs = append(errs, errors.New("project is required"))
+		errs = append(errs, errors.Errorf("%s is required", option.ProjectFlag))
 	}
-
-	// While the flags are marked as required, a user could still provide an
-	// empty string. This is a check to ensure that the flags are not empty.
-	if o.Freight == "" {
-		errs = append(errs, errors.New("freight is required"))
+	if o.FreightName == "" && o.FreightAlias == "" {
+		errs = append(
+			errs,
+			errors.Errorf("either %s or %s is required", option.FreightFlag, option.FreightAliasFlag),
+		)
 	}
 	if o.Stage == "" && o.SubscribersOf == "" {
-		errs = append(errs, errors.New("stage or subscribers-of is required"))
+		errs = append(
+			errs,
+			errors.Errorf("either %s or %s is required", option.StageFlag, option.SubscribersOfFlag),
+		)
 	}
-
 	return goerrors.Join(errs...)
 }
 
@@ -120,11 +152,17 @@ func (o *promotionOptions) run(ctx context.Context) error {
 
 	switch {
 	case o.Stage != "":
-		res, err := kargoSvcCli.PromoteStage(ctx, connect.NewRequest(&v1alpha1.PromoteStageRequest{
-			Project: o.Project,
-			Name:    o.Stage,
-			Freight: o.Freight,
-		}))
+		res, err := kargoSvcCli.PromoteStage(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.PromoteStageRequest{
+					Project:      o.Project,
+					Freight:      o.FreightName,
+					FreightAlias: o.FreightAlias,
+					Stage:        o.Stage,
+				},
+			),
+		)
 		if err != nil {
 			return errors.Wrap(err, "promote stage")
 		}
@@ -141,11 +179,17 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		_ = printer.PrintObj(promo, o.IOStreams.Out)
 		return nil
 	case o.SubscribersOf != "":
-		res, promoteErr := kargoSvcCli.PromoteSubscribers(ctx, connect.NewRequest(&v1alpha1.PromoteSubscribersRequest{
-			Project: o.Project,
-			Stage:   o.SubscribersOf,
-			Freight: o.Freight,
-		}))
+		res, promoteErr := kargoSvcCli.PromoteSubscribers(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.PromoteSubscribersRequest{
+					Project:      o.Project,
+					Freight:      o.FreightName,
+					FreightAlias: o.FreightAlias,
+					Stage:        o.SubscribersOf,
+				},
+			),
+		)
 		if ptr.Deref(o.PrintFlags.OutputFormat, "") == "" {
 			if res != nil && res.Msg != nil {
 				for _, p := range res.Msg.GetPromotions() {

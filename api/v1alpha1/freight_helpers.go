@@ -8,6 +8,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// GetFreightByNameOrAlias returns a pointer to the Freight resource specified
+// by the project, and name OR alias arguments. If no such resource is found,
+// nil is returned instead.
+func GetFreightByNameOrAlias(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	name string,
+	alias string,
+) (*Freight, error) {
+	if name != "" {
+		return GetFreight(
+			ctx,
+			c,
+			types.NamespacedName{
+				Namespace: project,
+				Name:      name,
+			},
+		)
+	}
+	return GetFreightByAlias(ctx, c, project, alias)
+}
+
 // GetFreight returns a pointer to the Freight resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
 // instead.
@@ -29,6 +52,36 @@ func GetFreight(
 		)
 	}
 	return &freight, nil
+}
+
+// GetFreightByAlias returns a pointer to the Freight resource specified by the
+// project and alias arguments. If no such resource is found, nil is returned
+// instead.
+func GetFreightByAlias(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	alias string,
+) (*Freight, error) {
+	freightList := FreightList{}
+	if err := c.List(
+		ctx,
+		&freightList,
+		client.InNamespace(project),
+		client.MatchingLabels{
+			AliasLabelKey: alias,
+		},
+	); err != nil {
+		return nil, errors.Wrapf(
+			err,
+			"error listing Freight in namespace %q",
+			project,
+		)
+	}
+	if len(freightList.Items) == 0 {
+		return nil, nil
+	}
+	return &freightList.Items[0], nil
 }
 
 // IsFreightAvailable answers whether the specified Freight is available to the

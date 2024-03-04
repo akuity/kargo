@@ -7,13 +7,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func (s *server) DeleteFreight(
+func (s *server) GetFreight(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.DeleteFreightRequest],
-) (*connect.Response[svcv1alpha1.DeleteFreightResponse], error) {
+	req *connect.Request[svcv1alpha1.GetFreightRequest],
+) (*connect.Response[svcv1alpha1.GetFreightResponse], error) {
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
@@ -51,9 +52,7 @@ func (s *server) DeleteFreight(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
-	if err := s.client.Delete(ctx, freight); err != nil {
-		return nil, errors.Wrap(err, "delete freight")
-	}
-
-	return connect.NewResponse(&svcv1alpha1.DeleteFreightResponse{}), nil
+	return connect.NewResponse(&svcv1alpha1.GetFreightResponse{
+		Freight: typesv1alpha1.ToFreightProto(*freight),
+	}), nil
 }

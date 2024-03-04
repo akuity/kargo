@@ -49,7 +49,7 @@ func TestQueryFreight(t *testing.T) {
 				Project: "fake-project",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -68,7 +68,7 @@ func TestQueryFreight(t *testing.T) {
 				GroupBy: "bogus-group-by",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 			},
@@ -92,7 +92,7 @@ func TestQueryFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -119,7 +119,7 @@ func TestQueryFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -151,7 +151,7 @@ func TestQueryFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -189,7 +189,7 @@ func TestQueryFreight(t *testing.T) {
 				GroupBy: GroupByImageRepository,
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				listFreightFn: func(
@@ -216,7 +216,7 @@ func TestQueryFreight(t *testing.T) {
 				GroupBy: GroupByImageRepository,
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				listFreightFn: func(
@@ -253,7 +253,7 @@ func TestQueryFreight(t *testing.T) {
 				GroupBy: GroupByGitRepository,
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				listFreightFn: func(
@@ -290,7 +290,7 @@ func TestQueryFreight(t *testing.T) {
 				GroupBy: GroupByChartRepository,
 			},
 			server: &server{
-				validateProjectFn: func(context.Context, string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				listFreightFn: func(

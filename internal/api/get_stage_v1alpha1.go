@@ -17,18 +17,24 @@ func (s *server) GetStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetStageRequest],
 ) (*connect.Response[svcv1alpha1.GetStageResponse], error) {
-	if err := validateProjectAndStageNonEmpty(req.Msg.GetProject(), req.Msg.GetName()); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
 
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+	name := req.Msg.GetName()
+	if err := validateFieldNotEmpty("name", name); err != nil {
+		return nil, err
+	}
+
+	if err := s.validateProjectExists(ctx, project); err != nil {
 		return nil, err
 	}
 
 	var stage kargoapi.Stage
 	if err := s.client.Get(ctx, client.ObjectKey{
-		Namespace: req.Msg.GetProject(),
-		Name:      req.Msg.GetName(),
+		Namespace: project,
+		Name:      name,
 	}, &stage); err != nil {
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
