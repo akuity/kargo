@@ -118,6 +118,21 @@ func (s *server) PromoteSubscribers(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q has no subscribers", stageName))
 	}
 
+	for _, subscriber := range subscribers {
+		if err := s.authorizeFn(
+			ctx,
+			"promote",
+			kargoapi.GroupVersion.WithResource("stages"),
+			"",
+			types.NamespacedName{
+				Namespace: subscriber.Namespace,
+				Name:      subscriber.Name,
+			},
+		); err != nil {
+			return nil, err
+		}
+	}
+
 	promoteErrs := make([]error, 0, len(subscribers))
 	createdPromos := make([]*v1alpha1.Promotion, 0, len(subscribers))
 	for _, subscriber := range subscribers {

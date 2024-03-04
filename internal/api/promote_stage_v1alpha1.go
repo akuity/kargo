@@ -6,8 +6,10 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/kargo"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -82,6 +84,7 @@ func (s *server) PromoteStage(
 		}
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
+
 	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
 	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
 		upstreamStages[i] = upstreamStage.Name
@@ -97,7 +100,24 @@ func (s *server) PromoteStage(
 		)
 	}
 
-	promotion := kargo.NewPromotion(*stage, freightName)
+	if err := s.authorizeFn(
+		ctx,
+		"promote",
+		schema.GroupVersionResource{
+			Group:    kargoapi.GroupVersion.Group,
+			Version:  kargoapi.GroupVersion.Version,
+			Resource: "stages",
+		},
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
+		return nil, err
+	}
+
+	promotion := kargo.NewPromotion(*stage, req.Msg.GetFreight())
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
 		return nil, errors.Wrap(err, "create promotion")
 	}
