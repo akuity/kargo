@@ -50,6 +50,11 @@ func Alias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, AliasFlag, "", usage)
 }
 
+// Aliases adds a multi-value AliasFlag to the provided flag set.
+func Aliases(fs *pflag.FlagSet, stage *[]string, usage string) {
+	fs.StringArrayVar(stage, AliasFlag, nil, usage)
+}
+
 // Filenames adds the FilenameFlag and FilenameShortFlag to the provided flag set.
 func Filenames(fs *pflag.FlagSet, filenames *[]string, usage string) {
 	fs.StringSliceVarP(filenames, FilenameFlag, FilenameShortFlag, nil, usage)
@@ -76,6 +81,11 @@ func LocalServer(fs *pflag.FlagSet, opt *Option) {
 // Name adds the NameFlag to the provided flag set.
 func Name(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, NameFlag, "", usage)
+}
+
+// Names adds a multi-value NameFlag to the provided flag set.
+func Names(fs *pflag.FlagSet, stage *[]string, usage string) {
+	fs.StringArrayVar(stage, NameFlag, nil, usage)
 }
 
 // NewAlias adds the NewAliasFlag to the provided flag set.

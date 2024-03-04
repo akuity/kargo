@@ -2,6 +2,7 @@ package get
 
 import (
 	"context"
+	goerrors "errors"
 	"time"
 
 	"connectrpc.com/connect"
@@ -22,8 +23,8 @@ type getFreightOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Name  string
-	Alias string
+	Names   []string
+	Aliases []string
 }
 
 func newGetFreightCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
@@ -84,10 +85,8 @@ func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Project,
 		"The project for which to get freight. If not set, the default project will be used.",
 	)
-	option.Name(cmd.Flags(), &o.Name, "The name of a piece of freight to get.")
-	option.Alias(cmd.Flags(), &o.Alias, "The alias of a piece of freight to get.")
-
-	cmd.MarkFlagsMutuallyExclusive(option.NameFlag, option.AliasFlag)
+	option.Names(cmd.Flags(), &o.Names, "The name of a piece of freight to get.")
+	option.Aliases(cmd.Flags(), &o.Aliases, "The alias of a piece of freight to get.")
 }
 
 // validate performs validation of the options. If the options are invalid, an
@@ -108,7 +107,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "get client from config")
 	}
 
-	if o.Name == "" && o.Alias == "" {
+	if len(o.Names) == 0 && len(o.Aliases) == 0 {
 
 		var resp *connect.Response[v1alpha1.QueryFreightResponse]
 		if resp, err = kargoSvcCli.QueryFreight(
@@ -131,25 +130,50 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 		return printObjects(o.Option, res)
 	}
 
-	resp, err := kargoSvcCli.GetFreight(
-		ctx,
-		connect.NewRequest(
-			&v1alpha1.GetFreightRequest{
-				Project: o.Project,
-				Name:    o.Name,
-				Alias:   o.Alias,
-			},
-		),
-	)
-	if err != nil {
-		return errors.Wrap(err, "get freight")
+	freight := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
+	errs := make([]error, 0, len(o.Names))
+	for _, name := range o.Names {
+		var resp *connect.Response[v1alpha1.GetFreightResponse]
+		if resp, err = kargoSvcCli.GetFreight(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.GetFreightRequest{
+					Project: o.Project,
+					Name:    name,
+				},
+			),
+		); err != nil {
+			errs = append(errs, errors.Wrapf(err, "get freight %s", name))
+			continue
+		}
+		freight = append(freight, typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()))
 	}
-	return printObjects(
-		o.Option,
-		[]*kargoapi.Freight{
-			typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()),
-		},
-	)
+	for _, alias := range o.Aliases {
+		var resp *connect.Response[v1alpha1.GetFreightResponse]
+		if resp, err = kargoSvcCli.GetFreight(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.GetFreightRequest{
+					Project: o.Project,
+					Alias:   alias,
+				},
+			),
+		); err != nil {
+			errs = append(errs, errors.Wrapf(err, "get freight %s", alias))
+			continue
+		}
+		freight = append(freight, typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()))
+	}
+
+	if err = printObjects(o.Option, freight); err != nil {
+		return errors.Wrap(err, "print stages")
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+
+	return goerrors.Join(errs...)
 }
 
 func newFreightTable(list *metav1.List) *metav1.Table {
