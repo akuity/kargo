@@ -1,13 +1,14 @@
 package get
 
 import (
+	"context"
 	goerrors "errors"
+	"slices"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
@@ -19,13 +20,22 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newGetPromotionsCommand(
-	cfg config.CLIConfig,
-	opt *option.Option,
-) *cobra.Command {
-	var stage string
+type getPromotionsOptions struct {
+	*option.Option
+	Config config.CLIConfig
+
+	Stage string
+	Names []string
+}
+
+func newGetPromotionsCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	cmdOpts := &getPromotionsOptions{
+		Option: opt,
+		Config: cfg,
+	}
+
 	cmd := &cobra.Command{
-		Use:     "promotions --project=project [--stage=stage] [NAME...]",
+		Use:     "promotions [--project=project] [--stage=stage] [NAME ...]",
 		Aliases: []string{"promotion", "promos", "promo"},
 		Short:   "Display one or many promotions",
 		Example: `
@@ -40,59 +50,92 @@ kargo get promotions --project=my-project --stage=my-stage
 
 # Get a promotion in the project
 kargo get promotions --project=my-project some-promotion
+
+# List all promotions in the default project
+kargo config set-project my-project
+kargo get promotions
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+			cmdOpts.complete(args)
 
-			project := opt.Project
-			if project == "" {
-				return errors.New("project is required")
-			}
-			req := &v1alpha1.ListPromotionsRequest{
-				Project: project,
-			}
-			if stage != "" {
-				req.Stage = proto.String(stage)
-			}
-
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
-			if err != nil {
-				return errors.Wrap(err, "get client from config")
-			}
-			resp, err := kargoSvcCli.ListPromotions(ctx, connect.NewRequest(req))
-			if err != nil {
-				return errors.Wrap(err, "list promotions")
-			}
-
-			names := slices.Compact(args)
-			res := make([]*kargoapi.Promotion, 0, len(resp.Msg.GetPromotions()))
-			var resErr error
-			if len(names) == 0 {
-				res = append(res, resp.Msg.GetPromotions()...)
-			} else {
-				promotionsByName := make(map[string]*kargoapi.Promotion, len(resp.Msg.GetPromotions()))
-				for i := range resp.Msg.GetPromotions() {
-					p := resp.Msg.GetPromotions()[i]
-					promotionsByName[p.GetName()] = p
-				}
-				for _, name := range names {
-					if promo, ok := promotionsByName[name]; ok {
-						res = append(res, promo)
-					} else {
-						resErr = goerrors.Join(err, errors.Errorf("promotion %q not found", name))
-					}
-				}
-			}
-			if err := printObjects(opt, res); err != nil {
+			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
-			return resErr
+
+			return cmdOpts.run(cmd.Context())
 		},
 	}
-	option.Project(cmd.Flags(), opt, opt.Project)
-	option.Stage(cmd.Flags(), &stage)
-	opt.PrintFlags.AddFlags(cmd)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
+}
+
+// addFlags adds the flags for the get promotions options to the provided command.
+func (o *getPromotionsOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+
+	option.Project(cmd.Flags(), &o.Project, o.Project,
+		"The Project for which to list Promotions. If not set, the default project will be used.")
+	option.Stage(cmd.Flags(), &o.Stage,
+		"The Stage for which to list Promotions. If not set, all stages will be listed.")
+}
+
+// complete sets the options from the command arguments.
+func (o *getPromotionsOptions) complete(args []string) {
+	o.Names = slices.Compact(args)
+}
+
+// validate performs validation of the options. If the options are invalid, an
+// error is returned.
+func (o *getPromotionsOptions) validate() error {
+	if o.Project == "" {
+		return errors.New("project is required")
+	}
+	return nil
+}
+
+// run gets the promotions from the server and prints them to the console.
+func (o *getPromotionsOptions) run(ctx context.Context) error {
+	req := &v1alpha1.ListPromotionsRequest{
+		Project: o.Project,
+	}
+	if o.Stage != "" {
+		req.Stage = proto.String(o.Stage)
+	}
+
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	if err != nil {
+		return errors.Wrap(err, "get client from config")
+	}
+	resp, err := kargoSvcCli.ListPromotions(ctx, connect.NewRequest(req))
+	if err != nil {
+		return errors.Wrap(err, "list promotions")
+	}
+
+	res := make([]*kargoapi.Promotion, 0, len(resp.Msg.GetPromotions()))
+	var resErr error
+	if len(o.Names) == 0 {
+		res = append(res, resp.Msg.GetPromotions()...)
+	} else {
+		promotionsByName := make(map[string]*kargoapi.Promotion, len(resp.Msg.GetPromotions()))
+		for idx := range resp.Msg.GetPromotions() {
+			p := resp.Msg.GetPromotions()[idx]
+			promotionsByName[p.GetName()] = p
+		}
+		for _, name := range o.Names {
+			if promo, ok := promotionsByName[name]; ok {
+				res = append(res, promo)
+			} else {
+				resErr = goerrors.Join(err, errors.Errorf("promotion %q not found", name))
+			}
+		}
+	}
+	if err := printObjects(o.Option, res); err != nil {
+		return err
+	}
+	return resErr
 }
 
 func newPromotionTable(list *metav1.List) *metav1.Table {

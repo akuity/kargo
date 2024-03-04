@@ -160,8 +160,8 @@
     "status": {
       "description": "Status describes the Warehouse's most recently observed state.",
       "properties": {
-        "error": {
-          "description": "Error describes any errors that are preventing the Warehouse controller\nfrom polling repositories to discover new Freight.",
+        "message": {
+          "description": "Message describes any errors that are preventing the Warehouse controller\nfrom polling repositories to discover new Freight.",
           "type": "string"
         },
         "observedGeneration": {

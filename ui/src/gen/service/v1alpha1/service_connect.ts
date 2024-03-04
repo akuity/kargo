@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateProjectRequest, CreateProjectResponse, CreateResourceRequest, CreateResourceResponse, CreateStageRequest, CreateStageResponse, CreateWarehouseRequest, CreateWarehouseResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, SetAutoPromotionForStageRequest, SetAutoPromotionForStageResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, UpdateStageRequest, UpdateStageResponse, UpdateWarehouseRequest, UpdateWarehouseResponse, WatchPromotionRequest, WatchPromotionResponse, WatchPromotionsRequest, WatchPromotionsResponse, WatchStagesRequest, WatchStagesResponse, WatchWarehousesRequest, WatchWarehousesResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, WatchPromotionRequest, WatchPromotionResponse, WatchPromotionsRequest, WatchPromotionsResponse, WatchStagesRequest, WatchStagesResponse, WatchWarehousesRequest, WatchWarehousesResponse } from "./service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -88,15 +88,6 @@ export const KargoService = {
       kind: MethodKind.Unary,
     },
     /**
-     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateStage
-     */
-    createStage: {
-      name: "CreateStage",
-      I: CreateStageRequest,
-      O: CreateStageResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
      * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListStages
      */
     listStages: {
@@ -122,15 +113,6 @@ export const KargoService = {
       I: WatchStagesRequest,
       O: WatchStagesResponse,
       kind: MethodKind.ServerStreaming,
-    },
-    /**
-     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateStage
-     */
-    updateStage: {
-      name: "UpdateStage",
-      I: UpdateStageRequest,
-      O: UpdateStageResponse,
-      kind: MethodKind.Unary,
     },
     /**
      * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage
@@ -207,15 +189,6 @@ export const KargoService = {
       kind: MethodKind.ServerStreaming,
     },
     /**
-     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateProject
-     */
-    createProject: {
-      name: "CreateProject",
-      I: CreateProjectRequest,
-      O: CreateProjectResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
      * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjects
      */
     listProjects: {
@@ -231,15 +204,6 @@ export const KargoService = {
       name: "DeleteProject",
       I: DeleteProjectRequest,
       O: DeleteProjectResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.SetAutoPromotionForStage
-     */
-    setAutoPromotionForStage: {
-      name: "SetAutoPromotionForStage",
-      I: SetAutoPromotionForStageRequest,
-      O: SetAutoPromotionForStageResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -304,24 +268,6 @@ export const KargoService = {
       I: WatchWarehousesRequest,
       O: WatchWarehousesResponse,
       kind: MethodKind.ServerStreaming,
-    },
-    /**
-     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateWarehouse
-     */
-    createWarehouse: {
-      name: "CreateWarehouse",
-      I: CreateWarehouseRequest,
-      O: CreateWarehouseResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateWarehouse
-     */
-    updateWarehouse: {
-      name: "UpdateWarehouse",
-      I: UpdateWarehouseRequest,
-      O: UpdateWarehouseResponse,
-      kind: MethodKind.Unary,
     },
     /**
      * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse

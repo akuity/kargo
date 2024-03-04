@@ -3127,17 +3127,17 @@ export class StageStatus extends Message<StageStatus> {
   /**
    * Health is the Stage's last observed health.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Health health = 4;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Health health = 8;
    */
   health?: Health;
 
   /**
-   * Error describes any errors that are preventing the Stage controller
+   * Message describes any errors that are preventing the Stage controller
    * from assessing Stage health or from finding new Freight.
    *
-   * @generated from field: optional string error = 5;
+   * @generated from field: optional string message = 9;
    */
-  error?: string;
+  message?: string;
 
   /**
    * ObservedGeneration represents the .metadata.generation that this Stage
@@ -3165,8 +3165,8 @@ export class StageStatus extends Message<StageStatus> {
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
-    { no: 4, name: "health", kind: "message", T: Health, opt: true },
-    { no: 5, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "health", kind: "message", T: Health, opt: true },
+    { no: 9, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 7, name: "currentPromotion", kind: "message", T: PromotionInfo, opt: true },
   ]);
@@ -3594,12 +3594,12 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
  */
 export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
-   * Error describes any errors that are preventing the Warehouse controller
+   * Message describes any errors that are preventing the Warehouse controller
    * from polling repositories to discover new Freight.
    *
-   * @generated from field: optional string error = 1;
+   * @generated from field: optional string message = 3;
    */
-  error?: string;
+  message?: string;
 
   /**
    * ObservedGeneration represents the .metadata.generation that this Warehouse
@@ -3617,7 +3617,7 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
   ]);
 

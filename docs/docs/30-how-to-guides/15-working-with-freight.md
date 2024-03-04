@@ -131,9 +131,9 @@ resource as it progresses through the `Stage`s of a pipeline.
 This is conveniently accomplished via the Kargo CLI:
 
 ```shell
-kargo update freight-alias \
+kargo update freight \
   f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
-  frozen-tauntaun \
+  --alias frozen-tauntaun \
   --project kargo-demo
 ```
 

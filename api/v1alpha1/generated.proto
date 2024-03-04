@@ -928,11 +928,11 @@ message StageStatus {
   repeated FreightReference history = 3;
 
   // Health is the Stage's last observed health.
-  optional Health health = 4;
+  optional Health health = 8;
 
-  // Error describes any errors that are preventing the Stage controller
+  // Message describes any errors that are preventing the Stage controller
   // from assessing Stage health or from finding new Freight.
-  optional string error = 5;
+  optional string message = 9;
 
   // ObservedGeneration represents the .metadata.generation that this Stage
   // status was reconciled against.
@@ -1032,9 +1032,9 @@ message WarehouseSpec {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 message WarehouseStatus {
-  // Error describes any errors that are preventing the Warehouse controller
+  // Message describes any errors that are preventing the Warehouse controller
   // from polling repositories to discover new Freight.
-  optional string error = 1;
+  optional string message = 3;
 
   // ObservedGeneration represents the .metadata.generation that this Warehouse
   // was reconciled against.

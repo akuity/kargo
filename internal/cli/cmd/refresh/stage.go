@@ -14,19 +14,40 @@ import (
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
-func newRefreshStageCommand(
-	cfg config.CLIConfig,
-	opt *option.Option,
-) *cobra.Command {
-	var wait bool
-	cmd := &cobra.Command{
-		Use:     "stage (STAGE)",
-		Args:    option.ExactArgs(1),
-		Example: "kargo refresh stage --project=guestbook (STAGE)",
-		RunE:    refreshObject(cfg, opt, "stage", wait),
+func newRefreshStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	cmdOpts := &refreshOptions{
+		Option: opt,
+		Config: cfg,
 	}
-	option.Wait(cmd.Flags(), &wait)
-	option.Project(cmd.Flags(), opt, opt.Project)
+
+	cmd := &cobra.Command{
+		Use:  "stage [--project=project] NAME [--wait]",
+		Args: option.ExactArgs(1),
+		Example: `
+# Refresh a stage
+kargo refresh stage --project=my-project my-stage
+
+# Refresh a stage and wait for it to complete
+kargo refresh stage --project=my-project my-stage --wait
+
+# Refresh a stage in the default project
+kargo config set-project my-project
+kargo refresh stage my-stage
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmdOpts.complete(refreshResourceTypeStage, args)
+
+			if err := cmdOpts.validate(); err != nil {
+				return err
+			}
+
+			return cmdOpts.run(cmd.Context())
+		},
+	}
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }
 

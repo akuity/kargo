@@ -24,11 +24,9 @@ service KargoService {
 
   /* Stage APIs */
 
-  rpc CreateStage(CreateStageRequest) returns (CreateStageResponse);
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
-  rpc UpdateStage(UpdateStageRequest) returns (UpdateStageResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
   rpc PromoteSubscribers(PromoteSubscribersRequest) returns (PromoteSubscribersResponse);
@@ -42,10 +40,8 @@ service KargoService {
 
   /* Project APIs */
 
-  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
-  rpc SetAutoPromotionForStage(SetAutoPromotionForStageRequest) returns (SetAutoPromotionForStageResponse);
 
   /* Freight APIs */
 
@@ -59,8 +55,6 @@ service KargoService {
   rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
   rpc GetWarehouse(GetWarehouseRequest) returns (GetWarehouseResponse);
   rpc WatchWarehouses(WatchWarehousesRequest) returns (stream WatchWarehousesResponse);
-  rpc CreateWarehouse(CreateWarehouseRequest) returns (CreateWarehouseResponse);
-  rpc UpdateWarehouse(UpdateWarehouseRequest) returns (UpdateWarehouseResponse);
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
   rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 }
@@ -117,12 +111,6 @@ message AdminLoginRequest {
 
 message AdminLoginResponse {
   string id_token = 1;
-}
-
-message TypedStageSpec {
-  string project = 1;
-  string name = 2;
-  github.com.akuity.kargo.api.v1alpha1.StageSpec spec = 3;
 }
 
 message CreateResourceRequest {
@@ -186,17 +174,6 @@ message DeleteResourceResponse {
   repeated DeleteResourceResult results = 1;
 }
 
-message CreateStageRequest {
-  oneof stage {
-    TypedStageSpec typed = 1;
-    string yaml = 2;
-  }
-}
-
-message CreateStageResponse {
-  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
-}
-
 message ListStagesRequest {
   string project = 1;
 }
@@ -222,17 +199,6 @@ message WatchStagesRequest {
 message WatchStagesResponse {
   github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
   string type = 2;
-}
-
-message UpdateStageRequest {
-  oneof stage {
-    TypedStageSpec typed = 1;
-    string yaml = 2;
-  }
-}
-
-message UpdateStageResponse {
-  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
 message DeleteStageRequest {
@@ -273,13 +239,6 @@ message RefreshStageResponse {
   github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
-message TypedPromotionPolicySpec {
-  string project = 1;
-  string name = 2;
-  string stage = 3;
-  bool enable_auto_promotion = 4;
-}
-
 message ListPromotionsRequest {
   string project = 1;
   optional string stage = 2;
@@ -316,24 +275,6 @@ message WatchPromotionRequest {
 message WatchPromotionResponse {
   github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
   string type = 2;
-}
-
-message SetAutoPromotionForStageRequest {
-  string project = 1;
-  string stage = 2;
-  bool enable = 3;
-}
-
-message SetAutoPromotionForStageResponse {
-  /* explicitly empty */
-}
-
-message CreateProjectRequest {
-  string name = 1;
-}
-
-message CreateProjectResponse {
-  github.com.akuity.kargo.api.v1alpha1.Project project = 1;
 }
 
 message ListProjectsRequest {
@@ -413,34 +354,6 @@ message WatchWarehousesRequest {
 message WatchWarehousesResponse {
   github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
   string type = 2;
-}
-
-message TypedWarehouseSpec {
-  string project = 1;
-  string name = 2;
-  github.com.akuity.kargo.api.v1alpha1.WarehouseSpec spec = 3;
-}
-
-message CreateWarehouseRequest {
-  oneof warehouse {
-    TypedWarehouseSpec typed = 1;
-    string yaml = 2;
-  }
-}
-
-message CreateWarehouseResponse {
-  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
-}
-
-message UpdateWarehouseRequest {
-  oneof warehouse {
-    TypedWarehouseSpec typed = 1;
-    string yaml = 2;
-  }
-}
-
-message UpdateWarehouseResponse {
-  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 message DeleteWarehouseRequest {

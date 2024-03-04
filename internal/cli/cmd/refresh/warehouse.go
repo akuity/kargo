@@ -14,19 +14,40 @@ import (
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
-func newRefreshWarehouseCommand(
-	cfg config.CLIConfig,
-	opt *option.Option,
-) *cobra.Command {
-	var wait bool
-	cmd := &cobra.Command{
-		Use:     "warehouse (WAREHOUSE)",
-		Args:    option.ExactArgs(1),
-		Example: "kargo warehouse refresh --project=guestbook (WAREHOUSE)",
-		RunE:    refreshObject(cfg, opt, "warehouse", wait),
+func newRefreshWarehouseCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	cmdOpts := &refreshOptions{
+		Option: opt,
+		Config: cfg,
 	}
-	option.Wait(cmd.Flags(), &wait)
-	option.Project(cmd.Flags(), opt, opt.Project)
+
+	cmd := &cobra.Command{
+		Use:  "warehouse [--project=project] NAME [--wait]",
+		Args: option.ExactArgs(1),
+		Example: `
+# Refresh a warehouse
+kargo refresh warehouse --project=my-project my-warehouse
+
+# Refresh a warehouse and wait for it to complete
+kargo refresh warehouse --project=my-project my-warehouse --wait
+
+# Refresh a warehouse in the default project
+kargo config set-project my-project
+kargo refresh warehouse my-warehouse
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cmdOpts.complete(refreshResourceTypeWarehouse, args)
+
+			if err := cmdOpts.validate(); err != nil {
+				return err
+			}
+
+			return cmdOpts.run(cmd.Context())
+		},
+	}
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
 }
 

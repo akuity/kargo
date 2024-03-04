@@ -210,9 +210,9 @@ type ChartSubscription struct {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 type WarehouseStatus struct {
-	// Error describes any errors that are preventing the Warehouse controller
+	// Message describes any errors that are preventing the Warehouse controller
 	// from polling repositories to discover new Freight.
-	Error string `json:"error,omitempty" protobuf:"bytes,1,opt,name=error"`
+	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`

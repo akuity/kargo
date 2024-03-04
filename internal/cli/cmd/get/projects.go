@@ -1,13 +1,14 @@
 package get
 
 import (
+	"context"
 	goerrors "errors"
+	"slices"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
 
@@ -18,12 +19,21 @@ import (
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func newGetProjectsCommand(
-	cfg config.CLIConfig,
-	opt *option.Option,
-) *cobra.Command {
+type getProjectsOptions struct {
+	*option.Option
+	Config config.CLIConfig
+
+	Names []string
+}
+
+func newGetProjectsCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+	cmdOpts := &getProjectsOptions{
+		Option: opt,
+		Config: cfg,
+	}
+
 	cmd := &cobra.Command{
-		Use:     "projects [NAME...]",
+		Use:     "projects [NAME ...]",
 		Aliases: []string{"project"},
 		Short:   "Display one or many projects",
 		Example: `
@@ -34,44 +44,61 @@ kargo get projects
 kargo get projects -o json
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
+			cmdOpts.complete(args)
 
-			kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
-			if err != nil {
-				return errors.Wrap(err, "get client from config")
-			}
-			resp, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
-			if err != nil {
-				return errors.Wrap(err, "list projects")
-			}
-
-			names := slices.Compact(args)
-			res := make([]*kargoapi.Project, 0, len(resp.Msg.GetProjects()))
-			var resErr error
-			if len(names) == 0 {
-				res = append(res, resp.Msg.GetProjects()...)
-			} else {
-				projectsByName := make(map[string]*kargoapi.Project, len(resp.Msg.GetProjects()))
-				for i := range resp.Msg.GetProjects() {
-					p := resp.Msg.GetProjects()[i]
-					projectsByName[p.Name] = p
-				}
-				for _, name := range names {
-					if promo, ok := projectsByName[name]; ok {
-						res = append(res, promo)
-					} else {
-						resErr = goerrors.Join(err, errors.Errorf("project %q not found", name))
-					}
-				}
-			}
-			if err := printObjects(opt, res); err != nil {
-				return err
-			}
-			return resErr
+			return cmdOpts.run(cmd.Context())
 		},
 	}
-	opt.PrintFlags.AddFlags(cmd)
+
+	// Register the option flags on the command.
+	cmdOpts.addFlags(cmd)
+
 	return cmd
+}
+
+// addFlags adds the flags for the get projects options to the provided command.
+func (o *getProjectsOptions) addFlags(cmd *cobra.Command) {
+	o.PrintFlags.AddFlags(cmd)
+}
+
+// complete sets the options from the command arguments.
+func (o *getProjectsOptions) complete(args []string) {
+	o.Names = slices.Compact(args)
+}
+
+// run gets the projects from the server and prints them to the console.
+func (o *getProjectsOptions) run(ctx context.Context) error {
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	if err != nil {
+		return errors.Wrap(err, "get client from config")
+	}
+	resp, err := kargoSvcCli.ListProjects(ctx, connect.NewRequest(&v1alpha1.ListProjectsRequest{}))
+	if err != nil {
+		return errors.Wrap(err, "list projects")
+	}
+
+	res := make([]*kargoapi.Project, 0, len(resp.Msg.GetProjects()))
+	var resErr error
+	if len(o.Names) == 0 {
+		res = append(res, resp.Msg.GetProjects()...)
+	} else {
+		projectsByName := make(map[string]*kargoapi.Project, len(resp.Msg.GetProjects()))
+		for idx := range resp.Msg.GetProjects() {
+			p := resp.Msg.GetProjects()[idx]
+			projectsByName[p.GetName()] = p
+		}
+		for _, name := range o.Names {
+			if promo, ok := projectsByName[name]; ok {
+				res = append(res, promo)
+			} else {
+				resErr = goerrors.Join(err, errors.Errorf("project %q not found", name))
+			}
+		}
+	}
+	if err := printObjects(o.Option, res); err != nil {
+		return err
+	}
+	return resErr
 }
 
 func newProjectTable(list *metav1.List) *metav1.Table {

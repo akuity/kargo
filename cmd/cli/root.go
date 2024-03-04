@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/akuity/kargo/internal/api"
@@ -24,9 +25,10 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/get"
 	"github.com/akuity/kargo/internal/cli/cmd/login"
 	"github.com/akuity/kargo/internal/cli/cmd/logout"
+	"github.com/akuity/kargo/internal/cli/cmd/promote"
 	"github.com/akuity/kargo/internal/cli/cmd/refresh"
-	"github.com/akuity/kargo/internal/cli/cmd/stage"
 	"github.com/akuity/kargo/internal/cli/cmd/update"
+	"github.com/akuity/kargo/internal/cli/cmd/version"
 	clicfg "github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 )
@@ -86,7 +88,7 @@ func NewRootCommand(
 		},
 	}
 
-	opt.IOStreams = &genericclioptions.IOStreams{
+	opt.IOStreams = &genericiooptions.IOStreams{
 		In:     cmd.InOrStdin(),
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
@@ -105,11 +107,11 @@ func NewRootCommand(
 	cmd.AddCommand(get.NewCommand(cfg, opt))
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(logout.NewCommand())
-	cmd.AddCommand(stage.NewCommand(cfg, opt))
 	cmd.AddCommand(refresh.NewCommand(cfg, opt))
 	cmd.AddCommand(update.NewCommand(cfg, opt))
 	cmd.AddCommand(dashboard.NewCommand(cfg))
-	cmd.AddCommand(newVersionCommand(cfg, opt))
+	cmd.AddCommand(promote.NewCommand(cfg, opt))
+	cmd.AddCommand(version.NewCommand(cfg, opt))
 	cmd.AddCommand(
 		cobracompletefig.CreateCompletionSpecCommand(
 			cobracompletefig.Opts{

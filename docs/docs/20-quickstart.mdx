@@ -324,10 +324,9 @@ the previous section.
       name: kargo-demo-repo
       namespace: kargo-demo
       labels:
-        kargo.akuity.io/secret-type: repository
+        kargo.akuity.io/cred-type: git
     stringData:
-      type: git
-      url: ${GITOPS_REPO_URL}
+      repoURL: ${GITOPS_REPO_URL}
       username: ${GITHUB_USERNAME}
       password: ${GITHUB_PAT}
     ---
@@ -475,7 +474,7 @@ the previous section.
 1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
     ```shell
-    kargo stage promote --project kargo-demo test --freight $FREIGHT_ID
+    kargo promote --project kargo-demo --freight $FREIGHT_ID --stage test
     ```
 
     Sample output:
@@ -613,9 +612,8 @@ thereby forming a _pipeline_:
 1. `uat` subscribes to `test`
 1. `prod` subscribes to `uat`.
 
-We leave it as an exercise to the reader to use the `kargo stage promote`
-command to progress the `Freight` from `stage` to `uat` and again from `uat` to
-`prod`.
+We leave it as an exercise to the reader to use the `kargo promote` command
+to progress the `Freight` from `test` to `uat` and again from `uat` to `prod`.
 
 :::info
 The `uat` and `prod` instances of our site should be accessible at:

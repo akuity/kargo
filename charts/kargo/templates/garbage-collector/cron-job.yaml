@@ -23,7 +23,7 @@ spec:
           serviceAccountName: kargo-garbage-collector
           {{- with .Values.garbageCollector.affinity }}
           affinity:
-            {{- toYaml . | nindent 8 }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           containers:
           - name: garbage-collector

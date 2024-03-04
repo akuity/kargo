@@ -5,71 +5,87 @@ sidebar_label: Managing credentials
 
 # Managing Credentials
 
-To manage the progression of changes from stage to stage, Kargo will
-often require read/write permissions on private GitOps repositories and
-read-only permissions on private container image and/or Helm chart repositories.
+To manage the progression of freight from stage to stage, Kargo will often
+require read/write permissions on private GitOps repositories and read-only
+permissions on private container image and/or Helm chart repositories.
 
 This section presents an overview of how these credentials can be managed.
 
 ## Credentials as Kubernetes `Secret` Resources
 
-Kargo borrows its general credential-management approach from Argo CD, meaning
-that credentials are stored as Kubernetes `Secret` resources containing
-specially-formatted data. These secrets generally take the following form:
+:::caution
+Kargo formerly borrowed its general credential-management approach from Argo CD,
+but has since diverged.
+:::
+
+Kargo expects any credentials it requires to have been stored as specially
+labeled Kubernetes `Secret` resources containing specially-formatted data. These
+`Secret`s take the following form:
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: <name>
-  namespace: <namespace>
+  namespace: <project namespace>
   labels:
-    kargo.akuity.io/secret-type: <secret type>
+    kargo.akuity.io/cred-type: <cred type>
 stringData:
-  type: <type>
-  url: <repo url>
+  repoURL: <repo url>
+  repoURLPattern: <a regular expression that may match many similar repo urls>
   username: <username>
   password: <password>
 ```
 
-The `name` of such a secret is inconsequential and may follow any convention
+The `name` of such a `Secret` is inconsequential and may follow any convention
 preferred by the user.
 
 :::info
-Kargo uses Kubernetes `Namespace`s to demarcate project boundaries, so related
-`Stage` resources always share a `Namespace`.
-
-Secrets representing credentials will typically exist in the same `Namespace` as
-the `Stage` resources that will require them. There are exceptions to this rule,
-which are covered in the next section.
+Kargo uses Kubernetes `Namespace`s to mark project boundaries. `Secret`s
+representing credentials will typically exist in the same `Namespace` as the
+`Stage` resources that will require them. There are exceptions to this, which
+are covered in the next section.
 :::
 
-The label key `kargo.akuity.io/secret-type` and its value, one of `repository`
-or `repo-creds`, is important, as it designates the secret as representing
-either credentials for a single repository (`repository`) or representing
-credentials for multiple repositories whose URLs begin with a common pattern
-(`repo-creds`). When searching for credentials, Kargo gives precedence to the
-former.
+The label key `kargo.akuity.io/cred-type` and its value, one of `git`, `helm`,
+or `image`, is important, as it designates the `Secret` as representing
+credentials for a Git repository, a Helm chart repository, or a container image
+repository, respectively.
 
 The `Secret`'s `data` field (set above using plaintext in the `stringData`
 field), MUST contain the following keys:
 
-* `type`: One of `git`, `image`, or `helm`.
+* `repoURL`: The full URL of the repository the credentials are for.
 
-* `url`: The full URL of the repository (if `kargo.akuity.io/secret-type:
-  repository`) or a prefix matching multiple repository URLs (if
-  `kargo.akuity.io/secret-type: repo-creds`).
+    OR
 
-* `username`: The username to use when authenticating to the repository. If the
-  value of the `password` key is a personal access token, the value of the
-  `username` field may be inconsequential. You should consult your Git hosting
-  provider's documentation for more information.
+    `repoURLPattern`: A regular expression that matches the URLs of multiple
+    repositories.
+
+* `username`: The username to use when authenticating to the repository.
 
 * `password`: A password or personal access token.
 
+    :::info
+    If the value of the `password` key is a personal access token, the value of
+    the `username` field may be inconsequential. You should consult your
+    repository's documentation for more information.
+    :::
+
+:::note
+When Kargo searches for repository credentials in a project `Namespace`, it
+_first_ checks all appropriately labeled `Secret`s for a `repoURL` value
+matching the repository URL exactly. Only if no `Secret` is an exact match does
+it check all appropriately labeled `Secret`s for a `repoURLPattern` with a
+regular expression matching the repository URL.
+
+When searching for an exact match, and again when searching for a pattern match,
+appropriately labeled `Secret`s are considered in lexical order by name.
+:::
+
 :::caution
 Only username/password (or personal access token) authentication is
-fully-supported at this time.
+supported at this time. Others are likely to be added in the future.
 :::
 
 ## Global Credentials
@@ -83,16 +99,26 @@ Refer to
 for more details.
 
 :::note
-Any matching credentials found in a `Project`/`Namespace` take precedence over
-those found in a global credentials `Namespace`.
+Any matching credentials (exact match _or_ pattern match) found in a project's
+own `Namespace` take precedence over those found in any global credentials
+`Namespace`.
+
+When Kargo searches for respository credentials in global credentials
+`Namespace`s, it _first_ checks all appropriately labeled `Secret`s for a
+`repoURL` value matching the repository URL exactly. Only if no `Secret` is an
+exact match does it check all appropriately labeled `Secret`s for a
+`repoURLPattern` with a regular expression matching the repository URL.
+
+When searching for an exact match, and again when searching for a pattern match,
+appropriately labeled `Secret`s are considered in lexical order by name.
+
+When Kargo is configured with multiple global credentials `Namespace`s, they are
+searched in lexical order by name. Only after no exact match _and_ no pattern
+match is found in one global credentials `Namespace` does Kargo search the next.
 :::
 
 :::caution
 It is important to understand the security implications of this feature. Any
 credentials stored in a global credentials `Namespace` will be available to
 _all_ Kargo projects.
-:::
-
-:::caution
-Versions of Kargo prior to v0.4.0 used a different mechanism for managing global
 :::

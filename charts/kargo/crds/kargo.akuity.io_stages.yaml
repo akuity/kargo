@@ -844,11 +844,6 @@ spec:
                 - freight
                 - name
                 type: object
-              error:
-                description: |-
-                  Error describes any errors that are preventing the Stage controller
-                  from assessing Stage health or from finding new Freight.
-                type: string
               health:
                 description: Health is the Stage's last observed health.
                 properties:
@@ -1056,6 +1051,11 @@ spec:
                       type: object
                   type: object
                 type: array
+              message:
+                description: |-
+                  Message describes any errors that are preventing the Stage controller
+                  from assessing Stage health or from finding new Freight.
+                type: string
               observedGeneration:
                 description: |-
                   ObservedGeneration represents the .metadata.generation that this Stage

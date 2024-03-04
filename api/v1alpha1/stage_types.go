@@ -510,10 +510,10 @@ type StageStatus struct {
 	// stored.
 	History FreightReferenceStack `json:"history,omitempty" protobuf:"bytes,3,rep,name=history"`
 	// Health is the Stage's last observed health.
-	Health *Health `json:"health,omitempty" protobuf:"bytes,4,opt,name=health"`
-	// Error describes any errors that are preventing the Stage controller
+	Health *Health `json:"health,omitempty" protobuf:"bytes,8,opt,name=health"`
+	// Message describes any errors that are preventing the Stage controller
 	// from assessing Stage health or from finding new Freight.
-	Error string `json:"error,omitempty" protobuf:"bytes,5,opt,name=error"`
+	Message string `json:"message,omitempty" protobuf:"bytes,9,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,6,opt,name=observedGeneration"`
