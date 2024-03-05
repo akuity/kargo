@@ -25,7 +25,7 @@ func (s *server) PromoteStage(
 	}
 
 	stageName := req.Msg.GetStage()
-	if err := validateFieldNotEmpty("name", stageName); err != nil {
+	if err := validateFieldNotEmpty("stage", stageName); err != nil {
 		return nil, err
 	}
 
