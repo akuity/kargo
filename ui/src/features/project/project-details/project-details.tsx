@@ -747,7 +747,7 @@ export const ProjectDetails = () => {
                           };
                           if (promotionType === 'default') {
                             promoteAction({
-                              name: promotingStage?.metadata?.name,
+                              stage: promotingStage?.metadata?.name,
                               ...currentData
                             });
                           } else {
@@ -821,7 +821,7 @@ export const ProjectDetails = () => {
                                   manualApproveAction({
                                     stage: node.data?.metadata?.name,
                                     project: name,
-                                    id: manuallyApproving
+                                    name: manuallyApproving
                                   });
                                 }
                               : undefined
