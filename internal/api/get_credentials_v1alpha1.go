@@ -59,20 +59,28 @@ func (s *server) GetCredentials(
 		)
 	}
 
-	secret = redactPassword(secret)
+	secret = redactCredentialSecretValues(secret)
 
 	return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
 		Credentials: typesv1alpha1.ToSecretProto(&secret),
 	}), nil
 }
 
-func redactPassword(secret corev1.Secret) corev1.Secret {
+// redactCredentialSecretValues returns a copy of the secret with all values in
+// the stringData map redacted except for those with specific keys that are
+// known to represent non-sensitive information when used correctly. Note: The
+// primary intention, at present, is only to redact the value associated with
+// the "password" key, but this approach prevents accidental exposure of the
+// password in the event that it has accidentally been assigned to a
+// wrong/unknown key, such as "pass" or "passwd".
+func redactCredentialSecretValues(secret corev1.Secret) corev1.Secret {
 	secret.StringData = make(map[string]string, len(secret.Data))
 	for k, v := range secret.Data {
-		if k == "password" {
-			secret.StringData[k] = "*** REDACTED ***"
-		} else {
+		switch k {
+		case "repoURL", "repoURLPattern", "username":
 			secret.StringData[k] = string(v)
+		default:
+			secret.StringData[k] = "*** REDACTED ***"
 		}
 	}
 	secret.Data = nil
