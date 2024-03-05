@@ -6,8 +6,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -39,7 +41,22 @@ func (s *server) GetCredentials(
 		},
 		&secret,
 	); err != nil {
-		return nil, errors.Wrapf(err, "get secret %s", name)
+		if kubeerr.IsNotFound(err) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, errors.Wrap(err, "get secret")
+	}
+
+	// If this isn't labeled as repository credentials, return not found.
+	var isCredentials bool
+	if secret.Labels != nil {
+		_, isCredentials = secret.Labels[kargoapi.CredentialTypeLabelKey]
+	}
+	if !isCredentials {
+		return nil, connect.NewError(
+			connect.CodeNotFound,
+			errors.Errorf("secret %q exists, but is not labeled as credentials", name),
+		)
 	}
 
 	secret = redactPassword(secret)
