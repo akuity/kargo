@@ -21,17 +21,17 @@ import (
 )
 
 type deleteProjectOptions struct {
-	*option.Option
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
-	Config config.CLIConfig
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Names []string
 }
 
-func newProjectCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func newProjectCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &deleteProjectOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("deleted").WithTypeSetter(kubernetes.GetScheme()),
@@ -73,6 +73,7 @@ kargo delete project my-project1 my-project2
 // addFlags adds the flags for the delete project options to the provided
 // command.
 func (o *deleteProjectOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 }
 
@@ -92,10 +93,11 @@ func (o *deleteProjectOptions) validate() error {
 
 // run removes the project(s) based on the options.
 func (o *deleteProjectOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {

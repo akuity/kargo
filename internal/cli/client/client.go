@@ -7,11 +7,23 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
 
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
+
+type Options struct {
+	InsecureTLS bool
+	LocalServer bool
+}
+
+// AddFlags adds the flags for the client options to the provided flag set.
+func (o *Options) AddFlags(flags *pflag.FlagSet) {
+	option.InsecureTLS(flags, &o.InsecureTLS)
+	option.LocalServer(flags, &o.LocalServer)
+}
 
 // GetClientFromConfig returns a new client for the Kargo API server located at
 // the address specified in local configuration, using credentials also
@@ -20,20 +32,20 @@ import (
 func GetClientFromConfig(
 	ctx context.Context,
 	cfg config.CLIConfig,
-	opt *option.Option,
+	opts Options,
 ) (
 	svcv1alpha1connect.KargoServiceClient,
 	error,
 ) {
-	if opt.UseLocalServer {
-		return GetClient(opt.LocalServerAddress, "", opt.InsecureTLS), nil
+	if opts.LocalServer {
+		return GetLocalServerClient(ctx, opts)
 	}
 	if cfg.APIAddress == "" || cfg.BearerToken == "" {
 		return nil, errors.New(
 			"seems like you are not logged in; please use `kargo login` to authenticate",
 		)
 	}
-	skipTLSVerify := opt.InsecureTLS || cfg.InsecureSkipTLSVerify
+	skipTLSVerify := opts.InsecureTLS || cfg.InsecureSkipTLSVerify
 	cfg, err := newTokenRefresher().refreshToken(ctx, cfg, skipTLSVerify)
 	if err != nil {
 		return nil, errors.Wrap(err, "error refreshing token")

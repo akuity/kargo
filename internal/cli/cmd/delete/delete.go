@@ -22,17 +22,17 @@ import (
 )
 
 type deleteOptions struct {
-	*option.Option
 	genericiooptions.IOStreams
-	PrintFlags *genericclioptions.PrintFlags
-	Config     config.CLIConfig
+	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Filenames []string
 }
 
-func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &deleteOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("deleted").WithTypeSetter(kubernetes.GetScheme()),
@@ -76,21 +76,17 @@ kargo delete warehouse --project=my-project my-warehouse
 	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
 
 	// Register subcommands.
-	cmd.AddCommand(newProjectCommand(cfg, streams, opt))
-	cmd.AddCommand(newStageCommand(cfg, streams, opt))
-	cmd.AddCommand(newWarehouseCommand(cfg, streams, opt))
+	cmd.AddCommand(newProjectCommand(cfg, streams))
+	cmd.AddCommand(newStageCommand(cfg, streams))
+	cmd.AddCommand(newWarehouseCommand(cfg, streams))
 
 	return cmd
 }
 
 // addFlags adds the flags for the delete options to the provided command.
 func (o *deleteOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to delete resource(s).")
 
@@ -124,10 +120,11 @@ func (o *deleteOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "read manifests")
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	resp, err := kargoSvcCli.DeleteResource(ctx, connect.NewRequest(&kargosvcapi.DeleteResourceRequest{
 		Manifest: manifest,

@@ -25,17 +25,17 @@ import (
 )
 
 type versionOptions struct {
-	*option.Option
-	Config config.CLIConfig
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	ClientOnly bool
 }
 
-func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &versionOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
@@ -70,10 +70,8 @@ kargo version --client
 
 // addFlags adds the flags for the version options to the provided command.
 func (o *versionOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	cmd.Flags().BoolVar(&o.ClientOnly, "client", o.ClientOnly, "If true, shows client version only (no server required)")
 }
@@ -89,8 +87,8 @@ func (o *versionOptions) run(ctx context.Context) error {
 
 	var serverVersion *svcv1alpha1.VersionInfo
 	var serverErr error
-	if !o.UseLocalServer && !o.ClientOnly {
-		serverVersion, serverErr = getServerVersion(ctx, o.Config, o.Option)
+	if !o.ClientOptions.LocalServer && !o.ClientOnly {
+		serverVersion, serverErr = getServerVersion(ctx, o.Config, o.ClientOptions)
 	}
 
 	if printToStdout {
@@ -118,15 +116,21 @@ func (o *versionOptions) run(ctx context.Context) error {
 	return serverErr
 }
 
-func getServerVersion(ctx context.Context, cfg config.CLIConfig, opt *option.Option) (*svcv1alpha1.VersionInfo, error) {
+func getServerVersion(
+	ctx context.Context,
+	cfg config.CLIConfig,
+	opts client.Options,
+) (*svcv1alpha1.VersionInfo, error) {
 	if cfg.APIAddress == "" || cfg.BearerToken == "" {
 		return nil, nil
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
+
 	resp, err := kargoSvcCli.GetVersionInfo(
 		ctx,
 		connect.NewRequest(&svcv1alpha1.GetVersionInfoRequest{}),

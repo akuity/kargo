@@ -4,19 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	"github.com/akuity/kargo/internal/cli/config"
 )
-
-type Option struct {
-	InsecureTLS        bool
-	LocalServerAddress string
-	UseLocalServer     bool
-}
-
-func NewOption(cfg config.CLIConfig) *Option {
-	return &Option{}
-}
 
 // ExactArgs is a wrapper around cobra.ExactArgs to additionally print usage string
 func ExactArgs(n int) cobra.PositionalArgs {

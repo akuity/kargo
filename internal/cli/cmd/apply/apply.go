@@ -23,17 +23,17 @@ import (
 )
 
 type applyOptions struct {
-	*option.Option
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
-	Config config.CLIConfig
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Filenames []string
 }
 
-func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &applyOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
@@ -72,12 +72,8 @@ kargo apply -f stages/
 
 // addFlags adds the flags for the apply options to the provided command.
 func (o *applyOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to apply the resource(s)")
 
@@ -111,10 +107,11 @@ func (o *applyOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "read manifests")
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	// TODO: Current implementation of apply is not the same as `kubectl` does.
 	// It actually "replaces" resource with the given file.

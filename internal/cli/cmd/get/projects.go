@@ -19,26 +19,21 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
-	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type getProjectsOptions struct {
-	*option.Option
-	Config config.CLIConfig
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Names []string
 }
 
-func newGetProjectsCommand(
-	cfg config.CLIConfig,
-	streams genericiooptions.IOStreams,
-	opt *option.Option,
-) *cobra.Command {
+func newGetProjectsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &getProjectsOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
@@ -78,6 +73,7 @@ kargo get project my-project
 
 // addFlags adds the flags for the get projects options to the provided command.
 func (o *getProjectsOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 }
 
@@ -88,10 +84,11 @@ func (o *getProjectsOptions) complete(args []string) {
 
 // run gets the projects from the server and prints them to the console.
 func (o *getProjectsOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	if len(o.Names) == 0 {
 		var resp *connect.Response[v1alpha1.ListProjectsResponse]

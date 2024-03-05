@@ -22,8 +22,8 @@ const (
 )
 
 type refreshOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Project      string
 	ResourceType string
@@ -31,7 +31,7 @@ type refreshOptions struct {
 	Wait         bool
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "refresh TYPE NAME [--wait]",
 		Short: "Refresh a stage or warehouse",
@@ -46,18 +46,15 @@ kargo refresh stage --project=my-project my-stage
 	}
 
 	// Register subcommands.
-	cmd.AddCommand(newRefreshWarehouseCommand(cfg, opt))
-	cmd.AddCommand(newRefreshStageCommand(cfg, opt))
+	cmd.AddCommand(newRefreshWarehouseCommand(cfg))
+	cmd.AddCommand(newRefreshStageCommand(cfg))
 
 	return cmd
 }
 
 // addFlags adds the flags for the refresh options to the provided command.
 func (o *refreshOptions) addFlags(cmd *cobra.Command) {
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 
 	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project the resource belongs to. If not set, the default project will be used.")
@@ -93,10 +90,11 @@ func (o *refreshOptions) validate() error {
 
 // run performs the refresh operation based on the provided options.
 func (o *refreshOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	switch o.ResourceType {
 	case refreshResourceTypeWarehouse:

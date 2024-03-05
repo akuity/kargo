@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
-func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get TYPE [NAME ...]",
 		Short: "Display one or many resources",
@@ -31,17 +31,12 @@ kargo get promotions --project=my-project --stage=my-stage
 `,
 	}
 
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), opt)
-	option.LocalServer(cmd.PersistentFlags(), opt)
-
 	// Register subcommands.
-	cmd.AddCommand(newGetFreightCommand(cfg, streams, opt))
-	cmd.AddCommand(newGetProjectsCommand(cfg, streams, opt))
-	cmd.AddCommand(newGetPromotionsCommand(cfg, streams, opt))
-	cmd.AddCommand(newGetStagesCommand(cfg, streams, opt))
-	cmd.AddCommand(newGetWarehousesCommand(cfg, streams, opt))
+	cmd.AddCommand(newGetFreightCommand(cfg, streams))
+	cmd.AddCommand(newGetProjectsCommand(cfg, streams))
+	cmd.AddCommand(newGetPromotionsCommand(cfg, streams))
+	cmd.AddCommand(newGetStagesCommand(cfg, streams))
+	cmd.AddCommand(newGetWarehousesCommand(cfg, streams))
 	return cmd
 }
 

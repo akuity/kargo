@@ -21,6 +21,12 @@ const (
 	// FreightAliasFlag is the flag name for the freight-alias flag.
 	FreightAliasFlag = "freight-alias"
 
+	// InsecureTLSFlag is the flag name for the insecure-tls flag.
+	InsecureTLSFlag = "insecure-skip-tls-verify"
+
+	// LocalServerFlag is the flag name for the local-server flag.
+	LocalServerFlag = "local-server"
+
 	// NameFlag is the flag name for the name flag.
 	NameFlag = "name"
 
@@ -70,12 +76,14 @@ func FreightAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, FreightAliasFlag, "", usage)
 }
 
-func InsecureTLS(fs *pflag.FlagSet, opt *Option) {
-	fs.BoolVar(&opt.InsecureTLS, "insecure-skip-tls-verify", false, "Skip TLS certificate verification")
+// InsecureTLS adds the InsecureTLSFlag to the provided flag set.
+func InsecureTLS(fs *pflag.FlagSet, insecure *bool) {
+	fs.BoolVar(insecure, InsecureTLSFlag, false, "Skip TLS certificate verification")
 }
 
-func LocalServer(fs *pflag.FlagSet, opt *Option) {
-	fs.BoolVar(&opt.UseLocalServer, "local-server", false, "Use local server")
+// LocalServer adds the LocalServerFlag to the provided flag set.
+func LocalServer(fs *pflag.FlagSet, localServer *bool) {
+	fs.BoolVar(localServer, LocalServerFlag, false, "Use local server")
 }
 
 // Name adds the NameFlag to the provided flag set.

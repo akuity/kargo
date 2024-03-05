@@ -23,19 +23,19 @@ import (
 )
 
 type getFreightOptions struct {
-	*option.Option
-	Config config.CLIConfig
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Project string
 	Names   []string
 	Aliases []string
 }
 
-func newGetFreightCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func newGetFreightCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &getFreightOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
@@ -92,6 +92,7 @@ kargo get freight --alias=wonky-wombat
 
 // addFlags adds the flags for the get freight options to the provided command.
 func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
@@ -115,10 +116,11 @@ func (o *getFreightOptions) validate() error {
 
 // run gets the freight from the server and prints it to the console.
 func (o *getFreightOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	if len(o.Names) == 0 && len(o.Aliases) == 0 {
 		var resp *connect.Response[v1alpha1.QueryFreightResponse]

@@ -24,18 +24,18 @@ import (
 )
 
 type getStagesOptions struct {
-	*option.Option
-	Config config.CLIConfig
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Project string
 	Names   []string
 }
 
-func newGetStagesCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func newGetStagesCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &getStagesOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
@@ -87,6 +87,7 @@ kargo get stage qa
 
 // addFlags adds the flags for the get stages options to the provided command.
 func (o *getStagesOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
@@ -111,10 +112,11 @@ func (o *getStagesOptions) validate() error {
 
 // run gets the stages from the server and prints them to the console.
 func (o *getStagesOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	if len(o.Names) == 0 {
 		var resp *connect.Response[v1alpha1.ListStagesResponse]

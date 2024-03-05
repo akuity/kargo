@@ -21,18 +21,18 @@ import (
 )
 
 type deleteWarehouseOptions struct {
-	*option.Option
-	Config config.CLIConfig
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Project string
 	Names   []string
 }
 
-func newWarehouseCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func newWarehouseCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &deleteWarehouseOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("deleted").WithTypeSetter(runtime.NewScheme()),
@@ -73,6 +73,7 @@ kargo delete warehouse my-warehouse
 // addFlags adds the flags for the delete warehouse options to the provided
 // command.
 func (o *deleteWarehouseOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
@@ -102,10 +103,11 @@ func (o *deleteWarehouseOptions) validate() error {
 
 // run removes the warehouse(s) based on the options.
 func (o *deleteWarehouseOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {

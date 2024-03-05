@@ -24,23 +24,19 @@ import (
 )
 
 type getPromotionsOptions struct {
-	*option.Option
-	Config config.CLIConfig
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Project string
 	Stage   string
 	Names   []string
 }
 
-func newGetPromotionsCommand(
-	cfg config.CLIConfig,
-	streams genericiooptions.IOStreams,
-	opt *option.Option,
-) *cobra.Command {
+func newGetPromotionsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &getPromotionsOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
@@ -99,6 +95,7 @@ kargo get promotion abc1234
 
 // addFlags adds the flags for the get promotions options to the provided command.
 func (o *getPromotionsOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
@@ -127,10 +124,11 @@ func (o *getPromotionsOptions) validate() error {
 
 // run gets the promotions from the server and prints them to the console.
 func (o *getPromotionsOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	if len(o.Names) == 0 {
 		var resp *connect.Response[v1alpha1.ListPromotionsResponse]

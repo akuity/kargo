@@ -15,8 +15,8 @@ import (
 )
 
 type updateFreightAliasOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Project  string
 	Name     string
@@ -24,9 +24,8 @@ type updateFreightAliasOptions struct {
 	NewAlias string
 }
 
-func newUpdateFreightAliasCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newUpdateFreightAliasCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &updateFreightAliasOptions{
-		Option: opt,
 		Config: cfg,
 	}
 
@@ -67,6 +66,8 @@ kargo update freight --old-alias=wonky-wombat --new-alias=frozen-fox
 // addFlags adds the flags for the update freight alias options to the provided
 // command.
 func (o *updateFreightAliasOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
+
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project the freight belongs to. If not set, the default project will be used.",
@@ -106,10 +107,11 @@ func (o *updateFreightAliasOptions) validate() error {
 
 // run updates the freight alias using the options.
 func (o *updateFreightAliasOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	if _, err = kargoSvcCli.UpdateFreightAlias(
 		ctx,

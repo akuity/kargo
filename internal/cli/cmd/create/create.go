@@ -22,17 +22,17 @@ import (
 )
 
 type createOptions struct {
-	*option.Option
-	Config config.CLIConfig
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Filenames []string
 }
 
-func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &createOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("created").WithTypeSetter(kubernetes.GetScheme()),
@@ -67,19 +67,15 @@ kargo create project my-project
 	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
 
 	// Register subcommands.
-	cmd.AddCommand(newProjectCommand(cfg, streams, opt))
+	cmd.AddCommand(newProjectCommand(cfg, streams))
 
 	return cmd
 }
 
 // addFlags adds the flags for the create options to the provided command.
 func (o *createOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to create resource(s).")
 
@@ -118,10 +114,12 @@ func (o *createOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "create printer")
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
+
 	resp, err := kargoSvcCli.CreateResource(ctx, connect.NewRequest(&kargosvcapi.CreateResourceRequest{
 		Manifest: manifest,
 	}))

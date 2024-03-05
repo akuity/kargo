@@ -37,8 +37,7 @@ const defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST
 var assets embed.FS
 
 type loginOptions struct {
-	*option.Option
-
+	InsecureTLS   bool
 	UseAdmin      bool
 	UseKubeconfig bool
 	UseSSO        bool
@@ -47,8 +46,8 @@ type loginOptions struct {
 	ServerAddress string
 }
 
-func NewCommand(opt *option.Option) *cobra.Command {
-	cmdOpts := &loginOptions{Option: opt}
+func NewCommand() *cobra.Command {
+	cmdOpts := &loginOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "login SERVER_ADDRESS (--admin | --kubeconfig | --sso)",
@@ -86,7 +85,7 @@ kargo login https://kargo.example.com --kubeconfig --insecure-tls
 
 // addFlags adds the flags for the login options to the provided command.
 func (o *loginOptions) addFlags(cmd *cobra.Command) {
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
+	option.InsecureTLS(cmd.PersistentFlags(), &o.InsecureTLS)
 
 	cmd.Flags().BoolVar(&o.UseAdmin, "admin", false,
 		"Log in as the Kargo admin user. If set, --kubeconfig and --sso must not be set.")

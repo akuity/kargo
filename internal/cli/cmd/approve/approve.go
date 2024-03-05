@@ -15,8 +15,8 @@ import (
 )
 
 type approvalOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Project      string
 	FreightName  string
@@ -24,9 +24,8 @@ type approvalOptions struct {
 	Stage        string
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &approvalOptions{
-		Option: opt,
 		Config: cfg,
 	}
 
@@ -66,10 +65,7 @@ kargo approve --freight-alias=wonky-wombat --stage=qa
 
 // addFlags adds the flags for the approval options to the provided command.
 func (o *approvalOptions) addFlags(cmd *cobra.Command) {
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
@@ -110,10 +106,11 @@ func (o *approvalOptions) validate() error {
 
 // run performs the approval of a freight based on the options.
 func (o *approvalOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	if _, err = kargoSvcCli.ApproveFreight(
 		ctx,

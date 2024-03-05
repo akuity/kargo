@@ -20,10 +20,11 @@ import (
 )
 
 type promotionOptions struct {
-	*option.Option
-	Config config.CLIConfig
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Project       string
 	FreightName   string
@@ -32,9 +33,8 @@ type promotionOptions struct {
 	SubscribersOf string
 }
 
-func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &promotionOptions{
-		Option:     opt,
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("promotion created").WithTypeSetter(kubernetes.GetScheme()),
@@ -96,12 +96,8 @@ kargo promote --freight-alias=wonky-wombat --subscribers-of=qas
 
 // addFlags adds the flags for the promotion options to the provided command.
 func (o *promotionOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
@@ -157,10 +153,11 @@ func (o *promotionOptions) validate() error {
 
 // run performs the promotion of the freight using the options.
 func (o *promotionOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "get client from config")
 	}
+	defer client.CloseIfPossible(kargoSvcCli)
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
