@@ -20,7 +20,8 @@ type deleteWarehouseOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Names []string
+	Project string
+	Names   []string
 }
 
 func newWarehouseCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
@@ -66,7 +67,7 @@ kargo delete warehouse my-warehouse
 func (o *deleteWarehouseOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
+	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project for which to delete Warehouses. If not set, the default project will be used.")
 }
 

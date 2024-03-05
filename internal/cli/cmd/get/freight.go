@@ -23,6 +23,7 @@ type getFreightOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
+	Project string
 	Names   []string
 	Aliases []string
 }
@@ -82,7 +83,7 @@ func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to get freight. If not set, the default project will be used.",
 	)
 	option.Names(cmd.Flags(), &o.Names, "The name of a piece of freight to get.")

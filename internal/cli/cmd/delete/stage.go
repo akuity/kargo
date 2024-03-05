@@ -20,7 +20,8 @@ type deleteStageOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Names []string
+	Project string
+	Names   []string
 }
 
 func newStageCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
@@ -65,7 +66,7 @@ kargo delete stage my-stage
 func (o *deleteStageOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
+	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project for which to delete Stages. If not set, the default project will be used.")
 }
 

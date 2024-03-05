@@ -24,8 +24,9 @@ type getPromotionsOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Stage string
-	Names []string
+	Project string
+	Stage   string
+	Names   []string
 }
 
 func newGetPromotionsCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
@@ -85,7 +86,7 @@ func (o *getPromotionsOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list promotions. If not set, the default project will be used.",
 	)
 	option.Stage(

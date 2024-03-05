@@ -19,16 +19,12 @@ type Option struct {
 	LocalServerAddress string
 	UseLocalServer     bool
 
-	Project string
-
 	IOStreams  *genericiooptions.IOStreams
 	PrintFlags *genericclioptions.PrintFlags
 }
 
 func NewOption(cfg config.CLIConfig) *Option {
-	return &Option{
-		Project: cfg.Project,
-	}
+	return &Option{}
 }
 
 func NewScheme() (*runtime.Scheme, error) {

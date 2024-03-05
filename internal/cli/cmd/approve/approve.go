@@ -18,6 +18,7 @@ type approvalOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
+	Project      string
 	FreightName  string
 	FreightAlias string
 	Stage        string
@@ -71,7 +72,7 @@ func (o *approvalOptions) addFlags(cmd *cobra.Command) {
 	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project the freight belongs to. If not set, the default project will be used.",
 	)
 	option.Freight(cmd.Flags(), &o.FreightName, "The name of the freight to approve.")

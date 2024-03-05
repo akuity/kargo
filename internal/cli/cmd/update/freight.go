@@ -18,6 +18,7 @@ type updateFreightAliasOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
+	Project  string
 	Name     string
 	OldAlias string
 	NewAlias string
@@ -67,7 +68,7 @@ kargo update freight --old-alias=wonky-wombat --new-alias=frozen-fox
 // command.
 func (o *updateFreightAliasOptions) addFlags(cmd *cobra.Command) {
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project the freight belongs to. If not set, the default project will be used.",
 	)
 	option.Name(cmd.Flags(), &o.Name, "The name of the freight to to be updated.")

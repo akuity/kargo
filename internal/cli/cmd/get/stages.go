@@ -24,7 +24,8 @@ type getStagesOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Names []string
+	Project string
+	Names   []string
 }
 
 func newGetStagesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
@@ -77,7 +78,7 @@ func (o *getStagesOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list stages. If not set, the default project will be used.",
 	)
 }

@@ -25,6 +25,7 @@ type refreshOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
+	Project      string
 	ResourceType string
 	Name         string
 	Wait         bool
@@ -58,7 +59,7 @@ func (o *refreshOptions) addFlags(cmd *cobra.Command) {
 	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
 	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
+	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project the resource belongs to. If not set, the default project will be used.")
 	option.Wait(cmd.Flags(), &o.Wait, false, "Wait for the refresh to complete.")
 }

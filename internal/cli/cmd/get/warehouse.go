@@ -21,7 +21,8 @@ type getWarehousesOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Names []string
+	Project string
+	Names   []string
 }
 
 func newGetWarehousesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
@@ -75,7 +76,7 @@ func (o *getWarehousesOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list Warehouses. If not set, the default project will be used.",
 	)
 }
