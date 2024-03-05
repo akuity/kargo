@@ -2672,3 +2672,66 @@ export class AnalysisRunReference extends Message<AnalysisRunReference> {
   }
 }
 
+/**
+ * TODO: Don't define this ourselves
+ *
+ * @generated from message github.com.akuity.kargo.pkg.api.v1alpha1.Secret
+ */
+export class Secret extends Message<Secret> {
+  /**
+   * @generated from field: string api_version = 1;
+   */
+  apiVersion = "";
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind = "";
+
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta metadata = 3;
+   */
+  metadata?: ObjectMeta;
+
+  /**
+   * @generated from field: string type = 4;
+   */
+  type = "";
+
+  /**
+   * @generated from field: map<string, string> string_data = 5;
+   */
+  stringData: { [key: string]: string } = {};
+
+  constructor(data?: PartialMessage<Secret>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "github.com.akuity.kargo.pkg.api.v1alpha1.Secret";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "api_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "metadata", kind: "message", T: ObjectMeta },
+    { no: 4, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "string_data", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Secret {
+    return new Secret().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Secret {
+    return new Secret().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Secret {
+    return new Secret().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Secret | PlainMessage<Secret> | undefined, b: Secret | PlainMessage<Secret> | undefined): boolean {
+    return proto3.util.equals(Secret, a, b);
+  }
+}
+

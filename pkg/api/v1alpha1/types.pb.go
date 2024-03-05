@@ -3443,6 +3443,86 @@ func (x *AnalysisRunReference) GetPhase() string {
 	return ""
 }
 
+// TODO: Don't define this ourselves
+type Secret struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ApiVersion string             `protobuf:"bytes,1,opt,name=api_version,json=apiVersion,proto3" json:"api_version,omitempty"`
+	Kind       string             `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Metadata   *metav1.ObjectMeta `protobuf:"bytes,3,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Type       string             `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	StringData map[string]string  `protobuf:"bytes,5,rep,name=string_data,json=stringData,proto3" json:"string_data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+}
+
+func (x *Secret) Reset() {
+	*x = Secret{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_v1alpha1_types_proto_msgTypes[55]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Secret) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Secret) ProtoMessage() {}
+
+func (x *Secret) ProtoReflect() protoreflect.Message {
+	mi := &file_v1alpha1_types_proto_msgTypes[55]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Secret.ProtoReflect.Descriptor instead.
+func (*Secret) Descriptor() ([]byte, []int) {
+	return file_v1alpha1_types_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *Secret) GetApiVersion() string {
+	if x != nil {
+		return x.ApiVersion
+	}
+	return ""
+}
+
+func (x *Secret) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *Secret) GetMetadata() *metav1.ObjectMeta {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+func (x *Secret) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *Secret) GetStringData() map[string]string {
+	if x != nil {
+		return x.StringData
+	}
+	return nil
+}
+
 var File_v1alpha1_types_proto protoreflect.FileDescriptor
 
 var file_v1alpha1_types_proto_rawDesc = []byte{
@@ -4110,27 +4190,47 @@ var file_v1alpha1_types_proto_rawDesc = []byte{
 	0x61, 0x63, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6e, 0x61, 0x6d, 0x65, 0x73,
 	0x70, 0x61, 0x63, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01,
 	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x70, 0x68, 0x61, 0x73,
-	0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x70, 0x68, 0x61, 0x73, 0x65, 0x42, 0xad,
-	0x02, 0x0a, 0x2c, 0x63, 0x6f, 0x6d, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70,
-	0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x42,
-	0x0a, 0x54, 0x79, 0x70, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x28, 0x67,
-	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x76,
-	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xa2, 0x02, 0x06, 0x47, 0x43, 0x41, 0x4b, 0x50, 0x41,
-	0xaa, 0x02, 0x28, 0x47, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x43, 0x6f, 0x6d, 0x2e, 0x41, 0x6b,
-	0x75, 0x69, 0x74, 0x79, 0x2e, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x50, 0x6b, 0x67, 0x2e, 0x41,
-	0x70, 0x69, 0x2e, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02, 0x28, 0x47, 0x69,
-	0x74, 0x68, 0x75, 0x62, 0x5c, 0x43, 0x6f, 0x6d, 0x5c, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c,
-	0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x50, 0x6b, 0x67, 0x5c, 0x41, 0x70, 0x69, 0x5c, 0x56, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2, 0x02, 0x34, 0x47, 0x69, 0x74, 0x68, 0x75, 0x62, 0x5c,
-	0x43, 0x6f, 0x6d, 0x5c, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f,
-	0x5c, 0x50, 0x6b, 0x67, 0x5c, 0x41, 0x70, 0x69, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
-	0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x2e,
-	0x47, 0x69, 0x74, 0x68, 0x75, 0x62, 0x3a, 0x3a, 0x43, 0x6f, 0x6d, 0x3a, 0x3a, 0x41, 0x6b, 0x75,
-	0x69, 0x74, 0x79, 0x3a, 0x3a, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x3a, 0x3a, 0x50, 0x6b, 0x67, 0x3a,
-	0x3a, 0x41, 0x70, 0x69, 0x3a, 0x3a, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x70, 0x68, 0x61, 0x73, 0x65, 0x22, 0xc3,
+	0x02, 0x0a, 0x06, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x61, 0x70, 0x69,
+	0x5f, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a,
+	0x61, 0x70, 0x69, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x6b, 0x69,
+	0x6e, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6b, 0x69, 0x6e, 0x64, 0x12, 0x4e,
+	0x0a, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x32, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61,
+	0x70, 0x69, 0x2e, 0x6d, 0x65, 0x74, 0x61, 0x76, 0x31, 0x2e, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74,
+	0x4d, 0x65, 0x74, 0x61, 0x52, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x12, 0x12,
+	0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79,
+	0x70, 0x65, 0x12, 0x61, 0x0a, 0x0b, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x5f, 0x64, 0x61, 0x74,
+	0x61, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x40, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
+	0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67,
+	0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x2e, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67,
+	0x44, 0x61, 0x74, 0x61, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x0a, 0x73, 0x74, 0x72, 0x69, 0x6e,
+	0x67, 0x44, 0x61, 0x74, 0x61, 0x1a, 0x3d, 0x0a, 0x0f, 0x53, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x44,
+	0x61, 0x74, 0x61, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61,
+	0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
+	0x3a, 0x02, 0x38, 0x01, 0x42, 0xad, 0x02, 0x0a, 0x2c, 0x63, 0x6f, 0x6d, 0x2e, 0x67, 0x69, 0x74,
+	0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b,
+	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x70, 0x6b, 0x67, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x42, 0x0a, 0x54, 0x79, 0x70, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x74,
+	0x6f, 0x50, 0x01, 0x5a, 0x28, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
+	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f, 0x70, 0x6b, 0x67,
+	0x2f, 0x61, 0x70, 0x69, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xa2, 0x02, 0x06,
+	0x47, 0x43, 0x41, 0x4b, 0x50, 0x41, 0xaa, 0x02, 0x28, 0x47, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
+	0x43, 0x6f, 0x6d, 0x2e, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x4b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x50, 0x6b, 0x67, 0x2e, 0x41, 0x70, 0x69, 0x2e, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0xca, 0x02, 0x28, 0x47, 0x69, 0x74, 0x68, 0x75, 0x62, 0x5c, 0x43, 0x6f, 0x6d, 0x5c, 0x41,
+	0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x50, 0x6b, 0x67, 0x5c,
+	0x41, 0x70, 0x69, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2, 0x02, 0x34, 0x47,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x5c, 0x43, 0x6f, 0x6d, 0x5c, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x50, 0x6b, 0x67, 0x5c, 0x41, 0x70, 0x69, 0x5c, 0x56,
+	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64,
+	0x61, 0x74, 0x61, 0xea, 0x02, 0x2e, 0x47, 0x69, 0x74, 0x68, 0x75, 0x62, 0x3a, 0x3a, 0x43, 0x6f,
+	0x6d, 0x3a, 0x3a, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x3a, 0x3a, 0x4b, 0x61, 0x72, 0x67, 0x6f,
+	0x3a, 0x3a, 0x50, 0x6b, 0x67, 0x3a, 0x3a, 0x41, 0x70, 0x69, 0x3a, 0x3a, 0x56, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -4145,7 +4245,7 @@ func file_v1alpha1_types_proto_rawDescGZIP() []byte {
 	return file_v1alpha1_types_proto_rawDescData
 }
 
-var file_v1alpha1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 60)
+var file_v1alpha1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 62)
 var file_v1alpha1_types_proto_goTypes = []interface{}{
 	(*ArgoCDAppUpdate)(nil),               // 0: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
 	(*ArgoCDHelm)(nil),                    // 1: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDHelm
@@ -4202,14 +4302,16 @@ var file_v1alpha1_types_proto_goTypes = []interface{}{
 	(*AnalysisRunArgument)(nil),           // 52: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunArgument
 	(*VerificationInfo)(nil),              // 53: github.com.akuity.kargo.pkg.api.v1alpha1.VerificationInfo
 	(*AnalysisRunReference)(nil),          // 54: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunReference
-	nil,                                   // 55: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus.MetadataEntry
-	nil,                                   // 56: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry
-	nil,                                   // 57: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry
-	nil,                                   // 58: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.LabelsEntry
-	nil,                                   // 59: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.AnnotationsEntry
-	(*metav1.ObjectMeta)(nil),             // 60: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
-	(*metav1.ListMeta)(nil),               // 61: github.com.akuity.kargo.pkg.api.metav1.ListMeta
-	(*timestamppb.Timestamp)(nil),         // 62: google.protobuf.Timestamp
+	(*Secret)(nil),                        // 55: github.com.akuity.kargo.pkg.api.v1alpha1.Secret
+	nil,                                   // 56: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus.MetadataEntry
+	nil,                                   // 57: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry
+	nil,                                   // 58: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry
+	nil,                                   // 59: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.LabelsEntry
+	nil,                                   // 60: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.AnnotationsEntry
+	nil,                                   // 61: github.com.akuity.kargo.pkg.api.v1alpha1.Secret.StringDataEntry
+	(*metav1.ObjectMeta)(nil),             // 62: github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	(*metav1.ListMeta)(nil),               // 63: github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	(*timestamppb.Timestamp)(nil),         // 64: google.protobuf.Timestamp
 }
 var file_v1alpha1_types_proto_depIdxs = []int32{
 	5,  // 0: github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate.source_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDSourceUpdate
@@ -4228,36 +4330,36 @@ var file_v1alpha1_types_proto_depIdxs = []int32{
 	16, // 13: github.com.akuity.kargo.pkg.api.v1alpha1.HelmPromotionMechanism.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.HelmChartDependencyUpdate
 	20, // 14: github.com.akuity.kargo.pkg.api.v1alpha1.PullRequestPromotionMechanism.github:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitHubPullRequest
 	23, // 15: github.com.akuity.kargo.pkg.api.v1alpha1.KustomizePromotionMechanism.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.KustomizeImageUpdate
-	60, // 16: github.com.akuity.kargo.pkg.api.v1alpha1.Project.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	62, // 16: github.com.akuity.kargo.pkg.api.v1alpha1.Project.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
 	26, // 17: github.com.akuity.kargo.pkg.api.v1alpha1.Project.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ProjectStatus
-	60, // 18: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	62, // 18: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
 	32, // 19: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionSpec
 	33, // 20: github.com.akuity.kargo.pkg.api.v1alpha1.Promotion.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus
 	42, // 21: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo.freight:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightReference
-	61, // 22: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	63, // 22: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
 	27, // 23: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Promotion
 	10, // 24: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms.git_repo_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitRepoUpdate
 	0,  // 25: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms.argocd_app_updates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ArgoCDAppUpdate
-	55, // 26: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus.metadata:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus.MetadataEntry
+	56, // 26: github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus.metadata:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionStatus.MetadataEntry
 	11, // 27: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.git:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitSubscription
 	22, // 28: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.image:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ImageSubscription
 	8,  // 29: github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription.chart:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ChartSubscription
-	60, // 30: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	62, // 30: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
 	37, // 31: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec
 	43, // 32: github.com.akuity.kargo.pkg.api.v1alpha1.Stage.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus
-	61, // 33: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
+	63, // 33: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ListMeta
 	35, // 34: github.com.akuity.kargo.pkg.api.v1alpha1.StageList.items:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Stage
 	45, // 35: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.subscriptions:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions
 	30, // 36: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.promotion_mechanisms:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionMechanisms
 	49, // 37: github.com.akuity.kargo.pkg.api.v1alpha1.StageSpec.verification:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Verification
-	60, // 38: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	62, // 38: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
 	9,  // 39: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.commits:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
 	21, // 40: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Image
 	7,  // 41: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Chart
 	39, // 42: github.com.akuity.kargo.pkg.api.v1alpha1.Freight.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus
-	56, // 43: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.verified_in:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry
-	57, // 44: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.approved_for:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry
-	62, // 45: github.com.akuity.kargo.pkg.api.v1alpha1.FreightReference.first_seen:type_name -> google.protobuf.Timestamp
+	57, // 43: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.verified_in:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry
+	58, // 44: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.approved_for:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry
+	64, // 45: github.com.akuity.kargo.pkg.api.v1alpha1.FreightReference.first_seen:type_name -> google.protobuf.Timestamp
 	9,  // 46: github.com.akuity.kargo.pkg.api.v1alpha1.FreightReference.commits:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.GitCommit
 	21, // 47: github.com.akuity.kargo.pkg.api.v1alpha1.FreightReference.images:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Image
 	7,  // 48: github.com.akuity.kargo.pkg.api.v1alpha1.FreightReference.charts:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Chart
@@ -4267,23 +4369,25 @@ var file_v1alpha1_types_proto_depIdxs = []int32{
 	12, // 52: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.health:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Health
 	28, // 53: github.com.akuity.kargo.pkg.api.v1alpha1.StageStatus.current_promotion:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.PromotionInfo
 	44, // 54: github.com.akuity.kargo.pkg.api.v1alpha1.Subscriptions.upstream_stages:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.StageSubscription
-	60, // 55: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	62, // 55: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
 	47, // 56: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.spec:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec
 	48, // 57: github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse.status:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseStatus
 	34, // 58: github.com.akuity.kargo.pkg.api.v1alpha1.WarehouseSpec.subscriptions:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.RepoSubscription
 	50, // 59: github.com.akuity.kargo.pkg.api.v1alpha1.Verification.analysis_templates:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisTemplateReference
 	51, // 60: github.com.akuity.kargo.pkg.api.v1alpha1.Verification.analysis_run_metadata:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata
 	52, // 61: github.com.akuity.kargo.pkg.api.v1alpha1.Verification.args:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunArgument
-	58, // 62: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.labels:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.LabelsEntry
-	59, // 63: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.annotations:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.AnnotationsEntry
+	59, // 62: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.labels:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.LabelsEntry
+	60, // 63: github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.annotations:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunMetadata.AnnotationsEntry
 	54, // 64: github.com.akuity.kargo.pkg.api.v1alpha1.VerificationInfo.analysis_run:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.AnalysisRunReference
-	40, // 65: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage
-	41, // 66: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage
-	67, // [67:67] is the sub-list for method output_type
-	67, // [67:67] is the sub-list for method input_type
-	67, // [67:67] is the sub-list for extension type_name
-	67, // [67:67] is the sub-list for extension extendee
-	0,  // [0:67] is the sub-list for field type_name
+	62, // 65: github.com.akuity.kargo.pkg.api.v1alpha1.Secret.metadata:type_name -> github.com.akuity.kargo.pkg.api.metav1.ObjectMeta
+	61, // 66: github.com.akuity.kargo.pkg.api.v1alpha1.Secret.string_data:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.Secret.StringDataEntry
+	40, // 67: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.VerifiedInEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.VerifiedStage
+	41, // 68: github.com.akuity.kargo.pkg.api.v1alpha1.FreightStatus.ApprovedForEntry.value:type_name -> github.com.akuity.kargo.pkg.api.v1alpha1.ApprovedStage
+	69, // [69:69] is the sub-list for method output_type
+	69, // [69:69] is the sub-list for method input_type
+	69, // [69:69] is the sub-list for extension type_name
+	69, // [69:69] is the sub-list for extension extendee
+	0,  // [0:69] is the sub-list for field type_name
 }
 
 func init() { file_v1alpha1_types_proto_init() }
@@ -4952,6 +5056,18 @@ func file_v1alpha1_types_proto_init() {
 				return nil
 			}
 		}
+		file_v1alpha1_types_proto_msgTypes[55].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Secret); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	file_v1alpha1_types_proto_msgTypes[0].OneofWrappers = []interface{}{}
 	file_v1alpha1_types_proto_msgTypes[5].OneofWrappers = []interface{}{}
@@ -4973,7 +5089,7 @@ func file_v1alpha1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_v1alpha1_types_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   60,
+			NumMessages:   62,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

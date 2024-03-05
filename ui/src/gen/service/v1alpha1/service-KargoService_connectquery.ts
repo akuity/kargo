@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -489,3 +489,90 @@ export const refreshWarehouse = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).refreshWarehouse;
+
+/**
+ * Credential APIs 
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials
+ */
+export const createCredentials = createQueryService({
+  service: {
+    methods: {
+      createCredentials: {
+        name: "CreateCredentials",
+        kind: MethodKind.Unary,
+        I: CreateCredentialsRequest,
+        O: CreateCredentialsResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).createCredentials;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials
+ */
+export const deleteCredentials = createQueryService({
+  service: {
+    methods: {
+      deleteCredentials: {
+        name: "DeleteCredentials",
+        kind: MethodKind.Unary,
+        I: DeleteCredentialsRequest,
+        O: DeleteCredentialsResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).deleteCredentials;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials
+ */
+export const getCredentials = createQueryService({
+  service: {
+    methods: {
+      getCredentials: {
+        name: "GetCredentials",
+        kind: MethodKind.Unary,
+        I: GetCredentialsRequest,
+        O: GetCredentialsResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).getCredentials;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials
+ */
+export const listCredentials = createQueryService({
+  service: {
+    methods: {
+      listCredentials: {
+        name: "ListCredentials",
+        kind: MethodKind.Unary,
+        I: ListCredentialsRequest,
+        O: ListCredentialsResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).listCredentials;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials
+ */
+export const updateCredentials = createQueryService({
+  service: {
+    methods: {
+      updateCredentials: {
+        name: "UpdateCredentials",
+        kind: MethodKind.Unary,
+        I: UpdateCredentialsRequest,
+        O: UpdateCredentialsResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).updateCredentials;
