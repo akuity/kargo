@@ -2,19 +2,20 @@ package create
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	sigyaml "sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -22,14 +23,18 @@ import (
 type createProjectOptions struct {
 	*option.Option
 	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
 	Name string
 }
 
-func newProjectCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newProjectCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
 	cmdOpts := &createProjectOptions{
-		Option: opt,
-		Config: cfg,
+		Option:     opt,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("created").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -53,6 +58,11 @@ kargo create project my-project
 
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
+
+	// Set the input/output streams for the command.
+	cmd.SetIn(cmdOpts.IOStreams.In)
+	cmd.SetOut(cmdOpts.IOStreams.Out)
+	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
 
 	return cmd
 }
@@ -113,11 +123,6 @@ func (o *createProjectOptions) run(ctx context.Context) error {
 	projectBytes = resp.Msg.GetResults()[0].GetCreatedResourceManifest()
 	if err = sigyaml.Unmarshal(projectBytes, project); err != nil {
 		return errors.Wrap(err, "unmarshal project")
-	}
-
-	if ptr.Deref(o.PrintFlags.OutputFormat, "") == "" {
-		_, _ = fmt.Fprintf(o.IOStreams.Out, "Project Created: %q\n", o.Name)
-		return nil
 	}
 
 	printer, err := o.PrintFlags.ToPrinter()

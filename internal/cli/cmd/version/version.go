@@ -11,12 +11,14 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	versionpkg "github.com/akuity/kargo/internal/version"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -25,14 +27,18 @@ import (
 type versionOptions struct {
 	*option.Option
 	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
 	ClientOnly bool
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
 	cmdOpts := &versionOptions{
-		Option: opt,
-		Config: cfg,
+		Option:     opt,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -46,13 +52,18 @@ kargo version
 # Print the client version information only
 kargo version --client
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdOpts.run(cmd.Context())
 		},
 	}
 
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
+
+	// Set the input/output streams for the command.
+	cmd.SetIn(cmdOpts.IOStreams.In)
+	cmd.SetOut(cmdOpts.IOStreams.Out)
+	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
 
 	return cmd
 }
@@ -69,11 +80,11 @@ func (o *versionOptions) addFlags(cmd *cobra.Command) {
 
 // run prints the client and server version information.
 func (o *versionOptions) run(ctx context.Context) error {
-	printToStdout := ptr.Deref(o.PrintFlags.OutputFormat, "") == ""
+	printToStdout := o.PrintFlags.OutputFlagSpecified == nil || !o.PrintFlags.OutputFlagSpecified()
 
 	cliVersion := typesv1alpha1.ToVersionProto(versionpkg.GetVersion())
 	if printToStdout {
-		fmt.Println("Client Version:", cliVersion.GetVersion())
+		_, _ = fmt.Fprintln(o.IOStreams.Out, "Client Version:", cliVersion.GetVersion())
 	}
 
 	var serverVersion *svcv1alpha1.VersionInfo
@@ -84,7 +95,7 @@ func (o *versionOptions) run(ctx context.Context) error {
 
 	if printToStdout {
 		if serverVersion != nil {
-			fmt.Println("Server Version:", serverVersion.GetVersion())
+			_, _ = fmt.Fprintln(o.IOStreams.Out, "Server Version:", serverVersion.GetVersion())
 		}
 		return serverErr
 	}

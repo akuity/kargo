@@ -8,11 +8,13 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"k8s.io/utils/ptr"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -20,6 +22,8 @@ import (
 type promotionOptions struct {
 	*option.Option
 	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
 	Project       string
 	FreightName   string
@@ -28,10 +32,12 @@ type promotionOptions struct {
 	SubscribersOf string
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
 	cmdOpts := &promotionOptions{
-		Option: opt,
-		Config: cfg,
+		Option:     opt,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("promotion created").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -68,7 +74,7 @@ kargo promote --freight=abc123 --subscribers-of=qa
 kargo config set-project my-project
 kargo promote --freight-alias=wonky-wombat --subscribers-of=qas
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
@@ -79,6 +85,11 @@ kargo promote --freight-alias=wonky-wombat --subscribers-of=qas
 
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
+
+	// Set the input/output streams for the command.
+	cmd.SetIn(cmdOpts.IOStreams.In)
+	cmd.SetOut(cmdOpts.IOStreams.Out)
+	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
 
 	return cmd
 }
@@ -151,6 +162,11 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		return err
 	}
 
+	printer, err := o.PrintFlags.ToPrinter()
+	if err != nil {
+		return errors.Wrap(err, "new printer")
+	}
+
 	switch {
 	case o.Stage != "":
 		res, err := kargoSvcCli.PromoteStage(
@@ -167,15 +183,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "promote stage")
 		}
-		if ptr.Deref(o.PrintFlags.OutputFormat, "") == "" {
-			fmt.Fprintf(o.IOStreams.Out,
-				"Promotion Created: %q\n", res.Msg.GetPromotion().GetMetadata().GetName())
-			return nil
-		}
-		printer, err := o.PrintFlags.ToPrinter()
-		if err != nil {
-			return errors.Wrap(err, "new printer")
-		}
+
 		promo := typesv1alpha1.FromPromotionProto(res.Msg.GetPromotion())
 		_ = printer.PrintObj(promo, o.IOStreams.Out)
 		return nil
@@ -191,25 +199,10 @@ func (o *promotionOptions) run(ctx context.Context) error {
 				},
 			),
 		)
-		if ptr.Deref(o.PrintFlags.OutputFormat, "") == "" {
-			if res != nil && res.Msg != nil {
-				for _, p := range res.Msg.GetPromotions() {
-					fmt.Fprintf(o.IOStreams.Out, "Promotion Created: %q\n", *p.Metadata.Name)
-				}
-			}
-			if promoteErr != nil {
-				return errors.Wrap(promoteErr, "promote subscribers")
-			}
-			return nil
-		}
 
-		printer, printerErr := o.PrintFlags.ToPrinter()
-		if printerErr != nil {
-			return errors.Wrap(printerErr, "new printer")
-		}
 		for _, p := range res.Msg.GetPromotions() {
-			kubeP := typesv1alpha1.FromPromotionProto(p)
-			_ = printer.PrintObj(kubeP, o.IOStreams.Out)
+			promo := typesv1alpha1.FromPromotionProto(p)
+			_ = printer.PrintObj(promo, o.IOStreams.Out)
 		}
 		return promoteErr
 	}

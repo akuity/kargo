@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -42,7 +41,7 @@ func NewRootCommand(
 	cfg clicfg.CLIConfig,
 	opt *option.Option,
 	rs *rootState,
-) (*cobra.Command, error) {
+) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "kargo",
 		DisableAutoGenTag: true,
@@ -88,30 +87,26 @@ func NewRootCommand(
 		},
 	}
 
-	opt.IOStreams = &genericiooptions.IOStreams{
-		In:     cmd.InOrStdin(),
-		Out:    os.Stdout,
-		ErrOut: os.Stderr,
-	}
-	scheme, err := option.NewScheme()
-	if err != nil {
-		return nil, err
-	}
-	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
+	// Set up the IOStreams for the commands to use.
+	streams := genericiooptions.IOStreams{Out: os.Stdout, ErrOut: os.Stderr, In: os.Stdin}
+	cmd.SetIn(streams.In)
+	cmd.SetOut(streams.Out)
+	cmd.SetErr(streams.ErrOut)
 
-	cmd.AddCommand(apply.NewCommand(cfg, opt))
+	// Register the subcommands.
+	cmd.AddCommand(apply.NewCommand(cfg, streams, opt))
 	cmd.AddCommand(approve.NewCommand(cfg, opt))
 	cmd.AddCommand(cliconfigcmd.NewCommand(cfg))
-	cmd.AddCommand(create.NewCommand(cfg, opt))
-	cmd.AddCommand(delete.NewCommand(cfg, opt))
-	cmd.AddCommand(get.NewCommand(cfg, opt))
+	cmd.AddCommand(create.NewCommand(cfg, streams, opt))
+	cmd.AddCommand(delete.NewCommand(cfg, streams, opt))
+	cmd.AddCommand(get.NewCommand(cfg, streams, opt))
 	cmd.AddCommand(login.NewCommand(opt))
 	cmd.AddCommand(logout.NewCommand())
 	cmd.AddCommand(refresh.NewCommand(cfg, opt))
 	cmd.AddCommand(update.NewCommand(cfg, opt))
 	cmd.AddCommand(dashboard.NewCommand(cfg))
-	cmd.AddCommand(promote.NewCommand(cfg, opt))
-	cmd.AddCommand(version.NewCommand(cfg, opt))
+	cmd.AddCommand(promote.NewCommand(cfg, streams, opt))
+	cmd.AddCommand(version.NewCommand(cfg, streams, opt))
 	cmd.AddCommand(
 		cobracompletefig.CreateCompletionSpecCommand(
 			cobracompletefig.Opts{
@@ -119,7 +114,8 @@ func NewRootCommand(
 			},
 		),
 	)
-	return cmd, nil
+
+	return cmd
 }
 
 func buildRootContext(ctx context.Context) context.Context {

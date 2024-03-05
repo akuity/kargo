@@ -9,13 +9,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/cli-runtime/pkg/printers"
-	"k8s.io/utils/ptr"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -24,14 +24,18 @@ import (
 type createOptions struct {
 	*option.Option
 	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
 	Filenames []string
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
 	cmdOpts := &createOptions{
-		Option: opt,
-		Config: cfg,
+		Option:     opt,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("created").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -57,8 +61,13 @@ kargo create project my-project
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	cmd.SetIn(cmdOpts.IOStreams.In)
+	cmd.SetOut(cmdOpts.IOStreams.Out)
+	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
+
 	// Register subcommands.
-	cmd.AddCommand(newProjectCommand(cfg, opt))
+	cmd.AddCommand(newProjectCommand(cfg, streams, opt))
 
 	return cmd
 }
@@ -104,12 +113,9 @@ func (o *createOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "read manifests")
 	}
 
-	var printer printers.ResourcePrinter
-	if ptr.Deref(o.PrintFlags.OutputFormat, "") != "" {
-		printer, err = o.PrintFlags.ToPrinter()
-		if err != nil {
-			return errors.Wrap(err, "new printer")
-		}
+	printer, err := o.PrintFlags.ToPrinter()
+	if err != nil {
+		return errors.Wrap(err, "create printer")
 	}
 
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
@@ -139,14 +145,6 @@ func (o *createOptions) run(ctx context.Context) error {
 		if err := sigyaml.Unmarshal(r.CreatedResourceManifest, &obj); err != nil {
 			fmt.Fprintf(o.IOStreams.ErrOut, "%s",
 				errors.Wrap(err, "Error: unmarshal created manifest"))
-			continue
-		}
-		if printer == nil {
-			name := types.NamespacedName{
-				Namespace: obj.GetNamespace(),
-				Name:      obj.GetName(),
-			}.String()
-			fmt.Fprintf(o.IOStreams.Out, "%s Created: %q\n", obj.GetKind(), name)
 			continue
 		}
 		_ = printer.PrintObj(&obj, o.IOStreams.Out)

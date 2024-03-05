@@ -10,11 +10,14 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -22,16 +25,20 @@ import (
 type getFreightOptions struct {
 	*option.Option
 	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
 	Project string
 	Names   []string
 	Aliases []string
 }
 
-func newGetFreightCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newGetFreightCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams, opt *option.Option) *cobra.Command {
 	cmdOpts := &getFreightOptions{
-		Option: opt,
-		Config: cfg,
+		Option:     opt,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -75,6 +82,11 @@ kargo get freight --alias=wonky-wombat
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	cmd.SetIn(cmdOpts.IOStreams.In)
+	cmd.SetOut(cmdOpts.IOStreams.Out)
+	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
+
 	return cmd
 }
 
@@ -109,7 +121,6 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 	}
 
 	if len(o.Names) == 0 && len(o.Aliases) == 0 {
-
 		var resp *connect.Response[v1alpha1.QueryFreightResponse]
 		if resp, err = kargoSvcCli.QueryFreight(
 			ctx,
@@ -121,6 +132,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 		); err != nil {
 			return errors.Wrap(err, "query freight")
 		}
+
 		// We didn't specify any groupBy, so there should be one group with an
 		// empty key
 		freight := resp.Msg.GetGroups()[""]
@@ -128,10 +140,10 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 		for _, f := range freight.Freight {
 			res = append(res, typesv1alpha1.FromFreightProto(f))
 		}
-		return printObjects(o.Option, res)
+		return printObjects(res, o.PrintFlags, o.IOStreams)
 	}
 
-	freight := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
+	res := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
 		var resp *connect.Response[v1alpha1.GetFreightResponse]
@@ -147,7 +159,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 			errs = append(errs, errors.Wrapf(err, "get freight %s", name))
 			continue
 		}
-		freight = append(freight, typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()))
+		res = append(res, typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()))
 	}
 	for _, alias := range o.Aliases {
 		var resp *connect.Response[v1alpha1.GetFreightResponse]
@@ -163,17 +175,12 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 			errs = append(errs, errors.Wrapf(err, "get freight %s", alias))
 			continue
 		}
-		freight = append(freight, typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()))
+		res = append(res, typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()))
 	}
 
-	if err = printObjects(o.Option, freight); err != nil {
-		return errors.Wrap(err, "print stages")
+	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+		return errors.Wrap(err, "print freight")
 	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-
 	return goerrors.Join(errs...)
 }
 

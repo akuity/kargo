@@ -8,11 +8,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -20,15 +23,23 @@ import (
 type getWarehousesOptions struct {
 	*option.Option
 	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
 	Project string
 	Names   []string
 }
 
-func newGetWarehousesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newGetWarehousesCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	opt *option.Option,
+) *cobra.Command {
 	cmdOpts := &getWarehousesOptions{
-		Option: opt,
-		Config: cfg,
+		Option:     opt,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -67,6 +78,11 @@ kargo get warehouse my-warehouse
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	cmd.SetIn(cmdOpts.IOStreams.In)
+	cmd.SetOut(cmdOpts.IOStreams.Out)
+	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
+
 	return cmd
 }
 
@@ -103,7 +119,6 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 	}
 
 	if len(o.Names) == 0 {
-
 		var resp *connect.Response[v1alpha1.ListWarehousesResponse]
 		if resp, err = kargoSvcCli.ListWarehouses(
 			ctx,
@@ -115,11 +130,12 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return errors.Wrap(err, "list warehouses")
 		}
+
 		res := make([]*kargoapi.Warehouse, 0, len(resp.Msg.GetWarehouses()))
 		for _, warehouse := range resp.Msg.GetWarehouses() {
 			res = append(res, typesv1alpha1.FromWarehouseProto(warehouse))
 		}
-		return printObjects(o.Option, res)
+		return printObjects(res, o.PrintFlags, o.IOStreams)
 
 	}
 
@@ -142,13 +158,8 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		res = append(res, typesv1alpha1.FromWarehouseProto(resp.Msg.GetWarehouse()))
 	}
 
-	if err = printObjects(o.Option, res); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
 		return errors.Wrap(err, "print warehouses")
 	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-
 	return goerrors.Join(errs...)
 }
