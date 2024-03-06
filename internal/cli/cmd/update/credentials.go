@@ -2,7 +2,6 @@ package update
 
 import (
 	"context"
-	goerrors "errors"
 
 	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
@@ -19,14 +18,15 @@ type updateCredentialsOptions struct {
 	*option.Option
 	Config config.CLIConfig
 
-	Name           string
-	Git            bool
-	Helm           bool
-	Image          bool
-	RepoURL        string
-	RepoURLPattern string
-	Username       string
-	Password       string
+	Name                        string
+	Git                         bool
+	Helm                        bool
+	Image                       bool
+	RepoURL                     string
+	RepoURLPattern              string
+	Username                    string
+	Password                    string
+	ChangePasswordInteractively bool
 }
 
 func newUpdateCredentialsCommand(
@@ -39,45 +39,35 @@ func newUpdateCredentialsCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use: "credentials [--project=project] NAME (--git | --helm | --image) " +
-			"(--repo-url=repo-url | --repo-url-pattern=repo-url-pattern) --username=username [--password=password]",
+		Use: `credentials [--project=project] NAME \
+    [--git | --helm | --image] \
+    [--repo-url=repo-url | --repo-url-pattern=repo-url-pattern] \
+    [--username=username] \
+    [--password=password | --interactive-password]`,
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Update credentials for accessing a repository",
 		Args:    cobra.ExactArgs(1),
 		Example: `
-# Update my-credentials for a Git repository
-kargo update credentials --project=my-project my-credentials \
-  --git --repo-url=https://github.com/my-org/my-repo.git \
-  --username=my-username --password=my-password
+# Update the password in my-credentials
+kargo update credentials --project=my-project my-credentials --password=my-password
 
-# Update my-credentials for a Helm chart repository
-kargo update credentials --project=my-project my-credentials \
-  --helm --repo-url=oci://ghcr.io/my-org/my-chart \
-  --username=my-username --password=my-password
+# Update the username in my-credentials
+kargo update credentials --project=my-project my-credentials --username=my-username
 
-# Update my-credentials for a container image repository
-kargo update credentials --project=my-project my-credentials \
-  --image --repo-url=ghcr.io/my-org/my-image \
-  --username=my-username --password=my-password
+# Update the credential type of my-credentials
+kargo update credentials --project=my-project my-credentials --git
 
-# Update my-credentials for a Git repository in the default project
+# Update the password in my-credentials in the default project
 kargo config set-project my-project
-kargo update credentials my-credentials \
-  --git --repo-url=https://github.com/my-org/my-repo.git \
-  --username=my-username --password=my-password
+kargo update credentials my-credentials --password=my-password
 
-# Update my-credentials for a Helm chart repository in the default project
+# Update the username in my-credentials in the default project
 kargo config set-project my-project
-kargo update credentials my-credentials \
-  --helm --repo-url=oci://ghcr.io/my-org/my-chart \
-  --username=my-username --password=my-password
+kargo update credentials my-credentials --username=my-username
 
-# Update credentials for a container image repository in the default project
+# Update the credentials type of my-credentials in the default project
 kargo config set-project my-project
-kargo update credentials my-credentials \
-  --image --repo-url=ghcr.io/my-org/my-image \
-  --username=my-username --password=my-password
-`,
+kargo update credentials my-credentials --git`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
@@ -102,28 +92,29 @@ func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 	option.Project(
 		cmd.Flags(), &o.Project, o.Project,
-		"The project in which to create credentials. If not set, the default project will be used.",
+		"The project in which to update credentials. If not set, the default project will be used.",
 	)
-	option.Git(cmd.Flags(), &o.Git, "Create credentials for a Git repository.")
-	option.Helm(cmd.Flags(), &o.Helm, "Create credentials for a Helm chart repository.")
-	option.Image(cmd.Flags(), &o.Image, "Create credentials for a container image repository.")
+	option.Git(cmd.Flags(), &o.Git, "Change the credentials to be for a Git repository.")
+	option.Helm(cmd.Flags(), &o.Helm, "Change the credentials to be for a Helm chart repository.")
+	option.Image(cmd.Flags(), &o.Image, "Change the credentials to be for a container image repository.")
 	option.RepoURL(cmd.Flags(), &o.RepoURL, "URL of the repository the credentials are for.")
 	option.RepoURLPattern(
 		cmd.Flags(), &o.RepoURLPattern,
 		"Regular expression matching multiple repositories the credentials are for.",
 	)
-	option.Username(cmd.Flags(), &o.Username, "Username for the credentials.")
-	option.Password(cmd.Flags(), &o.Password, "Password for the credentials.")
+	option.Username(cmd.Flags(), &o.Username, "Change the username in the credentials.")
+	option.Password(cmd.Flags(), &o.Password, "Change the password in the credentials.")
+	option.InteractivePassword(
+		cmd.Flags(),
+		&o.ChangePasswordInteractively,
+		"Change the password in the credentials interactively.",
+	)
 
-	cmd.MarkFlagsOneRequired(option.GitFlag, option.HelmFlag, option.ImageFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.GitFlag, option.HelmFlag, option.ImageFlag)
 
-	cmd.MarkFlagsOneRequired(option.RepoURLFlag, option.RepoURLPatternFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.RepoURLFlag, option.RepoURLPatternFlag)
 
-	if err := cmd.MarkFlagRequired(option.UsernameFlag); err != nil {
-		panic(errors.Wrapf(err, "could not mark %s flag as required", option.UsernameFlag))
-	}
+	cmd.MarkFlagsMutuallyExclusive(option.PasswordFlag, option.InteractivePasswordFlag)
 }
 
 // complete sets the options from the command arguments.
@@ -134,35 +125,27 @@ func (o *updateCredentialsOptions) complete(args []string) {
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
 func (o *updateCredentialsOptions) validate() error {
-	var errs []error
 	// While the flags are marked as required, a user could still provide an empty
 	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
-		errs = append(errs, errors.New("project is required"))
+		return errors.New("project is required")
 	}
-	if o.RepoURL == "" && o.RepoURLPattern == "" {
-		errs = append(
-			errs,
-			errors.New("either repo-url or repo-url-pattern is required"),
-		)
-	}
-	if o.Username == "" {
-		errs = append(errs, errors.New("username is required"))
-	}
-	return goerrors.Join(errs...)
+	return nil
 }
 
 // run creates the credentials in the project based on the options.
 func (o *updateCredentialsOptions) run(ctx context.Context) error {
-	for {
-		if o.Password != "" {
-			break
-		}
-		prompt := &survey.Password{
-			Message: "Repository password",
-		}
-		if err := survey.AskOne(prompt, &o.Password); err != nil {
-			return err
+	if o.ChangePasswordInteractively {
+		for {
+			if o.Password != "" {
+				break
+			}
+			prompt := &survey.Password{
+				Message: "Repository password",
+			}
+			if err := survey.AskOne(prompt, &o.Password); err != nil {
+				return err
+			}
 		}
 	}
 

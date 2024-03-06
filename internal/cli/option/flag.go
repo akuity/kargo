@@ -30,6 +30,9 @@ const (
 	// ImageFlag is the flag name for the image flag.
 	ImageFlag = "image"
 
+	// InteractivePasswordFlag is the flag name for the interactive-password flag.
+	InteractivePasswordFlag = "interactive-password"
+
 	// NameFlag is the flag name for the name flag.
 	NameFlag = "name"
 
@@ -108,6 +111,10 @@ func Image(fs *pflag.FlagSet, image *bool, usage string) {
 
 func InsecureTLS(fs *pflag.FlagSet, opt *Option) {
 	fs.BoolVar(&opt.InsecureTLS, "insecure-skip-tls-verify", false, "Skip TLS certificate verification")
+}
+
+func InteractivePassword(fs *pflag.FlagSet, changePasswordInteractively *bool, usage string) {
+	fs.BoolVar(changePasswordInteractively, InteractivePasswordFlag, false, usage)
 }
 
 func LocalServer(fs *pflag.FlagSet, opt *Option) {
