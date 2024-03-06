@@ -5,11 +5,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestRedactCredentialSecretValues(t *testing.T) {
-	const redacted = "*** REDACTED ***"
+func TestSanitizeCredentialSecret(t *testing.T) {
 	creds := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"last-applied-configuration": "fake-configuration",
+			},
+		},
 		Data: map[string][]byte{
 			"repoURL":        []byte("fake-url"),
 			"repoURLPattern": []byte("fake-pattern"),
@@ -18,7 +23,14 @@ func TestRedactCredentialSecretValues(t *testing.T) {
 			"random-key":     []byte("random-value"),
 		},
 	}
-	safeCreds := redactCredentialSecretValues(creds)
+	sanitizedCreds := sanitizeCredentialSecret(creds)
+	require.Equal(
+		t,
+		map[string]string{
+			"last-applied-configuration": redacted,
+		},
+		sanitizedCreds.Annotations,
+	)
 	require.Equal(
 		t,
 		map[string]string{
@@ -28,6 +40,6 @@ func TestRedactCredentialSecretValues(t *testing.T) {
 			"password":       redacted,
 			"random-key":     redacted,
 		},
-		safeCreds.StringData,
+		sanitizedCreds.StringData,
 	)
 }

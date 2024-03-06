@@ -43,7 +43,7 @@ func (s *server) ListCredentials(
 	})
 
 	for i, secret := range secrets {
-		secrets[i] = redactCredentialSecretValues(secret)
+		secrets[i] = sanitizeCredentialSecret(secret)
 	}
 
 	secretProtos := make([]*v1alpha1.Secret, len(secrets))

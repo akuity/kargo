@@ -14,6 +14,8 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
+const redacted = "*** REDACTED ***"
+
 func (s *server) GetCredentials(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetCredentialsRequest],
@@ -59,28 +61,37 @@ func (s *server) GetCredentials(
 		)
 	}
 
-	secret = redactCredentialSecretValues(secret)
+	secret = sanitizeCredentialSecret(secret)
 
 	return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
 		Credentials: typesv1alpha1.ToSecretProto(&secret),
 	}), nil
 }
 
-// redactCredentialSecretValues returns a copy of the secret with all values in
-// the stringData map redacted except for those with specific keys that are
-// known to represent non-sensitive information when used correctly. Note: The
-// primary intention, at present, is only to redact the value associated with
-// the "password" key, but this approach prevents accidental exposure of the
+// sanitizeCredentialSecret returns a copy of the secret with all values in the
+// stringData map redacted except for those with specific keys that are known to
+// represent non-sensitive information when used correctly. The primary
+// intention, at present, is only to redact the value associated with the
+// "password" key, but this approach prevents accidental exposure of the
 // password in the event that it has accidentally been assigned to a
-// wrong/unknown key, such as "pass" or "passwd".
-func redactCredentialSecretValues(secret corev1.Secret) corev1.Secret {
+// wrong/unknown key, such as "pass" or "passwd". All annotations are also
+// redacted because AT LEAST "last-applied-configuration" is a known vector for
+// leaking sensitive information and unknown configuration management tools may
+// use other annotations in a manner similar to "last-applied-configuration".
+// There is no concern over labels because the constraints on label values rule
+// out use in a manner similar to that of the "last-applied-configuration"
+// annotation.
+func sanitizeCredentialSecret(secret corev1.Secret) corev1.Secret {
 	secret.StringData = make(map[string]string, len(secret.Data))
+	for k := range secret.Annotations {
+		secret.Annotations[k] = redacted
+	}
 	for k, v := range secret.Data {
 		switch k {
 		case "repoURL", "repoURLPattern", "username":
 			secret.StringData[k] = string(v)
 		default:
-			secret.StringData[k] = "*** REDACTED ***"
+			secret.StringData[k] = redacted
 		}
 	}
 	secret.Data = nil
