@@ -111,7 +111,6 @@ func (o *applyOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	defer client.CloseIfPossible(kargoSvcCli)
 
 	// TODO: Current implementation of apply is not the same as `kubectl` does.
 	// It actually "replaces" resource with the given file.

@@ -118,7 +118,6 @@ func (o *createOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	defer client.CloseIfPossible(kargoSvcCli)
 
 	resp, err := kargoSvcCli.CreateResource(ctx, connect.NewRequest(&kargosvcapi.CreateResourceRequest{
 		Manifest: manifest,

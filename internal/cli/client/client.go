@@ -16,19 +16,16 @@ import (
 
 type Options struct {
 	InsecureTLS bool
-	LocalServer bool
 }
 
 // AddFlags adds the flags for the client options to the provided flag set.
 func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	option.InsecureTLS(flags, &o.InsecureTLS)
-	option.LocalServer(flags, &o.LocalServer)
 }
 
 // GetClientFromConfig returns a new client for the Kargo API server located at
 // the address specified in local configuration, using credentials also
-// specified in local configuration UNLESS the specified options indicates that
-// the local server should be used instead.
+// specified in the local configuration.
 func GetClientFromConfig(
 	ctx context.Context,
 	cfg config.CLIConfig,
@@ -37,9 +34,6 @@ func GetClientFromConfig(
 	svcv1alpha1connect.KargoServiceClient,
 	error,
 ) {
-	if opts.LocalServer {
-		return GetLocalServerClient(ctx, opts)
-	}
 	if cfg.APIAddress == "" || cfg.BearerToken == "" {
 		return nil, errors.New(
 			"seems like you are not logged in; please use `kargo login` to authenticate",

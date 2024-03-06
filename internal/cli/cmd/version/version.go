@@ -87,7 +87,7 @@ func (o *versionOptions) run(ctx context.Context) error {
 
 	var serverVersion *svcv1alpha1.VersionInfo
 	var serverErr error
-	if !o.ClientOptions.LocalServer && !o.ClientOnly {
+	if !o.ClientOnly {
 		serverVersion, serverErr = getServerVersion(ctx, o.Config, o.ClientOptions)
 	}
 
@@ -129,7 +129,6 @@ func getServerVersion(
 	if err != nil {
 		return nil, errors.Wrap(err, "get client from config")
 	}
-	defer client.CloseIfPossible(kargoSvcCli)
 
 	resp, err := kargoSvcCli.GetVersionInfo(
 		ctx,

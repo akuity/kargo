@@ -117,7 +117,6 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	defer client.CloseIfPossible(kargoSvcCli)
 
 	if len(o.Names) == 0 {
 		var resp *connect.Response[v1alpha1.ListWarehousesResponse]

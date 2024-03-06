@@ -107,7 +107,6 @@ func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	defer client.CloseIfPossible(kargoSvcCli)
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {

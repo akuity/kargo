@@ -94,7 +94,6 @@ func (o *refreshOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	defer client.CloseIfPossible(kargoSvcCli)
 
 	switch o.ResourceType {
 	case refreshResourceTypeWarehouse:

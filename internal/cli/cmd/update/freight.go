@@ -111,7 +111,6 @@ func (o *updateFreightAliasOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	defer client.CloseIfPossible(kargoSvcCli)
 
 	if _, err = kargoSvcCli.UpdateFreightAlias(
 		ctx,

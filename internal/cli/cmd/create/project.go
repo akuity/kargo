@@ -93,7 +93,6 @@ func (o *createProjectOptions) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	defer client.CloseIfPossible(kargoSvcCli)
 
 	project := &kargoapi.Project{
 		TypeMeta: metav1.TypeMeta{
