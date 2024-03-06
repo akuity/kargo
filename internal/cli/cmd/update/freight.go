@@ -48,7 +48,7 @@ kargo update freight --name=abc123 --new-alias=frozen-fox
 kargo config set-project my-project
 kargo update freight --old-alias=wonky-wombat --new-alias=frozen-fox
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err
 			}

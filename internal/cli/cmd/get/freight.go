@@ -71,7 +71,7 @@ kargo get freight --name=abc1234
 kargo config set-project my-project
 kargo get freight --alias=wonky-wombat
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
