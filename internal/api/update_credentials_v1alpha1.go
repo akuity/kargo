@@ -69,8 +69,9 @@ func (s *server) UpdateCredentials(
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			errors.Errorf(
-				"secret %q exists, but is not labeled as credentials",
-				credsUpdate.name,
+				"secret %q exists, but is not labeled with %q",
+				secret.Name,
+				kargoapi.CredentialTypeLabelKey,
 			),
 		)
 	}

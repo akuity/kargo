@@ -57,7 +57,11 @@ func (s *server) GetCredentials(
 	if !isCredentials {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
-			errors.Errorf("secret %q exists, but is not labeled as credentials", name),
+			errors.Errorf(
+				"secret %q exists, but is not labeled with %q",
+				secret.Name,
+				kargoapi.CredentialTypeLabelKey,
+			),
 		)
 	}
 
