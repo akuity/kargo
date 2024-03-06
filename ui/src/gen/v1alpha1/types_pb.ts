@@ -1833,6 +1833,11 @@ export class StageSpec extends Message<StageSpec> {
    */
   verification?: Verification;
 
+  /**
+   * @generated from field: string shard = 4;
+   */
+  shard = "";
+
   constructor(data?: PartialMessage<StageSpec>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1844,6 +1849,7 @@ export class StageSpec extends Message<StageSpec> {
     { no: 1, name: "subscriptions", kind: "message", T: Subscriptions },
     { no: 2, name: "promotion_mechanisms", kind: "message", T: PromotionMechanisms },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },
+    { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageSpec {
