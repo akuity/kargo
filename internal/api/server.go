@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -108,6 +109,22 @@ type server struct {
 		freight *kargoapi.Freight,
 		alias string,
 	) error
+
+	// Freight approval:
+	patchFreightStatusFn func(
+		ctx context.Context,
+		freight *kargoapi.Freight,
+		newStatus kargoapi.FreightStatus,
+	) error
+
+	// Special authorizations:
+	authorizeFn func(
+		ctx context.Context,
+		verb string,
+		gvr schema.GroupVersionResource,
+		subresource string,
+		key client.ObjectKey,
+	) error
 }
 
 type Server interface {
@@ -137,6 +154,8 @@ func NewServer(
 	s.getVerifiedFreightFn =
 		s.getVerifiedFreight
 	s.patchFreightAliasFn = s.patchFreightAlias
+	s.patchFreightStatusFn = s.patchFreightStatus
+	s.authorizeFn = kubeClient.Authorize
 	return s
 }
 

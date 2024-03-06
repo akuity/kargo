@@ -6,7 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -38,7 +39,7 @@ func (s *server) ApproveFreight(
 		return nil, err
 	}
 
-	if err := s.validateProjectExists(ctx, project); err != nil {
+	if err := s.validateProjectExistsFn(ctx, project); err != nil {
 		return nil, err
 	}
 
@@ -61,22 +62,39 @@ func (s *server) ApproveFreight(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
-	stage := &kargoapi.Stage{}
-	if err := s.client.Get(
+	stage, err := s.getStageFn(
 		ctx,
+		s.client,
 		client.ObjectKey{
 			Namespace: project,
 			Name:      stageName,
 		},
-		stage,
-	); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(
-				connect.CodeNotFound,
-				fmt.Errorf("stage %q not found", stageName),
-			)
-		}
+	)
+	if err != nil {
 		return nil, errors.Wrap(err, "get stage")
+	}
+	if stage == nil {
+		return nil, connect.NewError(
+			connect.CodeNotFound,
+			errors.Errorf("Stage %q not found in namespace %q", stageName, project),
+		)
+	}
+
+	if err := s.authorizeFn(
+		ctx,
+		"promote",
+		schema.GroupVersionResource{
+			Group:    kargoapi.GroupVersion.Group,
+			Version:  kargoapi.GroupVersion.Version,
+			Resource: "stages",
+		},
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
+		return nil, err
 	}
 
 	newStatus := *freight.Status.DeepCopy()
@@ -90,16 +108,30 @@ func (s *server) ApproveFreight(
 
 	newStatus.ApprovedFor[stageName] = kargoapi.ApprovedStage{}
 
-	if err := kubeclient.PatchStatus(
+	if err := s.patchFreightStatusFn(ctx, freight, newStatus); err != nil {
+		return nil, errors.Wrap(err, "patch status")
+	}
+
+	return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
+}
+
+func (s *server) patchFreightStatus(
+	ctx context.Context,
+	freight *kargoapi.Freight,
+	newStatus kargoapi.FreightStatus,
+) error {
+	err := kubeclient.PatchStatus(
 		ctx,
 		s.client,
 		freight,
 		func(status *kargoapi.FreightStatus) {
 			*status = newStatus
 		},
-	); err != nil {
-		return nil, errors.Wrap(err, "patch status")
-	}
-
-	return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
+	)
+	return errors.Wrapf(
+		err,
+		"error patching Freight %q status in namespace %q",
+		freight.Name,
+		freight.Namespace,
+	)
 }
