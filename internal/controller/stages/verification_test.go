@@ -17,7 +17,7 @@ import (
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 )
 
-func TestStarVerification(t *testing.T) {
+func TestStartVerification(t *testing.T) {
 	testCases := []struct {
 		name       string
 		stage      *kargoapi.Stage
@@ -464,6 +464,246 @@ func TestGetVerificationInfo(t *testing.T) {
 					testCase.stage,
 				),
 			)
+		})
+	}
+}
+
+func TestBuildAnalysisRun(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		stage      *kargoapi.Stage
+		templates  []*rollouts.AnalysisTemplate
+		assertions func(*testing.T, *kargoapi.Stage, []*rollouts.AnalysisTemplate, *rollouts.AnalysisRun, error)
+	}{
+		{
+			name:       "Builds AnalysisRun successfully",
+			reconciler: &reconciler{},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Spec: &kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisRunMetadata: &kargoapi.AnalysisRunMetadata{
+							Labels: map[string]string{
+								"custom":  "label",
+								"another": "label",
+							},
+							Annotations: map[string]string{
+								"custom":  "annotation",
+								"another": "annotation",
+							},
+						},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						ID: "fake-id",
+					},
+				},
+			},
+			templates: []*rollouts.AnalysisTemplate{
+				{
+					Spec: rollouts.AnalysisTemplateSpec{
+						Metrics: []rollouts.Metric{
+							{
+								Name:             "foo",
+								SuccessCondition: "true",
+							},
+						},
+						DryRun: []rollouts.DryRun{
+							{
+								MetricName: "foo",
+							},
+						},
+						MeasurementRetention: []rollouts.MeasurementRetention{
+							{
+								MetricName: "foo",
+								Limit:      10,
+							},
+						},
+						Args: []rollouts.Argument{
+							{
+								Name:  "test",
+								Value: ptr.To("true"),
+							},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				stage *kargoapi.Stage,
+				templates []*rollouts.AnalysisTemplate,
+				ar *rollouts.AnalysisRun,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, ar)
+
+				require.Contains(t, ar.Name, stage.Name)
+				require.Equal(t, ar.Namespace, stage.Namespace)
+
+				require.Equal(t, map[string]string{
+					kargoapi.StageLabelKey:   stage.Name,
+					kargoapi.FreightLabelKey: stage.Status.CurrentFreight.ID,
+					"custom":                 "label",
+					"another":                "label",
+				}, ar.Labels)
+				require.Equal(t, stage.Spec.Verification.AnalysisRunMetadata.Annotations, ar.Annotations)
+
+				require.Equal(t, templates[0].Spec.Metrics, ar.Spec.Metrics)
+				require.Equal(t, templates[0].Spec.DryRun, ar.Spec.DryRun)
+				require.Equal(t, templates[0].Spec.MeasurementRetention, ar.Spec.MeasurementRetention)
+				require.Equal(t, templates[0].Spec.Args, ar.Spec.Args)
+			},
+		},
+		{
+			name: "Sets rollout controller instance ID",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					RolloutsControllerInstanceID: "fake-instance-id",
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{ID: "fake-id"},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.Stage,
+				_ []*rollouts.AnalysisTemplate,
+				ar *rollouts.AnalysisRun,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, ar)
+
+				require.Equal(t, "fake-instance-id", ar.Labels["argo-rollouts.argoproj.io/controller-instance-id"])
+			},
+		},
+		{
+			name:       "Flattens multiple templates",
+			reconciler: &reconciler{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{ID: "fake-id"},
+				},
+			},
+			templates: []*rollouts.AnalysisTemplate{
+				{
+					Spec: rollouts.AnalysisTemplateSpec{
+						Metrics: []rollouts.Metric{
+							{
+								Name:             "foo",
+								SuccessCondition: "true",
+							},
+						},
+						Args: []rollouts.Argument{
+							{
+								Name:  "test",
+								Value: ptr.To("true"),
+							},
+						},
+					},
+				},
+				{
+					Spec: rollouts.AnalysisTemplateSpec{
+						Metrics: []rollouts.Metric{
+							{
+								Name:             "bar",
+								SuccessCondition: "false",
+							},
+						},
+						Args: []rollouts.Argument{
+							{
+								Name:  "test",
+								Value: ptr.To("true"),
+							},
+							{
+								Name:  "another",
+								Value: ptr.To("true"),
+							},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.Stage,
+				_ []*rollouts.AnalysisTemplate,
+				ar *rollouts.AnalysisRun,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, ar)
+
+				require.Len(t, ar.Spec.Metrics, 2)
+				require.Len(t, ar.Spec.Args, 2)
+			},
+		},
+		{
+			name:       "Merges flattened template args with stage args",
+			reconciler: &reconciler{},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						Args: []kargoapi.AnalysisRunArgument{
+							{
+								Name:  "test",
+								Value: "overwrite",
+							},
+						},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{ID: "fake-id"},
+				},
+			},
+			templates: []*rollouts.AnalysisTemplate{
+				{
+					Spec: rollouts.AnalysisTemplateSpec{
+						Args: []rollouts.Argument{
+							{
+								Name:  "test",
+								Value: ptr.To("true"),
+							},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.Stage,
+				_ []*rollouts.AnalysisTemplate,
+				ar *rollouts.AnalysisRun,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, ar)
+
+				require.Equal(t, []rollouts.Argument{
+					{
+						Name:  "test",
+						Value: ptr.To("overwrite"),
+					},
+				}, ar.Spec.Args)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ar, err := testCase.reconciler.buildAnalysisRun(testCase.stage, testCase.templates)
+			testCase.assertions(t, testCase.stage, testCase.templates, ar, err)
 		})
 	}
 }

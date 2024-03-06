@@ -27,7 +27,7 @@ func (s *server) PromoteStage(
 	}
 
 	stageName := req.Msg.GetStage()
-	if err := validateFieldNotEmpty("name", stageName); err != nil {
+	if err := validateFieldNotEmpty("stage", stageName); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +117,7 @@ func (s *server) PromoteStage(
 		return nil, err
 	}
 
-	promotion := kargo.NewPromotion(*stage, req.Msg.GetFreight())
+	promotion := kargo.NewPromotion(*stage, freight.Name)
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
 		return nil, errors.Wrap(err, "create promotion")
 	}

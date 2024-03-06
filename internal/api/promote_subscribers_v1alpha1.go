@@ -136,7 +136,7 @@ func (s *server) PromoteSubscribers(
 	promoteErrs := make([]error, 0, len(subscribers))
 	createdPromos := make([]*v1alpha1.Promotion, 0, len(subscribers))
 	for _, subscriber := range subscribers {
-		newPromo := kargo.NewPromotion(subscriber, freightName)
+		newPromo := kargo.NewPromotion(subscriber, freight.Name)
 		if err := s.createPromotionFn(ctx, &newPromo); err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue
