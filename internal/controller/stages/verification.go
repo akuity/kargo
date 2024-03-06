@@ -262,7 +262,7 @@ func (r *reconciler) buildAnalysisRun(
 			Value: &arg.Value,
 		}
 	}
-	mergedArgs, err := mergeArgs(template.Spec.Args, rolloutsArgs)
+	mergedArgs, err := mergeArgs(rolloutsArgs, template.Spec.Args)
 	if err != nil {
 		return nil, errors.Errorf("error merging arguments")
 	}
