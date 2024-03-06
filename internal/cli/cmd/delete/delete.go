@@ -4,33 +4,39 @@ import (
 	"context"
 	goerrors "errors"
 	"fmt"
-	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type deleteOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Filenames []string
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &deleteOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("deleted").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -65,22 +71,21 @@ kargo delete warehouse --project=my-project my-warehouse
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	// Register subcommands.
-	cmd.AddCommand(newProjectCommand(cfg, opt))
-	cmd.AddCommand(newStageCommand(cfg, opt))
-	cmd.AddCommand(newWarehouseCommand(cfg, opt))
+	cmd.AddCommand(newProjectCommand(cfg, streams))
+	cmd.AddCommand(newStageCommand(cfg, streams))
+	cmd.AddCommand(newWarehouseCommand(cfg, streams))
 
 	return cmd
 }
 
 // addFlags adds the flags for the delete options to the provided command.
 func (o *deleteOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to delete resource(s).")
 
@@ -114,7 +119,7 @@ func (o *deleteOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "read manifests")
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
@@ -137,6 +142,12 @@ func (o *deleteOptions) run(ctx context.Context) error {
 			deleteErrs = append(deleteErrs, errors.New(typedRes.Error))
 		}
 	}
+
+	printer, err := o.PrintFlags.ToPrinter()
+	if err != nil {
+		return errors.Wrap(err, "create printer")
+	}
+
 	for _, r := range successRes {
 		var obj unstructured.Unstructured
 		if err := sigyaml.Unmarshal(r.DeletedResourceManifest, &obj); err != nil {
@@ -144,11 +155,7 @@ func (o *deleteOptions) run(ctx context.Context) error {
 				errors.Wrap(err, "Error: unmarshal deleted manifest"))
 			continue
 		}
-		name := strings.TrimLeft(types.NamespacedName{
-			Namespace: obj.GetNamespace(),
-			Name:      obj.GetName(),
-		}.String(), "/")
-		fmt.Fprintf(o.IOStreams.Out, "%s Deleted: %q\n", obj.GetKind(), name)
+		_ = printer.PrintObj(&obj, o.IOStreams.Out)
 	}
 	return goerrors.Join(deleteErrs...)
 }

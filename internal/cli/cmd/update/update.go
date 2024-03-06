@@ -7,7 +7,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update SUBCOMMAND",
 		Short: "Update a resource",
@@ -17,11 +17,9 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 kargo update freight --project=my-project abc123 --alias=my-new-alias
 `,
 	}
-	option.InsecureTLS(cmd.PersistentFlags(), opt)
-	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	// Register subcommands.
-	cmd.AddCommand(newUpdateFreightAliasCommand(cfg, opt))
+	cmd.AddCommand(newUpdateFreightAliasCommand(cfg))
 
 	return cmd
 }

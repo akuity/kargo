@@ -3,13 +3,17 @@ package delete
 import (
 	"context"
 	goerrors "errors"
-	"fmt"
 	"slices"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -17,16 +21,21 @@ import (
 )
 
 type deleteWarehouseOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
-	Names []string
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project string
+	Names   []string
 }
 
-func newWarehouseCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newWarehouseCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &deleteWarehouseOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("deleted").WithTypeSetter(runtime.NewScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -64,9 +73,10 @@ kargo delete warehouse my-warehouse
 // addFlags adds the flags for the delete warehouse options to the provided
 // command.
 func (o *deleteWarehouseOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
+	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project for which to delete Warehouses. If not set, the default project will be used.")
 }
 
@@ -93,9 +103,14 @@ func (o *deleteWarehouseOptions) validate() error {
 
 // run removes the warehouse(s) based on the options.
 func (o *deleteWarehouseOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
+	}
+
+	printer, err := o.PrintFlags.ToPrinter()
+	if err != nil {
+		return errors.Wrap(err, "create printer")
 	}
 
 	var resErr error
@@ -112,7 +127,12 @@ func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 			resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
 			continue
 		}
-		_, _ = fmt.Fprintf(o.IOStreams.Out, "Warehouse Deleted: %q\n", name)
+		_ = printer.PrintObj(&kargoapi.Warehouse{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: o.Project,
+			},
+		}, o.IOStreams.Out)
 	}
 	return resErr
 }

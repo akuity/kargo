@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/akuity/kargo/internal/cli/config"
-	"github.com/akuity/kargo/internal/cli/option"
 )
 
 func main() {
@@ -21,11 +20,7 @@ func main() {
 		}
 		cfg = config.NewDefaultCLIConfig()
 	}
-	cmd, err := NewRootCommand(cfg, option.NewOption(cfg), &rootState{})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, errors.Wrap(err, "new root command"))
-		os.Exit(1)
-	}
+	cmd := NewRootCommand(cfg)
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		os.Exit(1)
 	}
