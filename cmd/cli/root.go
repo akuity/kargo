@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/logout"
 	"github.com/akuity/kargo/internal/cli/cmd/promote"
 	"github.com/akuity/kargo/internal/cli/cmd/refresh"
+	"github.com/akuity/kargo/internal/cli/cmd/server"
 	"github.com/akuity/kargo/internal/cli/cmd/update"
 	"github.com/akuity/kargo/internal/cli/cmd/version"
 	clicfg "github.com/akuity/kargo/internal/cli/config"
@@ -52,6 +53,7 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	cmd.AddCommand(dashboard.NewCommand(cfg))
 	cmd.AddCommand(promote.NewCommand(cfg, streams))
 	cmd.AddCommand(version.NewCommand(cfg, streams))
+	cmd.AddCommand(server.NewCommand())
 	cmd.AddCommand(
 		cobracompletefig.CreateCompletionSpecCommand(
 			cobracompletefig.Opts{
