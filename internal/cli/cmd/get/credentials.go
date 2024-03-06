@@ -55,8 +55,7 @@ kargo get credentials
 
 # Get specific credentials in the default project
 kargo config set-project my-project
-kargo get credentials my-credentials
-`,
+kargo get credentials my-credentials`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

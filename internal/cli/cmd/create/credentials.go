@@ -39,8 +39,11 @@ func newCreateCredentialsCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use: "credentials [--project=project] NAME (--git | --helm | --image) " +
-			" (--repo-url=repo-url | --repo-url-pattern=repo-url-pattern) --username=username [--password=password]",
+		Use: `credentials [--project=project] NAME \
+    (--git | --helm | --image) \
+    --repo-url=repo-url | --repo-url-pattern=repo-url-pattern) \
+    -username=username \
+    [--password=password]`,
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Create new credentials for accessing a repository",
 		Args:    cobra.ExactArgs(1),
@@ -76,8 +79,7 @@ kargo create credentials my-credentials \
 kargo config set-project my-project
 kargo create credentials my-credentials \
   --image --repo-url=ghcr.io/my-org/my-image \
-  --username=my-username --password=my-password
-`,
+  --username=my-username --password=my-password`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

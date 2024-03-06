@@ -46,8 +46,7 @@ kargo delete credentials --project=my-project my-credentials1 my-credentials2
 
 # Delete credentials from default project
 kargo config set-project my-project
-kargo delete credentials my-credentials
-`,
+kargo delete credentials my-credentials`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
