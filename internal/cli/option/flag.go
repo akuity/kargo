@@ -1,6 +1,7 @@
 package option
 
 import (
+	"github.com/akuity/kargo/internal/credentials"
 	"github.com/spf13/pflag"
 )
 
@@ -22,13 +23,13 @@ const (
 	FreightAliasFlag = "freight-alias"
 
 	// GitFlag is the flag name for the git flag.
-	GitFlag = "git"
+	GitFlag = string(credentials.TypeGit)
 
 	// HelmFlag is the flag name for the helm flag.
-	HelmFlag = "helm"
+	HelmFlag = string(credentials.TypeHelm)
 
 	// ImageFlag is the flag name for the image flag.
-	ImageFlag = "image"
+	ImageFlag = string(credentials.TypeImage)
 
 	// InteractivePasswordFlag is the flag name for the interactive-password flag.
 	InteractivePasswordFlag = "interactive-password"
@@ -96,17 +97,17 @@ func FreightAlias(fs *pflag.FlagSet, stage *string, usage string) {
 
 // Git adds the GitFlag to the provided flag set.
 func Git(fs *pflag.FlagSet, git *bool, usage string) {
-	fs.BoolVar(git, "git", false, usage)
+	fs.BoolVar(git, GitFlag, false, usage)
 }
 
 // Helm adds the HelmFlag to the provided flag set.
 func Helm(fs *pflag.FlagSet, helm *bool, usage string) {
-	fs.BoolVar(helm, "helm", false, usage)
+	fs.BoolVar(helm, HelmFlag, false, usage)
 }
 
 // Image adds the ImageFlag to the provided flag set.
 func Image(fs *pflag.FlagSet, image *bool, usage string) {
-	fs.BoolVar(image, "image", false, usage)
+	fs.BoolVar(image, ImageFlag, false, usage)
 }
 
 func InsecureTLS(fs *pflag.FlagSet, opt *Option) {

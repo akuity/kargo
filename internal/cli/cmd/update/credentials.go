@@ -11,6 +11,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/credentials"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -156,11 +157,11 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 
 	var repoType string
 	if o.Git {
-		repoType = "git"
+		repoType = string(credentials.TypeGit)
 	} else if o.Helm {
-		repoType = "helm"
+		repoType = string(credentials.TypeHelm)
 	} else if o.Image {
-		repoType = "image"
+		repoType = string(credentials.TypeImage)
 	}
 
 	if _, err := kargoSvcCli.UpdateCredentials(
