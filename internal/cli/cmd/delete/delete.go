@@ -15,6 +15,7 @@ import (
 
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/yaml"
@@ -71,9 +72,7 @@ kargo delete warehouse --project=my-project my-warehouse
 	cmdOpts.addFlags(cmd)
 
 	// Set the input/output streams for the command.
-	cmd.SetIn(cmdOpts.IOStreams.In)
-	cmd.SetOut(cmdOpts.IOStreams.Out)
-	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
 	// Register subcommands.
 	cmd.AddCommand(newProjectCommand(cfg, streams))

@@ -15,6 +15,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -68,9 +69,7 @@ kargo delete stage my-stage
 	cmdOpts.addFlags(cmd)
 
 	// Set the input/output streams for the command.
-	cmd.SetIn(cmdOpts.IOStreams.In)
-	cmd.SetOut(cmdOpts.IOStreams.Out)
-	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
 	return cmd
 }

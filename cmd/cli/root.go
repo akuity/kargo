@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/update"
 	"github.com/akuity/kargo/internal/cli/cmd/version"
 	clicfg "github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
 )
 
 func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
@@ -35,9 +36,7 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 
 	// Set up the IOStreams for the commands to use.
 	streams := genericiooptions.IOStreams{Out: os.Stdout, ErrOut: os.Stderr, In: os.Stdin}
-	cmd.SetIn(streams.In)
-	cmd.SetOut(streams.Out)
-	cmd.SetErr(streams.ErrOut)
+	io.SetIOStreams(cmd, streams)
 
 	// Register the subcommands.
 	cmd.AddCommand(apply.NewCommand(cfg, streams))

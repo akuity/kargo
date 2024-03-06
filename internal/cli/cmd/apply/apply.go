@@ -16,6 +16,7 @@ import (
 
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/yaml"
@@ -60,9 +61,7 @@ kargo apply -f stages/
 	}
 
 	// Set the input/output streams for the command.
-	cmd.SetIn(cmdOpts.IOStreams.In)
-	cmd.SetOut(cmdOpts.IOStreams.Out)
-	cmd.SetErr(cmdOpts.IOStreams.ErrOut)
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
