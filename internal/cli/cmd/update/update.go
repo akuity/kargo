@@ -2,12 +2,13 @@ package update
 
 import (
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 )
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update SUBCOMMAND",
 		Short: "Update a resource",
@@ -17,12 +18,10 @@ func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
 kargo update freight --project=my-project abc123 --alias=my-new-alias
 `,
 	}
-	option.InsecureTLS(cmd.PersistentFlags(), opt)
-	option.LocalServer(cmd.PersistentFlags(), opt)
 
 	// Register subcommands.
-	cmd.AddCommand(newUpdateCredentialsCommand(cfg, opt))
-	cmd.AddCommand(newUpdateFreightAliasCommand(cfg, opt))
+	cmd.AddCommand(newUpdateCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newUpdateFreightAliasCommand(cfg))
 
 	return cmd
 }

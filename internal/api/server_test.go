@@ -46,4 +46,7 @@ func TestNewServer(t *testing.T) {
 	require.NotNil(t, s.getAvailableFreightForStageFn)
 	require.NotNil(t, s.getFreightFromWarehouseFn)
 	require.NotNil(t, s.getVerifiedFreightFn)
+	require.NotNil(t, s.patchFreightAliasFn)
+	require.NotNil(t, s.patchFreightStatusFn)
+	require.NotNil(t, s.authorizeFn)
 }

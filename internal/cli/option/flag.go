@@ -1,8 +1,9 @@
 package option
 
 import (
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/spf13/pflag"
+
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 const (
@@ -30,6 +31,9 @@ const (
 
 	// ImageFlag is the flag name for the image flag.
 	ImageFlag = string(credentials.TypeImage)
+
+	// InsecureTLSFlag is the flag name for the insecure-tls flag.
+	InsecureTLSFlag = "insecure-skip-tls-verify"
 
 	// InteractivePasswordFlag is the flag name for the interactive-password flag.
 	InteractivePasswordFlag = "interactive-password"
@@ -113,17 +117,14 @@ func Image(fs *pflag.FlagSet, image *bool, usage string) {
 	fs.BoolVar(image, ImageFlag, false, usage)
 }
 
-func InsecureTLS(fs *pflag.FlagSet, opt *Option) {
-	fs.BoolVar(&opt.InsecureTLS, "insecure-skip-tls-verify", false, "Skip TLS certificate verification")
+// InsecureTLS adds the InsecureTLSFlag to the provided flag set.
+func InsecureTLS(fs *pflag.FlagSet, insecure *bool) {
+	fs.BoolVar(insecure, InsecureTLSFlag, false, "Skip TLS certificate verification")
 }
 
 // InteractivePassword adds the InteractivePasswordFlag to the provided flag set.
 func InteractivePassword(fs *pflag.FlagSet, changePasswordInteractively *bool, usage string) {
 	fs.BoolVar(changePasswordInteractively, InteractivePasswordFlag, false, usage)
-}
-
-func LocalServer(fs *pflag.FlagSet, opt *Option) {
-	fs.BoolVar(&opt.UseLocalServer, "local-server", false, "Use local server")
 }
 
 // Name adds the NameFlag to the provided flag set.

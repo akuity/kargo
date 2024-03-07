@@ -8,26 +8,38 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type getWarehousesOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
-	Names []string
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project string
+	Names   []string
 }
 
-func newGetWarehousesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newGetWarehousesCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+) *cobra.Command {
 	cmdOpts := &getWarehousesOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -66,16 +78,20 @@ kargo get warehouse my-warehouse
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	return cmd
 }
 
 // addFlags adds the flags for the get warehouses options to the provided
 // command.
 func (o *getWarehousesOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list Warehouses. If not set, the default project will be used.",
 	)
 }
@@ -96,13 +112,12 @@ func (o *getWarehousesOptions) validate() error {
 
 // run gets the warehouses from the server and prints them to the console.
 func (o *getWarehousesOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
 
 	if len(o.Names) == 0 {
-
 		var resp *connect.Response[v1alpha1.ListWarehousesResponse]
 		if resp, err = kargoSvcCli.ListWarehouses(
 			ctx,
@@ -114,11 +129,12 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return errors.Wrap(err, "list warehouses")
 		}
+
 		res := make([]*kargoapi.Warehouse, 0, len(resp.Msg.GetWarehouses()))
 		for _, warehouse := range resp.Msg.GetWarehouses() {
 			res = append(res, typesv1alpha1.FromWarehouseProto(warehouse))
 		}
-		return printObjects(o.Option, res)
+		return printObjects(res, o.PrintFlags, o.IOStreams)
 
 	}
 
@@ -141,13 +157,8 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		res = append(res, typesv1alpha1.FromWarehouseProto(resp.Msg.GetWarehouse()))
 	}
 
-	if err = printObjects(o.Option, res); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
 		return errors.Wrap(err, "print warehouses")
 	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-
 	return goerrors.Join(errs...)
 }

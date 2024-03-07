@@ -1,21 +1,12 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"net"
 	"os"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	cobracompletefig "github.com/withfig/autocomplete-tools/integrations/cobra"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/akuity/kargo/internal/api"
-	apiconfig "github.com/akuity/kargo/internal/api/config"
-	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/cli/cmd/apply"
 	"github.com/akuity/kargo/internal/cli/cmd/approve"
 	cliconfigcmd "github.com/akuity/kargo/internal/cli/cmd/config"
@@ -27,91 +18,42 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/logout"
 	"github.com/akuity/kargo/internal/cli/cmd/promote"
 	"github.com/akuity/kargo/internal/cli/cmd/refresh"
+	"github.com/akuity/kargo/internal/cli/cmd/server"
 	"github.com/akuity/kargo/internal/cli/cmd/update"
 	"github.com/akuity/kargo/internal/cli/cmd/version"
 	clicfg "github.com/akuity/kargo/internal/cli/config"
-	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/io"
 )
 
-// rootState holds state used internally by the root command.
-type rootState struct {
-	localServerListener net.Listener
-}
-
-func NewRootCommand(
-	cfg clicfg.CLIConfig,
-	opt *option.Option,
-	rs *rootState,
-) (*cobra.Command, error) {
+func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:               "kargo",
 		DisableAutoGenTag: true,
 		SilenceUsage:      true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			ctx := buildRootContext(cmd.Context())
-
-			if opt.UseLocalServer {
-				restCfg, err := config.GetConfig()
-				if err != nil {
-					return errors.Wrap(err, "get REST config")
-				}
-				client, err :=
-					kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{})
-				if err != nil {
-					return errors.Wrap(err, "error creating Kubernetes client")
-				}
-				l, err := net.Listen("tcp", "127.0.0.1:0")
-				if err != nil {
-					return errors.Wrap(err, "start local server")
-				}
-				rs.localServerListener = l
-				srv := api.NewServer(
-					apiconfig.ServerConfig{
-						LocalMode: true,
-					},
-					client,
-					client,
-				)
-				go srv.Serve(ctx, l) // nolint: errcheck
-				opt.LocalServerAddress = fmt.Sprintf("http://%s", l.Addr())
-			}
-			return nil
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.HelpFunc()(cmd, args)
 		},
-		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			if rs.localServerListener != nil {
-				return rs.localServerListener.Close()
-			}
-			return nil
-		},
 	}
 
-	opt.IOStreams = &genericiooptions.IOStreams{
-		In:     cmd.InOrStdin(),
-		Out:    os.Stdout,
-		ErrOut: os.Stderr,
-	}
-	scheme, err := option.NewScheme()
-	if err != nil {
-		return nil, err
-	}
-	opt.PrintFlags = genericclioptions.NewPrintFlags("").WithTypeSetter(scheme)
+	// Set up the IOStreams for the commands to use.
+	streams := genericiooptions.IOStreams{Out: os.Stdout, ErrOut: os.Stderr, In: os.Stdin}
+	io.SetIOStreams(cmd, streams)
 
-	cmd.AddCommand(apply.NewCommand(cfg, opt))
-	cmd.AddCommand(approve.NewCommand(cfg, opt))
+	// Register the subcommands.
+	cmd.AddCommand(apply.NewCommand(cfg, streams))
+	cmd.AddCommand(approve.NewCommand(cfg))
 	cmd.AddCommand(cliconfigcmd.NewCommand(cfg))
-	cmd.AddCommand(create.NewCommand(cfg, opt))
-	cmd.AddCommand(delete.NewCommand(cfg, opt))
-	cmd.AddCommand(get.NewCommand(cfg, opt))
-	cmd.AddCommand(login.NewCommand(opt))
+	cmd.AddCommand(create.NewCommand(cfg, streams))
+	cmd.AddCommand(delete.NewCommand(cfg, streams))
+	cmd.AddCommand(get.NewCommand(cfg, streams))
+	cmd.AddCommand(login.NewCommand())
 	cmd.AddCommand(logout.NewCommand())
-	cmd.AddCommand(refresh.NewCommand(cfg, opt))
-	cmd.AddCommand(update.NewCommand(cfg, opt))
+	cmd.AddCommand(refresh.NewCommand(cfg))
+	cmd.AddCommand(update.NewCommand(cfg, streams))
 	cmd.AddCommand(dashboard.NewCommand(cfg))
-	cmd.AddCommand(promote.NewCommand(cfg, opt))
-	cmd.AddCommand(version.NewCommand(cfg, opt))
+	cmd.AddCommand(promote.NewCommand(cfg, streams))
+	cmd.AddCommand(version.NewCommand(cfg, streams))
+	cmd.AddCommand(server.NewCommand())
 	cmd.AddCommand(
 		cobracompletefig.CreateCompletionSpecCommand(
 			cobracompletefig.Opts{
@@ -119,10 +61,6 @@ func NewRootCommand(
 			},
 		),
 	)
-	return cmd, nil
-}
 
-func buildRootContext(ctx context.Context) context.Context {
-	// TODO: Inject console printer or logger
-	return ctx
+	return cmd
 }

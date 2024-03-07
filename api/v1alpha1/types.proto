@@ -232,6 +232,7 @@ message StageSpec {
   Subscriptions subscriptions = 1 [json_name = "subscriptions"];
   PromotionMechanisms promotion_mechanisms = 2 [json_name = "promotionMechanisms"];
   optional Verification verification = 3 [json_name = "verification"];
+  string shard = 4 [json_name = "shard"];
 }
 
 message Freight {
