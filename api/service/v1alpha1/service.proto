@@ -428,7 +428,7 @@ message CreateCredentialsRequest {
 }
 
 message CreateCredentialsResponse {
-  /* explicitly empty */
+  github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
 }
 
 message DeleteCredentialsRequest {
@@ -468,5 +468,5 @@ message UpdateCredentialsRequest {
 }
 
 message UpdateCredentialsResponse {
-  /* explicitly empty */
+  github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
 }
