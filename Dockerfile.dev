@@ -38,7 +38,8 @@ ARG GROUP_ID=1000
 RUN addgroup --gid ${GROUP_ID} user \
     && adduser --disabled-password --gecos '' --uid ${USER_ID} --gid ${GROUP_ID} user \
     && mkdir -p /workspaces/kargo/ui/node_modules \
-    && chown -R ${USER_ID}:${GROUP_ID} /workspaces/kargo
+    && chown -R ${USER_ID}:${GROUP_ID} /workspaces/kargo \
+    && chown -R ${USER_ID}:${GROUP_ID} /go
 
 USER user
 
