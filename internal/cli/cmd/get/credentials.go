@@ -13,29 +13,35 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type getCredentialsOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
-	Names []string
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project string
+	Names   []string
 }
 
-func newGetCredentialsCommand(
-	cfg config.CLIConfig,
-	opt *option.Option,
-) *cobra.Command {
+func newGetCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &getCredentialsOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -70,6 +76,9 @@ kargo get credentials my-credentials`,
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	return cmd
 }
 
@@ -102,13 +111,12 @@ func (o *getCredentialsOptions) validate() error {
 
 // run gets the credentials from the server and prints them to the console.
 func (o *getCredentialsOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
 
 	if len(o.Names) == 0 {
-
 		var resp *connect.Response[v1alpha1.ListCredentialsResponse]
 		if resp, err = kargoSvcCli.ListCredentials(
 			ctx,
@@ -124,8 +132,7 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 		for i, credentials := range resp.Msg.GetCredentials() {
 			res[i] = typesv1alpha1.FromSecretProto(credentials)
 		}
-		return printObjects(o.Option, res)
-
+		return printObjects(res, o.PrintFlags, o.IOStreams)
 	}
 
 	res := make([]*corev1.Secret, 0, len(o.Names))
@@ -147,14 +154,9 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 		res = append(res, typesv1alpha1.FromSecretProto(resp.Msg.GetCredentials()))
 	}
 
-	if err = printObjects(o.Option, res); err != nil {
-		return errors.Wrap(err, "print credentials")
+	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+		return errors.Wrap(err, "print stages")
 	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-
 	return goerrors.Join(errs...)
 }
 

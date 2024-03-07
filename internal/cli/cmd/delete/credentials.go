@@ -3,33 +3,40 @@ package delete
 import (
 	"context"
 	goerrors "errors"
-	"fmt"
 	"slices"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type deleteCredentialsOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
-	Names []string
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project string
+	Names   []string
 }
 
-func newCredentialsCommand(
-	cfg config.CLIConfig,
-	opt *option.Option,
-) *cobra.Command {
+func newCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &deleteCredentialsOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("deleted").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -61,8 +68,10 @@ kargo delete credentials my-credentials`,
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
-	return cmd
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
+	return cmd
 }
 
 // addFlags adds the flags for the get credentials options to the provided
@@ -99,9 +108,14 @@ func (o *deleteCredentialsOptions) validate() error {
 
 // run removes the credentials from the project based on the options.
 func (o *deleteCredentialsOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
+	}
+
+	printer, err := o.PrintFlags.ToPrinter()
+	if err != nil {
+		return errors.Wrap(err, "create printer")
 	}
 
 	var resErr error
@@ -118,7 +132,15 @@ func (o *deleteCredentialsOptions) run(ctx context.Context) error {
 			resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
 			continue
 		}
-		_, _ = fmt.Fprintf(o.IOStreams.Out, "Credentials Deleted: %q\n", name)
+		_ = printer.PrintObj(
+			&corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: o.Project,
+				},
+			},
+			o.IOStreams.Out,
+		)
 	}
 	return resErr
 }

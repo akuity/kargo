@@ -2,26 +2,32 @@ package update
 
 import (
 	"context"
-	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"k8s.io/utils/ptr"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/credentials"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type updateCredentialsOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project                     string
 	Name                        string
 	Git                         bool
 	Helm                        bool
@@ -34,13 +40,11 @@ type updateCredentialsOptions struct {
 	ChangePasswordInteractively bool
 }
 
-func newUpdateCredentialsCommand(
-	cfg config.CLIConfig,
-	opt *option.Option,
-) *cobra.Command {
+func newUpdateCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &updateCredentialsOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -87,8 +91,10 @@ kargo update credentials my-credentials --git`,
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
-	return cmd
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
+	return cmd
 }
 
 // addFlags adds the flags for the get credentials options to the provided
@@ -155,7 +161,7 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 		}
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
@@ -184,11 +190,6 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "update credentials")
-	}
-
-	if ptr.Deref(o.PrintFlags.OutputFormat, "") == "" {
-		_, _ = fmt.Fprintf(o.IOStreams.Out, "Credentials Updated: %q\n", o.Name)
-		return nil
 	}
 
 	secret := typesv1alpha1.FromSecretProto(resp.Msg.GetCredentials())
