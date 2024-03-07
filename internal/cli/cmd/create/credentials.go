@@ -3,12 +3,15 @@ package create
 import (
 	"context"
 	goerrors "errors"
+	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/utils/ptr"
 
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -184,7 +187,7 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 		o.Type = credentials.TypeImage.String()
 	}
 
-	if _, err := kargoSvcCli.CreateCredentials(
+	resp, err := kargoSvcCli.CreateCredentials(
 		ctx,
 		connect.NewRequest(
 			&v1alpha1.CreateCredentialsRequest{
@@ -197,9 +200,21 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 				Password:       o.Password,
 			},
 		),
-	); err != nil {
+	)
+	if err != nil {
 		return errors.Wrap(err, "create credentials")
 	}
 
-	return nil
+	if ptr.Deref(o.PrintFlags.OutputFormat, "") == "" {
+		_, _ = fmt.Fprintf(o.IOStreams.Out, "Credentials Created: %q\n", o.Name)
+		return nil
+	}
+
+	secret := typesv1alpha1.FromSecretProto(resp.Msg.GetCredentials())
+
+	printer, err := o.PrintFlags.ToPrinter()
+	if err != nil {
+		return errors.Wrap(err, "new printer")
+	}
+	return printer.PrintObj(secret, o.IOStreams.Out)
 }

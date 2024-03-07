@@ -2,12 +2,15 @@ package update
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/utils/ptr"
 
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
@@ -165,7 +168,7 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 		o.Type = credentials.TypeImage.String()
 	}
 
-	if _, err := kargoSvcCli.UpdateCredentials(
+	resp, err := kargoSvcCli.UpdateCredentials(
 		ctx,
 		connect.NewRequest(
 			&v1alpha1.UpdateCredentialsRequest{
@@ -178,9 +181,21 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 				Password:       o.Password,
 			},
 		),
-	); err != nil {
+	)
+	if err != nil {
 		return errors.Wrap(err, "update credentials")
 	}
 
-	return nil
+	if ptr.Deref(o.PrintFlags.OutputFormat, "") == "" {
+		_, _ = fmt.Fprintf(o.IOStreams.Out, "Credentials Updated: %q\n", o.Name)
+		return nil
+	}
+
+	secret := typesv1alpha1.FromSecretProto(resp.Msg.GetCredentials())
+
+	printer, err := o.PrintFlags.ToPrinter()
+	if err != nil {
+		return errors.Wrap(err, "new printer")
+	}
+	return printer.PrintObj(secret, o.IOStreams.Out)
 }

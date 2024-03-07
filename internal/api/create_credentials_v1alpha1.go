@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -40,11 +41,18 @@ func (s *server) CreateCredentials(
 		return nil, err
 	}
 
-	if err := s.client.Create(ctx, credentialsToSecret(creds)); err != nil {
+	secret := credentialsToSecret(creds)
+	if err := s.client.Create(ctx, secret); err != nil {
 		return nil, errors.Wrap(err, "create secret")
 	}
 
-	return connect.NewResponse(&svcv1alpha1.CreateCredentialsResponse{}), nil
+	*secret = sanitizeCredentialSecret(*secret)
+
+	return connect.NewResponse(
+		&svcv1alpha1.CreateCredentialsResponse{
+			Credentials: typesv1alpha1.ToSecretProto(secret),
+		},
+	), nil
 }
 
 func (s *server) validateCredentials(creds credentials) error {
