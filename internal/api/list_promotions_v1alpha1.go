@@ -17,21 +17,24 @@ func (s *server) ListPromotions(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListPromotionsRequest],
 ) (*connect.Response[svcv1alpha1.ListPromotionsResponse], error) {
-	if req.Msg.GetProject() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
-	}
-
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
 
+	if err := s.validateProjectExists(ctx, project); err != nil {
+		return nil, err
+	}
+
+	stage := req.Msg.GetStage()
+
 	var list kargoapi.PromotionList
 	opts := []client.ListOption{
-		client.InNamespace(req.Msg.GetProject()),
+		client.InNamespace(project),
 	}
-	if req.Msg.GetStage() != "" {
+	if stage != "" {
 		opts = append(opts,
-			client.MatchingFields{kubeclient.PromotionsByStageIndexField: req.Msg.GetStage()},
+			client.MatchingFields{kubeclient.PromotionsByStageIndexField: stage},
 		)
 	}
 	if err := s.client.List(ctx, &list, opts...); err != nil {

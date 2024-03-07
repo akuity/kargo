@@ -9,29 +9,35 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/cli-runtime/pkg/printers"
-	"k8s.io/utils/ptr"
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type applyOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Filenames []string
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &applyOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -54,6 +60,9 @@ kargo apply -f stages/
 		},
 	}
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
@@ -62,12 +71,8 @@ kargo apply -f stages/
 
 // addFlags adds the flags for the apply options to the provided command.
 func (o *applyOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	// TODO: Factor out server flags to a higher level (root?) as they are
-	//   common to almost all commands.
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to apply the resource(s)")
 
@@ -101,15 +106,7 @@ func (o *applyOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "read manifests")
 	}
 
-	var printer printers.ResourcePrinter
-	if ptr.Deref(o.PrintFlags.OutputFormat, "") != "" {
-		printer, err = o.PrintFlags.ToPrinter()
-		if err != nil {
-			return errors.Wrap(err, "new printer")
-		}
-	}
-
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
@@ -140,41 +137,39 @@ func (o *applyOptions) run(ctx context.Context) error {
 		}
 	}
 
+	printer, err := o.toPrinter("created")
+	if err != nil {
+		return errors.Wrap(err, "new printer")
+	}
+
 	for _, res := range createdRes {
 		var obj unstructured.Unstructured
-		if err := sigyaml.Unmarshal(res.CreatedResourceManifest, &obj); err != nil {
+		if err = sigyaml.Unmarshal(res.CreatedResourceManifest, &obj); err != nil {
 			fmt.Fprintf(o.IOStreams.ErrOut, "%s",
 				errors.Wrap(err, "Error: unmarshal created manifest"))
 			continue
 		}
-		if printer == nil {
-			name := types.NamespacedName{
-				Namespace: obj.GetNamespace(),
-				Name:      obj.GetName(),
-			}.String()
-			fmt.Fprintf(o.IOStreams.Out, "%s Created: %q\n", obj.GetKind(), name)
-			continue
-		}
 		_ = printer.PrintObj(&obj, o.IOStreams.Out)
+	}
+
+	printer, err = o.toPrinter("updated")
+	if err != nil {
+		return errors.Wrap(err, "new printer")
 	}
 
 	for _, res := range updatedRes {
 		var obj unstructured.Unstructured
-		if err := sigyaml.Unmarshal(res.UpdatedResourceManifest, &obj); err != nil {
+		if err = sigyaml.Unmarshal(res.UpdatedResourceManifest, &obj); err != nil {
 			fmt.Fprintf(o.IOStreams.ErrOut, "%s",
 				errors.Wrap(err, "Error: unmarshal updated manifest"))
 			continue
 		}
-		if printer == nil {
-			name := types.NamespacedName{
-				Namespace: obj.GetNamespace(),
-				Name:      obj.GetName(),
-			}.String()
-			fmt.Fprintf(o.IOStreams.Out, "%s Updated: %q\n", obj.GetKind(), name)
-			continue
-		}
 		_ = printer.PrintObj(&obj, o.IOStreams.Out)
 	}
-
 	return goerrors.Join(errs...)
+}
+
+func (o *applyOptions) toPrinter(operation string) (printers.ResourcePrinter, error) {
+	o.PrintFlags.NamePrintFlags.Operation = operation
+	return o.PrintFlags.ToPrinter()
 }

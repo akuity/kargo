@@ -55,8 +55,8 @@ export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...p
       onOk={handleSubmit(async (data) => {
         await updateAliasAction({
           project,
-          freight: freight?.id || '',
-          alias: data.value || ''
+          name: freight?.id || '',
+          newAlias: data.value || ''
         });
         onSubmit();
       })}

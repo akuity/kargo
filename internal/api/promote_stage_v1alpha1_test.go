@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -39,11 +40,11 @@ func TestPromoteStage(t *testing.T) {
 			name: "error validating project",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
-				Name:    "fake-stage",
+				Stage:   "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -59,11 +60,11 @@ func TestPromoteStage(t *testing.T) {
 			name: "error getting Stage",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
-				Name:    "fake-stage",
+				Stage:   "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -86,11 +87,11 @@ func TestPromoteStage(t *testing.T) {
 			name: "Stage not found",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
-				Name:    "fake-stage",
+				Stage:   "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -117,11 +118,11 @@ func TestPromoteStage(t *testing.T) {
 			name: "error getting Freight",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
-				Name:    "fake-stage",
+				Stage:   "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -141,10 +142,10 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -161,11 +162,11 @@ func TestPromoteStage(t *testing.T) {
 			name: "Freight not found",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
-				Name:    "fake-stage",
+				Stage:   "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -185,10 +186,10 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return nil, nil
 				},
@@ -201,7 +202,7 @@ func TestPromoteStage(t *testing.T) {
 				connErr, ok := err.(*connect.Error)
 				require.True(t, ok)
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
-				require.Contains(t, connErr.Message(), "Freight")
+				require.Contains(t, connErr.Message(), "freight")
 				require.Contains(t, connErr.Message(), "not found in namespace")
 			},
 		},
@@ -209,11 +210,11 @@ func TestPromoteStage(t *testing.T) {
 			name: "Freight not available",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
-				Name:    "fake-stage",
+				Stage:   "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -233,10 +234,10 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
@@ -257,14 +258,14 @@ func TestPromoteStage(t *testing.T) {
 			},
 		},
 		{
-			name: "error creating Promotion",
+			name: "promoting not authorized",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
-				Name:    "fake-stage",
+				Stage:   "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -284,15 +285,82 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string,
+					string,
+					string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
 				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
 					return true
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return errors.New("not authorized")
+				},
+			},
+			assertions: func(
+				_ *connect.Response[svcv1alpha1.PromoteStageResponse],
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "not authorized", err.Error())
+			},
+		},
+		{
+			name: "error creating Promotion",
+			req: &svcv1alpha1.PromoteStageRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: &kargoapi.StageSpec{
+							Subscriptions: &kargoapi.Subscriptions{
+								UpstreamStages: []kargoapi.StageSubscription{
+									{
+										Name: "fake-upstream-stage",
+									},
+								},
+							},
+						},
+					}, nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
+					return true
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
 				},
 				createPromotionFn: func(
 					context.Context,
@@ -314,11 +382,11 @@ func TestPromoteStage(t *testing.T) {
 			name: "success",
 			req: &svcv1alpha1.PromoteStageRequest{
 				Project: "fake-project",
-				Name:    "fake-stage",
+				Stage:   "fake-stage",
 				Freight: "fake-freight",
 			},
 			server: &server{
-				validateProjectFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(ctx context.Context, project string) error {
 					return nil
 				},
 				getStageFn: func(
@@ -338,15 +406,24 @@ func TestPromoteStage(t *testing.T) {
 						},
 					}, nil
 				},
-				getFreightFn: func(
+				getFreightByNameOrAliasFn: func(
 					context.Context,
 					client.Client,
-					types.NamespacedName,
+					string, string, string,
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
 				isFreightAvailableFn: func(*kargoapi.Freight, string, []string) bool {
 					return true
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
 				},
 				createPromotionFn: func(
 					context.Context,

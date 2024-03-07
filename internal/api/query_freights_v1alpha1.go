@@ -35,24 +35,33 @@ func (s *server) QueryFreight(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.QueryFreightRequest],
 ) (*connect.Response[svcv1alpha1.QueryFreightResponse], error) {
-	if req.Msg.GetProject() == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
+		return nil, err
 	}
-	if err := s.validateProjectFn(ctx, req.Msg.GetProject()); err != nil {
-		return nil, err // This already returns a connect.Error
-	}
-	if err := validateGroupByOrderBy(req.Msg.GetGroup(), req.Msg.GetGroupBy(), req.Msg.GetOrderBy()); err != nil {
+
+	group := req.Msg.GetGroup()
+	groupBy := req.Msg.GetGroupBy()
+	orderBy := req.Msg.GetOrderBy()
+	if err := validateGroupByOrderBy(group, groupBy, orderBy); err != nil {
 		return nil, err // This already returns a connect.Error
 	}
 
+	if err := s.validateProjectExistsFn(ctx, project); err != nil {
+		return nil, err // This already returns a connect.Error
+	}
+
+	stageName := req.Msg.GetStage()
+	reverse := req.Msg.GetReverse()
+
 	var freight []kargoapi.Freight
-	if req.Msg.GetStage() != "" {
+	if stageName != "" {
 		stage, err := s.getStageFn(
 			ctx,
 			s.client,
 			types.NamespacedName{
-				Namespace: req.Msg.GetProject(),
-				Name:      req.Msg.GetStage(),
+				Namespace: project,
+				Name:      stageName,
 			},
 		)
 		if err != nil {
@@ -63,14 +72,15 @@ func (s *server) QueryFreight(
 				connect.CodeNotFound,
 				errors.Errorf(
 					"Stage %q not found in namespace %q",
-					req.Msg.GetStage(),
-					req.Msg.GetProject()),
+					stageName,
+					project,
+				),
 			)
 		}
 		freight, err = s.getAvailableFreightForStageFn(
 			ctx,
-			req.Msg.GetProject(),
-			req.Msg.GetStage(),
+			project,
+			stageName,
 			*stage.Spec.Subscriptions,
 		)
 		if err != nil {
@@ -82,7 +92,7 @@ func (s *server) QueryFreight(
 		if err := s.listFreightFn(
 			ctx,
 			freightList,
-			client.InNamespace(req.Msg.GetProject()),
+			client.InNamespace(project),
 		); err != nil {
 			return nil, errors.Wrap(err, "list freights")
 		}
@@ -91,18 +101,18 @@ func (s *server) QueryFreight(
 
 	// Split the Freight into groups
 	var freightGroups map[string]*svcv1alpha1.FreightList
-	switch req.Msg.GetGroupBy() {
+	switch groupBy {
 	case GroupByImageRepository:
-		freightGroups = groupByImageRepo(freight, req.Msg.GetGroup())
+		freightGroups = groupByImageRepo(freight, group)
 	case GroupByGitRepository:
-		freightGroups = groupByGitRepo(freight, req.Msg.GetGroup())
+		freightGroups = groupByGitRepo(freight, group)
 	case GroupByChartRepository:
-		freightGroups = groupByChart(freight, req.Msg.GetGroup())
+		freightGroups = groupByChart(freight, group)
 	default:
 		freightGroups = noGroupBy(freight)
 	}
 
-	sortFreightGroups(req.Msg.GetOrderBy(), req.Msg.GetReverse(), freightGroups)
+	sortFreightGroups(orderBy, reverse, freightGroups)
 
 	return connect.NewResponse(&svcv1alpha1.QueryFreightResponse{
 		Groups: freightGroups,

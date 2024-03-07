@@ -21,19 +21,23 @@ func (s *server) WatchPromotion(
 	req *connect.Request[svcv1alpha1.WatchPromotionRequest],
 	stream *connect.ServerStream[svcv1alpha1.WatchPromotionResponse],
 ) error {
-	if req.Msg.GetProject() == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
+		return err
 	}
-	if req.Msg.GetName() == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("name should not be empty"))
+
+	name := req.Msg.GetName()
+	if err := validateFieldNotEmpty("name", name); err != nil {
+		return err
 	}
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+
+	if err := s.validateProjectExists(ctx, project); err != nil {
 		return err
 	}
 
 	if err := s.client.Get(ctx, client.ObjectKey{
-		Namespace: req.Msg.GetProject(),
-		Name:      req.Msg.GetName(),
+		Namespace: project,
+		Name:      name,
 	}, &kargoapi.Promotion{}); err != nil {
 		if kubeerr.IsNotFound(err) {
 			return connect.NewError(connect.CodeNotFound, err)
@@ -42,9 +46,9 @@ func (s *server) WatchPromotion(
 	}
 
 	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, req.Msg.GetName()).String(),
+		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String(),
 	}
-	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, req.Msg.GetProject(), opts)
+	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, project, opts)
 	if err != nil {
 		return errors.Wrap(err, "watch promotion")
 	}

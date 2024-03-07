@@ -17,16 +17,24 @@ func (s *server) DeleteStage(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteStageRequest],
 ) (*connect.Response[svcv1alpha1.DeleteStageResponse], error) {
-	if err := validateProjectAndStageNonEmpty(req.Msg.GetProject(), req.Msg.GetName()); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+
+	name := req.Msg.GetName()
+	if err := validateFieldNotEmpty("name", name); err != nil {
 		return nil, err
 	}
+
+	if err := s.validateProjectExists(ctx, project); err != nil {
+		return nil, err
+	}
+
 	var stage kargoapi.Stage
 	key := client.ObjectKey{
-		Namespace: req.Msg.GetProject(),
-		Name:      req.Msg.GetName(),
+		Namespace: project,
+		Name:      name,
 	}
 	if err := s.client.Get(ctx, key, &stage); err != nil {
 		if kubeerr.IsNotFound(err) {

@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -39,7 +40,7 @@ type server struct {
 	// The following behaviors are overridable for testing purposes:
 
 	// Common validations:
-	validateProjectFn func(
+	validateProjectExistsFn func(
 		ctx context.Context,
 		project string,
 	) error
@@ -56,10 +57,12 @@ type server struct {
 		client.Client,
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
-	getFreightFn func(
+	getFreightByNameOrAliasFn func(
 		ctx context.Context,
 		c client.Client,
-		namespacedName types.NamespacedName,
+		project string,
+		name string,
+		alias string,
 	) (*kargoapi.Freight, error)
 	isFreightAvailableFn func(
 		freight *kargoapi.Freight,
@@ -106,6 +109,22 @@ type server struct {
 		freight *kargoapi.Freight,
 		alias string,
 	) error
+
+	// Freight approval:
+	patchFreightStatusFn func(
+		ctx context.Context,
+		freight *kargoapi.Freight,
+		newStatus kargoapi.FreightStatus,
+	) error
+
+	// Special authorizations:
+	authorizeFn func(
+		ctx context.Context,
+		verb string,
+		gvr schema.GroupVersionResource,
+		subresource string,
+		key client.ObjectKey,
+	) error
 }
 
 type Server interface {
@@ -122,10 +141,10 @@ func NewServer(
 		client:         kubeClient,
 		internalClient: internalClient,
 	}
-	s.validateProjectFn = s.validateProject
+	s.validateProjectExistsFn = s.validateProjectExists
 	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = kargoapi.GetStage
-	s.getFreightFn = kargoapi.GetFreight
+	s.getFreightByNameOrAliasFn = kargoapi.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = kargoapi.IsFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findStageSubscribersFn = s.findStageSubscribers
@@ -135,6 +154,8 @@ func NewServer(
 	s.getVerifiedFreightFn =
 		s.getVerifiedFreight
 	s.patchFreightAliasFn = s.patchFreightAlias
+	s.patchFreightStatusFn = s.patchFreightStatus
+	s.authorizeFn = kubeClient.Authorize
 	return s
 }
 

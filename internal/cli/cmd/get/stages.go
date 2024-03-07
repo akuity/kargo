@@ -11,25 +11,34 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type getStagesOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
-	Names []string
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project string
+	Names   []string
 }
 
-func newGetStagesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newGetStagesCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &getStagesOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -37,18 +46,22 @@ func newGetStagesCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Comman
 		Aliases: []string{"stage"},
 		Short:   "Display one or many stages",
 		Example: `
-# List all stages in the project
+# List all stages in my-project
 kargo get stages --project=my-project
 
-# List all stages in JSON output format
+# List all stages in my-project in JSON output format
 kargo get stages --project=my-project -o json
 
-# Get a stage in the project
-kargo get stages --project=my-project my-stage
+# Get the QA stage in my-project
+kargo get stage --project=my-project qa
 
 # List all stages in the default project
 kargo config set-project my-project
 kargo get stages
+
+# Get a the QA stage in the default project
+kargo config set-project my-project
+kargo get stage qa
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -64,15 +77,21 @@ kargo get stages
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	return cmd
 }
 
 // addFlags adds the flags for the get stages options to the provided command.
 func (o *getStagesOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
-		"The Project for which to list Stages. If not set, the default project will be used.")
+	option.Project(
+		cmd.Flags(), &o.Project, o.Config.Project,
+		"The project for which to list stages. If not set, the default project will be used.",
+	)
 }
 
 // complete sets the options from the command arguments.
@@ -91,39 +110,49 @@ func (o *getStagesOptions) validate() error {
 
 // run gets the stages from the server and prints them to the console.
 func (o *getStagesOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	resp, err := kargoSvcCli.ListStages(ctx, connect.NewRequest(&v1alpha1.ListStagesRequest{
-		Project: o.Project,
-	}))
-	if err != nil {
-		return errors.Wrap(err, "list stages")
+
+	if len(o.Names) == 0 {
+		var resp *connect.Response[v1alpha1.ListStagesResponse]
+		if resp, err = kargoSvcCli.ListStages(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.ListStagesRequest{
+					Project: o.Project,
+				},
+			),
+		); err != nil {
+			return errors.Wrap(err, "list stages")
+		}
+		return printObjects(resp.Msg.GetStages(), o.PrintFlags, o.IOStreams)
 	}
 
-	res := make([]*kargoapi.Stage, 0, len(resp.Msg.GetStages()))
-	var resErr error
-	if len(o.Names) == 0 {
-		res = append(res, resp.Msg.GetStages()...)
-	} else {
-		stagesByName := make(map[string]*kargoapi.Stage, len(resp.Msg.GetStages()))
-		for idx := range resp.Msg.GetStages() {
-			s := resp.Msg.GetStages()[idx]
-			stagesByName[s.GetName()] = s
+	res := make([]*kargoapi.Stage, 0, len(o.Names))
+	errs := make([]error, 0, len(o.Names))
+	for _, name := range o.Names {
+		var resp *connect.Response[v1alpha1.GetStageResponse]
+		if resp, err = kargoSvcCli.GetStage(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.GetStageRequest{
+					Project: o.Project,
+					Name:    name,
+				},
+			),
+		); err != nil {
+			errs = append(errs, err)
+			continue
 		}
-		for _, name := range o.Names {
-			if stage, ok := stagesByName[name]; ok {
-				res = append(res, stage)
-			} else {
-				resErr = goerrors.Join(err, errors.Errorf("stage %q not found", name))
-			}
-		}
+		res = append(res, resp.Msg.GetStage())
 	}
-	if err := printObjects(o.Option, res); err != nil {
-		return err
+
+	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+		return errors.Wrap(err, "print stages")
 	}
-	return resErr
+	return goerrors.Join(errs...)
 }
 
 func newStageTable(list *metav1.List) *metav1.Table {

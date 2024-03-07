@@ -5,18 +5,38 @@ import (
 )
 
 const (
+	// AliasFlag is the flag name for the alias flag.
+	AliasFlag = "alias"
+	// AliasShortFlag is the short flag name for the alias flag.
+	AliasShortFlag = "a"
+
 	// FilenameFlag is the flag name for the filename flag.
 	FilenameFlag = "filename"
 	// FilenameShortFlag is the short flag name for the filename flag.
 	FilenameShortFlag = "f"
+
+	// FreightFlag is the flag name for the freight flag.
+	FreightFlag = "freight"
+
+	// FreightAliasFlag is the flag name for the freight-alias flag.
+	FreightAliasFlag = "freight-alias"
+
+	// InsecureTLSFlag is the flag name for the insecure-tls flag.
+	InsecureTLSFlag = "insecure-skip-tls-verify"
+
+	// NameFlag is the flag name for the name flag.
+	NameFlag = "name"
 
 	// ProjectFlag is the flag name for the project flag.
 	ProjectFlag = "project"
 	// ProjectShortFlag is the short flag name for the project flag.
 	ProjectShortFlag = "p"
 
-	// FreightFlag is the flag name for the freight flag.
-	FreightFlag = "freight"
+	// NewAliasFlag is the flag name for the new-alias flag.
+	NewAliasFlag = "new-alias"
+
+	// OldAliasFlag is the flag name for the old-alias flag.
+	OldAliasFlag = "old-alias"
 
 	// StageFlag is the flag name for the stage flag.
 	StageFlag = "stage"
@@ -28,17 +48,54 @@ const (
 	WaitFlag = "wait"
 )
 
+// Alias adds the AliasFlag to the provided flag set.
+func Alias(fs *pflag.FlagSet, stage *string, usage string) {
+	fs.StringVar(stage, AliasFlag, "", usage)
+}
+
+// Aliases adds a multi-value AliasFlag to the provided flag set.
+func Aliases(fs *pflag.FlagSet, stage *[]string, usage string) {
+	fs.StringArrayVar(stage, AliasFlag, nil, usage)
+}
+
 // Filenames adds the FilenameFlag and FilenameShortFlag to the provided flag set.
 func Filenames(fs *pflag.FlagSet, filenames *[]string, usage string) {
 	fs.StringSliceVarP(filenames, FilenameFlag, FilenameShortFlag, nil, usage)
 }
 
-func InsecureTLS(fs *pflag.FlagSet, opt *Option) {
-	fs.BoolVar(&opt.InsecureTLS, "insecure-skip-tls-verify", false, "Skip TLS certificate verification")
+// Freight adds the FreightFlag to the provided flag set.
+func Freight(fs *pflag.FlagSet, freight *string, usage string) {
+	fs.StringVar(freight, FreightFlag, "", usage)
 }
 
-func LocalServer(fs *pflag.FlagSet, opt *Option) {
-	fs.BoolVar(&opt.UseLocalServer, "local-server", false, "Use local server")
+// FreightAlias adds the FreightAliasFlag to the provided flag set.
+func FreightAlias(fs *pflag.FlagSet, stage *string, usage string) {
+	fs.StringVar(stage, FreightAliasFlag, "", usage)
+}
+
+// InsecureTLS adds the InsecureTLSFlag to the provided flag set.
+func InsecureTLS(fs *pflag.FlagSet, insecure *bool) {
+	fs.BoolVar(insecure, InsecureTLSFlag, false, "Skip TLS certificate verification")
+}
+
+// Name adds the NameFlag to the provided flag set.
+func Name(fs *pflag.FlagSet, stage *string, usage string) {
+	fs.StringVar(stage, NameFlag, "", usage)
+}
+
+// Names adds a multi-value NameFlag to the provided flag set.
+func Names(fs *pflag.FlagSet, stage *[]string, usage string) {
+	fs.StringArrayVar(stage, NameFlag, nil, usage)
+}
+
+// NewAlias adds the NewAliasFlag to the provided flag set.
+func NewAlias(fs *pflag.FlagSet, stage *string, usage string) {
+	fs.StringVar(stage, NewAliasFlag, "", usage)
+}
+
+// OldAlias adds the OldAliasFlag to the provided flag set.
+func OldAlias(fs *pflag.FlagSet, stage *string, usage string) {
+	fs.StringVar(stage, OldAliasFlag, "", usage)
 }
 
 // Project adds the ProjectFlag and ProjectShortFlag to the provided flag set.
@@ -54,11 +111,6 @@ func Stage(fs *pflag.FlagSet, stage *string, usage string) {
 // SubscribersOf adds the SubscribersOfFlag to the provided flag set.
 func SubscribersOf(fs *pflag.FlagSet, subscribersOf *string, usage string) {
 	fs.StringVar(subscribersOf, SubscribersOfFlag, "", usage)
-}
-
-// Freight adds the FreightFlag to the provided flag set.
-func Freight(fs *pflag.FlagSet, freight *string, usage string) {
-	fs.StringVar(freight, FreightFlag, "", usage)
 }
 
 // Wait adds the WaitFlag to the provided flag set.

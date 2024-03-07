@@ -28,9 +28,14 @@ func (s *server) AdminLogin(
 		)
 	}
 
+	password := req.Msg.GetPassword()
+	if err := validateFieldNotEmpty("password", password); err != nil {
+		return nil, err
+	}
+
 	if err := bcrypt.CompareHashAndPassword(
 		[]byte(s.cfg.AdminConfig.HashedPassword),
-		[]byte(req.Msg.Password),
+		[]byte(password),
 	); err != nil {
 		return nil, connect.NewError(
 			connect.CodePermissionDenied,

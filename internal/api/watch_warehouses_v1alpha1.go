@@ -21,17 +21,21 @@ func (s *server) WatchWarehouses(
 	req *connect.Request[svcv1alpha1.WatchWarehousesRequest],
 	stream *connect.ServerStream[svcv1alpha1.WatchWarehousesResponse],
 ) error {
-	if req.Msg.GetProject() == "" {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("project should not be empty"))
-	}
-	if err := s.validateProject(ctx, req.Msg.GetProject()); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return err
 	}
 
-	if req.Msg.GetName() != "" {
+	if err := s.validateProjectExists(ctx, project); err != nil {
+		return err
+	}
+
+	name := req.Msg.GetName()
+
+	if name != "" {
 		if err := s.client.Get(ctx, libClient.ObjectKey{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetName(),
+			Namespace: project,
+			Name:      name,
 		}, &kargoapi.Warehouse{}); err != nil {
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
@@ -41,11 +45,11 @@ func (s *server) WatchWarehouses(
 	}
 
 	opts := metav1.ListOptions{}
-	if req.Msg.GetName() != "" {
-		opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, req.Msg.GetName()).String()
+	if name != "" {
+		opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, name).String()
 	}
 	w, err :=
-		s.client.Watch(ctx, &kargoapi.Warehouse{}, req.Msg.GetProject(), opts)
+		s.client.Watch(ctx, &kargoapi.Warehouse{}, project, opts)
 	if err != nil {
 		return errors.Wrap(err, "watch warehouse")
 	}

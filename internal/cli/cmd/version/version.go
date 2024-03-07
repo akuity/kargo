@@ -11,27 +11,34 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	versionpkg "github.com/akuity/kargo/internal/version"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type versionOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	ClientOnly bool
 }
 
-func NewCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &versionOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -45,7 +52,7 @@ kargo version
 # Print the client version information only
 kargo version --client
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdOpts.run(cmd.Context())
 		},
 	}
@@ -53,37 +60,38 @@ kargo version --client
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	return cmd
 }
 
 // addFlags adds the flags for the version options to the provided command.
 func (o *versionOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	option.InsecureTLS(cmd.PersistentFlags(), o.Option)
-	option.LocalServer(cmd.PersistentFlags(), o.Option)
 
 	cmd.Flags().BoolVar(&o.ClientOnly, "client", o.ClientOnly, "If true, shows client version only (no server required)")
 }
 
 // run prints the client and server version information.
 func (o *versionOptions) run(ctx context.Context) error {
-	printToStdout := ptr.Deref(o.PrintFlags.OutputFormat, "") == ""
+	printToStdout := o.PrintFlags.OutputFlagSpecified == nil || !o.PrintFlags.OutputFlagSpecified()
 
 	cliVersion := svcv1alpha1.ToVersionProto(versionpkg.GetVersion())
 	if printToStdout {
-		fmt.Println("Client Version:", cliVersion.GetVersion())
+		_, _ = fmt.Fprintln(o.IOStreams.Out, "Client Version:", cliVersion.GetVersion())
 	}
 
 	var serverVersion *svcv1alpha1.VersionInfo
 	var serverErr error
-	if !o.UseLocalServer && !o.ClientOnly {
-		serverVersion, serverErr = getServerVersion(ctx, o.Config, o.Option)
+	if !o.ClientOnly {
+		serverVersion, serverErr = getServerVersion(ctx, o.Config, o.ClientOptions)
 	}
 
 	if printToStdout {
 		if serverVersion != nil {
-			fmt.Println("Server Version:", serverVersion.GetVersion())
+			_, _ = fmt.Fprintln(o.IOStreams.Out, "Server Version:", serverVersion.GetVersion())
 		}
 		return serverErr
 	}
@@ -106,15 +114,20 @@ func (o *versionOptions) run(ctx context.Context) error {
 	return serverErr
 }
 
-func getServerVersion(ctx context.Context, cfg config.CLIConfig, opt *option.Option) (*svcv1alpha1.VersionInfo, error) {
+func getServerVersion(
+	ctx context.Context,
+	cfg config.CLIConfig,
+	opts client.Options,
+) (*svcv1alpha1.VersionInfo, error) {
 	if cfg.APIAddress == "" || cfg.BearerToken == "" {
 		return nil, nil
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opt)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "get client from config")
 	}
+
 	resp, err := kargoSvcCli.GetVersionInfo(
 		ctx,
 		connect.NewRequest(&svcv1alpha1.GetVersionInfoRequest{}),

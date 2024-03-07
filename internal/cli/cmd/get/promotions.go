@@ -9,29 +9,37 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type getPromotionsOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
-	Stage string
-	Names []string
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project string
+	Stage   string
+	Names   []string
 }
 
-func newGetPromotionsCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newGetPromotionsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &getPromotionsOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -39,21 +47,29 @@ func newGetPromotionsCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Co
 		Aliases: []string{"promotion", "promos", "promo"},
 		Short:   "Display one or many promotions",
 		Example: `
-# List all promotions in the project
+# List all promotions in my-project
 kargo get promotions --project=my-project
 
-# List all promotions in JSON output format
+# List all promotions in my-project in JSON output format
 kargo get promotions --project=my-project -o json
 
-# List all promotions for the stage
-kargo get promotions --project=my-project --stage=my-stage
+# List all promotions for the QA stage in my-project
+kargo get promotions --project=my-project --stage=qa
 
-# Get a promotion in the project
-kargo get promotions --project=my-project some-promotion
+# Get a specific promotion in my-project
+kargo get promotion --project=my-project abc1234
 
 # List all promotions in the default project
 kargo config set-project my-project
 kargo get promotions
+
+# List all promotions for the QA stage in the default project
+kargo config set-project my-project
+kargo get promotions --stage=qa
+
+# Get a specific promotion in the default project
+kargo config set-project my-project
+kargo get promotion abc1234
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -69,17 +85,25 @@ kargo get promotions
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	return cmd
 }
 
 // addFlags adds the flags for the get promotions options to the provided command.
 func (o *getPromotionsOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
-		"The Project for which to list Promotions. If not set, the default project will be used.")
-	option.Stage(cmd.Flags(), &o.Stage,
-		"The Stage for which to list Promotions. If not set, all stages will be listed.")
+	option.Project(
+		cmd.Flags(), &o.Project, o.Config.Project,
+		"The project for which to list promotions. If not set, the default project will be used.",
+	)
+	option.Stage(
+		cmd.Flags(), &o.Stage,
+		"The stage for which to list promotions. If not set, all stages will be listed.",
+	)
 }
 
 // complete sets the options from the command arguments.
@@ -98,44 +122,50 @@ func (o *getPromotionsOptions) validate() error {
 
 // run gets the promotions from the server and prints them to the console.
 func (o *getPromotionsOptions) run(ctx context.Context) error {
-	req := &v1alpha1.ListPromotionsRequest{
-		Project: o.Project,
-	}
-	if o.Stage != "" {
-		req.Stage = proto.String(o.Stage)
-	}
-
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	resp, err := kargoSvcCli.ListPromotions(ctx, connect.NewRequest(req))
-	if err != nil {
-		return errors.Wrap(err, "list promotions")
+
+	if len(o.Names) == 0 {
+		var resp *connect.Response[v1alpha1.ListPromotionsResponse]
+		if resp, err = kargoSvcCli.ListPromotions(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.ListPromotionsRequest{
+					Project: o.Project,
+					Stage:   &o.Stage,
+				},
+			),
+		); err != nil {
+			return errors.Wrap(err, "list promotions")
+		}
+		return printObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams)
 	}
 
-	res := make([]*kargoapi.Promotion, 0, len(resp.Msg.GetPromotions()))
-	var resErr error
-	if len(o.Names) == 0 {
-		res = append(res, resp.Msg.GetPromotions()...)
-	} else {
-		promotionsByName := make(map[string]*kargoapi.Promotion, len(resp.Msg.GetPromotions()))
-		for idx := range resp.Msg.GetPromotions() {
-			p := resp.Msg.GetPromotions()[idx]
-			promotionsByName[p.GetName()] = p
+	res := make([]*kargoapi.Promotion, 0, len(o.Names))
+	errs := make([]error, 0, len(o.Names))
+	for _, name := range o.Names {
+		var resp *connect.Response[v1alpha1.GetPromotionResponse]
+		if resp, err = kargoSvcCli.GetPromotion(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.GetPromotionRequest{
+					Project: o.Project,
+					Name:    name,
+				},
+			),
+		); err != nil {
+			errs = append(errs, err)
+			continue
 		}
-		for _, name := range o.Names {
-			if promo, ok := promotionsByName[name]; ok {
-				res = append(res, promo)
-			} else {
-				resErr = goerrors.Join(err, errors.Errorf("promotion %q not found", name))
-			}
-		}
+		res = append(res, resp.Msg.GetPromotion())
 	}
-	if err := printObjects(o.Option, res); err != nil {
-		return err
+
+	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+		return errors.Wrap(err, "print promotions")
 	}
-	return resErr
+	return goerrors.Join(errs...)
 }
 
 func newPromotionTable(list *metav1.List) *metav1.Table {

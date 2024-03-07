@@ -3035,6 +3035,20 @@ export class StageList extends Message<StageList> {
  */
 export class StageSpec extends Message<StageSpec> {
   /**
+   * Shard is the name of the shard that this Stage belongs to. This is an
+   * optional field. If not specified, the Stage will belong to the default
+   * shard. A defaulting webhook will sync this field with the value of the
+   * kargo.akuity.io/shard label. When the shard label is not present or differs
+   * from the value of this field, the defaulting webhook will set the label to
+   * the value of this field. If the shard label is present and this field is
+   * empty, the defaulting webhook will set the value of this field to the value
+   * of the shard label.
+   *
+   * @generated from field: optional string shard = 4;
+   */
+  shard?: string;
+
+  /**
    * Subscriptions describes the Stage's sources of Freight. This is a required
    * field.
    *
@@ -3072,6 +3086,7 @@ export class StageSpec extends Message<StageSpec> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 4, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "subscriptions", kind: "message", T: Subscriptions, opt: true },
     { no: 2, name: "promotionMechanisms", kind: "message", T: PromotionMechanisms, opt: true },
     { no: 3, name: "verification", kind: "message", T: Verification, opt: true },

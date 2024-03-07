@@ -23,10 +23,26 @@ func (s *server) PromoteSubscribers(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.PromoteSubscribersRequest],
 ) (*connect.Response[svcv1alpha1.PromoteSubscribersResponse], error) {
-	if err := validateProjectAndStageNonEmpty(req.Msg.GetProject(), req.Msg.GetStage()); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
-	if err := s.validateProjectFn(ctx, req.Msg.GetProject()); err != nil {
+
+	stageName := req.Msg.GetStage()
+	if err := validateFieldNotEmpty("stage", stageName); err != nil {
+		return nil, err
+	}
+
+	freightName := req.Msg.GetFreight()
+	freightAlias := req.Msg.GetFreightAlias()
+	if (freightName == "" && freightAlias == "") || (freightName != "" && freightAlias != "") {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("exactly one of freightName or freightAlias should not be empty"),
+		)
+	}
+
+	if err := s.validateProjectExistsFn(ctx, project); err != nil {
 		return nil, err
 	}
 
@@ -34,8 +50,8 @@ func (s *server) PromoteSubscribers(
 		ctx,
 		s.client,
 		types.NamespacedName{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetStage(),
+			Namespace: project,
+			Name:      stageName,
 		},
 	)
 	if err != nil {
@@ -46,8 +62,8 @@ func (s *server) PromoteSubscribers(
 			connect.CodeNotFound,
 			errors.Errorf(
 				"Stage %q not found in namespace %q",
-				req.Msg.GetStage(),
-				req.Msg.GetProject(),
+				stageName,
+				project,
 			),
 		)
 	}
@@ -60,39 +76,35 @@ func (s *server) PromoteSubscribers(
 	// Stage, then they should approve the Freight for the downstream Stage(s).
 	// Expect a nil if the specified Freight is not found or doesn't meet these
 	// conditions. Errors are indicative only of internal problems.
-	var freight *kargoapi.Freight
-	freight, err = s.getFreightFn(
+	freight, err := s.getFreightByNameOrAliasFn(
 		ctx,
 		s.client,
-		types.NamespacedName{
-			Namespace: req.Msg.GetProject(),
-			Name:      req.Msg.GetFreight(),
-		},
+		project,
+		freightName,
+		freightAlias,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "get freight")
 	}
 	if freight == nil {
-		return nil, connect.NewError(
-			connect.CodeNotFound,
-			errors.Errorf(
-				"Freight %q not found in namespace %q",
-				req.Msg.GetFreight(),
-				req.Msg.GetProject(),
-			),
-		)
+		if freightName != "" {
+			err = fmt.Errorf("freight %q not found in namespace %q", freightName, project)
+		} else {
+			err = fmt.Errorf("freight with alias %q not found in namespace %q", freightAlias, project)
+		}
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	if !s.isFreightAvailableFn(
 		freight,
-		"",                           // approved for not considered
-		[]string{req.Msg.GetStage()}, // verified in
+		"",                  // approved for not considered
+		[]string{stageName}, // verified in
 	) {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
 			errors.Errorf(
 				"Freight %q is not available to Stage %q",
-				req.Msg.GetFreight(),
-				req.Msg.GetStage(),
+				freightName,
+				stageName,
 			),
 		)
 	}
@@ -102,13 +114,28 @@ func (s *server) PromoteSubscribers(
 		return nil, errors.Wrap(err, "find stage subscribers")
 	}
 	if len(subscribers) == 0 {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q has no subscribers", req.Msg.GetStage()))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q has no subscribers", stageName))
+	}
+
+	for _, subscriber := range subscribers {
+		if err := s.authorizeFn(
+			ctx,
+			"promote",
+			kargoapi.GroupVersion.WithResource("stages"),
+			"",
+			types.NamespacedName{
+				Namespace: subscriber.Namespace,
+				Name:      subscriber.Name,
+			},
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	promoteErrs := make([]error, 0, len(subscribers))
 	createdPromos := make([]*v1alpha1.Promotion, 0, len(subscribers))
 	for _, subscriber := range subscribers {
-		newPromo := kargo.NewPromotion(subscriber, req.Msg.GetFreight())
+		newPromo := kargo.NewPromotion(subscriber, freight.Name)
 		if err := s.createPromotionFn(ctx, &newPromo); err != nil {
 			promoteErrs = append(promoteErrs, err)
 			continue

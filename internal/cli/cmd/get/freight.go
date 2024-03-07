@@ -3,7 +3,6 @@ package get
 import (
 	"context"
 	goerrors "errors"
-	"slices"
 	"time"
 
 	"connectrpc.com/connect"
@@ -11,47 +10,67 @@ import (
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type getFreightOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
 
-	Names []string
+	Config        config.CLIConfig
+	ClientOptions client.Options
+
+	Project string
+	Names   []string
+	Aliases []string
 }
 
-func newGetFreightCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newGetFreightCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &getFreightOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
-		Use:   "freight [--project=project] [NAME ...]",
+		Use:   "freight [--project=project] [--name=name | --alias=alias]",
 		Short: "Display one or many pieces of freight",
+		Args:  option.NoArgs,
 		Example: `
-# List all freight in the project
+# List all freight in my-project
 kargo get freight --project=my-project
 
-# List all freight in JSON output format
+# List all freight in my-project in JSON output format
 kargo get freight --project=my-project -o json
 
-# Get a single piece of freight in the project
-kargo get freight --project=my-project my-freight
+# Get a single piece of freight by name
+kargo get freight --project=my-project --name=abc1234
+
+# Get a single piece of freight by alias
+kargo get freight --project=my-project --alias=wonky-wombat
 
 # List all freight in the default project
 kargo config set-project my-project
 kargo get freight
-`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(args)
 
+# Get a single piece of freight by name in the default project
+kargo config set-project my-project
+kargo get freight --name=abc1234
+
+# Get a single piece of freight by alias in the default project
+kargo config set-project my-project
+kargo get freight --alias=wonky-wombat
+`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
@@ -63,82 +82,101 @@ kargo get freight
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	return cmd
 }
 
 // addFlags adds the flags for the get freight options to the provided command.
 func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
-	option.Project(cmd.Flags(), &o.Project, o.Project,
-		"The Project for which to list Freight. If not set, the default project will be used.")
-}
-
-// complete sets the options from the command arguments.
-func (o *getFreightOptions) complete(args []string) {
-	o.Names = slices.Compact(args)
+	option.Project(
+		cmd.Flags(), &o.Project, o.Config.Project,
+		"The project for which to get freight. If not set, the default project will be used.",
+	)
+	option.Names(cmd.Flags(), &o.Names, "The name of a piece of freight to get.")
+	option.Aliases(cmd.Flags(), &o.Aliases, "The alias of a piece of freight to get.")
 }
 
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
 func (o *getFreightOptions) validate() error {
+	// While the flags are marked as required, a user could still provide an empty
+	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
-		return errors.New("project is required")
+		return errors.Errorf("%s is required", option.ProjectFlag)
 	}
 	return nil
 }
 
 // run gets the freight from the server and prints it to the console.
 func (o *getFreightOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
 	}
-	resp, err := kargoSvcCli.QueryFreight(ctx, connect.NewRequest(&v1alpha1.QueryFreightRequest{
-		Project: o.Project,
-	}))
-	if err != nil {
-		return errors.Wrap(err, "query freight")
+
+	if len(o.Names) == 0 && len(o.Aliases) == 0 {
+		var resp *connect.Response[v1alpha1.QueryFreightResponse]
+		if resp, err = kargoSvcCli.QueryFreight(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.QueryFreightRequest{
+					Project: o.Project,
+				},
+			),
+		); err != nil {
+			return errors.Wrap(err, "query freight")
+		}
+
+		// We didn't specify any groupBy, so there should be one group with an
+		// empty key
+		freight := resp.Msg.GetGroups()[""]
+		return printObjects(freight.Freight, o.PrintFlags, o.IOStreams)
 	}
 
-	// We didn't specify any groupBy, so there should be one group with an
-	// empty key
-	freight := resp.Msg.GetGroups()[""]
-	res := make([]*kargoapi.Freight, 0, len(freight.Freight))
-	var resErr error
-	if len(o.Names) == 0 {
-		res = append(res, freight.Freight...)
-	} else {
-		freightByName := make(map[string]*kargoapi.Freight, len(freight.Freight))
-		freightByAlias := make(map[string]*kargoapi.Freight, len(freight.Freight))
-		for idx := range freight.Freight {
-			fr := freight.Freight[idx]
-			freightByName[fr.GetName()] = fr
-			if fr.GetLabels() != nil {
-				freightByAlias[fr.GetLabels()[kargoapi.AliasLabelKey]] = fr
-			}
+	res := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
+	errs := make([]error, 0, len(o.Names))
+	for _, name := range o.Names {
+		var resp *connect.Response[v1alpha1.GetFreightResponse]
+		if resp, err = kargoSvcCli.GetFreight(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.GetFreightRequest{
+					Project: o.Project,
+					Name:    name,
+				},
+			),
+		); err != nil {
+			errs = append(errs, errors.Wrapf(err, "get freight %s", name))
+			continue
 		}
-		selectedFreight := make(map[string]struct{}, len(o.Names))
-		for _, name := range o.Names {
-			f, ok := freightByName[name]
-			if !ok {
-				f, ok = freightByAlias[name]
-			}
-			if ok {
-				if _, selected := selectedFreight[f.Name]; !selected {
-					res = append(res, f)
-					selectedFreight[f.Name] = struct{}{}
-				}
-			} else {
-				resErr =
-					goerrors.Join(err, errors.Errorf("freight %q not found", name))
-			}
+		res = append(res, resp.Msg.GetFreight())
+	}
+	for _, alias := range o.Aliases {
+		var resp *connect.Response[v1alpha1.GetFreightResponse]
+		if resp, err = kargoSvcCli.GetFreight(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.GetFreightRequest{
+					Project: o.Project,
+					Alias:   alias,
+				},
+			),
+		); err != nil {
+			errs = append(errs, errors.Wrapf(err, "get freight %s", alias))
+			continue
 		}
+		res = append(res, resp.Msg.GetFreight())
 	}
-	if err := printObjects(o.Option, res); err != nil {
-		return err
+
+	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+		return errors.Wrap(err, "print freight")
 	}
-	return resErr
+	return goerrors.Join(errs...)
 }
 
 func newFreightTable(list *metav1.List) *metav1.Table {

@@ -13,7 +13,44 @@ import (
 	"github.com/akuity/kargo/internal/api/validation"
 )
 
-func TestValidateProject(t *testing.T) {
+func TestValidateFieldNotEmpty(t *testing.T) {
+	testCases := []struct {
+		name       string
+		fieldName  string
+		fieldValue string
+		assertions func(error)
+	}{
+		{
+			name:       "field is empty",
+			fieldName:  "project",
+			fieldValue: "",
+			assertions: func(err error) {
+				require.Error(t, err)
+				connErr, ok := err.(*connect.Error)
+				require.True(t, ok)
+				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
+				require.Equal(t, "project should not be empty", connErr.Message())
+			},
+		},
+		{
+			name:       "field is not empty",
+			fieldName:  "project",
+			fieldValue: "fake-project",
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				validateFieldNotEmpty(testCase.fieldName, testCase.fieldValue),
+			)
+		})
+	}
+}
+
+func TestValidateProjectExists(t *testing.T) {
 	testCases := []struct {
 		name       string
 		server     *server
@@ -89,56 +126,7 @@ func TestValidateProject(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
-				testCase.server.validateProject(context.Background(), "fake-project"),
-			)
-		})
-	}
-}
-
-func TestValidateProjectAndStageNonEmpty(t *testing.T) {
-	testCases := []struct {
-		name       string
-		project    string
-		stage      string
-		assertions func(error)
-	}{
-		{
-			name:    "project is empty",
-			project: "",
-			stage:   "fake-stage",
-			assertions: func(err error) {
-				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Equal(t, "project should not be empty", connErr.Message())
-			},
-		},
-		{
-			name:    "stage is empty",
-			project: "fake-project",
-			stage:   "",
-			assertions: func(err error) {
-				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Equal(t, "stage should not be empty", connErr.Message())
-			},
-		},
-		{
-			name:    "project and stage are both non-empty",
-			project: "fake-project",
-			stage:   "fake-stage",
-			assertions: func(err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				validateProjectAndStageNonEmpty(testCase.project, testCase.stage),
+				testCase.server.validateProjectExists(context.Background(), "fake-project"),
 			)
 		})
 	}

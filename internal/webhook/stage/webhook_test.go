@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,14 +27,60 @@ func TestNewWebhook(t *testing.T) {
 }
 
 func TestDefault(t *testing.T) {
-	stage := &kargoapi.Stage{}
+	const testShardName = "fake-shard"
+
 	w := &webhook{}
-	err := w.Default(context.Background(), stage)
-	require.NoError(t, err)
-	require.True(
-		t,
-		controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName),
-	)
+
+	t.Run("shard stays default when not specified at all", func(t *testing.T) {
+		stage := &kargoapi.Stage{
+			Spec: &kargoapi.StageSpec{},
+		}
+		err := w.Default(context.Background(), stage)
+		require.NoError(t, err)
+		require.Empty(t, stage.Labels)
+		require.Empty(t, stage.Spec.Shard)
+	})
+
+	t.Run("sync shard label to shard field", func(t *testing.T) {
+		stage := &kargoapi.Stage{
+			Spec: &kargoapi.StageSpec{
+				Shard: testShardName,
+			},
+		}
+		err := w.Default(context.Background(), stage)
+		require.NoError(t, err)
+		require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
+		require.Equal(t, testShardName, stage.Spec.Shard)
+	})
+
+	t.Run("sync shard field to shard label", func(t *testing.T) {
+		stage := &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					kargoapi.ShardLabelKey: testShardName,
+				},
+			},
+			Spec: &kargoapi.StageSpec{
+				Shard: testShardName,
+			},
+		}
+		err := w.Default(context.Background(), stage)
+		require.NoError(t, err)
+		require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
+		require.Equal(t, testShardName, stage.Spec.Shard)
+	})
+
+	t.Run("finalizer gets added", func(t *testing.T) {
+		stage := &kargoapi.Stage{
+			Spec: &kargoapi.StageSpec{},
+		}
+		err := w.Default(context.Background(), stage)
+		require.NoError(t, err)
+		require.True(
+			t,
+			controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName),
+		)
+	})
 }
 
 func TestValidateCreate(t *testing.T) {

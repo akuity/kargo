@@ -3,30 +3,39 @@ package delete
 import (
 	"context"
 	goerrors "errors"
-	"fmt"
 	"slices"
 
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/internal/cli/io"
+	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type deleteProjectOptions struct {
-	*option.Option
-	Config config.CLIConfig
+	genericiooptions.IOStreams
+	*genericclioptions.PrintFlags
+
+	Config        config.CLIConfig
+	ClientOptions client.Options
 
 	Names []string
 }
 
-func newProjectCommand(cfg config.CLIConfig, opt *option.Option) *cobra.Command {
+func newProjectCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmdOpts := &deleteProjectOptions{
-		Option: opt,
-		Config: cfg,
+		Config:     cfg,
+		IOStreams:  streams,
+		PrintFlags: genericclioptions.NewPrintFlags("deleted").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
@@ -54,12 +63,16 @@ kargo delete project my-project1 my-project2
 	// Register the option flags on the command.
 	cmdOpts.addFlags(cmd)
 
+	// Set the input/output streams for the command.
+	io.SetIOStreams(cmd, cmdOpts.IOStreams)
+
 	return cmd
 }
 
 // addFlags adds the flags for the delete project options to the provided
 // command.
 func (o *deleteProjectOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 }
 
@@ -79,9 +92,14 @@ func (o *deleteProjectOptions) validate() error {
 
 // run removes the project(s) based on the options.
 func (o *deleteProjectOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.Option)
+	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return errors.Wrap(err, "get client from config")
+	}
+
+	printer, err := o.PrintFlags.ToPrinter()
+	if err != nil {
+		return errors.Wrap(err, "create printer")
 	}
 
 	var resErr error
@@ -92,7 +110,11 @@ func (o *deleteProjectOptions) run(ctx context.Context) error {
 			resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
 			continue
 		}
-		_, _ = fmt.Fprintf(o.IOStreams.Out, "Project Deleted: %q\n", name)
+		_ = printer.PrintObj(&kargoapi.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+		}, o.IOStreams.Out)
 	}
 	return resErr
 }

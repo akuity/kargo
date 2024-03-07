@@ -86,9 +86,22 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 }
 
 // The Client interface combines the familiar controller-runtime Client
-// interface with a helpful Watch function that is absent from that interface.
+// interface with helpful Authorized and Watch functions that are absent from
+// that interface.
 type Client interface {
 	libClient.Client
+
+	// Authorize attempts to authorize the user to perform the desired operation
+	// on the specified resource. If the user is not authorized, an error is
+	// returned.
+	Authorize(
+		ctx context.Context,
+		verb string,
+		gvr schema.GroupVersionResource,
+		subresource string,
+		key libClient.ObjectKey,
+	) error
+
 	// Watch returns a suitable implementation of the watch.Interface for
 	// subscribing to the resources described by the provided arguments.
 	Watch(
@@ -506,6 +519,26 @@ func (a *authorizingSubResourceClient) Patch(
 	return client.SubResource(a.subResourceType).Patch(ctx, obj, patch, opts...)
 }
 
+func (c *client) Authorize(
+	ctx context.Context,
+	verb string,
+	gvr schema.GroupVersionResource,
+	subresource string,
+	key libClient.ObjectKey,
+) error {
+	if _, err := c.getAuthorizedClientFn(
+		ctx,
+		c.internalClient,
+		verb,
+		gvr,
+		subresource,
+		key,
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *client) Watch(
 	ctx context.Context,
 	obj libClient.Object,
@@ -766,16 +799,11 @@ func reviewSubjectAccess(
 
 func newForbiddenError(ra authv1.ResourceAttributes) error {
 	return apierrors.NewForbidden(
-		schema.GroupResource{ /* explicitly empty */ },
+		schema.GroupResource{
+			Group:    ra.Group,
+			Resource: ra.Resource,
+		},
 		ra.Name,
-		fmt.Errorf(
-			"%s %s",
-			ra.Verb,
-			schema.GroupVersionResource{
-				Group:    ra.Group,
-				Version:  ra.Version,
-				Resource: ra.Resource,
-			}.String(),
-		),
+		fmt.Errorf("%s is not permitted", ra.Verb),
 	)
 }
