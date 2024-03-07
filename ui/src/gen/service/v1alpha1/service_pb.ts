@@ -3089,11 +3089,14 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
 }
 
 /**
- * explicitly empty 
- *
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
  */
 export class CreateCredentialsResponse extends Message<CreateCredentialsResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+   */
+  credentials?: Secret;
+
   constructor(data?: PartialMessage<CreateCredentialsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3102,6 +3105,7 @@ export class CreateCredentialsResponse extends Message<CreateCredentialsResponse
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "credentials", kind: "message", T: Secret },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateCredentialsResponse {
@@ -3425,11 +3429,14 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
 }
 
 /**
- * explicitly empty 
- *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
  */
 export class UpdateCredentialsResponse extends Message<UpdateCredentialsResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+   */
+  credentials?: Secret;
+
   constructor(data?: PartialMessage<UpdateCredentialsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3438,6 +3445,7 @@ export class UpdateCredentialsResponse extends Message<UpdateCredentialsResponse
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "credentials", kind: "message", T: Secret },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCredentialsResponse {
