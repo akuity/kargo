@@ -62,7 +62,19 @@ func newWebhook(kubeClient client.Client) *webhook {
 
 func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
+
+	// Sync the convenience shard field with the shard label
+	if stage.Spec.Shard != "" {
+		if stage.Labels == nil {
+			stage.Labels = make(map[string]string, 1)
+		}
+		stage.Labels[kargoapi.ShardLabelKey] = stage.Spec.Shard
+	} else if stage.Labels != nil && stage.Labels[kargoapi.ShardLabelKey] != "" {
+		stage.Spec.Shard = stage.Labels[kargoapi.ShardLabelKey]
+	}
+
 	controllerutil.AddFinalizer(stage, kargoapi.FinalizerName)
+
 	return nil
 }
 
