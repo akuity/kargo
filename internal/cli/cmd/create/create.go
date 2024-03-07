@@ -58,7 +58,7 @@ kargo create project my-project
 	cmdOpts.addFlags(cmd)
 
 	// Register subcommands.
-	cmd.AddCommand(newCreateCredentialsCommand(cfg, opt))
+	cmd.AddCommand(newCredentialsCommand(cfg, opt))
 	cmd.AddCommand(newProjectCommand(cfg, opt))
 
 	return cmd

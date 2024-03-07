@@ -34,7 +34,7 @@ type createCredentialsOptions struct {
 	Password       string
 }
 
-func newCreateCredentialsCommand(
+func newCredentialsCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {

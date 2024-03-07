@@ -23,7 +23,7 @@ type deleteCredentialsOptions struct {
 	Names []string
 }
 
-func newDeleteCredentialsCommand(
+func newCredentialsCommand(
 	cfg config.CLIConfig,
 	opt *option.Option,
 ) *cobra.Command {
