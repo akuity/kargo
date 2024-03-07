@@ -11,7 +11,8 @@ cd "${work_dir}"
 
 function clean() {
   echo "Clean up intermediate resources..."
-  rm -r "${work_dir}/pkg/api/v1alpha1"
+  rm -r "${work_dir}/pkg/api/v1alpha1" || true
+  rm -r "${work_dir}/vendor" || true
 }
 
 function main() {
