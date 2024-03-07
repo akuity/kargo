@@ -107,7 +107,37 @@ func (r *reconciler) startVerification(
 		templates[i] = template
 	}
 
-	run, err := r.buildAnalysisRunFn(stage, templates)
+	freight, err := r.getFreightFn(
+		ctx,
+		r.kargoClient,
+		types.NamespacedName{
+			Namespace: stage.Namespace,
+			Name:      stage.Status.CurrentFreight.ID,
+		},
+	)
+	if err != nil {
+		return &kargoapi.VerificationInfo{
+			Phase: kargoapi.VerificationPhaseError,
+			Message: errors.Wrapf(
+				err,
+				"error getting Freight %q in namespace %q",
+				stage.Status.CurrentFreight.ID,
+				stage.Namespace,
+			).Error(),
+		}
+	}
+	if freight == nil {
+		return &kargoapi.VerificationInfo{
+			Phase: kargoapi.VerificationPhaseError,
+			Message: errors.Errorf(
+				"Freight %q in namespace %q not found",
+				stage.Status.CurrentFreight.ID,
+				stage.Namespace,
+			).Error(),
+		}
+	}
+
+	run, err := r.buildAnalysisRunFn(stage, freight, templates)
 	if err != nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
@@ -120,6 +150,7 @@ func (r *reconciler) startVerification(
 			).Error(),
 		}
 	}
+
 	if err := r.createAnalysisRunFn(ctx, run); err != nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
@@ -205,6 +236,7 @@ func (r *reconciler) getAnalysisRunNamespace(stage *kargoapi.Stage) string {
 
 func (r *reconciler) buildAnalysisRun(
 	stage *kargoapi.Stage,
+	freight *kargoapi.Freight,
 	templates []*rollouts.AnalysisTemplate,
 ) (*rollouts.AnalysisRun, error) {
 	// maximum length of the stage name used in the promotion name prefix before it exceeds
@@ -222,6 +254,7 @@ func (r *reconciler) buildAnalysisRun(
 		shortStageName = shortStageName[0:maxStageNamePrefixLength]
 	}
 	analysisRunName := strings.ToLower(fmt.Sprintf("%s.%s.%s", shortStageName, ulid.Make(), shortHash))
+	analysisRunNamespace := r.getAnalysisRunNamespace(stage)
 
 	// Build the labels and annotations for the AnalysisRun
 	var numLabels int
@@ -267,10 +300,10 @@ func (r *reconciler) buildAnalysisRun(
 		return nil, errors.Errorf("error merging arguments")
 	}
 
-	return &rollouts.AnalysisRun{
+	ar := &rollouts.AnalysisRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        analysisRunName,
-			Namespace:   r.getAnalysisRunNamespace(stage),
+			Namespace:   analysisRunNamespace,
 			Labels:      lbls,
 			Annotations: annotations,
 		},
@@ -280,7 +313,21 @@ func (r *reconciler) buildAnalysisRun(
 			MeasurementRetention: template.Spec.MeasurementRetention,
 			Args:                 mergedArgs,
 		},
-	}, nil
+	}
+
+	// Mark the Freight as the owner of the AnalysisRun, but ONLY if the
+	// AnalysisRun is being created in the same namespace as the Freight.
+	// This is to avoid creating a cross-namespace owner reference, which is
+	// not allowed by Kubernetes.
+	if analysisRunNamespace == freight.Namespace {
+		ownerRef := metav1.NewControllerRef(
+			freight,
+			kargoapi.GroupVersion.WithKind("Freight"),
+		)
+		ar.OwnerReferences = append(ar.OwnerReferences, *ownerRef)
+	}
+
+	return ar, nil
 }
 
 func flattenTemplates(

@@ -107,6 +107,7 @@ type reconciler struct {
 
 	buildAnalysisRunFn func(
 		stage *kargoapi.Stage,
+		freight *kargoapi.Freight,
 		templates []*rollouts.AnalysisTemplate,
 	) (*rollouts.AnalysisRun, error)
 
