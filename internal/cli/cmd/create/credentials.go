@@ -43,7 +43,7 @@ func newCreateCredentialsCommand(
 	cmd := &cobra.Command{
 		Use: `credentials [--project=project] NAME \
     (--git | --helm | --image) \
-    --repo-url=repo-url | --repo-url-pattern=repo-url-pattern) \
+    (--repo-url=repo-url | --repo-url-pattern=repo-url-pattern) \
     -username=username \
     [--password=password]`,
 		Aliases: []string{"credential", "creds", "cred"},

@@ -33,7 +33,7 @@ func newDeleteCredentialsCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "credentials [--project=project] [NAME ...]",
+		Use:     "credentials [--project=project] (NAME ...)",
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Delete credentials by name",
 		Args:    cobra.MinimumNArgs(1),
