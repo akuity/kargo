@@ -206,6 +206,8 @@ type reconciler struct {
 
 	clearApprovalsFn func(context.Context, *kargoapi.Stage) error
 
+	clearAnalysisRunsFn func(context.Context, *kargoapi.Stage) error
+
 	shardRequirement *labels.Requirement
 }
 
@@ -474,6 +476,7 @@ func newReconciler(
 	// Stage deletion:
 	r.clearVerificationsFn = r.clearVerifications
 	r.clearApprovalsFn = r.clearApprovals
+	r.clearAnalysisRunsFn = r.clearAnalysisRuns
 	return r
 }
 
@@ -882,13 +885,23 @@ func (r *reconciler) syncStageDelete(
 			stage.Namespace,
 		)
 	}
-	err := r.clearApprovalsFn(ctx, stage)
-	return status, errors.Wrapf(
-		err,
-		"error clearing approvals for Stage %q in namespace %q",
-		stage.Name,
-		stage.Namespace,
-	)
+	if err := r.clearApprovalsFn(ctx, stage); err != nil {
+		return status, errors.Wrapf(
+			err,
+			"error clearing approvals for Stage %q in namespace %q",
+			stage.Name,
+			stage.Namespace,
+		)
+	}
+	if err := r.clearAnalysisRunsFn(ctx, stage); err != nil {
+		return status, errors.Wrapf(
+			err,
+			"error clearing AnalysisRuns for Stage %q in namespace %q",
+			stage.Name,
+			stage.Namespace,
+		)
+	}
+	return status, nil
 }
 
 func (r *reconciler) clearVerifications(
@@ -971,6 +984,32 @@ func (r *reconciler) clearApprovals(
 				freight.Namespace,
 			)
 		}
+	}
+	return nil
+}
+
+func (r *reconciler) clearAnalysisRuns(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) error {
+	if r.rolloutsClient == nil {
+		return nil
+	}
+
+	namespace := r.getAnalysisRunNamespace(stage)
+	if err := r.rolloutsClient.DeleteAllOf(
+		ctx,
+		&rollouts.AnalysisRun{},
+		client.InNamespace(namespace),
+		client.MatchingLabels(map[string]string{
+			kargoapi.StageLabelKey: stage.Name,
+		}),
+	); err != nil {
+		return errors.Wrapf(
+			err,
+			"error deleting AnalysisRuns for Stage %q in namespace %q",
+			stage.Name, namespace,
+		)
 	}
 	return nil
 }
