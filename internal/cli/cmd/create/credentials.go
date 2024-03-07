@@ -176,13 +176,12 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "get client from config")
 	}
 
-	var repoType string
 	if o.Git {
-		repoType = credentials.TypeGit.String()
+		o.Type = credentials.TypeGit.String()
 	} else if o.Helm {
-		repoType = credentials.TypeHelm.String()
+		o.Type = credentials.TypeHelm.String()
 	} else if o.Image {
-		repoType = credentials.TypeImage.String()
+		o.Type = credentials.TypeImage.String()
 	}
 
 	if _, err := kargoSvcCli.CreateCredentials(
@@ -191,7 +190,7 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 			&v1alpha1.CreateCredentialsRequest{
 				Project:        o.Project,
 				Name:           o.Name,
-				Type:           repoType,
+				Type:           o.Type,
 				RepoUrl:        o.RepoURL,
 				RepoUrlPattern: o.RepoURLPattern,
 				Username:       o.Username,
