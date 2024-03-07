@@ -63,6 +63,9 @@ const (
 	// SubscribersOfFlag is the flag name for the subscribers-of flag.
 	SubscribersOfFlag = "subscribers-of"
 
+	// TypeFlag is the flag name for the type flag.
+	TypeFlag = "type"
+
 	// UsernameFlag is the flag name for the username flag.
 	UsernameFlag = "username"
 
@@ -114,6 +117,7 @@ func InsecureTLS(fs *pflag.FlagSet, opt *Option) {
 	fs.BoolVar(&opt.InsecureTLS, "insecure-skip-tls-verify", false, "Skip TLS certificate verification")
 }
 
+// InteractivePassword adds the InteractivePasswordFlag to the provided flag set.
 func InteractivePassword(fs *pflag.FlagSet, changePasswordInteractively *bool, usage string) {
 	fs.BoolVar(changePasswordInteractively, InteractivePasswordFlag, false, usage)
 }
@@ -142,6 +146,7 @@ func OldAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, OldAliasFlag, "", usage)
 }
 
+// Password adds the PasswordFlag to the provided flag set.
 func Password(fs *pflag.FlagSet, password *string, usage string) {
 	fs.StringVar(password, PasswordFlag, "", usage)
 }
@@ -169,6 +174,11 @@ func Stage(fs *pflag.FlagSet, stage *string, usage string) {
 // SubscribersOf adds the SubscribersOfFlag to the provided flag set.
 func SubscribersOf(fs *pflag.FlagSet, subscribersOf *string, usage string) {
 	fs.StringVar(subscribersOf, SubscribersOfFlag, "", usage)
+}
+
+// Type adds the TypeFlag to the provided flag set.
+func Type(fs *pflag.FlagSet, repoType *string, usage string) {
+	fs.StringVar(repoType, TypeFlag, "", usage)
 }
 
 // Username adds the UsernameFlag to the provided flag set.

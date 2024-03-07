@@ -23,6 +23,7 @@ type updateCredentialsOptions struct {
 	Git                         bool
 	Helm                        bool
 	Image                       bool
+	Type                        string
 	RepoURL                     string
 	RepoURLPattern              string
 	Username                    string
@@ -98,6 +99,7 @@ func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 	option.Git(cmd.Flags(), &o.Git, "Change the credentials to be for a Git repository.")
 	option.Helm(cmd.Flags(), &o.Helm, "Change the credentials to be for a Helm chart repository.")
 	option.Image(cmd.Flags(), &o.Image, "Change the credentials to be for a container image repository.")
+	option.Type(cmd.Flags(), &o.Type, "Type of repository the credentials are for.")
 	option.RepoURL(cmd.Flags(), &o.RepoURL, "URL of the repository the credentials are for.")
 	option.RepoURLPattern(
 		cmd.Flags(), &o.RepoURLPattern,
@@ -111,7 +113,7 @@ func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 		"Change the password in the credentials interactively.",
 	)
 
-	cmd.MarkFlagsMutuallyExclusive(option.GitFlag, option.HelmFlag, option.ImageFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.GitFlag, option.HelmFlag, option.ImageFlag, option.TypeFlag)
 
 	cmd.MarkFlagsMutuallyExclusive(option.RepoURLFlag, option.RepoURLPatternFlag)
 

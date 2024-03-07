@@ -24,6 +24,7 @@ type createCredentialsOptions struct {
 	Git            bool
 	Helm           bool
 	Image          bool
+	Type           string
 	RepoURL        string
 	RepoURLPattern string
 	Username       string
@@ -110,6 +111,7 @@ func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
 	option.Git(cmd.Flags(), &o.Git, "Create credentials for a Git repository.")
 	option.Helm(cmd.Flags(), &o.Helm, "Create credentials for a Helm chart repository.")
 	option.Image(cmd.Flags(), &o.Image, "Create credentials for a container image repository.")
+	option.Type(cmd.Flags(), &o.Type, "Type of repository the credentials are for.")
 	option.RepoURL(cmd.Flags(), &o.RepoURL, "URL of the repository the credentials are for.")
 	option.RepoURLPattern(
 		cmd.Flags(), &o.RepoURLPattern,
@@ -118,8 +120,8 @@ func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
 	option.Username(cmd.Flags(), &o.Username, "Username for the credentials.")
 	option.Password(cmd.Flags(), &o.Password, "Password for the credentials.")
 
-	cmd.MarkFlagsOneRequired(option.GitFlag, option.HelmFlag, option.ImageFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.GitFlag, option.HelmFlag, option.ImageFlag)
+	cmd.MarkFlagsOneRequired(option.GitFlag, option.HelmFlag, option.ImageFlag, option.TypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.GitFlag, option.HelmFlag, option.ImageFlag, option.TypeFlag)
 
 	cmd.MarkFlagsOneRequired(option.RepoURLFlag, option.RepoURLPatternFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.RepoURLFlag, option.RepoURLPatternFlag)
