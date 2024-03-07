@@ -159,11 +159,11 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 
 	var repoType string
 	if o.Git {
-		repoType = string(credentials.TypeGit)
+		repoType = credentials.TypeGit.String()
 	} else if o.Helm {
-		repoType = string(credentials.TypeHelm)
+		repoType = credentials.TypeHelm.String()
 	} else if o.Image {
-		repoType = string(credentials.TypeImage)
+		repoType = credentials.TypeImage.String()
 	}
 
 	if _, err := kargoSvcCli.UpdateCredentials(
