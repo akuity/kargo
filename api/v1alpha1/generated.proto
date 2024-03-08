@@ -654,6 +654,11 @@ message ImageSubscription {
   //
   // +kubebuilder:validation:Optional
   optional string platform = 7;
+
+  // InsecureSkipTLSVerify specifies whether certificate verification errors
+  // should be ignored when connecting to the repository. This should be enabled
+  // only with great caution.
+  optional bool insecureSkipTLSVerify = 8;
 }
 
 // KargoRenderImageUpdate describes how an image can be incorporated into a

@@ -1998,6 +1998,15 @@ export class ImageSubscription extends Message<ImageSubscription> {
    */
   platform?: string;
 
+  /**
+   * InsecureSkipTLSVerify specifies whether certificate verification errors
+   * should be ignored when connecting to the repository. This should be enabled
+   * only with great caution.
+   *
+   * @generated from field: optional bool insecureSkipTLSVerify = 8;
+   */
+  insecureSkipTLSVerify?: boolean;
+
   constructor(data?: PartialMessage<ImageSubscription>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2013,6 +2022,7 @@ export class ImageSubscription extends Message<ImageSubscription> {
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "platform", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "insecureSkipTLSVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ImageSubscription {
