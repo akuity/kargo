@@ -66,6 +66,7 @@ type reconciler struct {
 		allowTagsRegex string,
 		ignoreTags []string,
 		platform string,
+		insecureSkipVerify bool,
 		creds *image.Credentials,
 	) (string, string, error)
 

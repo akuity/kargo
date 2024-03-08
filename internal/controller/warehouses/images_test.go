@@ -40,6 +40,7 @@ func TestSelectImages(t *testing.T) {
 					string,
 					[]string,
 					string,
+					bool,
 					*image.Credentials,
 				) (string, string, error) {
 					return "", "", errors.New("something went wrong")
@@ -77,6 +78,7 @@ func TestSelectImages(t *testing.T) {
 					string,
 					[]string,
 					string,
+					bool,
 					*image.Credentials,
 				) (string, string, error) {
 					return "fake-tag", "fake-digest", nil

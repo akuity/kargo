@@ -58,6 +58,7 @@ func (r *reconciler) selectImages(
 			sub.AllowTags,
 			sub.IgnoreTags, // TODO: KR: Fix this
 			sub.Platform,
+			sub.InsecureSkipTLSVerify,
 			regCreds,
 		)
 		if err != nil {
@@ -109,17 +110,19 @@ func getImageRefs(
 	allowTagsRegex string,
 	ignoreTags []string,
 	platform string,
+	insecureSkipVerify bool,
 	creds *image.Credentials,
 ) (string, string, error) {
 	imageSelector, err := image.NewSelector(
 		repoURL,
 		image.SelectionStrategy(imageSelectionStrategy),
 		&image.SelectorOptions{
-			Constraint: constraint,
-			AllowRegex: allowTagsRegex,
-			Ignore:     ignoreTags,
-			Platform:   platform,
-			Creds:      creds,
+			Constraint:         constraint,
+			AllowRegex:         allowTagsRegex,
+			Ignore:             ignoreTags,
+			Platform:           platform,
+			Creds:              creds,
+			InsecureSkipVerify: insecureSkipVerify,
 		},
 	)
 	if err != nil {
