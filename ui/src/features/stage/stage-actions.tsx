@@ -1,7 +1,6 @@
 import { faChevronDown, faPen, faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Space } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -9,11 +8,11 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import {
   deleteStage,
-  queryFreight,
   getConfig,
+  queryFreight,
   refreshStage
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
 import { useModal } from '../common/modal/use-modal';
@@ -67,11 +66,11 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
     const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
     const shard = config?.argocdShards?.[shardKey];
 
-    if (!shard || !stage.spec?.promotionMechanisms?.argocdAppUpdates.length) {
+    if (!shard || !stage.spec?.promotionMechanisms?.argoCDAppUpdates.length) {
       return [];
     }
 
-    return stage.spec?.promotionMechanisms?.argocdAppUpdates.map((argoCD) => ({
+    return stage.spec?.promotionMechanisms?.argoCDAppUpdates.map((argoCD) => ({
       label: argoCD.appName,
       url: `${shard.url}/applications/${shard.namespace}/${argoCD.appName}`
     }));

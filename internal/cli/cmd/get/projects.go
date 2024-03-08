@@ -15,7 +15,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -96,12 +95,7 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return errors.Wrap(err, "list projects")
 		}
-
-		res := make([]*kargoapi.Project, 0, len(resp.Msg.GetProjects()))
-		for _, project := range resp.Msg.GetProjects() {
-			res = append(res, typesv1alpha1.FromProjectProto(project))
-		}
-		return printObjects(res, o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetProjects(), o.PrintFlags, o.IOStreams)
 	}
 
 	res := make([]*kargoapi.Project, 0, len(o.Names))
@@ -119,7 +113,7 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, typesv1alpha1.FromProjectProto(resp.Msg.GetProject()))
+		res = append(res, resp.Msg.GetProject())
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {

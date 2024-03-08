@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 
-import { Freight } from '@ui/gen/v1alpha1/types_pb';
+import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightLabel } from '../common/freight-label';
 

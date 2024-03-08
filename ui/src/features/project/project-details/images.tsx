@@ -5,7 +5,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 interface StagePixelStyle {
@@ -84,15 +84,15 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
       const len = stage.status?.history?.length || 0;
       stage.status?.history?.forEach((freight, i) => {
         freight.images?.forEach((image) => {
-          let repo = images.get(image.repoUrl);
+          let repo = image.repoURL ? images.get(image.repoURL) : undefined;
           if (!repo) {
             repo = new Map<string, StageStyleMap>();
-            images.set(image.repoUrl, repo);
+            images.set(image.repoURL!, repo);
           }
-          let stages = repo.get(image.tag);
+          let stages = image.tag ? repo.get(image.tag) : undefined;
           if (!stages) {
             stages = {} as StageStyleMap;
-            repo.set(image.tag, stages);
+            repo.set(image.tag!, stages);
           }
           stages[stage.metadata?.name as string] = {
             opacity: 1 - i / len,
@@ -102,15 +102,15 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
       });
 
       stage.status?.currentFreight?.images?.forEach((image) => {
-        let repo = images.get(image.repoUrl);
+        let repo = image.repoURL ? images.get(image.repoURL) : undefined;
         if (!repo) {
           repo = new Map<string, StageStyleMap>();
-          images.set(image.repoUrl, repo);
+          images.set(image.repoURL!, repo);
         }
-        let stages = repo.get(image.tag);
+        let stages = image.tag ? repo.get(image.tag) : undefined;
         if (!stages) {
           stages = {} as StageStyleMap;
-          repo.set(image.tag, stages);
+          repo.set(image.tag!, stages);
         }
         stages[stage.metadata?.name as string] = {
           opacity: 1,

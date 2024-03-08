@@ -89,6 +89,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    - name: Install tools
+      run: apt update && apt install unzip
     - uses: pnpm/action-setup@v3
       with:
         version: 8
@@ -109,15 +111,19 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - name: Install buf
-      run: go install github.com/bufbuild/buf/cmd/buf@v1.26.1
-    - name: Install controller-gen
-      run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
-    - name: Run Codegen
-      run: make codegen
+      uses: bufbuild/buf-setup-action@v1.29.0-1
+      with:
+        version: 1.26.1
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3
+      with:
+        version: "25.3"
     - name: Git stuff
       # As of go 1.20, this seems to be necessary for invoking git commands
       # within the container
       run: git config --global --add safe.directory /__w/kargo/kargo
+    - name: Run Codegen
+      run: make codegen
     - name: Check nothing has changed
       run: git diff --exit-code -- .
 

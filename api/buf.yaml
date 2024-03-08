@@ -7,9 +7,8 @@ lint:
     - DEFAULT
   except:
     - PACKAGE_DIRECTORY_MATCH
-  ignore_only:
-    PACKAGE_VERSION_SUFFIX:
-      - metav1/types.proto
+  ignore:
+    - v1alpha1/generated.proto
   allow_comment_ignores: true
 breaking:
   use:

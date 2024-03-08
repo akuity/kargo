@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 export type PromotionType = 'default' | 'subscribers';
 

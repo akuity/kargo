@@ -25,10 +25,10 @@ export const RepoNode = ({ nodeData, children }: Props) => {
   const type = nodeData.type;
   const value =
     type === NodeType.REPO_CHART
-      ? nodeData.data.repoUrl
+      ? nodeData.data.repoURL!
       : type === NodeType.WAREHOUSE
         ? nodeData.data
-        : nodeData.data.repoUrl;
+        : nodeData.data.repoURL!;
   return (
     <div className={styles.node}>
       <h3 className='flex justify-between gap-2'>

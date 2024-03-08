@@ -1,5 +1,4 @@
 import { createPromiseClient } from '@bufbuild/connect';
-import { Timestamp } from '@bufbuild/protobuf';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faCircleCheck,
@@ -37,6 +36,7 @@ import { PromotingStageBanner } from '@ui/features/freightline/promoting-stage-b
 import { StageIndicators } from '@ui/features/freightline/stage-indicators';
 import { StageDetails } from '@ui/features/stage/stage-details';
 import { getStageColors } from '@ui/features/stage/utils';
+import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import {
   approveFreight,
   getStage,
@@ -48,7 +48,7 @@ import {
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
-import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/types_pb';
+import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
@@ -66,7 +66,7 @@ const nodeHeight = 118;
 const warehouseNodeWidth = 150;
 const warehouseNodeHeight = 100;
 
-const getSeconds = (ts?: Timestamp): number => Number(ts?.seconds) || 0;
+const getSeconds = (ts?: Time): number => Number(ts?.seconds) || 0;
 
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();

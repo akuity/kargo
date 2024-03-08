@@ -4,7 +4,7 @@ import { Tooltip } from 'antd';
 import { formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
-import { Freight } from '@ui/gen/v1alpha1/types_pb';
+import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
 const ALIAS_LABEL_KEY = 'kargo.akuity.io/alias';
 

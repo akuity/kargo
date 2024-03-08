@@ -12,11 +12,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	apiv1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	apiv1alpha1 "github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
 const (
@@ -324,10 +323,7 @@ func appendToFreightList(list *svcv1alpha1.FreightList, f kargoapi.Freight) *svc
 	if list == nil {
 		list = &svcv1alpha1.FreightList{}
 	}
-	list.Freight = append(
-		list.Freight,
-		v1alpha1.ToFreightProto(f),
-	)
+	list.Freight = append(list.Freight, &f)
 	return list
 }
 
@@ -352,8 +348,7 @@ type ByFirstSeen []*apiv1alpha1.Freight
 func (a ByFirstSeen) Len() int      { return len(a) }
 func (a ByFirstSeen) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByFirstSeen) Less(i, j int) bool {
-	return a[i].GetMetadata().GetCreationTimestamp().AsTime().
-		Before(a[j].GetMetadata().GetCreationTimestamp().AsTime())
+	return a[i].CreationTimestamp.Time.Before(a[j].CreationTimestamp.Time)
 }
 
 // NOTE: sorting by tag will sort by the first container image we found
@@ -377,18 +372,17 @@ func (a ByTag) Less(i, j int) bool {
 		return iTag < jTag
 	}
 	// They are not comparable. Fallback to firstSeen
-	return a[i].GetMetadata().GetCreationTimestamp().AsTime().
-		Before(a[j].GetMetadata().GetCreationTimestamp().AsTime())
+	return a[i].CreationTimestamp.Time.Before(a[j].CreationTimestamp.Time)
 }
 
 func getRepoAndTag(s *apiv1alpha1.Freight) (string, string, *semver.Version) {
 	var repo, tag string
 	if len(s.Images) > 0 {
-		repo = s.Images[0].RepoUrl
+		repo = s.Images[0].RepoURL
 		tag = s.Images[0].Tag
 	} else if len(s.Charts) > 0 {
 		// path.Join accounts for the possibility that chart.Name is empty
-		repo = path.Join(s.Charts[0].RepoUrl, s.Charts[0].Name)
+		repo = path.Join(s.Charts[0].RepoURL, s.Charts[0].Name)
 		tag = s.Charts[0].Version
 	} else {
 		return "", "", nil

@@ -1,4 +1,4 @@
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 const COLOR_ANNOTATION = 'kargo.akuity.io/color';
 

@@ -6,10 +6,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 
+	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
 func (s *server) ListProjects(
@@ -21,8 +20,8 @@ func (s *server) ListProjects(
 		return nil, errors.Wrap(err, "error listing Projects")
 	}
 	projectProtos := make([]*v1alpha1.Project, len(projects.Items))
-	for i, project := range projects.Items {
-		projectProtos[i] = typesv1alpha1.ToProjectProto(project)
+	for i := range projects.Items {
+		projectProtos[i] = &projects.Items[i]
 	}
 	return connect.NewResponse(&svcv1alpha1.ListProjectsResponse{
 		Projects: projectProtos,

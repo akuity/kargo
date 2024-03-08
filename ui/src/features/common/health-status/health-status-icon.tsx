@@ -10,7 +10,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import { CSSProperties } from 'react';
 
-import { Health } from '@ui/gen/v1alpha1/types_pb';
+import { Health } from '@ui/gen/v1alpha1/generated_pb';
 
 import { HealthStatus, healthStatusToEnum } from './utils';
 

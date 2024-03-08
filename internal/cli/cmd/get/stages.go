@@ -15,7 +15,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -128,12 +127,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return errors.Wrap(err, "list stages")
 		}
-
-		res := make([]*kargoapi.Stage, 0, len(resp.Msg.GetStages()))
-		for _, stage := range resp.Msg.GetStages() {
-			res = append(res, typesv1alpha1.FromStageProto(stage))
-		}
-		return printObjects(res, o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetStages(), o.PrintFlags, o.IOStreams)
 	}
 
 	res := make([]*kargoapi.Stage, 0, len(o.Names))
@@ -152,7 +146,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, typesv1alpha1.FromStageProto(resp.Msg.GetStage()))
+		res = append(res, resp.Msg.GetStage())
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {

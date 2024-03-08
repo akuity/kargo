@@ -37,11 +37,11 @@ func (p *ProjectPhase) IsTerminal() bool {
 // and other TODO: TBD project-level resources.
 type Project struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec describes a Project.
-	Spec *ProjectSpec `json:"spec,omitempty"`
+	Spec *ProjectSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the Project's current status.
-	Status ProjectStatus `json:"status,omitempty"`
+	Status ProjectStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 func (p *Project) GetStatus() *ProjectStatus {
@@ -52,7 +52,7 @@ func (p *Project) GetStatus() *ProjectStatus {
 type ProjectSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within this Project.
-	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty"`
+	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
@@ -60,7 +60,7 @@ type ProjectSpec struct {
 type PromotionPolicy struct {
 	//+kubebuilder:validation:MinLength=1
 	//+kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Stage string `json:"stage"`
+	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
 	// AutoPromotionEnabled indicates whether new Freight can automatically be
 	// promoted into the Stage referenced by the Stage field. Note: There are may
 	// be other conditions also required for an auto-promotion to occur. This
@@ -68,17 +68,17 @@ type PromotionPolicy struct {
 	// subscribe to Warehouses instead of other, upstream Stages. This allows
 	// users to define Stages that are automatically updated as soon as new
 	// artifacts are detected.
-	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
+	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
 }
 
 // ProjectStatus describes a Project's current status.
 type ProjectStatus struct {
 	// Phase describes the Project's current phase.
-	Phase ProjectPhase `json:"phase,omitempty"`
+	Phase ProjectPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// Message is a display message about the Project, including any errors
 	// preventing the Project from being reconciled. i.e. If the Phase field has a
 	// value of CreationFailed, this field can be expected to explain why.
-	Message string `json:"message,omitempty"`
+	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
 }
 
 //+kubebuilder:object:root=true
@@ -86,6 +86,6 @@ type ProjectStatus struct {
 // ProjectList is a list of Project resources.
 type ProjectList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Project `json:"items"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Items           []Project `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

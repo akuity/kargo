@@ -14,7 +14,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -136,11 +135,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 		// We didn't specify any groupBy, so there should be one group with an
 		// empty key
 		freight := resp.Msg.GetGroups()[""]
-		res := make([]*kargoapi.Freight, 0, len(freight.Freight))
-		for _, f := range freight.Freight {
-			res = append(res, typesv1alpha1.FromFreightProto(f))
-		}
-		return printObjects(res, o.PrintFlags, o.IOStreams)
+		return printObjects(freight.Freight, o.PrintFlags, o.IOStreams)
 	}
 
 	res := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
@@ -159,7 +154,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 			errs = append(errs, errors.Wrapf(err, "get freight %s", name))
 			continue
 		}
-		res = append(res, typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()))
+		res = append(res, resp.Msg.GetFreight())
 	}
 	for _, alias := range o.Aliases {
 		var resp *connect.Response[v1alpha1.GetFreightResponse]
@@ -175,7 +170,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 			errs = append(errs, errors.Wrapf(err, "get freight %s", alias))
 			continue
 		}
-		res = append(res, typesv1alpha1.FromFreightProto(resp.Msg.GetFreight()))
+		res = append(res, resp.Msg.GetFreight())
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {

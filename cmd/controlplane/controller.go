@@ -76,8 +76,7 @@ func newControllerCommand() *cobra.Command {
 				if err = corev1.AddToScheme(scheme); err != nil {
 					return errors.Wrap(
 						err,
-						"error adding Kubernetes core API to Kargo controller manager "+
-							"scheme",
+						"error adding Kubernetes core API to Kargo controller manager scheme",
 					)
 				}
 				if err = rollouts.AddToScheme(scheme); err != nil {

@@ -110,8 +110,8 @@ func TestGetStage(t *testing.T) {
 				return
 			}
 			require.NotNil(t, res.Msg.GetStage())
-			require.Equal(t, ts.req.GetProject(), res.Msg.GetStage().GetMetadata().GetNamespace())
-			require.Equal(t, ts.req.GetName(), res.Msg.GetStage().GetMetadata().GetName())
+			require.Equal(t, ts.req.GetProject(), res.Msg.GetStage().Namespace)
+			require.Equal(t, ts.req.GetName(), res.Msg.GetStage().Name)
 		})
 	}
 }
