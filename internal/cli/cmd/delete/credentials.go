@@ -77,6 +77,7 @@ kargo delete credentials my-credentials`,
 // addFlags adds the flags for the get credentials options to the provided
 // command.
 func (o *deleteCredentialsOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags()))
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(

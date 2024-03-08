@@ -112,7 +112,9 @@ kargo create credentials my-credentials \
 // addFlags adds the flags for the get credentials options to the provided
 // command.
 func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
+
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to create credentials. If not set, the default project will be used.",

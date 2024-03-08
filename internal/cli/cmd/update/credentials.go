@@ -100,6 +100,7 @@ kargo update credentials my-credentials --git`,
 // addFlags adds the flags for the get credentials options to the provided
 // command.
 func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
+	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 	option.Project(
 		cmd.Flags(), &o.Project, o.Project,
