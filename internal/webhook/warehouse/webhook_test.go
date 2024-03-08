@@ -214,12 +214,20 @@ func TestValidateSpec(t *testing.T) {
 			spec: &kargoapi.WarehouseSpec{
 				Subscriptions: []kargoapi.RepoSubscription{
 					{
+						Git: &kargoapi.GitSubscription{
+							RepoURL: "bogus",
+						},
 						Image: &kargoapi.ImageSubscription{
 							SemverConstraint: "bogus",
 							Platform:         "bogus",
 						},
 						Chart: &kargoapi.ChartSubscription{
 							SemverConstraint: "bogus",
+						},
+					},
+					{
+						Git: &kargoapi.GitSubscription{
+							RepoURL: "bogus",
 						},
 					},
 				},
@@ -250,8 +258,14 @@ func TestValidateSpec(t *testing.T) {
 							Field:    "spec.subscriptions[0]",
 							BadValue: spec.Subscriptions[0],
 							Detail: "exactly one of spec.subscriptions[0].git, " +
-								"spec.subscriptions[0].images, or spec.subscriptions[0].charts " +
+								"spec.subscriptions[0].image, or spec.subscriptions[0].chart " +
 								"must be non-empty",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.subscriptions[1].git",
+							BadValue: "bogus",
+							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
 						},
 					},
 					errs,
@@ -300,6 +314,9 @@ func TestValidateSubs(t *testing.T) {
 			name: "invalid subscriptions",
 			subs: []kargoapi.RepoSubscription{
 				{
+					Git: &kargoapi.GitSubscription{
+						RepoURL: "bogus",
+					},
 					Image: &kargoapi.ImageSubscription{
 						SemverConstraint: "bogus",
 						Platform:         "bogus",
@@ -308,9 +325,14 @@ func TestValidateSubs(t *testing.T) {
 						SemverConstraint: "bogus",
 					},
 				},
+				{
+					Git: &kargoapi.GitSubscription{
+						RepoURL: "bogus",
+					},
+				},
 			},
 			assertions: func(subs []kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Len(t, errs, 4)
+				require.Len(t, errs, 5)
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -333,8 +355,14 @@ func TestValidateSubs(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "subs[0]",
 							BadValue: subs[0],
-							Detail: "exactly one of subs[0].git, subs[0].images, or " +
-								"subs[0].charts must be non-empty",
+							Detail: "exactly one of subs[0].git, subs[0].image, or " +
+								"subs[0].chart must be non-empty",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "subs[1].git",
+							BadValue: "bogus",
+							Detail:   "subscription for Git repository already exists at \"subs[0].git\"",
 						},
 					},
 					errs,
@@ -366,11 +394,15 @@ func TestValidateSub(t *testing.T) {
 	testCases := []struct {
 		name       string
 		sub        kargoapi.RepoSubscription
+		seen       uniqueSubSet
 		assertions func(kargoapi.RepoSubscription, field.ErrorList)
 	}{
 		{
 			name: "invalid subscription",
 			sub: kargoapi.RepoSubscription{
+				Git: &kargoapi.GitSubscription{
+					RepoURL: "bogus",
+				},
 				Image: &kargoapi.ImageSubscription{
 					SemverConstraint: "bogus",
 					Platform:         "bogus",
@@ -379,11 +411,23 @@ func TestValidateSub(t *testing.T) {
 					SemverConstraint: "bogus",
 				},
 			},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "git",
+					id:   "bogus",
+				}: field.NewPath("spec.subscriptions[0].git"),
+			},
 			assertions: func(sub kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Len(t, errs, 4)
+				require.Len(t, errs, 5)
 				require.Equal(
 					t,
 					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sub.git",
+							BadValue: "bogus",
+							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
+						},
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "sub.image.semverConstraint",
@@ -403,7 +447,7 @@ func TestValidateSub(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "sub",
 							BadValue: sub,
-							Detail:   "exactly one of sub.git, sub.images, or sub.charts must be non-empty",
+							Detail:   "exactly one of sub.git, sub.image, or sub.chart must be non-empty",
 						},
 					},
 					errs,
@@ -415,6 +459,7 @@ func TestValidateSub(t *testing.T) {
 			sub: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{},
 			},
+			seen: uniqueSubSet{},
 			assertions: func(_ kargoapi.RepoSubscription, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
@@ -425,7 +470,69 @@ func TestValidateSub(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				testCase.sub,
-				w.validateSub(field.NewPath("sub"), testCase.sub),
+				w.validateSub(field.NewPath("sub"), testCase.sub, testCase.seen),
+			)
+		})
+	}
+}
+
+func TestValidateGitSub(t *testing.T) {
+	testCases := []struct {
+		name       string
+		sub        kargoapi.GitSubscription
+		seen       uniqueSubSet
+		assertions func(field.ErrorList)
+	}{
+		{
+			name: "invalid",
+			sub: kargoapi.GitSubscription{
+				RepoURL:          "bogus",
+				SemverConstraint: "bogus",
+			},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "git",
+					id:   "bogus",
+				}: field.NewPath("spec.subscriptions[0].git"),
+			},
+			assertions: func(errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "git.semverConstraint",
+							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "git",
+							BadValue: "bogus",
+							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
+						},
+					},
+					errs,
+				)
+			},
+		},
+
+		{
+			name: "valid",
+			seen: uniqueSubSet{},
+			assertions: func(errs field.ErrorList) {
+				require.Nil(t, errs)
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				w.validateGitSub(
+					field.NewPath("git"),
+					testCase.sub,
+					testCase.seen,
+				),
 			)
 		})
 	}
@@ -435,13 +542,21 @@ func TestValidateImageSub(t *testing.T) {
 	testCases := []struct {
 		name       string
 		sub        kargoapi.ImageSubscription
+		seen       uniqueSubSet
 		assertions func(field.ErrorList)
 	}{
 		{
 			name: "invalid",
 			sub: kargoapi.ImageSubscription{
+				RepoURL:          "bogus",
 				SemverConstraint: "bogus",
 				Platform:         "bogus",
+			},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "image",
+					id:   "bogus",
+				}: field.NewPath("spec.subscriptions[0].image"),
 			},
 			assertions: func(errs field.ErrorList) {
 				require.Equal(
@@ -457,6 +572,12 @@ func TestValidateImageSub(t *testing.T) {
 							Field:    "image.platform",
 							BadValue: "bogus",
 						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "image",
+							BadValue: "bogus",
+							Detail:   "subscription for image repository already exists at \"spec.subscriptions[0].image\"",
+						},
 					},
 					errs,
 				)
@@ -465,6 +586,7 @@ func TestValidateImageSub(t *testing.T) {
 
 		{
 			name: "valid",
+			seen: uniqueSubSet{},
 			assertions: func(errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
@@ -477,6 +599,7 @@ func TestValidateImageSub(t *testing.T) {
 				w.validateImageSub(
 					field.NewPath("image"),
 					testCase.sub,
+					testCase.seen,
 				),
 			)
 		})
@@ -487,6 +610,7 @@ func TestValidateChartSub(t *testing.T) {
 	testCases := []struct {
 		name       string
 		sub        kargoapi.ChartSubscription
+		seen       uniqueSubSet
 		assertions func(field.ErrorList)
 	}{
 		{
@@ -496,6 +620,7 @@ func TestValidateChartSub(t *testing.T) {
 				Name:             "should-not-be-here",
 				SemverConstraint: "bogus",
 			},
+			seen: uniqueSubSet{},
 			assertions: func(errs field.ErrorList) {
 				require.Equal(
 					t,
@@ -522,6 +647,7 @@ func TestValidateChartSub(t *testing.T) {
 			sub: kargoapi.ChartSubscription{
 				RepoURL: "https://fake-url",
 			},
+			seen: uniqueSubSet{},
 			assertions: func(errs field.ErrorList) {
 				require.Equal(
 					t,
@@ -539,8 +665,64 @@ func TestValidateChartSub(t *testing.T) {
 		},
 
 		{
+			name: "duplicate HTTP/S chart",
+			sub: kargoapi.ChartSubscription{
+				RepoURL: "https://fake-url",
+				Name:    "bogus",
+			},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "chart",
+					id:   "https://fake-url:bogus",
+				}: field.NewPath("spec.subscriptions[0].chart"),
+			},
+			assertions: func(errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "chart",
+							BadValue: "https://fake-url",
+							Detail:   "subscription for chart \"bogus\" already exists at \"spec.subscriptions[0].chart\"",
+						},
+					},
+					errs,
+				)
+			},
+		},
+
+		{
+			name: "duplicate OCI chart",
+			sub: kargoapi.ChartSubscription{
+				RepoURL: "oci://fake-url",
+			},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "chart",
+					id:   "fake-url",
+				}: field.NewPath("spec.subscriptions[0].chart"),
+			},
+			assertions: func(errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "chart",
+							BadValue: "oci://fake-url",
+							Detail:   "subscription for chart already exists at \"spec.subscriptions[0].chart\"",
+						},
+					},
+					errs,
+				)
+			},
+		},
+
+		{
 			name: "valid",
 			sub:  kargoapi.ChartSubscription{},
+			seen: uniqueSubSet{},
 			assertions: func(errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
@@ -553,6 +735,7 @@ func TestValidateChartSub(t *testing.T) {
 				w.validateChartSub(
 					field.NewPath("chart"),
 					testCase.sub,
+					testCase.seen,
 				),
 			)
 		})
