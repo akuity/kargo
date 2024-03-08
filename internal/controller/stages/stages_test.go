@@ -67,6 +67,7 @@ func TestNewReconciler(t *testing.T) {
 	// Stage deletion:
 	require.NotNil(t, r.clearVerificationsFn)
 	require.NotNil(t, r.clearApprovalsFn)
+	require.NotNil(t, r.clearAnalysisRunsFn)
 }
 
 func TestSyncControlFlowStage(t *testing.T) {
@@ -1026,6 +1027,23 @@ func TestSyncStageDelete(t *testing.T) {
 			},
 		},
 		{
+			name: "error clearing AnalysisRuns",
+			reconciler: &reconciler{
+				clearVerificationsFn: func(context.Context, *kargoapi.Stage) error { return nil },
+				clearApprovalsFn:     func(context.Context, *kargoapi.Stage) error { return nil },
+				clearAnalysisRunsFn: func(context.Context, *kargoapi.Stage) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error clearing AnalysisRuns for Stage")
+				require.Contains(t, err.Error(), "something went wrong")
+				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+		{
 			name: "success",
 			reconciler: &reconciler{
 				clearVerificationsFn: func(context.Context, *kargoapi.Stage) error {
@@ -1034,6 +1052,7 @@ func TestSyncStageDelete(t *testing.T) {
 				clearApprovalsFn: func(context.Context, *kargoapi.Stage) error {
 					return nil
 				},
+				clearAnalysisRunsFn: func(context.Context, *kargoapi.Stage) error { return nil },
 			},
 			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
 				require.NoError(t, err)

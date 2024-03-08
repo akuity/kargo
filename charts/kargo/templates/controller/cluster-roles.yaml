@@ -112,5 +112,6 @@ rules:
   - get
   - list
   - watch
+  - deletecollection
 {{- end }}
 {{- end }}
