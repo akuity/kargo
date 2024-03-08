@@ -50,17 +50,7 @@ func (r *reconciler) selectImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		tag, digest, err := r.getImageRefsFn(
-			ctx,
-			sub.RepoURL,
-			sub.ImageSelectionStrategy,
-			sub.SemverConstraint,
-			sub.AllowTags,
-			sub.IgnoreTags, // TODO: KR: Fix this
-			sub.Platform,
-			sub.InsecureSkipTLSVerify,
-			regCreds,
-		)
+		tag, digest, err := r.getImageRefsFn(ctx, *sub, regCreds)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -104,32 +94,26 @@ func getGithubImageSourceURL(gitRepoURL, tag string) string {
 
 func getImageRefs(
 	ctx context.Context,
-	repoURL string,
-	imageSelectionStrategy kargoapi.ImageSelectionStrategy,
-	constraint string,
-	allowTagsRegex string,
-	ignoreTags []string,
-	platform string,
-	insecureSkipVerify bool,
+	sub kargoapi.ImageSubscription,
 	creds *image.Credentials,
 ) (string, string, error) {
 	imageSelector, err := image.NewSelector(
-		repoURL,
-		image.SelectionStrategy(imageSelectionStrategy),
+		sub.RepoURL,
+		image.SelectionStrategy(sub.ImageSelectionStrategy),
 		&image.SelectorOptions{
-			Constraint:         constraint,
-			AllowRegex:         allowTagsRegex,
-			Ignore:             ignoreTags,
-			Platform:           platform,
-			Creds:              creds,
-			InsecureSkipVerify: insecureSkipVerify,
+			Constraint:            sub.SemverConstraint,
+			AllowRegex:            sub.AllowTags,
+			Ignore:                sub.IgnoreTags,
+			Platform:              sub.Platform,
+			Creds:                 creds,
+			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 		},
 	)
 	if err != nil {
 		return "", "", errors.Wrapf(
 			err,
 			"error creating image selector for image %q",
-			repoURL,
+			sub.RepoURL,
 		)
 	}
 	img, err := imageSelector.Select(ctx)
@@ -137,11 +121,11 @@ func getImageRefs(
 		return "", "", errors.Wrapf(
 			err,
 			"error fetching newest applicable image %q",
-			repoURL,
+			sub.RepoURL,
 		)
 	}
 	if img == nil {
-		return "", "", errors.Errorf("found no applicable image %q", repoURL)
+		return "", "", errors.Errorf("found no applicable image %q", sub.RepoURL)
 	}
 	return img.Tag, img.Digest.String(), nil
 }

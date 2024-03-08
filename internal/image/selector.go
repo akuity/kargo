@@ -64,9 +64,9 @@ type SelectorOptions struct {
 	// Creds holds optional credentials for authenticating to the image
 	// repository.
 	Creds *Credentials
-	// InsecureSkipVerify is an optional flag, that if set to true, will disable
-	// verification of the image repository's TLS certificate.
-	InsecureSkipVerify bool
+	// InsecureSkipTLSVerify is an optional flag, that if set to true, will
+	// disable verification of the image repository's TLS certificate.
+	InsecureSkipTLSVerify bool
 }
 
 // NewSelector returns some implementation of the Selector interface that
@@ -103,7 +103,7 @@ func NewSelector(
 		platform = &p
 	}
 
-	repoClient, err := newRepositoryClient(repoURL, opts.InsecureSkipVerify, opts.Creds)
+	repoClient, err := newRepositoryClient(repoURL, opts.InsecureSkipTLSVerify, opts.Creds)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,

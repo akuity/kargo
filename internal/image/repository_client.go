@@ -123,7 +123,7 @@ type repositoryClient struct {
 // return a new repository client.
 func newRepositoryClient(
 	repoURL string,
-	insecureSkipVerify bool,
+	insecureSkipTLSVerify bool,
 	creds *Credentials,
 ) (*repositoryClient, error) {
 	repoRef, err := reference.ParseNormalizedNamed(repoURL)
@@ -136,9 +136,9 @@ func newRepositoryClient(
 	apiAddress := strings.TrimSuffix(reg.apiAddress, "/")
 
 	httpTransport := cleanhttp.DefaultTransport()
-	if insecureSkipVerify {
+	if insecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: insecureSkipVerify, // nolint: gosec
+			InsecureSkipVerify: insecureSkipTLSVerify, // nolint: gosec
 		}
 	}
 
