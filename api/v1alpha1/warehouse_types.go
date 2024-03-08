@@ -176,6 +176,10 @@ type ImageSubscription struct {
 	//
 	//+kubebuilder:validation:Optional
 	Platform string `json:"platform,omitempty" protobuf:"bytes,7,opt,name=platform"`
+	// InsecureSkipTLSVerify specifies whether certificate verification errors
+	// should be ignored when connecting to the repository. This should be enabled
+	// only with great caution.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,8,opt,name=insecureSkipTLSVerify"`
 }
 
 // ChartSubscription defines a subscription to a Helm chart repository.

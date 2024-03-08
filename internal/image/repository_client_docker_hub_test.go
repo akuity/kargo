@@ -31,7 +31,7 @@ func TestGetChallengeManager(t *testing.T) {
 }
 
 func TestGetTags(t *testing.T) {
-	client, err := newRepositoryClient("debian", getDockerHubCreds())
+	client, err := newRepositoryClient("debian", false, getDockerHubCreds())
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	tags, err := client.getTags(context.Background())
@@ -40,7 +40,7 @@ func TestGetTags(t *testing.T) {
 }
 
 func TestGetManifestByTag(t *testing.T) {
-	client, err := newRepositoryClient("debian", getDockerHubCreds())
+	client, err := newRepositoryClient("debian", false, getDockerHubCreds())
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	// Note: This is only going to come back with a manifest list. It won't
@@ -55,7 +55,7 @@ func TestGetManifestByDigest(t *testing.T) {
 	// nolint: lll
 	// https://hub.docker.com/layers/library/debian/bookworm/images/sha256-bd989d36e94ef694541231541b04c8c89bc6ccb8d015f12a715b605c64edde4a
 	const testDigest = "sha256:bd989d36e94ef694541231541b04c8c89bc6ccb8d015f12a715b605c64edde4a" // nolint: gosec
-	client, err := newRepositoryClient("debian", getDockerHubCreds())
+	client, err := newRepositoryClient("debian", false, getDockerHubCreds())
 	require.NoError(t, err)
 	m, err :=
 		client.getManifestByDigest(context.Background(), testDigest)
