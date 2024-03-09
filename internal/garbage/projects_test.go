@@ -1,0 +1,132 @@
+package garbage
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+)
+
+func TestCleanProjects(t *testing.T) {
+	testCases := []struct {
+		name         string
+		collector    *collector
+		errHandlerFn func(ctx context.Context, errCh <-chan struct{})
+	}{
+		{
+			// The objective of this test case is to ensure that errCh is signaled
+			// when an error occurs.
+			name: "error cleaning individual Project",
+			collector: &collector{
+				cleanProjectFn: func(context.Context, string) error {
+					return errors.New("something went wrong")
+				},
+			},
+			errHandlerFn: func(ctx context.Context, errCh <-chan struct{}) {
+				select {
+				case _, ok := <-errCh:
+					if !ok {
+						require.FailNow(
+							t,
+							"error channel was closed without receiving any signals",
+						)
+					}
+				case <-ctx.Done():
+					require.FailNow(
+						t,
+						"timed out without receiving an error signal",
+					)
+				}
+			},
+		},
+
+		{
+			// The objective of this test case is to ensure that errCh is NOT signaled
+			// when everything goes smoothly.
+			name: "success",
+			collector: &collector{
+				cleanProjectFn: func(context.Context, string) error {
+					return nil
+				},
+			},
+			errHandlerFn: func(ctx context.Context, errCh <-chan struct{}) {
+				select {
+				case _, ok := <-errCh:
+					if ok {
+						require.FailNow(t, "an unexpected error signal was received")
+					}
+				case <-ctx.Done():
+				}
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			projectCh := make(chan string)
+			errCh := make(chan struct{})
+
+			go testCase.collector.cleanProjects(ctx, projectCh, errCh)
+
+			select {
+			case projectCh <- "fake-project":
+			case <-ctx.Done():
+				require.FailNow(t, "timed out sending a Project name")
+			}
+
+			testCase.errHandlerFn(ctx, errCh)
+		})
+	}
+}
+
+func TestCleanProject(t *testing.T) {
+	testCases := []struct {
+		name       string
+		collector  *collector
+		assertions func(err error)
+	}{
+		{
+			name: "errors cleaning Promotions and Freight",
+			collector: &collector{
+				cleanProjectPromotionsFn: func(context.Context, string) error {
+					return errors.New("something went wrong")
+				},
+				cleanProjectFreightFn: func(context.Context, string) error {
+					return errors.New("something else went wrong")
+				},
+			},
+			assertions: func(err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error cleaning Promotions in Project")
+				require.Contains(t, err.Error(), "something went wrong")
+				require.Contains(t, err.Error(), "error cleaning Freight in Project")
+				require.Contains(t, err.Error(), "something else went wrong")
+			},
+		},
+		{
+			name: "success",
+			collector: &collector{
+				cleanProjectPromotionsFn: func(context.Context, string) error {
+					return nil
+				},
+				cleanProjectFreightFn: func(context.Context, string) error {
+					return nil
+				},
+			},
+			assertions: func(err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				testCase.collector.cleanProject(context.Background(), "fake-project"),
+			)
+		})
+	}
+}

@@ -3,8 +3,8 @@ package garbage
 import (
 	"context"
 	"math"
-	"sort"
 	"sync"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
 )
 
 // CollectorConfig is configuration for the garbage collector.
@@ -26,6 +25,15 @@ type CollectorConfig struct {
 	// MaxRetainedPromotions specifies the maximum number of Promotions in
 	// terminal phases per Project that may be spared by the garbage collector.
 	MaxRetainedPromotions int `envconfig:"MAX_RETAINED_PROMOTIONS" default:"20"`
+	// MaxRetainedFreight specifies the ideal maximum number of Freight OLDER than
+	// the oldest still in use (from each Warehouse) that may be spared by the
+	// garbage collector. The ACTUAL number of older Freight spared may exceed
+	// this ideal if some Freight that would otherwise be deleted do not meet the
+	// minimum age criterion.
+	MaxRetainedFreight int `envconfig:"MAX_RETAINED_FREIGHT" default:"10"`
+	// MinFreightDeletionAge specifies the minimum age Freight must be before
+	// considered eligible for garbage collection.
+	MinFreightDeletionAge time.Duration `envconfig:"MIN_FREIGHT_DELETION_AGE" default:"336h"` // 2 weeks
 }
 
 // CollectorConfigFromEnv returns a CollectorConfig populated from environment
@@ -59,6 +67,8 @@ type collector struct {
 		project string,
 	) error
 
+	cleanProjectPromotionsFn func(context.Context, string) error
+
 	listProjectsFn func(
 		context.Context,
 		client.ObjectList,
@@ -76,6 +86,38 @@ type collector struct {
 		client.Object,
 		...client.DeleteOption,
 	) error
+
+	cleanProjectFreightFn func(context.Context, string) error
+
+	listWarehousesFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+
+	cleanWarehouseFreightFn func(
+		ctx context.Context,
+		project string,
+		warehouse string,
+	) error
+
+	listFreightFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+
+	listStagesFn func(
+		context.Context,
+		client.ObjectList,
+		...client.ListOption,
+	) error
+
+	deleteFreightFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
+	) error
 }
 
 // NewCollector initializes and returns an implementation of the Collector
@@ -86,9 +128,16 @@ func NewCollector(kubeClient client.Client, cfg CollectorConfig) Collector {
 	}
 	c.cleanProjectsFn = c.cleanProjects
 	c.cleanProjectFn = c.cleanProject
+	c.cleanProjectPromotionsFn = c.cleanProjectPromotions
 	c.listProjectsFn = kubeClient.List
 	c.listPromotionsFn = kubeClient.List
 	c.deletePromotionFn = kubeClient.Delete
+	c.cleanProjectFreightFn = c.cleanProjectFreight
+	c.listWarehousesFn = kubeClient.List
+	c.cleanWarehouseFreightFn = c.cleanWarehouseFreight
+	c.listFreightFn = kubeClient.List
+	c.listStagesFn = kubeClient.List
+	c.deleteFreightFn = kubeClient.Delete
 	return c
 }
 
@@ -173,94 +222,4 @@ func (c *collector) Run(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// cleanProjects is a worker function that receives Project names over a channel
-// until that channel is closed. It will execute garbage collection for each
-// Project name received.
-func (c *collector) cleanProjects(
-	ctx context.Context,
-	projectCh <-chan string,
-	errCh chan<- struct{},
-) {
-	for {
-		select {
-		case project, ok := <-projectCh:
-			if !ok {
-				return // Channel was closed
-			}
-			if err := c.cleanProjectFn(ctx, project); err != nil {
-				select {
-				case errCh <- struct{}{}:
-				case <-ctx.Done():
-					return
-				}
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-// cleanProject executes garbage collection for a single Project.
-func (c *collector) cleanProject(ctx context.Context, project string) error {
-	logger := logging.LoggerFromContext(ctx).WithField("project", project)
-
-	promos := kargoapi.PromotionList{}
-	if err := c.listPromotionsFn(
-		ctx,
-		&promos,
-		client.InNamespace(project),
-	); err != nil {
-		return errors.Wrapf(err, "error listing Promotions for Project %q", project)
-	}
-
-	if len(promos.Items) <= c.cfg.MaxRetainedPromotions {
-		return nil // Done
-	}
-
-	// Sort Promotions by creation time
-	sort.Sort(byCreation(promos.Items))
-
-	// Delete oldest Promotions (in terminal phases only) that are in excess of
-	// MaxRetainedPromotions
-	var deleteErrCount int
-	for i := c.cfg.MaxRetainedPromotions; i < len(promos.Items); i++ {
-		promo := promos.Items[i]
-		if promo.Status.Phase.IsTerminal() {
-			promoLogger := logger.WithField("promotion", promo.Name)
-			if err := c.deletePromotionFn(ctx, &promo); err != nil {
-				promoLogger.Errorf("error deleting Promotion: %s", err)
-				deleteErrCount++
-			} else {
-				promoLogger.Debug("deleted Promotion")
-			}
-		}
-	}
-
-	if deleteErrCount > 0 {
-		return errors.Errorf(
-			"error deleting one or more Promotions from Project %q",
-			project,
-		)
-	}
-
-	return nil
-}
-
-// byCreation implements sort.Interface for []kargoapi.Promotion.
-type byCreation []kargoapi.Promotion
-
-func (b byCreation) Len() int {
-	return len(b)
-}
-
-func (b byCreation) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-
-func (b byCreation) Less(i, j int) bool {
-	return b[i].ObjectMeta.CreationTimestamp.Time.After(
-		b[j].ObjectMeta.CreationTimestamp.Time,
-	)
 }
