@@ -15,7 +15,9 @@ data:
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
+  {{- if .Values.controller.globalCredentials.namespaces }}
   GLOBAL_CREDENTIALS_NAMESPACES: {{ join "," .Values.controller.globalCredentials.namespaces }}
+  {{- end }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.kubeconfigSecrets.argocd }}
@@ -29,7 +31,11 @@ data:
   {{- if .Values.kubeconfigSecrets.rollouts }}
   ROLLOUTS_KUBECONFIG: /etc/kargo/kubeconfigs/rollouts-kubeconfig.yaml
   {{- end }}
+  {{- if .Values.controller.rollouts.analysisRunsNamespace }}
   ROLLOUTS_ANALYSIS_RUNS_NAMESPACE: {{ .Values.controller.rollouts.analysisRunsNamespace }}
+  {{- end}}
+  {{- if .Values.controller.rollouts.controllerInstanceID }}
   ROLLOUTS_CONTROLLER_INSTANCE_ID: {{ .Values.controller.rollouts.controllerInstanceID }}
+  {{- end }}
   {{- end }}
 {{- end }}
