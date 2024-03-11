@@ -9,7 +9,7 @@ metadata:
     {{- include "kargo.api.labels" . | nindent 4 }}
 data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
-  LOG_LEVEL: {{ .Values.api.logLevel }}
+  LOG_LEVEL: {{ quote .Values.api.logLevel }}
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml
   {{- end }}
@@ -26,8 +26,8 @@ data:
   {{- else }}
   ADMIN_ACCOUNT_TOKEN_ISSUER: http://{{ .Values.api.host }}
   {{- end }}
-  ADMIN_ACCOUNT_TOKEN_AUDIENCE: {{ .Values.api.host }}
-  ADMIN_ACCOUNT_TOKEN_TTL: {{ .Values.api.adminAccount.tokenTTL }}
+  ADMIN_ACCOUNT_TOKEN_AUDIENCE: {{ quote .Values.api.host }}
+  ADMIN_ACCOUNT_TOKEN_TTL: {{ quote .Values.api.adminAccount.tokenTTL }}
   {{- end }}
   {{- if .Values.api.oidc.enabled }}
   OIDC_ENABLED: "true"
@@ -38,21 +38,21 @@ data:
   {{- else }}
   OIDC_ISSUER_URL: http://{{ .Values.api.host }}/dex
   {{- end }}
-  OIDC_CLIENT_ID: {{ .Values.api.host }}
+  OIDC_CLIENT_ID: {{ quote .Values.api.host }}
   OIDC_CLI_CLIENT_ID: {{ .Values.api.host }}-cli
   DEX_ENABLED: "true"
   DEX_SERVER_ADDRESS: https://kargo-dex-server.{{ .Release.Namespace }}.svc
   DEX_CA_CERT_PATH: /etc/kargo/idp-ca.crt
   {{- else }}
-  OIDC_ISSUER_URL: {{ .Values.api.oidc.issuerURL }}
-  OIDC_CLIENT_ID: {{ .Values.api.oidc.clientID }}
+  OIDC_ISSUER_URL: {{ quote .Values.api.oidc.issuerURL }}
+  OIDC_CLIENT_ID: {{ quote .Values.api.oidc.clientID }}
   {{- if .Values.api.oidc.cliClientID }}
-  OIDC_CLI_CLIENT_ID: {{ .Values.api.oidc.cliClientID }}
+  OIDC_CLI_CLIENT_ID: {{ quote .Values.api.oidc.cliClientID }}
   {{- end }}
   {{- end }}
   {{- end }}
   {{- if .Values.api.argocd.urls }}
-  ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace }}
+  ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}
   ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ $val }},{{- end }}
   {{- end }}
   ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.api.rollouts.integrationEnabled }}

@@ -22,7 +22,6 @@ func TestGetConfig(t *testing.T) {
 			req: &svcv1alpha1.GetConfigRequest{},
 			cfg: config.ServerConfig{
 				ArgoCDConfig: config.ArgoCDConfig{
-					Namespace: "argocd",
 					URLs: map[string]string{
 						"": "https://argocd.example.com",
 					},
