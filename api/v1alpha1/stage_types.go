@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"os"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -399,16 +397,6 @@ type ArgoCDAppUpdate struct {
 	// SourceUpdates describes updates to be applied to various sources of the
 	// specified Argo CD Application resource.
 	SourceUpdates []ArgoCDSourceUpdate `json:"sourceUpdates,omitempty" protobuf:"bytes,3,rep,name=sourceUpdates"`
-}
-
-func (a *ArgoCDAppUpdate) AppNamespaceOrDefault() string {
-	if a.AppNamespace != "" {
-		return a.AppNamespace
-	}
-	if envArgocdNs := os.Getenv("ARGOCD_NAMESPACE"); envArgocdNs != "" {
-		return envArgocdNs
-	}
-	return "argocd"
 }
 
 // ArgoCDSourceUpdate describes updates that should be applied to one of an Argo

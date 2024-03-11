@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 )
 
 const (
@@ -104,8 +105,11 @@ func indexStagesByArgoCDApplications(shardName string) client.IndexerFunc {
 		}
 		apps := make([]string, len(stage.Spec.PromotionMechanisms.ArgoCDAppUpdates))
 		for i, appCheck := range stage.Spec.PromotionMechanisms.ArgoCDAppUpdates {
-			apps[i] =
-				fmt.Sprintf("%s:%s", appCheck.AppNamespaceOrDefault(), appCheck.AppName)
+			namespace := appCheck.AppNamespace
+			if namespace == "" {
+				namespace = libargocd.Namespace()
+			}
+			apps[i] = fmt.Sprintf("%s:%s", namespace, appCheck.AppName)
 		}
 		return apps
 	}

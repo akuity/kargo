@@ -114,7 +114,6 @@ func (a *ArgoCDURLMap) Decode(value string) error {
 }
 
 type ArgoCDConfig struct {
-	Namespace string `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
 	// URLs is a mapping from shard name to Argo CD URL
 	URLs ArgoCDURLMap `envconfig:"ARGOCD_URLS"`
 }
