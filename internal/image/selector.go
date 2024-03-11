@@ -2,9 +2,8 @@ package image
 
 import (
 	"context"
+	"fmt"
 	"regexp"
-
-	"github.com/pkg/errors"
 )
 
 // SelectionStrategy represents a strategy for selecting a single image from a
@@ -85,10 +84,10 @@ func NewSelector(
 	if opts.AllowRegex != "" {
 		var err error
 		if allowRegex, err = regexp.Compile(opts.AllowRegex); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error compiling regular expression %q",
+			return nil, fmt.Errorf(
+				"error compiling regular expression %q: %w",
 				opts.AllowRegex,
+				err,
 			)
 		}
 	}
@@ -97,18 +96,17 @@ func NewSelector(
 	if opts.Platform != "" {
 		p, err := parsePlatformConstraint(opts.Platform)
 		if err != nil {
-			return nil,
-				errors.Wrapf(err, "error parsing platform constraint %q", opts.Platform)
+			return nil, fmt.Errorf("error parsing platform constraint %q: %w", opts.Platform, err)
 		}
 		platform = &p
 	}
 
 	repoClient, err := newRepositoryClient(repoURL, opts.InsecureSkipTLSVerify, opts.Creds)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error creating repository client for image %q",
+		return nil, fmt.Errorf(
+			"error creating repository client for image %q: %w",
 			repoURL,
+			err,
 		)
 	}
 
@@ -138,7 +136,7 @@ func NewSelector(
 			platform,
 		)
 	default:
-		return nil, errors.Errorf("invalid image selection strategy %q", strategy)
+		return nil, fmt.Errorf("invalid image selection strategy %q", strategy)
 	}
 }
 

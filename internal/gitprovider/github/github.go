@@ -2,12 +2,12 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
 
 	"github.com/google/go-github/v56/github"
-	"github.com/pkg/errors"
 	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/internal/gitprovider"
@@ -150,7 +150,7 @@ func parseGitHubURL(u string) (string, string, error) {
 	regex := regexp.MustCompile(`^https\://github\.com/([\w-]+)/([\w-]+).*`)
 	parts := regex.FindStringSubmatch(u)
 	if len(parts) != 3 {
-		return "", "", errors.Errorf("error parsing github repository URL %q", u)
+		return "", "", fmt.Errorf("error parsing github repository URL %q", u)
 	}
 	return parts[1], parts[2], nil
 }

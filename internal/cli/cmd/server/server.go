@@ -2,9 +2,10 @@ package server
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -77,17 +78,17 @@ func (o *serverOptions) run(ctx context.Context) error {
 
 	restCfg, err := config.GetConfig()
 	if err != nil {
-		return errors.Wrap(err, "get REST config")
+		return fmt.Errorf("get REST config: %w", err)
 	}
 
 	client, err := kubernetes.NewClient(ctx, restCfg, kubernetes.ClientOptions{})
 	if err != nil {
-		return errors.Wrap(err, "error creating Kubernetes client")
+		return fmt.Errorf("error creating Kubernetes client: %w", err)
 	}
 
 	l, err := net.Listen("tcp", o.address)
 	if err != nil {
-		return errors.Wrap(err, "start local server")
+		return fmt.Errorf("start local server: %w", err)
 	}
 	defer l.Close() // nolint: errcheck
 
@@ -99,7 +100,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		client,
 	)
 	if err := srv.Serve(ctx, l); err != nil {
-		return errors.Wrap(err, "serve error")
+		return fmt.Errorf("serve error: %w", err)
 	}
 	return nil
 }

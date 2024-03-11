@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,8 +26,8 @@ func TestValidateFieldNotEmpty(t *testing.T) {
 			fieldValue: "",
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Equal(t, "project should not be empty", connErr.Message())
 			},
@@ -69,8 +69,8 @@ func TestValidateProjectExists(t *testing.T) {
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
 			},
 		},
@@ -87,8 +87,8 @@ func TestValidateProjectExists(t *testing.T) {
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 			},
 		},
@@ -146,8 +146,8 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			groupBy: "",
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Equal(
 					t,
@@ -161,8 +161,8 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			groupBy: "bogus-group-by",
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Contains(t, connErr.Message(), "Invalid group by")
 			},
@@ -173,8 +173,8 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			orderBy: OrderByTag,
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Contains(
 					t,
@@ -188,8 +188,8 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			orderBy: "bogus-order-by",
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Contains(t, connErr.Message(), "Invalid order by")
 			},

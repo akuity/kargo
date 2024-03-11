@@ -2,12 +2,12 @@ package get
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 	"slices"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
@@ -112,7 +112,7 @@ func (o *getStagesOptions) validate() error {
 func (o *getStagesOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
@@ -125,7 +125,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
-			return errors.Wrap(err, "list stages")
+			return fmt.Errorf("list stages: %w", err)
 		}
 		return printObjects(resp.Msg.GetStages(), o.PrintFlags, o.IOStreams)
 	}
@@ -150,9 +150,9 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
-		return errors.Wrap(err, "print stages")
+		return fmt.Errorf("print stages: %w", err)
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 func newStageTable(list *metav1.List) *metav1.Table {

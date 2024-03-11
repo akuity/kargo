@@ -1,7 +1,8 @@
 package logout
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/config"
@@ -18,10 +19,10 @@ func NewCommand() *cobra.Command {
 kargo logout
 `,
 		RunE: func(*cobra.Command, []string) error {
-			return errors.Wrap(
-				config.DeleteCLIConfig(),
-				"error deleting CLI configuration",
-			)
+			if err := config.DeleteCLIConfig(); err != nil {
+				return fmt.Errorf("error deleting CLI configuration: %w", err)
+			}
+			return nil
 		},
 	}
 }

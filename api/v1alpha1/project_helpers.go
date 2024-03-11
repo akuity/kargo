@@ -2,8 +2,8 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,7 +25,7 @@ func GetProject(
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
 		}
-		return nil, errors.Wrapf(err, "error getting Project %q", name)
+		return nil, fmt.Errorf("error getting Project %q: %w", name, err)
 	}
 	return &project, nil
 }

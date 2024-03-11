@@ -1,9 +1,8 @@
 package config
 
 import (
+	"errors"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 type ErrConfigNotFound struct {

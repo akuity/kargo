@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -25,7 +24,7 @@ func refreshObject(
 	)
 	patch := client.RawPatch(types.MergePatchType, patchBytes)
 	if err := c.Patch(ctx, obj, patch); err != nil {
-		return errors.Wrap(err, "patch annotation")
+		return fmt.Errorf("patch annotation: %w", err)
 	}
 	return nil
 }
@@ -38,7 +37,7 @@ func clearRefreshObject(
 	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, AnnotationKeyRefresh))
 	patch := client.RawPatch(types.MergePatchType, patchBytes)
 	if err := c.Patch(ctx, obj, patch); err != nil {
-		return errors.Wrap(err, "patch annotation")
+		return fmt.Errorf("patch annotation: %w", err)
 	}
 	return nil
 }

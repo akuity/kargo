@@ -2,8 +2,8 @@ package promotion
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	authzv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,15 +96,15 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		},
 	)
 	if err != nil {
-		return errors.Wrapf(
-			err,
-			"error finding Stage %q in namespace %q",
+		return fmt.Errorf(
+			"error finding Stage %q in namespace %q: %w",
 			promo.Spec.Stage,
 			promo.Namespace,
+			err,
 		)
 	}
 	if stage == nil {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"could not find Stage %q in namespace %q",
 			promo.Spec.Stage,
 			promo.Namespace,
@@ -176,7 +176,7 @@ func (w *webhook) authorize(
 		return apierrors.NewForbidden(
 			promotionGroupResource,
 			promo.Name,
-			errors.Errorf(
+			fmt.Errorf(
 				"error retrieving admission request from context; refusing to "+
 					"%s Promotion",
 				action,
@@ -202,7 +202,7 @@ func (w *webhook) authorize(
 		return apierrors.NewForbidden(
 			promotionGroupResource,
 			promo.Name,
-			errors.Errorf(
+			fmt.Errorf(
 				"error creating SubjectAccessReview; refusing to %s Promotion",
 				action,
 			),
@@ -213,7 +213,7 @@ func (w *webhook) authorize(
 		return apierrors.NewForbidden(
 			promotionGroupResource,
 			promo.Name,
-			errors.Errorf(
+			fmt.Errorf(
 				"subject %q is not permitted to %s Promotions for Stage %q",
 				req.UserInfo.Username,
 				action,

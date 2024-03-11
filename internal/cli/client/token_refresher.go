@@ -2,12 +2,13 @@ package client
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
 	"github.com/akuity/kargo/internal/cli/config"
@@ -112,10 +113,7 @@ func redeemRefreshToken(
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
 	if err != nil {
-		return "", "", errors.Wrap(
-			err,
-			"error retrieving public configuration from server",
-		)
+		return "", "", fmt.Errorf("error retrieving public configuration from server: %w", err)
 	}
 
 	if res.Msg.OidcConfig == nil {
@@ -124,7 +122,7 @@ func redeemRefreshToken(
 
 	provider, err := oidc.NewProvider(ctx, res.Msg.OidcConfig.IssuerUrl)
 	if err != nil {
-		return "", "", errors.Wrap(err, "error initializing OIDC provider")
+		return "", "", fmt.Errorf("error initializing OIDC provider: %w", err)
 	}
 
 	cfg := oauth2.Config{

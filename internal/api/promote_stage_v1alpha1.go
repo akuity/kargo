@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -52,12 +52,12 @@ func (s *server) PromoteStage(
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get stage")
+		return nil, fmt.Errorf("get stage: %w", err)
 	}
 	if stage == nil {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
-			errors.Errorf(
+			fmt.Errorf(
 				"Stage %q not found in namespace %q",
 				stageName,
 				project,
@@ -73,7 +73,7 @@ func (s *server) PromoteStage(
 		freightAlias,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get freight")
+		return nil, fmt.Errorf("get freight: %w", err)
 	}
 	if freight == nil {
 		if freightName != "" {
@@ -91,7 +91,7 @@ func (s *server) PromoteStage(
 	if !s.isFreightAvailableFn(freight, stage.Name, upstreamStages) {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.Errorf(
+			fmt.Errorf(
 				"Freight %q is not available to Stage %q",
 				freightName,
 				stageName,
@@ -118,7 +118,7 @@ func (s *server) PromoteStage(
 
 	promotion := kargo.NewPromotion(*stage, freight.Name)
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
-		return nil, errors.Wrap(err, "create promotion")
+		return nil, fmt.Errorf("create promotion: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.PromoteStageResponse{
 		Promotion: &promotion,

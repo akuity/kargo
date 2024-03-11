@@ -2,8 +2,8 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -28,11 +28,11 @@ func GetApplication(
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
 		}
-		return nil, errors.Wrapf(
-			err,
-			"error getting Argo CD Application %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error getting Argo CD Application %q in namespace %q: %w",
 			name,
 			namespace,
+			err,
 		)
 	}
 	return &app, nil

@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
@@ -156,7 +154,7 @@ func (g *gitMechanism) doSingleUpdate(
 		},
 	)
 	if err != nil {
-		return nil, newFreight, errors.Wrapf(err, "error cloning git repo %q", update.RepoURL)
+		return nil, newFreight, fmt.Errorf("error cloning git repo %q: %w", update.RepoURL, err)
 	}
 	defer repo.Close()
 
@@ -169,7 +167,7 @@ func (g *gitMechanism) doSingleUpdate(
 		if getPullRequestNumberFromMetadata(promo.Status.Metadata, update.RepoURL) == -1 {
 			// PR was never created. Prepare the branch for the commit
 			if err = preparePullRequestBranch(repo, commitBranch, update.WriteBranch); err != nil {
-				return nil, newFreight, errors.Wrapf(err, "error preparing PR branch %q", update.RepoURL)
+				return nil, newFreight, fmt.Errorf("error preparing PR branch %q: %w", update.RepoURL, err)
 			}
 		}
 	}
@@ -222,7 +220,7 @@ func getReadRef(
 	for i, commit := range commits {
 		if libGit.NormalizeGitURL(commit.RepoURL) == updateRepoURL {
 			if update.WriteBranch == commit.Branch && update.PullRequest == nil {
-				return "", -1, errors.Errorf(
+				return "", -1, fmt.Errorf(
 					"invalid update specified; cannot write to branch %q of repo %q "+
 						"because it will form a subscription loop",
 					updateRepoURL,
@@ -259,11 +257,7 @@ func getRepoCredentialsFn(
 			repoURL,
 		)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error obtaining credentials for git repo %q",
-				repoURL,
-			)
+			return nil, fmt.Errorf("error obtaining credentials for git repo %q: %w", repoURL, err)
 		}
 		logger := logging.LoggerFromContext(ctx).WithField("repo", repoURL)
 		if !ok {
@@ -296,11 +290,7 @@ func (g *gitMechanism) gitCommit(
 	// otherwise just move using the repository's default branch as the source.
 	if readRef != "" {
 		if err = repo.Checkout(readRef); err != nil {
-			return "", errors.Wrapf(
-				err,
-				"error checking out %q from git repo",
-				readRef,
-			)
+			return "", fmt.Errorf("error checking out %q from git repo: %w", readRef, err)
 		}
 	}
 
@@ -322,98 +312,72 @@ func (g *gitMechanism) gitCommit(
 		var tempDir string
 		tempDir, err = os.MkdirTemp("", "")
 		if err != nil {
-			return "", errors.Wrap(
-				err,
-				"error creating temp directory for pending changes",
-			)
+			return "", fmt.Errorf("error creating temp directory for pending changes: %w", err)
 		}
 		defer os.RemoveAll(tempDir)
 
 		if err = moveRepoContents(repo.WorkingDir(), tempDir); err != nil {
-			return "", errors.Wrap(
-				err,
-				"error moving repository working tree to temporary location",
-			)
+			return "", fmt.Errorf("error moving repository working tree to temporary location: %w", err)
 		}
 
 		if err = repo.ResetHard(); err != nil {
-			return "", errors.Wrap(err, "error resetting repository working tree")
+			return "", fmt.Errorf("error resetting repository working tree: %w", err)
 		}
 
 		var branchExists bool
 		if branchExists, err = repo.RemoteBranchExists(writeBranch); err != nil {
-			return "", errors.Wrapf(
-				err,
-				"error checking for existence of branch %q in remote repo %q",
+			return "", fmt.Errorf(
+				"error checking for existence of branch %q in remote repo %q: %w",
 				writeBranch,
 				update.RepoURL,
+				err,
 			)
 		} else if !branchExists {
 			if err = repo.CreateOrphanedBranch(writeBranch); err != nil {
-				return "", errors.Wrapf(
-					err,
-					"error creating branch %q in repo %q",
+				return "", fmt.Errorf(
+					"error creating branch %q in repo %q: %w",
 					writeBranch,
 					update.RepoURL,
+					err,
 				)
 			}
 		} else {
 			if err = repo.Checkout(writeBranch); err != nil {
-				return "", errors.Wrapf(
-					err,
-					"error checking out branch %q from git repo %q",
+				return "", fmt.Errorf(
+					"error checking out branch %q from git repo %q: %w",
 					writeBranch,
 					update.RepoURL,
+					err,
 				)
 			}
 		}
 
 		if err = deleteRepoContents(repo.WorkingDir()); err != nil {
-			return "",
-				errors.Wrap(err, "error clearing contents from repository working tree")
+			return "", fmt.Errorf("error clearing contents from repository working tree: %w", err)
 		}
 
 		if err = moveRepoContents(tempDir, repo.WorkingDir()); err != nil {
-			return "", errors.Wrap(
-				err,
-				"error restoring repository working tree from temporary location",
-			)
+			return "", fmt.Errorf("error restoring repository working tree from temporary location: %w", err)
 		}
 	}
 
 	hasDiffs, err := repo.HasDiffs()
 	if err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error checking for diffs in git repo %q",
-			update.RepoURL,
-		)
+		return "", fmt.Errorf("error checking for diffs in git repo %q: %w", update.RepoURL, err)
 	}
 
 	if hasDiffs {
 		if err = repo.AddAllAndCommit(commitMsg); err != nil {
-			return "", errors.Wrapf(
-				err,
-				"error committing updates to git repo %q",
-				update.RepoURL,
-			)
+			return "", fmt.Errorf("error committing updates to git repo %q: %w", update.RepoURL, err)
 		}
 		if err = repo.Push(false); err != nil {
-			return "", errors.Wrapf(
-				err,
-				"error pushing updates to git repo %q",
-				update.RepoURL,
-			)
+			return "", fmt.Errorf("error pushing updates to git repo %q: %w", update.RepoURL, err)
 		}
 	}
 
 	commitID, err := repo.LastCommitID()
 	if err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error getting last commit ID from git repo %q",
-			update.RepoURL,
-		)
+		return "", fmt.Errorf("error getting last commit ID from git repo %q: %w", update.RepoURL, err)
 	}
 
 	return commitID, nil

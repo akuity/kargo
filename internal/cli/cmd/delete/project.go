@@ -2,11 +2,11 @@ package delete
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 	"slices"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -94,20 +94,20 @@ func (o *deleteProjectOptions) validate() error {
 func (o *deleteProjectOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
-		return errors.Wrap(err, "create printer")
+		return fmt.Errorf("create printer: %w", err)
 	}
 
-	var resErr error
+	var errs []error
 	for _, name := range o.Names {
 		if _, err := kargoSvcCli.DeleteProject(ctx, connect.NewRequest(&v1alpha1.DeleteProjectRequest{
 			Name: name,
 		})); err != nil {
-			resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
+			errs = append(errs, err)
 			continue
 		}
 		_ = printer.PrintObj(&kargoapi.Project{
@@ -116,5 +116,5 @@ func (o *deleteProjectOptions) run(ctx context.Context) error {
 			},
 		}, o.IOStreams.Out)
 	}
-	return resErr
+	return errors.Join(errs...)
 }

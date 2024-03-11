@@ -1,10 +1,9 @@
 package exec
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
-
-	"github.com/pkg/errors"
 )
 
 // ExitError is an error type that is produced by the Exec() function when a
@@ -46,6 +45,8 @@ func Exec(cmd *exec.Cmd) ([]byte, error) {
 			ExitCode: exitErr.ExitCode(),
 		}
 	}
-	return res,
-		errors.Wrapf(err, "error executing cmd [%s]: %s", cmd.String(), string(res))
+	if err != nil {
+		err = fmt.Errorf("error executing cmd [%s]: %s: %w", cmd.String(), string(res), err)
+	}
+	return res, err
 }

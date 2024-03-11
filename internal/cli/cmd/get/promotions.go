@@ -2,12 +2,12 @@ package get
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 	"slices"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
@@ -124,7 +124,7 @@ func (o *getPromotionsOptions) validate() error {
 func (o *getPromotionsOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
@@ -138,7 +138,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
-			return errors.Wrap(err, "list promotions")
+			return fmt.Errorf("list promotions: %w", err)
 		}
 		return printObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams)
 	}
@@ -163,9 +163,9 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
-		return errors.Wrap(err, "print promotions")
+		return fmt.Errorf("print promotions: %w", err)
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 func newPromotionTable(list *metav1.List) *metav1.Table {

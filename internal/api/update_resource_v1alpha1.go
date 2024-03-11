@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigyaml "sigs.k8s.io/yaml"
@@ -18,7 +18,7 @@ func (s *server) UpdateResource(
 ) (*connect.Response[svcv1alpha1.UpdateResourceResponse], error) {
 	projects, otherResources, err := splitYAML(req.Msg.GetManifest())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse manifest: %w", err))
 	}
 	resources := append(projects, otherResources...)
 	res := make([]*svcv1alpha1.UpdateResourceResult, 0, len(resources))
@@ -41,7 +41,7 @@ func (s *server) updateResource(
 	if err := s.client.Get(ctx, client.ObjectKeyFromObject(obj), currentObj); err != nil {
 		return &svcv1alpha1.UpdateResourceResult{
 			Result: &svcv1alpha1.UpdateResourceResult_Error{
-				Error: errors.Wrap(err, "get resource").Error(),
+				Error: fmt.Errorf("get resource: %w", err).Error(),
 			},
 		}
 	}
@@ -50,7 +50,7 @@ func (s *server) updateResource(
 	if err := s.client.Update(ctx, obj); err != nil {
 		return &svcv1alpha1.UpdateResourceResult{
 			Result: &svcv1alpha1.UpdateResourceResult_Error{
-				Error: errors.Wrap(err, "update resource").Error(),
+				Error: fmt.Errorf("update resource: %w", err).Error(),
 			},
 		}
 	}
@@ -59,7 +59,7 @@ func (s *server) updateResource(
 	if err != nil {
 		return &svcv1alpha1.UpdateResourceResult{
 			Result: &svcv1alpha1.UpdateResourceResult_Error{
-				Error: errors.Wrap(err, "marshal updated manifest").Error(),
+				Error: fmt.Errorf("marshal updated manifest: %w", err).Error(),
 			},
 		}
 	}

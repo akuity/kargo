@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -113,7 +112,7 @@ func (w *webhook) ValidateCreate(
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
 		return nil, apierrors.NewInternalError(
-			errors.Wrap(err, "error getting admission request from context"),
+			fmt.Errorf("error getting admission request from context: %w", err),
 		)
 	}
 
@@ -225,7 +224,7 @@ func (w *webhook) ensureNamespace(
 			return apierrors.NewConflict(
 				projectGroupResource,
 				project.Name,
-				errors.Errorf(
+				fmt.Errorf(
 					"failed to initialize Project %q because namespace %q already exists",
 					project.Name,
 					project.Name,
@@ -237,7 +236,7 @@ func (w *webhook) ensureNamespace(
 	}
 	if !apierrors.IsNotFound(err) {
 		return apierrors.NewInternalError(
-			errors.Wrapf(err, "error getting namespace %q", project.Name),
+			fmt.Errorf("error getting namespace %q: %w", project.Name, err),
 		)
 	}
 
@@ -266,7 +265,7 @@ func (w *webhook) ensureNamespace(
 	controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
 	if err := w.createNamespaceFn(ctx, ns); err != nil {
 		return apierrors.NewInternalError(
-			errors.Wrapf(err, "error creating namespace %q", project.Name),
+			fmt.Errorf("error creating namespace %q: %w", project.Name, err),
 		)
 	}
 	logger.Debug("created namespace")
@@ -316,11 +315,11 @@ func (w *webhook) ensureSecretPermissions(
 			return nil
 		}
 		return apierrors.NewInternalError(
-			errors.Wrapf(
-				err,
-				"error creating role binding %q in project namespace %q",
+			fmt.Errorf(
+				"error creating role binding %q in project namespace %q: %w",
 				roleBinding.Name,
 				project.Name,
+				err,
 			),
 		)
 	}

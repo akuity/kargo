@@ -16,8 +16,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/akuity/kargo/internal/proto/codegen"
 )
 
@@ -59,10 +57,10 @@ func injectTags(pkgDir string, tagMap codegen.TagMap) error {
 		ast.Walk(injector, f)
 		file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_TRUNC, 0)
 		if err != nil {
-			return errors.Wrapf(err, "open file %s", fileName)
+			return fmt.Errorf("open file %s: %w", fileName, err)
 		}
 		if err := format.Node(file, fileSet, f); err != nil {
-			return errors.Wrapf(err, "write file %s", fileName)
+			return fmt.Errorf("write file %s: %w", fileName, err)
 		}
 	}
 	return nil
