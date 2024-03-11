@@ -17,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
@@ -141,7 +142,7 @@ func newControllerCommand() *cobra.Command {
 				}
 				restCfg.ContentType = runtime.ContentTypeJSON
 
-				argocdNamespace := os.GetEnv("ARGOCD_NAMESPACE", "argocd")
+				argocdNamespace := libargocd.Namespace()
 
 				// There's a chance there is only permission to interact with Argo CD
 				// Application resources in a single namespace, so we will use that

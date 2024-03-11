@@ -79,7 +79,7 @@ type AdminConfig struct {
 	TokenSigningKey []byte `envconfig:"ADMIN_ACCOUNT_TOKEN_SIGNING_KEY" required:"true"`
 	// TokenTTL specifies how long ID tokens for the admin account are valid. i.e.
 	// The expiry will be the time of issue plus this duration.
-	TokenTTL time.Duration `envconfig:"ADMIN_ACCOUNT_TOKEN_TTL" default:"1h"`
+	TokenTTL time.Duration `envconfig:"ADMIN_ACCOUNT_TOKEN_TTL" default:"24h"`
 }
 
 // AdminConfigFromEnv returns an AdminConfig populated from environment
@@ -114,7 +114,6 @@ func (a *ArgoCDURLMap) Decode(value string) error {
 }
 
 type ArgoCDConfig struct {
-	Namespace string `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
 	// URLs is a mapping from shard name to Argo CD URL
 	URLs ArgoCDURLMap `envconfig:"ARGOCD_URLS"`
 }

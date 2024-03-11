@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/logging"
@@ -114,21 +115,24 @@ func (a *argoCDMechanism) doSingleUpdate(
 	update kargoapi.ArgoCDAppUpdate,
 	newFreight kargoapi.FreightReference,
 ) error {
-	app, err :=
-		a.getArgoCDAppFn(ctx, update.AppNamespaceOrDefault(), update.AppName)
+	namespace := update.AppNamespace
+	if namespace == "" {
+		namespace = libargocd.Namespace()
+	}
+	app, err := a.getArgoCDAppFn(ctx, namespace, update.AppName)
 	if err != nil {
 		return errors.Wrapf(
 			err,
 			"error finding Argo CD Application %q in namespace %q",
 			update.AppName,
-			update.AppNamespaceOrDefault(),
+			namespace,
 		)
 	}
 	if app == nil {
 		return errors.Errorf(
 			"unable to find Argo CD Application %q in namespace %q",
 			update.AppName,
-			update.AppNamespaceOrDefault(),
+			namespace,
 		)
 	}
 	// Make sure this is allowed!
@@ -148,7 +152,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 					err,
 					"error updating source of Argo CD Application %q in namespace %q",
 					update.AppName,
-					update.AppNamespaceOrDefault(),
+					namespace,
 				)
 			}
 			app.Spec.Source = &source
@@ -163,7 +167,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 					err,
 					"error updating source(s) of Argo CD Application %q in namespace %q",
 					update.AppName,
-					update.AppNamespaceOrDefault(),
+					namespace,
 				)
 			}
 			app.Spec.Sources[i] = source
