@@ -14,6 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -150,7 +151,7 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 	credType Type,
 	repoURL string,
 ) (*corev1.Secret, error) {
-	repoURL = normalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
+	repoURL = helm.NormalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
 		git.NormalizeGitURL(repoURL), // This should be safe even on non-Git URLs
 	)
 
@@ -183,7 +184,7 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 		if !ok {
 			continue
 		}
-		url := normalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
+		url := helm.NormalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
 			git.NormalizeGitURL( // This should be safe even on non-Git URLs
 				string(urlBytes),
 			),
@@ -218,18 +219,6 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 	}
 
 	return nil, nil
-}
-
-// NormalizeURL normalizes a chart repository URL for purposes of comparison.
-// Crucially, this function removes the oci:// prefix from the URL if there is
-// one.
-func normalizeChartRepositoryURL(repo string) string {
-	return strings.TrimPrefix(
-		strings.ToLower(
-			strings.TrimSpace(repo),
-		),
-		"oci://",
-	)
 }
 
 func secretToCreds(secret *corev1.Secret) Credentials {
