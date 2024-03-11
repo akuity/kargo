@@ -16,10 +16,10 @@ spec:
   ingressClassName: {{ .Values.api.ingress.ingressClassName }}
   {{- end }}
   rules:
-  - host: {{ .Values.api.host }}
+  - host: {{ quote .Values.api.host }}
     http:
       paths:
-      - pathType: {{ .Values.api.ingress.pathType }}
+      - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
         path: /
         backend:
           service:
@@ -33,7 +33,7 @@ spec:
   {{- if .Values.api.ingress.tls.enabled }}
   tls:
   - hosts:
-    - {{ .Values.api.host }}
+    - {{ quote .Values.api.host }}
     secretName: kargo-api-ingress-cert
   {{- end }}
 {{- end }}
