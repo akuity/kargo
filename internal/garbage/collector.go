@@ -30,7 +30,7 @@ type CollectorConfig struct {
 	// garbage collector. The ACTUAL number of older Freight spared may exceed
 	// this ideal if some Freight that would otherwise be deleted do not meet the
 	// minimum age criterion.
-	MaxRetainedFreight int `envconfig:"MAX_RETAINED_FREIGHT" default:"10"`
+	MaxRetainedFreight int `envconfig:"MAX_RETAINED_FREIGHT" default:"20"`
 	// MinFreightDeletionAge specifies the minimum age Freight must be before
 	// considered eligible for garbage collection.
 	MinFreightDeletionAge time.Duration `envconfig:"MIN_FREIGHT_DELETION_AGE" default:"336h"` // 2 weeks

@@ -11,4 +11,6 @@ data:
   LOG_LEVEL: {{ quote .Values.garbageCollector.logLevel }}
   NUM_WORKERS: {{ quote .Values.garbageCollector.workers }}
   MAX_RETAINED_PROMOTIONS: {{ quote .Values.garbageCollector.maxRetainedPromotions }}
+  MAX_RETAINED_FREIGHT: {{ quote .Values.garbageCollector.maxRetainedFreight }}
+  MIN_FREIGHT_DELETION_AGE: {{ quote .Values.garbageCollector.minFreightDeletionAge }}
 {{- end }}
