@@ -2,13 +2,12 @@ package get
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,7 +112,7 @@ func (o *getCredentialsOptions) validate() error {
 func (o *getCredentialsOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
@@ -126,7 +125,7 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
-			return errors.Wrap(err, "list credentials")
+			return fmt.Errorf("list credentials: %w", err)
 		}
 		return printObjects(resp.Msg.GetCredentials(), o.PrintFlags, o.IOStreams)
 	}
@@ -151,9 +150,9 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
-		return errors.Wrap(err, "print stages")
+		return fmt.Errorf("print stages: %w", err)
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 func newCredentialsTable(list *metav1.List) *metav1.Table {

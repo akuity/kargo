@@ -2,10 +2,11 @@ package update
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -163,7 +164,7 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if o.Git {
@@ -189,12 +190,12 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 		),
 	)
 	if err != nil {
-		return errors.Wrap(err, "update credentials")
+		return fmt.Errorf("update credentials: %w", err)
 	}
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
-		return errors.Wrap(err, "new printer")
+		return fmt.Errorf("new printer: %w", err)
 	}
 	return printer.PrintObj(resp.Msg.GetCredentials(), o.IOStreams.Out)
 }

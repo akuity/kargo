@@ -2,11 +2,11 @@ package create
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -137,7 +137,14 @@ func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(option.RepoURLFlag, option.RepoURLPatternFlag)
 
 	if err := cmd.MarkFlagRequired(option.UsernameFlag); err != nil {
-		panic(errors.Wrapf(err, "could not mark %s flag as required", option.UsernameFlag))
+
+		panic(
+			fmt.Errorf(
+				"could not mark %s flag as required: %w",
+				option.UsernameFlag,
+				err,
+			),
+		)
 	}
 }
 
@@ -164,7 +171,7 @@ func (o *createCredentialsOptions) validate() error {
 	if o.Username == "" {
 		errs = append(errs, errors.New("username is required"))
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 // run creates the credentials in the project based on the options.
@@ -183,7 +190,7 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if o.Git {
@@ -209,12 +216,12 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 		),
 	)
 	if err != nil {
-		return errors.Wrap(err, "create credentials")
+		return fmt.Errorf("create credentials: %w", err)
 	}
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
-		return errors.Wrap(err, "new printer")
+		return fmt.Errorf("new printer: %w", err)
 	}
 	return printer.PrintObj(resp.Msg.GetCredentials(), o.IOStreams.Out)
 }
