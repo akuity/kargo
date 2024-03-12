@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kargo"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -132,7 +131,7 @@ func (s *server) PromoteSubscribers(
 	}
 
 	promoteErrs := make([]error, 0, len(subscribers))
-	createdPromos := make([]*v1alpha1.Promotion, 0, len(subscribers))
+	createdPromos := make([]*kargoapi.Promotion, 0, len(subscribers))
 	for _, subscriber := range subscribers {
 		newPromo := kargo.NewPromotion(subscriber, freight.Name)
 		if err := s.createPromotionFn(ctx, &newPromo); err != nil {

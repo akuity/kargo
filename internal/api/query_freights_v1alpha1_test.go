@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -827,10 +826,10 @@ func TestSortFreightGroups(t *testing.T) {
 			name: "order by tag",
 			groups: map[string]*svcv1alpha1.FreightList{
 				"": {
-					Freight: []*v1alpha1.Freight{
-						{Images: []v1alpha1.Image{{Tag: "b"}}},
-						{Images: []v1alpha1.Image{{Tag: "c"}}},
-						{Images: []v1alpha1.Image{{Tag: "a"}}},
+					Freight: []*kargoapi.Freight{
+						{Images: []kargoapi.Image{{Tag: "b"}}},
+						{Images: []kargoapi.Image{{Tag: "c"}}},
+						{Images: []kargoapi.Image{{Tag: "a"}}},
 					},
 				},
 			},
@@ -846,10 +845,10 @@ func TestSortFreightGroups(t *testing.T) {
 			name: "reverse order by tag",
 			groups: map[string]*svcv1alpha1.FreightList{
 				"": {
-					Freight: []*v1alpha1.Freight{
-						{Images: []v1alpha1.Image{{Tag: "b"}}},
-						{Images: []v1alpha1.Image{{Tag: "c"}}},
-						{Images: []v1alpha1.Image{{Tag: "a"}}},
+					Freight: []*kargoapi.Freight{
+						{Images: []kargoapi.Image{{Tag: "b"}}},
+						{Images: []kargoapi.Image{{Tag: "c"}}},
+						{Images: []kargoapi.Image{{Tag: "a"}}},
 					},
 				},
 			},
@@ -866,7 +865,7 @@ func TestSortFreightGroups(t *testing.T) {
 			name: "order by first seen",
 			groups: map[string]*svcv1alpha1.FreightList{
 				"": {
-					Freight: []*v1alpha1.Freight{
+					Freight: []*kargoapi.Freight{
 						{
 							ObjectMeta: metav1.ObjectMeta{
 								CreationTimestamp: metav1.NewTime(now),
@@ -897,7 +896,7 @@ func TestSortFreightGroups(t *testing.T) {
 			name: "reverse order by first seen",
 			groups: map[string]*svcv1alpha1.FreightList{
 				"": {
-					Freight: []*v1alpha1.Freight{
+					Freight: []*kargoapi.Freight{
 						{
 							ObjectMeta: metav1.ObjectMeta{
 								CreationTimestamp: metav1.NewTime(now),
