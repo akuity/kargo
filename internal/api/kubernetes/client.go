@@ -580,7 +580,10 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 	if path == "" {
 		logger.Debug("loading in-cluster REST config")
 		cfg, err := rest.InClusterConfig()
-		return cfg, fmt.Errorf("error loading in-cluster REST config: %w", err)
+		if err != nil {
+			return cfg, fmt.Errorf("error loading in-cluster REST config: %w", err)
+		}
+		return cfg, nil
 	}
 
 	logger.WithField("path", path).Debug("loading REST config from path")
