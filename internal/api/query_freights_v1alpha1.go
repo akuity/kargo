@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	apiv1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -344,7 +343,7 @@ func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alp
 	}
 }
 
-type ByFirstSeen []*apiv1alpha1.Freight
+type ByFirstSeen []*kargoapi.Freight
 
 func (a ByFirstSeen) Len() int      { return len(a) }
 func (a ByFirstSeen) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -357,7 +356,7 @@ func (a ByFirstSeen) Less(i, j int) bool {
 //
 // TODO: KR: We might want to think about whether the current sorting behavior
 // is useful at all, given the limitations noted above.
-type ByTag []*apiv1alpha1.Freight
+type ByTag []*kargoapi.Freight
 
 func (a ByTag) Len() int      { return len(a) }
 func (a ByTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -376,7 +375,7 @@ func (a ByTag) Less(i, j int) bool {
 	return a[i].CreationTimestamp.Time.Before(a[j].CreationTimestamp.Time)
 }
 
-func getRepoAndTag(s *apiv1alpha1.Freight) (string, string, *semver.Version) {
+func getRepoAndTag(s *kargoapi.Freight) (string, string, *semver.Version) {
 	var repo, tag string
 	if len(s.Images) > 0 {
 		repo = s.Images[0].RepoURL
