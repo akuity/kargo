@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -124,6 +125,13 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 		Scheme: scheme,
 		Metrics: server.Options{
 			BindAddress: "0",
+		},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Secret{},
+				},
+			},
 		},
 	})
 	if err != nil {

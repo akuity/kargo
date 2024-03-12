@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -33,6 +34,7 @@ kargo get promotions --project=my-project --stage=my-stage
 	}
 
 	// Register subcommands.
+	cmd.AddCommand(newGetCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newGetFreightCommand(cfg, streams))
 	cmd.AddCommand(newGetProjectsCommand(cfg, streams))
 	cmd.AddCommand(newGetPromotionsCommand(cfg, streams))
@@ -72,6 +74,8 @@ func printObjects[T runtime.Object](
 	var t T
 	var printObj runtime.Object
 	switch any(t).(type) {
+	case *corev1.Secret:
+		printObj = newCredentialsTable(list)
 	case *kargoapi.Freight:
 		printObj = newFreightTable(list)
 	case *kargoapi.Project:

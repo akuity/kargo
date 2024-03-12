@@ -2,6 +2,8 @@ package option
 
 import (
 	"github.com/spf13/pflag"
+
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 const (
@@ -21,16 +23,23 @@ const (
 	// FreightAliasFlag is the flag name for the freight-alias flag.
 	FreightAliasFlag = "freight-alias"
 
+	// GitFlag is the flag name for the git flag.
+	GitFlag = string(credentials.TypeGit)
+
+	// HelmFlag is the flag name for the helm flag.
+	HelmFlag = string(credentials.TypeHelm)
+
+	// ImageFlag is the flag name for the image flag.
+	ImageFlag = string(credentials.TypeImage)
+
 	// InsecureTLSFlag is the flag name for the insecure-tls flag.
 	InsecureTLSFlag = "insecure-skip-tls-verify"
 
+	// InteractivePasswordFlag is the flag name for the interactive-password flag.
+	InteractivePasswordFlag = "interactive-password"
+
 	// NameFlag is the flag name for the name flag.
 	NameFlag = "name"
-
-	// ProjectFlag is the flag name for the project flag.
-	ProjectFlag = "project"
-	// ProjectShortFlag is the short flag name for the project flag.
-	ProjectShortFlag = "p"
 
 	// NewAliasFlag is the flag name for the new-alias flag.
 	NewAliasFlag = "new-alias"
@@ -38,11 +47,31 @@ const (
 	// OldAliasFlag is the flag name for the old-alias flag.
 	OldAliasFlag = "old-alias"
 
+	// PasswordFlag is the flag name for the password flag.
+	PasswordFlag = "password"
+
+	// ProjectFlag is the flag name for the project flag.
+	ProjectFlag = "project"
+	// ProjectShortFlag is the short flag name for the project flag.
+	ProjectShortFlag = "p"
+
+	// RepoURLFlag is the flag name for the repo-url flag.
+	RepoURLFlag = "repo-url"
+
+	// RepoURLPatternFlag is the flag name for the repo-url-pattern flag.
+	RepoURLPatternFlag = "repo-url-pattern"
+
 	// StageFlag is the flag name for the stage flag.
 	StageFlag = "stage"
 
 	// SubscribersOfFlag is the flag name for the subscribers-of flag.
 	SubscribersOfFlag = "subscribers-of"
+
+	// TypeFlag is the flag name for the type flag.
+	TypeFlag = "type"
+
+	// UsernameFlag is the flag name for the username flag.
+	UsernameFlag = "username"
 
 	// WaitFlag is the flag name for the wait flag.
 	WaitFlag = "wait"
@@ -73,9 +102,29 @@ func FreightAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, FreightAliasFlag, "", usage)
 }
 
+// Git adds the GitFlag to the provided flag set.
+func Git(fs *pflag.FlagSet, git *bool, usage string) {
+	fs.BoolVar(git, GitFlag, false, usage)
+}
+
+// Helm adds the HelmFlag to the provided flag set.
+func Helm(fs *pflag.FlagSet, helm *bool, usage string) {
+	fs.BoolVar(helm, HelmFlag, false, usage)
+}
+
+// Image adds the ImageFlag to the provided flag set.
+func Image(fs *pflag.FlagSet, image *bool, usage string) {
+	fs.BoolVar(image, ImageFlag, false, usage)
+}
+
 // InsecureTLS adds the InsecureTLSFlag to the provided flag set.
 func InsecureTLS(fs *pflag.FlagSet, insecure *bool) {
 	fs.BoolVar(insecure, InsecureTLSFlag, false, "Skip TLS certificate verification")
+}
+
+// InteractivePassword adds the InteractivePasswordFlag to the provided flag set.
+func InteractivePassword(fs *pflag.FlagSet, changePasswordInteractively *bool, usage string) {
+	fs.BoolVar(changePasswordInteractively, InteractivePasswordFlag, false, usage)
 }
 
 // Name adds the NameFlag to the provided flag set.
@@ -98,9 +147,24 @@ func OldAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, OldAliasFlag, "", usage)
 }
 
+// Password adds the PasswordFlag to the provided flag set.
+func Password(fs *pflag.FlagSet, password *string, usage string) {
+	fs.StringVar(password, PasswordFlag, "", usage)
+}
+
 // Project adds the ProjectFlag and ProjectShortFlag to the provided flag set.
 func Project(fs *pflag.FlagSet, project *string, defaultProject, usage string) {
 	fs.StringVarP(project, ProjectFlag, ProjectShortFlag, defaultProject, usage)
+}
+
+// RepoURL adds the RepoURLFlag to the provided flag set.
+func RepoURL(fs *pflag.FlagSet, repoURL *string, usage string) {
+	fs.StringVar(repoURL, RepoURLFlag, "", usage)
+}
+
+// RepoURLPattern adds the RepoURLPatternFlag to the provided flag set.
+func RepoURLPattern(fs *pflag.FlagSet, repoURLPattern *string, usage string) {
+	fs.StringVar(repoURLPattern, RepoURLPatternFlag, "", usage)
 }
 
 // Stage adds the StageFlag to the provided flag set.
@@ -111,6 +175,16 @@ func Stage(fs *pflag.FlagSet, stage *string, usage string) {
 // SubscribersOf adds the SubscribersOfFlag to the provided flag set.
 func SubscribersOf(fs *pflag.FlagSet, subscribersOf *string, usage string) {
 	fs.StringVar(subscribersOf, SubscribersOfFlag, "", usage)
+}
+
+// Type adds the TypeFlag to the provided flag set.
+func Type(fs *pflag.FlagSet, repoType *string, usage string) {
+	fs.StringVar(repoType, TypeFlag, "", usage)
+}
+
+// Username adds the UsernameFlag to the provided flag set.
+func Username(fs *pflag.FlagSet, username *string, usage string) {
+	fs.StringVar(username, UsernameFlag, "", usage)
 }
 
 // Wait adds the WaitFlag to the provided flag set.

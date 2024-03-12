@@ -74,6 +74,7 @@ kargo delete warehouse --project=my-project my-warehouse
 	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
 	// Register subcommands.
+	cmd.AddCommand(newCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
 	cmd.AddCommand(newStageCommand(cfg, streams))
 	cmd.AddCommand(newWarehouseCommand(cfg, streams))

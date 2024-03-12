@@ -65,6 +65,8 @@ kargo create project my-project
 	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
 	// Register subcommands.
+	cmd.AddCommand(newCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newProjectCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
 
 	return cmd
