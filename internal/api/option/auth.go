@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	goerrors "errors"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,7 +15,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -94,8 +93,7 @@ func newAuthInterceptor(
 func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) (goOIDCIDTokenVerifyFn, error) {
 	keyset, err := getKeySet(ctx, cfg)
 	if err != nil {
-		return nil,
-			errors.Wrap(err, "error getting keys from OpenID Connect provider")
+		return nil, fmt.Errorf("error getting keys from OpenID Connect provider: %w", err)
 	}
 	// verifyFuncs might have two verify funcs: the web and cli verifier
 	var verifyFuncs []goOIDCIDTokenVerifyFn
@@ -126,7 +124,7 @@ func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) (goOID
 			errs = append(errs, err)
 		}
 		// if we get here, we've iterated all our verifiers and none of them worked.
-		return nil, goerrors.Join(errs...)
+		return nil, errors.Join(errs...)
 	}
 	return multiVerifyFunc, nil
 }
@@ -154,11 +152,7 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 		if cfg.DexProxyConfig.CACertPath != "" {
 			caCertBytes, err := os.ReadFile(cfg.DexProxyConfig.CACertPath)
 			if err != nil {
-				return nil, errors.Wrapf(
-					err,
-					"error reading CA cert file %q",
-					cfg.DexProxyConfig.CACertPath,
-				)
+				return nil, fmt.Errorf("error reading CA cert file %q: %w", cfg.DexProxyConfig.CACertPath, err)
 			}
 			caCertPool = x509.NewCertPool()
 			if ok := caCertPool.AppendCertsFromPEM(caCertBytes); !ok {
@@ -175,24 +169,19 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 
 	discoResp, err := httpClient.Get(discoURL)
 	if err != nil {
-		return nil, errors.Wrap(
-			err,
-			"error making discovery request to OpenID Connect identity provider",
-		)
+		return nil, fmt.Errorf("error making discovery request to OpenID Connect identity provider: %w", err)
 	}
 	defer discoResp.Body.Close()
 	bodyBytes, err := io.ReadAll(discoResp.Body)
 	if err != nil {
-		return nil,
-			errors.Wrap(err, "error reading discovery request response body")
+		return nil, fmt.Errorf("error reading discovery request response body: %w", err)
 	}
 	providerCfg := struct {
 		KeysURL string `json:"jwks_uri"`
 	}{}
 	if err = json.Unmarshal(bodyBytes, &providerCfg); err != nil {
 		fmt.Println(string(bodyBytes))
-		return nil,
-			errors.Wrap(err, "error unmarshaling discovery request response body")
+		return nil, fmt.Errorf("error unmarshaling discovery request response body: %w", err)
 	}
 
 	keysURL := providerCfg.KeysURL
@@ -290,7 +279,7 @@ func (a *authInterceptor) listServiceAccounts(
 	if err := a.internalClient.List(ctx, nsList, libClient.MatchingLabels{
 		kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
 	}); err != nil {
-		return nil, errors.Wrap(err, "list namespaces")
+		return nil, fmt.Errorf("list namespaces: %w", err)
 	}
 	// Add all project namespaces to the set.
 	for _, ns := range nsList.Items {
@@ -303,7 +292,7 @@ func (a *authInterceptor) listServiceAccounts(
 		// List ALL ServiceAccounts matching the query.
 		list := &corev1.ServiceAccountList{}
 		if err := a.internalClient.List(ctx, list, query); err != nil {
-			return nil, errors.Wrap(err, "list service accounts")
+			return nil, fmt.Errorf("list service accounts: %w", err)
 		}
 		for _, sa := range list.Items {
 			// Skip if it's not in a namespace we care about.
@@ -390,7 +379,7 @@ func (a *authInterceptor) authenticate(
 		if ok {
 			sa, err := a.listServiceAccountsFn(ctx, c)
 			if err != nil {
-				return ctx, errors.Wrap(err, "list service accounts for user")
+				return ctx, fmt.Errorf("list service accounts for user: %w", err)
 			}
 			return user.ContextWithInfo(
 				ctx,

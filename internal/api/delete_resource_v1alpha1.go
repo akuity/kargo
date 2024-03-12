@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	sigyaml "sigs.k8s.io/yaml"
 
@@ -17,7 +17,7 @@ func (s *server) DeleteResource(
 ) (*connect.Response[svcv1alpha1.DeleteResourceResponse], error) {
 	projects, otherResources, err := splitYAML(req.Msg.GetManifest())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse manifest: %w", err))
 	}
 	resources := append(otherResources, projects...)
 	res := make([]*svcv1alpha1.DeleteResourceResult, 0, len(resources))
@@ -39,7 +39,7 @@ func (s *server) deleteResource(
 	if err := s.client.Delete(ctx, obj); err != nil {
 		return &svcv1alpha1.DeleteResourceResult{
 			Result: &svcv1alpha1.DeleteResourceResult_Error{
-				Error: errors.Wrap(err, "delete resource").Error(),
+				Error: fmt.Errorf("delete resource: %w", err).Error(),
 			},
 		}
 	}
@@ -48,7 +48,7 @@ func (s *server) deleteResource(
 	if err != nil {
 		return &svcv1alpha1.DeleteResourceResult{
 			Result: &svcv1alpha1.DeleteResourceResult_Error{
-				Error: errors.Wrap(err, "marshal deleted manifest").Error(),
+				Error: fmt.Errorf("marshal deleted manifest: %w", err).Error(),
 			},
 		}
 	}

@@ -2,9 +2,9 @@ package validation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -23,7 +23,7 @@ func ValidateProject(ctx context.Context, kc client.Client, project string) erro
 		if kubeerr.IsNotFound(err) {
 			return ErrProjectNotFound
 		}
-		return errors.Wrap(err, "get project")
+		return fmt.Errorf("get project: %w", err)
 	}
 	if ns.GetLabels()[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
 		return field.Invalid(field.NewPath("metadata", "namespace"),

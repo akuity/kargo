@@ -2,11 +2,11 @@ package image
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"
@@ -34,10 +34,10 @@ func newSemVerSelector(
 	if constraint != "" {
 		var err error
 		if semverConstraint, err = semver.NewConstraint(constraint); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error parsing semver constraint %q",
+			return nil, fmt.Errorf(
+				"error parsing semver constraint %q: %w",
 				constraint,
+				err,
 			)
 		}
 	}
@@ -64,7 +64,7 @@ func (s *semVerSelector) Select(ctx context.Context) (*Image, error) {
 
 	tags, err := s.repoClient.getTags(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing tags")
+		return nil, fmt.Errorf("error listing tags: %w", err)
 	}
 	if len(tags) == 0 {
 		logger.Trace("found no tags")
@@ -103,7 +103,7 @@ func (s *semVerSelector) Select(ctx context.Context) (*Image, error) {
 	tag := images[0].Tag
 	image, err := s.repoClient.getImageByTag(ctx, tag, s.platform)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error retrieving image with tag %q", tag)
+		return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 	}
 	if image == nil {
 		logger.Tracef(

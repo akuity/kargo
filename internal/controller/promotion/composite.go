@@ -2,8 +2,7 @@ package promotion
 
 import (
 	"context"
-
-	"github.com/pkg/errors"
+	"fmt"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
@@ -62,10 +61,10 @@ func (c *compositeMechanism) Promote(
 		var otherStatus *kargoapi.PromotionStatus
 		otherStatus, newFreight, err = childMechanism.Promote(ctx, stage, promo, newFreight)
 		if err != nil {
-			return nil, newFreight, errors.Wrapf(
-				err,
-				"error executing %s",
+			return nil, newFreight, fmt.Errorf(
+				"error executing %s: %w",
 				childMechanism.GetName(),
+				err,
 			)
 		}
 		newStatus = aggregateGitPromoStatus(newStatus, *otherStatus)

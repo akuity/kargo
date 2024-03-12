@@ -2,9 +2,10 @@ package refresh
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -61,7 +62,7 @@ func waitForStage(
 		Name:    name,
 	}))
 	if err != nil {
-		return errors.Wrap(err, "watch stage")
+		return fmt.Errorf("watch stage: %w", err)
 	}
 	defer func() {
 		if conn, connErr := res.Conn(); connErr == nil {
@@ -71,7 +72,7 @@ func waitForStage(
 	for {
 		if !res.Receive() {
 			if err = res.Err(); err != nil {
-				return errors.Wrap(err, "watch stage")
+				return fmt.Errorf("watch stage: %w", err)
 			}
 			return errors.New("unexpected end of watch stream")
 		}

@@ -2,9 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +19,7 @@ func (s *server) CreateOrUpdateResource(
 ) (*connect.Response[svcv1alpha1.CreateOrUpdateResourceResponse], error) {
 	projects, otherResources, err := splitYAML(req.Msg.GetManifest())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse manifest: %w", err))
 	}
 	resources := append(projects, otherResources...)
 	res := make([]*svcv1alpha1.CreateOrUpdateResourceResult, 0, len(resources))
@@ -50,7 +51,7 @@ func (s *server) createOrUpdateResource(
 			case *svcv1alpha1.CreateResourceResult_Error:
 				return newCreateOrUpdateResourceResultError(errors.New(res.Error))
 			default:
-				return newCreateOrUpdateResourceResultError(errors.Errorf("unknown result type %T", res))
+				return newCreateOrUpdateResourceResultError(fmt.Errorf("unknown result type %T", res))
 			}
 		}
 		return newCreateOrUpdateResourceResultError(err)
@@ -67,14 +68,14 @@ func (s *server) createOrUpdateResource(
 	case *svcv1alpha1.UpdateResourceResult_Error:
 		return newCreateOrUpdateResourceResultError(errors.New(res.Error))
 	default:
-		return newCreateOrUpdateResourceResultError(errors.Errorf("unknown result type %T", res))
+		return newCreateOrUpdateResourceResultError(fmt.Errorf("unknown result type %T", res))
 	}
 }
 
 func newCreateOrUpdateResourceResultError(err error) *svcv1alpha1.CreateOrUpdateResourceResult {
 	return &svcv1alpha1.CreateOrUpdateResourceResult{
 		Result: &svcv1alpha1.CreateOrUpdateResourceResult_Error{
-			Error: errors.Wrap(err, "create or update resource").Error(),
+			Error: fmt.Errorf("create or update resource: %w", err).Error(),
 		},
 	}
 }

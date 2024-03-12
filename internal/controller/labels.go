@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -28,7 +29,10 @@ func GetShardPredicate(shard string) (predicate.Predicate, error) {
 				},
 			},
 		)
-		return pred, errors.Wrap(err, "error creating default selector predicate")
+		if err != nil {
+			return nil, fmt.Errorf("error creating default selector predicate: %w", err)
+		}
+		return pred, nil
 	}
 	pred, err := predicate.LabelSelectorPredicate(
 		*metav1.SetAsLabelSelector(
@@ -39,18 +43,21 @@ func GetShardPredicate(shard string) (predicate.Predicate, error) {
 			),
 		),
 	)
-	return pred, errors.Wrap(err, "error creating shard selector predicate")
+	if err != nil {
+		return nil, fmt.Errorf("error creating shard selector predicate: %w", err)
+	}
+	return pred, nil
 }
 
 func GetShardRequirement(shard string) (*labels.Requirement, error) {
 	req, err := labels.NewRequirement(kargoapi.ShardLabelKey, selection.Equals, []string{shard})
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating shard label selector")
+		return nil, fmt.Errorf("error creating shard label selector: %w", err)
 	}
 	if shard == "" {
 		req, err = labels.NewRequirement(kargoapi.ShardLabelKey, selection.DoesNotExist, nil)
 		if err != nil {
-			return nil, errors.Wrap(err, "error creating default label selector")
+			return nil, fmt.Errorf("error creating default label selector: %w", err)
 		}
 	}
 
@@ -67,7 +74,7 @@ func GetCredentialsRequirement() (*labels.Requirement, error) {
 		credentials.TypeImage.String(),
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "error creating credentials label selector")
+		return nil, fmt.Errorf("error creating credentials label selector: %w", err)
 	}
 	return req, nil
 }

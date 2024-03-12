@@ -23,7 +23,6 @@ import (
 	"github.com/opencontainers/go-digest"
 	ociv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/patrickmn/go-cache"
-	"github.com/pkg/errors"
 	"go.uber.org/ratelimit"
 	"golang.org/x/sync/semaphore"
 
@@ -128,7 +127,7 @@ func newRepositoryClient(
 ) (*repositoryClient, error) {
 	repoRef, err := reference.ParseNormalizedNamed(repoURL)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error parsing image repo URL %s", repoURL)
+		return nil, fmt.Errorf("error parsing image repo URL %s: %w", repoURL, err)
 	}
 	registryURL := reference.Domain(repoRef)
 	reg := getRegistry(registryURL)
@@ -150,8 +149,7 @@ func newRepositoryClient(
 		},
 	)
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error getting challenge manager for %s", apiAddress)
+		return nil, fmt.Errorf("error getting challenge manager for %s: %w", apiAddress, err)
 	}
 
 	if creds == nil {
@@ -177,15 +175,15 @@ func newRepositoryClient(
 
 	imageRef, err := reference.WithName(image)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error getting reference for image %q", image)
+		return nil, fmt.Errorf("error getting reference for image %q: %w", image, err)
 	}
 	repo, err := client.NewRepository(imageRef, apiAddress, rlt)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error creating internal repository for image %q in registry %s",
+		return nil, fmt.Errorf(
+			"error creating internal repository for image %q in registry %s: %w",
 			image,
 			apiAddress,
+			err,
 		)
 	}
 
@@ -223,13 +221,13 @@ var getChallengeManager = func(
 	apiAddress = fmt.Sprintf("%s/v2/", apiAddress)
 	resp, err := httpClient.Get(apiAddress)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error requesting %s", apiAddress)
+		return nil, fmt.Errorf("error requesting %s: %w", apiAddress, err)
 	}
 	defer resp.Body.Close()
 	// Consider only HTTP 200 and 401 to be valid responses
 	if resp.StatusCode != http.StatusOK &&
 		resp.StatusCode != http.StatusUnauthorized {
-		return nil, errors.Errorf(
+		return nil, fmt.Errorf(
 			"GET %s returned an HTTP %d status code; this address may not "+
 				"be a valid v2 Registry endpoint",
 			apiAddress,
@@ -237,9 +235,10 @@ var getChallengeManager = func(
 		)
 	}
 	challengeManager := challenge.NewSimpleManager()
-	err = challengeManager.AddResponse(resp)
-	return challengeManager,
-		errors.Wrap(err, "error configuring challenge manager")
+	if err = challengeManager.AddResponse(resp); err != nil {
+		err = fmt.Errorf("error configuring challenge manager: %w", err)
+	}
+	return challengeManager, err
 }
 
 // getTags retrieves a list of all tags from the repository.
@@ -249,7 +248,7 @@ func (r *repositoryClient) getTags(ctx context.Context) ([]string, error) {
 	tagSvc := r.repo.Tags(ctx)
 	tags, err := tagSvc.All(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error retrieving tags from repository")
+		return nil, fmt.Errorf("error retrieving tags from repository: %w", err)
 	}
 	return tags, nil
 }
@@ -263,16 +262,11 @@ func (r *repositoryClient) getImageByTag(
 ) (*Image, error) {
 	manifest, err := r.getManifestByTagFn(ctx, tag)
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error retrieving manifest for tag %s", tag)
+		return nil, fmt.Errorf("error retrieving manifest for tag %s: %w", tag, err)
 	}
 	image, err := r.extractImageFromManifestFn(ctx, manifest, platform)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error extracting image from manifest for tag %q",
-			tag,
-		)
+		return nil, fmt.Errorf("error extracting image from manifest for tag %q: %w", tag, err)
 	}
 	if image != nil {
 		image.Tag = tag
@@ -299,16 +293,11 @@ func (r *repositoryClient) getImageByDigest(
 
 	manifest, err := r.getManifestByDigestFn(ctx, d)
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error retrieving manifest %s", d)
+		return nil, fmt.Errorf("error retrieving manifest %s: %w", d, err)
 	}
 	image, err := r.extractImageFromManifestFn(ctx, manifest, platform)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error extracting image from manifest %s",
-			d,
-		)
+		return nil, fmt.Errorf("error extracting image from manifest %s: %w", d, err)
 	}
 
 	if image != nil {
@@ -329,7 +318,7 @@ func (r *repositoryClient) getManifestByTag(
 	logger.Tracef("retrieving manifest for tag %q from repository", tag)
 	manifestSvc, err := r.repo.Manifests(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting manifest service")
+		return nil, fmt.Errorf("error getting manifest service: %w", err)
 	}
 	manifest, err := manifestSvc.Get(
 		ctx,
@@ -338,8 +327,7 @@ func (r *repositoryClient) getManifestByTag(
 		distribution.WithManifestMediaTypes(knownMediaTypes),
 	)
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error retrieving manifest for tag %q", tag)
+		return nil, fmt.Errorf("error retrieving manifest for tag %q: %w", tag, err)
 	}
 	return manifest, nil
 }
@@ -353,7 +341,7 @@ func (r *repositoryClient) getManifestByDigest(
 	logger.Tracef("retrieving manifest for digest %q from repository", d.String())
 	manifestSvc, err := r.repo.Manifests(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting manifest service")
+		return nil, fmt.Errorf("error getting manifest service: %w", err)
 	}
 	manifest, err := manifestSvc.Get(
 		ctx,
@@ -361,7 +349,7 @@ func (r *repositoryClient) getManifestByDigest(
 		distribution.WithManifestMediaTypes(knownMediaTypes),
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error retrieving manifest for digest %q", d)
+		return nil, fmt.Errorf("error retrieving manifest for digest %q: %w", d, err)
 	}
 	return manifest, nil
 }
@@ -384,7 +372,7 @@ func (r *repositoryClient) extractImageFromManifest(
 	case *manifestlist.DeserializedManifestList, *ocischema.DeserializedImageIndex:
 		return r.extractImageFromCollectionFn(ctx, manifest, platform)
 	default:
-		return nil, errors.Errorf("invalid manifest type %T", manifest)
+		return nil, fmt.Errorf("invalid manifest type %T", manifest)
 	}
 }
 
@@ -406,7 +394,7 @@ func (r *repositoryClient) extractImageFromV1Manifest(
 	// We need this to calculate the digest
 	_, manifestBytes, err := manifest.Payload() // nolint: staticcheck
 	if err != nil {
-		return nil, errors.Wrap(err, "error extracting payload from V1 manifest")
+		return nil, fmt.Errorf("error extracting payload from V1 manifest: %w", err)
 	}
 	digest := digest.FromBytes(manifestBytes)
 
@@ -414,8 +402,7 @@ func (r *repositoryClient) extractImageFromV1Manifest(
 	logger.Tracef("extracting image from V1 manifest %s", digest)
 
 	if len(manifest.History) == 0 {
-		return nil,
-			errors.Errorf("no history information found in V1 manifest %s", digest)
+		return nil, fmt.Errorf("no history information found in V1 manifest %s", digest)
 	}
 
 	var info manifestInfo
@@ -423,7 +410,7 @@ func (r *repositoryClient) extractImageFromV1Manifest(
 		[]byte(manifest.History[0].V1Compatibility),
 		&info,
 	); err != nil {
-		return nil, errors.Wrapf(err, "error unmarshaling V1 manifest %s", digest)
+		return nil, fmt.Errorf("error unmarshaling V1 manifest %s: %w", digest, err)
 	}
 
 	if platform != nil &&
@@ -433,10 +420,10 @@ func (r *repositoryClient) extractImageFromV1Manifest(
 
 	createdAt, err := time.Parse(time.RFC3339Nano, info.Created)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error parsing createdAt timestamp from V1 manifest %s",
+		return nil, fmt.Errorf(
+			"error parsing createdAt timestamp from V1 manifest %s: %w",
 			digest,
+			err,
 		)
 	}
 
@@ -457,8 +444,7 @@ func (r *repositoryClient) extractImageFromV2Manifest(
 	// We need this to calculate the digest
 	_, manifestBytes, err := manifest.Payload()
 	if err != nil {
-		return nil,
-			errors.Wrap(err, "error extracting payload from V2 manifest")
+		return nil, fmt.Errorf("error extracting payload from V2 manifest: %w", err)
 	}
 	digest := digest.FromBytes(manifestBytes)
 
@@ -469,20 +455,20 @@ func (r *repositoryClient) extractImageFromV2Manifest(
 	// timestamp
 	blob, err := r.getBlobFn(ctx, manifest.Config.Digest)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error fetching blob %s referenced by V2 manifest %s",
+		return nil, fmt.Errorf(
+			"error fetching blob %s referenced by V2 manifest %s: %w",
 			manifest.Config.Digest,
 			digest,
+			err,
 		)
 	}
 	var info manifestInfo
 	if err = json.Unmarshal(blob, &info); err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error unmarshaling blob %s referenced by V2 manifest %s",
+		return nil, fmt.Errorf(
+			"error unmarshaling blob %s referenced by V2 manifest %s: %w",
 			manifest.Config.Digest,
 			digest,
+			err,
 		)
 	}
 
@@ -493,12 +479,11 @@ func (r *repositoryClient) extractImageFromV2Manifest(
 
 	createdAt, err := time.Parse(time.RFC3339Nano, info.Created)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error parsing createdAt timestamp from blob %s referenced by V2 "+
-				"manifest %s",
+		return nil, fmt.Errorf(
+			"error parsing createdAt timestamp from blob %s referenced by V2 manifest %s: %w",
 			manifest.Config.Digest,
 			digest,
+			err,
 		)
 	}
 
@@ -519,7 +504,7 @@ func (r *repositoryClient) extractImageFromOCIManifest(
 	// We need this to calculate the digest
 	_, manifestBytes, err := manifest.Payload()
 	if err != nil {
-		return nil, errors.Wrap(err, "error extracting payload from OCI manifest")
+		return nil, fmt.Errorf("error extracting payload from OCI manifest: %w", err)
 	}
 	digest := digest.FromBytes(manifestBytes)
 
@@ -530,20 +515,20 @@ func (r *repositoryClient) extractImageFromOCIManifest(
 	// timestamp
 	blob, err := r.getBlobFn(ctx, manifest.Config.Digest)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error fetching blob %s referenced by OCI manifest %s",
+		return nil, fmt.Errorf(
+			"error fetching blob %s referenced by OCI manifest %s: %w",
 			manifest.Config.Digest,
 			digest,
+			err,
 		)
 	}
 	var info manifestInfo
 	if err = json.Unmarshal(blob, &info); err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error unmarshaling blob %s referenced by OCI manifest %s",
+		return nil, fmt.Errorf(
+			"error unmarshaling blob %s referenced by OCI manifest %s: %w",
 			manifest.Config.Digest,
 			digest,
+			err,
 		)
 	}
 
@@ -560,12 +545,11 @@ func (r *repositoryClient) extractImageFromOCIManifest(
 
 	createdAt, err := time.Parse(time.RFC3339Nano, info.Created)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error parsing createdAt timestamp from blob %s referenced by OCI "+
-				"manifest %s",
+		return nil, fmt.Errorf(
+			"error parsing createdAt timestamp from blob %s referenced by OCI manifest %s: %w",
 			manifest.Config.Digest,
 			digest,
+			err,
 		)
 	}
 
@@ -588,7 +572,7 @@ func (r *repositoryClient) extractImageFromCollection(
 	// list or index.
 	_, manifestBytes, err := collection.Payload()
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting collection payload")
+		return nil, fmt.Errorf("error getting collection payload: %w", err)
 	}
 	digest := digest.FromBytes(manifestBytes)
 
@@ -611,7 +595,7 @@ func (r *repositoryClient) extractImageFromCollection(
 	}
 
 	if len(refs) == 0 {
-		return nil, errors.Errorf(
+		return nil, fmt.Errorf(
 			"empty V2 manifest list or OCI index %s is not supported",
 			digest,
 		)
@@ -638,7 +622,7 @@ func (r *repositoryClient) extractImageFromCollection(
 		}
 		if len(matchedRefs) > 1 {
 			// This really shouldn't happen.
-			return nil, errors.Errorf(
+			return nil, fmt.Errorf(
 				"expected only one reference to match platform %q, but found %d",
 				platform.String(),
 				len(matchedRefs),
@@ -647,15 +631,15 @@ func (r *repositoryClient) extractImageFromCollection(
 		ref := matchedRefs[0]
 		image, err := r.getImageByDigestFn(ctx, ref.Digest, platform)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error getting image from manifest %s",
+			return nil, fmt.Errorf(
+				"error getting image from manifest %s: %w",
 				ref.Digest,
+				err,
 			)
 		}
 		if image == nil {
 			// This really shouldn't happen.
-			return nil, errors.Errorf(
+			return nil, fmt.Errorf(
 				"expected manifest for digest %v to match platform %q, but it did not",
 				ref.Digest,
 				platform.String(),
@@ -674,15 +658,15 @@ func (r *repositoryClient) extractImageFromCollection(
 	for _, ref := range refs {
 		image, err := r.getImageByDigestFn(ctx, ref.Digest, platform)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error getting image from manifest %s",
+			return nil, fmt.Errorf(
+				"error getting image from manifest %s: %w",
 				ref.Digest,
+				err,
 			)
 		}
 		if image == nil {
 			// This really shouldn't happen.
-			return nil, errors.Errorf(
+			return nil, fmt.Errorf(
 				"found no image for manifest %s",
 				ref.Digest,
 			)

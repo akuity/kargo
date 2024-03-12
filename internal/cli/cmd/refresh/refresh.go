@@ -2,12 +2,11 @@ package refresh
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"fmt"
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/client"
@@ -85,14 +84,14 @@ func (o *refreshOptions) validate() error {
 		errs = append(errs, errors.New("name is required"))
 	}
 
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 // run performs the refresh operation based on the provided options.
 func (o *refreshOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	switch o.ResourceType {
@@ -109,7 +108,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 		}))
 	}
 	if err != nil {
-		return errors.Wrapf(err, "refresh %s", o.ResourceType)
+		return fmt.Errorf("refresh %s: %w", o.ResourceType, err)
 	}
 
 	if o.Wait {
@@ -120,7 +119,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			err = waitForStage(ctx, kargoSvcCli, o.Project, o.Name)
 		}
 		if err != nil {
-			return errors.Wrapf(err, "wait %s", o.ResourceType)
+			return fmt.Errorf("wait %s: %w", o.ResourceType, err)
 		}
 	}
 	fmt.Printf("%s '%s/%s' refreshed\n", o.ResourceType, o.Project, o.Name)

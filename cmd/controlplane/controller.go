@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -66,36 +66,33 @@ func newControllerCommand() *cobra.Command {
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
-					return errors.Wrap(
-						err,
-						"error loading REST config for Kargo controller manager",
-					)
+					return fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 				}
 				restCfg.ContentType = runtime.ContentTypeJSON
 
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(
+					return fmt.Errorf(
+						"error adding Kubernetes core API to Kargo controller manager scheme: %w",
 						err,
-						"error adding Kubernetes core API to Kargo controller manager scheme",
 					)
 				}
 				if err = rollouts.AddToScheme(scheme); err != nil {
-					return errors.Wrap(
+					return fmt.Errorf(
+						"error adding Argo Rollouts API to Kargo controller manager scheme: %w",
 						err,
-						"error adding Argo Rollouts API to Kargo controller manager scheme",
 					)
 				}
 				if err = kargoapi.AddToScheme(scheme); err != nil {
-					return errors.Wrap(
+					return fmt.Errorf(
+						"error adding Kargo API to Kargo controller manager scheme: %w",
 						err,
-						"error adding Kargo API to Kargo controller manager scheme",
 					)
 				}
 
 				secretReq, err := controller.GetCredentialsRequirement()
 				if err != nil {
-					return errors.Wrap(err, "error secret label requirement")
+					return fmt.Errorf("error getting label requirement for credentials Secrets: %w", err)
 				}
 
 				cacheOpts := cache.Options{
@@ -118,7 +115,7 @@ func newControllerCommand() *cobra.Command {
 						Cache: cacheOpts,
 					},
 				); err != nil {
-					return errors.Wrap(err, "error initializing Kargo controller manager")
+					return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 				}
 			}
 
@@ -135,10 +132,7 @@ func newControllerCommand() *cobra.Command {
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("ARGOCD_KUBECONFIG", ""))
 				if err != nil {
-					return errors.Wrap(
-						err,
-						"error loading REST config for Argo CD controller manager",
-					)
+					return fmt.Errorf("error loading REST config for Argo CD controller manager: %w", err)
 				}
 				restCfg.ContentType = runtime.ContentTypeJSON
 
@@ -151,16 +145,15 @@ func newControllerCommand() *cobra.Command {
 					log.Info("Argo CD integration is enabled")
 					scheme := runtime.NewScheme()
 					if err = corev1.AddToScheme(scheme); err != nil {
-						return errors.Wrap(
+						return fmt.Errorf(
+							"error adding Kubernetes core API to Argo CD controller manager scheme: %w",
 							err,
-							"error adding Kubernetes core API to Argo CD controller "+
-								"manager scheme",
 						)
 					}
 					if err = argocd.AddToScheme(scheme); err != nil {
-						return errors.Wrap(
+						return fmt.Errorf(
+							"error adding Argo CD API to Argo CD controller manager scheme: %w",
 							err,
-							"error adding Argo CD API to Argo CD controller manager scheme",
 						)
 					}
 					cacheOpts := cache.Options{} // Watches all namespaces by default
@@ -181,10 +174,7 @@ func newControllerCommand() *cobra.Command {
 							Cache: cacheOpts,
 						},
 					); err != nil {
-						return errors.Wrap(
-							err,
-							"error initializing Argo CD Application controller manager",
-						)
+						return fmt.Errorf("error initializing Argo CD Application controller manager: %w", err)
 					}
 				} else {
 					log.Warn(
@@ -209,10 +199,7 @@ func newControllerCommand() *cobra.Command {
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("ROLLOUTS_KUBECONFIG", ""))
 				if err != nil {
-					return errors.Wrap(
-						err,
-						"error loading REST config for Argo Rollouts controller manager",
-					)
+					return fmt.Errorf("error loading REST config for Argo Rollouts controller manager: %w", err)
 				}
 				restCfg.ContentType = runtime.ContentTypeJSON
 
@@ -220,10 +207,9 @@ func newControllerCommand() *cobra.Command {
 					log.Info("Argo Rollouts integration is enabled")
 					scheme := runtime.NewScheme()
 					if err = rollouts.AddToScheme(scheme); err != nil {
-						return errors.Wrap(
+						return fmt.Errorf(
+							"error adding Argo Rollouts API to Argo Rollouts controller manager scheme: %w",
 							err,
-							"error adding Argo Rollouts API to Argo Rollouts controller "+
-								"manager scheme",
 						)
 					}
 					cacheOpts := cache.Options{} // Watches all namespaces by default
@@ -252,9 +238,9 @@ func newControllerCommand() *cobra.Command {
 							Cache: cacheOpts,
 						},
 					); err != nil {
-						return errors.Wrap(
+						return fmt.Errorf(
+							"error initializing Argo Rollouts AnalysisRun controller manager: %w",
 							err,
-							"error initializing Argo Rollouts AnalysisRun controller manager",
 						)
 					}
 				} else {
@@ -279,7 +265,7 @@ func newControllerCommand() *cobra.Command {
 				credentialsDB,
 				shardName,
 			); err != nil {
-				return errors.Wrap(err, "error setting up Promotions reconciler")
+				return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 			}
 
 			if err := stages.SetupReconcilerWithManager(
@@ -289,7 +275,7 @@ func newControllerCommand() *cobra.Command {
 				rolloutsMgr,
 				stages.ReconcilerConfigFromEnv(),
 			); err != nil {
-				return errors.Wrap(err, "error setting up Stages reconciler")
+				return fmt.Errorf("error setting up Stages reconciler: %w", err)
 			}
 
 			if err := warehouses.SetupReconcilerWithManager(
@@ -297,7 +283,7 @@ func newControllerCommand() *cobra.Command {
 				credentialsDB,
 				shardName,
 			); err != nil {
-				return errors.Wrap(err, "error setting up Warehouses reconciler")
+				return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 			}
 
 			var errChan = make(chan error)
@@ -309,7 +295,7 @@ func newControllerCommand() *cobra.Command {
 				go func() {
 					defer wg.Done()
 					if err := argocdMgr.Start(ctx); err != nil {
-						errChan <- errors.Wrap(err, "error starting argo cd manager")
+						errChan <- fmt.Errorf("error starting argo cd manager: %w", err)
 					}
 				}()
 			}
@@ -318,7 +304,7 @@ func newControllerCommand() *cobra.Command {
 			go func() {
 				defer wg.Done()
 				if err := kargoMgr.Start(ctx); err != nil {
-					errChan <- errors.Wrap(err, "error starting kargo manager")
+					errChan <- fmt.Errorf("error starting kargo manager: %w", err)
 				}
 			}()
 
@@ -327,7 +313,7 @@ func newControllerCommand() *cobra.Command {
 				go func() {
 					defer wg.Done()
 					if err := rolloutsMgr.Start(ctx); err != nil {
-						errChan <- errors.Wrap(err, "error starting rollouts manager")
+						errChan <- fmt.Errorf("error starting rollouts manager: %w", err)
 					}
 				}()
 			}

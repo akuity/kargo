@@ -2,8 +2,8 @@ package api
 
 import (
 	"embed"
+	"fmt"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -17,10 +17,10 @@ var testData embed.FS
 func mustNewScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	if err := corev1.AddToScheme(scheme); err != nil {
-		panic(errors.Wrap(err, "add core v1 scheme"))
+		panic(fmt.Errorf("add core v1 to scheme: %w", err))
 	}
 	if err := kargoapi.AddToScheme(scheme); err != nil {
-		panic(errors.Wrap(err, "add kargo v1alpha1 scheme"))
+		panic(fmt.Errorf("add kargo v1alpha1 scheme: %w", err))
 	}
 	return scheme
 }
@@ -28,12 +28,12 @@ func mustNewScheme() *runtime.Scheme {
 func mustNewObject[T any](path string) *T {
 	rawObj, err := testData.ReadFile(path)
 	if err != nil {
-		panic(errors.Wrapf(err, "read file from path %q", path))
+		panic(fmt.Errorf("read file from path %q: %w", path, err))
 	}
 
 	var obj T
 	if err := yaml.Unmarshal(rawObj, &obj); err != nil {
-		panic(errors.Wrap(err, "unmarshal yaml"))
+		panic(fmt.Errorf("unmarshal yaml: %w", err))
 	}
 	return &obj
 }

@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -40,7 +40,7 @@ func (s *server) GetFreight(
 		alias,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get freight")
+		return nil, fmt.Errorf("get freight: %w", err)
 	}
 	if freight == nil {
 		if name != "" {

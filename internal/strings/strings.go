@@ -1,9 +1,9 @@
 package strings
 
 import (
+	"errors"
+	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // SplitLast splits a specified string on the last occurrence of the specified
@@ -17,7 +17,7 @@ func SplitLast(s, sep string) (string, string, error) {
 	}
 	i := strings.LastIndex(s, sep)
 	if i < 0 {
-		return "", "", errors.Errorf(
+		return "", "", fmt.Errorf(
 			"string %q contains no occurrences of separator %q",
 			s,
 			sep,

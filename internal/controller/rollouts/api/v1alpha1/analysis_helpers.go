@@ -2,8 +2,8 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -21,11 +21,11 @@ func GetAnalysisTemplate(
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
 		}
-		return nil, errors.Wrapf(
-			err,
-			"error getting AnalysisTemplate %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error getting AnalysisTemplate %q in namespace %q: %w",
 			namespacedName.Name,
 			namespacedName.Namespace,
+			err,
 		)
 	}
 	return &at, nil
@@ -41,11 +41,11 @@ func GetAnalysisRun(
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
 		}
-		return nil, errors.Wrapf(
-			err,
-			"error getting AnalysisRun %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error getting AnalysisRun %q in namespace %q: %w",
 			namespacedName.Name,
 			namespacedName.Namespace,
+			err,
 		)
 	}
 	return &ar, nil

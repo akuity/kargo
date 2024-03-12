@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,10 +40,10 @@ func (s *server) DeleteStage(
 			return nil, connect.NewError(connect.CodeNotFound,
 				fmt.Errorf("stage %q not found", key.String()))
 		}
-		return nil, errors.Wrap(err, "get stage")
+		return nil, fmt.Errorf("get stage: %w", err)
 	}
 	if err := s.client.Delete(ctx, &stage); err != nil && !kubeerr.IsNotFound(err) {
-		return nil, errors.Wrap(err, "delete stage")
+		return nil, fmt.Errorf("delete stage: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteStageResponse{}), nil
 }

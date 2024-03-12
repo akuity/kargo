@@ -2,13 +2,14 @@ package api
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	goos "os"
 	"time"
 
 	"connectrpc.com/grpchealth"
-	"github.com/pkg/errors"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
@@ -165,7 +166,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 
 	opts, err := option.NewHandlerOption(ctx, s.cfg, s.internalClient)
 	if err != nil {
-		return errors.Wrap(err, "error initializing handler options")
+		return fmt.Errorf("error initializing handler options: %w", err)
 	}
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
@@ -175,7 +176,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 		dexProxyCfg := dex.ProxyConfigFromEnv()
 		dexProxy, err := dex.NewProxy(dexProxyCfg)
 		if err != nil {
-			return errors.Wrap(err, "error initializing dex proxy")
+			return fmt.Errorf("error initializing dex proxy: %w", err)
 		}
 		mux.Handle("/dex/", dexProxy)
 	}

@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -38,7 +38,7 @@ func (s *server) GetWarehouse(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
-		return nil, errors.Wrap(err, "get warehouse")
+		return nil, fmt.Errorf("get warehouse: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
 		Warehouse: &warehouse,

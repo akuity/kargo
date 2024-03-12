@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -37,9 +37,9 @@ func (s *server) GetPromotion(
 	}, &promotion); err != nil {
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound,
-				errors.Errorf("promotion %q not found", name))
+				fmt.Errorf("promotion %q not found", name))
 		}
-		return nil, errors.Wrap(err, "get promotion")
+		return nil, fmt.Errorf("get promotion: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.GetPromotionResponse{
 		Promotion: &promotion,

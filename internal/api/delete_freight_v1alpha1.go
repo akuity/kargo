@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -40,7 +40,7 @@ func (s *server) DeleteFreight(
 		alias,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get freight")
+		return nil, err
 	}
 	if freight == nil {
 		if name != "" {
@@ -52,7 +52,7 @@ func (s *server) DeleteFreight(
 	}
 
 	if err := s.client.Delete(ctx, freight); err != nil {
-		return nil, errors.Wrap(err, "delete freight")
+		return nil, fmt.Errorf("delete freight: %w", err)
 	}
 
 	return connect.NewResponse(&svcv1alpha1.DeleteFreightResponse{}), nil

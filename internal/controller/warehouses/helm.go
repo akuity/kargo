@@ -2,8 +2,7 @@ package warehouses
 
 import (
 	"context"
-
-	"github.com/pkg/errors"
+	"fmt"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -33,10 +32,10 @@ func (r *reconciler) selectCharts(
 		creds, ok, err :=
 			r.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RepoURL)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error obtaining credentials for chart repository %q",
+			return nil, fmt.Errorf(
+				"error obtaining credentials for chart repository %q: %w",
 				sub.RepoURL,
+				err,
 			)
 		}
 
@@ -60,29 +59,29 @@ func (r *reconciler) selectCharts(
 		)
 		if err != nil {
 			if sub.Name == "" {
-				return nil, errors.Wrapf(
-					err,
-					"error searching for latest version of chart in repository %q",
+				return nil, fmt.Errorf(
+					"error searching for latest version of chart in repository %q: %w",
 					sub.RepoURL,
+					err,
 				)
 			}
-			return nil, errors.Wrapf(
-				err,
-				"error searching for latest version of chart %q in repository %q",
+			return nil, fmt.Errorf(
+				"error searching for latest version of chart %q in repository %q: %w",
 				sub.Name,
 				sub.RepoURL,
+				err,
 			)
 		}
 
 		if vers == "" {
 			logger.Error("found no suitable chart version")
 			if sub.Name == "" {
-				return nil, errors.Errorf(
+				return nil, fmt.Errorf(
 					"found no suitable version of chart in repository %q",
 					sub.RepoURL,
 				)
 			}
-			return nil, errors.Errorf(
+			return nil, fmt.Errorf(
 				"found no suitable version of chart %q in repository %q",
 				sub.Name,
 				sub.RepoURL,

@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -40,32 +41,27 @@ func newManagementControllerCommand() *cobra.Command {
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
-					return errors.Wrap(
-						err,
-						"error loading REST config for Kargo controller manager",
-					)
+					return fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 				}
 				restCfg.ContentType = runtime.ContentTypeJSON
 
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(
+					return fmt.Errorf(
+						"error adding Kubernetes core API to Kargo controller manager scheme: %w",
 						err,
-						"error adding Kubernetes core API to Kargo controller manager "+
-							"scheme",
 					)
 				}
 				if err = rbacv1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(
+					return fmt.Errorf(
+						"error adding Kubernetes RBAC API to Kargo controller manager scheme: %w",
 						err,
-						"error adding Kubernetes RBAC API to Kargo controller manager "+
-							"scheme",
 					)
 				}
 				if err = kargoapi.AddToScheme(scheme); err != nil {
-					return errors.Wrap(
+					return fmt.Errorf(
+						"error adding Kargo API to Kargo controller manager scheme: %w",
 						err,
-						"error adding Kargo API to Kargo controller manager scheme",
 					)
 				}
 				if kargoMgr, err = ctrl.NewManager(
@@ -77,22 +73,25 @@ func newManagementControllerCommand() *cobra.Command {
 						},
 					},
 				); err != nil {
-					return errors.Wrap(err, "error initializing Kargo controller manager")
+					return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 				}
 			}
 
 			if err := namespaces.SetupReconcilerWithManager(kargoMgr); err != nil {
-				return errors.Wrap(err, "error setting up Namespaces reconciler")
+				return fmt.Errorf("error setting up Namespaces reconciler: %w", err)
 			}
 
 			if err := projects.SetupReconcilerWithManager(
 				kargoMgr,
 				projects.ReconcilerConfigFromEnv(),
 			); err != nil {
-				return errors.Wrap(err, "error setting up Projects reconciler")
+				return fmt.Errorf("error setting up Projects reconciler: %w", err)
 			}
 
-			return errors.Wrap(kargoMgr.Start(ctx), "error starting kargo manager")
+			if err := kargoMgr.Start(ctx); err != nil {
+				return fmt.Errorf("error starting kargo manager: %w", err)
+			}
+			return nil
 		},
 	}
 }

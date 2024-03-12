@@ -6,7 +6,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -76,7 +75,7 @@ func (h *helmer) apply(
 			filepath.Join(workingDir, file),
 			changes,
 		); err != nil {
-			return nil, errors.Wrapf(err, "error updating values in file %q", file)
+			return nil, fmt.Errorf("error updating values in file %q: %w", file, err)
 		}
 	}
 
@@ -88,27 +87,16 @@ func (h *helmer) apply(
 			update.Helm.Charts,
 		)
 	if err != nil {
-		return nil, errors.Wrap(
-			err,
-			"error preparing changes to affected Chart.yaml files",
-		)
+		return nil, fmt.Errorf("error preparing changes to affected Chart.yaml files: %w", err)
 	}
 	for chart, changes := range changesByChart {
 		chartPath := filepath.Join(workingDir, chart)
 		chartYAMLPath := filepath.Join(chartPath, "Chart.yaml")
 		if err = h.setStringsInYAMLFileFn(chartYAMLPath, changes); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error updating dependencies for chart %q",
-				chart,
-			)
+			return nil, fmt.Errorf("error updating dependencies for chart %q: %w", chart, err)
 		}
 		if err = h.updateChartDependenciesFn(homeDir, chartPath); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error updating dependencies for chart %q",
-				chart,
-			)
+			return nil, fmt.Errorf("error updating dependencies for chart %q: :%w", chart, err)
 		}
 	}
 
@@ -210,8 +198,7 @@ func buildChartDependencyChanges(
 		absChartYAMLPath := filepath.Join(repoDir, chartPath, "Chart.yaml")
 		chartYAMLBytes, err := os.ReadFile(absChartYAMLPath)
 		if err != nil {
-			return nil, nil,
-				errors.Wrapf(err, "error reading file %q", absChartYAMLPath)
+			return nil, nil, fmt.Errorf("error reading file %q: %w", absChartYAMLPath, err)
 		}
 		chartYAMLObj := &struct {
 			Dependencies []struct {
@@ -220,8 +207,7 @@ func buildChartDependencyChanges(
 			} `json:"dependencies,omitempty"`
 		}{}
 		if err := yaml.Unmarshal(chartYAMLBytes, chartYAMLObj); err != nil {
-			return nil, nil,
-				errors.Wrapf(err, "error unmarshaling %q", absChartYAMLPath)
+			return nil, nil, fmt.Errorf("error unmarshaling %q: %w", absChartYAMLPath, err)
 		}
 		for i, dependency := range chartYAMLObj.Dependencies {
 			chartKey := path.Join(dependency.Repository, dependency.Name)

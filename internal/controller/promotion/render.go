@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
@@ -117,10 +115,10 @@ func (b *kargoRenderMechanism) doSingleUpdate(
 		update.RepoURL,
 	)
 	if err != nil {
-		return newFreight, errors.Wrapf(
-			err,
-			"error obtaining credentials for git repo %q",
+		return newFreight, fmt.Errorf(
+			"error obtaining credentials for git repo %q: %w",
 			update.RepoURL,
+			err,
 		)
 	}
 	repoCreds := git.RepoCredentials{}
@@ -173,10 +171,10 @@ func (b *kargoRenderMechanism) doSingleUpdate(
 
 	res, err := b.renderManifestsFn(req)
 	if err != nil {
-		return newFreight, errors.Wrapf(
-			err,
-			"error rendering manifests for git repo %q via Kargo Render",
+		return newFreight, fmt.Errorf(
+			"error rendering manifests for git repo %q via Kargo Render: %w",
 			update.RepoURL,
+			err,
 		)
 	}
 	switch res.ActionTaken {

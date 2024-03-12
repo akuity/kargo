@@ -2,12 +2,12 @@ package warehouses
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -37,10 +37,10 @@ func (r *reconciler) selectCommits(
 		creds, ok, err :=
 			r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error obtaining credentials for git repo %q",
+			return nil, fmt.Errorf(
+				"error obtaining credentials for git repo %q: %w",
 				sub.RepoURL,
+				err,
 			)
 		}
 		var repoCreds *git.RepoCredentials
@@ -57,10 +57,10 @@ func (r *reconciler) selectCommits(
 
 		gm, err := r.selectCommitMetaFn(ctx, *s.Git, repoCreds)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error determining latest commit ID of git repo %q",
+			return nil, fmt.Errorf(
+				"error determining latest commit ID of git repo %q: %w",
 				sub.RepoURL,
+				err,
 			)
 		}
 		logger.WithField("commit", gm.Commit).
@@ -105,14 +105,14 @@ func (r *reconciler) selectCommitMeta(
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error cloning git repo %q", sub.RepoURL)
+		return nil, fmt.Errorf("error cloning git repo %q: %w", sub.RepoURL, err)
 	}
 	selectedTag, selectedCommit, err := r.selectTagAndCommitID(repo, sub)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error selecting commit from git repo %q",
+		return nil, fmt.Errorf(
+			"error selecting commit from git repo %q: %w",
 			sub.RepoURL,
+			err,
 		)
 	}
 	msg, err := repo.CommitMessage(selectedCommit)
@@ -141,25 +141,26 @@ func (r *reconciler) selectTagAndCommitID(
 		// In this case, there is nothing to do except return the commit ID at the
 		// head of the branch.
 		commit, err := r.getLastCommitIDFn(repo)
-		return "", commit, errors.Wrapf(
-			err,
-			"error determining commit ID at head of branch %q in git repo %q",
-			sub.Branch,
-			sub.RepoURL,
-		)
+		if err != nil {
+			return "", "", fmt.Errorf(
+				"error determining commit ID at head of branch %q in git repo %q: %w",
+				sub.Branch,
+				sub.RepoURL,
+				err,
+			)
+		}
+		return "", commit, nil
 	}
 
 	tags, err := r.listTagsFn(repo) // These are ordered newest to oldest
 	if err != nil {
-		return "", "",
-			errors.Wrapf(err, "error listing tags from git repo %q", sub.RepoURL)
+		return "", "", fmt.Errorf("error listing tags from git repo %q: %w", sub.RepoURL, err)
 	}
 
 	// Narrow down the list of tags to those that are allowed and not ignored
 	allowRegex, err := regexp.Compile(sub.AllowTags)
 	if err != nil {
-		return "", "",
-			errors.Wrapf(err, "error compiling regular expression %q", sub.AllowTags)
+		return "", "", fmt.Errorf("error compiling regular expression %q: %w", sub.AllowTags, err)
 	}
 	filteredTags := make([]string, 0, len(tags))
 	for _, tagName := range tags {
@@ -168,8 +169,7 @@ func (r *reconciler) selectTagAndCommitID(
 		}
 	}
 	if len(filteredTags) == 0 {
-		return "", "",
-			errors.Errorf("found no applicable tags in repo %q", sub.RepoURL)
+		return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
 	}
 
 	var selectedTag string
@@ -184,31 +184,32 @@ func (r *reconciler) selectTagAndCommitID(
 			return "", "", err
 		}
 	default:
-		return "", "", errors.Errorf(
-			"unknown commit selection strategy %q",
-			sub.CommitSelectionStrategy,
-		)
+		return "", "", fmt.Errorf("unknown commit selection strategy %q", sub.CommitSelectionStrategy)
 	}
 	if selectedTag == "" {
-		return "", "", errors.Errorf("found no applicable tags in repo %q", sub.RepoURL)
+		return "", "", fmt.Errorf("found no applicable tags in repo %q", sub.RepoURL)
 	}
 
 	// Checkout the selected tag and return the commit ID
 	if err = r.checkoutTagFn(repo, selectedTag); err != nil {
-		return "", "", errors.Wrapf(
-			err,
-			"error checking out tag %q from git repo %q",
+		return "", "", fmt.Errorf(
+			"error checking out tag %q from git repo %q: %w",
 			selectedTag,
 			sub.RepoURL,
+			err,
 		)
 	}
 	commit, err := r.getLastCommitIDFn(repo)
-	return selectedTag, commit, errors.Wrapf(
-		err,
-		"error determining commit ID of tag %q in git repo %q",
-		selectedTag,
-		sub.RepoURL,
-	)
+	if err != nil {
+		return "", "", fmt.Errorf(
+			"error determining commit ID of tag %q in git repo %q: %w",
+			selectedTag,
+			sub.RepoURL,
+			err,
+		)
+
+	}
+	return selectedTag, commit, nil
 }
 
 // allows returns true if the given tag name matches the given regular
@@ -255,10 +256,10 @@ func selectSemverTag(tagNames []string, constraintStr string) (string, error) {
 	if constraintStr != "" {
 		var err error
 		if constraint, err = semver.NewConstraint(constraintStr); err != nil {
-			return "", errors.Wrapf(
-				err,
-				"error parsing semver constraint %q",
+			return "", fmt.Errorf(
+				"error parsing semver constraint %q: %w",
 				constraintStr,
+				err,
 			)
 		}
 	}

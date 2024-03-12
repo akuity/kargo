@@ -3,8 +3,6 @@ package image
 import (
 	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // platformConstraint represents an operating system, system architecture, and
@@ -35,8 +33,7 @@ func ValidatePlatformConstraint(platformStr string) bool {
 func parsePlatformConstraint(platformStr string) (platformConstraint, error) {
 	tokens := strings.SplitN(platformStr, "/", 3)
 	if len(tokens) < 2 {
-		return platformConstraint{},
-			errors.Errorf("error parsing platform constraint %q", platformStr)
+		return platformConstraint{}, fmt.Errorf("error parsing platform constraint %q", platformStr)
 	}
 	platform := platformConstraint{
 		os:   tokens[0],

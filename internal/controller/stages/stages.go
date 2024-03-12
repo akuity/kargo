@@ -2,11 +2,11 @@ package stages
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -222,66 +222,60 @@ func SetupReconcilerWithManager(
 ) error {
 	// Index Promotions in non-terminal states by Stage
 	if err := kubeclient.IndexNonTerminalPromotionsByStage(ctx, kargoMgr); err != nil {
-		return errors.Wrap(err, "index non-terminal Promotions by Stage")
+		return fmt.Errorf("index non-terminal Promotions by Stage: %w", err)
 	}
 
 	// Index Promotions by Stage + Freight
 	if err := kubeclient.IndexPromotionsByStageAndFreight(ctx, kargoMgr); err != nil {
-		return errors.Wrap(err, "index Promotions by Stage and Freight")
+		return fmt.Errorf("index Promotions by Stage and Freight: %w", err)
 	}
 
 	// Index Freight by Warehouse
 	if err := kubeclient.IndexFreightByWarehouse(ctx, kargoMgr); err != nil {
-		return errors.Wrap(err, "index Freight by Warehouse")
+		return fmt.Errorf("index Freight by Warehouse: %w", err)
 	}
 
 	// Index Freight by Stages in which it has been verified
 	if err :=
 		kubeclient.IndexFreightByVerifiedStages(ctx, kargoMgr); err != nil {
-		return errors.Wrap(
-			err,
-			"index Freight by Stages in which it has been verified",
-		)
+		return fmt.Errorf("index Freight by Stages in which it has been verified: %w", err)
 	}
 
 	// Index Freight by Stages for which it has been approved
 	if err :=
 		kubeclient.IndexFreightByApprovedStages(ctx, kargoMgr); err != nil {
-		return errors.Wrap(
-			err,
-			"index Freight by Stages for which it has been approved",
-		)
+		return fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
 	// Index Stages by upstream Stages
 	if err :=
 		kubeclient.IndexStagesByUpstreamStages(ctx, kargoMgr); err != nil {
-		return errors.Wrap(err, "index Stages by upstream Stages")
+		return fmt.Errorf("index Stages by upstream Stages: %w", err)
 	}
 
 	// Index Stages by Warehouse
 	if err := kubeclient.IndexStagesByWarehouse(ctx, kargoMgr); err != nil {
-		return errors.Wrap(err, "index Stages by Warehouse")
+		return fmt.Errorf("index Stages by Warehouse: %w", err)
 	}
 
 	// Index Stages by Argo CD Applications
 	if err := kubeclient.IndexStagesByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
-		return errors.Wrap(err, "index Stages by Argo CD Applications")
+		return fmt.Errorf("index Stages by Argo CD Applications: %w", err)
 	}
 
 	// Index Stages by AnalysisRun
 	if err := kubeclient.IndexStagesByAnalysisRun(ctx, kargoMgr, cfg.ShardName); err != nil {
-		return errors.Wrap(err, "index Stages by Argo Rollouts AnalysisRun")
+		return fmt.Errorf("index Stages by Argo Rollouts AnalysisRun: %w", err)
 	}
 
 	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
 	if err != nil {
-		return errors.Wrap(err, "error creating shard predicate")
+		return fmt.Errorf("error creating shard predicate: %w", err)
 	}
 
 	shardRequirement, err := controller.GetShardRequirement(cfg.ShardName)
 	if err != nil {
-		return errors.Wrap(err, "error creating shard selector")
+		return fmt.Errorf("error creating shard requirement: %w", err)
 	}
 	shardSelector := labels.NewSelector().Add(*shardRequirement)
 	var argocdClient, rolloutsClient client.Client
@@ -323,7 +317,7 @@ func SetupReconcilerWithManager(
 			),
 		)
 	if err != nil {
-		return errors.Wrap(err, "error building Stage reconciler")
+		return fmt.Errorf("error building Stage reconciler: %w", err)
 	}
 
 	logger := logging.LoggerFromContext(ctx)
@@ -343,7 +337,7 @@ func SetupReconcilerWithManager(
 		promoOwnerHandler,
 		promoWentTerminal,
 	); err != nil {
-		return errors.Wrap(err, "unable to watch Promotions")
+		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
 	// Watch Freight that has been marked as verified in a Stage and enqueue
@@ -359,7 +353,7 @@ func SetupReconcilerWithManager(
 		),
 		verifiedFreightHandler,
 	); err != nil {
-		return errors.Wrap(err, "unable to watch Freight")
+		return fmt.Errorf("unable to watch Freight: %w", err)
 	}
 
 	approveFreightHandler := &approvedFreightEventHandler{
@@ -372,7 +366,7 @@ func SetupReconcilerWithManager(
 		),
 		approveFreightHandler,
 	); err != nil {
-		return errors.Wrap(err, "unable to watch Freight")
+		return fmt.Errorf("unable to watch Freight: %w", err)
 	}
 
 	createdFreightEventHandler := &createdFreightEventHandler{
@@ -386,7 +380,7 @@ func SetupReconcilerWithManager(
 		),
 		createdFreightEventHandler,
 	); err != nil {
-		return errors.Wrap(err, "unable to watch Freight")
+		return fmt.Errorf("unable to watch Freight: %w", err)
 	}
 
 	// If Argo CD integration is disabled, this manager will be nil and we won't
@@ -403,7 +397,7 @@ func SetupReconcilerWithManager(
 			),
 			updatedArgoCDAppHandler,
 		); err != nil {
-			return errors.Wrap(err, "unable to watch Applications")
+			return fmt.Errorf("unable to watch Applications: %w", err)
 		}
 	}
 
@@ -421,7 +415,7 @@ func SetupReconcilerWithManager(
 			),
 			phaseChangedAnalysisRunHandler,
 		); err != nil {
-			return errors.Wrap(err, "unable to watch AnalysisRuns")
+			return fmt.Errorf("unable to watch AnalysisRuns: %w", err)
 		}
 	}
 
@@ -514,10 +508,9 @@ func (r *reconciler) Reconcile(
 	if stage.DeletionTimestamp != nil {
 		newStatus, err = r.syncStageDelete(ctx, stage)
 		if err == nil && controllerutil.RemoveFinalizer(stage, kargoapi.FinalizerName) {
-			err = errors.Wrap(
-				r.kargoClient.Update(ctx, stage),
-				"error removing finalizer",
-			)
+			if err = r.kargoClient.Update(ctx, stage); err != nil {
+				err = fmt.Errorf("error removing finalizer: %w", err)
+			}
 		}
 	} else if stage.Spec.PromotionMechanisms == nil {
 		newStatus, err = r.syncControlFlowStage(ctx, stage)
@@ -602,11 +595,11 @@ func (r *reconciler) syncControlFlowStage(
 				),
 			},
 		); err != nil {
-			return status, errors.Wrapf(
-				err,
-				"error listing Freight from Warehouse %q in namespace %q",
+			return status, fmt.Errorf(
+				"error listing Freight from Warehouse %q in namespace %q: %w",
 				stage.Spec.Subscriptions.Warehouse,
 				stage.Namespace,
+				err,
 			)
 		}
 		availableFreight = freight.Items
@@ -623,12 +616,11 @@ func (r *reconciler) syncControlFlowStage(
 			stage.Namespace,
 			stage.Spec.Subscriptions.UpstreamStages,
 		); err != nil {
-			return status, errors.Wrapf(
-				err,
-				"error getting all Freight verified in Stages upstream from Stage "+
-					"%q in namespace %q",
+			return status, fmt.Errorf(
+				"error getting all Freight verified in Stages upstream from Stage %q in namespace %q: %w",
 				stage.Name,
 				stage.Namespace,
+				err,
 			)
 		}
 	}
@@ -642,12 +634,12 @@ func (r *reconciler) syncControlFlowStage(
 			}
 			newStatus.VerifiedIn[stage.Name] = kargoapi.VerifiedStage{}
 			if err := r.patchFreightStatusFn(ctx, &af, newStatus); err != nil {
-				return status, errors.Wrapf(
-					err,
-					"error marking Freight %q in namespace %q as verified in Stage %q",
+				return status, fmt.Errorf(
+					"error marking Freight %q in namespace %q as verified in Stage %q: %w",
 					af.ID,
 					stage.Namespace,
 					stage.Name,
+					err,
 				)
 			}
 		}
@@ -757,12 +749,12 @@ func (r *reconciler) syncNormalStage(
 				status.CurrentFreight.ID,
 				stage.Name,
 			); err != nil {
-				return status, errors.Wrapf(
-					err,
-					"error marking Freight %q in namespace %q as verified in Stage %q",
+				return status, fmt.Errorf(
+					"error marking Freight %q in namespace %q as verified in Stage %q: %w",
 					status.CurrentFreight.ID,
 					stage.Namespace,
 					stage.Name,
+					err,
 				)
 			}
 		}
@@ -781,12 +773,11 @@ func (r *reconciler) syncNormalStage(
 	logger.Debug("checking if auto-promotion is permitted...")
 	if permitted, err :=
 		r.isAutoPromotionPermittedFn(ctx, stage.Namespace, stage.Name); err != nil {
-		return status, errors.Wrapf(
-			err,
-			"error checking if auto-promotion is permitted for Stage %q in "+
-				"namespace %q",
+		return status, fmt.Errorf(
+			"error checking if auto-promotion is permitted for Stage %q in namespace %q: %w",
 			stage.Name,
 			stage.Namespace,
+			err,
 		)
 	} else if !permitted {
 		logger.Debug("auto-promotion is not permitted for the Stage")
@@ -799,11 +790,11 @@ func (r *reconciler) syncNormalStage(
 	latestFreight, err :=
 		r.getLatestAvailableFreightFn(ctx, stage.Namespace, stage)
 	if err != nil {
-		return status, errors.Wrapf(
-			err,
-			"error finding latest Freight for Stage %q in namespace %q",
+		return status, fmt.Errorf(
+			"error finding latest Freight for Stage %q in namespace %q: %w",
 			stage.Name,
 			stage.Namespace,
+			err,
 		)
 	}
 
@@ -837,11 +828,11 @@ func (r *reconciler) syncNormalStage(
 			).AsSelector(),
 		},
 	); err != nil {
-		return status, errors.Wrapf(
-			err,
-			"error listing existing Promotions for Freight %q in namespace %q",
+		return status, fmt.Errorf(
+			"error listing existing Promotions for Freight %q in namespace %q: %w",
 			latestFreight.Name,
 			stage.Namespace,
+			err,
 		)
 	}
 
@@ -855,12 +846,12 @@ func (r *reconciler) syncNormalStage(
 	promo := kargo.NewPromotion(*stage, latestFreight.ID)
 	if err :=
 		r.createPromotionFn(ctx, &promo); err != nil {
-		return status, errors.Wrapf(
-			err,
-			"error creating Promotion of Stage %q in namespace %q to Freight %q",
+		return status, fmt.Errorf(
+			"error creating Promotion of Stage %q in namespace %q to Freight %q: %w",
 			stage.Name,
 			stage.Namespace,
 			latestFreight.Name,
+			err,
 		)
 	}
 	logger.WithField("promotion", promo.Name).Debug("created Promotion resource")
@@ -878,27 +869,27 @@ func (r *reconciler) syncStageDelete(
 		return status, nil
 	}
 	if err := r.clearVerificationsFn(ctx, stage); err != nil {
-		return status, errors.Wrapf(
-			err,
-			"error clearing verifications for Stage %q in namespace %q",
+		return status, fmt.Errorf(
+			"error clearing verifications for Stage %q in namespace %q: %w",
 			stage.Name,
 			stage.Namespace,
+			err,
 		)
 	}
 	if err := r.clearApprovalsFn(ctx, stage); err != nil {
-		return status, errors.Wrapf(
-			err,
-			"error clearing approvals for Stage %q in namespace %q",
+		return status, fmt.Errorf(
+			"error clearing approvals for Stage %q in namespace %q: %w",
 			stage.Name,
 			stage.Namespace,
+			err,
 		)
 	}
 	if err := r.clearAnalysisRunsFn(ctx, stage); err != nil {
-		return status, errors.Wrapf(
-			err,
-			"error clearing AnalysisRuns for Stage %q in namespace %q",
+		return status, fmt.Errorf(
+			"error clearing AnalysisRuns for Stage %q in namespace %q: %w",
 			stage.Name,
 			stage.Namespace,
+			err,
 		)
 	}
 	return status, nil
@@ -920,11 +911,11 @@ func (r *reconciler) clearVerifications(
 			),
 		},
 	); err != nil {
-		return errors.Wrapf(
-			err,
-			"error listing Freight verified in Stage %q in namespace %q",
+		return fmt.Errorf(
+			"error listing Freight verified in Stage %q in namespace %q: %w",
 			stage.Name,
 			stage.Namespace,
+			err,
 		)
 	}
 	for _, f := range verified.Items {
@@ -935,11 +926,11 @@ func (r *reconciler) clearVerifications(
 		}
 		delete(newStatus.VerifiedIn, stage.Name)
 		if err := r.patchFreightStatusFn(ctx, &freight, newStatus); err != nil {
-			return errors.Wrapf(
-				err,
-				"error patching status of Freight %q in namespace %q",
+			return fmt.Errorf(
+				"error patching status of Freight %q in namespace %q: %w",
 				freight.Name,
 				freight.Namespace,
+				err,
 			)
 		}
 	}
@@ -962,11 +953,11 @@ func (r *reconciler) clearApprovals(
 			),
 		},
 	); err != nil {
-		return errors.Wrapf(
-			err,
-			"error listing Freight approved for Stage %q in namespace %q",
+		return fmt.Errorf(
+			"error listing Freight approved for Stage %q in namespace %q: %w",
 			stage.Name,
 			stage.Namespace,
+			err,
 		)
 	}
 	for _, f := range approved.Items {
@@ -977,11 +968,11 @@ func (r *reconciler) clearApprovals(
 		}
 		delete(newStatus.ApprovedFor, stage.Name)
 		if err := r.patchFreightStatusFn(ctx, &freight, newStatus); err != nil {
-			return errors.Wrapf(
-				err,
-				"error patching status of Freight %q in namespace %q",
+			return fmt.Errorf(
+				"error patching status of Freight %q in namespace %q: %w",
 				freight.Name,
 				freight.Namespace,
+				err,
 			)
 		}
 	}
@@ -1005,10 +996,11 @@ func (r *reconciler) clearAnalysisRuns(
 			kargoapi.StageLabelKey: stage.Name,
 		}),
 	); err != nil {
-		return errors.Wrapf(
+		return fmt.Errorf(
+			"error deleting AnalysisRuns for Stage %q in namespace %q: %w",
+			stage.Name,
+			namespace,
 			err,
-			"error deleting AnalysisRuns for Stage %q in namespace %q",
-			stage.Name, namespace,
 		)
 	}
 	return nil
@@ -1030,12 +1022,11 @@ func (r *reconciler) hasNonTerminalPromotions(
 			}).AsSelector(),
 		},
 	); err != nil {
-		return false, errors.Wrapf(
-			err,
-			"error listing Promotions in non-terminal phases for Stage %q in "+
-				"namespace %q",
+		return false, fmt.Errorf(
+			"error listing Promotions in non-terminal phases for Stage %q in namespace %q: %w",
 			stageNamespace,
 			stageName,
+			err,
 		)
 	}
 	return len(promos.Items) > 0, nil
@@ -1059,15 +1050,15 @@ func (r *reconciler) verifyFreightInStage(
 		},
 	)
 	if err != nil {
-		return errors.Wrapf(
-			err,
-			"error finding Freight %q in namespace %q",
+		return fmt.Errorf(
+			"error finding Freight %q in namespace %q: %w",
 			freightName,
 			namespace,
+			err,
 		)
 	}
 	if freight == nil {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"found no Freight %q in namespace %q",
 			freightName,
 			namespace,
@@ -1099,20 +1090,22 @@ func (r *reconciler) patchFreightStatus(
 	freight *kargoapi.Freight,
 	newStatus kargoapi.FreightStatus,
 ) error {
-	err := kubeclient.PatchStatus(
+	if err := kubeclient.PatchStatus(
 		ctx,
 		r.kargoClient,
 		freight,
 		func(status *kargoapi.FreightStatus) {
 			*status = newStatus
 		},
-	)
-	return errors.Wrapf(
-		err,
-		"error patching Freight %q status in namespace %q",
-		freight.Name,
-		freight.Namespace,
-	)
+	); err != nil {
+		return fmt.Errorf(
+			"error patching Freight %q status in namespace %q: %w",
+			freight.Name,
+			freight.Namespace,
+			err,
+		)
+	}
+	return nil
 }
 
 func (r *reconciler) isAutoPromotionPermitted(
@@ -1123,10 +1116,10 @@ func (r *reconciler) isAutoPromotionPermitted(
 	logger := logging.LoggerFromContext(ctx)
 	project, err := r.getProjectFn(ctx, r.kargoClient, namespace)
 	if err != nil {
-		return false, errors.Wrapf(err, "error finding Project %q", namespace)
+		return false, fmt.Errorf("error finding Project %q: %w", namespace, err)
 	}
 	if project == nil {
-		return false, errors.Errorf("Project %q not found", namespace)
+		return false, fmt.Errorf("Project %q not found", namespace)
 	}
 	if project.Spec == nil || len(project.Spec.PromotionPolicies) == 0 {
 		logger.Debug("found no PromotionPolicy associated with the Stage")
@@ -1156,11 +1149,11 @@ func (r *reconciler) getLatestAvailableFreight(
 			stage.Spec.Subscriptions.Warehouse,
 		)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error checking Warehouse %q in namespace %q for Freight",
+			return nil, fmt.Errorf(
+				"error checking Warehouse %q in namespace %q for Freight: %w",
 				stage.Spec.Subscriptions.Warehouse,
 				namespace,
+				err,
 			)
 		}
 		if latestFreight == nil {
@@ -1176,12 +1169,11 @@ func (r *reconciler) getLatestAvailableFreight(
 		stage.Spec.Subscriptions.UpstreamStages,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error finding latest Freight verified in Stages upstream from "+
-				"Stage %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error finding latest Freight verified in Stages upstream from Stage %q in namespace %q: %w",
 			stage.Name,
 			namespace,
+			err,
 		)
 	}
 	if latestVerifiedFreight == nil {
@@ -1194,11 +1186,11 @@ func (r *reconciler) getLatestAvailableFreight(
 		stage.Name,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error finding latest Freight approved for Stage %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error finding latest Freight approved for Stage %q in namespace %q: %w",
 			stage.Name,
 			namespace,
+			err,
 		)
 	}
 	if latestVerifiedFreight == nil {
@@ -1238,11 +1230,11 @@ func (r *reconciler) getLatestFreightFromWarehouse(
 			),
 		},
 	); err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error listing Freight for Warehouse %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error listing Freight for Warehouse %q in namespace %q: %w",
 			warehouse,
 			namespace,
+			err,
 		)
 	}
 	if len(freight.Items) == 0 {
@@ -1277,11 +1269,11 @@ func (r *reconciler) getAllVerifiedFreight(
 				),
 			},
 		); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error listing Freight verified in Stage %q in namespace %q",
+			return nil, fmt.Errorf(
+				"error listing Freight verified in Stage %q in namespace %q: %w",
 				stageSub.Name,
 				namespace,
+				err,
 			)
 		}
 		for _, freight := range freight.Items {
@@ -1339,11 +1331,11 @@ func (r *reconciler) getLatestApprovedFreight(
 			),
 		},
 	); err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error listing Freight verified in Stage %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error listing Freight verified in Stage %q in namespace %q: %w",
 			stage,
 			namespace,
+			err,
 		)
 	}
 	if len(freight.Items) == 0 {
