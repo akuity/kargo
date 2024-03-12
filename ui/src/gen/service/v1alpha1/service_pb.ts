@@ -6,6 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
+import { Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -3093,7 +3094,7 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
  */
 export class CreateCredentialsResponse extends Message<CreateCredentialsResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+   * @generated from field: k8s.io.api.core.v1.Secret credentials = 1;
    */
   credentials?: Secret;
 
@@ -3249,7 +3250,7 @@ export class GetCredentialsRequest extends Message<GetCredentialsRequest> {
  */
 export class GetCredentialsResponse extends Message<GetCredentialsResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+   * @generated from field: k8s.io.api.core.v1.Secret credentials = 1;
    */
   credentials?: Secret;
 
@@ -3323,7 +3324,7 @@ export class ListCredentialsRequest extends Message<ListCredentialsRequest> {
  */
 export class ListCredentialsResponse extends Message<ListCredentialsResponse> {
   /**
-   * @generated from field: repeated github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+   * @generated from field: repeated k8s.io.api.core.v1.Secret credentials = 1;
    */
   credentials: Secret[] = [];
 
@@ -3433,7 +3434,7 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
  */
 export class UpdateCredentialsResponse extends Message<UpdateCredentialsResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+   * @generated from field: k8s.io.api.core.v1.Secret credentials = 1;
    */
   credentials?: Secret;
 
