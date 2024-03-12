@@ -5,8 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -30,19 +29,15 @@ func (s *server) DeleteStage(
 		return nil, err
 	}
 
-	var stage kargoapi.Stage
-	key := client.ObjectKey{
-		Namespace: project,
-		Name:      name,
-	}
-	if err := s.client.Get(ctx, key, &stage); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound,
-				fmt.Errorf("stage %q not found", key.String()))
-		}
-		return nil, fmt.Errorf("get stage: %w", err)
-	}
-	if err := s.client.Delete(ctx, &stage); err != nil && !kubeerr.IsNotFound(err) {
+	if err := s.client.Delete(
+		ctx,
+		&kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      name,
+			},
+		},
+	); err != nil {
 		return nil, fmt.Errorf("delete stage: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteStageResponse{}), nil

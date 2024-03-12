@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -28,9 +27,6 @@ func (s *server) GetProject(
 		},
 		&project,
 	); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
 		return nil, fmt.Errorf("get project: %w", err)
 	}
 
