@@ -66,6 +66,7 @@ func printObjects[T runtime.Object](
 		if len(list.Items) == 1 {
 			return printer.PrintObj(list.Items[0].Object, streams.Out)
 		}
+		return printer.PrintObj(list, streams.Out)
 	}
 
 	var t T
