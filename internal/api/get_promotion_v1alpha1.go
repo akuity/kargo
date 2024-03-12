@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -35,10 +34,6 @@ func (s *server) GetPromotion(
 		Namespace: project,
 		Name:      name,
 	}, &promotion); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound,
-				fmt.Errorf("promotion %q not found", name))
-		}
 		return nil, fmt.Errorf("get promotion: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.GetPromotionResponse{

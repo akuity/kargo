@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -39,9 +38,6 @@ func (s *server) WatchPromotion(
 		Namespace: project,
 		Name:      name,
 	}, &kargoapi.Promotion{}); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return connect.NewError(connect.CodeNotFound, err)
-		}
 		return fmt.Errorf("get promotion: %w", err)
 	}
 

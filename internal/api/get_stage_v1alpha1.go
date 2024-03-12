@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -35,9 +34,6 @@ func (s *server) GetStage(
 		Namespace: project,
 		Name:      name,
 	}, &stage); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
 		return nil, fmt.Errorf("get stage: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.GetStageResponse{
