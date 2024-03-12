@@ -36,7 +36,7 @@ func (s *server) DeleteCredentials(
 		},
 	}
 	if err := s.client.Delete(ctx, secret); err != nil {
-		return nil, fmt.Errorf("delete credentials: %w", err)
+		return nil, fmt.Errorf("delete secret: %w", err)
 	}
 
 	return connect.NewResponse(&svcv1alpha1.DeleteCredentialsResponse{}), nil
