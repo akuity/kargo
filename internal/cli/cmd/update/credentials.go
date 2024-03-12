@@ -103,7 +103,7 @@ func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to update credentials. If not set, the default project will be used.",
 	)
 	option.Git(cmd.Flags(), &o.Git, "Change the credentials to be for a Git repository.")

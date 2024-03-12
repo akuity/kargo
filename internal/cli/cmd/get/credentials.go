@@ -87,7 +87,7 @@ func (o *getCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Project(
-		cmd.Flags(), &o.Project, o.Project,
+		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list credentials. If not set, the default project will be used.",
 	)
 }
