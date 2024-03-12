@@ -33,14 +33,14 @@ func (s *server) GetCredentials(
 		return nil, err
 	}
 
-	secret := &corev1.Secret{}
+	secret := corev1.Secret{}
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
 			Namespace: project,
 			Name:      name,
 		},
-		secret,
+		&secret,
 	); err != nil {
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
@@ -82,23 +82,20 @@ func (s *server) GetCredentials(
 // There is no concern over labels because the constraints on label values rule
 // out use in a manner similar to that of the "last-applied-configuration"
 // annotation.
-func sanitizeCredentialSecret(secret *corev1.Secret) *corev1.Secret {
-	if secret == nil {
-		return nil
+func sanitizeCredentialSecret(secret corev1.Secret) *corev1.Secret {
+	s := secret.DeepCopy()
+	s.StringData = make(map[string]string, len(s.Data))
+	for k := range s.Annotations {
+		s.Annotations[k] = redacted
 	}
-	secret = secret.DeepCopy()
-	secret.StringData = make(map[string]string, len(secret.Data))
-	for k := range secret.Annotations {
-		secret.Annotations[k] = redacted
-	}
-	for k, v := range secret.Data {
+	for k, v := range s.Data {
 		switch k {
 		case "repoURL", "repoURLPattern", "username":
-			secret.StringData[k] = string(v)
+			s.StringData[k] = string(v)
 		default:
-			secret.StringData[k] = redacted
+			s.StringData[k] = redacted
 		}
 	}
-	secret.Data = nil
-	return secret
+	s.Data = nil
+	return s
 }

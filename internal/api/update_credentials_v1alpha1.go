@@ -45,14 +45,14 @@ func (s *server) UpdateCredentials(
 		return nil, err
 	}
 
-	secret := &corev1.Secret{}
+	secret := corev1.Secret{}
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
 			Namespace: credsUpdate.project,
 			Name:      credsUpdate.name,
 		},
-		secret,
+		&secret,
 	); err != nil {
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
@@ -76,9 +76,9 @@ func (s *server) UpdateCredentials(
 		)
 	}
 
-	applyCredentialsUpdateToSecret(secret, credsUpdate)
+	applyCredentialsUpdateToSecret(&secret, credsUpdate)
 
-	if err := s.client.Update(ctx, secret); err != nil {
+	if err := s.client.Update(ctx, &secret); err != nil {
 		return nil, errors.Wrap(err, "update secret")
 	}
 

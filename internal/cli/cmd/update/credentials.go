@@ -10,7 +10,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -193,11 +192,9 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 		return errors.Wrap(err, "update credentials")
 	}
 
-	secret := typesv1alpha1.FromSecretProto(resp.Msg.GetCredentials())
-
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
 		return errors.Wrap(err, "new printer")
 	}
-	return printer.PrintObj(secret, o.IOStreams.Out)
+	return printer.PrintObj(resp.Msg.GetCredentials(), o.IOStreams.Out)
 }

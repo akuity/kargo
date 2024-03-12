@@ -47,7 +47,7 @@ func (s *server) CreateCredentials(
 
 	return connect.NewResponse(
 		&svcv1alpha1.CreateCredentialsResponse{
-			Credentials: sanitizeCredentialSecret(secret),
+			Credentials: sanitizeCredentialSecret(*secret),
 		},
 	), nil
 }

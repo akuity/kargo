@@ -2,12 +2,13 @@ package garbage
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math"
 	"sort"
 	"sync"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -105,9 +106,9 @@ func (c *collector) Run(ctx context.Context) error {
 			).AsSelector(),
 		},
 	); err != nil {
-		return errors.Wrap(
+		return fmt.Errorf(
+			"error listing projects; no garbage collection performed: %w",
 			err,
-			"error listing projects; no garbage collection performed",
 		)
 	}
 
@@ -212,7 +213,11 @@ func (c *collector) cleanProject(ctx context.Context, project string) error {
 		&promos,
 		client.InNamespace(project),
 	); err != nil {
-		return errors.Wrapf(err, "error listing Promotions for Project %q", project)
+		return fmt.Errorf(
+			"error listing Promotions for Project %q: %w",
+			project,
+			err,
+		)
 	}
 
 	if len(promos.Items) <= c.cfg.MaxRetainedPromotions {
@@ -239,7 +244,7 @@ func (c *collector) cleanProject(ctx context.Context, project string) error {
 	}
 
 	if deleteErrCount > 0 {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"error deleting one or more Promotions from Project %q",
 			project,
 		)

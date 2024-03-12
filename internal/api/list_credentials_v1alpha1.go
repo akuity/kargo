@@ -42,7 +42,7 @@ func (s *server) ListCredentials(
 
 	secrets := make([]*corev1.Secret, len(secretsList.Items))
 	for i, secret := range secretsList.Items {
-		secrets[i] = sanitizeCredentialSecret(&secret)
+		secrets[i] = sanitizeCredentialSecret(secret)
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListCredentialsResponse{
