@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -19,7 +20,7 @@ func (s *server) GetConfig(
 		resp.ArgocdShards[shardName] = &svcv1alpha1.ArgoCDShard{
 			Url: url,
 			// TODO: currently, all shards must use the same namespace
-			Namespace: s.cfg.ArgoCDConfig.Namespace,
+			Namespace: libargocd.Namespace(),
 		}
 	}
 	return connect.NewResponse(&resp), nil

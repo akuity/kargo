@@ -1,6 +1,6 @@
 import yaml from 'yaml';
 
-import { Stage } from '@ui/gen/v1alpha1/types_pb';
+import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
 

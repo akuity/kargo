@@ -12,7 +12,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -129,13 +128,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return errors.Wrap(err, "list warehouses")
 		}
-
-		res := make([]*kargoapi.Warehouse, 0, len(resp.Msg.GetWarehouses()))
-		for _, warehouse := range resp.Msg.GetWarehouses() {
-			res = append(res, typesv1alpha1.FromWarehouseProto(warehouse))
-		}
-		return printObjects(res, o.PrintFlags, o.IOStreams)
-
+		return printObjects(resp.Msg.GetWarehouses(), o.PrintFlags, o.IOStreams)
 	}
 
 	res := make([]*kargoapi.Warehouse, 0, len(o.Names))
@@ -154,7 +147,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, typesv1alpha1.FromWarehouseProto(resp.Msg.GetWarehouse()))
+		res = append(res, resp.Msg.GetWarehouse())
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {

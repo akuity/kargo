@@ -11,7 +11,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -178,9 +177,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "promote stage")
 		}
-
-		promo := typesv1alpha1.FromPromotionProto(res.Msg.GetPromotion())
-		_ = printer.PrintObj(promo, o.IOStreams.Out)
+		_ = printer.PrintObj(res.Msg.GetPromotion(), o.IOStreams.Out)
 		return nil
 	case o.SubscribersOf != "":
 		res, promoteErr := kargoSvcCli.PromoteSubscribers(
@@ -196,8 +193,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		)
 
 		for _, p := range res.Msg.GetPromotions() {
-			promo := typesv1alpha1.FromPromotionProto(p)
-			_ = printer.PrintObj(promo, o.IOStreams.Out)
+			_ = printer.PrintObj(p, o.IOStreams.Out)
 		}
 		return promoteErr
 	}

@@ -30,7 +30,7 @@ func TestNewRepository(t *testing.T) {
 		getChallengeManager = getChallengeManagerBackup
 	}()
 
-	client, err := newRepositoryClient("debian", nil)
+	client, err := newRepositoryClient("debian", false, nil)
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	require.NotNil(t, client.registry)

@@ -1,8 +1,8 @@
 import { Timestamp } from '@bufbuild/protobuf';
-import { expect, test, describe } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { ObjectMeta } from '@ui/gen/metav1/types_pb';
-import { Promotion, PromotionStatus } from '@ui/gen/v1alpha1/types_pb';
+import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
+import { Promotion, PromotionStatus } from '@ui/gen/v1alpha1/generated_pb';
 
 import { sortPromotions } from './utils/sort';
 

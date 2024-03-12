@@ -1,4 +1,4 @@
-FROM golang:1.22.0-bookworm
+FROM golang:1.22.1-bookworm
 
 ARG TARGETARCH
 
@@ -7,15 +7,22 @@ ARG CONTROLLER_GEN_VERSION=v0.14.0
 ARG GOLANGCI_LINT_VERSION=1.54.2
 ARG HELM_VERSION=v3.12.3
 ARG NODE_MAJOR=20
+ARG PROTOC_VERSION=25.3
 
-RUN go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
+RUN apt update && apt install -y ca-certificates curl gnupg unzip \
+    && export PROTOC_REL=protoc-${PROTOC_VERSION}-linux-$([ $(uname -m) = "aarch64" ] && echo "aarch" || echo "x86")_64.zip \
+    && curl -sSfLO https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_REL} \
+    && unzip ${PROTOC_REL} -d protoc \
+    && mv protoc /usr/local \
+    && ln -s /usr/local/protoc/bin/protoc /usr/local/bin \
+    && rm ${PROTOC_REL} \
+    && go install github.com/bufbuild/buf/cmd/buf@${BUF_VERSION} \
     && go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_GEN_VERSION} \
     && cd /usr/local/bin \
     && curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_LINT_VERSION}/golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}.tar.gz \
         | tar xvz golangci-lint-${GOLANGCI_LINT_VERSION}-linux-${TARGETARCH}/golangci-lint --strip-components=1 \
     && curl -sSfL https://get.helm.sh/helm-$HELM_VERSION-linux-${TARGETARCH}.tar.gz \
         | tar xvz linux-${TARGETARCH}/helm --strip-components=1 \
-    && apt-get install -y ca-certificates curl gnupg \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
@@ -31,7 +38,8 @@ ARG GROUP_ID=1000
 RUN addgroup --gid ${GROUP_ID} user \
     && adduser --disabled-password --gecos '' --uid ${USER_ID} --gid ${GROUP_ID} user \
     && mkdir -p /workspaces/kargo/ui/node_modules \
-    && chown -R ${USER_ID}:${GROUP_ID} /workspaces/kargo
+    && chown -R ${USER_ID}:${GROUP_ID} /workspaces/kargo \
+    && chown -R ${USER_ID}:${GROUP_ID} /go
 
 USER user
 

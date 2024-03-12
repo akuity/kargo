@@ -59,14 +59,9 @@ type reconciler struct {
 	) ([]kargoapi.Image, error)
 
 	getImageRefsFn func(
-		ctx context.Context,
-		repoURL string,
-		imageSelectionStrategy kargoapi.ImageSelectionStrategy,
-		semverConstraint string,
-		allowTagsRegex string,
-		ignoreTags []string,
-		platform string,
-		creds *image.Credentials,
+		context.Context,
+		kargoapi.ImageSubscription,
+		*image.Credentials,
 	) (string, string, error)
 
 	selectChartsFn func(

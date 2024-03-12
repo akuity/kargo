@@ -17,7 +17,7 @@ import { transportWithAuth } from '@ui/config/transport';
 import { listPromotions } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/service/v1alpha1/service_connect';
 import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
-import { Promotion } from '@ui/gen/v1alpha1/types_pb';
+import { Promotion } from '@ui/gen/v1alpha1/generated_pb';
 
 import { sortPromotions } from './utils/sort';
 
@@ -146,7 +146,7 @@ export const Promotions = () => {
     },
     {
       title: 'Freight',
-      render: (_, promotion) => promotion.spec?.freight.substring(0, 7)
+      render: (_, promotion) => promotion.spec?.freight?.substring(0, 7)
     }
   ];
 

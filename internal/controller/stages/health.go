@@ -6,6 +6,7 @@ import (
 	"path"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 )
@@ -35,18 +36,18 @@ func (r *reconciler) checkHealth(
 		return &h
 	}
 
-	for i, updates := range argoCDAppUpdates {
-		h.ArgoCDApps[i] = kargoapi.ArgoCDAppStatus{
-			Namespace: updates.AppNamespaceOrDefault(),
-			Name:      updates.AppName,
+	for i, update := range argoCDAppUpdates {
+		namespace := update.AppNamespace
+		if namespace == "" {
+			namespace = libargocd.Namespace()
 		}
 
-		app, err := r.getArgoCDAppFn(
-			ctx,
-			r.argocdClient,
-			updates.AppNamespaceOrDefault(),
-			updates.AppName,
-		)
+		h.ArgoCDApps[i] = kargoapi.ArgoCDAppStatus{
+			Namespace: namespace,
+			Name:      update.AppName,
+		}
+
+		app, err := r.getArgoCDAppFn(ctx, r.argocdClient, namespace, update.AppName)
 
 		if err != nil {
 			h.ArgoCDApps[i].HealthStatus = kargoapi.ArgoCDAppHealthStatus{
@@ -60,8 +61,8 @@ func (r *reconciler) checkHealth(
 				h.Issues,
 				fmt.Sprintf(
 					"error finding Argo CD Application %q in namespace %q: %s",
-					updates.AppName,
-					updates.AppNamespaceOrDefault(),
+					update.AppName,
+					namespace,
 					err,
 				),
 			)
@@ -80,8 +81,8 @@ func (r *reconciler) checkHealth(
 				h.Issues,
 				fmt.Sprintf(
 					"unable to find Argo CD Application %q in namespace %q",
-					updates.AppName,
-					updates.AppNamespaceOrDefault(),
+					update.AppName,
+					namespace,
 				),
 			)
 			continue
@@ -106,8 +107,8 @@ func (r *reconciler) checkHealth(
 				fmt.Sprintf(
 					"bugs in Argo CD currently prevent a comprehensive assessment of "+
 						"the health of multi-source Application %q in namespace %q",
-					updates.AppName,
-					updates.AppNamespaceOrDefault(),
+					update.AppName,
+					namespace,
 				),
 			)
 			continue

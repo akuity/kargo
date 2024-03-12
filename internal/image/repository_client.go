@@ -2,6 +2,7 @@ package image
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/client/auth"
 	"github.com/distribution/distribution/v3/registry/client/auth/challenge"
 	"github.com/distribution/distribution/v3/registry/client/transport"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/opencontainers/go-digest"
 	ociv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/patrickmn/go-cache"
@@ -121,6 +123,7 @@ type repositoryClient struct {
 // return a new repository client.
 func newRepositoryClient(
 	repoURL string,
+	insecureSkipTLSVerify bool,
 	creds *Credentials,
 ) (*repositoryClient, error) {
 	repoRef, err := reference.ParseNormalizedNamed(repoURL)
@@ -132,11 +135,18 @@ func newRepositoryClient(
 	image := reg.normalizeImageName(reference.Path(repoRef))
 	apiAddress := strings.TrimSuffix(reg.apiAddress, "/")
 
+	httpTransport := cleanhttp.DefaultTransport()
+	if insecureSkipTLSVerify {
+		httpTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: insecureSkipTLSVerify, // nolint: gosec
+		}
+	}
+
 	challengeManager, err := getChallengeManager(
 		apiAddress,
 		&rateLimitedRoundTripper{
 			limiter:              reg.rateLimiter,
-			internalRoundTripper: http.DefaultTransport,
+			internalRoundTripper: httpTransport,
 		},
 	)
 	if err != nil {
@@ -151,11 +161,11 @@ func newRepositoryClient(
 	rlt := &rateLimitedRoundTripper{
 		limiter: reg.rateLimiter,
 		internalRoundTripper: transport.NewTransport(
-			http.DefaultTransport,
+			httpTransport,
 			auth.NewAuthorizer(
 				challengeManager,
 				auth.NewTokenHandler(
-					http.DefaultTransport,
+					httpTransport,
 					creds,
 					image,
 					"pull",

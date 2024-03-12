@@ -213,3 +213,15 @@ func UpdateChartDependencies(homePath, chartPath string) error {
 		chartPath,
 	)
 }
+
+// NormalizeChartRepositoryURL normalizes a chart repository URL for purposes
+// of comparison. Crucially, this function removes the oci:// prefix from the
+// URL if there is one.
+func NormalizeChartRepositoryURL(repo string) string {
+	return strings.TrimPrefix(
+		strings.ToLower(
+			strings.TrimSpace(repo),
+		),
+		"oci://",
+	)
+}

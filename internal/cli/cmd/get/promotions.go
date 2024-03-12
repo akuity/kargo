@@ -15,7 +15,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -141,12 +140,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return errors.Wrap(err, "list promotions")
 		}
-
-		res := make([]*kargoapi.Promotion, 0, len(resp.Msg.GetPromotions()))
-		for _, promotion := range resp.Msg.GetPromotions() {
-			res = append(res, typesv1alpha1.FromPromotionProto(promotion))
-		}
-		return printObjects(res, o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams)
 	}
 
 	res := make([]*kargoapi.Promotion, 0, len(o.Names))
@@ -165,7 +159,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, typesv1alpha1.FromPromotionProto(resp.Msg.GetPromotion()))
+		res = append(res, resp.Msg.GetPromotion())
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {

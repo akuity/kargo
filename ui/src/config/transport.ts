@@ -67,10 +67,12 @@ const errorHandler: Interceptor = (next) => (req) => {
 
 export const transport = createConnectTransport({
   baseUrl: '',
+  useBinaryFormat: true,
   interceptors: [errorHandler]
 });
 
 export const transportWithAuth = createConnectTransport({
   baseUrl: '',
-  interceptors: [authHandler, errorHandler]
+  useBinaryFormat: true,
+  interceptors: [authHandler, errorHandler],
 });

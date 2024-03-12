@@ -3,7 +3,7 @@ import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 
-import { Freight, GitCommit } from '@ui/gen/v1alpha1/types_pb';
+import { Freight, GitCommit } from '@ui/gen/v1alpha1/generated_pb';
 
 export const FreightContents = (props: {
   freight?: Freight;
@@ -40,18 +40,18 @@ export const FreightContents = (props: {
       {(freight?.commits || []).map((c) => (
         <FreightContentItem key={c.id} overlay={<CommitInfo commit={c} />} icon={faGit}>
           <a
-            href={`${c.repoUrl.replace('.git', '')}/commit/${c.id}`}
+            href={`${c.repoURL?.replace('.git', '')}/commit/${c.id}`}
             target='_blank'
             className={`${highlighted ? 'text-blue-200' : 'text-gray-500'} hover:text-blue-300`}
           >
-            {c.id.substring(0, 6)}
+            {c.id?.substring(0, 6)}
           </a>
         </FreightContentItem>
       ))}
       {(freight?.images || []).map((i) => (
         <FreightContentItem
-          key={`${i.repoUrl}:${i.tag}`}
-          title={`${i.repoUrl}:${i.tag}`}
+          key={`${i.repoURL}:${i.tag}`}
+          title={`${i.repoURL}:${i.tag}`}
           icon={faDocker}
         >
           <div>{i.tag}</div>
@@ -65,7 +65,7 @@ const CommitInfo = ({ commit }: { commit: GitCommit }) => (
   <div className='grid grid-cols-2'>
     <div>Repo:</div>
     <div>
-      <a href={commit.repoUrl}>{commit.repoUrl}</a>
+      <a href={commit.repoURL}>{commit.repoURL}</a>
     </div>
     <div>Branch:</div>
     <div>{commit.branch}</div>

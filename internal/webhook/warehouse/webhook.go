@@ -15,6 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
@@ -120,8 +122,9 @@ func (w *webhook) validateSubs(
 		return nil
 	}
 	var errs field.ErrorList
+	seen := make(uniqueSubSet, len(subs))
 	for i, sub := range subs {
-		errs = append(errs, w.validateSub(f.Index(i), sub)...)
+		errs = append(errs, w.validateSub(f.Index(i), sub, seen)...)
 	}
 	return errs
 }
@@ -129,19 +132,21 @@ func (w *webhook) validateSubs(
 func (w *webhook) validateSub(
 	f *field.Path,
 	sub kargoapi.RepoSubscription,
+	seen uniqueSubSet,
 ) field.ErrorList {
 	var errs field.ErrorList
 	var repoTypes int
 	if sub.Git != nil {
 		repoTypes++
+		errs = append(errs, w.validateGitSub(f.Child("git"), *sub.Git, seen)...)
 	}
 	if sub.Image != nil {
 		repoTypes++
-		errs = append(errs, w.validateImageSub(f.Child("image"), *sub.Image)...)
+		errs = append(errs, w.validateImageSub(f.Child("image"), *sub.Image, seen)...)
 	}
 	if sub.Chart != nil {
 		repoTypes++
-		errs = append(errs, w.validateChartSub(f.Child("chart"), *sub.Chart)...)
+		errs = append(errs, w.validateChartSub(f.Child("chart"), *sub.Chart, seen)...)
 	}
 	if repoTypes != 1 {
 		errs = append(
@@ -150,7 +155,7 @@ func (w *webhook) validateSub(
 				f,
 				sub,
 				fmt.Sprintf(
-					"exactly one of %s.git, %s.images, or %s.charts must be non-empty",
+					"exactly one of %s.git, %s.image, or %s.chart must be non-empty",
 					f.String(),
 					f.String(),
 					f.String(),
@@ -161,9 +166,28 @@ func (w *webhook) validateSub(
 	return errs
 }
 
+func (w *webhook) validateGitSub(
+	f *field.Path,
+	sub kargoapi.GitSubscription,
+	seen uniqueSubSet,
+) field.ErrorList {
+	var errs field.ErrorList
+	if err := validateSemverConstraint(
+		f.Child("semverConstraint"),
+		sub.SemverConstraint,
+	); err != nil {
+		errs = append(errs, err)
+	}
+	if err := seen.addGit(sub, f); err != nil {
+		errs = append(errs, field.Invalid(f, sub.RepoURL, err.Error()))
+	}
+	return errs
+}
+
 func (w *webhook) validateImageSub(
 	f *field.Path,
 	sub kargoapi.ImageSubscription,
+	seen uniqueSubSet,
 ) field.ErrorList {
 	var errs field.ErrorList
 	if err := validateSemverConstraint(
@@ -177,14 +201,18 @@ func (w *webhook) validateImageSub(
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
 		}
 	}
+	if err := seen.addImage(sub, f); err != nil {
+		errs = append(errs, field.Invalid(f, sub.RepoURL, err.Error()))
+	}
 	return errs
 }
 
 func (w *webhook) validateChartSub(
 	f *field.Path,
 	sub kargoapi.ChartSubscription,
+	seen uniqueSubSet,
 ) field.ErrorList {
-	errs := field.ErrorList{}
+	var errs field.ErrorList
 	if err := validateSemverConstraint(
 		f.Child("semverConstraint"),
 		sub.SemverConstraint,
@@ -201,7 +229,8 @@ func (w *webhook) validateChartSub(
 			),
 		)
 	}
-	if (strings.HasPrefix(sub.RepoURL, "http://") || strings.HasPrefix(sub.RepoURL, "https://")) && sub.Name == "" {
+	isHTTP := strings.HasPrefix(sub.RepoURL, "http://") || strings.HasPrefix(sub.RepoURL, "https://")
+	if isHTTP && sub.Name == "" {
 		errs = append(
 			errs,
 			field.Invalid(
@@ -211,10 +240,10 @@ func (w *webhook) validateChartSub(
 			),
 		)
 	}
-	if len(errs) > 0 {
-		return errs
+	if err := seen.addChart(sub, isHTTP, f); err != nil {
+		errs = append(errs, field.Invalid(f, sub.RepoURL, err.Error()))
 	}
-	return nil
+	return errs
 }
 
 func validateSemverConstraint(
@@ -227,5 +256,48 @@ func validateSemverConstraint(
 	if _, err := semver.NewConstraint(semverConstraint); err != nil {
 		return field.Invalid(f, semverConstraint, "")
 	}
+	return nil
+}
+
+type subscriptionKey struct {
+	kind string
+	id   string
+}
+
+type uniqueSubSet map[subscriptionKey]*field.Path
+
+func (s uniqueSubSet) addGit(sub kargoapi.GitSubscription, p *field.Path) error {
+	k := subscriptionKey{kind: "git", id: git.NormalizeGitURL(sub.RepoURL)}
+	if _, exists := s[k]; exists {
+		return fmt.Errorf("subscription for Git repository already exists at %q", s[k])
+	}
+	s[k] = p
+	return nil
+}
+
+func (s uniqueSubSet) addImage(sub kargoapi.ImageSubscription, p *field.Path) error {
+	// The normalization of Helm chart repository URLs can also be used here
+	// to ensure the uniqueness of the image reference as it does the job of
+	// ensuring lower-casing, etc. without introducing unwanted side effects.
+	k := subscriptionKey{kind: "image", id: helm.NormalizeChartRepositoryURL(sub.RepoURL)}
+	if _, exists := s[k]; exists {
+		return fmt.Errorf("subscription for image repository already exists at %q", s[k])
+	}
+	s[k] = p
+	return nil
+}
+
+func (s uniqueSubSet) addChart(sub kargoapi.ChartSubscription, isHTTP bool, p *field.Path) error {
+	k := subscriptionKey{kind: "chart", id: helm.NormalizeChartRepositoryURL(sub.RepoURL)}
+	if isHTTP {
+		k.id = k.id + ":" + sub.Name
+	}
+	if _, exists := s[k]; exists {
+		if isHTTP {
+			return fmt.Errorf("subscription for chart %q already exists at %q", sub.Name, s[k])
+		}
+		return fmt.Errorf("subscription for chart already exists at %q", s[k])
+	}
+	s[k] = p
 	return nil
 }

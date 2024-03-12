@@ -7,7 +7,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/pkg/errors"
 
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -53,6 +52,6 @@ func (s *server) GetFreight(
 	}
 
 	return connect.NewResponse(&svcv1alpha1.GetFreightResponse{
-		Freight: typesv1alpha1.ToFreightProto(*freight),
+		Freight: freight,
 	}), nil
 }

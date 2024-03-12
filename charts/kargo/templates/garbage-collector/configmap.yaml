@@ -8,7 +8,7 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
 data:
-  LOG_LEVEL: {{ .Values.garbageCollector.logLevel }}
+  LOG_LEVEL: {{ quote .Values.garbageCollector.logLevel }}
   NUM_WORKERS: {{ quote .Values.garbageCollector.workers }}
   MAX_RETAINED_PROMOTIONS: {{ quote .Values.garbageCollector.maxRetainedPromotions }}
 {{- end }}

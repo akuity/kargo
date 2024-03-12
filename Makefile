@@ -66,6 +66,8 @@ lint-go:
 
 .PHONY: lint-proto
 lint-proto:
+	# Vendor go dependencies to build protobuf definitions
+	go mod vendor
 	buf lint api --error-format=$(BUF_LINT_ERROR_FORMAT)
 
 .PHONY: lint-charts
@@ -83,6 +85,13 @@ test-unit:
 		-coverprofile=coverage.txt \
 		-covermode=atomic \
 		./...
+
+################################################################################
+# Dependency management                                                        #
+################################################################################
+.PHONY: deps-tools
+deps-tools:
+	./hack/install-tools.sh
 
 ################################################################################
 # Builds                                                                       #
@@ -126,8 +135,10 @@ nightly-cli:
 ################################################################################
 
 .PHONY: codegen
-codegen:
-	buf generate api
+codegen: deps-tools codegen-proto codegen-controller codegen-ui codegen-docs
+
+.PHONY: codegen-controller
+codegen-controller:
 	controller-gen \
 		rbac:roleName=manager-role \
 		crd \
@@ -137,10 +148,20 @@ codegen:
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
-	pnpm --dir=ui install --dev
-	pnpm --dir=ui run generate:schema
+
+.PHONY: codegen-docs
+codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
 	bash hack/helm-docs/helm-docs.sh
+
+.PHONY: codegen-proto
+codegen-proto:
+	./hack/codegen/proto.sh
+
+.PHONY: codegen-ui
+codegen-ui:
+	pnpm --dir=ui install --dev
+	pnpm --dir=ui run generate:schema
 
 ################################################################################
 # Hack: Targets to help you hack                                               #
@@ -277,7 +298,7 @@ hack-install-argo-rollouts:
 		--wait
 
 .PHONY: hack-uninstall-prereqs
-hack-uninstall-prereqs: hack-uninstall-argo-rollouts hack-uninstall-argocd hack-uninstall-cert-manager 
+hack-uninstall-prereqs: hack-uninstall-argo-rollouts hack-uninstall-argocd hack-uninstall-cert-manager
 
 .PHONY: hack-uninstall-argo-rollouts
 hack-uninstall-argo-rollouts:
