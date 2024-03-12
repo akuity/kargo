@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -54,9 +53,6 @@ func (s *server) UpdateCredentials(
 		},
 		&secret,
 	); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
 

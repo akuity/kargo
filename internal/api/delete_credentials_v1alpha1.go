@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -37,9 +36,7 @@ func (s *server) DeleteCredentials(
 		},
 	}
 	if err := s.client.Delete(ctx, secret); err != nil {
-		if !kubeerr.IsNotFound(err) {
-			return nil, fmt.Errorf("delete secret: %w", err)
-		}
+		return nil, fmt.Errorf("delete credentials: %w", err)
 	}
 
 	return connect.NewResponse(&svcv1alpha1.DeleteCredentialsResponse{}), nil
