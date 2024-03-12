@@ -521,10 +521,10 @@ type StageStatus struct {
 // FreightReference is a simplified representation of a piece of Freight -- not
 // a root resource type.
 type FreightReference struct {
-	// ID is system-assigned value that is derived deterministically from the
-	// contents of the Freight. i.e. Two pieces of Freight can be compared for
-	// equality by comparing their IDs.
-	ID string `json:"id,omitempty" protobuf:"bytes,1,opt,name=id"`
+	// Name is system-assigned identifier that is derived deterministically from
+	// the contents of the Freight. i.e. Two pieces of Freight can be compared for
+	// equality by comparing their Names.
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,2,rep,name=commits"`
 	// Images describes specific versions of specific container images.

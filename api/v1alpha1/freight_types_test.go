@@ -75,7 +75,7 @@ func TestGitCommitEquals(t *testing.T) {
 	}
 }
 
-func TestFreightUpdateID(t *testing.T) {
+func TestFreightGenerateID(t *testing.T) {
 	freight := Freight{
 		Commits: []GitCommit{
 			{
@@ -97,15 +97,13 @@ func TestFreightUpdateID(t *testing.T) {
 			},
 		},
 	}
-	freight.UpdateID()
-	result := freight.ID
+	id := freight.GenerateID()
+	expected := id
 	// Doing this any number of times should yield the same ID
 	for i := 0; i < 100; i++ {
-		freight.UpdateID()
-		require.Equal(t, result, freight.ID)
+		require.Equal(t, expected, freight.GenerateID())
 	}
 	// Changing anything should change the result
 	freight.Commits[0].ID = "a-different-fake-commit"
-	freight.UpdateID()
-	require.NotEqual(t, result, freight.ID)
+	require.NotEqual(t, expected, freight.GenerateID())
 }
