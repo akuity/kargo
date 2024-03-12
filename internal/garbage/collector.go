@@ -106,10 +106,7 @@ func (c *collector) Run(ctx context.Context) error {
 			).AsSelector(),
 		},
 	); err != nil {
-		return fmt.Errorf(
-			"error listing projects; no garbage collection performed: %w",
-			err,
-		)
+		return fmt.Errorf("error listing projects; no garbage collection performed: %w", err)
 	}
 
 	projectCh := make(chan string)
@@ -213,11 +210,7 @@ func (c *collector) cleanProject(ctx context.Context, project string) error {
 		&promos,
 		client.InNamespace(project),
 	); err != nil {
-		return fmt.Errorf(
-			"error listing Promotions for Project %q: %w",
-			project,
-			err,
-		)
+		return fmt.Errorf("error listing Promotions for Project %q: %w", project, err)
 	}
 
 	if len(promos.Items) <= c.cfg.MaxRetainedPromotions {
