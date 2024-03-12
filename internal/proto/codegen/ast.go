@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/fatih/structtag"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -122,11 +121,11 @@ func parseFieldTags(field *ast.Field) (*structtag.Tags, error) {
 	// Remove backquotes from field tag value
 	rawTag, err := strconv.Unquote(field.Tag.Value)
 	if err != nil {
-		return nil, errors.Wrap(err, "unquote field tag value")
+		return nil, fmt.Errorf("unquote field tag value: %w", err)
 	}
 	tags, err := structtag.Parse(rawTag)
 	if err != nil {
-		return nil, errors.Wrap(err, "parse field tag")
+		return nil, fmt.Errorf("parse field tag: %w", err)
 	}
 	return tags, nil
 }

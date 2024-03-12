@@ -3,13 +3,14 @@ package dex
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
 )
 
 // ProxyConfig represents configuration for a reverse proxy to a Dex server.
@@ -34,18 +35,17 @@ func ProxyConfigFromEnv() ProxyConfig {
 func NewProxy(cfg ProxyConfig) (*httputil.ReverseProxy, error) {
 	target, err := url.Parse(cfg.ServerAddr)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error parsing URL %q", cfg.ServerAddr)
+		return nil, fmt.Errorf("error parsing URL %q: %w", cfg.ServerAddr, err)
 	}
 
 	var caCertPool *x509.CertPool
 	if cfg.CACertPath != "" {
 		caCertBytes, err := os.ReadFile(cfg.CACertPath)
 		if err != nil {
-			return nil,
-				errors.Wrapf(err, "error reading CA cert file %q", cfg.CACertPath)
+			return nil, fmt.Errorf("error reading CA cert file %q: %w", cfg.CACertPath, err)
 		}
 		if caCertPool, err = buildCACertPool(caCertBytes); err != nil {
-			return nil, errors.Wrapf(err, "error building CA cert pool")
+			return nil, fmt.Errorf("error building CA cert pool: %w", err)
 		}
 	}
 

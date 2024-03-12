@@ -2,8 +2,9 @@ package image
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"
@@ -47,7 +48,7 @@ func (d *digestSelector) Select(ctx context.Context) (*Image, error) {
 
 	tags, err := d.repoClient.getTags(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing tags")
+		return nil, fmt.Errorf("error listing tags: %w", err)
 	}
 	if len(tags) == 0 {
 		logger.Trace("found no tags")
@@ -61,7 +62,7 @@ func (d *digestSelector) Select(ctx context.Context) (*Image, error) {
 		}
 		image, err := d.repoClient.getImageByTag(ctx, tag, d.platform)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error retrieving image with tag %q", tag)
+			return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 		}
 		if image == nil {
 			logger.Tracef(

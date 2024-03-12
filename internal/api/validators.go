@@ -2,9 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/akuity/kargo/internal/api/validation"
@@ -14,7 +15,7 @@ func validateFieldNotEmpty(fieldName string, fieldValue string) error {
 	if fieldValue == "" {
 		return connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.Errorf("%s should not be empty", fieldName),
+			fmt.Errorf("%s should not be empty", fieldName),
 		)
 	}
 	return nil
@@ -29,7 +30,7 @@ func (s *server) validateProjectExists(ctx context.Context, project string) erro
 		if ok := errors.As(err, &fieldErr); ok {
 			return connect.NewError(connect.CodeInvalidArgument, err)
 		}
-		return errors.Wrap(err, "validate project")
+		return fmt.Errorf("validate project: %w", err)
 	}
 	return nil
 }
@@ -38,7 +39,7 @@ func validateGroupByOrderBy(group string, groupBy string, orderBy string) error 
 	if group != "" && groupBy == "" {
 		return connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.Errorf("Cannot filter by group without group by"),
+			errors.New("Cannot filter by group without group by"),
 		)
 	}
 	switch groupBy {
@@ -46,21 +47,21 @@ func validateGroupByOrderBy(group string, groupBy string, orderBy string) error 
 	default:
 		return connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.Errorf("Invalid group by: %s", groupBy),
+			fmt.Errorf("Invalid group by: %s", groupBy),
 		)
 	}
 	switch orderBy {
 	case OrderByTag:
 		if groupBy != GroupByImageRepository && groupBy != GroupByChartRepository {
 			return connect.NewError(connect.CodeInvalidArgument,
-				errors.Errorf("Tag ordering only valid when grouping by: %s, %s",
+				fmt.Errorf("Tag ordering only valid when grouping by: %s, %s",
 					GroupByImageRepository, GroupByChartRepository))
 		}
 	case OrderByFirstSeen, "":
 	default:
 		return connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.Errorf("Invalid order by: %s", orderBy),
+			fmt.Errorf("Invalid order by: %s", orderBy),
 		)
 	}
 

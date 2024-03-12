@@ -2,11 +2,11 @@ package api
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,8 +35,8 @@ func TestQueryFreight(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Equal(t, "project should not be empty", connErr.Message())
 			},
@@ -75,8 +75,8 @@ func TestQueryFreight(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Equal(t, "Invalid group by: bogus-group-by", connErr.Message())
 			},
@@ -133,8 +133,8 @@ func TestQueryFreight(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
 				require.Contains(t, connErr.Message(), "Stage")
 				require.Contains(t, connErr.Message(), "not found in namespace")

@@ -2,9 +2,9 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,11 +23,11 @@ func GetPromotion(
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
 		}
-		return nil, errors.Wrapf(
-			err,
-			"error getting Promotion %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error getting Promotion %q in namespace %q: %w",
 			namespacedName.Name,
 			namespacedName.Namespace,
+			err,
 		)
 	}
 	return &promo, nil
@@ -49,7 +49,7 @@ func RefreshPromotion(
 		},
 	}
 	if err := refreshObject(ctx, c, promo, time.Now); err != nil {
-		return nil, errors.Wrap(err, "refresh")
+		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
 }

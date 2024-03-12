@@ -2,11 +2,10 @@ package promote
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -132,33 +131,33 @@ func (o *promotionOptions) validate() error {
 	// While the flags are marked as required, a user could still provide an empty
 	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
-		errs = append(errs, errors.Errorf("%s is required", option.ProjectFlag))
+		errs = append(errs, fmt.Errorf("%s is required", option.ProjectFlag))
 	}
 	if o.FreightName == "" && o.FreightAlias == "" {
 		errs = append(
 			errs,
-			errors.Errorf("either %s or %s is required", option.FreightFlag, option.FreightAliasFlag),
+			fmt.Errorf("either %s or %s is required", option.FreightFlag, option.FreightAliasFlag),
 		)
 	}
 	if o.Stage == "" && o.SubscribersOf == "" {
 		errs = append(
 			errs,
-			errors.Errorf("either %s or %s is required", option.StageFlag, option.SubscribersOfFlag),
+			fmt.Errorf("either %s or %s is required", option.StageFlag, option.SubscribersOfFlag),
 		)
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 // run performs the promotion of the freight using the options.
 func (o *promotionOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
-		return errors.Wrap(err, "new printer")
+		return fmt.Errorf("new printer: %w", err)
 	}
 
 	switch {
@@ -175,7 +174,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			),
 		)
 		if err != nil {
-			return errors.Wrap(err, "promote stage")
+			return fmt.Errorf("promote stage: %w", err)
 		}
 		_ = printer.PrintObj(res.Msg.GetPromotion(), o.IOStreams.Out)
 		return nil

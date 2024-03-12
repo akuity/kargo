@@ -2,12 +2,12 @@ package promotion
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
 
 	"github.com/gobwas/glob"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -121,18 +121,19 @@ func (a *argoCDMechanism) doSingleUpdate(
 	}
 	app, err := a.getArgoCDAppFn(ctx, namespace, update.AppName)
 	if err != nil {
-		return errors.Wrapf(
-			err,
-			"error finding Argo CD Application %q in namespace %q",
+		return fmt.Errorf(
+			"error finding Argo CD Application %q in namespace %q: %w",
 			update.AppName,
 			namespace,
+			err,
 		)
 	}
 	if app == nil {
-		return errors.Errorf(
-			"unable to find Argo CD Application %q in namespace %q",
+		return fmt.Errorf(
+			"unable to find Argo CD Application %q in namespace %q: %w",
 			update.AppName,
 			namespace,
+			err,
 		)
 	}
 	// Make sure this is allowed!
@@ -148,11 +149,11 @@ func (a *argoCDMechanism) doSingleUpdate(
 				newFreight,
 				srcUpdate,
 			); err != nil {
-				return errors.Wrapf(
-					err,
-					"error updating source of Argo CD Application %q in namespace %q",
+				return fmt.Errorf(
+					"error updating source of Argo CD Application %q in namespace %q: %w",
 					update.AppName,
 					namespace,
+					err,
 				)
 			}
 			app.Spec.Source = &source
@@ -163,11 +164,11 @@ func (a *argoCDMechanism) doSingleUpdate(
 				newFreight,
 				srcUpdate,
 			); err != nil {
-				return errors.Wrapf(
-					err,
-					"error updating source(s) of Argo CD Application %q in namespace %q",
+				return fmt.Errorf(
+					"error updating source(s) of Argo CD Application %q in namespace %q: %w",
 					update.AppName,
 					namespace,
+					err,
 				)
 			}
 			app.Spec.Sources[i] = source
@@ -210,7 +211,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 		app,
 		patch,
 	); err != nil {
-		return errors.Wrapf(err, "error patching Argo CD Application %q", app.Name)
+		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
 	}
 	logging.LoggerFromContext(ctx).WithField("app", app.Name).
 		Debug("patched Argo CD Application")
@@ -240,7 +241,7 @@ func authorizeArgoCDAppUpdate(
 	stageMeta metav1.ObjectMeta,
 	appMeta metav1.ObjectMeta,
 ) error {
-	permErr := errors.Errorf(
+	permErr := fmt.Errorf(
 		"Argo CD Application %q in namespace %q does not permit mutation by "+
 			"Kargo Stage %s in namespace %s",
 		appMeta.Name,
@@ -257,7 +258,7 @@ func authorizeArgoCDAppUpdate(
 	}
 	tokens := strings.SplitN(allowedStage, ":", 2)
 	if len(tokens) != 2 {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"unable to parse value of annotation %q (%q) on Argo CD Application "+
 				"%q in namespace %q",
 			authorizedStageAnnotationKey,
@@ -268,7 +269,7 @@ func authorizeArgoCDAppUpdate(
 	}
 	allowedNamespaceGlob, err := glob.Compile(tokens[0])
 	if err != nil {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"Argo CD Application %q in namespace %q has invalid glob expression: %q",
 			appMeta.Name,
 			appMeta.Namespace,
@@ -277,7 +278,7 @@ func authorizeArgoCDAppUpdate(
 	}
 	allowedNameGlob, err := glob.Compile(tokens[1])
 	if err != nil {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"Argo CD Application %q in namespace %q has invalid glob expression: %q",
 			appMeta.Name,
 			appMeta.Namespace,

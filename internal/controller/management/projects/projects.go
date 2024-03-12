@@ -2,9 +2,9 @@ package projects
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -196,11 +196,11 @@ func (r *reconciler) syncProject(
 ) (kargoapi.ProjectStatus, error) {
 	status, err := r.ensureNamespaceFn(ctx, project)
 	if err != nil {
-		return status, errors.Wrap(err, "error ensuring namespace")
+		return status, fmt.Errorf("error ensuring namespace: %w", err)
 	}
 
 	if err = r.ensureSecretPermissionsFn(ctx, project); err != nil {
-		return status, errors.Wrap(err, "error ensuring secret permissions")
+		return status, fmt.Errorf("error ensuring secret permissions: %w", err)
 	}
 
 	status.Phase = kargoapi.ProjectPhaseReady
@@ -247,21 +247,20 @@ func (r *reconciler) ensureNamespace(
 			ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 			controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
 			if err = r.updateNamespaceFn(ctx, ns); err != nil {
-				return status,
-					errors.Wrapf(err, "error updating namespace %q", project.Name)
+				return status, fmt.Errorf("error updating namespace %q: %w", project.Name, err)
 			}
 			logger.Debug("updated namespace with Project as owner")
 			return status, nil
 		}
 		status.Phase = kargoapi.ProjectPhaseInitializationFailed
-		return status, errors.Errorf(
+		return status, fmt.Errorf(
 			"failed to initialize Project %q because namespace %q already exists",
 			project.Name,
 			project.Name,
 		)
 	}
 	if !apierrors.IsNotFound(err) {
-		return status, errors.Wrapf(err, "error getting namespace %q", project.Name)
+		return status, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 	}
 
 	logger.Debug("namespace does not exist yet; creating namespace")
@@ -282,8 +281,7 @@ func (r *reconciler) ensureNamespace(
 	// the Project.
 	controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
 	if err := r.createNamespaceFn(ctx, ns); err != nil {
-		return status,
-			errors.Wrapf(err, "error creating namespace %q", project.Name)
+		return status, fmt.Errorf("error creating namespace %q: %w", project.Name, err)
 	}
 	logger.Debug("created namespace")
 
@@ -331,11 +329,11 @@ func (r *reconciler) ensureSecretPermissions(
 			logger.Debug("role binding already exists in project namespace")
 			return nil
 		}
-		return errors.Wrapf(
-			err,
-			"error creating role binding %q in project namespace %q",
+		return fmt.Errorf(
+			"error creating role binding %q in project namespace %q: %w",
 			roleBinding.Name,
 			project.Name,
+			err,
 		)
 	}
 	logger.Debug("granted API server access to manage project secrets")

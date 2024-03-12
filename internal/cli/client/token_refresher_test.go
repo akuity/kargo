@@ -2,11 +2,11 @@ package client
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/internal/cli/config"

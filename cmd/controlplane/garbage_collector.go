@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -37,14 +38,14 @@ func newGarbageCollectorCommand() *cobra.Command {
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
-					return errors.Wrap(err, "error loading REST config")
+					return fmt.Errorf("error loading REST config: %w", err)
 				}
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "error adding Kubernetes core API to scheme")
+					return fmt.Errorf("error adding Kubernetes core API to scheme: %w", err)
 				}
 				if err = kargoapi.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "error adding Kargo API to scheme")
+					return fmt.Errorf("error adding Kargo API to scheme: %w", err)
 				}
 				if kubeClient, err = client.New(
 					restCfg,
@@ -52,7 +53,7 @@ func newGarbageCollectorCommand() *cobra.Command {
 						Scheme: scheme,
 					},
 				); err != nil {
-					return errors.Wrap(err, "error initializing Kubernetes client")
+					return fmt.Errorf("err: %w", err)
 				}
 			}
 

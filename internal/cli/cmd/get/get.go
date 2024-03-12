@@ -1,7 +1,8 @@
 package get
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +63,7 @@ func printObjects[T runtime.Object](
 	if flags.OutputFlagSpecified != nil && flags.OutputFlagSpecified() {
 		printer, err := flags.ToPrinter()
 		if err != nil {
-			return errors.Wrap(err, "new printer")
+			return fmt.Errorf("new printer: %w", err)
 		}
 		if len(list.Items) == 1 {
 			return printer.PrintObj(list.Items[0].Object, streams.Out)

@@ -2,11 +2,10 @@ package api
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -55,12 +54,12 @@ func (s *server) PromoteSubscribers(
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get stage")
+		return nil, fmt.Errorf("get stage: %w", err)
 	}
 	if stage == nil {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
-			errors.Errorf(
+			fmt.Errorf(
 				"Stage %q not found in namespace %q",
 				stageName,
 				project,
@@ -84,7 +83,7 @@ func (s *server) PromoteSubscribers(
 		freightAlias,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get freight")
+		return nil, fmt.Errorf("get freight: %w", err)
 	}
 	if freight == nil {
 		if freightName != "" {
@@ -101,7 +100,7 @@ func (s *server) PromoteSubscribers(
 	) {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.Errorf(
+			fmt.Errorf(
 				"Freight %q is not available to Stage %q",
 				freightName,
 				stageName,
@@ -111,7 +110,7 @@ func (s *server) PromoteSubscribers(
 
 	subscribers, err := s.findStageSubscribersFn(ctx, stage)
 	if err != nil {
-		return nil, errors.Wrap(err, "find stage subscribers")
+		return nil, fmt.Errorf("find stage subscribers: %w", err)
 	}
 	if len(subscribers) == 0 {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("stage %q has no subscribers", stageName))
@@ -148,8 +147,7 @@ func (s *server) PromoteSubscribers(
 	})
 
 	if len(promoteErrs) > 0 {
-		return res,
-			connect.NewError(connect.CodeInternal, goerrors.Join(promoteErrs...))
+		return res, connect.NewError(connect.CodeInternal, errors.Join(promoteErrs...))
 	}
 
 	return res, nil

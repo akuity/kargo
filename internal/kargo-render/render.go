@@ -6,8 +6,6 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/pkg/errors"
-
 	"github.com/akuity/kargo/internal/controller/git"
 	libExec "github.com/akuity/kargo/internal/exec"
 )
@@ -75,10 +73,12 @@ func RenderManifests(req Request) (Response, error) { // nolint: revive
 	res := Response{}
 	resBytes, err := libExec.Exec(buildRenderCmd(req))
 	if err != nil {
-		return res, errors.Wrap(err, "error rendering manifests")
+		return res, fmt.Errorf("error rendering manifests: %w", err)
 	}
-	err = json.Unmarshal(resBytes, &res)
-	return res, errors.Wrap(err, "error unmarshalling response")
+	if err = json.Unmarshal(resBytes, &res); err != nil {
+		err = fmt.Errorf("error unmarshalling response: %w", err)
+	}
+	return res, err
 }
 
 func buildRenderCmd(req Request) *exec.Cmd {

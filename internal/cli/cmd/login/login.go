@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"embed"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -18,7 +19,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bacongobbler/browser"
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 	"k8s.io/utils/strings/slices"
@@ -164,15 +164,17 @@ func (o *loginOptions) run(ctx context.Context) error {
 		refreshToken = ""
 	}
 
-	err = libConfig.SaveCLIConfig(
+	if err = libConfig.SaveCLIConfig(
 		libConfig.CLIConfig{
 			APIAddress:            o.ServerAddress,
 			BearerToken:           bearerToken,
 			RefreshToken:          refreshToken,
 			InsecureSkipTLSVerify: o.InsecureTLS,
 		},
-	)
-	return errors.Wrap(err, "error persisting configuration")
+	); err != nil {
+		return fmt.Errorf("error persisting configuration: %w", err)
+	}
+	return nil
 }
 
 func adminLogin(
@@ -188,10 +190,7 @@ func adminLogin(
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
 	if err != nil {
-		return "", errors.Wrap(
-			err,
-			"error retrieving public configuration from server",
-		)
+		return "", fmt.Errorf("error retrieving public configuration from server: %w", err)
 	}
 
 	if !cfgRes.Msg.AdminAccountEnabled {
@@ -205,7 +204,7 @@ func adminLogin(
 		}),
 	)
 	if err != nil {
-		return "", errors.Wrap(err, "error logging in as admin user")
+		return "", fmt.Errorf("error logging in as admin user: %w", err)
 	}
 
 	return loginRes.Msg.IdToken, nil
@@ -216,11 +215,11 @@ func adminLogin(
 func kubeconfigLogin(ctx context.Context) (string, error) {
 	restCfg, err := config.GetConfig()
 	if err != nil {
-		return "", errors.Wrap(err, "error loading kubeconfig")
+		return "", fmt.Errorf("error loading kubeconfig: %w", err)
 	}
 	bearerToken, err := kubeclient.GetCredential(ctx, restCfg)
 	return bearerToken,
-		errors.Wrap(err, "error retrieving bearer token from kubeconfig")
+		fmt.Errorf("error retrieving bearer token from kubeconfig: %w", err)
 }
 
 // ssoLogin performs a login using OpenID Connect. It first retrieves
@@ -241,10 +240,7 @@ func ssoLogin(
 		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
 	)
 	if err != nil {
-		return "", "", errors.Wrap(
-			err,
-			"error retrieving public configuration from server",
-		)
+		return "", "", fmt.Errorf("error retrieving public configuration from server: %w", err)
 	}
 
 	if res.Msg.OidcConfig == nil {
@@ -265,14 +261,14 @@ func ssoLogin(
 	)
 	provider, err := oidc.NewProvider(ctx, res.Msg.OidcConfig.IssuerUrl)
 	if err != nil {
-		return "", "", errors.Wrap(err, "error initializing OIDC provider")
+		return "", "", fmt.Errorf("error initializing OIDC provider: %w", err)
 	}
 
 	providerClaims := struct {
 		ScopesSupported []string `json:"scopes_supported"`
 	}{}
 	if err = provider.Claims(&providerClaims); err != nil {
-		return "", "", errors.Wrap(err, "error retrieving provider claims")
+		return "", "", fmt.Errorf("error retrieving provider claims: %w", err)
 	}
 	const offlineAccessScope = "offline_access"
 	// If the provider supports the "offline_access" scope, request it so that
@@ -286,7 +282,7 @@ func ssoLogin(
 		fmt.Sprintf("localhost:%d", callbackPort),
 	)
 	if err != nil {
-		return "", "", errors.Wrap(err, "error creating callback listener")
+		return "", "", fmt.Errorf("error creating callback listener: %w", err)
 	}
 
 	cfg := oauth2.Config{
@@ -310,7 +306,7 @@ func ssoLogin(
 	// See: https://www.rfc-editor.org/rfc/rfc6749#section-10.10
 	state, err := randString(24)
 	if err != nil {
-		return "", "", errors.Wrap(err, "error generating state")
+		return "", "", fmt.Errorf("error generating state: %w", err)
 	}
 
 	codeCh := make(chan string)
@@ -319,10 +315,7 @@ func ssoLogin(
 
 	codeVerifier, codeChallenge, err := createPCKEVerifierAndChallenge()
 	if err != nil {
-		return "", "", errors.Wrap(
-			err,
-			"error creating PCKE code verifier and code challenge",
-		)
+		return "", "", fmt.Errorf("error creating PCKE code verifier and code challenge: %w", err)
 	}
 	url := cfg.AuthCodeURL(
 		state,
@@ -331,18 +324,16 @@ func ssoLogin(
 	)
 
 	if err = browser.Open(url); err != nil {
-		return "", "", errors.Wrap(err, "error opening system default browser")
+		return "", "", fmt.Errorf("error opening system default browser: %w", err)
 	}
 
 	var code string
 	select {
 	case code = <-codeCh:
 	case err = <-errCh:
-		return "", "", errors.Wrap(err, "error in callback handler")
+		return "", "", fmt.Errorf("error in callback handler: %w", err)
 	case <-time.After(5 * time.Minute):
-		return "", "", errors.New(
-			"timed out waiting for user to complete authentication",
-		)
+		return "", "", errors.New("timed out waiting for user to complete authentication")
 	case <-ctx.Done():
 		return "", "", ctx.Err()
 	}
@@ -353,7 +344,7 @@ func ssoLogin(
 		oauth2.SetAuthURLParam("code_verifier", codeVerifier),
 	)
 	if err != nil {
-		return "", "", errors.Wrap(err, "error exchanging auth code for token")
+		return "", "", fmt.Errorf("error exchanging auth code for token: %w", err)
 	}
 
 	idToken, ok := token.Extra("id_token").(string)
@@ -436,7 +427,7 @@ func receiveAuthCode(
 	}
 	if err := srv.Serve(listener); err != nil {
 		select {
-		case errCh <- errors.Wrap(err, "error running temporary HTTP server"):
+		case errCh <- fmt.Errorf("error running temporary HTTP server: %w", err):
 		case <-ctx.Done():
 		}
 	}
@@ -459,7 +450,7 @@ func createPCKEVerifierAndChallenge() (string, string, error) {
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~",
 	)
 	if err != nil {
-		return "", "", errors.Wrap(err, "error creating PKCE code verifier")
+		return "", "", fmt.Errorf("error creating PKCE code verifier: %w", err)
 	}
 	codeChallengeHash := sha256.Sum256([]byte(codeVerifier))
 	// [:] converts [32]byte to []byte

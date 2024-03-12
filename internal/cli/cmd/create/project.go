@@ -2,10 +2,11 @@ package create
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -90,7 +91,7 @@ func (o *createProjectOptions) validate() error {
 func (o *createProjectOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	project := &kargoapi.Project{
@@ -104,7 +105,7 @@ func (o *createProjectOptions) run(ctx context.Context) error {
 	}
 	projectBytes, err := sigyaml.Marshal(project)
 	if err != nil {
-		return errors.Wrap(err, "marshal project")
+		return fmt.Errorf("marshal project: %w", err)
 	}
 
 	resp, err := kargoSvcCli.CreateResource(
@@ -116,18 +117,18 @@ func (o *createProjectOptions) run(ctx context.Context) error {
 		),
 	)
 	if err != nil {
-		return errors.Wrap(err, "create resource")
+		return fmt.Errorf("create resource: %w", err)
 	}
 
 	project = &kargoapi.Project{}
 	projectBytes = resp.Msg.GetResults()[0].GetCreatedResourceManifest()
 	if err = sigyaml.Unmarshal(projectBytes, project); err != nil {
-		return errors.Wrap(err, "unmarshal project")
+		return fmt.Errorf("unmarshal project: %w", err)
 	}
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
-		return errors.Wrap(err, "new printer")
+		return fmt.Errorf("new printer: %w", err)
 	}
 	return printer.PrintObj(project, o.IOStreams.Out)
 }

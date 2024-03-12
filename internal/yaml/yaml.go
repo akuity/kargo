@@ -3,12 +3,12 @@ package yaml
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -132,25 +132,29 @@ func isPathInPaths(path string, paths []string) bool {
 func SetStringsInFile(file string, changes map[string]string) error {
 	inBytes, err := os.ReadFile(file)
 	if err != nil {
-		return errors.Wrapf(
-			err,
-			"error reading file %q",
+		return fmt.Errorf(
+			"error reading file %q: %w",
 			file,
+			err,
 		)
 	}
 	outBytes, err := SetStringsInBytes(inBytes, changes)
 	if err != nil {
-		return errors.Wrap(err, "error mutating bytes")
+		return fmt.Errorf("error mutating bytes: %w", err)
 	}
-	return errors.Wrapf(
-		// This file should always exist already, so the permissions we choose here
-		// don't really matter. (They only matter when this function call creates
-		// the file, which it never will.) We went with 0600 just to appease the
-		// gosec linter.
-		os.WriteFile(file, outBytes, 0600),
-		"error writing mutated bytes to file %q",
-		file,
-	)
+
+	// This file should always exist already, so the permissions we choose here
+	// don't really matter. (They only matter when this function call creates
+	// the file, which it never will.) We went with 0600 just to appease the
+	// gosec linter.
+	if err = os.WriteFile(file, outBytes, 0600); err != nil {
+		return fmt.Errorf(
+			"error writing mutated bytes to file %q: %w",
+			file,
+			err,
+		)
+	}
+	return nil
 }
 
 // SetStringsInBytes returns a copy of the provided bytes with the changes
@@ -166,7 +170,7 @@ func SetStringsInBytes(
 ) ([]byte, error) {
 	doc := &yaml.Node{}
 	if err := yaml.Unmarshal(inBytes, doc); err != nil {
-		return nil, errors.Wrap(err, "error unmarshaling input")
+		return nil, fmt.Errorf("error unmarshaling input: %w", err)
 	}
 
 	type change struct {
@@ -194,26 +198,26 @@ func SetStringsInBytes(
 		change, found := changesByLine[line]
 		if !found {
 			if _, err := outBuf.WriteString(scanner.Text()); err != nil {
-				return nil, errors.Wrap(err, errMsg)
+				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
 			if _, err := outBuf.WriteString("\n"); err != nil {
-				return nil, errors.Wrap(err, errMsg)
+				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
 		} else {
 			unchanged := scanner.Text()[0:change.col]
 			if _, err := outBuf.WriteString(unchanged); err != nil {
-				return nil, errors.Wrap(err, errMsg)
+				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
 			if !strings.HasSuffix(unchanged, " ") {
 				if _, err := outBuf.WriteString(" "); err != nil {
-					return nil, errors.Wrap(err, errMsg)
+					return nil, fmt.Errorf("%s: %w", errMsg, err)
 				}
 			}
 			if _, err := outBuf.WriteString(change.value); err != nil {
-				return nil, errors.Wrap(err, errMsg)
+				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
 			if _, err := outBuf.WriteString("\n"); err != nil {
-				return nil, errors.Wrap(err, errMsg)
+				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
 		}
 		line++

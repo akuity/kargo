@@ -2,11 +2,10 @@ package apply
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -77,13 +76,13 @@ func (o *applyOptions) addFlags(cmd *cobra.Command) {
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to apply the resource(s)")
 
 	if err := cmd.MarkFlagRequired(option.FilenameFlag); err != nil {
-		panic(errors.Wrap(err, "could not mark filename flag as required"))
+		panic(fmt.Errorf("could not mark filename flag as required: %w", err))
 	}
 	if err := cmd.MarkFlagFilename(option.FilenameFlag, ".yaml", ".yml"); err != nil {
-		panic(errors.Wrap(err, "could not mark filename flag as filename"))
+		panic(fmt.Errorf("could not mark filename flag as filename: %w", err))
 	}
 	if err := cmd.MarkFlagDirname(option.FilenameFlag); err != nil {
-		panic(errors.Wrap(err, "could not mark filename flag as dirname"))
+		panic(fmt.Errorf("could not mark filename flag as dirname: %w", err))
 	}
 }
 
@@ -103,12 +102,12 @@ func (o *applyOptions) validate() error {
 func (o *applyOptions) run(ctx context.Context) error {
 	rawManifest, err := yaml.Read(o.Filenames)
 	if err != nil {
-		return errors.Wrap(err, "read manifests")
+		return fmt.Errorf("read manifests: %w", err)
 	}
 
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	// TODO: Current implementation of apply is not the same as `kubectl` does.
@@ -119,7 +118,7 @@ func (o *applyOptions) run(ctx context.Context) error {
 			Manifest: rawManifest,
 		}))
 	if err != nil {
-		return errors.Wrap(err, "apply resource")
+		return fmt.Errorf("apply resource: %w", err)
 	}
 
 	resCap := len(resp.Msg.GetResults())
@@ -139,14 +138,14 @@ func (o *applyOptions) run(ctx context.Context) error {
 
 	printer, err := o.toPrinter("created")
 	if err != nil {
-		return errors.Wrap(err, "new printer")
+		return fmt.Errorf("new printer: %w", err)
 	}
 
 	for _, res := range createdRes {
 		var obj unstructured.Unstructured
 		if err = sigyaml.Unmarshal(res.CreatedResourceManifest, &obj); err != nil {
-			fmt.Fprintf(o.IOStreams.ErrOut, "%s",
-				errors.Wrap(err, "Error: unmarshal created manifest"))
+			_, _ = fmt.Fprintf(o.IOStreams.ErrOut, "Error: %s",
+				fmt.Errorf("uunmarshal created manifest: %w", err))
 			continue
 		}
 		_ = printer.PrintObj(&obj, o.IOStreams.Out)
@@ -154,19 +153,19 @@ func (o *applyOptions) run(ctx context.Context) error {
 
 	printer, err = o.toPrinter("updated")
 	if err != nil {
-		return errors.Wrap(err, "new printer")
+		return fmt.Errorf("new printer: %w", err)
 	}
 
 	for _, res := range updatedRes {
 		var obj unstructured.Unstructured
 		if err = sigyaml.Unmarshal(res.UpdatedResourceManifest, &obj); err != nil {
-			fmt.Fprintf(o.IOStreams.ErrOut, "%s",
-				errors.Wrap(err, "Error: unmarshal updated manifest"))
+			_, _ = fmt.Fprintf(o.IOStreams.ErrOut, "Error: %s",
+				fmt.Errorf("unmarshal updated manifest: %w", err))
 			continue
 		}
 		_ = printer.PrintObj(&obj, o.IOStreams.Out)
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 func (o *applyOptions) toPrinter(operation string) (printers.ResourcePrinter, error) {

@@ -2,8 +2,8 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -44,11 +44,11 @@ func GetFreight(
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
 		}
-		return nil, errors.Wrapf(
-			err,
-			"error getting Freight %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error getting Freight %q in namespace %q: %w",
 			namespacedName.Name,
 			namespacedName.Namespace,
+			err,
 		)
 	}
 	return &freight, nil
@@ -72,10 +72,11 @@ func GetFreightByAlias(
 			AliasLabelKey: alias,
 		},
 	); err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error listing Freight in namespace %q",
+		return nil, fmt.Errorf(
+			"error listing Freight with alias %q in namespace %q: %w",
+			alias,
 			project,
+			err,
 		)
 	}
 	if len(freightList.Items) == 0 {

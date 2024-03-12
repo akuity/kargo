@@ -2,8 +2,8 @@ package warehouses
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -20,10 +20,10 @@ func (r *reconciler) getAvailableFreightAlias(
 			&freight,
 			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
 		); err != nil {
-			return "", errors.Wrapf(
-				err,
-				"error checking for existence of Freight with alias %q",
+			return "", fmt.Errorf(
+				"error checking for existence of Freight with alias %q: %w",
 				alias,
+				err,
 			)
 		}
 		if len(freight.Items) == 0 {

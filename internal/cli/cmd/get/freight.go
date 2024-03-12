@@ -2,11 +2,11 @@ package get
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
@@ -107,7 +107,7 @@ func (o *getFreightOptions) validate() error {
 	// While the flags are marked as required, a user could still provide an empty
 	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
-		return errors.Errorf("%s is required", option.ProjectFlag)
+		return fmt.Errorf("%s is required", option.ProjectFlag)
 	}
 	return nil
 }
@@ -116,7 +116,7 @@ func (o *getFreightOptions) validate() error {
 func (o *getFreightOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 && len(o.Aliases) == 0 {
@@ -129,7 +129,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
-			return errors.Wrap(err, "query freight")
+			return fmt.Errorf("query freight: %w", err)
 		}
 
 		// We didn't specify any groupBy, so there should be one group with an
@@ -151,7 +151,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
-			errs = append(errs, errors.Wrapf(err, "get freight %s", name))
+			errs = append(errs, fmt.Errorf("get freight %s: %w", name, err))
 			continue
 		}
 		res = append(res, resp.Msg.GetFreight())
@@ -167,16 +167,16 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
-			errs = append(errs, errors.Wrapf(err, "get freight %s", alias))
+			errs = append(errs, fmt.Errorf("get freight %s: %w", alias, err))
 			continue
 		}
 		res = append(res, resp.Msg.GetFreight())
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
-		return errors.Wrap(err, "print freight")
+		return fmt.Errorf("print freight: %w", err)
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 func newFreightTable(list *metav1.List) *metav1.Table {

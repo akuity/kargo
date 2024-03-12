@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/oklog/ulid/v2"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -50,12 +49,12 @@ func (r *reconciler) startVerification(
 	); err != nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
-			Message: errors.Wrapf(
-				err,
-				"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q",
+			Message: fmt.Errorf(
+				"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
 				stage.Name,
 				stage.Status.CurrentFreight.ID,
 				namespace,
+				err,
 			).Error(),
 		}
 	}
@@ -86,18 +85,18 @@ func (r *reconciler) startVerification(
 		if err != nil {
 			return &kargoapi.VerificationInfo{
 				Phase: kargoapi.VerificationPhaseError,
-				Message: errors.Wrapf(
-					err,
-					"error getting AnalysisTemplate %q in namespace %q",
+				Message: fmt.Errorf(
+					"error getting AnalysisTemplate %q in namespace %q: %w",
 					templateRef.Name,
 					stage.Namespace,
+					err,
 				).Error(),
 			}
 		}
 		if template == nil {
 			return &kargoapi.VerificationInfo{
 				Phase: kargoapi.VerificationPhaseError,
-				Message: errors.Errorf(
+				Message: fmt.Errorf(
 					"AnalysisTemplate %q in namespace %q not found",
 					templateRef.Name,
 					stage.Namespace,
@@ -118,18 +117,18 @@ func (r *reconciler) startVerification(
 	if err != nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
-			Message: errors.Wrapf(
-				err,
-				"error getting Freight %q in namespace %q",
+			Message: fmt.Errorf(
+				"error getting Freight %q in namespace %q: %w",
 				stage.Status.CurrentFreight.ID,
 				stage.Namespace,
+				err,
 			).Error(),
 		}
 	}
 	if freight == nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
-			Message: errors.Errorf(
+			Message: fmt.Errorf(
 				"Freight %q in namespace %q not found",
 				stage.Status.CurrentFreight.ID,
 				stage.Namespace,
@@ -141,12 +140,12 @@ func (r *reconciler) startVerification(
 	if err != nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
-			Message: errors.Wrapf(
-				err,
-				"error building AnalysisRun for Stage %q and Freight %q in namespace %q",
+			Message: fmt.Errorf(
+				"error building AnalysisRun for Stage %q and Freight %q in namespace %q: %w",
 				stage.Name,
 				stage.Status.CurrentFreight.ID,
 				stage.Namespace,
+				err,
 			).Error(),
 		}
 	}
@@ -154,11 +153,11 @@ func (r *reconciler) startVerification(
 	if err := r.createAnalysisRunFn(ctx, run); err != nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
-			Message: errors.Wrapf(
-				err,
-				"error creating AnalysisRun %q in namespace %q",
+			Message: fmt.Errorf(
+				"error creating AnalysisRun %q in namespace %q: %w",
 				run.Name,
 				run.Namespace,
+				err,
 			).Error(),
 		}
 	}
@@ -197,18 +196,18 @@ func (r *reconciler) getVerificationInfo(
 	if err != nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
-			Message: errors.Wrapf(
-				err,
-				"error getting AnalysisRun %q in namespace %q",
+			Message: fmt.Errorf(
+				"error getting AnalysisRun %q in namespace %q: %w",
 				analysisRunName,
 				namespace,
+				err,
 			).Error(),
 		}
 	}
 	if analysisRun == nil {
 		return &kargoapi.VerificationInfo{
 			Phase: kargoapi.VerificationPhaseError,
-			Message: errors.Errorf(
+			Message: fmt.Errorf(
 				"AnalysisRun %q in namespace %q not found",
 				analysisRunName,
 				namespace,
@@ -283,7 +282,7 @@ func (r *reconciler) buildAnalysisRun(
 	// Flatten templates into a single template
 	template, err := flattenTemplates(templates)
 	if err != nil {
-		return nil, errors.Wrap(err, "error flattening templates")
+		return nil, fmt.Errorf("error flattening templates: %w", err)
 	}
 
 	// Merge the args from the template with the args from the Stage
@@ -297,7 +296,7 @@ func (r *reconciler) buildAnalysisRun(
 	}
 	mergedArgs, err := mergeArgs(rolloutsArgs, template.Spec.Args)
 	if err != nil {
-		return nil, errors.Errorf("error merging arguments")
+		return nil, fmt.Errorf("error merging arguments: %w", err)
 	}
 
 	ar := &rollouts.AnalysisRun{

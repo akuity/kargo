@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -98,18 +97,18 @@ func (o *versionOptions) run(ctx context.Context) error {
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
-		return errors.Wrap(err, "new printer")
+		return fmt.Errorf("new printer: %w", err)
 	}
 	obj, err := componentVersionsToRuntimeObject(&svcv1alpha1.ComponentVersions{
 		Server: serverVersion,
 		Cli:    cliVersion,
 	})
 	if err != nil {
-		return errors.Wrap(err, "map component versions to runtime object")
+		return fmt.Errorf("map component versions to runtime object: %w", err)
 	}
 
 	if err := printer.PrintObj(obj, o.IOStreams.Out); err != nil {
-		return errors.Wrap(err, "printing object")
+		return fmt.Errorf("printing object: %w", err)
 	}
 	return serverErr
 }
@@ -125,7 +124,7 @@ func getServerVersion(
 
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "get client from config")
+		return nil, fmt.Errorf("get client from config: %w", err)
 	}
 
 	resp, err := kargoSvcCli.GetVersionInfo(
@@ -133,7 +132,7 @@ func getServerVersion(
 		connect.NewRequest(&svcv1alpha1.GetVersionInfoRequest{}),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get version info from server")
+		return nil, fmt.Errorf("get version info from server: %w", err)
 	}
 
 	return resp.Msg.GetVersionInfo(), nil
@@ -142,11 +141,11 @@ func getServerVersion(
 func componentVersionsToRuntimeObject(v *svcv1alpha1.ComponentVersions) (runtime.Object, error) {
 	data, err := protojson.Marshal(v)
 	if err != nil {
-		return nil, errors.Wrap(err, "marshal component versions")
+		return nil, fmt.Errorf("marshal component versions: %w", err)
 	}
 	var content map[string]any
 	if err := json.Unmarshal(data, &content); err != nil {
-		return nil, errors.Wrap(err, "unmarshal component versions")
+		return nil, fmt.Errorf("unmarshal component versions: %w", err)
 	}
 	u := &unstructured.Unstructured{}
 	u.SetUnstructuredContent(content)

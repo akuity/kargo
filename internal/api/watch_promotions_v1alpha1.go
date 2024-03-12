@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -39,13 +39,13 @@ func (s *server) WatchPromotions(
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			return errors.Wrap(err, "get stage")
+			return fmt.Errorf("get stage: %w", err)
 		}
 	}
 
 	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, project, metav1.ListOptions{})
 	if err != nil {
-		return errors.Wrap(err, "watch promotion")
+		return fmt.Errorf("watch promotion: %w", err)
 	}
 	defer w.Stop()
 	for {
@@ -58,22 +58,22 @@ func (s *server) WatchPromotions(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return errors.Errorf("unexpected object type %T", e.Object)
+				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
 			var promotion *kargoapi.Promotion
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &promotion); err != nil {
-				return errors.Wrap(err, "from unstructured")
+			if err = runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &promotion); err != nil {
+				return fmt.Errorf("from unstructured: %w", err)
 			}
 			// FIXME: Current (dynamic) client doesn't support filtering with indexed field by indexer,
 			// so manually filter stage here.
 			if stage != "" && stage != promotion.Spec.Stage {
 				continue
 			}
-			if err := stream.Send(&svcv1alpha1.WatchPromotionsResponse{
+			if err = stream.Send(&svcv1alpha1.WatchPromotionsResponse{
 				Promotion: promotion,
 				Type:      string(e.Type),
 			}); err != nil {
-				return errors.Wrap(err, "send response")
+				return fmt.Errorf("send response: %w", err)
 			}
 		}
 	}

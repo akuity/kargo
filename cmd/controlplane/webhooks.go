@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	authzv1 "k8s.io/api/authorization/v1"
@@ -41,21 +42,21 @@ func newWebhooksServerCommand() *cobra.Command {
 
 			restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 			if err != nil {
-				return errors.Wrap(err, "error getting REST config")
+				return fmt.Errorf("error getting REST config: %w", err)
 			}
 
 			scheme := runtime.NewScheme()
 			if err = corev1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add corev1 to scheme")
+				return fmt.Errorf("add corev1 to scheme: %w", err)
 			}
 			if err = rbacv1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add rbacv1 to scheme")
+				return fmt.Errorf("add rbacv1 to scheme: %w", err)
 			}
 			if err = authzv1.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add authzv1 to scheme")
+				return fmt.Errorf("add authzv1 to scheme: %w", err)
 			}
 			if err = kargoapi.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add kargo api to scheme")
+				return fmt.Errorf("add kargo api to scheme: %w", err)
 			}
 
 			mgr, err := ctrl.NewManager(
@@ -73,37 +74,37 @@ func newWebhooksServerCommand() *cobra.Command {
 				},
 			)
 			if err != nil {
-				return errors.Wrap(err, "new manager")
+				return fmt.Errorf("new manager: %w", err)
 			}
 
 			// Index Stages by Freight
 			if err = kubeclient.IndexStagesByFreight(ctx, mgr); err != nil {
-				return errors.Wrap(err, "index Stages by Freight")
+				return fmt.Errorf("index Stages by Freight: %w", err)
 			}
 
 			if err = freight.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "setup Freight webhook")
+				return fmt.Errorf("setup Freight webhook: %w", err)
 			}
 			if err = project.SetupWebhookWithManager(
 				mgr,
 				project.WebhookConfigFromEnv(),
 			); err != nil {
-				return errors.Wrap(err, "setup Project webhook")
+				return fmt.Errorf("setup Project webhook: %w", err)
 			}
 			if err = promotion.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "setup Promotion webhook")
+				return fmt.Errorf("setup Promotion webhook: %w", err)
 			}
 			if err = stage.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "setup Stage webhook")
+				return fmt.Errorf("setup Stage webhook: %w", err)
 			}
 			if err = warehouse.SetupWebhookWithManager(mgr); err != nil {
-				return errors.Wrap(err, "setup Warehouse webhook")
+				return fmt.Errorf("setup Warehouse webhook: %w", err)
 			}
 
-			return errors.Wrap(
-				mgr.Start(ctx),
-				"start Kargo webhook manager",
-			)
+			if err := mgr.Start(ctx); err != nil {
+				return fmt.Errorf("start Kargo webhook manager: %w", err)
+			}
+			return nil
 		},
 	}
 }

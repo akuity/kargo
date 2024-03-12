@@ -2,10 +2,10 @@ package update
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/client"
@@ -77,7 +77,7 @@ func (o *updateFreightAliasOptions) addFlags(cmd *cobra.Command) {
 	option.NewAlias(cmd.Flags(), &o.NewAlias, "The new alias to be assigned to the freight.")
 
 	if err := cmd.MarkFlagRequired(option.NewAliasFlag); err != nil {
-		panic(errors.Wrapf(err, "could not mark %s flag as required", option.NewAliasFlag))
+		panic(fmt.Errorf("could not mark %s flag as required: %w", option.NewAliasFlag, err))
 	}
 
 	cmd.MarkFlagsOneRequired(option.NameFlag, option.OldAliasFlag)
@@ -91,25 +91,25 @@ func (o *updateFreightAliasOptions) validate() error {
 	// While the flags are marked as required, a user could still provide an empty
 	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
-		errs = append(errs, errors.Errorf("%s is required", option.ProjectFlag))
+		errs = append(errs, fmt.Errorf("%s is required", option.ProjectFlag))
 	}
 	if o.Name == "" && o.OldAlias == "" {
 		errs = append(
 			errs,
-			errors.Errorf("either %s or %s is required", option.NameFlag, option.OldAliasFlag),
+			fmt.Errorf("either %s or %s is required", option.NameFlag, option.OldAliasFlag),
 		)
 	}
 	if o.NewAlias == "" {
-		errs = append(errs, errors.Errorf("%s is required", option.NewAliasFlag))
+		errs = append(errs, fmt.Errorf("%s is required", option.NewAliasFlag))
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 // run updates the freight alias using the options.
 func (o *updateFreightAliasOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if _, err = kargoSvcCli.UpdateFreightAlias(
@@ -123,7 +123,7 @@ func (o *updateFreightAliasOptions) run(ctx context.Context) error {
 			},
 		),
 	); err != nil {
-		return errors.Wrap(err, "update freight alias")
+		return fmt.Errorf("update freight alias: %w", err)
 	}
 	return nil
 }

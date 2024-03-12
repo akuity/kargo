@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -40,7 +40,7 @@ func (s *server) WatchStages(
 			if kubeerr.IsNotFound(err) {
 				return connect.NewError(connect.CodeNotFound, err)
 			}
-			return errors.Wrap(err, "get stage")
+			return fmt.Errorf("get stage: %w", err)
 		}
 	}
 
@@ -48,10 +48,9 @@ func (s *server) WatchStages(
 	if name != "" {
 		opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, name).String()
 	}
-	w, err :=
-		s.client.Watch(ctx, &kargoapi.Stage{}, project, opts)
+	w, err := s.client.Watch(ctx, &kargoapi.Stage{}, project, opts)
 	if err != nil {
-		return errors.Wrap(err, "watch stage")
+		return fmt.Errorf("watch stage: %w", err)
 	}
 	defer w.Stop()
 	for {
@@ -64,17 +63,17 @@ func (s *server) WatchStages(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return errors.Errorf("unexpected object type %T", e.Object)
+				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
 			var stage *kargoapi.Stage
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &stage); err != nil {
-				return errors.Wrap(err, "from unstructured")
+				return fmt.Errorf("from unstructured: %w", err)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchStagesResponse{
 				Stage: stage,
 				Type:  string(e.Type),
 			}); err != nil {
-				return errors.Wrap(err, "send response")
+				return fmt.Errorf("send response: %w", err)
 			}
 		}
 	}

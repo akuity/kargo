@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"oras.land/oras-go/pkg/registry"
 	"oras.land/oras-go/pkg/registry/remote"
@@ -50,23 +49,26 @@ func SelectChartVersion(
 		versions, err =
 			getChartVersionsFromOCIRepo(ctx, repoURL, creds)
 	} else {
-		return "", errors.Errorf("repository URL %q is invalid", repoURL)
+		return "", fmt.Errorf("repository URL %q is invalid", repoURL)
 	}
 	if err != nil {
-		return "", errors.Wrapf(
-			err,
-			"error retrieving versions of chart %q from repository %q",
+		return "", fmt.Errorf(
+			"error retrieving versions of chart %q from repository %q: %w",
 			chart,
 			repoURL,
+			err,
 		)
 	}
 	latestVersion, err := getLatestVersion(versions, semverConstraint)
-	return latestVersion, errors.Wrapf(
-		err,
-		"error determining latest version of chart %q from repository %q",
-		chart,
-		repoURL,
-	)
+	if err != nil {
+		return "", fmt.Errorf(
+			"error determining latest version of chart %q from repository %q: %w",
+			chart,
+			repoURL,
+			err,
+		)
+	}
+	return latestVersion, nil
 }
 
 // getChartVersionsFromClassicRepo connects to the classic (HTTP/S) chart
@@ -82,30 +84,26 @@ func getChartVersionsFromClassicRepo(
 	indexURL := fmt.Sprintf("%s/index.yaml", strings.TrimSuffix(repoURL, "/"))
 	req, err := http.NewRequest(http.MethodGet, indexURL, nil)
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error preparing HTTP/S request to %q", indexURL)
+		return nil, fmt.Errorf("error preparing HTTP/S request to %q: %w", indexURL, err)
 	}
 	if creds != nil {
 		req.SetBasicAuth(creds.Username, creds.Password)
 	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error querying repository index at %q", indexURL)
+		return nil, fmt.Errorf("error querying repository index at %q: %w", indexURL, err)
 	}
 	if res.StatusCode != http.StatusOK {
-		return nil,
-			errors.Errorf(
-				"received unexpected HTTP %d when querying repository index at %q",
-				res.StatusCode,
-				indexURL,
-			)
+		return nil, fmt.Errorf(
+			"received unexpected HTTP %d when querying repository index at %q",
+			res.StatusCode,
+			indexURL,
+		)
 	}
 	defer res.Body.Close()
 	resBodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error reading repository index from %q", indexURL)
+		return nil, fmt.Errorf("error reading repository index from %q: %w", indexURL, err)
 	}
 	index := struct {
 		Entries map[string][]struct {
@@ -113,12 +111,11 @@ func getChartVersionsFromClassicRepo(
 		} `json:"entries,omitempty"`
 	}{}
 	if err = yaml.Unmarshal(resBodyBytes, &index); err != nil {
-		return nil,
-			errors.Wrapf(err, "error unmarshaling repository index from %q", indexURL)
+		return nil, fmt.Errorf("error unmarshaling repository index from %q: %w", indexURL, err)
 	}
 	entries, ok := index.Entries[chart]
 	if !ok {
-		return nil, errors.Errorf(
+		return nil, fmt.Errorf(
 			"no versions of chart %q found in repository index from %q",
 			chart,
 			indexURL,
@@ -142,7 +139,7 @@ func getChartVersionsFromOCIRepo(
 ) ([]string, error) {
 	ref, err := registry.ParseReference(strings.TrimPrefix(repoURL, "oci://"))
 	if err != nil {
-		return nil, errors.Wrapf(err, "error parsing repository URL %q", repoURL)
+		return nil, fmt.Errorf("error parsing repository URL %q: %w", repoURL, err)
 	}
 	rep := &remote.Repository{
 		Reference: ref,
@@ -158,15 +155,15 @@ func getChartVersionsFromOCIRepo(
 			},
 		},
 	}
+
 	versions := make([]string, 0, rep.TagListPageSize)
-	return versions, errors.Wrapf(
-		rep.Tags(ctx, func(t []string) error {
-			versions = append(versions, t...)
-			return nil
-		}),
-		"error retrieving versions of chart from repository %q",
-		repoURL,
-	)
+	if err := rep.Tags(ctx, func(t []string) error {
+		versions = append(versions, t...)
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("error retrieving versions of chart from repository %q: %w", repoURL, err)
+	}
+	return versions, nil
 }
 
 // getLatestVersion returns the semantically greatest version from the versions
@@ -179,7 +176,7 @@ func getLatestVersion(versions []string, constraintStr string) (string, error) {
 	for i, version := range versions {
 		var err error
 		if semvers[i], err = semver.NewVersion(version); err != nil {
-			return "", errors.Wrapf(err, "error parsing version %q", version)
+			return "", fmt.Errorf("error parsing version %q: %w", version, err)
 		}
 	}
 	sort.Sort(semver.Collection(semvers))
@@ -188,7 +185,7 @@ func getLatestVersion(versions []string, constraintStr string) (string, error) {
 	}
 	constraint, err := semver.NewConstraint(constraintStr)
 	if err != nil {
-		return "", errors.Wrapf(err, "error parsing constraint %q", constraintStr)
+		return "", fmt.Errorf("error parsing constraint %q: %w", constraintStr, err)
 	}
 	for i := len(semvers) - 1; i >= 0; i-- {
 		if constraint.Check(semvers[i]) {
@@ -206,12 +203,10 @@ func UpdateChartDependencies(homePath, chartPath string) error {
 	} else {
 		cmd.Env = append(cmd.Env, homeEnvVar)
 	}
-	_, err := libExec.Exec(cmd)
-	return errors.Wrapf(
-		err,
-		"error running `helm dependency update` for chart at %q",
-		chartPath,
-	)
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error running `helm dependency update` for chart at %q: %w", chartPath, err)
+	}
+	return nil
 }
 
 // NormalizeChartRepositoryURL normalizes a chart repository URL for purposes

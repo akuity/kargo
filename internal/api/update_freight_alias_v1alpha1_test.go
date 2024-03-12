@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,8 +27,8 @@ func TestUpdateFreightAlias(t *testing.T) {
 			server: &server{},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 			},
 		},
@@ -40,8 +40,8 @@ func TestUpdateFreightAlias(t *testing.T) {
 			server: &server{},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 			},
 		},
@@ -54,8 +54,8 @@ func TestUpdateFreightAlias(t *testing.T) {
 			server: &server{},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 			},
 		},
@@ -121,8 +121,8 @@ func TestUpdateFreightAlias(t *testing.T) {
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
 				require.Contains(t, connErr.Message(), "freight")
 				require.Contains(t, connErr.Message(), "not found in namespace")
@@ -156,8 +156,8 @@ func TestUpdateFreightAlias(t *testing.T) {
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInternal, connErr.Code())
 				require.Equal(t, "something went wrong", connErr.Message())
 			},
@@ -203,8 +203,8 @@ func TestUpdateFreightAlias(t *testing.T) {
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeAlreadyExists, connErr.Code())
 				require.Contains(
 					t,
@@ -248,8 +248,8 @@ func TestUpdateFreightAlias(t *testing.T) {
 			},
 			assertions: func(err error) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInternal, connErr.Code())
 				require.Equal(t, "something went wrong", connErr.Message())
 			},

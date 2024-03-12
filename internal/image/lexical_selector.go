@@ -2,10 +2,10 @@ package image
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"sort"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"
@@ -50,7 +50,7 @@ func (l *lexicalSelector) Select(ctx context.Context) (*Image, error) {
 
 	tags, err := l.repoClient.getTags(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing tags")
+		return nil, fmt.Errorf("error listing tags: %w", err)
 	}
 	if len(tags) == 0 {
 		logger.Trace("found no tags")
@@ -79,7 +79,7 @@ func (l *lexicalSelector) Select(ctx context.Context) (*Image, error) {
 	tag := tags[0]
 	image, err := l.repoClient.getImageByTag(ctx, tag, l.platform)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error retrieving image with tag %q", tag)
+		return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 	}
 	if image == nil {
 		logger.Tracef(

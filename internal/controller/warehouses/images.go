@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -33,10 +32,10 @@ func (r *reconciler) selectImages(
 		creds, ok, err :=
 			r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error obtaining credentials for image repo %q",
+			return nil, fmt.Errorf(
+				"error obtaining credentials for image repo %q: %w",
 				sub.RepoURL,
+				err,
 			)
 		}
 		var regCreds *image.Credentials
@@ -52,10 +51,10 @@ func (r *reconciler) selectImages(
 
 		tag, digest, err := r.getImageRefsFn(ctx, *sub, regCreds)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error getting latest suitable image %q",
+			return nil, fmt.Errorf(
+				"error getting latest suitable image %q: %w",
 				sub.RepoURL,
+				err,
 			)
 		}
 		imgs = append(
@@ -110,22 +109,22 @@ func getImageRefs(
 		},
 	)
 	if err != nil {
-		return "", "", errors.Wrapf(
-			err,
-			"error creating image selector for image %q",
+		return "", "", fmt.Errorf(
+			"error creating image selector for image %q: %w",
 			sub.RepoURL,
+			err,
 		)
 	}
 	img, err := imageSelector.Select(ctx)
 	if err != nil {
-		return "", "", errors.Wrapf(
-			err,
-			"error fetching newest applicable image %q",
+		return "", "", fmt.Errorf(
+			"error fetching newest applicable image %q: %w",
 			sub.RepoURL,
+			err,
 		)
 	}
 	if img == nil {
-		return "", "", errors.Errorf("found no applicable image %q", sub.RepoURL)
+		return "", "", fmt.Errorf("found no applicable image %q", sub.RepoURL)
 	}
 	return img.Tag, img.Digest.String(), nil
 }

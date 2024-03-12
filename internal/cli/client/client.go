@@ -3,10 +3,11 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
 	"github.com/akuity/kargo/internal/cli/config"
@@ -42,7 +43,7 @@ func GetClientFromConfig(
 	skipTLSVerify := opts.InsecureTLS || cfg.InsecureSkipTLSVerify
 	cfg, err := newTokenRefresher().refreshToken(ctx, cfg, skipTLSVerify)
 	if err != nil {
-		return nil, errors.Wrap(err, "error refreshing token")
+		return nil, fmt.Errorf("error refreshing token: %w", err)
 	}
 	return GetClient(cfg.APIAddress, cfg.BearerToken, skipTLSVerify), nil
 }
