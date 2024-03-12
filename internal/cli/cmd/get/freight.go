@@ -198,7 +198,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 	}
 	return &metav1.Table{
 		ColumnDefinitions: []metav1.TableColumnDefinition{
-			{Name: "Name/ID", Type: "string"},
+			{Name: "Name", Type: "string"},
 			{Name: "Alias", Type: "string"},
 			{Name: "Age", Type: "string"},
 		},
