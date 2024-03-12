@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,7 +45,7 @@ func (s *server) GetCredentials(
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
-		return nil, errors.Wrap(err, "get secret")
+		return nil, fmt.Errorf("get secret: %w", err)
 	}
 
 	// If this isn't labeled as repository credentials, return not found.
@@ -56,7 +56,7 @@ func (s *server) GetCredentials(
 	if !isCredentials {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
-			errors.Errorf(
+			fmt.Errorf(
 				"secret %q exists, but is not labeled with %q",
 				secret.Name,
 				kargoapi.CredentialTypeLabelKey,

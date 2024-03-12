@@ -2,9 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -42,7 +43,7 @@ func (s *server) CreateCredentials(
 
 	secret := credentialsToSecret(creds)
 	if err := s.client.Create(ctx, secret); err != nil {
-		return nil, errors.Wrap(err, "create secret")
+		return nil, fmt.Errorf("create secret: %w", err)
 	}
 
 	return connect.NewResponse(

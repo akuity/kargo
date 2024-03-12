@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,7 +33,7 @@ func (s *server) ListCredentials(
 		client.InNamespace(req.Msg.GetProject()),
 		client.HasLabels{kargoapi.CredentialTypeLabelKey},
 	); err != nil {
-		return nil, errors.Wrap(err, "list secrets")
+		return nil, fmt.Errorf("list secrets: %w", err)
 	}
 
 	sort.Slice(secretsList.Items, func(i, j int) bool {

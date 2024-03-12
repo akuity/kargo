@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +38,7 @@ func (s *server) DeleteCredentials(
 	}
 	if err := s.client.Delete(ctx, secret); err != nil {
 		if !kubeerr.IsNotFound(err) {
-			return nil, errors.Wrap(err, "delete secret")
+			return nil, fmt.Errorf("delete secret: %w", err)
 		}
 	}
 
