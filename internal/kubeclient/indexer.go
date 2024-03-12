@@ -265,7 +265,7 @@ func IndexStagesByFreight(ctx context.Context, mgr ctrl.Manager) error {
 func indexStagesByFreight(obj client.Object) []string {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 	if stage.Status.CurrentFreight != nil {
-		if id := stage.Status.CurrentFreight.ID; id != "" {
+		if id := stage.Status.CurrentFreight.Name; id != "" {
 			return []string{id}
 		}
 	}

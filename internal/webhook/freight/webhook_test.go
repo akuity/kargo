@@ -38,9 +38,7 @@ func TestDefault(t *testing.T) {
 	w := &webhook{}
 	err := w.Default(context.Background(), freight)
 	require.NoError(t, err)
-	require.NotEmpty(t, freight.ID)
 	require.NotEmpty(t, freight.Name)
-	require.Equal(t, freight.ID, freight.Name)
 }
 
 func TestValidateCreate(t *testing.T) {
@@ -276,19 +274,24 @@ func TestValidateUpdate(t *testing.T) {
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
 				oldFreight := &kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
-					ID: "fake-id",
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "fake-repo-url",
+							ID:      "fake-commit-id",
+						},
+					},
 				}
+				oldFreight.Name = oldFreight.GenerateID()
 				newFreight := oldFreight.DeepCopy()
-				newFreight.ID = "another-fake-id"
+				newFreight.Commits[0].ID = "another-fake-commit-id"
 				return oldFreight, newFreight
 			},
 			webhook: &webhook{},
 			assertions: func(err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "\"fake-name\" is invalid")
+				require.Contains(t, err.Error(), "is invalid")
 				require.Contains(t, err.Error(), "freight is immutable")
 			},
 		},
@@ -301,8 +304,14 @@ func TestValidateUpdate(t *testing.T) {
 						Name:      "fake-name",
 						Namespace: "fake-namespace",
 					},
-					ID: "fake-id",
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "fake-repo-url",
+							ID:      "fake-commit-id",
+						},
+					},
 				}
+				oldFreight.Name = oldFreight.GenerateID()
 				newFreight := oldFreight.DeepCopy()
 				return oldFreight, newFreight
 			},
@@ -339,7 +348,6 @@ func TestValidateDelete(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "fake-freight",
 				},
-				ID: "fake-id",
 			},
 			webhook: &webhook{
 				listStagesFn: func(
@@ -357,7 +365,6 @@ func TestValidateDelete(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "fake-freight",
 				},
-				ID: "fake-id",
 			},
 			webhook: &webhook{
 				listStagesFn: func(
@@ -374,7 +381,7 @@ func TestValidateDelete(t *testing.T) {
 							},
 							Status: kargoapi.StageStatus{
 								CurrentFreight: &kargoapi.FreightReference{
-									ID: "fake-id",
+									Name: "fake-id",
 								},
 							},
 						},
