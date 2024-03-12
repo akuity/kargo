@@ -279,7 +279,7 @@ func (r *reconciler) promote(
 	}
 	logger.Debug("found associated Stage")
 
-	if stage.Status.CurrentFreight != nil && stage.Status.CurrentFreight.ID == freightName {
+	if stage.Status.CurrentFreight != nil && stage.Status.CurrentFreight.Name == freightName {
 		return &kargoapi.PromotionStatus{
 			Phase:   kargoapi.PromotionPhaseSucceeded,
 			Message: "Stage already has the desired Freight",
@@ -318,8 +318,8 @@ func (r *reconciler) promote(
 		)
 	}
 
-	simpleTargetFreight := kargoapi.FreightReference{
-		ID:      targetFreight.ID,
+	targetFreightRef := kargoapi.FreightReference{
+		Name:    targetFreight.Name,
 		Commits: targetFreight.Commits,
 		Images:  targetFreight.Images,
 		Charts:  targetFreight.Charts,
@@ -329,14 +329,14 @@ func (r *reconciler) promote(
 		status.Phase = kargoapi.StagePhasePromoting
 		status.CurrentPromotion = &kargoapi.PromotionInfo{
 			Name:    promo.Name,
-			Freight: simpleTargetFreight,
+			Freight: targetFreightRef,
 		}
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, simpleTargetFreight)
+	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)
 	if err != nil {
 		return nil, err
 	}

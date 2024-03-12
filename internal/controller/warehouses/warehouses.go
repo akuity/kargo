@@ -325,7 +325,6 @@ func (r *reconciler) getLatestFreightFromRepos(
 		Images:  selectedImages,
 		Charts:  selectedCharts,
 	}
-	freight.UpdateID()
-	freight.ObjectMeta.Name = freight.ID
+	freight.Name = freight.GenerateID()
 	return freight, nil
 }

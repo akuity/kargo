@@ -42,7 +42,7 @@ func (r *reconciler) startVerification(
 			LabelSelector: labels.SelectorFromSet(
 				map[string]string{
 					kargoapi.StageLabelKey:   stage.Name,
-					kargoapi.FreightLabelKey: stage.Status.CurrentFreight.ID,
+					kargoapi.FreightLabelKey: stage.Status.CurrentFreight.Name,
 				},
 			),
 		},
@@ -52,7 +52,7 @@ func (r *reconciler) startVerification(
 			Message: fmt.Errorf(
 				"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
 				stage.Name,
-				stage.Status.CurrentFreight.ID,
+				stage.Status.CurrentFreight.Name,
 				namespace,
 				err,
 			).Error(),
@@ -111,7 +111,7 @@ func (r *reconciler) startVerification(
 		r.kargoClient,
 		types.NamespacedName{
 			Namespace: stage.Namespace,
-			Name:      stage.Status.CurrentFreight.ID,
+			Name:      stage.Status.CurrentFreight.Name,
 		},
 	)
 	if err != nil {
@@ -119,7 +119,7 @@ func (r *reconciler) startVerification(
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error getting Freight %q in namespace %q: %w",
-				stage.Status.CurrentFreight.ID,
+				stage.Status.CurrentFreight.Name,
 				stage.Namespace,
 				err,
 			).Error(),
@@ -130,7 +130,7 @@ func (r *reconciler) startVerification(
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"Freight %q in namespace %q not found",
-				stage.Status.CurrentFreight.ID,
+				stage.Status.CurrentFreight.Name,
 				stage.Namespace,
 			).Error(),
 		}
@@ -143,7 +143,7 @@ func (r *reconciler) startVerification(
 			Message: fmt.Errorf(
 				"error building AnalysisRun for Stage %q and Freight %q in namespace %q: %w",
 				stage.Name,
-				stage.Status.CurrentFreight.ID,
+				stage.Status.CurrentFreight.Name,
 				stage.Namespace,
 				err,
 			).Error(),
@@ -244,7 +244,7 @@ func (r *reconciler) buildAnalysisRun(
 	const maxStageNamePrefixLength = 218
 
 	// Build the name of the AnalysisRun
-	shortHash := stage.Status.CurrentFreight.ID
+	shortHash := stage.Status.CurrentFreight.Name
 	if len(shortHash) > 7 {
 		shortHash = shortHash[0:7]
 	}
@@ -274,7 +274,7 @@ func (r *reconciler) buildAnalysisRun(
 		}
 	}
 	lbls[kargoapi.StageLabelKey] = stage.Name
-	lbls[kargoapi.FreightLabelKey] = stage.Status.CurrentFreight.ID
+	lbls[kargoapi.FreightLabelKey] = stage.Status.CurrentFreight.Name
 	if r.cfg.RolloutsControllerInstanceID != "" {
 		lbls["argo-rollouts.argoproj.io/controller-instance-id"] = r.cfg.RolloutsControllerInstanceID
 	}
