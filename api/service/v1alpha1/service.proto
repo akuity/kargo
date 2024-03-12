@@ -3,10 +3,10 @@ syntax = "proto3";
 package akuity.io.kargo.service.v1alpha1;
 
 import "google/protobuf/timestamp.proto";
+import "v1alpha1/generated.proto";
+import "k8s.io/api/core/v1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
-
-import "v1alpha1/types.proto";
 
 service KargoService {
   rpc GetVersionInfo(GetVersionInfoRequest) returns (GetVersionInfoResponse);
@@ -189,7 +189,7 @@ message ListStagesRequest {
 }
 
 message ListStagesResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Stage stages = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
 }
 
 message GetStageRequest {
@@ -198,7 +198,7 @@ message GetStageRequest {
 }
 
 message GetStageResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
 message WatchStagesRequest {
@@ -207,7 +207,7 @@ message WatchStagesRequest {
 }
 
 message WatchStagesResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
   string type = 2;
 }
 
@@ -228,7 +228,7 @@ message PromoteStageRequest {
 }
 
 message PromoteStageResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
 }
 
 message PromoteSubscribersRequest {
@@ -239,7 +239,7 @@ message PromoteSubscribersRequest {
 }
 
 message PromoteSubscribersResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
 }
 
 message RefreshStageRequest {
@@ -248,7 +248,7 @@ message RefreshStageRequest {
 }
 
 message RefreshStageResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Stage stage = 1;
+  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
 message ListPromotionsRequest {
@@ -257,7 +257,7 @@ message ListPromotionsRequest {
 }
 
 message ListPromotionsResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotions = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
 }
 
 message WatchPromotionsRequest {
@@ -266,7 +266,7 @@ message WatchPromotionsRequest {
 }
 
 message WatchPromotionsResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
   string type = 2;
 }
 
@@ -276,7 +276,7 @@ message GetPromotionRequest {
 }
 
 message GetPromotionResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
 }
 
 message WatchPromotionRequest {
@@ -285,7 +285,7 @@ message WatchPromotionRequest {
 }
 
 message WatchPromotionResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Promotion promotion = 1;
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
   string type = 2;
 }
 
@@ -302,7 +302,7 @@ message GetProjectRequest {
 }
 
 message GetProjectResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Project project = 1;
+  github.com.akuity.kargo.api.v1alpha1.Project project = 1;
 }
 
 message ListProjectsRequest {
@@ -310,7 +310,7 @@ message ListProjectsRequest {
 }
 
 message ListProjectsResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Project projects = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Project projects = 1;
 }
 
 message ApproveFreightRequest {
@@ -341,7 +341,7 @@ message GetFreightRequest {
 }
 
 message GetFreightResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
+  github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
 }
 
 message QueryFreightRequest {
@@ -358,7 +358,7 @@ message QueryFreightResponse {
 }
 
 message FreightList {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Freight freight = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
 }
 
 message UpdateFreightAliasRequest {
@@ -377,7 +377,7 @@ message ListWarehousesRequest {
 }
 
 message ListWarehousesResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouses = 1;
+  repeated github.com.akuity.kargo.api.v1alpha1.Warehouse warehouses = 1;
 }
 
 message GetWarehouseRequest {
@@ -386,7 +386,7 @@ message GetWarehouseRequest {
 }
 
 message GetWarehouseResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 message WatchWarehousesRequest {
@@ -395,7 +395,7 @@ message WatchWarehousesRequest {
 }
 
 message WatchWarehousesResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
   string type = 2;
 }
 
@@ -414,7 +414,7 @@ message RefreshWarehouseRequest {
 }
 
 message RefreshWarehouseResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Warehouse warehouse = 1;
+  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 message CreateCredentialsRequest {
@@ -428,7 +428,7 @@ message CreateCredentialsRequest {
 }
 
 message CreateCredentialsResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+  k8s.io.api.core.v1.Secret credentials = 1;
 }
 
 message DeleteCredentialsRequest {
@@ -446,7 +446,7 @@ message GetCredentialsRequest {
 }
 
 message GetCredentialsResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+  k8s.io.api.core.v1.Secret credentials = 1;
 }
 
 message ListCredentialsRequest {
@@ -454,7 +454,7 @@ message ListCredentialsRequest {
 }
 
 message ListCredentialsResponse {
-  repeated github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+  repeated k8s.io.api.core.v1.Secret credentials = 1;
 }
 
 message UpdateCredentialsRequest {
@@ -468,5 +468,5 @@ message UpdateCredentialsRequest {
 }
 
 message UpdateCredentialsResponse {
-  github.com.akuity.kargo.pkg.api.v1alpha1.Secret credentials = 1;
+  k8s.io.api.core.v1.Secret credentials = 1;
 }

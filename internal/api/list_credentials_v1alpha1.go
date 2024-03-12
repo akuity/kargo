@@ -10,9 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/v1alpha1"
 )
 
 func (s *server) ListCredentials(
@@ -37,20 +35,17 @@ func (s *server) ListCredentials(
 	); err != nil {
 		return nil, errors.Wrap(err, "list secrets")
 	}
-	secrets := secretsList.Items
-	sort.Slice(secrets, func(i, j int) bool {
-		return secrets[i].Name < secrets[j].Name
+
+	sort.Slice(secretsList.Items, func(i, j int) bool {
+		return secretsList.Items[i].Name < secretsList.Items[j].Name
 	})
 
-	for i, secret := range secrets {
-		secrets[i] = sanitizeCredentialSecret(secret)
+	secrets := make([]*corev1.Secret, len(secretsList.Items))
+	for i, secret := range secretsList.Items {
+		secrets[i] = sanitizeCredentialSecret(&secret)
 	}
 
-	secretProtos := make([]*v1alpha1.Secret, len(secrets))
-	for i := range secrets {
-		secretProtos[i] = typesv1alpha1.ToSecretProto(&secrets[i])
-	}
 	return connect.NewResponse(&svcv1alpha1.ListCredentialsResponse{
-		Credentials: secretProtos,
+		Credentials: secrets,
 	}), nil
 }

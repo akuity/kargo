@@ -9,7 +9,7 @@ import (
 )
 
 func TestSanitizeCredentialSecret(t *testing.T) {
-	creds := corev1.Secret{
+	creds := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
 				"last-applied-configuration": "fake-configuration",

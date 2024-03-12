@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	typesv1alpha1 "github.com/akuity/kargo/internal/api/types/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -34,14 +33,14 @@ func (s *server) GetCredentials(
 		return nil, err
 	}
 
-	secret := corev1.Secret{}
+	secret := &corev1.Secret{}
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
 			Namespace: project,
 			Name:      name,
 		},
-		&secret,
+		secret,
 	); err != nil {
 		if kubeerr.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
@@ -65,10 +64,8 @@ func (s *server) GetCredentials(
 		)
 	}
 
-	secret = sanitizeCredentialSecret(secret)
-
 	return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
-		Credentials: typesv1alpha1.ToSecretProto(&secret),
+		Credentials: sanitizeCredentialSecret(secret),
 	}), nil
 }
 
@@ -85,7 +82,11 @@ func (s *server) GetCredentials(
 // There is no concern over labels because the constraints on label values rule
 // out use in a manner similar to that of the "last-applied-configuration"
 // annotation.
-func sanitizeCredentialSecret(secret corev1.Secret) corev1.Secret {
+func sanitizeCredentialSecret(secret *corev1.Secret) *corev1.Secret {
+	if secret == nil {
+		return nil
+	}
+	secret = secret.DeepCopy()
 	secret.StringData = make(map[string]string, len(secret.Data))
 	for k := range secret.Annotations {
 		secret.Annotations[k] = redacted
