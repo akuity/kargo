@@ -194,13 +194,7 @@ func IndexFreightByWarehouse(ctx context.Context, mgr ctrl.Manager) error {
 
 func indexFreightByWarehouse(obj client.Object) []string {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-	for _, ownerRef := range freight.OwnerReferences {
-		if ownerRef.APIVersion == kargoapi.GroupVersion.String() &&
-			ownerRef.Kind == "Warehouse" {
-			return []string{ownerRef.Name}
-		}
-	}
-	return nil
+	return []string{freight.Warehouse}
 }
 
 // IndexFreightByVerifiedStages indexes Freight by the Stages in which it has

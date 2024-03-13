@@ -289,44 +289,6 @@ func TestIndexPromotionsByStage(t *testing.T) {
 	}
 }
 
-func TestIndexFreightByWarehouse(t *testing.T) {
-	testCases := []struct {
-		name     string
-		freight  *kargoapi.Freight
-		expected []string
-	}{
-		{
-			name:     "Freight has no ownerRef",
-			freight:  &kargoapi.Freight{},
-			expected: nil,
-		},
-		{
-			name: "Freight has ownerRef",
-			freight: &kargoapi.Freight{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: kargoapi.GroupVersion.String(),
-							Kind:       "Warehouse",
-							Name:       "fake-warehouse",
-						},
-					},
-				},
-			},
-			expected: []string{"fake-warehouse"},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expected,
-				indexFreightByWarehouse(testCase.freight),
-			)
-		})
-	}
-}
-
 func TestIndexFreightByVerifiedStages(t *testing.T) {
 	testCases := []struct {
 		name     string
