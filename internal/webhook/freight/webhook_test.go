@@ -20,25 +20,90 @@ import (
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	w := newWebhook(kubeClient)
+	require.NotNil(t, w.freightAliasGenerator)
 	// Assert that all overridable behaviors were initialized to a default:
+	require.NotNil(t, w.getAvailableFreightAliasFn)
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.listFreightFn)
 	require.NotNil(t, w.listStagesFn)
 }
 
 func TestDefault(t *testing.T) {
-	freight := &kargoapi.Freight{
-		Commits: []kargoapi.GitCommit{
-			{
-				RepoURL: "fake-repo-url",
-				ID:      "fake-id",
+	testCases := []struct {
+		name       string
+		webhook    *webhook
+		freight    *kargoapi.Freight
+		assertions func(*testing.T, *kargoapi.Freight, error)
+	}{
+		{
+			name:    "sync alias label to alias field",
+			webhook: &webhook{},
+			freight: &kargoapi.Freight{
+				Alias: "fake-alias",
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, freight.Name)
+				require.NotEmpty(t, freight.Labels)
+				require.Equal(t, "fake-alias", freight.Labels[kargoapi.AliasLabelKey])
+			},
+		},
+		{
+			name:    "sync alias field to alias label",
+			webhook: &webhook{},
+			freight: &kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.AliasLabelKey: "fake-alias",
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, freight.Name)
+				require.Equal(t, "fake-alias", freight.Alias)
+			},
+		},
+		{
+			name: "error getting available alias",
+			webhook: &webhook{
+				getAvailableFreightAliasFn: func(context.Context) (string, error) {
+					return "", errors.New("something went wrong")
+				},
+			},
+			freight: &kargoapi.Freight{},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "get available freight alias")
+				require.Contains(t, err.Error(), "something went wrong")
+			},
+		},
+		{
+			name: "success getting available alias",
+			webhook: &webhook{
+				getAvailableFreightAliasFn: func(context.Context) (string, error) {
+					return "fake-alias", nil
+				},
+			},
+			freight: &kargoapi.Freight{},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, freight.Name)
+				require.Equal(t, "fake-alias", freight.Alias)
+				require.NotEmpty(t, freight.Labels)
+				require.Equal(t, "fake-alias", freight.Labels[kargoapi.AliasLabelKey])
 			},
 		},
 	}
-	w := &webhook{}
-	err := w.Default(context.Background(), freight)
-	require.NoError(t, err)
-	require.NotEmpty(t, freight.Name)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := testCase.webhook.Default(
+				context.Background(),
+				testCase.freight,
+			)
+			testCase.assertions(t, testCase.freight, err)
+		})
+	}
 }
 
 func TestValidateCreate(t *testing.T) {
@@ -46,7 +111,7 @@ func TestValidateCreate(t *testing.T) {
 		name       string
 		webhook    *webhook
 		freight    kargoapi.Freight
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating project",
@@ -60,7 +125,7 @@ func TestValidateCreate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -91,7 +156,7 @@ func TestValidateCreate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				statusErr, ok := err.(*apierrors.StatusError)
 				require.True(t, ok)
 				require.Equal(
@@ -130,7 +195,7 @@ func TestValidateCreate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				statusErr, ok := err.(*apierrors.StatusError)
 				require.True(t, ok)
 				require.Equal(t, int32(http.StatusConflict), statusErr.Status().Code)
@@ -147,8 +212,15 @@ func TestValidateCreate(t *testing.T) {
 				) error {
 					return nil
 				},
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -168,11 +240,18 @@ func TestValidateCreate(t *testing.T) {
 				) error {
 					return nil
 				},
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
 			},
 			freight: kargoapi.Freight{
 				Commits: []kargoapi.GitCommit{{}},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -181,7 +260,7 @@ func TestValidateCreate(t *testing.T) {
 		tc := testCase // Avoid implicit memory aliasing
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := tc.webhook.ValidateCreate(context.Background(), &tc.freight)
-			tc.assertions(err)
+			tc.assertions(t, err)
 		})
 	}
 }
@@ -191,7 +270,7 @@ func TestValidateUpdate(t *testing.T) {
 		name       string
 		webhook    *webhook
 		setup      func() (*kargoapi.Freight, *kargoapi.Freight)
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error listing freight",
@@ -221,7 +300,7 @@ func TestValidateUpdate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				statusErr, ok := err.(*apierrors.StatusError)
 				require.True(t, ok)
 				require.Equal(
@@ -262,7 +341,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				statusErr, ok := err.(*apierrors.StatusError)
 				require.True(t, ok)
 				require.Equal(t, int32(http.StatusConflict), statusErr.Status().Code)
@@ -288,8 +367,16 @@ func TestValidateUpdate(t *testing.T) {
 				newFreight.Commits[0].ID = "another-fake-commit-id"
 				return oldFreight, newFreight
 			},
-			webhook: &webhook{},
-			assertions: func(err error) {
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "is invalid")
 				require.Contains(t, err.Error(), "freight is immutable")
@@ -315,8 +402,16 @@ func TestValidateUpdate(t *testing.T) {
 				newFreight := oldFreight.DeepCopy()
 				return oldFreight, newFreight
 			},
-			webhook: &webhook{},
-			assertions: func(err error) {
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -329,7 +424,7 @@ func TestValidateUpdate(t *testing.T) {
 				oldFreight,
 				newFreight,
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }

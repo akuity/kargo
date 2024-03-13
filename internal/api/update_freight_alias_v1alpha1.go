@@ -99,8 +99,9 @@ func (s *server) patchFreightAlias(
 ) error {
 	patchBytes := []byte(
 		fmt.Sprintf(
-			`{"metadata":{"labels":{"%s":"%s"}}}`,
+			`{"metadata":{"labels":{%q:%q}},"alias":%q}`,
 			kargoapi.AliasLabelKey,
+			alias,
 			alias,
 		),
 	)

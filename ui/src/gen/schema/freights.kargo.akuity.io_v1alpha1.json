@@ -2,6 +2,10 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "description": "Freight represents a collection of versioned artifacts.",
   "properties": {
+    "alias": {
+      "description": "Alias is a human-friendly alias for a piece of Freight. This is an optional\nfield. A defaulting webhook will sync this field with the value of the\nkargo.akuity.io/alias label. When the alias label is not present or differs\nfrom the value of this field, the defaulting webhook will set the label to\nthe value of this field. If the alias label is present and this field is\nempty, the defaulting webhook will set the value of this field to the value\nof the alias label. If this field is empty and the alias label is not\npresent, the defaulting webhook will choose an available alias and assign\nit to both the field and label.",
+      "type": "string"
+    },
     "apiVersion": {
       "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
       "type": "string"

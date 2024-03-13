@@ -940,6 +940,21 @@ export class Freight extends Message<Freight> {
   metadata?: ObjectMeta;
 
   /**
+   * Alias is a human-friendly alias for a piece of Freight. This is an optional
+   * field. A defaulting webhook will sync this field with the value of the
+   * kargo.akuity.io/alias label. When the alias label is not present or differs
+   * from the value of this field, the defaulting webhook will set the label to
+   * the value of this field. If the alias label is present and this field is
+   * empty, the defaulting webhook will set the value of this field to the value
+   * of the alias label. If this field is empty and the alias label is not
+   * present, the defaulting webhook will choose an available alias and assign
+   * it to both the field and label.
+   *
+   * @generated from field: optional string alias = 7;
+   */
+  alias?: string;
+
+  /**
    * Commits describes specific Git repository commits.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitCommit commits = 3;
@@ -976,6 +991,7 @@ export class Freight extends Message<Freight> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.Freight";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
+    { no: 7, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 4, name: "images", kind: "message", T: Image, repeated: true },
     { no: 5, name: "charts", kind: "message", T: Chart, repeated: true },
