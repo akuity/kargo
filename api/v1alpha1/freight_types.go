@@ -19,6 +19,16 @@ import (
 type Freight struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	// Alias is a human-friendly alias for a piece of Freight. This is an optional
+	// field. A defaulting webhook will sync this field with the value of the
+	// kargo.akuity.io/alias label. When the alias label is not present or differs
+	// from the value of this field, the defaulting webhook will set the label to
+	// the value of this field. If the alias label is present and this field is
+	// empty, the defaulting webhook will set the value of this field to the value
+	// of the alias label. If this field is empty and the alias label is not
+	// present, the defaulting webhook will choose an available alias and assign
+	// it to both the field and label.
+	Alias string `json:"alias,omitempty"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.
