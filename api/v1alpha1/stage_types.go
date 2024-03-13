@@ -526,7 +526,7 @@ type FreightReference struct {
 	// equality by comparing their Names.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Warehouse is the name of the Warehouse that created this Freight.
-	Warehouse string `json:"warehouse,omitempty"`
+	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,6,opt,name=warehouse"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,2,rep,name=commits"`
 	// Images describes specific versions of specific container images.

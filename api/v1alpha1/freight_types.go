@@ -34,7 +34,7 @@ type Freight struct {
 	// the case of user-defined Freight.
 	//
 	//+kubebuilder:validation:Required
-	Warehouse string `json:"warehouse,omitempty"`
+	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,8,opt,name=warehouse"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.

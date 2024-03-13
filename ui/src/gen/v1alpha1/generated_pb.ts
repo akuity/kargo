@@ -955,6 +955,17 @@ export class Freight extends Message<Freight> {
   alias?: string;
 
   /**
+   * Warehouse is the name of the Warehouse that created this Freight. This is a
+   * required field. TODO: It is not clear yet how this field should be set in
+   * the case of user-defined Freight.
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional string warehouse = 8;
+   */
+  warehouse?: string;
+
+  /**
    * Commits describes specific Git repository commits.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitCommit commits = 3;
@@ -992,6 +1003,7 @@ export class Freight extends Message<Freight> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
     { no: 7, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 4, name: "images", kind: "message", T: Image, repeated: true },
     { no: 5, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1077,6 +1089,13 @@ export class FreightReference extends Message<FreightReference> {
   name?: string;
 
   /**
+   * Warehouse is the name of the Warehouse that created this Freight.
+   *
+   * @generated from field: optional string warehouse = 6;
+   */
+  warehouse?: string;
+
+  /**
    * Commits describes specific Git repository commits.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitCommit commits = 2;
@@ -1114,6 +1133,7 @@ export class FreightReference extends Message<FreightReference> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightReference";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },
     { no: 4, name: "charts", kind: "message", T: Chart, repeated: true },

@@ -577,6 +577,10 @@
                 }
               },
               "type": "object"
+            },
+            "warehouse": {
+              "description": "Warehouse is the name of the Warehouse that created this Freight.",
+              "type": "string"
             }
           },
           "type": "object"
@@ -713,6 +717,10 @@
                     }
                   },
                   "type": "object"
+                },
+                "warehouse": {
+                  "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                  "type": "string"
                 }
               },
               "type": "object"
@@ -934,6 +942,10 @@
                   }
                 },
                 "type": "object"
+              },
+              "warehouse": {
+                "description": "Warehouse is the name of the Warehouse that created this Freight.",
+                "type": "string"
               }
             },
             "type": "object"
