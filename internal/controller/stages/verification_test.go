@@ -87,6 +87,85 @@ func TestStartVerification(t *testing.T) {
 			},
 		},
 		{
+			name: "Analysis run already exists but reconfirmation is requested",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReconfirm: "fake-run",
+					},
+				},
+				Spec: &kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						Name: "fake-id",
+					},
+				},
+			},
+			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
+				listAnalysisRunsFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					analysisRuns, ok := objList.(*rollouts.AnalysisRunList)
+					require.True(t, ok)
+					analysisRuns.Items = []rollouts.AnalysisRun{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-run",
+						},
+					}}
+					return nil
+				},
+				getAnalysisTemplateFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*rollouts.AnalysisTemplate, error) {
+					return &rollouts.AnalysisTemplate{}, nil
+				},
+				getFreightFn: func(ctx context.Context, c client.Client, name types.NamespacedName) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				buildAnalysisRunFn: func(
+					*kargoapi.Stage,
+					*kargoapi.Freight,
+					[]*rollouts.AnalysisTemplate,
+				) (*rollouts.AnalysisRun, error) {
+					return &rollouts.AnalysisRun{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "new-fake-run",
+							Namespace: "fake-namespace",
+						},
+					}, nil
+				},
+				createAnalysisRunFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(vi *kargoapi.VerificationInfo) {
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						Phase: kargoapi.VerificationPhasePending,
+						AnalysisRun: &kargoapi.AnalysisRunReference{
+							Name:      "new-fake-run",
+							Namespace: "fake-namespace",
+						},
+					},
+					vi,
+				)
+			},
+		},
+		{
 			name: "error getting AnalysisTemplate",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{

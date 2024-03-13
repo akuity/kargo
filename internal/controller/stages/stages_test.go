@@ -233,7 +233,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				},
 			},
 			assertions: func(
-				initialStatus kargoapi.StageStatus,
+				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
@@ -317,6 +317,119 @@ func TestSyncNormalStage(t *testing.T) {
 			) {
 				require.NoError(t, err)
 				// Status should be returned unchanged
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "reconfirms verification",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReconfirm: "fake-analysis-run",
+					},
+				},
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseSteady,
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							Phase: kargoapi.VerificationPhaseFailed,
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name: "fake-analysis-run",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.FreightReference,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				startVerificationFn: func(
+					context.Context,
+					*kargoapi.Stage,
+				) *kargoapi.VerificationInfo {
+					return &kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhasePending,
+						Message: "Awaiting reconfirmation",
+						AnalysisRun: &kargoapi.AnalysisRunReference{
+							Name: "new-fake-analysis-run",
+						},
+					}
+				},
+			},
+			assertions: func(
+				_ kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(t, kargoapi.StagePhaseVerifying, newStatus.Phase)
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhasePending,
+						Message: "Awaiting reconfirmation",
+						AnalysisRun: &kargoapi.AnalysisRunReference{
+							Name: "new-fake-analysis-run",
+						},
+					},
+					newStatus.CurrentFreight.VerificationInfo,
+				)
+			},
+		},
+
+		{
+			name: "ignores reconfirmation if conditions are not met",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReconfirm: "wrong-fake-analysis-run",
+					},
+				},
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseSteady,
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							Phase: kargoapi.VerificationPhaseFailed,
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name: "fake-analysis-run",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.FreightReference,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+			},
+			assertions: func(
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, newStatus.CurrentFreight)
 				require.Equal(t, initialStatus, newStatus)
 			},
 		},

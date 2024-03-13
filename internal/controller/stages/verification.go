@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/oklog/ulid/v2"
@@ -59,14 +60,27 @@ func (r *reconciler) startVerification(
 		}
 	}
 	if len(analysisRuns.Items) > 0 {
-		logger.Debug("AnalysisRun already exists for Freight")
-		return &kargoapi.VerificationInfo{
-			Phase: kargoapi.VerificationPhase(analysisRuns.Items[0].Status.Phase),
-			AnalysisRun: &kargoapi.AnalysisRunReference{
-				Name:      analysisRuns.Items[0].Name,
-				Namespace: analysisRuns.Items[0].Namespace,
-				Phase:     string(analysisRuns.Items[0].Status.Phase),
-			},
+		// Sort the AnalysisRuns by creation timestamp, so that the most recent
+		// one is first.
+		sort.SliceStable(analysisRuns.Items, func(i, j int) bool {
+			return analysisRuns.Items[j].CreationTimestamp.Before(&analysisRuns.Items[i].CreationTimestamp)
+		})
+
+		// If we have a reconfirm annotation, we should ignore the latest
+		// AnalysisRun if it matches the reference in the annotation value.
+		// Without this check, we would return early and not create a new
+		// AnalysisRun.
+		latestAnalysisRun := analysisRuns.Items[0]
+		if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReconfirm]; !ok || v != latestAnalysisRun.Name {
+			logger.Debug("AnalysisRun already exists for Freight")
+			return &kargoapi.VerificationInfo{
+				Phase: kargoapi.VerificationPhase(latestAnalysisRun.Status.Phase),
+				AnalysisRun: &kargoapi.AnalysisRunReference{
+					Name:      latestAnalysisRun.Name,
+					Namespace: latestAnalysisRun.Namespace,
+					Phase:     string(latestAnalysisRun.Status.Phase),
+				},
+			}
 		}
 	}
 

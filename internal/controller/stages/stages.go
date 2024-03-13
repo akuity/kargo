@@ -536,6 +536,10 @@ func (r *reconciler) Reconcile(
 	if clearRefreshErr != nil {
 		logger.Errorf("error clearing Stage refresh annotation: %s", clearRefreshErr)
 	}
+	clearReconfirmErr := kargoapi.ClearStageReconfirm(ctx, r.kargoClient, stage)
+	if clearReconfirmErr != nil {
+		logger.Errorf("error clearing Stage reconfirm annotation: %s", clearReconfirmErr)
+	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
 	// do it this way so that a failure to update is never counted as THE failure
@@ -545,6 +549,9 @@ func (r *reconciler) Reconcile(
 	}
 	if err == nil {
 		err = clearRefreshErr
+	}
+	if err == nil {
+		err = clearReconfirmErr
 	}
 	logger.Debug("done reconciling Stage")
 
@@ -706,30 +713,42 @@ func (r *reconciler) syncNormalStage(
 		}
 
 		// Initiate or follow-up on verification if required
-		// NOTE: If stage cache is stale, phase can be StagePhaseNotApplicable
-		//       even though current freight is not empty in that case
-		//       check if verification step is necessary and if yes execute
-		//       step irrespective of phase
-		if (status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable) &&
-			stage.Spec.Verification != nil {
-			if status.CurrentFreight.VerificationInfo == nil {
-				if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-					log.Debug("starting verification")
-					status.CurrentFreight.VerificationInfo = r.startVerificationFn(ctx, stage)
+		if stage.Spec.Verification != nil {
+			// Confirm if a rerun of verification is requested. If so, clear the
+			// verification info and start the verification process again.
+			info := status.CurrentFreight.VerificationInfo
+			if info != nil && info.AnalysisRun != nil && info.Phase.IsTerminal() {
+				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReconfirm]; ok && v == info.AnalysisRun.Name {
+					logger.Debug("reconfirming verification")
+					status.Phase = kargoapi.StagePhaseVerifying
+					status.CurrentFreight.VerificationInfo = nil
 				}
-			} else {
-				log.Debug("checking verification results")
-				status.CurrentFreight.VerificationInfo = r.getVerificationInfoFn(ctx, stage)
 			}
-			if status.CurrentFreight.VerificationInfo != nil {
-				log.Debugf(
-					"verification phase is %s",
-					status.CurrentFreight.VerificationInfo.Phase,
-				)
-				if status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
-					// Verification is complete
-					status.Phase = kargoapi.StagePhaseSteady
-					log.Debug("verification is complete")
+
+			// NOTE: If stage cache is stale, phase can be StagePhaseNotApplicable
+			//       even though current freight is not empty in that case
+			//       check if verification step is necessary and if yes execute
+			//       step irrespective of phase
+			if status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable {
+				if status.CurrentFreight.VerificationInfo == nil {
+					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
+						log.Debug("starting verification")
+						status.CurrentFreight.VerificationInfo = r.startVerificationFn(ctx, stage)
+					}
+				} else {
+					log.Debug("checking verification results")
+					status.CurrentFreight.VerificationInfo = r.getVerificationInfoFn(ctx, stage)
+				}
+				if status.CurrentFreight.VerificationInfo != nil {
+					log.Debugf(
+						"verification phase is %s",
+						status.CurrentFreight.VerificationInfo.Phase,
+					)
+					if status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
+						// Verification is complete
+						status.Phase = kargoapi.StagePhaseSteady
+						log.Debug("verification is complete")
+					}
 				}
 			}
 		}
