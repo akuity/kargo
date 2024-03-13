@@ -567,6 +567,10 @@
                   ],
                   "type": "object"
                 },
+                "id": {
+                  "description": "ID is the identifier of the Verification process.",
+                  "type": "string"
+                },
                 "message": {
                   "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
                   "type": "string"
@@ -706,6 +710,10 @@
                         "phase"
                       ],
                       "type": "object"
+                    },
+                    "id": {
+                      "description": "ID is the identifier of the Verification process.",
+                      "type": "string"
                     },
                     "message": {
                       "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
@@ -931,6 +939,10 @@
                       "phase"
                     ],
                     "type": "object"
+                  },
+                  "id": {
+                    "description": "ID is the identifier of the Verification process.",
+                    "type": "string"
                   },
                   "message": {
                     "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",

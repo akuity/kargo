@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -23,6 +24,7 @@ func (r *reconciler) startVerification(
 ) *kargoapi.VerificationInfo {
 	if r.rolloutsClient == nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; " +
 				"cannot start verification",
@@ -33,47 +35,47 @@ func (r *reconciler) startVerification(
 
 	namespace := r.getAnalysisRunNamespace(stage)
 
-	// Check for existing AnalysisRun
-	analysisRuns := rollouts.AnalysisRunList{}
-	if err := r.listAnalysisRunsFn(
-		ctx,
-		&analysisRuns,
-		&client.ListOptions{
-			Namespace: namespace,
-			LabelSelector: labels.SelectorFromSet(
-				map[string]string{
-					kargoapi.StageLabelKey:   stage.Name,
-					kargoapi.FreightLabelKey: stage.Status.CurrentFreight.Name,
-				},
-			),
-		},
-	); err != nil {
-		return &kargoapi.VerificationInfo{
-			Phase: kargoapi.VerificationPhaseError,
-			Message: fmt.Errorf(
-				"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
-				stage.Name,
-				stage.Status.CurrentFreight.Name,
-				namespace,
-				err,
-			).Error(),
-		}
-	}
-	if len(analysisRuns.Items) > 0 {
-		// Sort the AnalysisRuns by creation timestamp, so that the most recent
-		// one is first.
-		sort.SliceStable(analysisRuns.Items, func(i, j int) bool {
-			return analysisRuns.Items[j].CreationTimestamp.Before(&analysisRuns.Items[i].CreationTimestamp)
-		})
-
-		// If we have a reconfirm annotation, we should ignore the latest
-		// AnalysisRun if it matches the reference in the annotation value.
-		// Without this check, we would return early and not create a new
-		// AnalysisRun.
-		latestAnalysisRun := analysisRuns.Items[0]
-		if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReconfirm]; !ok || v != latestAnalysisRun.Name {
-			logger.Debug("AnalysisRun already exists for Freight")
+	// If the stage does not have a reverification annotation, check if there is
+	// an existing AnalysisRun for the Stage and Freight. If there is, return
+	// the status of this AnalysisRun.
+	if _, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReconfirm]; !ok {
+		analysisRuns := rollouts.AnalysisRunList{}
+		if err := r.listAnalysisRunsFn(
+			ctx,
+			&analysisRuns,
+			&client.ListOptions{
+				Namespace: namespace,
+				LabelSelector: labels.SelectorFromSet(
+					map[string]string{
+						kargoapi.StageLabelKey:   stage.Name,
+						kargoapi.FreightLabelKey: stage.Status.CurrentFreight.Name,
+					},
+				),
+			},
+		); err != nil {
 			return &kargoapi.VerificationInfo{
+				ID:    uuid.NewString(),
+				Phase: kargoapi.VerificationPhaseError,
+				Message: fmt.Errorf(
+					"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
+					stage.Name,
+					stage.Status.CurrentFreight.Name,
+					namespace,
+					err,
+				).Error(),
+			}
+		}
+		if len(analysisRuns.Items) > 0 {
+			// Sort the AnalysisRuns by creation timestamp, so that the most recent
+			// one is first.
+			sort.SliceStable(analysisRuns.Items, func(i, j int) bool {
+				return analysisRuns.Items[j].CreationTimestamp.Before(&analysisRuns.Items[i].CreationTimestamp)
+			})
+
+			logger.Debug("AnalysisRun already exists for Freight")
+			latestAnalysisRun := analysisRuns.Items[0]
+			return &kargoapi.VerificationInfo{
+				ID:    uuid.NewString(),
 				Phase: kargoapi.VerificationPhase(latestAnalysisRun.Status.Phase),
 				AnalysisRun: &kargoapi.AnalysisRunReference{
 					Name:      latestAnalysisRun.Name,
@@ -98,6 +100,7 @@ func (r *reconciler) startVerification(
 		)
 		if err != nil {
 			return &kargoapi.VerificationInfo{
+				ID:    uuid.NewString(),
 				Phase: kargoapi.VerificationPhaseError,
 				Message: fmt.Errorf(
 					"error getting AnalysisTemplate %q in namespace %q: %w",
@@ -109,6 +112,7 @@ func (r *reconciler) startVerification(
 		}
 		if template == nil {
 			return &kargoapi.VerificationInfo{
+				ID:    uuid.NewString(),
 				Phase: kargoapi.VerificationPhaseError,
 				Message: fmt.Errorf(
 					"AnalysisTemplate %q in namespace %q not found",
@@ -130,6 +134,7 @@ func (r *reconciler) startVerification(
 	)
 	if err != nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error getting Freight %q in namespace %q: %w",
@@ -141,6 +146,7 @@ func (r *reconciler) startVerification(
 	}
 	if freight == nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"Freight %q in namespace %q not found",
@@ -153,6 +159,7 @@ func (r *reconciler) startVerification(
 	run, err := r.buildAnalysisRunFn(stage, freight, templates)
 	if err != nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error building AnalysisRun for Stage %q and Freight %q in namespace %q: %w",
@@ -166,6 +173,7 @@ func (r *reconciler) startVerification(
 
 	if err := r.createAnalysisRunFn(ctx, run); err != nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error creating AnalysisRun %q in namespace %q: %w",
@@ -177,6 +185,7 @@ func (r *reconciler) startVerification(
 	}
 
 	return &kargoapi.VerificationInfo{
+		ID:    uuid.NewString(),
 		Phase: kargoapi.VerificationPhasePending,
 		AnalysisRun: &kargoapi.AnalysisRunReference{
 			Name:      run.Name,
@@ -191,6 +200,7 @@ func (r *reconciler) getVerificationInfo(
 ) *kargoapi.VerificationInfo {
 	if r.rolloutsClient == nil {
 		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 			Phase: kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; cannot " +
 				"get verification info",
@@ -209,6 +219,7 @@ func (r *reconciler) getVerificationInfo(
 	)
 	if err != nil {
 		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error getting AnalysisRun %q in namespace %q: %w",
@@ -220,6 +231,7 @@ func (r *reconciler) getVerificationInfo(
 	}
 	if analysisRun == nil {
 		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"AnalysisRun %q in namespace %q not found",
@@ -229,6 +241,7 @@ func (r *reconciler) getVerificationInfo(
 		}
 	}
 	return &kargoapi.VerificationInfo{
+		ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 		Phase: kargoapi.VerificationPhase(analysisRun.Status.Phase),
 		AnalysisRun: &kargoapi.AnalysisRunReference{
 			Name:      analysisRun.Name,

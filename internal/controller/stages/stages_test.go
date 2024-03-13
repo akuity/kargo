@@ -326,7 +326,7 @@ func TestSyncNormalStage(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReconfirm: "fake-analysis-run",
+						kargoapi.AnnotationKeyReconfirm: "fake-id",
 					},
 				},
 				Spec: &kargoapi.StageSpec{
@@ -337,6 +337,7 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseSteady,
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
+							ID:    "fake-id",
 							Phase: kargoapi.VerificationPhaseFailed,
 							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Name: "fake-analysis-run",
@@ -359,6 +360,7 @@ func TestSyncNormalStage(t *testing.T) {
 					*kargoapi.Stage,
 				) *kargoapi.VerificationInfo {
 					return &kargoapi.VerificationInfo{
+						ID:      "new-fake-id",
 						Phase:   kargoapi.VerificationPhasePending,
 						Message: "Awaiting reconfirmation",
 						AnalysisRun: &kargoapi.AnalysisRunReference{
@@ -378,6 +380,7 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
+						ID:      "new-fake-id",
 						Phase:   kargoapi.VerificationPhasePending,
 						Message: "Awaiting reconfirmation",
 						AnalysisRun: &kargoapi.AnalysisRunReference{

@@ -97,15 +97,21 @@ func ReconfirmStageVerification(
 	}
 
 	curFreight := stage.Status.CurrentFreight
-	if curFreight == nil || curFreight.VerificationInfo == nil || curFreight.VerificationInfo.AnalysisRun == nil {
-		return errors.New("no existing verification to reconfirm")
+	if curFreight == nil {
+		return errors.New("stage has no current freight")
+	}
+	if curFreight.VerificationInfo == nil {
+		return errors.New("stage has no verification info")
+	}
+	if curFreight.VerificationInfo.ID == "" {
+		return fmt.Errorf("missing verification ID to reverify")
 	}
 
 	patchBytes := []byte(
 		fmt.Sprintf(
 			`{"metadata":{"annotations":{"%s":"%s"}}}`,
 			AnnotationKeyReconfirm,
-			curFreight.VerificationInfo.AnalysisRun.Name,
+			curFreight.VerificationInfo.ID,
 		),
 	)
 	patch := client.RawPatch(types.MergePatchType, patchBytes)

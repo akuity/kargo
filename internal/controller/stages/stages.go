@@ -722,8 +722,8 @@ func (r *reconciler) syncNormalStage(
 			// Confirm if a rerun of verification is requested. If so, clear the
 			// verification info and start the verification process again.
 			info := status.CurrentFreight.VerificationInfo
-			if info != nil && info.AnalysisRun != nil && info.Phase.IsTerminal() {
-				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReconfirm]; ok && v == info.AnalysisRun.Name {
+			if info != nil && info.ID != "" && info.Phase.IsTerminal() {
+				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReconfirm]; ok && v == info.ID {
 					logger.Debug("reconfirming verification")
 					status.Phase = kargoapi.StagePhaseVerifying
 					status.CurrentFreight.VerificationInfo = nil

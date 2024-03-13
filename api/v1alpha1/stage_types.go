@@ -728,6 +728,8 @@ type AnalysisRunArgument struct {
 // VerificationInfo contains information about the currently running
 // Verification process.
 type VerificationInfo struct {
+	// ID is the identifier of the Verification process.
+	ID string `json:"id,omitempty" protobuf:"bytes,4,opt,name=id"`
 	// Phase describes the current phase of the Verification process. Generally,
 	// this will be a reflection of the underlying AnalysisRun's phase, however,
 	// there are exceptions to this, such as in the case where an AnalysisRun

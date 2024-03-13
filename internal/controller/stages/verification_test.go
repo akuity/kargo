@@ -22,12 +22,12 @@ func TestStartVerification(t *testing.T) {
 		name       string
 		stage      *kargoapi.Stage
 		reconciler *reconciler
-		assertions func(*kargoapi.VerificationInfo)
+		assertions func(*testing.T, *kargoapi.VerificationInfo)
 	}{
 		{
 			name:       "rollouts integration not enabled",
 			reconciler: &reconciler{},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.Contains(
 					t,
 					vi.Message,
@@ -54,7 +54,7 @@ func TestStartVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error listing AnalysisRuns for Stage")
 			},
@@ -81,7 +81,7 @@ func TestStartVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Empty(t, vi.Message)
 			},
@@ -151,18 +151,14 @@ func TestStartVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
-				require.Equal(
-					t,
-					&kargoapi.VerificationInfo{
-						Phase: kargoapi.VerificationPhasePending,
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "new-fake-run",
-							Namespace: "fake-namespace",
-						},
-					},
-					vi,
-				)
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNilf(t, vi, "expected non-nil VerificationInfo")
+				require.NotEmptyf(t, vi.ID, "expected non-empty VerificationInfo.ID")
+				require.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
+				require.Equal(t, &kargoapi.AnalysisRunReference{
+					Name:      "new-fake-run",
+					Namespace: "fake-namespace",
+				}, vi.AnalysisRun)
 			},
 		},
 		{
@@ -196,7 +192,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error getting AnalysisTemplate")
@@ -233,7 +229,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "AnalysisTemplate")
 				require.Contains(t, vi.Message, "not found")
@@ -277,7 +273,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, fmt.Errorf("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error getting Freight")
@@ -321,7 +317,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "Freight")
 				require.Contains(t, vi.Message, "not found")
@@ -371,7 +367,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error building AnalysisRun for Stage")
@@ -429,7 +425,7 @@ func TestStartVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error creating AnalysisRun")
@@ -488,24 +484,21 @@ func TestStartVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
-				require.Equal(
-					t,
-					&kargoapi.VerificationInfo{
-						Phase: kargoapi.VerificationPhasePending,
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "fake-run",
-							Namespace: "fake-namespace",
-						},
-					},
-					vi,
-				)
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNilf(t, vi, "expected non-nil VerificationInfo")
+				require.NotEmptyf(t, vi.ID, "expected non-empty VerificationInfo.ID")
+				require.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
+				require.Equal(t, &kargoapi.AnalysisRunReference{
+					Name:      "fake-run",
+					Namespace: "fake-namespace",
+				}, vi.AnalysisRun)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.startVerification(
 					context.Background(),
 					testCase.stage,
@@ -520,12 +513,19 @@ func TestGetVerificationInfo(t *testing.T) {
 		name       string
 		stage      *kargoapi.Stage
 		reconciler *reconciler
-		assertions func(*kargoapi.VerificationInfo)
+		assertions func(*testing.T, *kargoapi.VerificationInfo)
 	}{
 		{
 			name:       "rollouts integration not enabled",
 			reconciler: &reconciler{},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(
 					t,
@@ -558,7 +558,7 @@ func TestGetVerificationInfo(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error getting AnalysisRun")
@@ -588,7 +588,7 @@ func TestGetVerificationInfo(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "AnalysisRun")
 				require.Contains(t, vi.Message, "not found")
@@ -626,7 +626,7 @@ func TestGetVerificationInfo(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -645,6 +645,7 @@ func TestGetVerificationInfo(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.getVerificationInfo(
 					context.Background(),
 					testCase.stage,

@@ -74,7 +74,7 @@ func TestReconfirmStageVerification(t *testing.T) {
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
-		require.Errorf(t, err, "Stage %q in namespace %q not found", "fake-stage", "fake-namespace")
+		require.ErrorContains(t, err, "not found")
 	})
 
 	t.Run("missing verification info", func(t *testing.T) {
@@ -91,7 +91,7 @@ func TestReconfirmStageVerification(t *testing.T) {
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
-		require.Errorf(t, err, "no existing verification to reconfirm")
+		require.ErrorContains(t, err, "missing current freight or verification info")
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -104,9 +104,7 @@ func TestReconfirmStageVerification(t *testing.T) {
 				Status: StageStatus{
 					CurrentFreight: &FreightReference{
 						VerificationInfo: &VerificationInfo{
-							AnalysisRun: &AnalysisRunReference{
-								Name: "fake-analysis-run",
-							},
+							ID: "fake-id",
 						},
 					},
 				},
@@ -124,7 +122,7 @@ func TestReconfirmStageVerification(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		require.Equal(t, "fake-analysis-run", stage.Annotations[AnnotationKeyReconfirm])
+		require.Equal(t, "fake-id", stage.Annotations[AnnotationKeyReconfirm])
 	})
 }
 
@@ -179,7 +177,7 @@ func TestClearStageReconfirm(t *testing.T) {
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 					Annotations: map[string]string{
-						AnnotationKeyReconfirm: "fake-analysis-run",
+						AnnotationKeyReconfirm: "fake-id",
 					},
 				},
 			},
@@ -190,7 +188,7 @@ func TestClearStageReconfirm(t *testing.T) {
 				Name:      "fake-stage",
 				Namespace: "fake-namespace",
 				Annotations: map[string]string{
-					AnnotationKeyReconfirm: "fake-analysis-run",
+					AnnotationKeyReconfirm: "fake-id",
 				},
 			},
 		})
