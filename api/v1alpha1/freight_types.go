@@ -28,7 +28,7 @@ type Freight struct {
 	// of the alias label. If this field is empty and the alias label is not
 	// present, the defaulting webhook will choose an available alias and assign
 	// it to both the field and label.
-	Alias string `json:"alias,omitempty"`
+	Alias string `json:"alias,omitempty" protobuf:"bytes,7,opt,name=alias"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.
