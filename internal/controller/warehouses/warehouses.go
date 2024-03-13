@@ -300,18 +300,14 @@ func (r *reconciler) getLatestFreightFromRepos(
 	}
 	logger.Debug("synced chart repo subscriptions")
 
-	ownerRef := metav1.NewControllerRef(
-		warehouse,
-		kargoapi.GroupVersion.WithKind("Warehouse"),
-	)
 	freight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:       warehouse.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*ownerRef},
+			Namespace: warehouse.Namespace,
 		},
-		Commits: selectedCommits,
-		Images:  selectedImages,
-		Charts:  selectedCharts,
+		Warehouse: warehouse.Name,
+		Commits:   selectedCommits,
+		Images:    selectedImages,
+		Charts:    selectedCharts,
 	}
 	freight.Name = freight.GenerateID()
 	return freight, nil
