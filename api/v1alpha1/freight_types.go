@@ -29,6 +29,12 @@ type Freight struct {
 	// present, the defaulting webhook will choose an available alias and assign
 	// it to both the field and label.
 	Alias string `json:"alias,omitempty" protobuf:"bytes,7,opt,name=alias"`
+	// Warehouse is the name of the Warehouse that created this Freight. This is a
+	// required field. TODO: It is not clear yet how this field should be set in
+	// the case of user-defined Freight.
+	//
+	//+kubebuilder:validation:Required
+	Warehouse string `json:"warehouse,omitempty"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.
