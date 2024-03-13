@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/technosophos/moniker"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,9 +31,12 @@ var (
 )
 
 type webhook struct {
-	client client.Client
+	client                client.Client
+	freightAliasGenerator moniker.Namer
 
 	// The following behaviors are overridable for testing purposes:
+
+	getAvailableFreightAliasFn func(context.Context) (string, error)
 
 	validateProjectFn func(
 		context.Context,
@@ -64,19 +68,40 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 func newWebhook(kubeClient client.Client) *webhook {
-	return &webhook{
-		client:            kubeClient,
-		validateProjectFn: libWebhook.ValidateProject,
-		listFreightFn:     kubeClient.List,
-		listStagesFn:      kubeClient.List,
+	w := &webhook{
+		client:                kubeClient,
+		freightAliasGenerator: moniker.New(),
 	}
+	w.getAvailableFreightAliasFn = w.getAvailableFreightAlias
+	w.validateProjectFn = libWebhook.ValidateProject
+	w.listFreightFn = kubeClient.List
+	w.listStagesFn = kubeClient.List
+	return w
 }
 
-func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
+func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 	// Re-calculate ID in case it wasn't set correctly to begin with -- possible
 	// if/when we allow users to create their own Freight.
 	freight.Name = freight.GenerateID()
+
+	// Sync the convenience alias field with the alias label
+	if freight.Labels == nil {
+		freight.Labels = make(map[string]string, 1)
+	}
+	if freight.Alias != "" {
+		freight.Labels[kargoapi.AliasLabelKey] = freight.Alias
+	} else if freight.Labels[kargoapi.AliasLabelKey] != "" {
+		freight.Alias = freight.Labels[kargoapi.AliasLabelKey]
+	} else {
+		alias, err := w.getAvailableFreightAliasFn(ctx)
+		if err != nil {
+			return fmt.Errorf("get available freight alias: %w", err)
+		}
+		freight.Alias = alias
+		freight.Labels[kargoapi.AliasLabelKey] = alias
+	}
+
 	return nil
 }
 
@@ -90,29 +115,25 @@ func (w *webhook) ValidateCreate(
 		return nil, err
 	}
 
-	if freight.ObjectMeta.Labels != nil &&
-		freight.ObjectMeta.Labels[kargoapi.AliasLabelKey] != "" {
-		alias := freight.ObjectMeta.Labels[kargoapi.AliasLabelKey]
-		freightList := kargoapi.FreightList{}
-		if err := w.listFreightFn(
-			ctx,
-			&freightList,
-			client.InNamespace(freight.Namespace),
-			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
-		); err != nil {
-			return nil, apierrors.NewInternalError(err)
-		}
-		if len(freightList.Items) > 0 {
-			return nil, apierrors.NewConflict(
-				freightGroupResource,
-				freight.Name,
-				fmt.Errorf(
-					"alias %q already used by another piece of Freight in namespace %q",
-					alias,
-					freight.Namespace,
-				),
-			)
-		}
+	freightList := kargoapi.FreightList{}
+	if err := w.listFreightFn(
+		ctx,
+		&freightList,
+		client.InNamespace(freight.Namespace),
+		client.MatchingLabels{kargoapi.AliasLabelKey: freight.Alias},
+	); err != nil {
+		return nil, apierrors.NewInternalError(err)
+	}
+	if len(freightList.Items) > 0 {
+		return nil, apierrors.NewConflict(
+			freightGroupResource,
+			freight.Name,
+			fmt.Errorf(
+				"alias %q already used by another piece of Freight in namespace %q",
+				freight.Alias,
+				freight.Namespace,
+			),
+		)
 	}
 
 	if len(freight.Commits) == 0 &&
@@ -140,30 +161,26 @@ func (w *webhook) ValidateUpdate(
 ) (admission.Warnings, error) {
 	freight := newObj.(*kargoapi.Freight) // nolint: forcetypeassert
 
-	if freight.ObjectMeta.Labels != nil &&
-		freight.ObjectMeta.Labels[kargoapi.AliasLabelKey] != "" {
-		alias := freight.ObjectMeta.Labels[kargoapi.AliasLabelKey]
-		freightList := kargoapi.FreightList{}
-		if err := w.listFreightFn(
-			ctx,
-			&freightList,
-			client.InNamespace(freight.Namespace),
-			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
-		); err != nil {
-			return nil, apierrors.NewInternalError(err)
-		}
-		if len(freightList.Items) > 1 ||
-			(len(freightList.Items) == 1 && freightList.Items[0].Name != freight.Name) {
-			return nil, apierrors.NewConflict(
-				freightGroupResource,
-				freight.Name,
-				fmt.Errorf(
-					"alias %q already used by another piece of Freight in namespace %q",
-					alias,
-					freight.Namespace,
-				),
-			)
-		}
+	freightList := kargoapi.FreightList{}
+	if err := w.listFreightFn(
+		ctx,
+		&freightList,
+		client.InNamespace(freight.Namespace),
+		client.MatchingLabels{kargoapi.AliasLabelKey: freight.Alias},
+	); err != nil {
+		return nil, apierrors.NewInternalError(err)
+	}
+	if len(freightList.Items) > 1 ||
+		(len(freightList.Items) == 1 && freightList.Items[0].Name != freight.Name) {
+		return nil, apierrors.NewConflict(
+			freightGroupResource,
+			freight.Name,
+			fmt.Errorf(
+				"alias %q already used by another piece of Freight in namespace %q",
+				freight.Alias,
+				freight.Namespace,
+			),
+		)
 	}
 
 	// Freight is meant to be immutable. We only need to compare the Name to a
