@@ -17,7 +17,7 @@ func TestCleanProjectFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
 		collector  *collector
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error listing Warehouses",
@@ -30,7 +30,7 @@ func TestCleanProjectFreight(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error listing Warehouses in Project")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -53,7 +53,7 @@ func TestCleanProjectFreight(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -79,7 +79,7 @@ func TestCleanProjectFreight(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -87,6 +87,7 @@ func TestCleanProjectFreight(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.collector.cleanProjectFreight(
 					context.Background(),
 					"fake-project",
@@ -100,7 +101,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
 		collector  *collector
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error listing Freight",
@@ -113,7 +114,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error listing Freight from Warehouse")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -136,7 +137,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -164,7 +165,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error listing Stages in Project")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -215,7 +216,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -269,7 +270,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -277,6 +278,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.collector.cleanWarehouseFreight(
 					context.Background(),
 					"fake-project",

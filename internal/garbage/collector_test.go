@@ -45,7 +45,7 @@ func TestRun(t *testing.T) {
 			projectCh <-chan string,
 			errCh chan<- struct{},
 		)
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error listing Projects",
@@ -56,7 +56,7 @@ func TestRun(t *testing.T) {
 			) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -99,7 +99,7 @@ func TestRun(t *testing.T) {
 					require.FailNow(t, "timed out signaling an error")
 				}
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(
 					t,
@@ -137,7 +137,7 @@ func TestRun(t *testing.T) {
 					require.FailNow(t, "timed out waiting for a Project name")
 				}
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -154,7 +154,7 @@ func TestRun(t *testing.T) {
 				cleanProjectsFn: testCase.cleanProjectsFn,
 			}
 			err := c.Run(ctx)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }

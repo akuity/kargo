@@ -26,7 +26,7 @@ func TestCleanProjectPromotions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		collector  *collector
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error listing Promotions",
@@ -39,7 +39,7 @@ func TestCleanProjectPromotions(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error listing Promotions for Project")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -60,7 +60,7 @@ func TestCleanProjectPromotions(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -93,7 +93,7 @@ func TestCleanProjectPromotions(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -107,6 +107,7 @@ func TestCleanProjectPromotions(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.collector.cfg.MaxRetainedPromotions = 20
 			testCase.assertions(
+				t,
 				testCase.collector.cleanProjectPromotions(ctx, "fake-project"),
 			)
 		})

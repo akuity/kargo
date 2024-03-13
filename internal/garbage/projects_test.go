@@ -87,7 +87,7 @@ func TestCleanProject(t *testing.T) {
 	testCases := []struct {
 		name       string
 		collector  *collector
-		assertions func(err error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "errors cleaning Promotions and Freight",
@@ -99,7 +99,7 @@ func TestCleanProject(t *testing.T) {
 					return errors.New("something else went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error cleaning Promotions in Project")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -117,7 +117,7 @@ func TestCleanProject(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -125,6 +125,7 @@ func TestCleanProject(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.collector.cleanProject(context.Background(), "fake-project"),
 			)
 		})
