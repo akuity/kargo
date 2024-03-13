@@ -100,7 +100,7 @@ func (c *collector) cleanWarehouseFreight(
 			&stages,
 			client.InNamespace(project),
 			client.MatchingFields{
-				kubeclient.StagesByFreightIndexField: f.ID,
+				kubeclient.StagesByFreightIndexField: f.Name,
 			},
 		); err != nil {
 			logger.WithField("freight", f).Error("error listing Stages using Freight")
