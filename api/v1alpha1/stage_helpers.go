@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -76,4 +77,72 @@ func ClearStageRefresh(
 		},
 	}
 	return clearRefreshObject(ctx, c, &newStage)
+}
+
+// ReconfirmStageVerification forces reconfirmation of the verification of a
+// Stage by setting an annotation on the Stage, causing the controller to
+// reconfirm it. At present, the annotation value is the name of the current
+// AnalysisRun associated with the Stage.
+func ReconfirmStageVerification(
+	ctx context.Context,
+	c client.Client,
+	namespacedName types.NamespacedName,
+) error {
+	stage, err := GetStage(ctx, c, namespacedName)
+	if err != nil || stage == nil {
+		if stage == nil {
+			err = fmt.Errorf("Stage %q in namespace %q not found", namespacedName.Name, namespacedName.Namespace)
+		}
+		return err
+	}
+
+	curFreight := stage.Status.CurrentFreight
+	if curFreight == nil || curFreight.VerificationInfo == nil || curFreight.VerificationInfo.AnalysisRun == nil {
+		return errors.New("no existing verification to reconfirm")
+	}
+
+	patchBytes := []byte(
+		fmt.Sprintf(
+			`{"metadata":{"annotations":{"%s":"%s"}}}`,
+			AnnotationKeyReconfirm,
+			curFreight.VerificationInfo.AnalysisRun.Name,
+		),
+	)
+	patch := client.RawPatch(types.MergePatchType, patchBytes)
+	if err := c.Patch(ctx, stage, patch); err != nil {
+		return fmt.Errorf("patch annotation: %w", err)
+	}
+	return nil
+}
+
+// ClearStageReconfirm is called by the Stage controller to clear the reconfirm
+// annotation on the Stage (if present). A client (e.g. UI) who requested a
+// reconfirmation of the Stage verification, can wait until the annotation is
+// cleared, to understand that the controller acknowledged the reconfirmation
+// request.
+func ClearStageReconfirm(
+	ctx context.Context,
+	c client.Client,
+	stage *Stage,
+) error {
+	if stage.Annotations == nil {
+		return nil
+	}
+
+	if _, ok := stage.Annotations[AnnotationKeyReconfirm]; !ok {
+		return nil
+	}
+
+	newStage := Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      stage.Name,
+			Namespace: stage.Namespace,
+		},
+	}
+	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, AnnotationKeyReconfirm))
+	patch := client.RawPatch(types.MergePatchType, patchBytes)
+	if err := c.Patch(ctx, &newStage, patch); err != nil {
+		return fmt.Errorf("patch annotation: %w", err)
+	}
+	return nil
 }
