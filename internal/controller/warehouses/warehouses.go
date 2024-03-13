@@ -6,7 +6,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/technosophos/moniker"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,7 +30,6 @@ type reconciler struct {
 	client                     client.Client
 	credentialsDB              credentials.Database
 	imageSourceURLFnsByBaseURL map[string]func(string, string) string
-	freightAliasGenerator      moniker.Namer
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -83,8 +81,6 @@ type reconciler struct {
 		kargoapi.GitSubscription,
 		*git.RepoCredentials,
 	) (*gitMeta, error)
-
-	getAvailableFreightAliasFn func(context.Context) (string, error)
 
 	createFreightFn func(
 		context.Context,
@@ -141,7 +137,6 @@ func newReconciler(
 		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
 			githubURLPrefix: getGithubImageSourceURL,
 		},
-		freightAliasGenerator: moniker.New(),
 	}
 	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
 	r.selectCommitsFn = r.selectCommits
@@ -153,7 +148,6 @@ func newReconciler(
 	r.selectChartsFn = r.selectCharts
 	r.selectChartVersionFn = helm.SelectChartVersion
 	r.selectCommitMetaFn = r.selectCommitMeta
-	r.getAvailableFreightAliasFn = r.getAvailableFreightAlias
 	r.createFreightFn = kubeClient.Create
 	return r
 }
@@ -244,12 +238,6 @@ func (r *reconciler) syncWarehouse(
 		return status, nil
 	}
 	logger.Debug("got latest Freight from repositories")
-
-	freight.Labels = map[string]string{}
-	if freight.Labels[kargoapi.AliasLabelKey], err =
-		r.getAvailableFreightAliasFn(ctx); err != nil {
-		return status, fmt.Errorf("error getting available Freight alias: %w", err)
-	}
 
 	if err = r.createFreightFn(ctx, freight); err != nil {
 		if apierrors.IsAlreadyExists(err) {
