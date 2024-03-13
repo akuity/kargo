@@ -114,31 +114,31 @@ func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
 	return false
 }
 
-// IgnoreClearRefreshUpdates is a predicate that filters out update events if
-// the update was only to clear the refresh annotation. This prevents the
-// extra reconciliation that happens when reconcilers respond to refresh by
-// updating the object's annotations.
-type IgnoreClearRefreshUpdates struct {
+type IgnoreAnnotationRemoval struct {
 	predicate.Funcs
+
+	AnnotationKey string
 }
 
-// Update returns false if the update event cleared the refresh annotation.
-// NOTE: this predicate assumes that the update was to clear the annotation and nothing else.
-// This is safe to assume as long as the ClearXxxxRefresh helpers are always used to clear
-// the refresh annotation.
-func (i IgnoreClearRefreshUpdates) Update(e event.UpdateEvent) bool {
+// Update returns false if the update event removed the AnnotationKey, true
+// otherwise.
+//
+// NOTE: this predicate assumes that the update was to clear the annotation and
+// nothing else. This is safe to assume as long as the helpers of the API are
+// always used to clear the respective annotation.
+func (i IgnoreAnnotationRemoval) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil || e.ObjectNew == nil {
 		return true
 	}
-	oldHasRefreshAnnotation := false
+	oldHasAnnotation := false
 	if oldAnnotations := e.ObjectOld.GetAnnotations(); oldAnnotations != nil {
-		_, oldHasRefreshAnnotation = oldAnnotations[kargoapi.AnnotationKeyRefresh]
+		_, oldHasAnnotation = oldAnnotations[i.AnnotationKey]
 	}
-	newHasRefreshAnnotation := false
+	newHasAnnotation := false
 	if newAnnotations := e.ObjectNew.GetAnnotations(); newAnnotations != nil {
-		_, newHasRefreshAnnotation = newAnnotations[kargoapi.AnnotationKeyRefresh]
+		_, newHasAnnotation = newAnnotations[i.AnnotationKey]
 	}
-	if oldHasRefreshAnnotation && !newHasRefreshAnnotation {
+	if oldHasAnnotation && !newHasAnnotation {
 		return false
 	}
 	return true

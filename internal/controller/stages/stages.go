@@ -305,7 +305,12 @@ func SetupReconcilerWithManager(
 			),
 		).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
+		WithEventFilter(kargo.IgnoreAnnotationRemoval{
+			AnnotationKey: kargoapi.AnnotationKeyRefresh,
+		}).
+		WithEventFilter(kargo.IgnoreAnnotationRemoval{
+			AnnotationKey: kargoapi.AnnotationKeyReconfirm,
+		}).
 		WithOptions(controller.CommonOptions()).
 		Build(
 			newReconciler(

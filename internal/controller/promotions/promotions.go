@@ -72,7 +72,9 @@ func SetupReconcilerWithManager(
 		For(&kargoapi.Promotion{}).
 		WithEventFilter(changePredicate).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
+		WithEventFilter(kargo.IgnoreAnnotationRemoval{
+			AnnotationKey: kargoapi.AnnotationKeyRefresh,
+		}).
 		WithOptions(controller.CommonOptions()).
 		Build(reconciler)
 	if err != nil {

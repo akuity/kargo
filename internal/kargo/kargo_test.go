@@ -96,7 +96,7 @@ func TestNewPromotion(t *testing.T) {
 	}
 }
 
-func TestIgnoreClearRefreshUpdates(t *testing.T) {
+func TestIgnoreAnnotationRemovalUpdates(t *testing.T) {
 	testCases := []struct {
 		name     string
 		old      client.Object
@@ -110,7 +110,7 @@ func TestIgnoreClearRefreshUpdates(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "refresh cleared",
+			name: "annotation removed",
 			old: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -126,7 +126,7 @@ func TestIgnoreClearRefreshUpdates(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "refresh set",
+			name: "annotation set",
 			old: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{},
@@ -145,12 +145,14 @@ func TestIgnoreClearRefreshUpdates(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			icru := IgnoreClearRefreshUpdates{}
+			p := IgnoreAnnotationRemoval{
+				AnnotationKey: kargoapi.AnnotationKeyRefresh,
+			}
 			e := event.UpdateEvent{
 				ObjectOld: tc.old,
 				ObjectNew: tc.new,
 			}
-			require.Equal(t, tc.expected, icru.Update(e))
+			require.Equal(t, tc.expected, p.Update(e))
 		})
 	}
 }

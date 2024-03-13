@@ -119,7 +119,9 @@ func SetupReconcilerWithManager(
 			),
 		).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
+		WithEventFilter(kargo.IgnoreAnnotationRemoval{
+			AnnotationKey: kargoapi.AnnotationKeyRefresh,
+		}).
 		WithOptions(controller.CommonOptions()).
 		Complete(newReconciler(mgr.GetClient(), credentialsDB)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
