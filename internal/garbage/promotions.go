@@ -2,9 +2,9 @@ package garbage
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -21,7 +21,7 @@ func (c *collector) cleanProjectPromotions(ctx context.Context, project string) 
 		&promos,
 		client.InNamespace(project),
 	); err != nil {
-		return errors.Wrapf(err, "error listing Promotions for Project %q", project)
+		return fmt.Errorf("error listing Promotions for Project %q: %w", project, err)
 	}
 
 	if len(promos.Items) <= c.cfg.MaxRetainedPromotions {
@@ -48,7 +48,7 @@ func (c *collector) cleanProjectPromotions(ctx context.Context, project string) 
 	}
 
 	if deleteErrCount > 0 {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"error deleting one or more Promotions from Project %q",
 			project,
 		)

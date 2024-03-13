@@ -2,12 +2,13 @@ package garbage
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math"
 	"sync"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -154,10 +155,7 @@ func (c *collector) Run(ctx context.Context) error {
 			).AsSelector(),
 		},
 	); err != nil {
-		return errors.Wrap(
-			err,
-			"error listing projects; no garbage collection performed",
-		)
+		return fmt.Errorf("error listing projects; no garbage collection performed: %w", err)
 	}
 
 	projectCh := make(chan string)

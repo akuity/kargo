@@ -2,10 +2,10 @@ package garbage
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -28,7 +28,7 @@ func (c *collector) cleanProjectFreight(ctx context.Context, project string) err
 		warehouses,
 		client.InNamespace(project),
 	); err != nil {
-		return errors.Wrapf(err, "error listing Warehouses in Project %q", project)
+		return fmt.Errorf("error listing Warehouses in Project %q: %w", project, err)
 	}
 
 	var cleanErrCount int
@@ -43,7 +43,7 @@ func (c *collector) cleanProjectFreight(ctx context.Context, project string) err
 	}
 
 	if cleanErrCount > 0 {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"error cleaning Freight from one or more Warehouses in Project %q",
 			project,
 		)
@@ -76,11 +76,11 @@ func (c *collector) cleanWarehouseFreight(
 			kubeclient.FreightByWarehouseIndexField: warehouse,
 		},
 	); err != nil {
-		return errors.Wrapf(
-			err,
-			"error listing Freight from Warehouse %q in Project %q",
+		return fmt.Errorf(
+			"error listing Freight from Warehouse %q in Project %q: %w",
 			warehouse,
 			project,
+			err,
 		)
 	}
 
@@ -104,11 +104,11 @@ func (c *collector) cleanWarehouseFreight(
 			},
 		); err != nil {
 			logger.WithField("freight", f).Error("error listing Stages using Freight")
-			return errors.Wrapf(
-				err,
-				"error listing Stages in Project %q using Freight %q",
+			return fmt.Errorf(
+				"error listing Stages in Project %q using Freight %q: %w",
 				project,
 				f.Name,
+				err,
 			)
 		}
 		if len(stages.Items) > 0 {
@@ -137,7 +137,7 @@ func (c *collector) cleanWarehouseFreight(
 	}
 
 	if deleteErrCount > 0 {
-		return errors.Errorf(
+		return fmt.Errorf(
 			"error deleting one or more Freight from Project %q Warehouse %q",
 			project,
 			warehouse,

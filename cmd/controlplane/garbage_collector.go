@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -42,14 +43,14 @@ func newGarbageCollectorCommand() *cobra.Command {
 				restCfg, err :=
 					kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 				if err != nil {
-					return errors.Wrap(err, "error loading REST config")
+					return fmt.Errorf("error loading REST config: %w", err)
 				}
 				scheme := runtime.NewScheme()
 				if err = corev1.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "error adding Kubernetes core API to scheme")
+					return fmt.Errorf("error adding Kubernetes core API to scheme: %w", err)
 				}
 				if err = kargoapi.AddToScheme(scheme); err != nil {
-					return errors.Wrap(err, "error adding Kargo API to scheme")
+					return fmt.Errorf("error adding Kargo API to scheme: %w", err)
 				}
 				if mgr, err = ctrl.NewManager(
 					restCfg,
@@ -60,15 +61,15 @@ func newGarbageCollectorCommand() *cobra.Command {
 						},
 					},
 				); err != nil {
-					return errors.Wrap(err, "error initializing controller manager")
+					return fmt.Errorf("error initializing controller manager: %w", err)
 				}
 				// Index Freight by Warehouse
 				if err = kubeclient.IndexFreightByWarehouse(ctx, mgr); err != nil {
-					return errors.Wrap(err, "error indexing Freight by Warehouse")
+					return fmt.Errorf("error indexing Freight by Warehouse: %w", err)
 				}
 				// Index Stages by Freight
 				if err = kubeclient.IndexStagesByFreight(ctx, mgr); err != nil {
-					return errors.Wrap(err, "error indexing Stages by Freight")
+					return fmt.Errorf("error indexing Stages by Freight: %w", err)
 				}
 			}
 
@@ -77,7 +78,7 @@ func newGarbageCollectorCommand() *cobra.Command {
 
 			go func() {
 				if err := mgr.Start(ctx); err != nil {
-					panic(errors.Wrap(err, "start manager"))
+					panic(fmt.Errorf("start manager: %w", err))
 				}
 			}()
 

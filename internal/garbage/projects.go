@@ -2,9 +2,8 @@ package garbage
 
 import (
 	"context"
-	goerrors "errors"
-
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
 
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -48,16 +47,16 @@ func (c *collector) cleanProject(ctx context.Context, project string) error {
 	if err := c.cleanProjectPromotionsFn(ctx, project); err != nil {
 		errs = append(
 			errs,
-			errors.Wrapf(err, "error cleaning Promotions in Project %q", project),
+			fmt.Errorf("error cleaning Promotions in Project %q: %w", project, err),
 		)
 	}
 
 	if err := c.cleanProjectFreightFn(ctx, project); err != nil {
 		errs = append(
 			errs,
-			errors.Wrapf(err, "error cleaning Freight in Project %q", project),
+			fmt.Errorf("error cleaning Freight in Project %q: %w", project, err),
 		)
 	}
 
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
