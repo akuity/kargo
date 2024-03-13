@@ -55,7 +55,7 @@ export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...p
       onOk={handleSubmit(async (data) => {
         await updateAliasAction({
           project,
-          name: freight?.id || '',
+          name: freight?.metadata?.name || '',
           newAlias: data.value || ''
         });
         onSubmit();
@@ -63,7 +63,7 @@ export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...p
     >
       <div className='mb-4'>
         <div className='text-xs font-semibold uppercase'>Freight ID</div>
-        <div className='font-mono'>{freight?.id}</div>
+        <div className='font-mono'>{freight?.metadata?.name}</div>
       </div>
       <FieldContainer label='New Alias' name='value' control={control}>
         {({ field }) => (

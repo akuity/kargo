@@ -97,7 +97,7 @@ func TestCompositePromote(t *testing.T) {
 							// would make, but for testing purposes, this is good enough to
 							// help us assert that the function under test does return all
 							// modifications made by its child promotion mechanisms.
-							newFreight.ID = "fake-mutated-id"
+							newFreight.Name = "fake-mutated-id"
 							return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, newFreight, nil
 						},
 					},
@@ -111,9 +111,9 @@ func TestCompositePromote(t *testing.T) {
 			) {
 				require.NoError(t, err)
 				// Verify that changes made by child promotion mechanism are returned
-				require.Equal(t, "fake-mutated-id", newFreightOut.ID)
+				require.Equal(t, "fake-mutated-id", newFreightOut.Name)
 				// Everything else should be unchanged
-				newFreightOut.ID = newFreightIn.ID
+				newFreightOut.Name = newFreightIn.Name
 				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},

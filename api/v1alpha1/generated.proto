@@ -271,11 +271,6 @@ message ChartSubscription {
 message Freight {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  // ID is a system-assigned value that is derived deterministically from the
-  // contents of the Freight. i.e. Two pieces of Freight can be compared for
-  // equality by comparing their IDs.
-  optional string id = 2;
-
   // Commits describes specific Git repository commits.
   repeated GitCommit commits = 3;
 
@@ -299,10 +294,10 @@ message FreightList {
 // FreightReference is a simplified representation of a piece of Freight -- not
 // a root resource type.
 message FreightReference {
-  // ID is system-assigned value that is derived deterministically from the
-  // contents of the Freight. i.e. Two pieces of Freight can be compared for
-  // equality by comparing their IDs.
-  optional string id = 1;
+  // Name is system-assigned identifier that is derived deterministically from
+  // the contents of the Freight. i.e. Two pieces of Freight can be compared for
+  // equality by comparing their Names.
+  optional string name = 1;
 
   // Commits describes specific Git repository commits.
   repeated GitCommit commits = 2;

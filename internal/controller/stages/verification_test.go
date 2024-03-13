@@ -40,7 +40,7 @@ func TestStartVerification(t *testing.T) {
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -64,7 +64,7 @@ func TestStartVerification(t *testing.T) {
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -96,7 +96,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -133,7 +133,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -170,7 +170,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -214,7 +214,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -258,7 +258,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -308,7 +308,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -366,7 +366,7 @@ func TestStartVerification(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -616,7 +616,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-id",
+						Name: "fake-id",
 					},
 				},
 			},
@@ -665,7 +665,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 
 				require.Equal(t, map[string]string{
 					kargoapi.StageLabelKey:   stage.Name,
-					kargoapi.FreightLabelKey: stage.Status.CurrentFreight.ID,
+					kargoapi.FreightLabelKey: stage.Status.CurrentFreight.Name,
 					"custom":                 "label",
 					"another":                "label",
 				}, ar.Labels)
@@ -689,7 +689,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{ID: "fake-id"},
+					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
 				},
 			},
 			freight: freight,
@@ -714,7 +714,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{ID: "fake-id"},
+					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
 				},
 			},
 			freight: freight,
@@ -785,7 +785,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{ID: "fake-id"},
+					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
 				},
 			},
 			freight: freight,
@@ -831,7 +831,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{ID: "fake-id"},
+					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
 				},
 			},
 			freight: freight,
@@ -868,7 +868,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Verification: &kargoapi.Verification{},
 				},
 				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{ID: "fake-id"},
+					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
 				},
 			},
 			freight: freight,

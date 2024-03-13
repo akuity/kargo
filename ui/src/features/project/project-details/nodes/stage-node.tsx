@@ -77,7 +77,7 @@ export const StageNode = ({
           <div className='pb-1'>
             {stage.status?.currentPromotion ? (
               <Tooltip
-                title={`Freight ${stage.status?.currentPromotion.freight?.id} is being promoted`}
+                title={`Freight ${stage.status?.currentPromotion.freight?.name} is being promoted`}
               >
                 <FontAwesomeIcon icon={faGear} spin={true} />
               </Tooltip>

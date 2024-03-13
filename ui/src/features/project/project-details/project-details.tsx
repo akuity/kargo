@@ -499,7 +499,7 @@ export const ProjectDetails = () => {
 
       const pe: { [key: string]: boolean } = {};
       ((availableFreight as Freight[]) || []).forEach((f: Freight) => {
-        pe[f?.id || ''] = true;
+        pe[f?.metadata?.name || ''] = true;
       });
       setPromotionEligible(pe);
     }
@@ -512,8 +512,8 @@ export const ProjectDetails = () => {
   React.useEffect(() => {
     const stagesPerFreight: { [key: string]: Stage[] } = {};
     (data?.stages || []).forEach((stage) => {
-      const items = stagesPerFreight[stage.status?.currentFreight?.id || ''] || [];
-      stagesPerFreight[stage.status?.currentFreight?.id || ''] = [...items, stage];
+      const items = stagesPerFreight[stage.status?.currentFreight?.name || ''] || [];
+      stagesPerFreight[stage.status?.currentFreight?.name || ''] = [...items, stage];
       stage?.spec?.subscriptions?.upstreamStages.forEach((item) => {
         const items = subscribersByStage[item.name || ''] || [];
         subscribersByStage[item.name || ''] = [...items, stage];
@@ -526,7 +526,7 @@ export const ProjectDetails = () => {
   React.useEffect(() => {
     const fullFreightById: { [key: string]: Freight } = {};
     (freightData?.groups['']?.freight || []).forEach((freight) => {
-      fullFreightById[freight.id || ''] = freight;
+      fullFreightById[freight?.metadata?.name || ''] = freight;
     });
     setFullFreightById(fullFreightById);
   }, [freightData]);
@@ -636,7 +636,7 @@ export const ProjectDetails = () => {
                     key={id}
                     onClick={() => {
                       if (promotingStage && promotionEligible[id]) {
-                        setConfirmingPromotion(confirmingPromotion ? undefined : f?.id);
+                        setConfirmingPromotion(confirmingPromotion ? undefined : f?.metadata?.name);
                       }
                     }}
                     mode={freightModeFor(id)}
@@ -743,7 +743,7 @@ export const ProjectDetails = () => {
                         onClick={() => {
                           const currentData = {
                             project: promotingStage?.metadata?.namespace,
-                            freight: f?.id
+                            freight: f?.metadata?.name
                           };
                           if (promotionType === 'default') {
                             promoteAction({
@@ -795,7 +795,7 @@ export const ProjectDetails = () => {
                           projectName={name}
                           faded={isFaded(node.data)}
                           currentFreight={
-                            fullFreightById[node.data?.status?.currentFreight?.id || '']
+                            fullFreightById[node.data?.status?.currentFreight?.name || '']
                           }
                           hasNoSubscribers={
                             (subscribersByStage[node?.data?.metadata?.name || ''] || []).length ===

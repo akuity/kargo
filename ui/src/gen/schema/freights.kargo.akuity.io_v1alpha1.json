@@ -66,10 +66,6 @@
       },
       "type": "array"
     },
-    "id": {
-      "description": "ID is a system-assigned value that is derived deterministically from the\ncontents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their IDs.",
-      "type": "string"
-    },
     "images": {
       "description": "Images describes specific versions of specific container images.",
       "items": {

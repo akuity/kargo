@@ -636,7 +636,7 @@ func (r *reconciler) syncControlFlowStage(
 			if err := r.patchFreightStatusFn(ctx, &af, newStatus); err != nil {
 				return status, fmt.Errorf(
 					"error marking Freight %q in namespace %q as verified in Stage %q: %w",
-					af.ID,
+					af.Name,
 					stage.Namespace,
 					stage.Name,
 					err,
@@ -683,7 +683,7 @@ func (r *reconciler) syncNormalStage(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		freightLogger := logger.WithField("freight", status.CurrentFreight.ID)
+		freightLogger := logger.WithField("freight", status.CurrentFreight.Name)
 
 		// Check health
 		status.Health = r.checkHealthFn(
@@ -746,12 +746,12 @@ func (r *reconciler) syncNormalStage(
 			if err := r.verifyFreightInStageFn(
 				ctx,
 				stage.Namespace,
-				status.CurrentFreight.ID,
+				status.CurrentFreight.Name,
 				stage.Name,
 			); err != nil {
 				return status, fmt.Errorf(
 					"error marking Freight %q in namespace %q as verified in Stage %q: %w",
-					status.CurrentFreight.ID,
+					status.CurrentFreight.Name,
 					stage.Namespace,
 					stage.Name,
 					err,
@@ -807,7 +807,7 @@ func (r *reconciler) syncNormalStage(
 
 	// Only proceed if nextFreight isn't the one we already have
 	if stage.Status.CurrentFreight != nil &&
-		stage.Status.CurrentFreight.ID == latestFreight.Name {
+		stage.Status.CurrentFreight.Name == latestFreight.Name {
 		logger.Debug("Stage already has latest available Freight")
 		return status, nil
 	}
@@ -843,7 +843,7 @@ func (r *reconciler) syncNormalStage(
 
 	logger.Debug("auto-promotion will proceed")
 
-	promo := kargo.NewPromotion(*stage, latestFreight.ID)
+	promo := kargo.NewPromotion(*stage, latestFreight.Name)
 	if err :=
 		r.createPromotionFn(ctx, &promo); err != nil {
 		return status, fmt.Errorf(

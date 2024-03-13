@@ -24,7 +24,7 @@ func TestFreightReferenceStackEmpty(t *testing.T) {
 		},
 		{
 			name:           "stack has items",
-			stack:          FreightReferenceStack{{ID: "foo"}},
+			stack:          FreightReferenceStack{{Name: "foo"}},
 			expectedResult: false,
 		},
 	}
@@ -59,9 +59,9 @@ func TestFreightReferenceStackPop(t *testing.T) {
 		},
 		{
 			name:            "stack has items",
-			stack:           FreightReferenceStack{{ID: "foo"}, {ID: "bar"}},
-			expectedStack:   FreightReferenceStack{{ID: "bar"}},
-			expectedFreight: FreightReference{ID: "foo"},
+			stack:           FreightReferenceStack{{Name: "foo"}, {Name: "bar"}},
+			expectedStack:   FreightReferenceStack{{Name: "bar"}},
+			expectedFreight: FreightReference{Name: "foo"},
 			expectedOK:      true,
 		},
 	}
@@ -96,8 +96,8 @@ func TestFreightReferenceStackTop(t *testing.T) {
 		},
 		{
 			name:            "stack has items",
-			stack:           FreightReferenceStack{{ID: "foo"}, {ID: "bar"}},
-			expectedFreight: FreightReference{ID: "foo"},
+			stack:           FreightReferenceStack{{Name: "foo"}, {Name: "bar"}},
+			expectedFreight: FreightReference{Name: "foo"},
 			expectedOK:      true,
 		},
 	}
@@ -122,23 +122,23 @@ func TestFreightReferenceStackPush(t *testing.T) {
 		{
 			name:          "initial stack is nil",
 			stack:         nil,
-			newFreight:    []FreightReference{{ID: "foo"}, {ID: "bar"}},
-			expectedStack: FreightReferenceStack{{ID: "foo"}, {ID: "bar"}},
+			newFreight:    []FreightReference{{Name: "foo"}, {Name: "bar"}},
+			expectedStack: FreightReferenceStack{{Name: "foo"}, {Name: "bar"}},
 		},
 		{
 			name:          "initial stack is not nil",
-			stack:         FreightReferenceStack{{ID: "foo"}},
-			newFreight:    []FreightReference{{ID: "bar"}},
-			expectedStack: FreightReferenceStack{{ID: "bar"}, {ID: "foo"}},
+			stack:         FreightReferenceStack{{Name: "foo"}},
+			newFreight:    []FreightReference{{Name: "bar"}},
+			expectedStack: FreightReferenceStack{{Name: "bar"}, {Name: "foo"}},
 		},
 		{
 			name: "initial stack is full",
 			stack: FreightReferenceStack{
 				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
-			newFreight: []FreightReference{{ID: "foo"}},
+			newFreight: []FreightReference{{Name: "foo"}},
 			expectedStack: FreightReferenceStack{
-				{ID: "foo"}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+				{Name: "foo"}, {}, {}, {}, {}, {}, {}, {}, {}, {},
 			},
 		},
 	}

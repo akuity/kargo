@@ -19,10 +19,6 @@ import (
 type Freight struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// ID is a system-assigned value that is derived deterministically from the
-	// contents of the Freight. i.e. Two pieces of Freight can be compared for
-	// equality by comparing their IDs.
-	ID string `json:"id,omitempty" protobuf:"bytes,2,opt,name=id"`
 	// Commits describes specific Git repository commits.
 	Commits []GitCommit `json:"commits,omitempty" protobuf:"bytes,3,rep,name=commits"`
 	// Images describes specific versions of specific container images.
@@ -37,9 +33,9 @@ func (f *Freight) GetStatus() *FreightStatus {
 	return &f.Status
 }
 
-// UpdateID deterministically calculates a piece of Freight's ID based on its
-// contents and assigns it to the ID field.
-func (f *Freight) UpdateID() {
+// GenerateID deterministically calculates a piece of Freight's ID based on its
+// contents and returns it.
+func (f *Freight) GenerateID() string {
 	size := len(f.Commits) + len(f.Images) + len(f.Charts)
 	artifacts := make([]string, 0, size)
 	for _, commit := range f.Commits {
@@ -72,7 +68,7 @@ func (f *Freight) UpdateID() {
 		)
 	}
 	sort.Strings(artifacts)
-	f.ID = fmt.Sprintf(
+	return fmt.Sprintf(
 		"%x",
 		sha1.Sum([]byte(strings.Join(artifacts, "|"))),
 	)

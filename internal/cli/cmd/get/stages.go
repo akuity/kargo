@@ -161,7 +161,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 		stage := item.Object.(*kargoapi.Stage) // nolint: forcetypeassert
 		var currentFreightID string
 		if stage.Status.CurrentFreight != nil {
-			currentFreightID = stage.Status.CurrentFreight.ID
+			currentFreightID = stage.Status.CurrentFreight.Name
 		}
 		var health string
 		if stage.Status.Health != nil {

@@ -940,15 +940,6 @@ export class Freight extends Message<Freight> {
   metadata?: ObjectMeta;
 
   /**
-   * ID is a system-assigned value that is derived deterministically from the
-   * contents of the Freight. i.e. Two pieces of Freight can be compared for
-   * equality by comparing their IDs.
-   *
-   * @generated from field: optional string id = 2;
-   */
-  id?: string;
-
-  /**
    * Commits describes specific Git repository commits.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.GitCommit commits = 3;
@@ -985,7 +976,6 @@ export class Freight extends Message<Freight> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.Freight";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "metadata", kind: "message", T: ObjectMeta, opt: true },
-    { no: 2, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 4, name: "images", kind: "message", T: Image, repeated: true },
     { no: 5, name: "charts", kind: "message", T: Chart, repeated: true },
@@ -1062,13 +1052,13 @@ export class FreightList extends Message<FreightList> {
  */
 export class FreightReference extends Message<FreightReference> {
   /**
-   * ID is system-assigned value that is derived deterministically from the
-   * contents of the Freight. i.e. Two pieces of Freight can be compared for
-   * equality by comparing their IDs.
+   * Name is system-assigned identifier that is derived deterministically from
+   * the contents of the Freight. i.e. Two pieces of Freight can be compared for
+   * equality by comparing their Names.
    *
-   * @generated from field: optional string id = 1;
+   * @generated from field: optional string name = 1;
    */
-  id?: string;
+  name?: string;
 
   /**
    * Commits describes specific Git repository commits.
@@ -1107,7 +1097,7 @@ export class FreightReference extends Message<FreightReference> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightReference";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },
     { no: 4, name: "charts", kind: "message", T: Chart, repeated: true },

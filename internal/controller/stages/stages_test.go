@@ -683,7 +683,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
-						ID: "fake-freight-id",
+						Name: "fake-freight-id",
 					},
 				},
 			},

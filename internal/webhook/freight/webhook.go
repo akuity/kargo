@@ -76,10 +76,7 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
 	// Re-calculate ID in case it wasn't set correctly to begin with -- possible
 	// if/when we allow users to create their own Freight.
-	freight.UpdateID()
-	// TODO: For now, we'll force Name to be the same as ID, but be can change
-	// this later if/when we allow users to create their own Freight.
-	freight.Name = freight.ID
+	freight.Name = freight.GenerateID()
 	return nil
 }
 
@@ -138,7 +135,7 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
-	oldObj runtime.Object,
+	_ runtime.Object,
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
 	freight := newObj.(*kargoapi.Freight) // nolint: forcetypeassert
@@ -169,10 +166,10 @@ func (w *webhook) ValidateUpdate(
 		}
 	}
 
-	// Freight is meant to be immutable. We only need to compare IDs because IDs
-	// are fingerprints that are deterministically derived from the artifacts
-	// referenced by the Freight.
-	if freight.ID != (oldObj.(*kargoapi.Freight)).ID { // nolint: forcetypeassert
+	// Freight is meant to be immutable. We only need to compare the Name to a
+	// newly generated ID because these are both fingerprints that are
+	// deterministically derived from the artifacts referenced by the Freight.
+	if freight.Name != freight.GenerateID() { // nolint: forcetypeassert
 		return nil, apierrors.NewInvalid(
 			freightGroupKind,
 			freight.Name,
@@ -201,7 +198,7 @@ func (w *webhook) ValidateDelete(
 		&list,
 		client.InNamespace(freight.GetNamespace()),
 		client.MatchingFields{
-			kubeclient.StagesByFreightIndexField: freight.ID,
+			kubeclient.StagesByFreightIndexField: freight.Name,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("list stages: %w", err)

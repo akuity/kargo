@@ -345,11 +345,9 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				require.NotEmpty(t, freight.Name)
-				require.NotEmpty(t, freight.ID)
 				require.NotEmpty(t, freight.OwnerReferences)
 				// All other fields should have a predictable value
 				freight.Name = ""
-				freight.ID = ""
 				freight.OwnerReferences = nil
 				require.Equal(
 					t,

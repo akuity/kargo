@@ -511,10 +511,6 @@
               },
               "type": "array"
             },
-            "id": {
-              "description": "ID is system-assigned value that is derived deterministically from the\ncontents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their IDs.",
-              "type": "string"
-            },
             "images": {
               "description": "Images describes specific versions of specific container images.",
               "items": {
@@ -540,6 +536,10 @@
                 "type": "object"
               },
               "type": "array"
+            },
+            "name": {
+              "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+              "type": "string"
             },
             "verificationInfo": {
               "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
@@ -647,10 +647,6 @@
                   },
                   "type": "array"
                 },
-                "id": {
-                  "description": "ID is system-assigned value that is derived deterministically from the\ncontents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their IDs.",
-                  "type": "string"
-                },
                 "images": {
                   "description": "Images describes specific versions of specific container images.",
                   "items": {
@@ -676,6 +672,10 @@
                     "type": "object"
                   },
                   "type": "array"
+                },
+                "name": {
+                  "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                  "type": "string"
                 },
                 "verificationInfo": {
                   "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
@@ -868,10 +868,6 @@
                 },
                 "type": "array"
               },
-              "id": {
-                "description": "ID is system-assigned value that is derived deterministically from the\ncontents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their IDs.",
-                "type": "string"
-              },
               "images": {
                 "description": "Images describes specific versions of specific container images.",
                 "items": {
@@ -897,6 +893,10 @@
                   "type": "object"
                 },
                 "type": "array"
+              },
+              "name": {
+                "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                "type": "string"
               },
               "verificationInfo": {
                 "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
