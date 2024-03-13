@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteToStageRequest, PromoteToStageResponse, PromoteToStageSubscribersRequest, PromoteToStageSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, WatchPromotionRequest, WatchPromotionResponse, WatchPromotionsRequest, WatchPromotionsResponse, WatchStagesRequest, WatchStagesResponse, WatchWarehousesRequest, WatchWarehousesResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteToStageRequest, PromoteToStageResponse, PromoteToStageSubscribersRequest, PromoteToStageSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, RequestStageVerificationRequest, RequestStageVerificationResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse, WatchPromotionRequest, WatchPromotionResponse, WatchPromotionsRequest, WatchPromotionsResponse, WatchStagesRequest, WatchStagesResponse, WatchWarehousesRequest, WatchWarehousesResponse } from "./service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -130,6 +130,15 @@ export const KargoService = {
       name: "RefreshStage",
       I: RefreshStageRequest,
       O: RefreshStageResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RequestStageVerification
+     */
+    requestStageVerification: {
+      name: "RequestStageVerification",
+      I: RequestStageVerificationRequest,
+      O: RequestStageVerificationResponse,
       kind: MethodKind.Unary,
     },
     /**

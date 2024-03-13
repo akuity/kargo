@@ -68,6 +68,9 @@ const (
 	// KargoServiceRefreshStageProcedure is the fully-qualified name of the KargoService's RefreshStage
 	// RPC.
 	KargoServiceRefreshStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshStage"
+	// KargoServiceRequestStageVerificationProcedure is the fully-qualified name of the KargoService's
+	// RequestStageVerification RPC.
+	KargoServiceRequestStageVerificationProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RequestStageVerification"
 	// KargoServiceListPromotionsProcedure is the fully-qualified name of the KargoService's
 	// ListPromotions RPC.
 	KargoServiceListPromotionsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListPromotions"
@@ -157,6 +160,7 @@ type KargoServiceClient interface {
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
+	RequestStageVerification(context.Context, *connect.Request[v1alpha1.RequestStageVerificationRequest]) (*connect.Response[v1alpha1.RequestStageVerificationResponse], error)
 	// Promotion APIs
 	ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error)
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionsResponse], error)
@@ -258,6 +262,11 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 		refreshStage: connect.NewClient[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse](
 			httpClient,
 			baseURL+KargoServiceRefreshStageProcedure,
+			opts...,
+		),
+		requestStageVerification: connect.NewClient[v1alpha1.RequestStageVerificationRequest, v1alpha1.RequestStageVerificationResponse](
+			httpClient,
+			baseURL+KargoServiceRequestStageVerificationProcedure,
 			opts...,
 		),
 		listPromotions: connect.NewClient[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse](
@@ -398,6 +407,7 @@ type kargoServiceClient struct {
 	watchStages               *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
 	deleteStage               *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
 	refreshStage              *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
+	requestStageVerification  *connect.Client[v1alpha1.RequestStageVerificationRequest, v1alpha1.RequestStageVerificationResponse]
 	listPromotions            *connect.Client[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse]
 	watchPromotions           *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
 	getPromotion              *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
@@ -488,6 +498,12 @@ func (c *kargoServiceClient) DeleteStage(ctx context.Context, req *connect.Reque
 // RefreshStage calls akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage.
 func (c *kargoServiceClient) RefreshStage(ctx context.Context, req *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error) {
 	return c.refreshStage.CallUnary(ctx, req)
+}
+
+// RequestStageVerification calls
+// akuity.io.kargo.service.v1alpha1.KargoService.RequestStageVerification.
+func (c *kargoServiceClient) RequestStageVerification(ctx context.Context, req *connect.Request[v1alpha1.RequestStageVerificationRequest]) (*connect.Response[v1alpha1.RequestStageVerificationResponse], error) {
+	return c.requestStageVerification.CallUnary(ctx, req)
 }
 
 // ListPromotions calls akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions.
@@ -629,6 +645,7 @@ type KargoServiceHandler interface {
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
+	RequestStageVerification(context.Context, *connect.Request[v1alpha1.RequestStageVerificationRequest]) (*connect.Response[v1alpha1.RequestStageVerificationResponse], error)
 	// Promotion APIs
 	ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error)
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest], *connect.ServerStream[v1alpha1.WatchPromotionsResponse]) error
@@ -726,6 +743,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServiceRefreshStageHandler := connect.NewUnaryHandler(
 		KargoServiceRefreshStageProcedure,
 		svc.RefreshStage,
+		opts...,
+	)
+	kargoServiceRequestStageVerificationHandler := connect.NewUnaryHandler(
+		KargoServiceRequestStageVerificationProcedure,
+		svc.RequestStageVerification,
 		opts...,
 	)
 	kargoServiceListPromotionsHandler := connect.NewUnaryHandler(
@@ -876,6 +898,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteStageHandler.ServeHTTP(w, r)
 		case KargoServiceRefreshStageProcedure:
 			kargoServiceRefreshStageHandler.ServeHTTP(w, r)
+		case KargoServiceRequestStageVerificationProcedure:
+			kargoServiceRequestStageVerificationHandler.ServeHTTP(w, r)
 		case KargoServiceListPromotionsProcedure:
 			kargoServiceListPromotionsHandler.ServeHTTP(w, r)
 		case KargoServiceWatchPromotionsProcedure:
@@ -983,6 +1007,10 @@ func (UnimplementedKargoServiceHandler) DeleteStage(context.Context, *connect.Re
 
 func (UnimplementedKargoServiceHandler) RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) RequestStageVerification(context.Context, *connect.Request[v1alpha1.RequestStageVerificationRequest]) (*connect.Response[v1alpha1.RequestStageVerificationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RequestStageVerification is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error) {
