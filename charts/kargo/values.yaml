@@ -364,6 +364,10 @@ garbageCollector:
   workers: 3
   ## @param garbageCollector.maxRetainedPromotions The maximum number of Promotions in terminal phases PER PROJECT that may be spared by the garbage collector.
   maxRetainedPromotions: 20
+  ## @param garbageCollector.maxRetainedFreight The ideal maximum number of Freight OLDER than the oldest still in use (from each Warehouse) that may be spared by the garbage collector. The ACTUAL number of older Freight spared may exceed this ideal if some Freight that would otherwise be deleted do not meet the minimum age criterion.
+  maxRetainedFreight: 20
+  ## @param garbageCollector.minFreightDeletionAge The minimum age Freight must be before considered eligible for garbage collection.
+  minFreightDeletionAge: 336h # Two weeks
   ## @param garbageCollector.logLevel The log level for the garbage collector.
   logLevel: INFO
   ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
