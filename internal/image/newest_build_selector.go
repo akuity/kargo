@@ -2,11 +2,11 @@ package image
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"sort"
 	"sync"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"
@@ -51,7 +51,7 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 
 	tags, err := n.repoClient.getTags(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error listing tags")
+		return nil, fmt.Errorf("error listing tags: %w", err)
 	}
 	if len(tags) == 0 {
 		logger.Trace("found no tags")
@@ -77,8 +77,7 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 	logger.Trace("retrieving images for all tags that matched criteria")
 	images, err := n.getImagesByTags(ctx, tags)
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error retrieving images for all matched tags")
+		return nil, fmt.Errorf("error retrieving images for all matched tags: %w", err)
 	}
 	if len(images) == 0 {
 		// This shouldn't happen
@@ -101,7 +100,7 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 	digest := images[0].Digest
 	image, err := n.repoClient.getImageByDigest(ctx, digest, n.platform)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error retrieving image with digest %q", digest.String())
+		return nil, fmt.Errorf("error retrieving image with digest %q: %w", digest.String(), err)
 	}
 	if image == nil {
 		logger.Tracef(
@@ -142,10 +141,10 @@ func (n *newestBuildSelector) getImagesByTags(
 
 	for _, tag := range tags {
 		if err := metaSem.Acquire(ctx, 1); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error acquiring semaphore for retrieval of image with tag %q",
+			return nil, fmt.Errorf(
+				"error acquiring semaphore for retrieval of image with tag %q: %w",
 				tag,
+				err,
 			)
 		}
 		wg.Add(1)

@@ -2,12 +2,11 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -27,10 +26,10 @@ func (s *server) ListStages(
 
 	var list kargoapi.StageList
 	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
-		return nil, errors.Wrap(err, "list stages")
+		return nil, fmt.Errorf("list stages: %w", err)
 	}
 
-	stages := make([]*v1alpha1.Stage, len(list.Items))
+	stages := make([]*kargoapi.Stage, len(list.Items))
 	for idx := range list.Items {
 		stages[idx] = &list.Items[idx]
 	}

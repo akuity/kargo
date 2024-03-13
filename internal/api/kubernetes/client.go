@@ -2,11 +2,11 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
 	authv1 "k8s.io/api/authorization/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -67,11 +67,10 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	if opts.Scheme == nil {
 		opts.Scheme = runtime.NewScheme()
 		if err := kubescheme.AddToScheme(opts.Scheme); err != nil {
-			return opts,
-				errors.Wrap(err, "error adding Kubernetes API to scheme")
+			return opts, fmt.Errorf("error adding Kubernetes API to scheme: %w", err)
 		}
 		if err := kargoapi.AddToScheme(opts.Scheme); err != nil {
-			return opts, errors.Wrap(err, "error adding Kargo API to scheme")
+			return opts, fmt.Errorf("error adding Kargo API to scheme: %w", err)
 		}
 	}
 	if opts.NewInternalClient == nil {
@@ -147,17 +146,17 @@ func NewClient(
 ) (Client, error) {
 	var err error
 	if opts, err = setOptionsDefaults(opts); err != nil {
-		return nil, errors.Wrap(err, "error setting client options defaults")
+		return nil, fmt.Errorf("error setting client options defaults: %w", err)
 	}
 	internalClient, err :=
 		opts.NewInternalClient(ctx, restCfg, opts.Scheme)
 	if err != nil {
-		return nil, errors.Wrap(err, "error building internal client")
+		return nil, fmt.Errorf("error building internal client: %w", err)
 	}
 	internalDynamicClient, err :=
 		opts.NewInternalDynamicClient(restCfg)
 	if err != nil {
-		return nil, errors.Wrap(err, "error building internal dynamic client")
+		return nil, fmt.Errorf("error building internal dynamic client: %w", err)
 	}
 	return &client{
 		internalClient:        internalClient,
@@ -179,8 +178,7 @@ func newDefaultInternalClient(
 		},
 	)
 	if err != nil {
-		return nil,
-			errors.Wrap(err, "error creating controller-runtime cluster")
+		return nil, fmt.Errorf("error creating controller-runtime cluster: %w", err)
 	}
 	go func() {
 		err = cluster.Start(ctx)
@@ -188,7 +186,10 @@ func newDefaultInternalClient(
 	if !cluster.GetCache().WaitForCacheSync(ctx) {
 		return nil, errors.New("error waiting for cache sync")
 	}
-	return cluster.GetClient(), errors.Wrap(err, "error starting cluster")
+	if err != nil {
+		return nil, fmt.Errorf("error starting cluster: %w", err)
+	}
+	return cluster.GetClient(), nil
 }
 
 func (c *client) Get(
@@ -579,12 +580,18 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 	if path == "" {
 		logger.Debug("loading in-cluster REST config")
 		cfg, err := rest.InClusterConfig()
-		return cfg, errors.Wrap(err, "error loading in-cluster REST config")
+		if err != nil {
+			return cfg, fmt.Errorf("error loading in-cluster REST config: %w", err)
+		}
+		return cfg, nil
 	}
 
 	logger.WithField("path", path).Debug("loading REST config from path")
 	cfg, err := clientcmd.BuildConfigFromFlags("", path)
-	return cfg, errors.Wrapf(err, "error loading REST config from %q", path)
+	if err != nil {
+		return cfg, fmt.Errorf("error loading REST config from %q: %w", path, err)
+	}
+	return cfg, nil
 }
 
 // gvrAndKeyFromObj extracts the group, version, and plural resource type
@@ -596,8 +603,7 @@ func gvrAndKeyFromObj(
 ) (schema.GroupVersionResource, *libClient.ObjectKey, error) {
 	gvk, err := apiutil.GVKForObject(runtimeObj, scheme)
 	if err != nil {
-		return schema.GroupVersionResource{}, nil,
-			errors.Wrap(err, "error extracting GVK from object")
+		return schema.GroupVersionResource{}, nil, fmt.Errorf("error extracting GVK from object: %w", err)
 	}
 	// In case this was a list, we trim the "List" suffix to get the kind that's
 	// IN the list.
@@ -682,7 +688,7 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 						return internalClient, nil
 					}
 					if !apierrors.IsForbidden(err) {
-						return nil, errors.Wrap(err, "review subject access")
+						return nil, fmt.Errorf("review subject access: %w", err)
 					}
 				}
 			}
@@ -697,7 +703,7 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 			ra,
 			withBearerToken(userInfo.BearerToken),
 		); err != nil {
-			return nil, errors.Wrap(err, "review subject access")
+			return nil, fmt.Errorf("review subject access: %w", err)
 		}
 		return internalClient, nil
 	}
@@ -739,7 +745,7 @@ func reviewSubjectAccess(
 ) error {
 	cfg, err := GetRestConfig(ctx, os.Getenv("KUBECONFIG"))
 	if err != nil {
-		return errors.Wrap(err, "get REST config")
+		return fmt.Errorf("get REST config: %w", err)
 	}
 
 	var opt userClientOptions
@@ -764,7 +770,7 @@ func reviewSubjectAccess(
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "create user-specific Kubernetes client")
+		return fmt.Errorf("create user-specific Kubernetes client: %w", err)
 	}
 
 	if opt.subject != nil {
@@ -775,7 +781,7 @@ func reviewSubjectAccess(
 			},
 		}
 		if err := userClient.Create(ctx, review); err != nil {
-			return errors.Wrap(err, "submit SubjectAccessReview")
+			return fmt.Errorf("submit SubjectAccessReview: %w", err)
 		}
 		if review.Status.Allowed {
 			return nil
@@ -789,7 +795,7 @@ func reviewSubjectAccess(
 		},
 	}
 	if err := userClient.Create(ctx, review); err != nil {
-		return errors.Wrap(err, "submit SelfSubjectAccessReview")
+		return fmt.Errorf("submit SelfSubjectAccessReview: %w", err)
 	}
 	if review.Status.Allowed {
 		return nil

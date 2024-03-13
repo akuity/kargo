@@ -2,9 +2,9 @@ package warehouses
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/technosophos/moniker"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -103,32 +103,32 @@ func SetupReconcilerWithManager(
 
 	shardPredicate, err := controller.GetShardPredicate(shardName)
 	if err != nil {
-		return errors.Wrap(err, "error creating shard selector predicate")
+		return fmt.Errorf("error creating shard selector predicate: %w", err)
 	}
 
-	return errors.Wrap(
-		ctrl.NewControllerManagedBy(mgr).
-			For(&kargoapi.Warehouse{}).
-			WithEventFilter(
-				predicate.Funcs{
-					DeleteFunc: func(event.DeleteEvent) bool {
-						// We're not interested in any deletes
-						return false
-					},
+	if err := ctrl.NewControllerManagedBy(mgr).
+		For(&kargoapi.Warehouse{}).
+		WithEventFilter(
+			predicate.Funcs{
+				DeleteFunc: func(event.DeleteEvent) bool {
+					// We're not interested in any deletes
+					return false
 				},
-			).
-			WithEventFilter(
-				predicate.Or(
-					predicate.GenerationChangedPredicate{},
-					predicate.AnnotationChangedPredicate{},
-				),
-			).
-			WithEventFilter(shardPredicate).
-			WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
-			WithOptions(controller.CommonOptions()).
-			Complete(newReconciler(mgr.GetClient(), credentialsDB)),
-		"error building Warehouse reconciler",
-	)
+			},
+		).
+		WithEventFilter(
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
+			),
+		).
+		WithEventFilter(shardPredicate).
+		WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
+		WithOptions(controller.CommonOptions()).
+		Complete(newReconciler(mgr.GetClient(), credentialsDB)); err != nil {
+		return fmt.Errorf("error building Warehouse reconciler: %w", err)
+	}
+	return nil
 }
 
 func newReconciler(
@@ -237,8 +237,7 @@ func (r *reconciler) syncWarehouse(
 
 	freight, err := r.getLatestFreightFromReposFn(ctx, warehouse)
 	if err != nil {
-		return status,
-			errors.Wrap(err, "error getting latest Freight from repositories")
+		return status, fmt.Errorf("error getting latest Freight from repositories: %w", err)
 	}
 	if freight == nil {
 		logger.Debug("found no Freight from repositories")
@@ -249,7 +248,7 @@ func (r *reconciler) syncWarehouse(
 	freight.Labels = map[string]string{}
 	if freight.Labels[kargoapi.AliasLabelKey], err =
 		r.getAvailableFreightAliasFn(ctx); err != nil {
-		return status, errors.Wrap(err, "error getting available Freight alias")
+		return status, fmt.Errorf("error getting available Freight alias: %w", err)
 	}
 
 	if err = r.createFreightFn(ctx, freight); err != nil {
@@ -261,11 +260,11 @@ func (r *reconciler) syncWarehouse(
 			)
 			return status, nil
 		}
-		return status, errors.Wrapf(
-			err,
-			"error creating Freight %q in namespace %q",
+		return status, fmt.Errorf(
+			"error creating Freight %q in namespace %q: %w",
 			freight.Name,
 			freight.Namespace,
+			err,
 		)
 	}
 	log.Debugf(
@@ -289,7 +288,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 		warehouse.Spec.Subscriptions,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "error syncing git repo subscriptions")
+		return nil, fmt.Errorf("error syncing git repo subscriptions: %w", err)
 	}
 	logger.Debug("synced git repo subscriptions")
 
@@ -299,7 +298,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 		warehouse.Spec.Subscriptions,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "error syncing image repo subscriptions")
+		return nil, fmt.Errorf("error syncing image repo subscriptions: %w", err)
 	}
 	logger.Debug("synced image repo subscriptions")
 
@@ -309,7 +308,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 		warehouse.Spec.Subscriptions,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "error syncing chart repo subscriptions")
+		return nil, fmt.Errorf("error syncing chart repo subscriptions: %w", err)
 	}
 	logger.Debug("synced chart repo subscriptions")
 

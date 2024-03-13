@@ -2,6 +2,7 @@ package image
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/distribution/distribution/v3/registry/client/auth/challenge"
 	"github.com/opencontainers/go-digest"
 	"github.com/patrickmn/go-cache"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 

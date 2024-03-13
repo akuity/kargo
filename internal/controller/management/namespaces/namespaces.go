@@ -2,8 +2,8 @@ package namespaces
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -117,11 +117,11 @@ func (r *reconciler) Reconcile(
 			},
 		),
 	); err != nil {
-		return ctrl.Result{}, errors.Wrapf(err, "error deleting Project %q", ns.Name)
+		return ctrl.Result{}, fmt.Errorf("error deleting Project %q: %w", ns.Name, err)
 	}
 	if controllerutil.RemoveFinalizer(ns, kargoapi.FinalizerName) {
 		if err := r.updateNamespaceFn(ctx, ns); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "error removing finalizer")
+			return ctrl.Result{}, fmt.Errorf("error removing finalizer: %w", err)
 		}
 	}
 	logger.Debug("done reconciling Namespace")

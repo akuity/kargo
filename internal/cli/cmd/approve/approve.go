@@ -2,10 +2,10 @@ package approve
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/client"
@@ -76,7 +76,7 @@ func (o *approvalOptions) addFlags(cmd *cobra.Command) {
 	option.Stage(cmd.Flags(), &o.Stage, "The stage for which to approve the freight.")
 
 	if err := cmd.MarkFlagRequired(option.StageFlag); err != nil {
-		panic(errors.Wrapf(err, "could not mark %s flag as required", option.StageFlag))
+		panic(fmt.Errorf("could not mark %s flag as required: %w", option.StageFlag, err))
 	}
 
 	cmd.MarkFlagsOneRequired(option.FreightFlag, option.FreightAliasFlag)
@@ -90,25 +90,25 @@ func (o *approvalOptions) validate() error {
 	// While the flags are marked as required, a user could still provide an empty
 	// string. This is a check to ensure that the flags are not empty.
 	if o.Project == "" {
-		errs = append(errs, errors.Errorf("%s is required", option.ProjectFlag))
+		errs = append(errs, fmt.Errorf("%s is required", option.ProjectFlag))
 	}
 	if o.FreightName == "" && o.FreightAlias == "" {
 		errs = append(
 			errs,
-			errors.Errorf("either %s or %s is required", option.FreightFlag, option.FreightAliasFlag),
+			fmt.Errorf("either %s or %s is required", option.FreightFlag, option.FreightAliasFlag),
 		)
 	}
 	if o.Stage == "" {
-		errs = append(errs, errors.Errorf("%s is required", option.StageFlag))
+		errs = append(errs, fmt.Errorf("%s is required", option.StageFlag))
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 // run performs the approval of a freight based on the options.
 func (o *approvalOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if _, err = kargoSvcCli.ApproveFreight(
@@ -122,7 +122,7 @@ func (o *approvalOptions) run(ctx context.Context) error {
 			},
 		),
 	); err != nil {
-		return errors.Wrap(err, "approve freight")
+		return fmt.Errorf("approve freight: %w", err)
 	}
 	return nil
 }

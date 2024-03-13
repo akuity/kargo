@@ -2,11 +2,11 @@ package delete
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 	"slices"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -98,22 +98,22 @@ func (o *deleteWarehouseOptions) validate() error {
 		errs = append(errs, errors.New("at least one warehouse name is required"))
 	}
 
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 // run removes the warehouse(s) based on the options.
 func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
-		return errors.Wrap(err, "create printer")
+		return fmt.Errorf("create printer: %w", err)
 	}
 
-	var resErr error
+	var errs []error
 	for _, name := range o.Names {
 		if _, err := kargoSvcCli.DeleteWarehouse(
 			ctx,
@@ -124,7 +124,7 @@ func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
-			resErr = goerrors.Join(resErr, errors.Wrap(err, "Error"))
+			errs = append(errs, err)
 			continue
 		}
 		_ = printer.PrintObj(&kargoapi.Warehouse{
@@ -134,5 +134,5 @@ func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 			},
 		}, o.IOStreams.Out)
 	}
-	return resErr
+	return errors.Join(errs...)
 }

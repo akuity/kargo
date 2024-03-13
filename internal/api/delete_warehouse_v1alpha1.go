@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -31,20 +29,16 @@ func (s *server) DeleteWarehouse(
 		return nil, err
 	}
 
-	var warehouse kargoapi.Warehouse
-	key := client.ObjectKey{
-		Namespace: project,
-		Name:      name,
-	}
-	if err := s.client.Get(ctx, key, &warehouse); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeNotFound,
-				fmt.Errorf("warehouse %q not found", key.String()))
-		}
-		return nil, errors.Wrap(err, "get warehouse")
-	}
-	if err := s.client.Delete(ctx, &warehouse); err != nil && !kubeerr.IsNotFound(err) {
-		return nil, errors.Wrap(err, "delete warehouse")
+	if err := s.client.Delete(
+		ctx,
+		&kargoapi.Warehouse{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: project,
+				Name:      name,
+			},
+		},
+	); err != nil {
+		return nil, fmt.Errorf("delete warehouse: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteWarehouseResponse{}), nil
 }

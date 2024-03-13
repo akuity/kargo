@@ -2,10 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -37,10 +36,7 @@ func (s *server) WatchWarehouses(
 			Namespace: project,
 			Name:      name,
 		}, &kargoapi.Warehouse{}); err != nil {
-			if kubeerr.IsNotFound(err) {
-				return connect.NewError(connect.CodeNotFound, err)
-			}
-			return errors.Wrap(err, "get warehouse")
+			return fmt.Errorf("get warehouse: %w", err)
 		}
 	}
 
@@ -48,10 +44,9 @@ func (s *server) WatchWarehouses(
 	if name != "" {
 		opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, name).String()
 	}
-	w, err :=
-		s.client.Watch(ctx, &kargoapi.Warehouse{}, project, opts)
+	w, err := s.client.Watch(ctx, &kargoapi.Warehouse{}, project, opts)
 	if err != nil {
-		return errors.Wrap(err, "watch warehouse")
+		return fmt.Errorf("watch warehouse: %w", err)
 	}
 	defer w.Stop()
 	for {
@@ -64,17 +59,17 @@ func (s *server) WatchWarehouses(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return errors.Errorf("unexpected object type %T", e.Object)
+				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
 			var warehouse *kargoapi.Warehouse
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &warehouse); err != nil {
-				return errors.Wrap(err, "from unstructured")
+				return fmt.Errorf("from unstructured: %w", err)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchWarehousesResponse{
 				Warehouse: warehouse,
 				Type:      string(e.Type),
 			}); err != nil {
-				return errors.Wrap(err, "send response")
+				return fmt.Errorf("send response: %w", err)
 			}
 		}
 	}

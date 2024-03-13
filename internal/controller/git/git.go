@@ -3,14 +3,13 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	libExec "github.com/akuity/kargo/internal/exec"
 )
@@ -135,11 +134,7 @@ func Clone(
 ) (Repo, error) {
 	homeDir, err := os.MkdirTemp("", "")
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error creating home directory for repo %q",
-			repoURL,
-		)
+		return nil, fmt.Errorf("error creating home directory for repo %q: %w", repoURL, err)
 	}
 	r := &repo{
 		url:                   repoURL,
@@ -154,8 +149,10 @@ func Clone(
 }
 
 func (r *repo) AddAll() error {
-	_, err := libExec.Exec(r.buildCommand("add", "."))
-	return errors.Wrap(err, "error staging changes for commit")
+	if _, err := libExec.Exec(r.buildCommand("add", ".")); err != nil {
+		return fmt.Errorf("error staging changes for commit: %w", err)
+	}
+	return nil
 }
 
 func (r *repo) AddAllAndCommit(message string) error {
@@ -166,8 +163,10 @@ func (r *repo) AddAllAndCommit(message string) error {
 }
 
 func (r *repo) Clean() error {
-	_, err := libExec.Exec(r.buildCommand("clean", "-fd"))
-	return errors.Wrapf(err, "error cleaning branch %q", r.currentBranch)
+	if _, err := libExec.Exec(r.buildCommand("clean", "-fd")); err != nil {
+		return fmt.Errorf("error cleaning branch %q: %w", r.currentBranch, err)
+	}
+	return nil
 }
 
 func (r *repo) clone(opts *CloneOptions) error {
@@ -189,12 +188,7 @@ func (r *repo) clone(opts *CloneOptions) error {
 	cmd := r.buildCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		return errors.Wrapf(
-			err,
-			"error cloning repo %q into %q",
-			r.url,
-			r.dir,
-		)
+		return fmt.Errorf("error cloning repo %q into %q: %w", r.url, r.dir, err)
 	}
 	if opts.Branch == "" {
 		// If branch wasn't specified as part of options, we need to determine it manually
@@ -203,7 +197,7 @@ func (r *repo) clone(opts *CloneOptions) error {
 			"--show-current",
 		))
 		if err != nil {
-			return errors.Wrap(err, "error determining branch after cloning")
+			return fmt.Errorf("error determining branch after cloning: %w", err)
 		}
 		r.currentBranch = strings.TrimSpace(string(resBytes))
 	}
@@ -216,29 +210,24 @@ func (r *repo) Close() error {
 
 func (r *repo) Checkout(branch string) error {
 	r.currentBranch = branch
-	_, err := libExec.Exec(r.buildCommand(
+	if _, err := libExec.Exec(r.buildCommand(
 		"checkout",
 		branch,
 		// The next line makes it crystal clear to git that we're checking out
 		// a branch. We need to do this because branch names can often resemble
 		// paths within the repo.
 		"--",
-	))
-	return errors.Wrapf(
-		err,
-		"error checking out branch %q from repo %q",
-		branch,
-		r.url,
-	)
+	)); err != nil {
+		return fmt.Errorf("error checking out branch %q from repo %q: %w", branch, r.url, err)
+	}
+	return nil
 }
 
 func (r *repo) Commit(message string) error {
-	_, err := libExec.Exec(r.buildCommand("commit", "-m", message))
-	return errors.Wrapf(
-		err,
-		"error committing changes to branch %q",
-		r.currentBranch,
-	)
+	if _, err := libExec.Exec(r.buildCommand("commit", "-m", message)); err != nil {
+		return fmt.Errorf("error committing changes to branch %q: %w", r.currentBranch, err)
+	}
+	return nil
 }
 
 func (r *repo) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
@@ -248,17 +237,18 @@ func (r *repo) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
 	if err == nil {
 		return false, nil
 	}
-	if execErr, ok := err.(*libExec.ExitError); ok {
+	var execErr *libExec.ExitError
+	if errors.As(err, &execErr) {
 		if execErr.ExitCode == 1 {
 			return true, nil
 		}
 	}
-	return false, errors.Wrapf(err, "error diffing commits %s..%s", commit1, commit2)
+	return false, fmt.Errorf("error diffing commits %s..%s: %w", commit1, commit2, err)
 }
 
 func (r *repo) CreateChildBranch(branch string) error {
 	r.currentBranch = branch
-	_, err := libExec.Exec(r.buildCommand(
+	if _, err := libExec.Exec(r.buildCommand(
 		"checkout",
 		"-b",
 		branch,
@@ -266,13 +256,10 @@ func (r *repo) CreateChildBranch(branch string) error {
 		// a branch. We need to do this because branch names can often resemble
 		// paths within the repo.
 		"--",
-	))
-	return errors.Wrapf(
-		err,
-		"error creating new branch %q for repo %q",
-		branch,
-		r.url,
-	)
+	)); err != nil {
+		return fmt.Errorf("error creating new branch %q for repo %q: %w", branch, r.url, err)
+	}
+	return nil
 }
 
 func (r *repo) CreateOrphanedBranch(branch string) error {
@@ -283,12 +270,7 @@ func (r *repo) CreateOrphanedBranch(branch string) error {
 		branch,
 		"--discard-changes",
 	)); err != nil {
-		return errors.Wrapf(
-			err,
-			"error creating orphaned branch %q for repo %q",
-			branch,
-			r.url,
-		)
+		return fmt.Errorf("error creating orphaned branch %q for repo %q: %w", branch, r.url, err)
 	}
 	return r.Clean()
 }
@@ -298,33 +280,31 @@ func (r *repo) CurrentBranch() string {
 }
 
 func (r *repo) DeleteBranch(branch string) error {
-	_, err := libExec.Exec(r.buildCommand(
+	if _, err := libExec.Exec(r.buildCommand(
 		"branch",
 		"--delete",
 		"--force",
 		branch,
-	))
-	return errors.Wrapf(
-		err,
-		"error deleting branch %q for repo %q",
-		branch,
-		r.url,
-	)
+	)); err != nil {
+		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, r.url, err)
+	}
+	return nil
 }
 
 func (r *repo) HasDiffs() (bool, error) {
 	resBytes, err := libExec.Exec(r.buildCommand("status", "-s"))
-	return len(resBytes) > 0,
-		errors.Wrapf(err, "error checking status of branch %q", r.currentBranch)
+	if err != nil {
+		return false, fmt.Errorf("error checking status of branch %q: %w", r.currentBranch, err)
+	}
+	return len(resBytes) > 0, nil
 }
 
 func (r *repo) GetDiffPaths() ([]string, error) {
 	resBytes, err := libExec.Exec(r.buildCommand("status", "-s"))
 	if err != nil {
-		return nil,
-			errors.Wrapf(err, "error checking status of branch %q", r.currentBranch)
+		return nil, fmt.Errorf("error checking status of branch %q: %w", r.currentBranch, err)
 	}
-	paths := []string{}
+	var paths []string
 	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
@@ -341,30 +321,33 @@ func (r *repo) IsAncestor(parent string, child string) (bool, error) {
 	if err == nil {
 		return true, nil
 	}
-	if execErr, ok := err.(*libExec.ExitError); ok {
+	var execErr *libExec.ExitError
+	if errors.As(err, &execErr) {
 		if execErr.ExitCode == 1 {
 			return false, nil
 		}
 	}
-	return false, errors.Wrapf(err, "error testing ancestry of branches %q, %q", parent, child)
+	return false, fmt.Errorf("error testing ancestry of branches %q, %q: %w", parent, child, err)
 }
 
 func (r *repo) LastCommitID() (string, error) {
 	shaBytes, err := libExec.Exec(r.buildCommand("rev-parse", "HEAD"))
-	return strings.TrimSpace(string(shaBytes)),
-		errors.Wrap(err, "error obtaining ID of last commit")
+	if err != nil {
+		return "", fmt.Errorf("error obtaining ID of last commit: %w", err)
+	}
+	return strings.TrimSpace(string(shaBytes)), nil
 }
 
 func (r *repo) ListTags() ([]string, error) {
 	if _, err :=
 		libExec.Exec(r.buildCommand("fetch", "origin", "--tags")); err != nil {
-		return nil, errors.Wrapf(err, "error fetching tags from repo %q", r.url)
+		return nil, fmt.Errorf("error fetching tags from repo %q: %w", r.url, err)
 	}
 	tagsBytes, err := libExec.Exec(r.buildCommand("tag", "--list", "--sort", "-creatordate"))
 	if err != nil {
-		return nil, errors.Wrapf(err, "error listing tags for repo %q", r.url)
+		return nil, fmt.Errorf("error listing tags for repo %q: %w", r.url, err)
 	}
-	tags := []string{}
+	var tags []string
 	scanner := bufio.NewScanner(bytes.NewReader(tagsBytes))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {
@@ -377,8 +360,10 @@ func (r *repo) CommitMessage(id string) (string, error) {
 	msgBytes, err := libExec.Exec(
 		r.buildCommand("log", "-n", "1", "--pretty=format:%s", id),
 	)
-	return string(msgBytes),
-		errors.Wrapf(err, "error obtaining commit message for commit %q", id)
+	if err != nil {
+		return "", fmt.Errorf("error obtaining commit message for commit %q: %w", id, err)
+	}
+	return string(msgBytes), nil
 }
 
 func (r *repo) CommitMessages(id1, id2 string) ([]string, error) {
@@ -390,15 +375,10 @@ func (r *repo) CommitMessages(id1, id2 string) ([]string, error) {
 		fmt.Sprintf("%s..%s", id1, id2),
 	))
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error obtaining commit messages between commits %q and %q",
-			id1,
-			id2,
-		)
+		return nil, fmt.Errorf("error obtaining commit messages between commits %q and %q: %w", id1, id2, err)
 	}
 	msgsBytes := bytes.Split(allMsgBytes, []byte("\n"))
-	msgs := []string{}
+	var msgs []string
 	for _, msgBytes := range msgsBytes {
 		msgStr := string(msgBytes)
 		// There's usually a trailing newline in the result. We could just discard
@@ -416,8 +396,10 @@ func (r *repo) Push(force bool) error {
 	if force {
 		args = append(args, "--force")
 	}
-	_, err := libExec.Exec(r.buildCommand(args...))
-	return errors.Wrapf(err, "error pushing branch %q", r.currentBranch)
+	if _, err := libExec.Exec(r.buildCommand(args...)); err != nil {
+		return fmt.Errorf("error pushing branch %q: %w", r.currentBranch, err)
+	}
+	return nil
 }
 
 func (r *repo) RemoteBranchExists(branch string) (bool, error) {
@@ -428,22 +410,27 @@ func (r *repo) RemoteBranchExists(branch string) (bool, error) {
 		r.url,
 		branch,
 	))
-	if exitErr, ok := err.(*libExec.ExitError); ok && exitErr.ExitCode == 2 {
+	var exitErr *libExec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode == 2 {
 		// Branch does not exist
 		return false, nil
 	}
-	return err == nil, errors.Wrapf(
-		err,
-		"error checking for existence of branch %q in remote repo %q",
-		branch,
-		r.url,
-	)
+	if err != nil {
+		return false, fmt.Errorf(
+			"error checking for existence of branch %q in remote repo %q: %w",
+			branch,
+			r.url,
+			err,
+		)
+	}
+	return true, nil
 }
 
 func (r *repo) ResetHard() error {
-	_, err :=
-		libExec.Exec(r.buildCommand("reset", "--hard"))
-	return errors.Wrap(err, "error resetting branch working tree")
+	if _, err := libExec.Exec(r.buildCommand("reset", "--hard")); err != nil {
+		return fmt.Errorf("error resetting branch working tree: %w", err)
+	}
+	return nil
 }
 
 func (r *repo) URL() string {
@@ -465,13 +452,13 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 	cmd := r.buildCommand("config", "--global", "user.name", "Kargo Render")
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		return errors.Wrapf(err, "error configuring git username")
+		return fmt.Errorf("error configuring git username: %w", err)
 	}
 	cmd =
 		r.buildCommand("config", "--global", "user.email", "kargo-render@akuity.io")
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		return errors.Wrapf(err, "error configuring git user email address")
+		return fmt.Errorf("error configuring git user email address: %w", err)
 	}
 
 	// If an SSH key was provided, use that.
@@ -481,7 +468,7 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 		const sshConfig = "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null"
 		if err :=
 			os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
-			return errors.Wrapf(err, "error writing SSH config to %q", sshConfigPath)
+			return fmt.Errorf("error writing SSH config to %q: %w", sshConfigPath, err)
 		}
 
 		rsaKeyPath := filepath.Join(r.homeDir, ".ssh", "id_rsa")
@@ -490,7 +477,7 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 			[]byte(repoCreds.SSHPrivateKey),
 			0600,
 		); err != nil {
-			return errors.Wrapf(err, "error writing SSH key to %q", rsaKeyPath)
+			return fmt.Errorf("error writing SSH key to %q: %w", rsaKeyPath, err)
 		}
 		return nil // We're done
 	}
@@ -501,12 +488,12 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 	cmd = r.buildCommand("config", "--global", "credential.helper", "store")
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		return errors.Wrapf(err, "error configuring git credential helper")
+		return fmt.Errorf("error configuring git credential helper: %w", err)
 	}
 
 	credentialURL, err := url.Parse(r.url)
 	if err != nil {
-		return errors.Wrapf(err, "error parsing URL %q", r.url)
+		return fmt.Errorf("error parsing URL %q: %w", r.url, err)
 	}
 	// Remove path and query string components from the URL
 	credentialURL.Path = ""
@@ -527,11 +514,7 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 		[]byte(credentialURL.String()),
 		0600,
 	); err != nil {
-		return errors.Wrapf(
-			err,
-			"error writing credentials to %q",
-			credentialsPath,
-		)
+		return fmt.Errorf("error writing credentials to %q: %w", credentialsPath, err)
 	}
 	return nil
 }

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
-
 	"github.com/akuity/kargo/internal/cli/config"
 )
 
@@ -15,7 +13,7 @@ func main() {
 	cfg, err := config.LoadCLIConfig()
 	if err != nil {
 		if !config.IsConfigNotFoundErr(err) {
-			fmt.Fprintln(os.Stderr, errors.Wrap(err, "load config"))
+			_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("load config: %w", err))
 			os.Exit(1)
 		}
 		cfg = config.NewDefaultCLIConfig()

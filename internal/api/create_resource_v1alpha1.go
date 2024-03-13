@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	sigyaml "sigs.k8s.io/yaml"
 
@@ -17,7 +17,7 @@ func (s *server) CreateResource(
 ) (*connect.Response[svcv1alpha1.CreateResourceResponse], error) {
 	projects, otherResources, err := splitYAML(req.Msg.GetManifest())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.Wrap(err, "parse manifest"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse manifest: %w", err))
 	}
 	resources := append(projects, otherResources...)
 	res := make([]*svcv1alpha1.CreateResourceResult, 0, len(resources))
@@ -39,7 +39,7 @@ func (s *server) createResource(
 	if err := s.client.Create(ctx, obj); err != nil {
 		return &svcv1alpha1.CreateResourceResult{
 			Result: &svcv1alpha1.CreateResourceResult_Error{
-				Error: errors.Wrap(err, "create resource").Error(),
+				Error: fmt.Errorf("create resource: %w", err).Error(),
 			},
 		}
 	}
@@ -48,7 +48,7 @@ func (s *server) createResource(
 	if err != nil {
 		return &svcv1alpha1.CreateResourceResult{
 			Result: &svcv1alpha1.CreateResourceResult_Error{
-				Error: errors.Wrap(err, "marshal created manifest").Error(),
+				Error: fmt.Errorf("marshal created manifest: %w", err).Error(),
 			},
 		}
 	}

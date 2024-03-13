@@ -123,6 +123,21 @@ const (
 	// KargoServiceRefreshWarehouseProcedure is the fully-qualified name of the KargoService's
 	// RefreshWarehouse RPC.
 	KargoServiceRefreshWarehouseProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshWarehouse"
+	// KargoServiceCreateCredentialsProcedure is the fully-qualified name of the KargoService's
+	// CreateCredentials RPC.
+	KargoServiceCreateCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateCredentials"
+	// KargoServiceDeleteCredentialsProcedure is the fully-qualified name of the KargoService's
+	// DeleteCredentials RPC.
+	KargoServiceDeleteCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteCredentials"
+	// KargoServiceGetCredentialsProcedure is the fully-qualified name of the KargoService's
+	// GetCredentials RPC.
+	KargoServiceGetCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetCredentials"
+	// KargoServiceListCredentialsProcedure is the fully-qualified name of the KargoService's
+	// ListCredentials RPC.
+	KargoServiceListCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListCredentials"
+	// KargoServiceUpdateCredentialsProcedure is the fully-qualified name of the KargoService's
+	// UpdateCredentials RPC.
+	KargoServiceUpdateCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateCredentials"
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
@@ -162,6 +177,12 @@ type KargoServiceClient interface {
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchWarehousesResponse], error)
 	DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error)
 	RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error)
+	// Credential APIs
+	CreateCredentials(context.Context, *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error)
+	DeleteCredentials(context.Context, *connect.Request[v1alpha1.DeleteCredentialsRequest]) (*connect.Response[v1alpha1.DeleteCredentialsResponse], error)
+	GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error)
+	ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error)
+	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
 }
 
 // NewKargoServiceClient constructs a client for the akuity.io.kargo.service.v1alpha1.KargoService
@@ -334,6 +355,31 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceRefreshWarehouseProcedure,
 			opts...,
 		),
+		createCredentials: connect.NewClient[v1alpha1.CreateCredentialsRequest, v1alpha1.CreateCredentialsResponse](
+			httpClient,
+			baseURL+KargoServiceCreateCredentialsProcedure,
+			opts...,
+		),
+		deleteCredentials: connect.NewClient[v1alpha1.DeleteCredentialsRequest, v1alpha1.DeleteCredentialsResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteCredentialsProcedure,
+			opts...,
+		),
+		getCredentials: connect.NewClient[v1alpha1.GetCredentialsRequest, v1alpha1.GetCredentialsResponse](
+			httpClient,
+			baseURL+KargoServiceGetCredentialsProcedure,
+			opts...,
+		),
+		listCredentials: connect.NewClient[v1alpha1.ListCredentialsRequest, v1alpha1.ListCredentialsResponse](
+			httpClient,
+			baseURL+KargoServiceListCredentialsProcedure,
+			opts...,
+		),
+		updateCredentials: connect.NewClient[v1alpha1.UpdateCredentialsRequest, v1alpha1.UpdateCredentialsResponse](
+			httpClient,
+			baseURL+KargoServiceUpdateCredentialsProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -371,6 +417,11 @@ type kargoServiceClient struct {
 	watchWarehouses        *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
 	deleteWarehouse        *connect.Client[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse]
 	refreshWarehouse       *connect.Client[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse]
+	createCredentials      *connect.Client[v1alpha1.CreateCredentialsRequest, v1alpha1.CreateCredentialsResponse]
+	deleteCredentials      *connect.Client[v1alpha1.DeleteCredentialsRequest, v1alpha1.DeleteCredentialsResponse]
+	getCredentials         *connect.Client[v1alpha1.GetCredentialsRequest, v1alpha1.GetCredentialsResponse]
+	listCredentials        *connect.Client[v1alpha1.ListCredentialsRequest, v1alpha1.ListCredentialsResponse]
+	updateCredentials      *connect.Client[v1alpha1.UpdateCredentialsRequest, v1alpha1.UpdateCredentialsResponse]
 }
 
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
@@ -534,6 +585,31 @@ func (c *kargoServiceClient) RefreshWarehouse(ctx context.Context, req *connect.
 	return c.refreshWarehouse.CallUnary(ctx, req)
 }
 
+// CreateCredentials calls akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials.
+func (c *kargoServiceClient) CreateCredentials(ctx context.Context, req *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error) {
+	return c.createCredentials.CallUnary(ctx, req)
+}
+
+// DeleteCredentials calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials.
+func (c *kargoServiceClient) DeleteCredentials(ctx context.Context, req *connect.Request[v1alpha1.DeleteCredentialsRequest]) (*connect.Response[v1alpha1.DeleteCredentialsResponse], error) {
+	return c.deleteCredentials.CallUnary(ctx, req)
+}
+
+// GetCredentials calls akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials.
+func (c *kargoServiceClient) GetCredentials(ctx context.Context, req *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error) {
+	return c.getCredentials.CallUnary(ctx, req)
+}
+
+// ListCredentials calls akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials.
+func (c *kargoServiceClient) ListCredentials(ctx context.Context, req *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error) {
+	return c.listCredentials.CallUnary(ctx, req)
+}
+
+// UpdateCredentials calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials.
+func (c *kargoServiceClient) UpdateCredentials(ctx context.Context, req *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error) {
+	return c.updateCredentials.CallUnary(ctx, req)
+}
+
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
 // service.
 type KargoServiceHandler interface {
@@ -572,6 +648,12 @@ type KargoServiceHandler interface {
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest], *connect.ServerStream[v1alpha1.WatchWarehousesResponse]) error
 	DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error)
 	RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error)
+	// Credential APIs
+	CreateCredentials(context.Context, *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error)
+	DeleteCredentials(context.Context, *connect.Request[v1alpha1.DeleteCredentialsRequest]) (*connect.Response[v1alpha1.DeleteCredentialsResponse], error)
+	GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error)
+	ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error)
+	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
 }
 
 // NewKargoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -740,6 +822,31 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		svc.RefreshWarehouse,
 		opts...,
 	)
+	kargoServiceCreateCredentialsHandler := connect.NewUnaryHandler(
+		KargoServiceCreateCredentialsProcedure,
+		svc.CreateCredentials,
+		opts...,
+	)
+	kargoServiceDeleteCredentialsHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteCredentialsProcedure,
+		svc.DeleteCredentials,
+		opts...,
+	)
+	kargoServiceGetCredentialsHandler := connect.NewUnaryHandler(
+		KargoServiceGetCredentialsProcedure,
+		svc.GetCredentials,
+		opts...,
+	)
+	kargoServiceListCredentialsHandler := connect.NewUnaryHandler(
+		KargoServiceListCredentialsProcedure,
+		svc.ListCredentials,
+		opts...,
+	)
+	kargoServiceUpdateCredentialsHandler := connect.NewUnaryHandler(
+		KargoServiceUpdateCredentialsProcedure,
+		svc.UpdateCredentials,
+		opts...,
+	)
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KargoServiceGetVersionInfoProcedure:
@@ -806,6 +913,16 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteWarehouseHandler.ServeHTTP(w, r)
 		case KargoServiceRefreshWarehouseProcedure:
 			kargoServiceRefreshWarehouseHandler.ServeHTTP(w, r)
+		case KargoServiceCreateCredentialsProcedure:
+			kargoServiceCreateCredentialsHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteCredentialsProcedure:
+			kargoServiceDeleteCredentialsHandler.ServeHTTP(w, r)
+		case KargoServiceGetCredentialsProcedure:
+			kargoServiceGetCredentialsHandler.ServeHTTP(w, r)
+		case KargoServiceListCredentialsProcedure:
+			kargoServiceListCredentialsHandler.ServeHTTP(w, r)
+		case KargoServiceUpdateCredentialsProcedure:
+			kargoServiceUpdateCredentialsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -941,4 +1058,24 @@ func (UnimplementedKargoServiceHandler) DeleteWarehouse(context.Context, *connec
 
 func (UnimplementedKargoServiceHandler) RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) CreateCredentials(context.Context, *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteCredentials(context.Context, *connect.Request[v1alpha1.DeleteCredentialsRequest]) (*connect.Response[v1alpha1.DeleteCredentialsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials is not implemented"))
 }

@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,7 +49,7 @@ func SetupReconcilerWithManager(
 
 	shardPredicate, err := controller.GetShardPredicate(shardName)
 	if err != nil {
-		return errors.Wrap(err, "error creating shard selector predicate")
+		return fmt.Errorf("error creating shard selector predicate: %w", err)
 	}
 
 	var argocdClient client.Client
@@ -77,7 +76,7 @@ func SetupReconcilerWithManager(
 		WithOptions(controller.CommonOptions()).
 		Build(reconciler)
 	if err != nil {
-		return errors.Wrap(err, "error building Promotion reconciler")
+		return fmt.Errorf("error building Promotion controller: %w", err)
 	}
 
 	logger := logging.LoggerFromContext(ctx)
@@ -96,7 +95,7 @@ func SetupReconcilerWithManager(
 		priorityQueueHandler,
 		promoWentTerminal,
 	); err != nil {
-		return errors.Wrap(err, "unable to watch Promotions")
+		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
 	return nil
@@ -138,7 +137,7 @@ func (r *reconciler) Reconcile(
 	r.initializeOnce.Do(func() {
 		promos := kargoapi.PromotionList{}
 		if err = r.kargoClient.List(ctx, &promos); err != nil {
-			err = errors.Wrap(err, "error listing promotions")
+			err = fmt.Errorf("error listing promotions: %w", err)
 		} else {
 			r.pqs.initializeQueues(ctx, promos)
 			logger.Debug(
@@ -147,7 +146,7 @@ func (r *reconciler) Reconcile(
 		}
 	})
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "error initializing Promotion queues")
+		return ctrl.Result{}, fmt.Errorf("error initializing Promotion queues: %w", err)
 	}
 
 	ctx = logging.ContextWithLogger(ctx, logger)
@@ -273,19 +272,10 @@ func (r *reconciler) promote(
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error finding Stage %q in namespace %q",
-			stageName,
-			stageNamespace,
-		)
+		return nil, fmt.Errorf("error finding Stage %q in namespace %q: %w", stageName, stageNamespace, err)
 	}
 	if stage == nil {
-		return nil, errors.Errorf(
-			"could not find Stage %q in namespace %q",
-			stageName,
-			stageNamespace,
-		)
+		return nil, fmt.Errorf("could not find Stage %q in namespace %q", stageName, stageNamespace)
 	}
 	logger.Debug("found associated Stage")
 
@@ -305,25 +295,22 @@ func (r *reconciler) promote(
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrapf(
+		return nil, fmt.Errorf(
+			"error finding Freight %q in namespace %q: %w",
+			promo.Spec.Freight,
+			promo.Namespace,
 			err,
-			"error finding Freight %q in namespace %q",
-			promo.Spec.Freight, promo.Namespace,
 		)
 	}
 	if targetFreight == nil {
-		return nil, errors.Errorf(
-			"Freight %q not found in namespace %q",
-			promo.Spec.Freight,
-			promo.Namespace,
-		)
+		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
 	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
 	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
 		upstreamStages[i] = upstreamStage.Name
 	}
 	if !kargoapi.IsFreightAvailable(targetFreight, stageName, upstreamStages) {
-		return nil, errors.Errorf(
+		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
 			stageName,
@@ -374,11 +361,11 @@ func (r *reconciler) promote(
 			}
 		})
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error updating status of Stage %q in namespace %q",
+			return nil, fmt.Errorf(
+				"error updating status of Stage %q in namespace %q: %w",
 				stageName,
 				stageNamespace,
+				err,
 			)
 		}
 	}

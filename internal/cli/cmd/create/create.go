@@ -2,11 +2,10 @@ package create
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -66,6 +65,8 @@ kargo create project my-project
 	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
 	// Register subcommands.
+	cmd.AddCommand(newCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newProjectCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
 
 	return cmd
@@ -79,13 +80,13 @@ func (o *createOptions) addFlags(cmd *cobra.Command) {
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to create resource(s).")
 
 	if err := cmd.MarkFlagRequired(option.FilenameFlag); err != nil {
-		panic(errors.Wrap(err, "could not mark filename flag as required"))
+		panic(fmt.Errorf("could not mark filename flag as required: %w", err))
 	}
 	if err := cmd.MarkFlagFilename(option.FilenameFlag, ".yaml", ".yml"); err != nil {
-		panic(errors.Wrap(err, "could not mark filename flag as filename"))
+		panic(fmt.Errorf("could not mark filename flag as filename: %w", err))
 	}
 	if err := cmd.MarkFlagDirname(option.FilenameFlag); err != nil {
-		panic(errors.Wrap(err, "could not mark filename flag as dirname"))
+		panic(fmt.Errorf("could not mark filename flag as dirname: %w", err))
 	}
 }
 
@@ -105,24 +106,24 @@ func (o *createOptions) validate() error {
 func (o *createOptions) run(ctx context.Context) error {
 	manifest, err := yaml.Read(o.Filenames)
 	if err != nil {
-		return errors.Wrap(err, "read manifests")
+		return fmt.Errorf("read manifests: %w", err)
 	}
 
 	printer, err := o.PrintFlags.ToPrinter()
 	if err != nil {
-		return errors.Wrap(err, "create printer")
+		return fmt.Errorf("create printer: %w", err)
 	}
 
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	resp, err := kargoSvcCli.CreateResource(ctx, connect.NewRequest(&kargosvcapi.CreateResourceRequest{
 		Manifest: manifest,
 	}))
 	if err != nil {
-		return errors.Wrap(err, "create resource")
+		return fmt.Errorf("create resource: %w", err)
 	}
 
 	resCap := len(resp.Msg.GetResults())
@@ -139,11 +140,11 @@ func (o *createOptions) run(ctx context.Context) error {
 	for _, r := range successRes {
 		var obj unstructured.Unstructured
 		if err := sigyaml.Unmarshal(r.CreatedResourceManifest, &obj); err != nil {
-			fmt.Fprintf(o.IOStreams.ErrOut, "%s",
-				errors.Wrap(err, "Error: unmarshal created manifest"))
+			_, _ = fmt.Fprintf(o.IOStreams.ErrOut, "Error: %s",
+				fmt.Errorf("unmarshal created manifest: %w", err))
 			continue
 		}
 		_ = printer.PrintObj(&obj, o.IOStreams.Out)
 	}
-	return goerrors.Join(createErrs...)
+	return errors.Join(createErrs...)
 }

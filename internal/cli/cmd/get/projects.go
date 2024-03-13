@@ -2,12 +2,12 @@ package get
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 	"slices"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
@@ -84,7 +84,7 @@ func (o *getProjectsOptions) complete(args []string) {
 func (o *getProjectsOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
@@ -93,7 +93,7 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 			ctx,
 			connect.NewRequest(&v1alpha1.ListProjectsRequest{}),
 		); err != nil {
-			return errors.Wrap(err, "list projects")
+			return fmt.Errorf("list projects: %w", err)
 		}
 		return printObjects(resp.Msg.GetProjects(), o.PrintFlags, o.IOStreams)
 	}
@@ -117,9 +117,9 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
-		return errors.Wrap(err, "print projects")
+		return fmt.Errorf("print projects: %w", err)
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 func newProjectTable(list *metav1.List) *metav1.Table {

@@ -2,12 +2,11 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -38,9 +37,9 @@ func (s *server) ListPromotions(
 		)
 	}
 	if err := s.client.List(ctx, &list, opts...); err != nil {
-		return nil, errors.Wrap(err, "list promotions")
+		return nil, fmt.Errorf("list promotions: %w", err)
 	}
-	promotions := make([]*v1alpha1.Promotion, len(list.Items))
+	promotions := make([]*kargoapi.Promotion, len(list.Items))
 	for idx := range list.Items {
 		promotions[idx] = &list.Items[idx]
 	}

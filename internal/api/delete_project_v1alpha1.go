@@ -2,11 +2,11 @@ package api
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -32,13 +32,7 @@ func (s *server) DeleteProject(
 			},
 		},
 	); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return nil, connect.NewError(
-				connect.CodeNotFound,
-				errors.Errorf("project %q not found", name),
-			)
-		}
-		return nil, errors.Wrap(err, "delete Project")
+		return nil, fmt.Errorf("delete project: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteProjectResponse{}), nil
 }

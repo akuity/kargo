@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,8 +31,8 @@ func TestPromoteStage(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 			},
 		},
@@ -107,8 +107,8 @@ func TestPromoteStage(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
 				require.Contains(t, connErr.Message(), "Stage")
 				require.Contains(t, connErr.Message(), "not found in namespace")
@@ -199,8 +199,8 @@ func TestPromoteStage(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeNotFound, connErr.Code())
 				require.Contains(t, connErr.Message(), "freight")
 				require.Contains(t, connErr.Message(), "not found in namespace")
@@ -250,8 +250,8 @@ func TestPromoteStage(t *testing.T) {
 				err error,
 			) {
 				require.Error(t, err)
-				connErr, ok := err.(*connect.Error)
-				require.True(t, ok)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Contains(t, connErr.Message(), "Freight")
 				require.Contains(t, connErr.Message(), "is not available to Stage")

@@ -12,6 +12,7 @@ linters:
   disable-all: true
   enable:
     - bodyclose
+    - depguard
     - errcheck
     - exportloopref
     - forcetypeassert
@@ -35,6 +36,13 @@ linters:
 
 # all available settings for linters we enable
 linters-settings:
+  depguard:
+    rules:
+      main:
+        deny:
+          # avoid reintroduction of `github.com/pkg/errors` package
+          - pkg: "github.com/pkg/errors"
+            desc: Should use `errors` package from the standard library
   errcheck:
     # report about not checking of errors in type assertions: `a := b.(MyStruct)`;
     # default is false: such cases aren't reported by default.

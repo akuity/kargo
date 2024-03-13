@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,7 +51,7 @@ func (s *server) ApproveFreight(
 		alias,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get freight")
+		return nil, fmt.Errorf("get freight: %w", err)
 	}
 	if freight == nil {
 		if name != "" {
@@ -71,12 +71,12 @@ func (s *server) ApproveFreight(
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get stage")
+		return nil, fmt.Errorf("get stage: %w", err)
 	}
 	if stage == nil {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
-			errors.Errorf("Stage %q not found in namespace %q", stageName, project),
+			fmt.Errorf("Stage %q not found in namespace %q", stageName, project),
 		)
 	}
 
@@ -109,7 +109,7 @@ func (s *server) ApproveFreight(
 	newStatus.ApprovedFor[stageName] = kargoapi.ApprovedStage{}
 
 	if err := s.patchFreightStatusFn(ctx, freight, newStatus); err != nil {
-		return nil, errors.Wrap(err, "patch status")
+		return nil, fmt.Errorf("patch status: %w", err)
 	}
 
 	return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
@@ -120,18 +120,20 @@ func (s *server) patchFreightStatus(
 	freight *kargoapi.Freight,
 	newStatus kargoapi.FreightStatus,
 ) error {
-	err := kubeclient.PatchStatus(
+	if err := kubeclient.PatchStatus(
 		ctx,
 		s.client,
 		freight,
 		func(status *kargoapi.FreightStatus) {
 			*status = newStatus
 		},
-	)
-	return errors.Wrapf(
-		err,
-		"error patching Freight %q status in namespace %q",
-		freight.Name,
-		freight.Namespace,
-	)
+	); err != nil {
+		return fmt.Errorf(
+			"error patching Freight %q status in namespace %q: %w",
+			freight.Name,
+			freight.Namespace,
+			err,
+		)
+	}
+	return nil
 }

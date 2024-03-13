@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -44,18 +44,18 @@ func newAPICommand() *cobra.Command {
 			cfg := config.ServerConfigFromEnv()
 			restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 			if err != nil {
-				return errors.Wrap(err, "error loading REST config")
+				return fmt.Errorf("error loading REST config: %w", err)
 			}
 
 			scheme := runtime.NewScheme()
 			if err = kubescheme.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add Kubernetes api to scheme")
+				return fmt.Errorf("add Kubernetes api to scheme: %w", err)
 			}
 			if types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true")) {
 				if argoRolloutsExists(ctx, restCfg) {
 					log.Info("Argo Rollouts integration is enabled")
 					if err = rollouts.AddToScheme(scheme); err != nil {
-						return errors.Wrap(err, "add argo rollouts api to scheme")
+						return fmt.Errorf("add argo rollouts api to scheme: %w", err)
 					}
 				} else {
 					log.Warn(
@@ -67,12 +67,12 @@ func newAPICommand() *cobra.Command {
 				log.Info("Argo Rollouts integration is disabled")
 			}
 			if err = kargoapi.AddToScheme(scheme); err != nil {
-				return errors.Wrap(err, "add kargo api to scheme")
+				return fmt.Errorf("add kargo api to scheme: %w", err)
 			}
 
 			internalClient, err := newClientForAPI(ctx, restCfg, scheme)
 			if err != nil {
-				return errors.Wrap(err, "create internal Kubernetes client")
+				return fmt.Errorf("create internal Kubernetes client: %w", err)
 			}
 			kubeClientOptions := kubernetes.ClientOptions{
 				NewInternalClient: func(context.Context, *rest.Config, *runtime.Scheme) (client.Client, error) {
@@ -84,7 +84,7 @@ func newAPICommand() *cobra.Command {
 			}
 			kubeClient, err := kubernetes.NewClient(ctx, restCfg, kubeClientOptions)
 			if err != nil {
-				return errors.Wrap(err, "create Kubernetes client")
+				return fmt.Errorf("create Kubernetes client: %w", err)
 			}
 
 			if cfg.AdminConfig != nil {
@@ -108,11 +108,14 @@ func newAPICommand() *cobra.Command {
 				),
 			)
 			if err != nil {
-				return errors.Wrap(err, "error creating listener")
+				return fmt.Errorf("error creating listener: %w", err)
 			}
 			defer l.Close()
 
-			return errors.Wrap(srv.Serve(ctx, l), "serve")
+			if err = srv.Serve(ctx, l); err != nil {
+				return fmt.Errorf("serve: %w", err)
+			}
+			return nil
 		},
 	}
 }
@@ -123,50 +126,55 @@ func newClientForAPI(ctx context.Context, r *rest.Config, scheme *runtime.Scheme
 		Metrics: server.Options{
 			BindAddress: "0",
 		},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Secret{},
+				},
+			},
+		},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "new manager")
+		return nil, fmt.Errorf("new manager: %w", err)
 	}
 
 	// Index Promotions by Stage
 	if err := kubeclient.IndexPromotionsByStage(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index promotions by stage")
+		return nil, fmt.Errorf("index Promotions by Stage: %w", err)
 	}
 
 	// Index Freight by Warehouse
 	if err := kubeclient.IndexFreightByWarehouse(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index freight by warehouse")
+		return nil, fmt.Errorf("index Freight by Warehouse: %w", err)
 	}
 
 	// Index Freight by Stages in which it has been verified
 	if err := kubeclient.IndexFreightByVerifiedStages(ctx, mgr); err != nil {
-		return nil,
-			errors.Wrap(err, "index Freight by Stages in which it has been verified")
+		return nil, fmt.Errorf("index Freight by Stages in which it has been verified: %w", err)
 	}
 
 	// Index Freight by Stages for which it is approved
 	if err :=
 		kubeclient.IndexFreightByApprovedStages(ctx, mgr); err != nil {
-		return nil,
-			errors.Wrap(err, "index Freight by Stages for which it has been approved")
+		return nil, fmt.Errorf("index Freight by Stages for which it has been approved: %w", err)
 	}
 
 	// Index ServiceAccounts by ODIC email
 	if err := kubeclient.IndexServiceAccountsByOIDCEmail(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index service accounts by oidc email")
+		return nil, fmt.Errorf("index ServiceAccounts by OIDC email: %w", err)
 	}
 	// Index ServiceAccounts by OIDC groups
 	if err := kubeclient.IndexServiceAccountsByOIDCGroups(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index service accounts by oidc groups")
+		return nil, fmt.Errorf("index ServiceAccounts by OIDC groups: %w", err)
 	}
 	// Index ServiceAccounts by OIDC subjects
 	if err := kubeclient.IndexServiceAccountsByOIDCSubjects(ctx, mgr); err != nil {
-		return nil, errors.Wrap(err, "index service accounts by oidc subjects")
+		return nil, fmt.Errorf("index ServiceAccounts by OIDC subjects: %w", err)
 	}
 
 	go func() {
 		if err := mgr.Start(ctx); err != nil {
-			panic(errors.Wrap(err, "start manager"))
+			panic(fmt.Errorf("start manager: %w", err))
 		}
 	}()
 

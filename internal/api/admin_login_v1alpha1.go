@@ -2,12 +2,13 @@ package api
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -61,7 +62,7 @@ func (s *server) AdminLogin(
 	if err != nil {
 		return nil, connect.NewError(
 			connect.CodeInternal,
-			errors.Wrap(err, "error signing ID token"),
+			fmt.Errorf("error signing ID token: %w", err),
 		)
 	}
 

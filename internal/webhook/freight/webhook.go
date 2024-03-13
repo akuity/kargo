@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -110,7 +109,7 @@ func (w *webhook) ValidateCreate(
 			return nil, apierrors.NewConflict(
 				freightGroupResource,
 				freight.Name,
-				errors.Errorf(
+				fmt.Errorf(
 					"alias %q already used by another piece of Freight in namespace %q",
 					alias,
 					freight.Namespace,
@@ -161,7 +160,7 @@ func (w *webhook) ValidateUpdate(
 			return nil, apierrors.NewConflict(
 				freightGroupResource,
 				freight.Name,
-				errors.Errorf(
+				fmt.Errorf(
 					"alias %q already used by another piece of Freight in namespace %q",
 					alias,
 					freight.Namespace,
@@ -205,7 +204,7 @@ func (w *webhook) ValidateDelete(
 			kubeclient.StagesByFreightIndexField: freight.ID,
 		},
 	); err != nil {
-		return nil, errors.Wrap(err, "list stages")
+		return nil, fmt.Errorf("list stages: %w", err)
 	}
 	if len(list.Items) > 0 {
 		stages := make([]string, len(list.Items))

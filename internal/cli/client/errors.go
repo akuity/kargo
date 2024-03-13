@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 
 	"github.com/akuity/kargo/internal/cli/config"
 )

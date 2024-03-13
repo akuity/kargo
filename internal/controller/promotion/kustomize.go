@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/kustomize"
@@ -71,11 +69,11 @@ func (k *kustomizer) apply(
 		}
 		dir := filepath.Join(workingDir, imgUpdate.Path)
 		if err := k.setImageFn(dir, fqImageRef); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error updating image %q to %q using Kustomize",
+			return nil, fmt.Errorf(
+				"error updating image %q to %q using Kustomize: %w",
 				imgUpdate.Image,
 				fqImageRef,
+				err,
 			)
 		}
 		changeSummary = append(

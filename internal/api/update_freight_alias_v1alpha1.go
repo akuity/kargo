@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -49,7 +49,7 @@ func (s *server) UpdateFreightAlias(
 		oldAlias,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "get freight")
+		return nil, fmt.Errorf("get freight: %w", err)
 	}
 	if freight == nil {
 		if name != "" {
@@ -76,7 +76,7 @@ func (s *server) UpdateFreightAlias(
 			// TODO: This should probably be a 409 Conflict, but connect doesn't seem
 			// to have that
 			connect.CodeAlreadyExists,
-			errors.Errorf(
+			fmt.Errorf(
 				"alias %q already used by another piece of Freight in namespace %q",
 				newAlias,
 				project,
@@ -106,7 +106,7 @@ func (s *server) patchFreightAlias(
 	)
 	patch := client.RawPatch(types.MergePatchType, patchBytes)
 	if err := s.client.Patch(ctx, freight, patch); err != nil {
-		return errors.Wrap(err, "patch label")
+		return fmt.Errorf("patch label: %w", err)
 	}
 	return nil
 }

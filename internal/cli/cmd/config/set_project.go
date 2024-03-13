@@ -1,9 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/config"
@@ -50,7 +50,7 @@ func (o *setProjectOptions) run() error {
 	o.Config.Project = o.Project
 
 	if err := config.SaveCLIConfig(o.Config); err != nil {
-		return errors.Wrap(err, "save cli config")
+		return fmt.Errorf("save cli config: %w", err)
 	}
 	return nil
 }

@@ -1,11 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/adrg/xdg"
-	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
 )
 
@@ -19,20 +19,20 @@ func init() {
 	if configHome == "" {
 		userHome, err := os.UserHomeDir()
 		if err != nil {
-			panic(errors.Wrap(err, "error determining user home directory"))
+			panic(fmt.Errorf("error determining user home directory: %w", err))
 		}
 		// This is what the spec says the default should be.
 		//
 		// See https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 		if err := os.Setenv("XDG_CONFIG_HOME", filepath.Join(userHome, ".config")); err != nil {
-			panic(errors.Wrap(err, "set XDG_CONFIG_HOME environment variable"))
+			panic(fmt.Errorf("set XDG_CONFIG_HOME environment variable: %w", err))
 		}
 		xdg.Reload()
 	}
 	var err error
 	if xdgConfigPath, err =
 		xdg.ConfigFile(filepath.Join("kargo", "config")); err != nil {
-		panic(errors.Wrap(err, "error determining XDG config path"))
+		panic(fmt.Errorf("error determining XDG config path: %w", err))
 	}
 }
 
@@ -79,24 +79,23 @@ func loadCLIConfig(configPath string) (CLIConfig, error) {
 	_, err := os.Stat(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return cfg, errors.Wrap(
-				NewConfigNotFoundErr(configPath), "please use `kargo login` to continue")
+			return cfg, fmt.Errorf("please use `kargo login` to continue: %w", NewConfigNotFoundErr(configPath))
 		}
-		return cfg, errors.Wrap(err, "os.Stat")
+		return cfg, fmt.Errorf("os.Stat: %w", err)
 	}
 	configBytes, err := os.ReadFile(configPath)
 	if err != nil {
-		return cfg, errors.Wrapf(
-			err,
-			"error reading configuration file at %s",
+		return cfg, fmt.Errorf(
+			"error reading configuration file at %s: %w",
 			configPath,
+			err,
 		)
 	}
 	if err := yaml.Unmarshal(configBytes, &cfg); err != nil {
-		return cfg, errors.Wrapf(
-			err,
-			"error parsing configuration file at %s",
+		return cfg, fmt.Errorf(
+			"error parsing configuration file at %s: %w",
 			configPath,
+			err,
 		)
 	}
 	return cfg, nil
@@ -111,11 +110,11 @@ func SaveCLIConfig(config CLIConfig) error {
 func saveCLIConfig(config CLIConfig, configPath string) error {
 	configBytes, err := yaml.Marshal(config)
 	if err != nil {
-		return errors.Wrap(err, "error marshaling config")
+		return fmt.Errorf("error marshaling config: %w", err)
 	}
 	if err :=
 		os.WriteFile(configPath, configBytes, 0600); err != nil {
-		return errors.Wrapf(err, "error writing to %s", configPath)
+		return fmt.Errorf("error writing to %s: %w", configPath, err)
 	}
 	return nil
 }
@@ -128,7 +127,7 @@ func DeleteCLIConfig() error {
 
 func deleteCLIConfig(configPath string) error {
 	if err := os.RemoveAll(configPath); err != nil {
-		return errors.Wrap(err, "error deleting configuration")
+		return fmt.Errorf("error deleting configuration: %w", err)
 	}
 	return nil
 }

@@ -2,9 +2,9 @@ package api
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -27,7 +27,7 @@ func splitYAML(
 			if err == io.EOF {
 				break
 			}
-			return nil, nil, errors.Wrap(err, "error decoding manifest")
+			return nil, nil, fmt.Errorf("error decoding manifest: %w", err)
 		}
 		ext.Raw = bytes.TrimSpace(ext.Raw)
 		if len(ext.Raw) == 0 || bytes.Equal(ext.Raw, []byte("null")) {
@@ -35,7 +35,7 @@ func splitYAML(
 		}
 		resource := unstructured.Unstructured{}
 		if err := yaml.Unmarshal(ext.Raw, &resource); err != nil {
-			return nil, nil, errors.Wrap(err, "error unmarshaling manifest")
+			return nil, nil, fmt.Errorf("error unmarshaling manifest: %w", err)
 		}
 		if resource.GroupVersionKind().Group == kargoapi.GroupVersion.Group && resource.GetKind() == "Project" {
 			projects = append(projects, resource)

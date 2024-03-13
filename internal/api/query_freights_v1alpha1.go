@@ -2,17 +2,16 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"path"
 	"sort"
 
 	"connectrpc.com/connect"
 	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	apiv1alpha1 "github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -65,12 +64,12 @@ func (s *server) QueryFreight(
 			},
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "get stage")
+			return nil, fmt.Errorf("get stage: %w", err)
 		}
 		if stage == nil {
 			return nil, connect.NewError(
 				connect.CodeNotFound,
-				errors.Errorf(
+				fmt.Errorf(
 					"Stage %q not found in namespace %q",
 					stageName,
 					project,
@@ -84,7 +83,7 @@ func (s *server) QueryFreight(
 			*stage.Spec.Subscriptions,
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "get available freight for stage")
+			return nil, fmt.Errorf("get available freight for stage: %w", err)
 		}
 	} else {
 		freightList := &kargoapi.FreightList{}
@@ -94,7 +93,7 @@ func (s *server) QueryFreight(
 			freightList,
 			client.InNamespace(project),
 		); err != nil {
-			return nil, errors.Wrap(err, "list freights")
+			return nil, fmt.Errorf("list freight: %w", err)
 		}
 		freight = freightList.Items
 	}
@@ -140,16 +139,15 @@ func (s *server) getAvailableFreightForStage(
 		subs.UpstreamStages,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error listing Freight verified in Stages upstream from Stage %q in "+
-				"namespace %q",
+		return nil, fmt.Errorf(
+			"error listing Freight verified in Stages upstream from Stage %q in namespace %q: %w",
 			stage,
 			project,
+			err,
 		)
 	}
 	var approvedFreight kargoapi.FreightList
-	if err := s.listFreightFn(
+	if err = s.listFreightFn(
 		ctx,
 		&approvedFreight,
 		&client.ListOptions{
@@ -160,11 +158,11 @@ func (s *server) getAvailableFreightForStage(
 			),
 		},
 	); err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"error listing Freight approved for Stage %q in namespace %q",
+		return nil, fmt.Errorf(
+			"error listing Freight approved for Stage %q in namespace %q: %w",
 			stage,
 			project,
+			err,
 		)
 	}
 	if len(verifiedFreight) == 0 &&
@@ -198,7 +196,7 @@ func (s *server) getFreightFromWarehouse(
 	warehouse string,
 ) ([]kargoapi.Freight, error) {
 	var freight kargoapi.FreightList
-	err := s.listFreightFn(
+	if err := s.listFreightFn(
 		ctx,
 		&freight,
 		&client.ListOptions{
@@ -208,13 +206,15 @@ func (s *server) getFreightFromWarehouse(
 				warehouse,
 			),
 		},
-	)
-	return freight.Items, errors.Wrapf(
-		err,
-		"error listing Freight for Warehouse %q in namespace %q",
-		warehouse,
-		project,
-	)
+	); err != nil {
+		return nil, fmt.Errorf(
+			"error listing Freight for Warehouse %q in namespace %q: %w",
+			warehouse,
+			project,
+			err,
+		)
+	}
+	return freight.Items, nil
 }
 
 func (s *server) getVerifiedFreight(
@@ -238,11 +238,11 @@ func (s *server) getVerifiedFreight(
 				),
 			},
 		); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error listing Freight verified in Stage %q in namespace %q",
+			return nil, fmt.Errorf(
+				"error listing Freight verified in Stage %q in namespace %q: %w",
 				stageSub.Name,
 				project,
+				err,
 			)
 		}
 		for _, freight := range freight.Items {
@@ -343,7 +343,7 @@ func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alp
 	}
 }
 
-type ByFirstSeen []*apiv1alpha1.Freight
+type ByFirstSeen []*kargoapi.Freight
 
 func (a ByFirstSeen) Len() int      { return len(a) }
 func (a ByFirstSeen) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -356,7 +356,7 @@ func (a ByFirstSeen) Less(i, j int) bool {
 //
 // TODO: KR: We might want to think about whether the current sorting behavior
 // is useful at all, given the limitations noted above.
-type ByTag []*apiv1alpha1.Freight
+type ByTag []*kargoapi.Freight
 
 func (a ByTag) Len() int      { return len(a) }
 func (a ByTag) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
@@ -375,7 +375,7 @@ func (a ByTag) Less(i, j int) bool {
 	return a[i].CreationTimestamp.Time.Before(a[j].CreationTimestamp.Time)
 }
 
-func getRepoAndTag(s *apiv1alpha1.Freight) (string, string, *semver.Version) {
+func getRepoAndTag(s *kargoapi.Freight) (string, string, *semver.Version) {
 	var repo, tag string
 	if len(s.Images) > 0 {
 		repo = s.Images[0].RepoURL

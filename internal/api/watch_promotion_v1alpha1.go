@@ -2,10 +2,9 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -39,10 +38,7 @@ func (s *server) WatchPromotion(
 		Namespace: project,
 		Name:      name,
 	}, &kargoapi.Promotion{}); err != nil {
-		if kubeerr.IsNotFound(err) {
-			return connect.NewError(connect.CodeNotFound, err)
-		}
-		return errors.Wrap(err, "get promotion")
+		return fmt.Errorf("get promotion: %w", err)
 	}
 
 	opts := metav1.ListOptions{
@@ -50,7 +46,7 @@ func (s *server) WatchPromotion(
 	}
 	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, project, opts)
 	if err != nil {
-		return errors.Wrap(err, "watch promotion")
+		return fmt.Errorf("watch promotion: %w", err)
 	}
 	defer w.Stop()
 	for {
@@ -63,17 +59,17 @@ func (s *server) WatchPromotion(
 			}
 			u, ok := e.Object.(*unstructured.Unstructured)
 			if !ok {
-				return errors.Errorf("unexpected object type %T", e.Object)
+				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
 			var promotion *kargoapi.Promotion
 			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &promotion); err != nil {
-				return errors.Wrap(err, "from unstructured")
+				return fmt.Errorf("from unstructured: %w", err)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchPromotionResponse{
 				Promotion: promotion,
 				Type:      string(e.Type),
 			}); err != nil {
-				return errors.Wrap(err, "send response")
+				return fmt.Errorf("send response: %w", err)
 			}
 		}
 	}

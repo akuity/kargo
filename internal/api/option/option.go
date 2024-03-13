@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,7 +25,7 @@ func NewHandlerOption(
 	if !cfg.LocalMode {
 		authInterceptor, err := newAuthInterceptor(ctx, cfg, internalClient)
 		if err != nil {
-			return nil, errors.Wrap(err, "initialize authentication interceptor")
+			return nil, fmt.Errorf("initialize authentication interceptor: %w", err)
 		}
 		interceptors = append(interceptors, authInterceptor)
 	}

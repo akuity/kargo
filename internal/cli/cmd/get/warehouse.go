@@ -2,11 +2,11 @@ package get
 
 import (
 	"context"
-	goerrors "errors"
+	"errors"
+	"fmt"
 	"slices"
 
 	"connectrpc.com/connect"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -113,7 +113,7 @@ func (o *getWarehousesOptions) validate() error {
 func (o *getWarehousesOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
-		return errors.Wrap(err, "get client from config")
+		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
@@ -126,7 +126,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
-			return errors.Wrap(err, "list warehouses")
+			return fmt.Errorf("list warehouses: %w", err)
 		}
 		return printObjects(resp.Msg.GetWarehouses(), o.PrintFlags, o.IOStreams)
 	}
@@ -151,7 +151,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
-		return errors.Wrap(err, "print warehouses")
+		return fmt.Errorf("print warehouses: %w", err)
 	}
-	return goerrors.Join(errs...)
+	return errors.Join(errs...)
 }
