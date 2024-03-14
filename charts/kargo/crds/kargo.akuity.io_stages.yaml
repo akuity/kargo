@@ -15,7 +15,7 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.currentFreight.id
+    - jsonPath: .status.currentFreight.name
       name: Current Freight
       type: string
     - jsonPath: .status.health.status
