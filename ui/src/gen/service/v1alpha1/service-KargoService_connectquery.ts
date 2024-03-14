@@ -5,7 +5,7 @@
 
 import { createQueryService } from "@bufbuild/connect-query";
 import { MethodKind } from "@bufbuild/protobuf";
-import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteStageRequest, PromoteStageResponse, PromoteSubscribersRequest, PromoteSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse } from "./service_pb.js";
+import { AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteToStageRequest, PromoteToStageResponse, PromoteToStageSubscribersRequest, PromoteToStageSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse } from "./service_pb.js";
 
 export const typeName = "akuity.io.kargo.service.v1alpha1.KargoService";
 
@@ -200,40 +200,6 @@ export const deleteStage = createQueryService({
 }).deleteStage;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.PromoteStage
- */
-export const promoteStage = createQueryService({
-  service: {
-    methods: {
-      promoteStage: {
-        name: "PromoteStage",
-        kind: MethodKind.Unary,
-        I: PromoteStageRequest,
-        O: PromoteStageResponse,
-      },
-    },
-    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
-  },
-}).promoteStage;
-
-/**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.PromoteSubscribers
- */
-export const promoteSubscribers = createQueryService({
-  service: {
-    methods: {
-      promoteSubscribers: {
-        name: "PromoteSubscribers",
-        kind: MethodKind.Unary,
-        I: PromoteSubscribersRequest,
-        O: PromoteSubscribersResponse,
-      },
-    },
-    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
-  },
-}).promoteSubscribers;
-
-/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage
  */
 export const refreshStage = createQueryService({
@@ -387,6 +353,40 @@ export const getFreight = createQueryService({
     typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
   },
 }).getFreight;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage
+ */
+export const promoteToStage = createQueryService({
+  service: {
+    methods: {
+      promoteToStage: {
+        name: "PromoteToStage",
+        kind: MethodKind.Unary,
+        I: PromoteToStageRequest,
+        O: PromoteToStageResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).promoteToStage;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStageSubscribers
+ */
+export const promoteToStageSubscribers = createQueryService({
+  service: {
+    methods: {
+      promoteToStageSubscribers: {
+        name: "PromoteToStageSubscribers",
+        kind: MethodKind.Unary,
+        I: PromoteToStageSubscribersRequest,
+        O: PromoteToStageSubscribersResponse,
+      },
+    },
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService",
+  },
+}).promoteToStageSubscribers;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight

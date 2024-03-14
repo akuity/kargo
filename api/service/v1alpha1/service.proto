@@ -29,8 +29,6 @@ service KargoService {
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
-  rpc PromoteStage(PromoteStageRequest) returns (PromoteStageResponse);
-  rpc PromoteSubscribers(PromoteSubscribersRequest) returns (PromoteSubscribersResponse);
   rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
   /* Promotion APIs */
@@ -50,6 +48,8 @@ service KargoService {
   rpc ApproveFreight(ApproveFreightRequest) returns (ApproveFreightResponse);
   rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
   rpc GetFreight(GetFreightRequest) returns (GetFreightResponse);
+  rpc PromoteToStage(PromoteToStageRequest) returns (PromoteToStageResponse);
+  rpc PromoteToStageSubscribers(PromoteToStageSubscribersRequest) returns (PromoteToStageSubscribersResponse);
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
   rpc UpdateFreightAlias(UpdateFreightAliasRequest) returns (UpdateFreightAliasResponse);
 
@@ -220,28 +220,6 @@ message DeleteStageResponse {
   /* explicitly empty */
 }
 
-message PromoteStageRequest {
-  string project = 1;
-  string stage = 2;
-  string freight = 3;
-  string freight_alias = 4 [json_name = "freightAlias"];
-}
-
-message PromoteStageResponse {
-  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
-}
-
-message PromoteSubscribersRequest {
-  string project = 1;
-  string stage = 2;
-  string freight = 3;
-  string freight_alias = 4 [json_name = "freightAlias"];
-}
-
-message PromoteSubscribersResponse {
-  repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
-}
-
 message RefreshStageRequest {
   string project = 1;
   string name = 2;
@@ -342,6 +320,28 @@ message GetFreightRequest {
 
 message GetFreightResponse {
   github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+}
+
+message PromoteToStageRequest {
+  string project = 1;
+  string stage = 2;
+  string freight = 3;
+  string freight_alias = 4 [json_name = "freightAlias"];
+}
+
+message PromoteToStageResponse {
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+}
+
+message PromoteToStageSubscribersRequest {
+  string project = 1;
+  string stage = 2;
+  string freight = 3;
+  string freight_alias = 4 [json_name = "freightAlias"];
+}
+
+message PromoteToStageSubscribersResponse {
+  repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
 }
 
 message QueryFreightRequest {

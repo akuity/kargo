@@ -162,10 +162,10 @@ func (o *promotionOptions) run(ctx context.Context) error {
 
 	switch {
 	case o.Stage != "":
-		res, err := kargoSvcCli.PromoteStage(
+		res, err := kargoSvcCli.PromoteToStage(
 			ctx,
 			connect.NewRequest(
-				&v1alpha1.PromoteStageRequest{
+				&v1alpha1.PromoteToStageRequest{
 					Project:      o.Project,
 					Freight:      o.FreightName,
 					FreightAlias: o.FreightAlias,
@@ -179,10 +179,10 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		_ = printer.PrintObj(res.Msg.GetPromotion(), o.IOStreams.Out)
 		return nil
 	case o.SubscribersOf != "":
-		res, promoteErr := kargoSvcCli.PromoteSubscribers(
+		res, promoteErr := kargoSvcCli.PromoteToStageSubscribers(
 			ctx,
 			connect.NewRequest(
-				&v1alpha1.PromoteSubscribersRequest{
+				&v1alpha1.PromoteToStageSubscribersRequest{
 					Project:      o.Project,
 					Freight:      o.FreightName,
 					FreightAlias: o.FreightAlias,

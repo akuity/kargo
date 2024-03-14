@@ -42,8 +42,8 @@ import {
   getStage,
   listStages,
   listWarehouses,
-  promoteStage,
-  promoteSubscribers,
+  promoteToStage,
+  promoteToStageSubscribers,
   queryFreight,
   refreshWarehouse
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
@@ -435,8 +435,8 @@ export const ProjectDetails = () => {
     }
   });
 
-  const { mutate: promoteSubscribersAction } = useMutation({
-    ...promoteSubscribers.useMutation(),
+  const { mutate: promoteToStageSubscribersAction } = useMutation({
+    ...promoteToStageSubscribers.useMutation(),
     onError: (err) => {
       message.error(err?.toString());
     },
@@ -449,7 +449,7 @@ export const ProjectDetails = () => {
   });
 
   const { mutate: promoteAction } = useMutation({
-    ...promoteStage.useMutation(),
+    ...promoteToStage.useMutation(),
     onError: (err) => {
       message.error(err?.toString());
     },
@@ -751,7 +751,7 @@ export const ProjectDetails = () => {
                               ...currentData
                             });
                           } else {
-                            promoteSubscribersAction({
+                            promoteToStageSubscribersAction({
                               stage: promotingStage?.metadata?.name,
                               ...currentData
                             });
