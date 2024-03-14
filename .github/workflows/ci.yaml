@@ -25,6 +25,11 @@ jobs:
           ${{ runner.os }}-go-
     - name: Run unit tests
       run: make test-unit
+    - name: Remove generated code from report
+      run: |
+        grep -v .pb.go coverage.txt | grep -v zz_generated | grep -v service.connect.go > coverage.tmp
+        rm coverage.txt
+        mv coverage.tmp coverage.txt
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
       with:
