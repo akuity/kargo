@@ -197,7 +197,12 @@ func (r *reconciler) Reconcile(
 	if updateErr != nil {
 		logger.Errorf("error updating Warehouse status: %s", updateErr)
 	}
-	if clearRefreshErr := kargoapi.ClearWarehouseRefresh(ctx, r.client, warehouse); clearRefreshErr != nil {
+	if clearRefreshErr := kargoapi.ClearAnnotations(
+		ctx,
+		r.client,
+		warehouse,
+		kargoapi.AnnotationKeyRefresh,
+	); clearRefreshErr != nil {
 		logger.Errorf("error clearing Warehouse refresh annotation: %s", clearRefreshErr)
 	}
 

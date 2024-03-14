@@ -237,9 +237,15 @@ func (r *reconciler) Reconcile(
 	if err != nil {
 		logger.Errorf("error updating Promotion status: %s", err)
 	}
-	if clearRefreshErr := kargoapi.ClearPromotionRefresh(ctx, r.kargoClient, promo); clearRefreshErr != nil {
+	if clearRefreshErr := kargoapi.ClearAnnotations(
+		ctx,
+		r.kargoClient,
+		promo,
+		kargoapi.AnnotationKeyRefresh,
+	); clearRefreshErr != nil {
 		logger.Errorf("error clearing Promotion refresh annotation: %s", clearRefreshErr)
 	}
+
 	if err != nil {
 		// Controller runtime automatically gives us a progressive backoff if err is
 		// not nil

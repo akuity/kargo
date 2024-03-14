@@ -11,6 +11,128 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+func TestClearAnnotations(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+
+	t.Parallel()
+	newFakeClient := func(obj ...client.Object) client.Client {
+		return fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(obj...).
+			Build()
+	}
+
+	testCases := []struct {
+		name       string
+		client     client.Client
+		obj        client.Object
+		keys       []string
+		assertions func(*testing.T, client.Object, error)
+	}{
+		{
+			name:   "no keys",
+			client: newFakeClient(),
+			obj:    nil,
+			keys:   nil,
+			assertions: func(t *testing.T, _ client.Object, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "no annotations",
+			client: newFakeClient(&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			}),
+			obj: &Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			},
+			keys: []string{"key"},
+			assertions: func(t *testing.T, _ client.Object, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:   "not found",
+			client: newFakeClient(),
+			obj: &Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			},
+			keys: []string{"key"},
+			assertions: func(t *testing.T, _ client.Object, err error) {
+				require.ErrorContains(t, err, "patch annotation")
+			},
+		},
+		{
+			name: "clear one",
+			client: newFakeClient(&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+					Annotations: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			}),
+			obj: &Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			},
+			keys: []string{"key1"},
+			assertions: func(t *testing.T, obj client.Object, err error) {
+				require.NoError(t, err)
+				require.Contains(t, obj.GetAnnotations(), "key2")
+				require.NotContains(t, obj.GetAnnotations(), "key1")
+			},
+		},
+		{
+			name: "clear two",
+			client: newFakeClient(&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+					Annotations: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			}),
+			obj: &Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			},
+			keys: []string{"key1", "key2"},
+			assertions: func(t *testing.T, obj client.Object, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, obj.GetAnnotations(), "key2")
+				require.NotContains(t, obj.GetAnnotations(), "key1")
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			err := ClearAnnotations(context.TODO(), tc.client, tc.obj, tc.keys...)
+			tc.assertions(t, tc.obj, err)
+		})
+	}
+}
+
 func Test_patchAnnotation(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))

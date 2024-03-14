@@ -8,6 +8,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+func ClearAnnotations(ctx context.Context, c client.Client, obj client.Object, keys ...string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	patchBytes := []byte(`{"metadata":{"annotations":{`)
+	for i, key := range keys {
+		if i > 0 {
+			patchBytes = append(patchBytes, ',')
+		}
+		patchBytes = append(patchBytes, fmt.Sprintf(`"%s":null`, key)...)
+	}
+	patchBytes = append(patchBytes, "}}}"...)
+	patch := client.RawPatch(types.MergePatchType, patchBytes)
+	if err := c.Patch(ctx, obj, patch); err != nil {
+		return fmt.Errorf("patch annotation: %w", err)
+	}
+	return nil
+}
+
 func patchAnnotation(ctx context.Context, c client.Client, obj client.Object, key, value string) error {
 	patchBytes := []byte(
 		fmt.Sprintf(
@@ -16,20 +36,6 @@ func patchAnnotation(ctx context.Context, c client.Client, obj client.Object, ke
 			value,
 		),
 	)
-	patch := client.RawPatch(types.MergePatchType, patchBytes)
-	if err := c.Patch(ctx, obj, patch); err != nil {
-		return fmt.Errorf("patch annotation: %w", err)
-	}
-	return nil
-}
-
-func clearObjectAnnotation(
-	ctx context.Context,
-	c client.Client,
-	obj client.Object,
-	annotationKey string,
-) error {
-	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, annotationKey))
 	patch := client.RawPatch(types.MergePatchType, patchBytes)
 	if err := c.Patch(ctx, obj, patch); err != nil {
 		return fmt.Errorf("patch annotation: %w", err)

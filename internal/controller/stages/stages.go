@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -554,33 +555,23 @@ func (r *reconciler) Reconcile(
 	if updateErr != nil {
 		logger.Errorf("error updating Stage status: %s", updateErr)
 	}
-	clearRefreshErr := kargoapi.ClearStageRefresh(ctx, r.kargoClient, stage)
-	if clearRefreshErr != nil {
-		logger.Errorf("error clearing Stage refresh annotation: %s", clearRefreshErr)
-	}
-	clearReconfirmErr := kargoapi.ClearStageReverify(ctx, r.kargoClient, stage)
-	if clearReconfirmErr != nil {
-		logger.Errorf("error clearing Stage reconfirm annotation: %s", clearReconfirmErr)
-	}
-	clearAbortErr := kargoapi.ClearStageAbort(ctx, r.kargoClient, stage)
-	if clearAbortErr != nil {
-		logger.Errorf("error clearing Stage abort annotation: %s", clearAbortErr)
+	clearErr := kargoapi.ClearAnnotations(
+		ctx,
+		r.kargoClient,
+		stage,
+		kargoapi.AnnotationKeyRefresh,
+		kargoapi.AnnotationKeyReverify,
+		kargoapi.AnnotationKeyAbort,
+	)
+	if clearErr != nil {
+		logger.Errorf("error clearing Stage annotations: %s", clearErr)
 	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
 	// do it this way so that a failure to update is never counted as THE failure
 	// when something else more serious occurred first.
 	if err == nil {
-		err = updateErr
-	}
-	if err == nil {
-		err = clearRefreshErr
-	}
-	if err == nil {
-		err = clearReconfirmErr
-	}
-	if err == nil {
-		err = clearAbortErr
+		err = errors.Join(updateErr, clearErr)
 	}
 	logger.Debug("done reconciling Stage")
 
