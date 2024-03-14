@@ -75,5 +75,5 @@ func ClearWarehouseRefresh(
 			Namespace: wh.Namespace,
 		},
 	}
-	return clearRefreshObject(ctx, c, &newWh)
+	return clearObjectAnnotation(ctx, c, &newWh, AnnotationKeyRefresh)
 }

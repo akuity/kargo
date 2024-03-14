@@ -73,5 +73,5 @@ func ClearPromotionRefresh(
 			Namespace: promo.Namespace,
 		},
 	}
-	return clearRefreshObject(ctx, c, &newPromo)
+	return clearObjectAnnotation(ctx, c, &newPromo, AnnotationKeyRefresh)
 }

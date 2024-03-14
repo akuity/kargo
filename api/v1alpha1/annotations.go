@@ -4,6 +4,7 @@ const (
 	AnnotationKeyRefresh = "kargo.akuity.io/refresh"
 
 	AnnotationKeyReverify = "kargo.akuity.io/reverify"
+	AnnotationKeyAbort    = "kargo.akuity.io/abort"
 
 	AnnotationKeyOIDCEmails   = "rbac.kargo.akuity.io/email"
 	AnnotationKeyOIDCGroups   = "rbac.kargo.akuity.io/groups"

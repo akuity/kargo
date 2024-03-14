@@ -76,7 +76,7 @@ func ClearStageRefresh(
 			Namespace: stage.Namespace,
 		},
 	}
-	return clearRefreshObject(ctx, c, &newStage)
+	return clearObjectAnnotation(ctx, c, &newStage, AnnotationKeyRefresh)
 }
 
 // ReverifyStageFreight forces reconfirmation of the verification of the
@@ -146,10 +146,32 @@ func ClearStageReverify(
 			Namespace: stage.Namespace,
 		},
 	}
-	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, AnnotationKeyReverify))
-	patch := client.RawPatch(types.MergePatchType, patchBytes)
-	if err := c.Patch(ctx, &newStage, patch); err != nil {
-		return fmt.Errorf("patch annotation: %w", err)
+	return clearObjectAnnotation(ctx, c, &newStage, AnnotationKeyReverify)
+}
+
+// ClearStageAbort is called by the Stage controller to clear the
+// AnnotationKeyAbort annotation on the Stage (if present). A client (e.g.
+// UI) who requested an abort of the Stage verification, can wait
+// until the annotation is cleared, to understand that the controller
+// acknowledged the abort request.
+func ClearStageAbort(
+	ctx context.Context,
+	c client.Client,
+	stage *Stage,
+) error {
+	if stage.Annotations == nil {
+		return nil
 	}
-	return nil
+
+	if _, ok := stage.Annotations[AnnotationKeyAbort]; !ok {
+		return nil
+	}
+
+	newStage := Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      stage.Name,
+			Namespace: stage.Namespace,
+		},
+	}
+	return clearObjectAnnotation(ctx, c, &newStage, AnnotationKeyAbort)
 }

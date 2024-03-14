@@ -29,12 +29,13 @@ func refreshObject(
 	return nil
 }
 
-func clearRefreshObject(
+func clearObjectAnnotation(
 	ctx context.Context,
 	c client.Client,
 	obj client.Object,
+	annotationKey string,
 ) error {
-	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, AnnotationKeyRefresh))
+	patchBytes := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"%s":null}}}`, annotationKey))
 	patch := client.RawPatch(types.MergePatchType, patchBytes)
 	if err := c.Patch(ctx, obj, patch); err != nil {
 		return fmt.Errorf("patch annotation: %w", err)

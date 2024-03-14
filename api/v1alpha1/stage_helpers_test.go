@@ -245,3 +245,81 @@ func TestClearStageReverify(t *testing.T) {
 		require.False(t, ok)
 	})
 }
+
+func TestClearStageAbort(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+
+	t.Run("no annotations", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+			},
+		).Build()
+
+		err := ClearStageAbort(context.TODO(), c, &Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "fake-stage",
+				Namespace: "fake-namespace",
+			},
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("no abort annotation", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "fake-stage",
+					Namespace:   "fake-namespace",
+					Annotations: map[string]string{},
+				},
+			},
+		).Build()
+
+		err := ClearStageAbort(context.TODO(), c, &Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "fake-stage",
+				Namespace:   "fake-namespace",
+				Annotations: map[string]string{},
+			},
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						AnnotationKeyAbort: "fake-id",
+					},
+				},
+			},
+		).Build()
+
+		err := ClearStageAbort(context.TODO(), c, &Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "fake-stage",
+				Namespace: "fake-namespace",
+				Annotations: map[string]string{
+					AnnotationKeyAbort: "fake-id",
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.NoError(t, err)
+		_, ok := stage.Annotations[AnnotationKeyAbort]
+		require.False(t, ok)
+	})
+}
