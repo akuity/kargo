@@ -326,7 +326,7 @@ func TestSyncNormalStage(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReconfirm: "fake-id",
+						kargoapi.AnnotationKeyReverify: "fake-id",
 					},
 				},
 				Spec: &kargoapi.StageSpec{
@@ -397,7 +397,7 @@ func TestSyncNormalStage(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReconfirm: "wrong-fake-analysis-run",
+						kargoapi.AnnotationKeyReverify: "wrong-fake-analysis-run",
 					},
 				},
 				Spec: &kargoapi.StageSpec{

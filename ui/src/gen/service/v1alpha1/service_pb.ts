@@ -1406,82 +1406,6 @@ export class RefreshStageResponse extends Message<RefreshStageResponse> {
 }
 
 /**
- * @generated from message akuity.io.kargo.service.v1alpha1.RequestStageVerificationRequest
- */
-export class RequestStageVerificationRequest extends Message<RequestStageVerificationRequest> {
-  /**
-   * @generated from field: string project = 1;
-   */
-  project = "";
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  constructor(data?: PartialMessage<RequestStageVerificationRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.RequestStageVerificationRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RequestStageVerificationRequest {
-    return new RequestStageVerificationRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RequestStageVerificationRequest {
-    return new RequestStageVerificationRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RequestStageVerificationRequest {
-    return new RequestStageVerificationRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RequestStageVerificationRequest | PlainMessage<RequestStageVerificationRequest> | undefined, b: RequestStageVerificationRequest | PlainMessage<RequestStageVerificationRequest> | undefined): boolean {
-    return proto3.util.equals(RequestStageVerificationRequest, a, b);
-  }
-}
-
-/**
- * explicitly empty 
- *
- * @generated from message akuity.io.kargo.service.v1alpha1.RequestStageVerificationResponse
- */
-export class RequestStageVerificationResponse extends Message<RequestStageVerificationResponse> {
-  constructor(data?: PartialMessage<RequestStageVerificationResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "akuity.io.kargo.service.v1alpha1.RequestStageVerificationResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RequestStageVerificationResponse {
-    return new RequestStageVerificationResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RequestStageVerificationResponse {
-    return new RequestStageVerificationResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RequestStageVerificationResponse {
-    return new RequestStageVerificationResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RequestStageVerificationResponse | PlainMessage<RequestStageVerificationResponse> | undefined, b: RequestStageVerificationResponse | PlainMessage<RequestStageVerificationResponse> | undefined): boolean {
-    return proto3.util.equals(RequestStageVerificationResponse, a, b);
-  }
-}
-
-/**
  * @generated from message akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
  */
 export class ListPromotionsRequest extends Message<ListPromotionsRequest> {
@@ -2693,6 +2617,82 @@ export class UpdateFreightAliasResponse extends Message<UpdateFreightAliasRespon
 
   static equals(a: UpdateFreightAliasResponse | PlainMessage<UpdateFreightAliasResponse> | undefined, b: UpdateFreightAliasResponse | PlainMessage<UpdateFreightAliasResponse> | undefined): boolean {
     return proto3.util.equals(UpdateFreightAliasResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ReverifyRequest
+ */
+export class ReverifyRequest extends Message<ReverifyRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<ReverifyRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ReverifyRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReverifyRequest {
+    return new ReverifyRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ReverifyRequest {
+    return new ReverifyRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ReverifyRequest {
+    return new ReverifyRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ReverifyRequest | PlainMessage<ReverifyRequest> | undefined, b: ReverifyRequest | PlainMessage<ReverifyRequest> | undefined): boolean {
+    return proto3.util.equals(ReverifyRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.ReverifyResponse
+ */
+export class ReverifyResponse extends Message<ReverifyResponse> {
+  constructor(data?: PartialMessage<ReverifyResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ReverifyResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReverifyResponse {
+    return new ReverifyResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ReverifyResponse {
+    return new ReverifyResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ReverifyResponse {
+    return new ReverifyResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ReverifyResponse | PlainMessage<ReverifyResponse> | undefined, b: ReverifyResponse | PlainMessage<ReverifyResponse> | undefined): boolean {
+    return proto3.util.equals(ReverifyResponse, a, b);
   }
 }
 

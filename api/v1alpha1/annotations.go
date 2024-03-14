@@ -3,7 +3,7 @@ package v1alpha1
 const (
 	AnnotationKeyRefresh = "kargo.akuity.io/refresh"
 
-	AnnotationKeyReconfirm = "kargo.akuity.io/reconfirm"
+	AnnotationKeyReverify = "kargo.akuity.io/reverify"
 
 	AnnotationKeyOIDCEmails   = "rbac.kargo.akuity.io/email"
 	AnnotationKeyOIDCGroups   = "rbac.kargo.akuity.io/groups"

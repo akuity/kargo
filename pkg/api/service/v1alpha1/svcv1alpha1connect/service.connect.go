@@ -68,9 +68,6 @@ const (
 	// KargoServiceRefreshStageProcedure is the fully-qualified name of the KargoService's RefreshStage
 	// RPC.
 	KargoServiceRefreshStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshStage"
-	// KargoServiceRequestStageVerificationProcedure is the fully-qualified name of the KargoService's
-	// RequestStageVerification RPC.
-	KargoServiceRequestStageVerificationProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RequestStageVerification"
 	// KargoServiceListPromotionsProcedure is the fully-qualified name of the KargoService's
 	// ListPromotions RPC.
 	KargoServiceListPromotionsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListPromotions"
@@ -111,6 +108,8 @@ const (
 	// KargoServiceUpdateFreightAliasProcedure is the fully-qualified name of the KargoService's
 	// UpdateFreightAlias RPC.
 	KargoServiceUpdateFreightAliasProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateFreightAlias"
+	// KargoServiceReverifyProcedure is the fully-qualified name of the KargoService's Reverify RPC.
+	KargoServiceReverifyProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/Reverify"
 	// KargoServiceListWarehousesProcedure is the fully-qualified name of the KargoService's
 	// ListWarehouses RPC.
 	KargoServiceListWarehousesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListWarehouses"
@@ -160,7 +159,6 @@ type KargoServiceClient interface {
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
-	RequestStageVerification(context.Context, *connect.Request[v1alpha1.RequestStageVerificationRequest]) (*connect.Response[v1alpha1.RequestStageVerificationResponse], error)
 	// Promotion APIs
 	ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error)
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionsResponse], error)
@@ -176,6 +174,8 @@ type KargoServiceClient interface {
 	PromoteToStageSubscribers(context.Context, *connect.Request[v1alpha1.PromoteToStageSubscribersRequest]) (*connect.Response[v1alpha1.PromoteToStageSubscribersResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error)
+	// Verification APIs
+	Reverify(context.Context, *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error)
 	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
 	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchWarehousesResponse], error)
@@ -264,11 +264,6 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceRefreshStageProcedure,
 			opts...,
 		),
-		requestStageVerification: connect.NewClient[v1alpha1.RequestStageVerificationRequest, v1alpha1.RequestStageVerificationResponse](
-			httpClient,
-			baseURL+KargoServiceRequestStageVerificationProcedure,
-			opts...,
-		),
 		listPromotions: connect.NewClient[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse](
 			httpClient,
 			baseURL+KargoServiceListPromotionsProcedure,
@@ -339,6 +334,11 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceUpdateFreightAliasProcedure,
 			opts...,
 		),
+		reverify: connect.NewClient[v1alpha1.ReverifyRequest, v1alpha1.ReverifyResponse](
+			httpClient,
+			baseURL+KargoServiceReverifyProcedure,
+			opts...,
+		),
 		listWarehouses: connect.NewClient[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse](
 			httpClient,
 			baseURL+KargoServiceListWarehousesProcedure,
@@ -407,7 +407,6 @@ type kargoServiceClient struct {
 	watchStages               *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
 	deleteStage               *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
 	refreshStage              *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
-	requestStageVerification  *connect.Client[v1alpha1.RequestStageVerificationRequest, v1alpha1.RequestStageVerificationResponse]
 	listPromotions            *connect.Client[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse]
 	watchPromotions           *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
 	getPromotion              *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
@@ -422,6 +421,7 @@ type kargoServiceClient struct {
 	promoteToStageSubscribers *connect.Client[v1alpha1.PromoteToStageSubscribersRequest, v1alpha1.PromoteToStageSubscribersResponse]
 	queryFreight              *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
 	updateFreightAlias        *connect.Client[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse]
+	reverify                  *connect.Client[v1alpha1.ReverifyRequest, v1alpha1.ReverifyResponse]
 	listWarehouses            *connect.Client[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse]
 	getWarehouse              *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
 	watchWarehouses           *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
@@ -500,12 +500,6 @@ func (c *kargoServiceClient) RefreshStage(ctx context.Context, req *connect.Requ
 	return c.refreshStage.CallUnary(ctx, req)
 }
 
-// RequestStageVerification calls
-// akuity.io.kargo.service.v1alpha1.KargoService.RequestStageVerification.
-func (c *kargoServiceClient) RequestStageVerification(ctx context.Context, req *connect.Request[v1alpha1.RequestStageVerificationRequest]) (*connect.Response[v1alpha1.RequestStageVerificationResponse], error) {
-	return c.requestStageVerification.CallUnary(ctx, req)
-}
-
 // ListPromotions calls akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions.
 func (c *kargoServiceClient) ListPromotions(ctx context.Context, req *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error) {
 	return c.listPromotions.CallUnary(ctx, req)
@@ -577,6 +571,11 @@ func (c *kargoServiceClient) UpdateFreightAlias(ctx context.Context, req *connec
 	return c.updateFreightAlias.CallUnary(ctx, req)
 }
 
+// Reverify calls akuity.io.kargo.service.v1alpha1.KargoService.Reverify.
+func (c *kargoServiceClient) Reverify(ctx context.Context, req *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error) {
+	return c.reverify.CallUnary(ctx, req)
+}
+
 // ListWarehouses calls akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses.
 func (c *kargoServiceClient) ListWarehouses(ctx context.Context, req *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error) {
 	return c.listWarehouses.CallUnary(ctx, req)
@@ -645,7 +644,6 @@ type KargoServiceHandler interface {
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
-	RequestStageVerification(context.Context, *connect.Request[v1alpha1.RequestStageVerificationRequest]) (*connect.Response[v1alpha1.RequestStageVerificationResponse], error)
 	// Promotion APIs
 	ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error)
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest], *connect.ServerStream[v1alpha1.WatchPromotionsResponse]) error
@@ -661,6 +659,8 @@ type KargoServiceHandler interface {
 	PromoteToStageSubscribers(context.Context, *connect.Request[v1alpha1.PromoteToStageSubscribersRequest]) (*connect.Response[v1alpha1.PromoteToStageSubscribersResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error)
+	// Verification APIs
+	Reverify(context.Context, *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error)
 	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
 	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest], *connect.ServerStream[v1alpha1.WatchWarehousesResponse]) error
@@ -745,11 +745,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		svc.RefreshStage,
 		opts...,
 	)
-	kargoServiceRequestStageVerificationHandler := connect.NewUnaryHandler(
-		KargoServiceRequestStageVerificationProcedure,
-		svc.RequestStageVerification,
-		opts...,
-	)
 	kargoServiceListPromotionsHandler := connect.NewUnaryHandler(
 		KargoServiceListPromotionsProcedure,
 		svc.ListPromotions,
@@ -818,6 +813,11 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServiceUpdateFreightAliasHandler := connect.NewUnaryHandler(
 		KargoServiceUpdateFreightAliasProcedure,
 		svc.UpdateFreightAlias,
+		opts...,
+	)
+	kargoServiceReverifyHandler := connect.NewUnaryHandler(
+		KargoServiceReverifyProcedure,
+		svc.Reverify,
 		opts...,
 	)
 	kargoServiceListWarehousesHandler := connect.NewUnaryHandler(
@@ -898,8 +898,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteStageHandler.ServeHTTP(w, r)
 		case KargoServiceRefreshStageProcedure:
 			kargoServiceRefreshStageHandler.ServeHTTP(w, r)
-		case KargoServiceRequestStageVerificationProcedure:
-			kargoServiceRequestStageVerificationHandler.ServeHTTP(w, r)
 		case KargoServiceListPromotionsProcedure:
 			kargoServiceListPromotionsHandler.ServeHTTP(w, r)
 		case KargoServiceWatchPromotionsProcedure:
@@ -928,6 +926,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceQueryFreightHandler.ServeHTTP(w, r)
 		case KargoServiceUpdateFreightAliasProcedure:
 			kargoServiceUpdateFreightAliasHandler.ServeHTTP(w, r)
+		case KargoServiceReverifyProcedure:
+			kargoServiceReverifyHandler.ServeHTTP(w, r)
 		case KargoServiceListWarehousesProcedure:
 			kargoServiceListWarehousesHandler.ServeHTTP(w, r)
 		case KargoServiceGetWarehouseProcedure:
@@ -1009,10 +1009,6 @@ func (UnimplementedKargoServiceHandler) RefreshStage(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) RequestStageVerification(context.Context, *connect.Request[v1alpha1.RequestStageVerificationRequest]) (*connect.Response[v1alpha1.RequestStageVerificationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RequestStageVerification is not implemented"))
-}
-
 func (UnimplementedKargoServiceHandler) ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions is not implemented"))
 }
@@ -1067,6 +1063,10 @@ func (UnimplementedKargoServiceHandler) QueryFreight(context.Context, *connect.R
 
 func (UnimplementedKargoServiceHandler) UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) Reverify(context.Context, *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.Reverify is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error) {

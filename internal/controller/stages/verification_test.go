@@ -60,7 +60,7 @@ func TestStartVerification(t *testing.T) {
 			},
 		},
 		{
-			name: "Analysis run already exists",
+			name: "AnalysisRun already exists",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
@@ -87,11 +87,11 @@ func TestStartVerification(t *testing.T) {
 			},
 		},
 		{
-			name: "Analysis run already exists but reconfirmation is requested",
+			name: "AnalysisRun already exists but reverification is requested",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReconfirm: "fake-run",
+						kargoapi.AnnotationKeyReverify: "fake-id",
 					},
 				},
 				Spec: &kargoapi.StageSpec{

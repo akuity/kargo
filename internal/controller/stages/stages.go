@@ -309,7 +309,7 @@ func SetupReconcilerWithManager(
 			AnnotationKey: kargoapi.AnnotationKeyRefresh,
 		}).
 		WithEventFilter(kargo.IgnoreAnnotationRemoval{
-			AnnotationKey: kargoapi.AnnotationKeyReconfirm,
+			AnnotationKey: kargoapi.AnnotationKeyReverify,
 		}).
 		WithOptions(controller.CommonOptions()).
 		Build(
@@ -541,7 +541,7 @@ func (r *reconciler) Reconcile(
 	if clearRefreshErr != nil {
 		logger.Errorf("error clearing Stage refresh annotation: %s", clearRefreshErr)
 	}
-	clearReconfirmErr := kargoapi.ClearStageReconfirm(ctx, r.kargoClient, stage)
+	clearReconfirmErr := kargoapi.ClearStageReverify(ctx, r.kargoClient, stage)
 	if clearReconfirmErr != nil {
 		logger.Errorf("error clearing Stage reconfirm annotation: %s", clearReconfirmErr)
 	}
@@ -719,11 +719,11 @@ func (r *reconciler) syncNormalStage(
 
 		// Initiate or follow-up on verification if required
 		if stage.Spec.Verification != nil {
-			// Confirm if a rerun of verification is requested. If so, clear the
-			// verification info and start the verification process again.
+			// Confirm if a reverification is requested. If so, clear the
+			// verification info to start the verification process again.
 			info := status.CurrentFreight.VerificationInfo
 			if info != nil && info.ID != "" && info.Phase.IsTerminal() {
-				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReconfirm]; ok && v == info.ID {
+				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; ok && v == info.ID {
 					logger.Debug("reconfirming verification")
 					status.Phase = kargoapi.StagePhaseVerifying
 					status.CurrentFreight.VerificationInfo = nil

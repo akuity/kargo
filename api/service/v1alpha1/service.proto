@@ -30,7 +30,6 @@ service KargoService {
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
-  rpc RequestStageVerification(RequestStageVerificationRequest) returns (RequestStageVerificationResponse);
 
   /* Promotion APIs */
   rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
@@ -53,6 +52,9 @@ service KargoService {
   rpc PromoteToStageSubscribers(PromoteToStageSubscribersRequest) returns (PromoteToStageSubscribersResponse);
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
   rpc UpdateFreightAlias(UpdateFreightAliasRequest) returns (UpdateFreightAliasResponse);
+
+  /* Verification APIs */
+  rpc Reverify(ReverifyRequest) returns (ReverifyResponse);
 
   /* Warehouse APIs */
 
@@ -230,15 +232,6 @@ message RefreshStageResponse {
   github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
-message RequestStageVerificationRequest {
-  string project = 1;
-  string name = 2;
-}
-
-message RequestStageVerificationResponse {
-  /* explicitly empty */
-}
-
 message ListPromotionsRequest {
   string project = 1;
   optional string stage = 2;
@@ -379,6 +372,15 @@ message UpdateFreightAliasRequest {
 }
 
 message UpdateFreightAliasResponse {
+  /* explicitly empty */
+}
+
+message ReverifyRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message ReverifyResponse {
   /* explicitly empty */
 }
 

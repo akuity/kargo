@@ -30,10 +30,10 @@ func newVerifyStageCommand(cfg config.CLIConfig) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "stage [--project=project] (NAME)",
-		Short: "Run the verification of a stage",
+		Short: "Run the verification of the stage's current freight",
 		Args:  option.ExactArgs(1),
 		Example: `
-# Run the verification of a stage
+# Run the verification of the stage's current freight
 kargo verify stage --project=my-project my-stage
 
 # Run the verification of a stage in the default project
@@ -94,10 +94,10 @@ func (o *verifyStageOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	if _, err := kargoSvcCli.RequestStageVerification(
+	if _, err := kargoSvcCli.Reverify(
 		ctx,
 		connect.NewRequest(
-			&v1alpha1.RequestStageVerificationRequest{
+			&v1alpha1.ReverifyRequest{
 				Project: o.Project,
 				Name:    o.Name,
 			},

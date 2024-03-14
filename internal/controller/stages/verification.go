@@ -38,7 +38,7 @@ func (r *reconciler) startVerification(
 	// If the stage does not have a reverification annotation, check if there is
 	// an existing AnalysisRun for the Stage and Freight. If there is, return
 	// the status of this AnalysisRun.
-	if _, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReconfirm]; !ok {
+	if _, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; !ok {
 		analysisRuns := rollouts.AnalysisRunList{}
 		if err := r.listAnalysisRunsFn(
 			ctx,

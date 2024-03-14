@@ -63,21 +63,21 @@ func TestGetStage(t *testing.T) {
 	}
 }
 
-func TestReconfirmStageVerification(t *testing.T) {
+func TestReverifyStageFreight(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
 
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		err := ReconfirmStageVerification(context.TODO(), c, types.NamespacedName{
+		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
 		require.ErrorContains(t, err, "not found")
 	})
 
-	t.Run("missing verification info", func(t *testing.T) {
+	t.Run("missing current freight", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			&Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -87,11 +87,53 @@ func TestReconfirmStageVerification(t *testing.T) {
 			},
 		).Build()
 
-		err := ReconfirmStageVerification(context.TODO(), c, types.NamespacedName{
+		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
-		require.ErrorContains(t, err, "missing current freight or verification info")
+		require.ErrorContains(t, err, "stage has no current freight")
+	})
+
+	t.Run("missing verification info", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Status: StageStatus{
+					CurrentFreight: &FreightReference{},
+				},
+			},
+		).Build()
+
+		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.ErrorContains(t, err, "stage has no existing verification info")
+	})
+
+	t.Run("missing verification info ID", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Status: StageStatus{
+					CurrentFreight: &FreightReference{
+						VerificationInfo: &VerificationInfo{},
+					},
+				},
+			},
+		).Build()
+
+		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.ErrorContains(t, err, "stage verification info has no ID")
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -111,7 +153,7 @@ func TestReconfirmStageVerification(t *testing.T) {
 			},
 		).Build()
 
-		err := ReconfirmStageVerification(context.TODO(), c, types.NamespacedName{
+		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -122,11 +164,11 @@ func TestReconfirmStageVerification(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		require.Equal(t, "fake-id", stage.Annotations[AnnotationKeyReconfirm])
+		require.Equal(t, "fake-id", stage.Annotations[AnnotationKeyReverify])
 	})
 }
 
-func TestClearStageReconfirm(t *testing.T) {
+func TestClearStageReverify(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
 
@@ -140,7 +182,7 @@ func TestClearStageReconfirm(t *testing.T) {
 			},
 		).Build()
 
-		err := ClearStageReconfirm(context.TODO(), c, &Stage{
+		err := ClearStageReverify(context.TODO(), c, &Stage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-stage",
 				Namespace: "fake-namespace",
@@ -160,7 +202,7 @@ func TestClearStageReconfirm(t *testing.T) {
 			},
 		).Build()
 
-		err := ClearStageReconfirm(context.TODO(), c, &Stage{
+		err := ClearStageReverify(context.TODO(), c, &Stage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "fake-stage",
 				Namespace:   "fake-namespace",
@@ -177,18 +219,18 @@ func TestClearStageReconfirm(t *testing.T) {
 					Name:      "fake-stage",
 					Namespace: "fake-namespace",
 					Annotations: map[string]string{
-						AnnotationKeyReconfirm: "fake-id",
+						AnnotationKeyReverify: "fake-id",
 					},
 				},
 			},
 		).Build()
 
-		err := ClearStageReconfirm(context.TODO(), c, &Stage{
+		err := ClearStageReverify(context.TODO(), c, &Stage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-stage",
 				Namespace: "fake-namespace",
 				Annotations: map[string]string{
-					AnnotationKeyReconfirm: "fake-id",
+					AnnotationKeyReverify: "fake-id",
 				},
 			},
 		})
@@ -199,7 +241,7 @@ func TestClearStageReconfirm(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		_, ok := stage.Annotations[AnnotationKeyReconfirm]
+		_, ok := stage.Annotations[AnnotationKeyReverify]
 		require.False(t, ok)
 	})
 }

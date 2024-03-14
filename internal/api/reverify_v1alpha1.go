@@ -10,10 +10,10 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-func (s *server) RequestStageVerification(
+func (s *server) Reverify(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.RequestStageVerificationRequest],
-) (*connect.Response[svcv1alpha1.RequestStageVerificationResponse], error) {
+	req *connect.Request[svcv1alpha1.ReverifyRequest],
+) (*connect.Response[svcv1alpha1.ReverifyResponse], error) {
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
@@ -31,8 +31,8 @@ func (s *server) RequestStageVerification(
 		Namespace: project,
 		Name:      name,
 	}
-	if err := kargoapi.ReconfirmStageVerification(ctx, s.client, objKey); err != nil {
+	if err := kargoapi.ReverifyStageFreight(ctx, s.client, objKey); err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(&svcv1alpha1.RequestStageVerificationResponse{}), nil
+	return connect.NewResponse(&svcv1alpha1.ReverifyResponse{}), nil
 }
