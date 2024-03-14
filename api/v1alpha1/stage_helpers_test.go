@@ -246,6 +246,144 @@ func TestClearStageReverify(t *testing.T) {
 	})
 }
 
+func TestAbortStageFreightVerification(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+
+	t.Run("not found", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.ErrorContains(t, err, "not found")
+	})
+
+	t.Run("missing current freight", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+			},
+		).Build()
+
+		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.ErrorContains(t, err, "stage has no current freight")
+	})
+
+	t.Run("missing verification info", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Status: StageStatus{
+					CurrentFreight: &FreightReference{},
+				},
+			},
+		).Build()
+
+		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.ErrorContains(t, err, "stage has no existing verification info")
+	})
+
+	t.Run("missing verification info ID", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Status: StageStatus{
+					CurrentFreight: &FreightReference{
+						VerificationInfo: &VerificationInfo{},
+					},
+				},
+			},
+		).Build()
+
+		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.ErrorContains(t, err, "stage verification info has no ID")
+	})
+
+	t.Run("verification in terminal phase", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Status: StageStatus{
+					CurrentFreight: &FreightReference{
+						VerificationInfo: &VerificationInfo{
+							ID:    "fake-id",
+							Phase: VerificationPhaseError,
+						},
+					},
+				},
+			},
+		).Build()
+
+		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.NoError(t, err)
+
+		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.NoError(t, err)
+		_, ok := stage.Annotations[AnnotationKeyAbort]
+		require.False(t, ok)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+				Status: StageStatus{
+					CurrentFreight: &FreightReference{
+						VerificationInfo: &VerificationInfo{
+							ID: "fake-id",
+						},
+					},
+				},
+			},
+		).Build()
+
+		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.NoError(t, err)
+
+		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "fake-id", stage.Annotations[AnnotationKeyAbort])
+	})
+}
+
 func TestClearStageAbort(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))

@@ -2630,9 +2630,9 @@ export class ReverifyRequest extends Message<ReverifyRequest> {
   project = "";
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string stage = 2;
    */
-  name = "";
+  stage = "";
 
   constructor(data?: PartialMessage<ReverifyRequest>) {
     super();
@@ -2643,7 +2643,7 @@ export class ReverifyRequest extends Message<ReverifyRequest> {
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.ReverifyRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ReverifyRequest {
@@ -2693,6 +2693,82 @@ export class ReverifyResponse extends Message<ReverifyResponse> {
 
   static equals(a: ReverifyResponse | PlainMessage<ReverifyResponse> | undefined, b: ReverifyResponse | PlainMessage<ReverifyResponse> | undefined): boolean {
     return proto3.util.equals(ReverifyResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
+ */
+export class AbortVerificationRequest extends Message<AbortVerificationRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string stage = 2;
+   */
+  stage = "";
+
+  constructor(data?: PartialMessage<AbortVerificationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.AbortVerificationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stage", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AbortVerificationRequest {
+    return new AbortVerificationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AbortVerificationRequest {
+    return new AbortVerificationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AbortVerificationRequest {
+    return new AbortVerificationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AbortVerificationRequest | PlainMessage<AbortVerificationRequest> | undefined, b: AbortVerificationRequest | PlainMessage<AbortVerificationRequest> | undefined): boolean {
+    return proto3.util.equals(AbortVerificationRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
+ */
+export class AbortVerificationResponse extends Message<AbortVerificationResponse> {
+  constructor(data?: PartialMessage<AbortVerificationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.AbortVerificationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AbortVerificationResponse {
+    return new AbortVerificationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AbortVerificationResponse {
+    return new AbortVerificationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AbortVerificationResponse {
+    return new AbortVerificationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AbortVerificationResponse | PlainMessage<AbortVerificationResponse> | undefined, b: AbortVerificationResponse | PlainMessage<AbortVerificationResponse> | undefined): boolean {
+    return proto3.util.equals(AbortVerificationResponse, a, b);
   }
 }
 

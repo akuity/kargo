@@ -54,7 +54,9 @@ service KargoService {
   rpc UpdateFreightAlias(UpdateFreightAliasRequest) returns (UpdateFreightAliasResponse);
 
   /* Verification APIs */
+
   rpc Reverify(ReverifyRequest) returns (ReverifyResponse);
+  rpc AbortVerification(AbortVerificationRequest) returns (AbortVerificationResponse);
 
   /* Warehouse APIs */
 
@@ -377,10 +379,19 @@ message UpdateFreightAliasResponse {
 
 message ReverifyRequest {
   string project = 1;
-  string name = 2;
+  string stage = 2;
 }
 
 message ReverifyResponse {
+  /* explicitly empty */
+}
+
+message AbortVerificationRequest {
+  string project = 1;
+  string stage = 2;
+}
+
+message AbortVerificationResponse {
   /* explicitly empty */
 }
 

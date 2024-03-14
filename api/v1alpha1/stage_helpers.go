@@ -149,6 +149,54 @@ func ClearStageReverify(
 	return clearObjectAnnotation(ctx, c, &newStage, AnnotationKeyReverify)
 }
 
+// AbortStageFreightVerification forces aborting the verification of the
+// Freight associated with a Stage by setting an AnnotationKeyAbort
+// annotation on the Stage, causing the controller to abort the verification.
+// The annotation value is the identifier of the existing VerificationInfo for
+// the Stage.
+func AbortStageFreightVerification(
+	ctx context.Context,
+	c client.Client,
+	namespacedName types.NamespacedName,
+) error {
+	stage, err := GetStage(ctx, c, namespacedName)
+	if err != nil || stage == nil {
+		if stage == nil {
+			err = fmt.Errorf("Stage %q in namespace %q not found", namespacedName.Name, namespacedName.Namespace)
+		}
+		return err
+	}
+
+	curFreight := stage.Status.CurrentFreight
+	if curFreight == nil {
+		return errors.New("stage has no current freight")
+	}
+	if curFreight.VerificationInfo == nil {
+		return errors.New("stage has no existing verification info")
+	}
+	if stage.Status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
+		// The verification is already in a terminal phase, so we can skip the
+		// abort request.
+		return nil
+	}
+	if curFreight.VerificationInfo.ID == "" {
+		return fmt.Errorf("stage verification info has no ID")
+	}
+
+	patchBytes := []byte(
+		fmt.Sprintf(
+			`{"metadata":{"annotations":{"%s":"%s"}}}`,
+			AnnotationKeyAbort,
+			stage.Status.CurrentFreight.VerificationInfo.ID,
+		),
+	)
+	patch := client.RawPatch(types.MergePatchType, patchBytes)
+	if err := c.Patch(ctx, stage, patch); err != nil {
+		return fmt.Errorf("patch annotation: %w", err)
+	}
+	return nil
+}
+
 // ClearStageAbort is called by the Stage controller to clear the
 // AnnotationKeyAbort annotation on the Stage (if present). A client (e.g.
 // UI) who requested an abort of the Stage verification, can wait

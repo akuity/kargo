@@ -21,6 +21,7 @@ type verifyStageOptions struct {
 
 	Project string
 	Name    string
+	Abort   bool
 }
 
 func newVerifyStageCommand(cfg config.CLIConfig) *cobra.Command {
@@ -29,16 +30,23 @@ func newVerifyStageCommand(cfg config.CLIConfig) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "stage [--project=project] (NAME)",
-		Short: "Run the verification of the stage's current freight",
+		Use:   "stage [--project=project] (NAME) [--abort]",
+		Short: "(Re)run or abort the verification of the stage's current freight",
 		Args:  option.ExactArgs(1),
 		Example: `
-# Run the verification of the stage's current freight
+# Rerun the verification of the stage's current freight
 kargo verify stage --project=my-project my-stage
 
-# Run the verification of a stage in the default project
+# Rerun the verification of a stage in the default project
 kargo config set-project my-project
 kargo verify stage my-stage
+
+# Abort the verification of a stage's current freight
+kargo verify stage --project=my-project my-stage --abort
+
+# Abort the verification of a stage in the default project
+kargo config set-project my-project
+kargo verify stage my-stage --abort
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -65,6 +73,7 @@ func (o *verifyStageOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project the stage belongs to. If not set, the default project will be used.",
 	)
+	cmd.Flags().BoolVar(&o.Abort, "abort", false, "If set, the verification will be aborted.")
 }
 
 // complete sets the options from the command arguments.
@@ -94,16 +103,32 @@ func (o *verifyStageOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
+	if o.Abort {
+		if _, err := kargoSvcCli.AbortVerification(
+			ctx,
+			connect.NewRequest(
+				&v1alpha1.AbortVerificationRequest{
+					Project: o.Project,
+					Stage:   o.Name,
+				},
+			),
+		); err != nil {
+			return fmt.Errorf("abort verification: %w", err)
+		}
+		return nil
+	}
+
 	if _, err := kargoSvcCli.Reverify(
 		ctx,
 		connect.NewRequest(
 			&v1alpha1.ReverifyRequest{
 				Project: o.Project,
-				Name:    o.Name,
+				Stage:   o.Name,
 			},
 		),
 	); err != nil {
-		return fmt.Errorf("verify stage: %w", err)
+		return fmt.Errorf("reverify stage: %w", err)
 	}
+
 	return nil
 }
