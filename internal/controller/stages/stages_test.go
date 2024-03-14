@@ -322,7 +322,7 @@ func TestSyncNormalStage(t *testing.T) {
 		},
 
 		{
-			name: "reconfirms verification",
+			name: "reverification requested",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -393,7 +393,7 @@ func TestSyncNormalStage(t *testing.T) {
 		},
 
 		{
-			name: "ignores reconfirmation if conditions are not met",
+			name: "ignores reverification request if conditions are not met",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -542,6 +542,121 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus.Phase = initialStatus.Phase
 				newStatus.CurrentFreight = initialStatus.CurrentFreight
 				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
+			name: "verification abort error",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "fake-id",
+					},
+				},
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseVerifying,
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							ID:    "fake-id",
+							Phase: kargoapi.VerificationPhasePending,
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name: "fake-analysis-run",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.FreightReference,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				getVerificationInfoFn: func(
+					_ context.Context,
+					s *kargoapi.Stage,
+				) *kargoapi.VerificationInfo {
+					return s.Status.CurrentFreight.VerificationInfo
+				},
+				abortVerificationFn: func(
+					context.Context,
+					*kargoapi.Stage,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				_ kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+
+		{
+			name: "verification abort conditions not met",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "fake-id",
+					},
+				},
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseVerifying,
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							ID:    "fake-id",
+							Phase: kargoapi.VerificationPhasePending,
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name: "fake-analysis-run",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.FreightReference,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				getVerificationInfoFn: func(
+					_ context.Context,
+					s *kargoapi.Stage,
+				) *kargoapi.VerificationInfo {
+					i := s.Status.CurrentFreight.VerificationInfo.DeepCopy()
+					i.Phase = kargoapi.VerificationPhaseError
+					return i
+				},
+				abortVerificationFn: func(
+					context.Context,
+					*kargoapi.Stage,
+				) error {
+					// Should not be called
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				_ kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
 			},
 		},
 

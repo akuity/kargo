@@ -655,6 +655,92 @@ func TestGetVerificationInfo(t *testing.T) {
 	}
 }
 
+func TestAbortVerification(t *testing.T) {
+	testCases := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		reconciler *reconciler
+		assertions func(*testing.T, error)
+	}{
+		{
+			name:       "rollouts integration not enabled",
+			reconciler: &reconciler{},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "rollouts integration is disabled on this controller")
+			},
+		},
+		{
+			name: "error patching AnalysisRun",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name:      "fake-run",
+								Namespace: "fake-namespace",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
+				patchAnalysisRunFn: func(
+					context.Context,
+					client.Object,
+					client.Patch,
+					...client.PatchOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name:      "fake-run",
+								Namespace: "fake-namespace",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
+				patchAnalysisRunFn: func(
+					context.Context,
+					client.Object,
+					client.Patch,
+					...client.PatchOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				testCase.reconciler.abortVerification(
+					context.Background(),
+					testCase.stage,
+				),
+			)
+		})
+	}
+}
+
 func TestBuildAnalysisRun(t *testing.T) {
 	freight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{

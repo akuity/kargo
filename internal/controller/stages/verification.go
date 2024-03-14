@@ -251,6 +251,30 @@ func (r *reconciler) getVerificationInfo(
 	}
 }
 
+func (r *reconciler) abortVerification(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) error {
+	if r.rolloutsClient == nil {
+		return fmt.Errorf("rollouts integration is disabled on this controller; cannot abort verification")
+	}
+
+	ar := &rollouts.AnalysisRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Name,
+			Namespace: stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Namespace,
+		},
+	}
+	if err := r.patchAnalysisRunFn(
+		ctx,
+		ar,
+		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"terminate":true}}`)),
+	); err != nil {
+		return fmt.Errorf("error terminating AnalysisRun %q in namespace %q: %w", ar.Name, ar.Namespace, err)
+	}
+	return nil
+}
+
 // getAnalysisRunNamespace determines the namespace in which to create the
 // AnalysisRun resources.
 func (r *reconciler) getAnalysisRunNamespace(stage *kargoapi.Stage) string {

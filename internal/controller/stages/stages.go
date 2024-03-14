@@ -88,6 +88,11 @@ type reconciler struct {
 		*kargoapi.Stage,
 	) *kargoapi.VerificationInfo
 
+	abortVerificationFn func(
+		context.Context,
+		*kargoapi.Stage,
+	) error
+
 	getVerificationInfoFn func(
 		context.Context,
 		*kargoapi.Stage,
@@ -115,6 +120,13 @@ type reconciler struct {
 		context.Context,
 		client.Object,
 		...client.CreateOption,
+	) error
+
+	patchAnalysisRunFn func(
+		context.Context,
+		client.Object,
+		client.Patch,
+		...client.PatchOption,
 	) error
 
 	getAnalysisRunFn func(
@@ -311,6 +323,9 @@ func SetupReconcilerWithManager(
 		WithEventFilter(kargo.IgnoreAnnotationRemoval{
 			AnnotationKey: kargoapi.AnnotationKeyReverify,
 		}).
+		WithEventFilter(kargo.IgnoreAnnotationRemoval{
+			AnnotationKey: kargoapi.AnnotationKeyAbort,
+		}).
 		WithOptions(controller.CommonOptions()).
 		Build(
 			newReconciler(
@@ -450,12 +465,14 @@ func newReconciler(
 	r.getArgoCDAppFn = argocd.GetApplication
 	// Freight verification:
 	r.startVerificationFn = r.startVerification
+	r.abortVerificationFn = r.abortVerification
 	r.getVerificationInfoFn = r.getVerificationInfo
 	r.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	r.listAnalysisRunsFn = r.kargoClient.List
 	r.buildAnalysisRunFn = r.buildAnalysisRun
 	if rolloutsClient != nil {
 		r.createAnalysisRunFn = r.rolloutsClient.Create
+		r.patchAnalysisRunFn = r.rolloutsClient.Patch
 	}
 	r.getAnalysisRunFn = rollouts.GetAnalysisRun
 	r.getFreightFn = kargoapi.GetFreight
@@ -545,6 +562,10 @@ func (r *reconciler) Reconcile(
 	if clearReconfirmErr != nil {
 		logger.Errorf("error clearing Stage reconfirm annotation: %s", clearReconfirmErr)
 	}
+	clearAbortErr := kargoapi.ClearStageAbort(ctx, r.kargoClient, stage)
+	if clearAbortErr != nil {
+		logger.Errorf("error clearing Stage abort annotation: %s", clearAbortErr)
+	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
 	// do it this way so that a failure to update is never counted as THE failure
@@ -557,6 +578,9 @@ func (r *reconciler) Reconcile(
 	}
 	if err == nil {
 		err = clearReconfirmErr
+	}
+	if err == nil {
+		err = clearAbortErr
 	}
 	logger.Debug("done reconciling Stage")
 
@@ -724,7 +748,7 @@ func (r *reconciler) syncNormalStage(
 			info := status.CurrentFreight.VerificationInfo
 			if info != nil && info.ID != "" && info.Phase.IsTerminal() {
 				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; ok && v == info.ID {
-					logger.Debug("reconfirming verification")
+					logger.Debug("rerunning verification")
 					status.Phase = kargoapi.StagePhaseVerifying
 					status.CurrentFreight.VerificationInfo = nil
 				}
@@ -743,7 +767,25 @@ func (r *reconciler) syncNormalStage(
 				} else {
 					log.Debug("checking verification results")
 					status.CurrentFreight.VerificationInfo = r.getVerificationInfoFn(ctx, stage)
+
+					// Abort the verification if it's still running and the Stage has
+					// been marked to do so.
+					newInfo := status.CurrentFreight.VerificationInfo
+					if newInfo.ID != "" && !newInfo.Phase.IsTerminal() {
+						if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyAbort]; ok && v == newInfo.ID {
+							log.Debug("aborting verification")
+							if err := r.abortVerificationFn(ctx, stage); err != nil {
+								return status, fmt.Errorf(
+									"error aborting verification for Stage %q in namespace %q: %w",
+									stage.Name,
+									stage.Namespace,
+									err,
+								)
+							}
+						}
+					}
 				}
+
 				if status.CurrentFreight.VerificationInfo != nil {
 					log.Debugf(
 						"verification phase is %s",
