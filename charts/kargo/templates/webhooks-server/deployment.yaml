@@ -21,7 +21,7 @@ spec:
         {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.webhooksServer.labels" . | nindent 8 }}
       annotations:
-        configmap/checksum: {{ include (print $.Template.BasePath "/webhooks-server/configmap.yaml") . | sha256sum }}
+        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/webhooks-server/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
       serviceAccount: kargo-webhooks-server
       {{- with .Values.webhooksServer.affinity }}

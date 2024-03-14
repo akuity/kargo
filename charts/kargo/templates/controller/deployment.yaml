@@ -21,7 +21,7 @@ spec:
         {{- include "kargo.labels" . | nindent 8 }}
         {{- include "kargo.controller.labels" . | nindent 8 }}
       annotations:
-        configmap/checksum: {{ include (print $.Template.BasePath "/controller/configmap.yaml") . | sha256sum }}
+        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/controller/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
       serviceAccount: kargo-controller
       {{- with .Values.controller.affinity }}
