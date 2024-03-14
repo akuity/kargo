@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func Test_refreshObject(t *testing.T) {
+func Test_patchAnnotation(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
 
@@ -23,13 +22,12 @@ func Test_refreshObject(t *testing.T) {
 			WithObjects(obj...).
 			Build()
 	}
-	mockNow := func() time.Time {
-		return time.Date(2023, 11, 2, 0, 0, 0, 0, time.UTC)
-	}
+
 	testCases := map[string]struct {
 		obj         client.Object
-		cli         client.Client
-		nowFunc     func() time.Time
+		client      client.Client
+		key         string
+		value       string
 		errExpected bool
 	}{
 		"stage": {
@@ -39,31 +37,33 @@ func Test_refreshObject(t *testing.T) {
 					Name:      "stage",
 				},
 			},
-			cli: newFakeClient(&Stage{
+			client: newFakeClient(&Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "stage",
 				},
 			}),
-			nowFunc: mockNow,
+			key:   "key",
+			value: "value",
 		},
-		"stage with refresh annotation key": {
+		"stage with existing annotation": {
 			obj: &Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "stage",
 				},
 			},
-			cli: newFakeClient(&Stage{
+			client: newFakeClient(&Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "stage",
 					Annotations: map[string]string{
-						AnnotationKeyRefresh: time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+						"key": "value",
 					},
 				},
 			}),
-			nowFunc: mockNow,
+			key:   "key",
+			value: "value2",
 		},
 		"non-existing stage": {
 			obj: &Stage{
@@ -72,23 +72,22 @@ func Test_refreshObject(t *testing.T) {
 					Name:      "stage",
 				},
 			},
-			cli:         newFakeClient(),
-			nowFunc:     mockNow,
+			client:      newFakeClient(),
+			key:         "key",
+			value:       "value",
 			errExpected: true,
 		},
 	}
 	for name, tc := range testCases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			err := refreshObject(context.Background(), tc.cli, tc.obj, tc.nowFunc)
+			err := patchAnnotation(context.Background(), tc.client, tc.obj, tc.key, tc.value)
 			if tc.errExpected {
 				require.Error(t, err)
 				return
 			}
-			require.Contains(t, tc.obj.GetAnnotations(), AnnotationKeyRefresh)
-			actual, err := time.Parse(time.RFC3339, tc.obj.GetAnnotations()[AnnotationKeyRefresh])
-			require.NoError(t, err)
-			require.Equal(t, tc.nowFunc(), actual)
+			require.Contains(t, tc.obj.GetAnnotations(), tc.key)
+			require.Equal(t, tc.obj.GetAnnotations()[tc.key], tc.value)
 		})
 	}
 }

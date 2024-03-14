@@ -3,23 +3,17 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func refreshObject(
-	ctx context.Context,
-	c client.Client,
-	obj client.Object,
-	nowFunc func() time.Time,
-) error {
+func patchAnnotation(ctx context.Context, c client.Client, obj client.Object, key, value string) error {
 	patchBytes := []byte(
 		fmt.Sprintf(
 			`{"metadata":{"annotations":{"%s":"%s"}}}`,
-			AnnotationKeyRefresh,
-			nowFunc().UTC().Format(time.RFC3339),
+			key,
+			value,
 		),
 	)
 	patch := client.RawPatch(types.MergePatchType, patchBytes)

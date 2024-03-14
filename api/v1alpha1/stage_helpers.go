@@ -49,7 +49,7 @@ func RefreshStage(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := refreshObject(ctx, c, stage, time.Now); err != nil {
+	if err := patchAnnotation(ctx, c, stage, AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return stage, nil
@@ -108,18 +108,7 @@ func ReverifyStageFreight(
 		return fmt.Errorf("stage verification info has no ID")
 	}
 
-	patchBytes := []byte(
-		fmt.Sprintf(
-			`{"metadata":{"annotations":{"%s":"%s"}}}`,
-			AnnotationKeyReverify,
-			curFreight.VerificationInfo.ID,
-		),
-	)
-	patch := client.RawPatch(types.MergePatchType, patchBytes)
-	if err := c.Patch(ctx, stage, patch); err != nil {
-		return fmt.Errorf("patch annotation: %w", err)
-	}
-	return nil
+	return patchAnnotation(ctx, c, stage, AnnotationKeyReverify, curFreight.VerificationInfo.ID)
 }
 
 // ClearStageReverify is called by the Stage controller to clear the
@@ -183,18 +172,7 @@ func AbortStageFreightVerification(
 		return fmt.Errorf("stage verification info has no ID")
 	}
 
-	patchBytes := []byte(
-		fmt.Sprintf(
-			`{"metadata":{"annotations":{"%s":"%s"}}}`,
-			AnnotationKeyAbort,
-			stage.Status.CurrentFreight.VerificationInfo.ID,
-		),
-	)
-	patch := client.RawPatch(types.MergePatchType, patchBytes)
-	if err := c.Patch(ctx, stage, patch); err != nil {
-		return fmt.Errorf("patch annotation: %w", err)
-	}
-	return nil
+	return patchAnnotation(ctx, c, stage, AnnotationKeyAbort, curFreight.VerificationInfo.ID)
 }
 
 // ClearStageAbort is called by the Stage controller to clear the

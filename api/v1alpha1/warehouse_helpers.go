@@ -48,7 +48,13 @@ func RefreshWarehouse(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := refreshObject(ctx, c, warehouse, time.Now); err != nil {
+	if err := patchAnnotation(
+		ctx,
+		c,
+		warehouse,
+		AnnotationKeyRefresh,
+		time.Now().Format(time.RFC3339),
+	); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return warehouse, nil

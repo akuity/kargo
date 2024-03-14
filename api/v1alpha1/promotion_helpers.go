@@ -48,7 +48,7 @@ func RefreshPromotion(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := refreshObject(ctx, c, promo, time.Now); err != nil {
+	if err := patchAnnotation(ctx, c, promo, AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
