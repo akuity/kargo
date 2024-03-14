@@ -34,7 +34,8 @@ jobs:
       id: unstable-version
       run: |
         set -xue
-        LATEST_VERSION=$(go list -f {{.Version}} -mod=mod -m github.com/akuity/kargo@main | cut -f1 -d'-')
+        # Once Kargo goes to v2, we need to replace github.com/akuity/kargo with github.com/akuity/kargo/v2 on the next line
+        LATEST_VERSION=$(go list -m -versions github.com/akuity/kargo | awk '{print $NF}' | awk -F "." '{print $1"."$2".0"}')
         NEW_VERSION=$(awk 'BEGIN {FS=OFS="."} {$2++; print}' <<< "${LATEST_VERSION}")
         echo "unstable-version=${NEW_VERSION}-unstable-$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
     - name: Set up QEMU
