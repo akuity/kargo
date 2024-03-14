@@ -156,29 +156,30 @@ func (w *webhook) ValidateCreate(
 
 func (w *webhook) ValidateUpdate(
 	ctx context.Context,
-	_ runtime.Object,
+	oldObj runtime.Object,
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
-	freight := newObj.(*kargoapi.Freight) // nolint: forcetypeassert
+	oldFreight := oldObj.(*kargoapi.Freight) // nolint: forcetypeassert
+	newFreight := newObj.(*kargoapi.Freight) // nolint: forcetypeassert
 
 	freightList := kargoapi.FreightList{}
 	if err := w.listFreightFn(
 		ctx,
 		&freightList,
-		client.InNamespace(freight.Namespace),
-		client.MatchingLabels{kargoapi.AliasLabelKey: freight.Alias},
+		client.InNamespace(newFreight.Namespace),
+		client.MatchingLabels{kargoapi.AliasLabelKey: newFreight.Alias},
 	); err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
 	if len(freightList.Items) > 1 ||
-		(len(freightList.Items) == 1 && freightList.Items[0].Name != freight.Name) {
+		(len(freightList.Items) == 1 && freightList.Items[0].Name != newFreight.Name) {
 		return nil, apierrors.NewConflict(
 			freightGroupResource,
-			freight.Name,
+			newFreight.Name,
 			fmt.Errorf(
 				"alias %q already used by another piece of Freight in namespace %q",
-				freight.Alias,
-				freight.Namespace,
+				newFreight.Alias,
+				newFreight.Namespace,
 			),
 		)
 	}
@@ -186,14 +187,14 @@ func (w *webhook) ValidateUpdate(
 	// Freight is meant to be immutable. We only need to compare the Name to a
 	// newly generated ID because these are both fingerprints that are
 	// deterministically derived from the artifacts referenced by the Freight.
-	if freight.Name != freight.GenerateID() { // nolint: forcetypeassert
+	if newFreight.Name != newFreight.GenerateID() || oldFreight.Warehouse != newFreight.Warehouse {
 		return nil, apierrors.NewInvalid(
 			freightGroupKind,
-			freight.Name,
+			oldFreight.Name,
 			field.ErrorList{
 				field.Invalid(
 					field.NewPath(""),
-					freight,
+					oldFreight,
 					"freight is immutable",
 				),
 			},

@@ -349,7 +349,7 @@ func TestValidateUpdate(t *testing.T) {
 		},
 
 		{
-			name: "attempt to mutate",
+			name: "attempt to mutate artifacts",
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
 				oldFreight := &kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
@@ -365,6 +365,36 @@ func TestValidateUpdate(t *testing.T) {
 				oldFreight.Name = oldFreight.GenerateID()
 				newFreight := oldFreight.DeepCopy()
 				newFreight.Commits[0].ID = "another-fake-commit-id"
+				return oldFreight, newFreight
+			},
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "is invalid")
+				require.Contains(t, err.Error(), "freight is immutable")
+			},
+		},
+
+		{
+			name: "attempt to mutate warehouse field",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				oldFreight := &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-namespace",
+					},
+					Warehouse: "fake-warehouse",
+				}
+				oldFreight.Name = oldFreight.GenerateID()
+				newFreight := oldFreight.DeepCopy()
+				newFreight.Warehouse = "another-fake-warehouse"
 				return oldFreight, newFreight
 			},
 			webhook: &webhook{

@@ -177,10 +177,12 @@ func TestSyncWarehouse(t *testing.T) {
 }
 
 func TestGetLatestFreightFromRepos(t *testing.T) {
+	const testWarehouseName = "fake-warehouse"
+
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*kargoapi.Freight, error)
+		assertions func(*testing.T, *kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting latest git commits",
@@ -193,7 +195,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error syncing git repo subscription")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -218,7 +220,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -254,7 +256,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -306,11 +308,10 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				require.NotEmpty(t, freight.Name)
-				require.NotEmpty(t, freight.OwnerReferences)
 				// All other fields should have a predictable value
 				freight.Name = ""
 				freight.OwnerReferences = nil
@@ -320,6 +321,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "fake-namespace",
 						},
+						Warehouse: testWarehouseName,
 						Commits: []kargoapi.GitCommit{
 							{
 								RepoURL: "fake-url",
@@ -347,17 +349,17 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.getLatestFreightFromRepos(
-					context.Background(),
-					&kargoapi.Warehouse{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "fake-namespace",
-						},
-						Spec: &kargoapi.WarehouseSpec{},
+			freight, err := testCase.reconciler.getLatestFreightFromRepos(
+				context.Background(),
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-namespace",
+						Name:      testWarehouseName,
 					},
-				),
+					Spec: &kargoapi.WarehouseSpec{},
+				},
 			)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }

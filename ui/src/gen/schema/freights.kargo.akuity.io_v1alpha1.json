@@ -124,6 +124,10 @@
         }
       },
       "type": "object"
+    },
+    "warehouse": {
+      "description": "Warehouse is the name of the Warehouse that created this Freight. This is a\nrequired field. TODO: It is not clear yet how this field should be set in\nthe case of user-defined Freight.",
+      "type": "string"
     }
   },
   "type": "object"

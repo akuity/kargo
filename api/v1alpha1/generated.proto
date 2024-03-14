@@ -282,6 +282,13 @@ message Freight {
   // it to both the field and label.
   optional string alias = 7;
 
+  // Warehouse is the name of the Warehouse that created this Freight. This is a
+  // required field. TODO: It is not clear yet how this field should be set in
+  // the case of user-defined Freight.
+  //
+  // +kubebuilder:validation:Required
+  optional string warehouse = 8;
+
   // Commits describes specific Git repository commits.
   repeated GitCommit commits = 3;
 
@@ -309,6 +316,9 @@ message FreightReference {
   // the contents of the Freight. i.e. Two pieces of Freight can be compared for
   // equality by comparing their Names.
   optional string name = 1;
+
+  // Warehouse is the name of the Warehouse that created this Freight.
+  optional string warehouse = 6;
 
   // Commits describes specific Git repository commits.
   repeated GitCommit commits = 2;

@@ -700,6 +700,10 @@ spec:
                           cannot be launched successfully.
                         type: string
                     type: object
+                  warehouse:
+                    description: Warehouse is the name of the Warehouse that created
+                      this Freight.
+                    type: string
                 type: object
               currentPromotion:
                 description: CurrentPromotion is a reference to the currently Running
@@ -847,6 +851,10 @@ spec:
                               cannot be launched successfully.
                             type: string
                         type: object
+                      warehouse:
+                        description: Warehouse is the name of the Warehouse that created
+                          this Freight.
+                        type: string
                     type: object
                   name:
                     description: Name is the name of the Promotion
@@ -1060,6 +1068,10 @@ spec:
                             cannot be launched successfully.
                           type: string
                       type: object
+                    warehouse:
+                      description: Warehouse is the name of the Warehouse that created
+                        this Freight.
+                      type: string
                   type: object
                 type: array
               message:
