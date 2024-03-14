@@ -319,10 +319,11 @@ func (r *reconciler) promote(
 	}
 
 	targetFreightRef := kargoapi.FreightReference{
-		Name:    targetFreight.Name,
-		Commits: targetFreight.Commits,
-		Images:  targetFreight.Images,
-		Charts:  targetFreight.Charts,
+		Name:      targetFreight.Name,
+		Commits:   targetFreight.Commits,
+		Images:    targetFreight.Images,
+		Charts:    targetFreight.Charts,
+		Warehouse: targetFreight.Warehouse,
 	}
 
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
