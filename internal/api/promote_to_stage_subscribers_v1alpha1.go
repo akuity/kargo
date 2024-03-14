@@ -14,13 +14,13 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
-// PromoteSubscribers creates a Promotion resources to transition all Stages
-// immediately downstream from the specified Stage into the state represented by
-// the specified Freight.
-func (s *server) PromoteSubscribers(
+// PromoteToStageSubscribers creates a Promotion resources to transition all
+// Stages immediately downstream from the specified Stage into the state
+// represented by the specified Freight.
+func (s *server) PromoteToStageSubscribers(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.PromoteSubscribersRequest],
-) (*connect.Response[svcv1alpha1.PromoteSubscribersResponse], error) {
+	req *connect.Request[svcv1alpha1.PromoteToStageSubscribersRequest],
+) (*connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse], error) {
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (s *server) PromoteSubscribers(
 		createdPromos = append(createdPromos, &newPromo)
 	}
 
-	res := connect.NewResponse(&svcv1alpha1.PromoteSubscribersResponse{
+	res := connect.NewResponse(&svcv1alpha1.PromoteToStageSubscribersResponse{
 		Promotions: createdPromos,
 	})
 
