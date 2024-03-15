@@ -52,7 +52,7 @@ webhooks:
     apiGroups: ["kargo.akuity.io"]
     apiVersions: ["v1alpha1"]
     resources: ["stages"]
-    operations: ["CREATE"]
+    operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
 ---
 apiVersion: admissionregistration.k8s.io/v1
