@@ -228,16 +228,6 @@ func (c *createdFreightEventHandler) Create(
 ) {
 	logger := logging.LoggerFromContext(ctx)
 	freight := evt.Object.(*kargoapi.Freight) // nolint: forcetypeassert
-	// TODO: Get warehouse name freight.OwnerReferences
-	if len(freight.OwnerReferences) != 1 {
-		logger.Warnf(
-			"Expected Freight %q to have exactly 1 OwnerReference, got %d",
-			freight.Name,
-			len(freight.OwnerReferences),
-		)
-		return
-	}
-	warehouse := freight.OwnerReferences[0].Name
 	stages := kargoapi.StageList{}
 	if err := c.kargoClient.List(
 		ctx,
@@ -246,14 +236,14 @@ func (c *createdFreightEventHandler) Create(
 			Namespace: freight.Namespace,
 			FieldSelector: fields.OneTermEqualSelector(
 				kubeclient.StagesByWarehouseIndexField,
-				warehouse,
+				freight.Warehouse,
 			),
 			LabelSelector: c.shardSelector,
 		},
 	); err != nil {
 		logger.Errorf(
 			"Failed list Stages subscribed to Warehouse %q in namespace %q",
-			warehouse,
+			freight.Warehouse,
 			freight.Namespace,
 		)
 		return
