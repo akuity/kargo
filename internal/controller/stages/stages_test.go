@@ -590,7 +590,7 @@ func TestSyncNormalStage(t *testing.T) {
 					*kargoapi.Stage,
 				) *kargoapi.VerificationInfo {
 					return &kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseFailed,
+						Phase:   kargoapi.VerificationPhaseAborted,
 						Message: "aborted",
 					}
 				},
@@ -605,7 +605,7 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseFailed,
+						Phase:   kargoapi.VerificationPhaseAborted,
 						Message: "aborted",
 					},
 					newStatus.CurrentFreight.VerificationInfo,
@@ -664,7 +664,7 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.VerificationInfo {
 					// Should not be called
 					return &kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseFailed,
+						Phase:   kargoapi.VerificationPhaseAborted,
 						Message: "aborted",
 					}
 				},

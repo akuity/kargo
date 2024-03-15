@@ -746,7 +746,7 @@ func TestAbortVerification(t *testing.T) {
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Equal(t, "fake-id", vi.ID)
-				require.Equal(t, kargoapi.VerificationPhaseFailed, vi.Phase)
+				require.Equal(t, kargoapi.VerificationPhaseAborted, vi.Phase)
 				require.Equal(t, "Verification aborted by user", vi.Message)
 			},
 		},

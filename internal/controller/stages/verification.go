@@ -294,7 +294,7 @@ func (r *reconciler) abortVerification(
 	// will indicate a "Succeeded" phase due to Argo Rollouts behavior.
 	return &kargoapi.VerificationInfo{
 		ID:      stage.Status.CurrentFreight.VerificationInfo.ID,
-		Phase:   kargoapi.VerificationPhaseFailed,
+		Phase:   kargoapi.VerificationPhaseAborted,
 		Message: "Verification aborted by user",
 	}
 }

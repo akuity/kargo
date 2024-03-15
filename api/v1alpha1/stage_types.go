@@ -40,6 +40,9 @@ const (
 	// VerificationPhaseError denotes a verification process that has completed
 	// with an error.
 	VerificationPhaseError VerificationPhase = "Error"
+	// VerificationPhaseAborted denotes a verification process that has been
+	// aborted.
+	VerificationPhaseAborted VerificationPhase = "Aborted"
 	// VerificationPhaseInconclusive denotes a verification process that has
 	// completed with an inconclusive result.
 	VerificationPhaseInconclusive VerificationPhase = "Inconclusive"
@@ -49,7 +52,7 @@ const (
 func (v *VerificationPhase) IsTerminal() bool {
 	switch *v {
 	case VerificationPhaseSuccessful, VerificationPhaseFailed,
-		VerificationPhaseError, VerificationPhaseInconclusive:
+		VerificationPhaseError, VerificationPhaseAborted, VerificationPhaseInconclusive:
 		return true
 	default:
 		return false
