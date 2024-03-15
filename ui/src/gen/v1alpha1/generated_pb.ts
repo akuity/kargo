@@ -3403,6 +3403,13 @@ export class Verification extends Message<Verification> {
  */
 export class VerificationInfo extends Message<VerificationInfo> {
   /**
+   * ID is the identifier of the Verification process.
+   *
+   * @generated from field: optional string id = 4;
+   */
+  id?: string;
+
+  /**
    * Phase describes the current phase of the Verification process. Generally,
    * this will be a reflection of the underlying AnalysisRun's phase, however,
    * there are exceptions to this, such as in the case where an AnalysisRun
@@ -3436,6 +3443,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.VerificationInfo";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 4, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "analysisRun", kind: "message", T: AnalysisRunReference, opt: true },

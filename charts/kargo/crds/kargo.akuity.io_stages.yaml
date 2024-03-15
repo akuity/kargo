@@ -687,6 +687,9 @@ spec:
                         - namespace
                         - phase
                         type: object
+                      id:
+                        description: ID is the identifier of the Verification process.
+                        type: string
                       message:
                         description: |-
                           Message may contain additional information about why the verification
@@ -838,6 +841,10 @@ spec:
                             - namespace
                             - phase
                             type: object
+                          id:
+                            description: ID is the identifier of the Verification
+                              process.
+                            type: string
                           message:
                             description: |-
                               Message may contain additional information about why the verification
@@ -1055,6 +1062,9 @@ spec:
                           - namespace
                           - phase
                           type: object
+                        id:
+                          description: ID is the identifier of the Verification process.
+                          type: string
                         message:
                           description: |-
                             Message may contain additional information about why the verification

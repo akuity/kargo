@@ -48,30 +48,8 @@ func RefreshPromotion(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := refreshObject(ctx, c, promo, time.Now); err != nil {
+	if err := patchAnnotation(ctx, c, promo, AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
-}
-
-// ClearPromotionRefresh is called by the Promotion controller to clear the refresh
-// annotation on the Promotion (if present).
-func ClearPromotionRefresh(
-	ctx context.Context,
-	c client.Client,
-	promo *Promotion,
-) error {
-	if promo.Annotations == nil {
-		return nil
-	}
-	if _, ok := promo.Annotations[AnnotationKeyRefresh]; !ok {
-		return nil
-	}
-	newPromo := Promotion{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      promo.Name,
-			Namespace: promo.Namespace,
-		},
-	}
-	return clearRefreshObject(ctx, c, &newPromo)
 }

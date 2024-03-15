@@ -1012,6 +1012,9 @@ message Verification {
 // VerificationInfo contains information about the currently running
 // Verification process.
 message VerificationInfo {
+  // ID is the identifier of the Verification process.
+  optional string id = 4;
+
   // Phase describes the current phase of the Verification process. Generally,
   // this will be a reflection of the underlying AnalysisRun's phase, however,
   // there are exceptions to this, such as in the case where an AnalysisRun

@@ -114,32 +114,34 @@ func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
 	return false
 }
 
-// IgnoreClearRefreshUpdates is a predicate that filters out update events if
-// the update was only to clear the refresh annotation. This prevents the
-// extra reconciliation that happens when reconcilers respond to refresh by
-// updating the object's annotations.
-type IgnoreClearRefreshUpdates struct {
+// IgnoreAnnotationRemoval is a predicate that ignores the removal of specific
+// Annotations in an update event. This is useful when we want to ignore
+// updates that only remove an annotation and nothing else, which may be the
+// case when the annotation(s) are cleared by the controller itself.
+type IgnoreAnnotationRemoval struct {
 	predicate.Funcs
+
+	Annotations []string
 }
 
-// Update returns false if the update event cleared the refresh annotation.
-// NOTE: this predicate assumes that the update was to clear the annotation and nothing else.
-// This is safe to assume as long as the ClearXxxxRefresh helpers are always used to clear
-// the refresh annotation.
-func (i IgnoreClearRefreshUpdates) Update(e event.UpdateEvent) bool {
+// Update returns false if the update event only removed any of the Annotations,
+// true otherwise.
+//
+// NOTE: this predicate assumes that the update was to clear the annotation and
+// nothing else. This is safe to assume as long as the helpers of the API are
+// always used to clear the respective annotation.
+func (i IgnoreAnnotationRemoval) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil || e.ObjectNew == nil {
 		return true
 	}
-	oldHasRefreshAnnotation := false
-	if oldAnnotations := e.ObjectOld.GetAnnotations(); oldAnnotations != nil {
-		_, oldHasRefreshAnnotation = oldAnnotations[kargoapi.AnnotationKeyRefresh]
-	}
-	newHasRefreshAnnotation := false
-	if newAnnotations := e.ObjectNew.GetAnnotations(); newAnnotations != nil {
-		_, newHasRefreshAnnotation = newAnnotations[kargoapi.AnnotationKeyRefresh]
-	}
-	if oldHasRefreshAnnotation && !newHasRefreshAnnotation {
-		return false
+	oldAnnotations := e.ObjectOld.GetAnnotations()
+	newAnnotations := e.ObjectNew.GetAnnotations()
+	for _, annotation := range i.Annotations {
+		_, oldHasAnnotation := oldAnnotations[annotation]
+		_, newHasAnnotation := newAnnotations[annotation]
+		if oldHasAnnotation && !newHasAnnotation {
+			return false
+		}
 	}
 	return true
 }

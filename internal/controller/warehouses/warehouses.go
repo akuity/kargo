@@ -119,7 +119,11 @@ func SetupReconcilerWithManager(
 			),
 		).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreClearRefreshUpdates{}).
+		WithEventFilter(kargo.IgnoreAnnotationRemoval{
+			Annotations: []string{
+				kargoapi.AnnotationKeyRefresh,
+			},
+		}).
 		WithOptions(controller.CommonOptions()).
 		Complete(newReconciler(mgr.GetClient(), credentialsDB)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
@@ -195,7 +199,12 @@ func (r *reconciler) Reconcile(
 	if updateErr != nil {
 		logger.Errorf("error updating Warehouse status: %s", updateErr)
 	}
-	if clearRefreshErr := kargoapi.ClearWarehouseRefresh(ctx, r.client, warehouse); clearRefreshErr != nil {
+	if clearRefreshErr := kargoapi.ClearAnnotations(
+		ctx,
+		r.client,
+		warehouse,
+		kargoapi.AnnotationKeyRefresh,
+	); clearRefreshErr != nil {
 		logger.Errorf("error clearing Warehouse refresh annotation: %s", clearRefreshErr)
 	}
 

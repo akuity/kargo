@@ -22,12 +22,12 @@ func TestStartVerification(t *testing.T) {
 		name       string
 		stage      *kargoapi.Stage
 		reconciler *reconciler
-		assertions func(*kargoapi.VerificationInfo)
+		assertions func(*testing.T, *kargoapi.VerificationInfo)
 	}{
 		{
 			name:       "rollouts integration not enabled",
 			reconciler: &reconciler{},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.Contains(
 					t,
 					vi.Message,
@@ -54,13 +54,13 @@ func TestStartVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error listing AnalysisRuns for Stage")
 			},
 		},
 		{
-			name: "Analysis run already exists",
+			name: "AnalysisRun already exists",
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
@@ -81,9 +81,84 @@ func TestStartVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Empty(t, vi.Message)
+			},
+		},
+		{
+			name: "AnalysisRun already exists but reverification is requested",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: "fake-id",
+					},
+				},
+				Spec: &kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{
+						AnalysisTemplates: []kargoapi.AnalysisTemplateReference{{}},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						Name: "fake-id",
+					},
+				},
+			},
+			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
+				listAnalysisRunsFn: func(
+					_ context.Context,
+					objList client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					analysisRuns, ok := objList.(*rollouts.AnalysisRunList)
+					require.True(t, ok)
+					analysisRuns.Items = []rollouts.AnalysisRun{{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-run",
+						},
+					}}
+					return nil
+				},
+				getAnalysisTemplateFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*rollouts.AnalysisTemplate, error) {
+					return &rollouts.AnalysisTemplate{}, nil
+				},
+				getFreightFn: func(ctx context.Context, c client.Client, name types.NamespacedName) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				buildAnalysisRunFn: func(
+					*kargoapi.Stage,
+					*kargoapi.Freight,
+					[]*rollouts.AnalysisTemplate,
+				) (*rollouts.AnalysisRun, error) {
+					return &rollouts.AnalysisRun{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "new-fake-run",
+							Namespace: "fake-namespace",
+						},
+					}, nil
+				},
+				createAnalysisRunFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNilf(t, vi, "expected non-nil VerificationInfo")
+				require.NotEmptyf(t, vi.ID, "expected non-empty VerificationInfo.ID")
+				require.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
+				require.Equal(t, &kargoapi.AnalysisRunReference{
+					Name:      "new-fake-run",
+					Namespace: "fake-namespace",
+				}, vi.AnalysisRun)
 			},
 		},
 		{
@@ -117,7 +192,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error getting AnalysisTemplate")
@@ -154,7 +229,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "AnalysisTemplate")
 				require.Contains(t, vi.Message, "not found")
@@ -198,7 +273,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, fmt.Errorf("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error getting Freight")
@@ -242,7 +317,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "Freight")
 				require.Contains(t, vi.Message, "not found")
@@ -292,7 +367,7 @@ func TestStartVerification(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error building AnalysisRun for Stage")
@@ -350,7 +425,7 @@ func TestStartVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error creating AnalysisRun")
@@ -409,24 +484,21 @@ func TestStartVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
-				require.Equal(
-					t,
-					&kargoapi.VerificationInfo{
-						Phase: kargoapi.VerificationPhasePending,
-						AnalysisRun: &kargoapi.AnalysisRunReference{
-							Name:      "fake-run",
-							Namespace: "fake-namespace",
-						},
-					},
-					vi,
-				)
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNilf(t, vi, "expected non-nil VerificationInfo")
+				require.NotEmptyf(t, vi.ID, "expected non-empty VerificationInfo.ID")
+				require.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
+				require.Equal(t, &kargoapi.AnalysisRunReference{
+					Name:      "fake-run",
+					Namespace: "fake-namespace",
+				}, vi.AnalysisRun)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.startVerification(
 					context.Background(),
 					testCase.stage,
@@ -441,12 +513,19 @@ func TestGetVerificationInfo(t *testing.T) {
 		name       string
 		stage      *kargoapi.Stage
 		reconciler *reconciler
-		assertions func(*kargoapi.VerificationInfo)
+		assertions func(*testing.T, *kargoapi.VerificationInfo)
 	}{
 		{
 			name:       "rollouts integration not enabled",
 			reconciler: &reconciler{},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{},
+					},
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(
 					t,
@@ -479,7 +558,7 @@ func TestGetVerificationInfo(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "something went wrong")
 				require.Contains(t, vi.Message, "error getting AnalysisRun")
@@ -509,7 +588,7 @@ func TestGetVerificationInfo(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Contains(t, vi.Message, "AnalysisRun")
 				require.Contains(t, vi.Message, "not found")
@@ -547,7 +626,7 @@ func TestGetVerificationInfo(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(vi *kargoapi.VerificationInfo) {
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
@@ -566,7 +645,117 @@ func TestGetVerificationInfo(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.getVerificationInfo(
+					context.Background(),
+					testCase.stage,
+				),
+			)
+		})
+	}
+}
+
+func TestAbortVerification(t *testing.T) {
+	testCases := []struct {
+		name       string
+		stage      *kargoapi.Stage
+		reconciler *reconciler
+		assertions func(*testing.T, *kargoapi.VerificationInfo)
+	}{
+		{
+			name:       "rollouts integration not enabled",
+			reconciler: &reconciler{},
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							ID: "fake-id",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Equal(t, vi.ID, "fake-id")
+				require.Contains(
+					t,
+					vi.Message,
+					"Rollouts integration is disabled on this controller",
+				)
+			},
+		},
+		{
+			name: "error patching AnalysisRun",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							ID: "fake-id",
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name:      "fake-run",
+								Namespace: "fake-namespace",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
+				patchAnalysisRunFn: func(
+					context.Context,
+					client.Object,
+					client.Patch,
+					...client.PatchOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Equal(t, "fake-id", vi.ID)
+				require.Contains(t, vi.Message, "AnalysisRun")
+				require.Contains(t, vi.Message, "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							ID: "fake-id",
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name:      "fake-run",
+								Namespace: "fake-namespace",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				rolloutsClient: fake.NewClientBuilder().Build(),
+				patchAnalysisRunFn: func(
+					context.Context,
+					client.Object,
+					client.Patch,
+					...client.PatchOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Equal(t, "fake-id", vi.ID)
+				require.Equal(t, kargoapi.VerificationPhaseAborted, vi.Phase)
+				require.Equal(t, "Verification aborted by user", vi.Message)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				testCase.reconciler.abortVerification(
 					context.Background(),
 					testCase.stage,
 				),

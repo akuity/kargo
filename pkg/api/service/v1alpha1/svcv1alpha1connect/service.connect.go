@@ -108,6 +108,11 @@ const (
 	// KargoServiceUpdateFreightAliasProcedure is the fully-qualified name of the KargoService's
 	// UpdateFreightAlias RPC.
 	KargoServiceUpdateFreightAliasProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateFreightAlias"
+	// KargoServiceReverifyProcedure is the fully-qualified name of the KargoService's Reverify RPC.
+	KargoServiceReverifyProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/Reverify"
+	// KargoServiceAbortVerificationProcedure is the fully-qualified name of the KargoService's
+	// AbortVerification RPC.
+	KargoServiceAbortVerificationProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/AbortVerification"
 	// KargoServiceListWarehousesProcedure is the fully-qualified name of the KargoService's
 	// ListWarehouses RPC.
 	KargoServiceListWarehousesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListWarehouses"
@@ -172,6 +177,8 @@ type KargoServiceClient interface {
 	PromoteToStageSubscribers(context.Context, *connect.Request[v1alpha1.PromoteToStageSubscribersRequest]) (*connect.Response[v1alpha1.PromoteToStageSubscribersResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error)
+	Reverify(context.Context, *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error)
+	AbortVerification(context.Context, *connect.Request[v1alpha1.AbortVerificationRequest]) (*connect.Response[v1alpha1.AbortVerificationResponse], error)
 	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
 	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchWarehousesResponse], error)
@@ -330,6 +337,16 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+KargoServiceUpdateFreightAliasProcedure,
 			opts...,
 		),
+		reverify: connect.NewClient[v1alpha1.ReverifyRequest, v1alpha1.ReverifyResponse](
+			httpClient,
+			baseURL+KargoServiceReverifyProcedure,
+			opts...,
+		),
+		abortVerification: connect.NewClient[v1alpha1.AbortVerificationRequest, v1alpha1.AbortVerificationResponse](
+			httpClient,
+			baseURL+KargoServiceAbortVerificationProcedure,
+			opts...,
+		),
 		listWarehouses: connect.NewClient[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse](
 			httpClient,
 			baseURL+KargoServiceListWarehousesProcedure,
@@ -412,6 +429,8 @@ type kargoServiceClient struct {
 	promoteToStageSubscribers *connect.Client[v1alpha1.PromoteToStageSubscribersRequest, v1alpha1.PromoteToStageSubscribersResponse]
 	queryFreight              *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
 	updateFreightAlias        *connect.Client[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse]
+	reverify                  *connect.Client[v1alpha1.ReverifyRequest, v1alpha1.ReverifyResponse]
+	abortVerification         *connect.Client[v1alpha1.AbortVerificationRequest, v1alpha1.AbortVerificationResponse]
 	listWarehouses            *connect.Client[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse]
 	getWarehouse              *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
 	watchWarehouses           *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
@@ -561,6 +580,16 @@ func (c *kargoServiceClient) UpdateFreightAlias(ctx context.Context, req *connec
 	return c.updateFreightAlias.CallUnary(ctx, req)
 }
 
+// Reverify calls akuity.io.kargo.service.v1alpha1.KargoService.Reverify.
+func (c *kargoServiceClient) Reverify(ctx context.Context, req *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error) {
+	return c.reverify.CallUnary(ctx, req)
+}
+
+// AbortVerification calls akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification.
+func (c *kargoServiceClient) AbortVerification(ctx context.Context, req *connect.Request[v1alpha1.AbortVerificationRequest]) (*connect.Response[v1alpha1.AbortVerificationResponse], error) {
+	return c.abortVerification.CallUnary(ctx, req)
+}
+
 // ListWarehouses calls akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses.
 func (c *kargoServiceClient) ListWarehouses(ctx context.Context, req *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error) {
 	return c.listWarehouses.CallUnary(ctx, req)
@@ -644,6 +673,8 @@ type KargoServiceHandler interface {
 	PromoteToStageSubscribers(context.Context, *connect.Request[v1alpha1.PromoteToStageSubscribersRequest]) (*connect.Response[v1alpha1.PromoteToStageSubscribersResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
 	UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error)
+	Reverify(context.Context, *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error)
+	AbortVerification(context.Context, *connect.Request[v1alpha1.AbortVerificationRequest]) (*connect.Response[v1alpha1.AbortVerificationResponse], error)
 	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
 	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest], *connect.ServerStream[v1alpha1.WatchWarehousesResponse]) error
@@ -798,6 +829,16 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		svc.UpdateFreightAlias,
 		opts...,
 	)
+	kargoServiceReverifyHandler := connect.NewUnaryHandler(
+		KargoServiceReverifyProcedure,
+		svc.Reverify,
+		opts...,
+	)
+	kargoServiceAbortVerificationHandler := connect.NewUnaryHandler(
+		KargoServiceAbortVerificationProcedure,
+		svc.AbortVerification,
+		opts...,
+	)
 	kargoServiceListWarehousesHandler := connect.NewUnaryHandler(
 		KargoServiceListWarehousesProcedure,
 		svc.ListWarehouses,
@@ -904,6 +945,10 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceQueryFreightHandler.ServeHTTP(w, r)
 		case KargoServiceUpdateFreightAliasProcedure:
 			kargoServiceUpdateFreightAliasHandler.ServeHTTP(w, r)
+		case KargoServiceReverifyProcedure:
+			kargoServiceReverifyHandler.ServeHTTP(w, r)
+		case KargoServiceAbortVerificationProcedure:
+			kargoServiceAbortVerificationHandler.ServeHTTP(w, r)
 		case KargoServiceListWarehousesProcedure:
 			kargoServiceListWarehousesHandler.ServeHTTP(w, r)
 		case KargoServiceGetWarehouseProcedure:
@@ -1039,6 +1084,14 @@ func (UnimplementedKargoServiceHandler) QueryFreight(context.Context, *connect.R
 
 func (UnimplementedKargoServiceHandler) UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) Reverify(context.Context, *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.Reverify is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) AbortVerification(context.Context, *connect.Request[v1alpha1.AbortVerificationRequest]) (*connect.Response[v1alpha1.AbortVerificationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error) {

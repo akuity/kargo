@@ -3,8 +3,10 @@ package stages
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -22,6 +24,7 @@ func (r *reconciler) startVerification(
 ) *kargoapi.VerificationInfo {
 	if r.rolloutsClient == nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; " +
 				"cannot start verification",
@@ -32,41 +35,54 @@ func (r *reconciler) startVerification(
 
 	namespace := r.getAnalysisRunNamespace(stage)
 
-	// Check for existing AnalysisRun
-	analysisRuns := rollouts.AnalysisRunList{}
-	if err := r.listAnalysisRunsFn(
-		ctx,
-		&analysisRuns,
-		&client.ListOptions{
-			Namespace: namespace,
-			LabelSelector: labels.SelectorFromSet(
-				map[string]string{
-					kargoapi.StageLabelKey:   stage.Name,
-					kargoapi.FreightLabelKey: stage.Status.CurrentFreight.Name,
-				},
-			),
-		},
-	); err != nil {
-		return &kargoapi.VerificationInfo{
-			Phase: kargoapi.VerificationPhaseError,
-			Message: fmt.Errorf(
-				"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
-				stage.Name,
-				stage.Status.CurrentFreight.Name,
-				namespace,
-				err,
-			).Error(),
-		}
-	}
-	if len(analysisRuns.Items) > 0 {
-		logger.Debug("AnalysisRun already exists for Freight")
-		return &kargoapi.VerificationInfo{
-			Phase: kargoapi.VerificationPhase(analysisRuns.Items[0].Status.Phase),
-			AnalysisRun: &kargoapi.AnalysisRunReference{
-				Name:      analysisRuns.Items[0].Name,
-				Namespace: analysisRuns.Items[0].Namespace,
-				Phase:     string(analysisRuns.Items[0].Status.Phase),
+	// If the stage does not have a reverification annotation, check if there is
+	// an existing AnalysisRun for the Stage and Freight. If there is, return
+	// the status of this AnalysisRun.
+	if _, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; !ok {
+		analysisRuns := rollouts.AnalysisRunList{}
+		if err := r.listAnalysisRunsFn(
+			ctx,
+			&analysisRuns,
+			&client.ListOptions{
+				Namespace: namespace,
+				LabelSelector: labels.SelectorFromSet(
+					map[string]string{
+						kargoapi.StageLabelKey:   stage.Name,
+						kargoapi.FreightLabelKey: stage.Status.CurrentFreight.Name,
+					},
+				),
 			},
+		); err != nil {
+			return &kargoapi.VerificationInfo{
+				ID:    uuid.NewString(),
+				Phase: kargoapi.VerificationPhaseError,
+				Message: fmt.Errorf(
+					"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
+					stage.Name,
+					stage.Status.CurrentFreight.Name,
+					namespace,
+					err,
+				).Error(),
+			}
+		}
+		if len(analysisRuns.Items) > 0 {
+			// Sort the AnalysisRuns by creation timestamp, so that the most recent
+			// one is first.
+			sort.SliceStable(analysisRuns.Items, func(i, j int) bool {
+				return analysisRuns.Items[j].CreationTimestamp.Before(&analysisRuns.Items[i].CreationTimestamp)
+			})
+
+			logger.Debug("AnalysisRun already exists for Freight")
+			latestAnalysisRun := analysisRuns.Items[0]
+			return &kargoapi.VerificationInfo{
+				ID:    uuid.NewString(),
+				Phase: kargoapi.VerificationPhase(latestAnalysisRun.Status.Phase),
+				AnalysisRun: &kargoapi.AnalysisRunReference{
+					Name:      latestAnalysisRun.Name,
+					Namespace: latestAnalysisRun.Namespace,
+					Phase:     string(latestAnalysisRun.Status.Phase),
+				},
+			}
 		}
 	}
 
@@ -84,6 +100,7 @@ func (r *reconciler) startVerification(
 		)
 		if err != nil {
 			return &kargoapi.VerificationInfo{
+				ID:    uuid.NewString(),
 				Phase: kargoapi.VerificationPhaseError,
 				Message: fmt.Errorf(
 					"error getting AnalysisTemplate %q in namespace %q: %w",
@@ -95,6 +112,7 @@ func (r *reconciler) startVerification(
 		}
 		if template == nil {
 			return &kargoapi.VerificationInfo{
+				ID:    uuid.NewString(),
 				Phase: kargoapi.VerificationPhaseError,
 				Message: fmt.Errorf(
 					"AnalysisTemplate %q in namespace %q not found",
@@ -116,6 +134,7 @@ func (r *reconciler) startVerification(
 	)
 	if err != nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error getting Freight %q in namespace %q: %w",
@@ -127,6 +146,7 @@ func (r *reconciler) startVerification(
 	}
 	if freight == nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"Freight %q in namespace %q not found",
@@ -139,6 +159,7 @@ func (r *reconciler) startVerification(
 	run, err := r.buildAnalysisRunFn(stage, freight, templates)
 	if err != nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error building AnalysisRun for Stage %q and Freight %q in namespace %q: %w",
@@ -152,6 +173,7 @@ func (r *reconciler) startVerification(
 
 	if err := r.createAnalysisRunFn(ctx, run); err != nil {
 		return &kargoapi.VerificationInfo{
+			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error creating AnalysisRun %q in namespace %q: %w",
@@ -163,6 +185,7 @@ func (r *reconciler) startVerification(
 	}
 
 	return &kargoapi.VerificationInfo{
+		ID:    uuid.NewString(),
 		Phase: kargoapi.VerificationPhasePending,
 		AnalysisRun: &kargoapi.AnalysisRunReference{
 			Name:      run.Name,
@@ -177,6 +200,7 @@ func (r *reconciler) getVerificationInfo(
 ) *kargoapi.VerificationInfo {
 	if r.rolloutsClient == nil {
 		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 			Phase: kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; cannot " +
 				"get verification info",
@@ -195,6 +219,7 @@ func (r *reconciler) getVerificationInfo(
 	)
 	if err != nil {
 		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error getting AnalysisRun %q in namespace %q: %w",
@@ -206,6 +231,7 @@ func (r *reconciler) getVerificationInfo(
 	}
 	if analysisRun == nil {
 		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 			Phase: kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"AnalysisRun %q in namespace %q not found",
@@ -215,12 +241,61 @@ func (r *reconciler) getVerificationInfo(
 		}
 	}
 	return &kargoapi.VerificationInfo{
+		ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 		Phase: kargoapi.VerificationPhase(analysisRun.Status.Phase),
 		AnalysisRun: &kargoapi.AnalysisRunReference{
 			Name:      analysisRun.Name,
 			Namespace: analysisRun.Namespace,
 			Phase:     string(analysisRun.Status.Phase),
 		},
+	}
+}
+
+func (r *reconciler) abortVerification(
+	ctx context.Context,
+	stage *kargoapi.Stage,
+) *kargoapi.VerificationInfo {
+	if r.rolloutsClient == nil {
+		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
+			Phase: kargoapi.VerificationPhaseError,
+			Message: "Rollouts integration is disabled on this controller; cannot " +
+				"abort verification",
+		}
+	}
+
+	ar := &rollouts.AnalysisRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Name,
+			Namespace: stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Namespace,
+		},
+	}
+	if err := r.patchAnalysisRunFn(
+		ctx,
+		ar,
+		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"terminate":true}}`)),
+	); err != nil {
+		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
+			Phase: kargoapi.VerificationPhaseError,
+			Message: fmt.Errorf(
+				"error terminating AnalysisRun %q in namespace %q: %w",
+				ar.Name,
+				ar.Namespace,
+				err,
+			).Error(),
+		}
+	}
+
+	// Return a new VerificationInfo with the same ID and a message indicating
+	// that the verification was aborted. The Phase will be set to Failed, as
+	// the verification was not successful.
+	// We do not use the further information from the AnalysisRun, as this
+	// will indicate a "Succeeded" phase due to Argo Rollouts behavior.
+	return &kargoapi.VerificationInfo{
+		ID:      stage.Status.CurrentFreight.VerificationInfo.ID,
+		Phase:   kargoapi.VerificationPhaseAborted,
+		Message: "Verification aborted by user",
 	}
 }
 

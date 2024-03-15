@@ -3407,6 +3407,192 @@ func (*UpdateFreightAliasResponse) Descriptor() ([]byte, []int) {
 	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{62}
 }
 
+type ReverifyRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	Stage   string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+}
+
+func (x *ReverifyRequest) Reset() {
+	*x = ReverifyRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_v1alpha1_service_proto_msgTypes[63]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ReverifyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReverifyRequest) ProtoMessage() {}
+
+func (x *ReverifyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_service_v1alpha1_service_proto_msgTypes[63]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReverifyRequest.ProtoReflect.Descriptor instead.
+func (*ReverifyRequest) Descriptor() ([]byte, []int) {
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *ReverifyRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *ReverifyRequest) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
+}
+
+type ReverifyResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *ReverifyResponse) Reset() {
+	*x = ReverifyResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_v1alpha1_service_proto_msgTypes[64]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ReverifyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReverifyResponse) ProtoMessage() {}
+
+func (x *ReverifyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_service_v1alpha1_service_proto_msgTypes[64]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReverifyResponse.ProtoReflect.Descriptor instead.
+func (*ReverifyResponse) Descriptor() ([]byte, []int) {
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{64}
+}
+
+type AbortVerificationRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	Stage   string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+}
+
+func (x *AbortVerificationRequest) Reset() {
+	*x = AbortVerificationRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_v1alpha1_service_proto_msgTypes[65]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AbortVerificationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AbortVerificationRequest) ProtoMessage() {}
+
+func (x *AbortVerificationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_service_v1alpha1_service_proto_msgTypes[65]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AbortVerificationRequest.ProtoReflect.Descriptor instead.
+func (*AbortVerificationRequest) Descriptor() ([]byte, []int) {
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *AbortVerificationRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *AbortVerificationRequest) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
+}
+
+type AbortVerificationResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *AbortVerificationResponse) Reset() {
+	*x = AbortVerificationResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_service_v1alpha1_service_proto_msgTypes[66]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AbortVerificationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AbortVerificationResponse) ProtoMessage() {}
+
+func (x *AbortVerificationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_service_v1alpha1_service_proto_msgTypes[66]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AbortVerificationResponse.ProtoReflect.Descriptor instead.
+func (*AbortVerificationResponse) Descriptor() ([]byte, []int) {
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{66}
+}
+
 type ListWarehousesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3418,7 +3604,7 @@ type ListWarehousesRequest struct {
 func (x *ListWarehousesRequest) Reset() {
 	*x = ListWarehousesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[63]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[67]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3431,7 +3617,7 @@ func (x *ListWarehousesRequest) String() string {
 func (*ListWarehousesRequest) ProtoMessage() {}
 
 func (x *ListWarehousesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[63]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[67]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3444,7 +3630,7 @@ func (x *ListWarehousesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWarehousesRequest.ProtoReflect.Descriptor instead.
 func (*ListWarehousesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{63}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ListWarehousesRequest) GetProject() string {
@@ -3465,7 +3651,7 @@ type ListWarehousesResponse struct {
 func (x *ListWarehousesResponse) Reset() {
 	*x = ListWarehousesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[64]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[68]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3478,7 +3664,7 @@ func (x *ListWarehousesResponse) String() string {
 func (*ListWarehousesResponse) ProtoMessage() {}
 
 func (x *ListWarehousesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[64]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[68]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3491,7 +3677,7 @@ func (x *ListWarehousesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWarehousesResponse.ProtoReflect.Descriptor instead.
 func (*ListWarehousesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{64}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ListWarehousesResponse) GetWarehouses() []*v1alpha1.Warehouse {
@@ -3513,7 +3699,7 @@ type GetWarehouseRequest struct {
 func (x *GetWarehouseRequest) Reset() {
 	*x = GetWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[65]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[69]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3526,7 +3712,7 @@ func (x *GetWarehouseRequest) String() string {
 func (*GetWarehouseRequest) ProtoMessage() {}
 
 func (x *GetWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[65]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[69]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3539,7 +3725,7 @@ func (x *GetWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*GetWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{65}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *GetWarehouseRequest) GetProject() string {
@@ -3567,7 +3753,7 @@ type GetWarehouseResponse struct {
 func (x *GetWarehouseResponse) Reset() {
 	*x = GetWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[66]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[70]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3580,7 +3766,7 @@ func (x *GetWarehouseResponse) String() string {
 func (*GetWarehouseResponse) ProtoMessage() {}
 
 func (x *GetWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[66]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[70]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3593,7 +3779,7 @@ func (x *GetWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*GetWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{66}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *GetWarehouseResponse) GetWarehouse() *v1alpha1.Warehouse {
@@ -3615,7 +3801,7 @@ type WatchWarehousesRequest struct {
 func (x *WatchWarehousesRequest) Reset() {
 	*x = WatchWarehousesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[67]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[71]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3628,7 +3814,7 @@ func (x *WatchWarehousesRequest) String() string {
 func (*WatchWarehousesRequest) ProtoMessage() {}
 
 func (x *WatchWarehousesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[67]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[71]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3641,7 +3827,7 @@ func (x *WatchWarehousesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchWarehousesRequest.ProtoReflect.Descriptor instead.
 func (*WatchWarehousesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{67}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *WatchWarehousesRequest) GetProject() string {
@@ -3670,7 +3856,7 @@ type WatchWarehousesResponse struct {
 func (x *WatchWarehousesResponse) Reset() {
 	*x = WatchWarehousesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[68]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[72]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3683,7 +3869,7 @@ func (x *WatchWarehousesResponse) String() string {
 func (*WatchWarehousesResponse) ProtoMessage() {}
 
 func (x *WatchWarehousesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[68]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[72]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3696,7 +3882,7 @@ func (x *WatchWarehousesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchWarehousesResponse.ProtoReflect.Descriptor instead.
 func (*WatchWarehousesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{68}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *WatchWarehousesResponse) GetWarehouse() *v1alpha1.Warehouse {
@@ -3725,7 +3911,7 @@ type DeleteWarehouseRequest struct {
 func (x *DeleteWarehouseRequest) Reset() {
 	*x = DeleteWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[69]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[73]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3738,7 +3924,7 @@ func (x *DeleteWarehouseRequest) String() string {
 func (*DeleteWarehouseRequest) ProtoMessage() {}
 
 func (x *DeleteWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[69]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[73]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3751,7 +3937,7 @@ func (x *DeleteWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{69}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *DeleteWarehouseRequest) GetProject() string {
@@ -3777,7 +3963,7 @@ type DeleteWarehouseResponse struct {
 func (x *DeleteWarehouseResponse) Reset() {
 	*x = DeleteWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[70]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[74]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3790,7 +3976,7 @@ func (x *DeleteWarehouseResponse) String() string {
 func (*DeleteWarehouseResponse) ProtoMessage() {}
 
 func (x *DeleteWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[70]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[74]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3803,7 +3989,7 @@ func (x *DeleteWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*DeleteWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{70}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{74}
 }
 
 type RefreshWarehouseRequest struct {
@@ -3818,7 +4004,7 @@ type RefreshWarehouseRequest struct {
 func (x *RefreshWarehouseRequest) Reset() {
 	*x = RefreshWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[71]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[75]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3831,7 +4017,7 @@ func (x *RefreshWarehouseRequest) String() string {
 func (*RefreshWarehouseRequest) ProtoMessage() {}
 
 func (x *RefreshWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[71]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[75]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3844,7 +4030,7 @@ func (x *RefreshWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*RefreshWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{71}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *RefreshWarehouseRequest) GetProject() string {
@@ -3872,7 +4058,7 @@ type RefreshWarehouseResponse struct {
 func (x *RefreshWarehouseResponse) Reset() {
 	*x = RefreshWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[72]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[76]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3885,7 +4071,7 @@ func (x *RefreshWarehouseResponse) String() string {
 func (*RefreshWarehouseResponse) ProtoMessage() {}
 
 func (x *RefreshWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[72]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[76]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3898,7 +4084,7 @@ func (x *RefreshWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*RefreshWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{72}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *RefreshWarehouseResponse) GetWarehouse() *v1alpha1.Warehouse {
@@ -3925,7 +4111,7 @@ type CreateCredentialsRequest struct {
 func (x *CreateCredentialsRequest) Reset() {
 	*x = CreateCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[73]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[77]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3938,7 +4124,7 @@ func (x *CreateCredentialsRequest) String() string {
 func (*CreateCredentialsRequest) ProtoMessage() {}
 
 func (x *CreateCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[73]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[77]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3951,7 +4137,7 @@ func (x *CreateCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*CreateCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{73}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *CreateCredentialsRequest) GetProject() string {
@@ -4014,7 +4200,7 @@ type CreateCredentialsResponse struct {
 func (x *CreateCredentialsResponse) Reset() {
 	*x = CreateCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[74]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[78]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4027,7 +4213,7 @@ func (x *CreateCredentialsResponse) String() string {
 func (*CreateCredentialsResponse) ProtoMessage() {}
 
 func (x *CreateCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[74]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[78]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4040,7 +4226,7 @@ func (x *CreateCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*CreateCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{74}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *CreateCredentialsResponse) GetCredentials() *v1.Secret {
@@ -4062,7 +4248,7 @@ type DeleteCredentialsRequest struct {
 func (x *DeleteCredentialsRequest) Reset() {
 	*x = DeleteCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[75]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[79]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4075,7 +4261,7 @@ func (x *DeleteCredentialsRequest) String() string {
 func (*DeleteCredentialsRequest) ProtoMessage() {}
 
 func (x *DeleteCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[75]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[79]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4088,7 +4274,7 @@ func (x *DeleteCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{75}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *DeleteCredentialsRequest) GetProject() string {
@@ -4114,7 +4300,7 @@ type DeleteCredentialsResponse struct {
 func (x *DeleteCredentialsResponse) Reset() {
 	*x = DeleteCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[76]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[80]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4127,7 +4313,7 @@ func (x *DeleteCredentialsResponse) String() string {
 func (*DeleteCredentialsResponse) ProtoMessage() {}
 
 func (x *DeleteCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[76]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[80]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4140,7 +4326,7 @@ func (x *DeleteCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{76}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{80}
 }
 
 type GetCredentialsRequest struct {
@@ -4155,7 +4341,7 @@ type GetCredentialsRequest struct {
 func (x *GetCredentialsRequest) Reset() {
 	*x = GetCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[77]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[81]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4168,7 +4354,7 @@ func (x *GetCredentialsRequest) String() string {
 func (*GetCredentialsRequest) ProtoMessage() {}
 
 func (x *GetCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[77]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[81]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4181,7 +4367,7 @@ func (x *GetCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*GetCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{77}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *GetCredentialsRequest) GetProject() string {
@@ -4209,7 +4395,7 @@ type GetCredentialsResponse struct {
 func (x *GetCredentialsResponse) Reset() {
 	*x = GetCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[78]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[82]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4222,7 +4408,7 @@ func (x *GetCredentialsResponse) String() string {
 func (*GetCredentialsResponse) ProtoMessage() {}
 
 func (x *GetCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[78]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[82]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4235,7 +4421,7 @@ func (x *GetCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*GetCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{78}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *GetCredentialsResponse) GetCredentials() *v1.Secret {
@@ -4256,7 +4442,7 @@ type ListCredentialsRequest struct {
 func (x *ListCredentialsRequest) Reset() {
 	*x = ListCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[79]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[83]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4269,7 +4455,7 @@ func (x *ListCredentialsRequest) String() string {
 func (*ListCredentialsRequest) ProtoMessage() {}
 
 func (x *ListCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[79]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[83]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4282,7 +4468,7 @@ func (x *ListCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*ListCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{79}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *ListCredentialsRequest) GetProject() string {
@@ -4303,7 +4489,7 @@ type ListCredentialsResponse struct {
 func (x *ListCredentialsResponse) Reset() {
 	*x = ListCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[80]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[84]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4316,7 +4502,7 @@ func (x *ListCredentialsResponse) String() string {
 func (*ListCredentialsResponse) ProtoMessage() {}
 
 func (x *ListCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[80]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[84]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4329,7 +4515,7 @@ func (x *ListCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*ListCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{80}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *ListCredentialsResponse) GetCredentials() []*v1.Secret {
@@ -4356,7 +4542,7 @@ type UpdateCredentialsRequest struct {
 func (x *UpdateCredentialsRequest) Reset() {
 	*x = UpdateCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[81]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[85]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4369,7 +4555,7 @@ func (x *UpdateCredentialsRequest) String() string {
 func (*UpdateCredentialsRequest) ProtoMessage() {}
 
 func (x *UpdateCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[81]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[85]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4382,7 +4568,7 @@ func (x *UpdateCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{81}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *UpdateCredentialsRequest) GetProject() string {
@@ -4445,7 +4631,7 @@ type UpdateCredentialsResponse struct {
 func (x *UpdateCredentialsResponse) Reset() {
 	*x = UpdateCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[82]
+		mi := &file_service_v1alpha1_service_proto_msgTypes[86]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4458,7 +4644,7 @@ func (x *UpdateCredentialsResponse) String() string {
 func (*UpdateCredentialsResponse) ProtoMessage() {}
 
 func (x *UpdateCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[82]
+	mi := &file_service_v1alpha1_service_proto_msgTypes[86]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4471,7 +4657,7 @@ func (x *UpdateCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{82}
+	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *UpdateCredentialsResponse) GetCredentials() *v1.Secret {
@@ -4866,7 +5052,19 @@ var file_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x12, 0x1b, 0x0a, 0x09, 0x6e, 0x65, 0x77, 0x5f, 0x61, 0x6c, 0x69, 0x61, 0x73, 0x18, 0x04, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x08, 0x6e, 0x65, 0x77, 0x41, 0x6c, 0x69, 0x61, 0x73, 0x22, 0x1c, 0x0a,
 	0x1a, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x46, 0x72, 0x65, 0x69, 0x67, 0x68, 0x74, 0x41, 0x6c,
-	0x69, 0x61, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x31, 0x0a, 0x15, 0x4c,
+	0x69, 0x61, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x41, 0x0a, 0x0f, 0x52,
+	0x65, 0x76, 0x65, 0x72, 0x69, 0x66, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18,
+	0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x67,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x22, 0x12,
+	0x0a, 0x10, 0x52, 0x65, 0x76, 0x65, 0x72, 0x69, 0x66, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x22, 0x4a, 0x0a, 0x18, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x56, 0x65, 0x72, 0x69, 0x66,
+	0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18,
+	0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x67,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x22, 0x1b,
+	0x0a, 0x19, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x56, 0x65, 0x72, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x31, 0x0a, 0x15, 0x4c,
 	0x69, 0x73, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x73, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x22, 0x69,
@@ -4981,7 +5179,7 @@ var file_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x69, 0x61, 0x6c, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6b, 0x38, 0x73,
 	0x2e, 0x69, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x63, 0x6f, 0x72, 0x65, 0x2e, 0x76, 0x31, 0x2e,
 	0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x0b, 0x63, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69,
-	0x61, 0x6c, 0x73, 0x32, 0xd5, 0x26, 0x0a, 0x0c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x53, 0x65, 0x72,
+	0x61, 0x6c, 0x73, 0x32, 0xd7, 0x28, 0x0a, 0x0c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x53, 0x65, 0x72,
 	0x76, 0x69, 0x63, 0x65, 0x12, 0x83, 0x01, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x56, 0x65, 0x72, 0x73,
 	0x69, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
 	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
@@ -5204,111 +5402,127 @@ var file_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73,
 	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
 	0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x46, 0x72, 0x65, 0x69, 0x67, 0x68, 0x74, 0x41, 0x6c, 0x69,
-	0x61, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x83, 0x01, 0x0a, 0x0e, 0x4c,
-	0x69, 0x73, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x73, 0x12, 0x37, 0x2e,
-	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
-	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x2e, 0x4c, 0x69, 0x73, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x73, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
+	0x61, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x71, 0x0a, 0x08, 0x52, 0x65,
+	0x76, 0x65, 0x72, 0x69, 0x66, 0x79, 0x12, 0x31, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
 	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x57, 0x61,
-	0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x7d, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65,
-	0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x61,
-	0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x88, 0x01, 0x0a, 0x0f, 0x57, 0x61, 0x74, 0x63, 0x68, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75,
-	0x73, 0x65, 0x73, 0x12, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x76, 0x65, 0x72, 0x69,
+	0x66, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x32, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x76,
+	0x65, 0x72, 0x69, 0x66, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x8c, 0x01,
+	0x0a, 0x11, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x56, 0x65, 0x72, 0x69, 0x66, 0x69, 0x63, 0x61, 0x74,
+	0x69, 0x6f, 0x6e, 0x12, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
 	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x57, 0x61, 0x72, 0x65,
-	0x68, 0x6f, 0x75, 0x73, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x39, 0x2e,
-	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
-	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x73,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x86, 0x01, 0x0a, 0x0f, 0x44,
-	0x65, 0x6c, 0x65, 0x74, 0x65, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x12, 0x38,
-	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
-	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
-	0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73,
-	0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x39, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x56, 0x65, 0x72, 0x69,
+	0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
+	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x2e, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x56, 0x65, 0x72, 0x69, 0x66, 0x69, 0x63, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x83, 0x01, 0x0a,
+	0x0e, 0x4c, 0x69, 0x73, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x73, 0x12,
+	0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
+	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65,
+	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
 	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65,
-	0x74, 0x65, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x89, 0x01, 0x0a, 0x10, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x57,
-	0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x12, 0x39, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x66, 0x72,
-	0x65, 0x73, 0x68, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x1a, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
-	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x57, 0x61,
-	0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x8c, 0x01, 0x0a, 0x11, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e,
-	0x74, 0x69, 0x61, 0x6c, 0x73, 0x12, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
+	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74,
+	0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x7d, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75,
+	0x73, 0x65, 0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
+	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75,
+	0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74,
+	0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x88, 0x01, 0x0a, 0x0f, 0x57, 0x61, 0x74, 0x63, 0x68, 0x57, 0x61, 0x72, 0x65, 0x68,
+	0x6f, 0x75, 0x73, 0x65, 0x73, 0x12, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
 	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
-	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43,
-	0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
-	0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x57, 0x61,
+	0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x39, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
+	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73,
+	0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x86, 0x01, 0x0a,
+	0x0f, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65,
+	0x12, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
+	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f,
+	0x75, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x39, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65,
+	0x6c, 0x65, 0x74, 0x65, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x89, 0x01, 0x0a, 0x10, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73,
+	0x68, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x12, 0x39, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65,
+	0x66, 0x72, 0x65, 0x73, 0x68, 0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
+	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68,
+	0x57, 0x61, 0x72, 0x65, 0x68, 0x6f, 0x75, 0x73, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x8c, 0x01, 0x0a, 0x11, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64,
+	0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x12, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74,
+	0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65,
+	0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x12, 0x8c, 0x01, 0x0a, 0x11, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65,
+	0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x12, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
+	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
+	0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
+	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64,
+	0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x83, 0x01, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61,
+	0x6c, 0x73, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
+	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74,
+	0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47,
+	0x65, 0x74, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x86, 0x01, 0x0a, 0x0f, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x72,
+	0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x12, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73,
+	0x74, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x39, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x72, 0x65, 0x64, 0x65,
 	0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x8c,
-	0x01, 0x0a, 0x11, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74,
+	0x01, 0x0a, 0x11, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74,
 	0x69, 0x61, 0x6c, 0x73, 0x12, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f,
 	0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76,
-	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x72,
+	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x72,
 	0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x1a, 0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
 	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e,
-	0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x83, 0x01,
-	0x0a, 0x0e, 0x47, 0x65, 0x74, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73,
-	0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61,
-	0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69,
-	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74,
-	0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x86, 0x01, 0x0a, 0x0f, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x72, 0x65, 0x64,
-	0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x12, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x43,
-	0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x39, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
-	0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74,
-	0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x8c, 0x01, 0x0a,
-	0x11, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61,
-	0x6c, 0x73, 0x12, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
-	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64,
-	0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3b,
-	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
-	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
-	0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69,
-	0x61, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x97, 0x02, 0x0a, 0x24,
-	0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
-	0x70, 0x68, 0x61, 0x31, 0x42, 0x0c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50, 0x72, 0x6f,
-	0x74, 0x6f, 0x50, 0x01, 0x5a, 0x3c, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d,
-	0x2f, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f, 0x70, 0x6b,
-	0x67, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x3b, 0x73, 0x76, 0x63, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0xa2, 0x02, 0x04, 0x41, 0x49, 0x4b, 0x53, 0xaa, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69,
-	0x74, 0x79, 0x2e, 0x49, 0x6f, 0x2e, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x53, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x2e, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02, 0x20, 0x41,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2,
-	0x02, 0x2c, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67,
-	0x6f, 0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02,
-	0x24, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x3a, 0x3a, 0x49, 0x6f, 0x3a, 0x3a, 0x4b, 0x61, 0x72,
-	0x67, 0x6f, 0x3a, 0x3a, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x3a, 0x56, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6e,
+	0x74, 0x69, 0x61, 0x6c, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x97, 0x02,
+	0x0a, 0x24, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x42, 0x0c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50,
+	0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x3c, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2f, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f,
+	0x70, 0x6b, 0x67, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x3b, 0x73, 0x76, 0x63, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0xa2, 0x02, 0x04, 0x41, 0x49, 0x4b, 0x53, 0xaa, 0x02, 0x20, 0x41, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x49, 0x6f, 0x2e, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x53, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02,
+	0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f,
+	0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0xe2, 0x02, 0x2c, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61,
+	0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61,
+	0xea, 0x02, 0x24, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x3a, 0x3a, 0x49, 0x6f, 0x3a, 0x3a, 0x4b,
+	0x61, 0x72, 0x67, 0x6f, 0x3a, 0x3a, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x3a, 0x56,
+	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -5323,7 +5537,7 @@ func file_service_v1alpha1_service_proto_rawDescGZIP() []byte {
 	return file_service_v1alpha1_service_proto_rawDescData
 }
 
-var file_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 85)
+var file_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 89)
 var file_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(*ComponentVersions)(nil),                 // 0: akuity.io.kargo.service.v1alpha1.ComponentVersions
 	(*VersionInfo)(nil),                       // 1: akuity.io.kargo.service.v1alpha1.VersionInfo
@@ -5388,70 +5602,74 @@ var file_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(*FreightList)(nil),                       // 60: akuity.io.kargo.service.v1alpha1.FreightList
 	(*UpdateFreightAliasRequest)(nil),         // 61: akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
 	(*UpdateFreightAliasResponse)(nil),        // 62: akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
-	(*ListWarehousesRequest)(nil),             // 63: akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
-	(*ListWarehousesResponse)(nil),            // 64: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
-	(*GetWarehouseRequest)(nil),               // 65: akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
-	(*GetWarehouseResponse)(nil),              // 66: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
-	(*WatchWarehousesRequest)(nil),            // 67: akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
-	(*WatchWarehousesResponse)(nil),           // 68: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
-	(*DeleteWarehouseRequest)(nil),            // 69: akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
-	(*DeleteWarehouseResponse)(nil),           // 70: akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
-	(*RefreshWarehouseRequest)(nil),           // 71: akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
-	(*RefreshWarehouseResponse)(nil),          // 72: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
-	(*CreateCredentialsRequest)(nil),          // 73: akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
-	(*CreateCredentialsResponse)(nil),         // 74: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
-	(*DeleteCredentialsRequest)(nil),          // 75: akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
-	(*DeleteCredentialsResponse)(nil),         // 76: akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
-	(*GetCredentialsRequest)(nil),             // 77: akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
-	(*GetCredentialsResponse)(nil),            // 78: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
-	(*ListCredentialsRequest)(nil),            // 79: akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
-	(*ListCredentialsResponse)(nil),           // 80: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
-	(*UpdateCredentialsRequest)(nil),          // 81: akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
-	(*UpdateCredentialsResponse)(nil),         // 82: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
-	nil,                                       // 83: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
-	nil,                                       // 84: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
-	(*timestamppb.Timestamp)(nil),             // 85: google.protobuf.Timestamp
-	(*v1alpha1.Stage)(nil),                    // 86: github.com.akuity.kargo.api.v1alpha1.Stage
-	(*v1alpha1.Promotion)(nil),                // 87: github.com.akuity.kargo.api.v1alpha1.Promotion
-	(*v1alpha1.Project)(nil),                  // 88: github.com.akuity.kargo.api.v1alpha1.Project
-	(*v1alpha1.Freight)(nil),                  // 89: github.com.akuity.kargo.api.v1alpha1.Freight
-	(*v1alpha1.Warehouse)(nil),                // 90: github.com.akuity.kargo.api.v1alpha1.Warehouse
-	(*v1.Secret)(nil),                         // 91: k8s.io.api.core.v1.Secret
+	(*ReverifyRequest)(nil),                   // 63: akuity.io.kargo.service.v1alpha1.ReverifyRequest
+	(*ReverifyResponse)(nil),                  // 64: akuity.io.kargo.service.v1alpha1.ReverifyResponse
+	(*AbortVerificationRequest)(nil),          // 65: akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
+	(*AbortVerificationResponse)(nil),         // 66: akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
+	(*ListWarehousesRequest)(nil),             // 67: akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
+	(*ListWarehousesResponse)(nil),            // 68: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
+	(*GetWarehouseRequest)(nil),               // 69: akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
+	(*GetWarehouseResponse)(nil),              // 70: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
+	(*WatchWarehousesRequest)(nil),            // 71: akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
+	(*WatchWarehousesResponse)(nil),           // 72: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
+	(*DeleteWarehouseRequest)(nil),            // 73: akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
+	(*DeleteWarehouseResponse)(nil),           // 74: akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
+	(*RefreshWarehouseRequest)(nil),           // 75: akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
+	(*RefreshWarehouseResponse)(nil),          // 76: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
+	(*CreateCredentialsRequest)(nil),          // 77: akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
+	(*CreateCredentialsResponse)(nil),         // 78: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
+	(*DeleteCredentialsRequest)(nil),          // 79: akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
+	(*DeleteCredentialsResponse)(nil),         // 80: akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
+	(*GetCredentialsRequest)(nil),             // 81: akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
+	(*GetCredentialsResponse)(nil),            // 82: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
+	(*ListCredentialsRequest)(nil),            // 83: akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
+	(*ListCredentialsResponse)(nil),           // 84: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
+	(*UpdateCredentialsRequest)(nil),          // 85: akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
+	(*UpdateCredentialsResponse)(nil),         // 86: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
+	nil,                                       // 87: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
+	nil,                                       // 88: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
+	(*timestamppb.Timestamp)(nil),             // 89: google.protobuf.Timestamp
+	(*v1alpha1.Stage)(nil),                    // 90: github.com.akuity.kargo.api.v1alpha1.Stage
+	(*v1alpha1.Promotion)(nil),                // 91: github.com.akuity.kargo.api.v1alpha1.Promotion
+	(*v1alpha1.Project)(nil),                  // 92: github.com.akuity.kargo.api.v1alpha1.Project
+	(*v1alpha1.Freight)(nil),                  // 93: github.com.akuity.kargo.api.v1alpha1.Freight
+	(*v1alpha1.Warehouse)(nil),                // 94: github.com.akuity.kargo.api.v1alpha1.Warehouse
+	(*v1.Secret)(nil),                         // 95: k8s.io.api.core.v1.Secret
 }
 var file_service_v1alpha1_service_proto_depIdxs = []int32{
 	1,  // 0: akuity.io.kargo.service.v1alpha1.ComponentVersions.server:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
 	1,  // 1: akuity.io.kargo.service.v1alpha1.ComponentVersions.cli:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
-	85, // 2: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
+	89, // 2: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
 	1,  // 3: akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse.version_info:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
-	83, // 4: akuity.io.kargo.service.v1alpha1.GetConfigResponse.argocd_shards:type_name -> akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
+	87, // 4: akuity.io.kargo.service.v1alpha1.GetConfigResponse.argocd_shards:type_name -> akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
 	9,  // 5: akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse.oidc_config:type_name -> akuity.io.kargo.service.v1alpha1.OIDCConfig
 	13, // 6: akuity.io.kargo.service.v1alpha1.CreateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.CreateResourceResult
 	16, // 7: akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResult
 	19, // 8: akuity.io.kargo.service.v1alpha1.UpdateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.UpdateResourceResult
 	22, // 9: akuity.io.kargo.service.v1alpha1.DeleteResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.DeleteResourceResult
-	86, // 10: akuity.io.kargo.service.v1alpha1.ListStagesResponse.stages:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	86, // 11: akuity.io.kargo.service.v1alpha1.GetStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	86, // 12: akuity.io.kargo.service.v1alpha1.WatchStagesResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	86, // 13: akuity.io.kargo.service.v1alpha1.RefreshStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	87, // 14: akuity.io.kargo.service.v1alpha1.ListPromotionsResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	87, // 15: akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	87, // 16: akuity.io.kargo.service.v1alpha1.GetPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	87, // 17: akuity.io.kargo.service.v1alpha1.WatchPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	88, // 18: akuity.io.kargo.service.v1alpha1.GetProjectResponse.project:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
-	88, // 19: akuity.io.kargo.service.v1alpha1.ListProjectsResponse.projects:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
-	89, // 20: akuity.io.kargo.service.v1alpha1.GetFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
-	87, // 21: akuity.io.kargo.service.v1alpha1.PromoteToStageResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	87, // 22: akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	84, // 23: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.groups:type_name -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
-	89, // 24: akuity.io.kargo.service.v1alpha1.FreightList.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
-	90, // 25: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse.warehouses:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	90, // 26: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	90, // 27: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	90, // 28: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	91, // 29: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	91, // 30: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	91, // 31: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	91, // 32: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	90, // 10: akuity.io.kargo.service.v1alpha1.ListStagesResponse.stages:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	90, // 11: akuity.io.kargo.service.v1alpha1.GetStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	90, // 12: akuity.io.kargo.service.v1alpha1.WatchStagesResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	90, // 13: akuity.io.kargo.service.v1alpha1.RefreshStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	91, // 14: akuity.io.kargo.service.v1alpha1.ListPromotionsResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	91, // 15: akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	91, // 16: akuity.io.kargo.service.v1alpha1.GetPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	91, // 17: akuity.io.kargo.service.v1alpha1.WatchPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	92, // 18: akuity.io.kargo.service.v1alpha1.GetProjectResponse.project:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
+	92, // 19: akuity.io.kargo.service.v1alpha1.ListProjectsResponse.projects:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
+	93, // 20: akuity.io.kargo.service.v1alpha1.GetFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
+	91, // 21: akuity.io.kargo.service.v1alpha1.PromoteToStageResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	91, // 22: akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	88, // 23: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.groups:type_name -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
+	93, // 24: akuity.io.kargo.service.v1alpha1.FreightList.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
+	94, // 25: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse.warehouses:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	94, // 26: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	94, // 27: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	94, // 28: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	95, // 29: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	95, // 30: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	95, // 31: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	95, // 32: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
 	5,  // 33: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ArgoCDShard
 	60, // 34: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.FreightList
 	2,  // 35: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
@@ -5481,55 +5699,59 @@ var file_service_v1alpha1_service_proto_depIdxs = []int32{
 	56, // 59: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStageSubscribers:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersRequest
 	58, // 60: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:input_type -> akuity.io.kargo.service.v1alpha1.QueryFreightRequest
 	61, // 61: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:input_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
-	63, // 62: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
-	65, // 63: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
-	67, // 64: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
-	69, // 65: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
-	71, // 66: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
-	73, // 67: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
-	75, // 68: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:input_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
-	77, // 69: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:input_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
-	79, // 70: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:input_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
-	81, // 71: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
-	3,  // 72: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
-	6,  // 73: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigResponse
-	8,  // 74: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
-	11, // 75: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
-	14, // 76: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateResourceResponse
-	17, // 77: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse
-	20, // 78: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
-	23, // 79: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:output_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
-	25, // 80: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
-	27, // 81: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
-	29, // 82: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:output_type -> akuity.io.kargo.service.v1alpha1.WatchStagesResponse
-	31, // 83: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
-	33, // 84: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:output_type -> akuity.io.kargo.service.v1alpha1.RefreshStageResponse
-	35, // 85: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
-	37, // 86: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
-	39, // 87: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionResponse
-	41, // 88: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
-	43, // 89: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
-	45, // 90: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectResponse
-	47, // 91: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
-	49, // 92: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:output_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
-	51, // 93: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:output_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
-	53, // 94: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:output_type -> akuity.io.kargo.service.v1alpha1.GetFreightResponse
-	55, // 95: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
-	57, // 96: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStageSubscribers:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersResponse
-	59, // 97: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:output_type -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse
-	62, // 98: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:output_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
-	64, // 99: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
-	66, // 100: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
-	68, // 101: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
-	70, // 102: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
-	72, // 103: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
-	74, // 104: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
-	76, // 105: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:output_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
-	78, // 106: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:output_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
-	80, // 107: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:output_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
-	82, // 108: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
-	72, // [72:109] is the sub-list for method output_type
-	35, // [35:72] is the sub-list for method input_type
+	63, // 62: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:input_type -> akuity.io.kargo.service.v1alpha1.ReverifyRequest
+	65, // 63: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:input_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
+	67, // 64: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
+	69, // 65: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
+	71, // 66: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
+	73, // 67: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
+	75, // 68: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
+	77, // 69: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
+	79, // 70: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:input_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
+	81, // 71: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:input_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
+	83, // 72: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:input_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
+	85, // 73: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
+	3,  // 74: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
+	6,  // 75: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigResponse
+	8,  // 76: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
+	11, // 77: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
+	14, // 78: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateResourceResponse
+	17, // 79: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse
+	20, // 80: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
+	23, // 81: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:output_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
+	25, // 82: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
+	27, // 83: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
+	29, // 84: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:output_type -> akuity.io.kargo.service.v1alpha1.WatchStagesResponse
+	31, // 85: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
+	33, // 86: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:output_type -> akuity.io.kargo.service.v1alpha1.RefreshStageResponse
+	35, // 87: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
+	37, // 88: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
+	39, // 89: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionResponse
+	41, // 90: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
+	43, // 91: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
+	45, // 92: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectResponse
+	47, // 93: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
+	49, // 94: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:output_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
+	51, // 95: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:output_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
+	53, // 96: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:output_type -> akuity.io.kargo.service.v1alpha1.GetFreightResponse
+	55, // 97: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
+	57, // 98: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStageSubscribers:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersResponse
+	59, // 99: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:output_type -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse
+	62, // 100: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:output_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
+	64, // 101: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:output_type -> akuity.io.kargo.service.v1alpha1.ReverifyResponse
+	66, // 102: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:output_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
+	68, // 103: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
+	70, // 104: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
+	72, // 105: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
+	74, // 106: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
+	76, // 107: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
+	78, // 108: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
+	80, // 109: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:output_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
+	82, // 110: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:output_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
+	84, // 111: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:output_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
+	86, // 112: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
+	74, // [74:113] is the sub-list for method output_type
+	35, // [35:74] is the sub-list for method input_type
 	35, // [35:35] is the sub-list for extension type_name
 	35, // [35:35] is the sub-list for extension extendee
 	0,  // [0:35] is the sub-list for field type_name
@@ -6298,7 +6520,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[63].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListWarehousesRequest); i {
+			switch v := v.(*ReverifyRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6310,7 +6532,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[64].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListWarehousesResponse); i {
+			switch v := v.(*ReverifyResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6322,7 +6544,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[65].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetWarehouseRequest); i {
+			switch v := v.(*AbortVerificationRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6334,7 +6556,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[66].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetWarehouseResponse); i {
+			switch v := v.(*AbortVerificationResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6346,7 +6568,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[67].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchWarehousesRequest); i {
+			switch v := v.(*ListWarehousesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6358,7 +6580,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[68].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchWarehousesResponse); i {
+			switch v := v.(*ListWarehousesResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6370,7 +6592,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[69].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteWarehouseRequest); i {
+			switch v := v.(*GetWarehouseRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6382,7 +6604,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[70].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteWarehouseResponse); i {
+			switch v := v.(*GetWarehouseResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6394,7 +6616,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[71].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RefreshWarehouseRequest); i {
+			switch v := v.(*WatchWarehousesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6406,7 +6628,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[72].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RefreshWarehouseResponse); i {
+			switch v := v.(*WatchWarehousesResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6418,7 +6640,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[73].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateCredentialsRequest); i {
+			switch v := v.(*DeleteWarehouseRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6430,7 +6652,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[74].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateCredentialsResponse); i {
+			switch v := v.(*DeleteWarehouseResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6442,7 +6664,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[75].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteCredentialsRequest); i {
+			switch v := v.(*RefreshWarehouseRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6454,7 +6676,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[76].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteCredentialsResponse); i {
+			switch v := v.(*RefreshWarehouseResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6466,7 +6688,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[77].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetCredentialsRequest); i {
+			switch v := v.(*CreateCredentialsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6478,7 +6700,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[78].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetCredentialsResponse); i {
+			switch v := v.(*CreateCredentialsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6490,7 +6712,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[79].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListCredentialsRequest); i {
+			switch v := v.(*DeleteCredentialsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6502,7 +6724,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[80].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListCredentialsResponse); i {
+			switch v := v.(*DeleteCredentialsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6514,7 +6736,7 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[81].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateCredentialsRequest); i {
+			switch v := v.(*GetCredentialsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -6526,6 +6748,54 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_service_v1alpha1_service_proto_msgTypes[82].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetCredentialsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_v1alpha1_service_proto_msgTypes[83].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListCredentialsRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_v1alpha1_service_proto_msgTypes[84].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListCredentialsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_v1alpha1_service_proto_msgTypes[85].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateCredentialsRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_service_v1alpha1_service_proto_msgTypes[86].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateCredentialsResponse); i {
 			case 0:
 				return &v.state
@@ -6564,7 +6834,7 @@ func file_service_v1alpha1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_service_v1alpha1_service_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   85,
+			NumMessages:   89,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
