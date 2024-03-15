@@ -70,7 +70,7 @@ func TestGetKeySet(t *testing.T) {
 				mux := http.NewServeMux()
 				srv := httptest.NewServer(mux)
 				t.Cleanup(srv.Close)
-				mux.HandleFunc(discoPath, func(w http.ResponseWriter, r *http.Request) {
+				mux.HandleFunc(discoPath, func(w http.ResponseWriter, _ *http.Request) {
 					_, err := w.Write([]byte(`{
 						"issuer": "` + srv.URL + `",
 						"jwks_uri": "` + srv.URL + `/keys"
@@ -92,7 +92,7 @@ func TestGetKeySet(t *testing.T) {
 				t.Cleanup(srv.Close)
 				mux.HandleFunc(
 					dexDiscoPath,
-					func(w http.ResponseWriter, r *http.Request) {
+					func(w http.ResponseWriter, _ *http.Request) {
 						_, err := w.Write([]byte(`{
 						"issuer": "` + srv.URL + `",
 						"jwks_uri": "` + srv.URL + `/keys"
@@ -118,7 +118,7 @@ func TestGetKeySet(t *testing.T) {
 				t.Cleanup(srv.Close)
 				mux.HandleFunc(
 					dexDiscoPath,
-					func(w http.ResponseWriter, r *http.Request) {
+					func(w http.ResponseWriter, _ *http.Request) {
 						_, err := w.Write([]byte(`{
 						"issuer": "` + srv.URL + `",
 						"jwks_uri": "` + srv.URL + `/keys"
@@ -224,7 +224,7 @@ func TestAuthenticate(t *testing.T) {
 					rc.Issuer = testKargoIssuer
 					return nil, nil, nil
 				},
-				verifyKargoIssuedTokenFn: func(rawToken string) bool {
+				verifyKargoIssuedTokenFn: func(_ string) bool {
 					return false
 				},
 			},
@@ -254,7 +254,7 @@ func TestAuthenticate(t *testing.T) {
 					rc.Issuer = testKargoIssuer
 					return nil, nil, nil
 				},
-				verifyKargoIssuedTokenFn: func(rawToken string) bool {
+				verifyKargoIssuedTokenFn: func(_ string) bool {
 					return true
 				},
 			},
@@ -393,12 +393,12 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 	testCases := []struct {
 		name            string
 		authInterceptor *authInterceptor
-		assertions      func(c claims, ok bool)
+		assertions      func(t *testing.T, c claims, ok bool)
 	}{
 		{
 			name:            "OIDC not supported",
 			authInterceptor: &authInterceptor{},
-			assertions: func(_ claims, ok bool) {
+			assertions: func(t *testing.T, _ claims, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -412,7 +412,7 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ claims, ok bool) {
+			assertions: func(t *testing.T, _ claims, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -429,7 +429,7 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 					return claims{}, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ claims, ok bool) {
+			assertions: func(t *testing.T, _ claims, ok bool) {
 				require.False(t, ok)
 			},
 		},
@@ -452,7 +452,7 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(c claims, ok bool) {
+			assertions: func(t *testing.T, c claims, ok bool) {
 				require.True(t, ok)
 				require.Equal(t, "ironman", c.Subject)
 				require.Equal(t, "tony@starkindustries.io", c.Email)
@@ -462,14 +462,13 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.authInterceptor.verifyIDPIssuedToken(
-					context.Background(),
-					// With the way these tests are constructed, this doesn't have to
-					// be valid.
-					"some-token",
-				),
+			c, ok := testCase.authInterceptor.verifyIDPIssuedToken(
+				context.Background(),
+				// With the way these tests are constructed, this doesn't have to
+				// be valid.
+				"some-token",
 			)
+			testCase.assertions(t, c, ok)
 		})
 	}
 }

@@ -37,6 +37,7 @@ func TestArgoCDPromote(t *testing.T) {
 		stage      *kargoapi.Stage
 		newFreight kargoapi.FreightReference
 		assertions func(
+			t *testing.T,
 			newStatus *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.FreightReference,
 			newFreightOut kargoapi.FreightReference,
@@ -52,7 +53,8 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newStatus *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -74,9 +76,10 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newStatus *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
+				_ kargoapi.FreightReference,
+				_ kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -110,7 +113,8 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newStatus *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -147,7 +151,8 @@ func TestArgoCDPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				newStatus *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -165,7 +170,7 @@ func TestArgoCDPromote(t *testing.T) {
 				&kargoapi.Promotion{},
 				testCase.newFreight,
 			)
-			testCase.assertions(newStatus, testCase.newFreight, newFreightOut, err)
+			testCase.assertions(t, newStatus, testCase.newFreight, newFreightOut, err)
 		})
 	}
 }
@@ -176,7 +181,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 		promoMech  *argoCDMechanism
 		stageMeta  metav1.ObjectMeta
 		update     kargoapi.ArgoCDAppUpdate
-		assertions func(err error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error getting Argo CD App",
@@ -189,7 +194,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error finding Argo CD Application")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -206,7 +211,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "unable to find Argo CD Application")
 			},
@@ -232,7 +237,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				Name:      "fake-name",
 				Namespace: "fake-namespace",
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "does not permit mutation by")
 			},
@@ -275,7 +280,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 					{},
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -325,7 +330,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 					{},
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -366,7 +371,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				Name:      "fake-name",
 				Namespace: "fake-namespace",
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -407,7 +412,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				Name:      "fake-name",
 				Namespace: "fake-namespace",
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -415,6 +420,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.promoMech.doSingleUpdate(
 					context.Background(),
 					testCase.stageMeta,
@@ -550,6 +556,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 		newFreight kargoapi.FreightReference
 		update     kargoapi.ArgoCDSourceUpdate
 		assertions func(
+			t *testing.T,
 			originalSource argocd.ApplicationSource,
 			updatedSource argocd.ApplicationSource,
 			err error,
@@ -564,6 +571,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				RepoURL: "different-fake-url",
 			},
 			assertions: func(
+				t *testing.T,
 				originalSource argocd.ApplicationSource,
 				updatedSource argocd.ApplicationSource,
 				err error,
@@ -592,6 +600,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				UpdateTargetRevision: true,
 			},
 			assertions: func(
+				t *testing.T,
 				originalSource argocd.ApplicationSource,
 				updatedSource argocd.ApplicationSource,
 				err error,
@@ -626,6 +635,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				UpdateTargetRevision: true,
 			},
 			assertions: func(
+				t *testing.T,
 				originalSource argocd.ApplicationSource,
 				updatedSource argocd.ApplicationSource,
 				err error,
@@ -669,6 +679,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				originalSource argocd.ApplicationSource,
 				updatedSource argocd.ApplicationSource,
 				err error,
@@ -721,6 +732,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				originalSource argocd.ApplicationSource,
 				updatedSource argocd.ApplicationSource,
 				err error,
@@ -752,7 +764,7 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 				testCase.newFreight,
 				testCase.update,
 			)
-			testCase.assertions(testCase.source, updatedSource, err)
+			testCase.assertions(t, testCase.source, updatedSource, err)
 		})
 	}
 }

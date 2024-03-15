@@ -26,7 +26,7 @@ func TestNewSelector(t *testing.T) {
 		repoURL    string
 		strategy   SelectionStrategy
 		opts       *SelectorOptions
-		assertions func(s Selector, err error)
+		assertions func(t *testing.T, s Selector, err error)
 	}{
 		{
 			name:    "invalid allow regex",
@@ -34,7 +34,7 @@ func TestNewSelector(t *testing.T) {
 			opts: &SelectorOptions{
 				AllowRegex: "(invalid", // Invalid regex due to unclosed parenthesis
 			},
-			assertions: func(_ Selector, err error) {
+			assertions: func(t *testing.T, _ Selector, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error compiling regular expression")
 			},
@@ -45,7 +45,7 @@ func TestNewSelector(t *testing.T) {
 			opts: &SelectorOptions{
 				Platform: "invalid",
 			},
-			assertions: func(_ Selector, err error) {
+			assertions: func(t *testing.T, _ Selector, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing platform constraint")
 			},
@@ -57,7 +57,7 @@ func TestNewSelector(t *testing.T) {
 			opts: &SelectorOptions{
 				Constraint: "invalid", // Not a semver
 			},
-			assertions: func(_ Selector, err error) {
+			assertions: func(t *testing.T, _ Selector, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "invalid image selection strategy")
 			},
@@ -69,7 +69,7 @@ func TestNewSelector(t *testing.T) {
 				Constraint: "fake-constraint",
 			},
 			repoURL: "debian",
-			assertions: func(selector Selector, err error) {
+			assertions: func(t *testing.T, selector Selector, err error) {
 				require.NoError(t, err)
 				require.IsType(t, &digestSelector{}, selector)
 			},
@@ -78,7 +78,7 @@ func TestNewSelector(t *testing.T) {
 			name:     "success with lexical image selector",
 			strategy: SelectionStrategyLexical,
 			repoURL:  "debian",
-			assertions: func(selector Selector, err error) {
+			assertions: func(t *testing.T, selector Selector, err error) {
 				require.NoError(t, err)
 				require.IsType(t, &lexicalSelector{}, selector)
 			},
@@ -87,7 +87,7 @@ func TestNewSelector(t *testing.T) {
 			name:     "success with newest build image selector",
 			strategy: SelectionStrategyNewestBuild,
 			repoURL:  "debian",
-			assertions: func(selector Selector, err error) {
+			assertions: func(t *testing.T, selector Selector, err error) {
 				require.NoError(t, err)
 				require.IsType(t, &newestBuildSelector{}, selector)
 			},
@@ -96,7 +96,7 @@ func TestNewSelector(t *testing.T) {
 			name:     "success with semver image selector",
 			strategy: SelectionStrategySemVer,
 			repoURL:  "debian",
-			assertions: func(selector Selector, err error) {
+			assertions: func(t *testing.T, selector Selector, err error) {
 				require.NoError(t, err)
 				require.IsType(t, &semVerSelector{}, selector)
 			},
@@ -109,7 +109,7 @@ func TestNewSelector(t *testing.T) {
 				testCase.strategy,
 				testCase.opts,
 			)
-			testCase.assertions(s, err)
+			testCase.assertions(t, s, err)
 		})
 	}
 }

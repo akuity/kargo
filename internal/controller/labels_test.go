@@ -30,12 +30,12 @@ func TestGetShardPredicate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		shardName  string
-		assertions func(predicate.Predicate, error)
+		assertions func(*testing.T, predicate.Predicate, error)
 	}{
 		{
 			name:      "shard name is the empty string",
 			shardName: "",
-			assertions: func(pred predicate.Predicate, err error) {
+			assertions: func(t *testing.T, pred predicate.Predicate, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, pred)
 				require.True(t, pred.Create(unlabeledEvent))
@@ -45,7 +45,7 @@ func TestGetShardPredicate(t *testing.T) {
 		{
 			name:      "shard name is not the empty string",
 			shardName: testShardName,
-			assertions: func(pred predicate.Predicate, err error) {
+			assertions: func(t *testing.T, pred predicate.Predicate, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, pred)
 				require.False(t, pred.Create(unlabeledEvent))
@@ -55,7 +55,8 @@ func TestGetShardPredicate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(GetShardPredicate(testCase.shardName))
+			pred, err := GetShardPredicate(testCase.shardName)
+			testCase.assertions(t, pred, err)
 		})
 	}
 }

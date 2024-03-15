@@ -13,13 +13,13 @@ func TestExec(t *testing.T) {
 	testCases := []struct {
 		name       string
 		cmd        *exec.Cmd
-		assertions func(res []byte, err error)
+		assertions func(t *testing.T, res []byte, err error)
 	}{
 		{
 			name: "error",
 			// This command should fail, but ALSO produce some output
 			cmd: exec.Command("expr", "100", "/", "0"),
-			assertions: func(res []byte, err error) {
+			assertions: func(t *testing.T, _ []byte, err error) {
 				require.Error(t, err)
 				var exitErr *ExitError
 				ok := errors.As(err, &exitErr)
@@ -35,7 +35,7 @@ func TestExec(t *testing.T) {
 		{
 			name: "success",
 			cmd:  exec.Command("echo", "foobar"),
-			assertions: func(res []byte, err error) {
+			assertions: func(t *testing.T, res []byte, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "foobar\n", string(res))
 			},
@@ -43,7 +43,8 @@ func TestExec(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(Exec(testCase.cmd))
+			res, err := Exec(testCase.cmd)
+			testCase.assertions(t, res, err)
 		})
 	}
 }

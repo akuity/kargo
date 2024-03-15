@@ -72,7 +72,7 @@ func TestDefault(t *testing.T) {
 				},
 			},
 			freight: &kargoapi.Freight{},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "get available freight alias")
 				require.Contains(t, err.Error(), "something went wrong")

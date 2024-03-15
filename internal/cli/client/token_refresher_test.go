@@ -30,6 +30,7 @@ func TestRefreshToken(t *testing.T) {
 		) (string, string, error)
 		saveCLIConfigFn func(config.CLIConfig) error
 		assertions      func(
+			t *testing.T,
 			originalCfg config.CLIConfig,
 			updatedCfg config.CLIConfig,
 			err error,
@@ -42,7 +43,7 @@ func TestRefreshToken(t *testing.T) {
 					BearerToken: "not a JWT",
 				}
 			},
-			assertions: func(originalCfg, updatedCfg config.CLIConfig, err error) {
+			assertions: func(t *testing.T, originalCfg, updatedCfg config.CLIConfig, err error) {
 				require.NoError(t, err)
 				require.Equal(t, originalCfg, updatedCfg)
 			},
@@ -61,7 +62,7 @@ func TestRefreshToken(t *testing.T) {
 				require.NoError(t, err)
 				return cfg
 			},
-			assertions: func(originalCfg, updatedCfg config.CLIConfig, err error,
+			assertions: func(t *testing.T, originalCfg, updatedCfg config.CLIConfig, err error,
 			) {
 				require.NoError(t, err)
 				require.Equal(t, originalCfg, updatedCfg)
@@ -81,7 +82,7 @@ func TestRefreshToken(t *testing.T) {
 				require.NoError(t, err)
 				return cfg
 			},
-			assertions: func(_, _ config.CLIConfig, err error) {
+			assertions: func(t *testing.T, _, _ config.CLIConfig, err error) {
 				require.Error(t, err)
 				require.Equal(
 					t,
@@ -108,7 +109,7 @@ func TestRefreshToken(t *testing.T) {
 				require.NoError(t, err)
 				return cfg
 			},
-			assertions: func(_, _ config.CLIConfig, err error) {
+			assertions: func(t *testing.T, _, _ config.CLIConfig, err error) {
 				require.Error(t, err)
 				require.Equal(
 					t,
@@ -141,7 +142,7 @@ func TestRefreshToken(t *testing.T) {
 			) (string, string, error) {
 				return "", "", errors.New("something went wrong")
 			},
-			assertions: func(_, _ config.CLIConfig, err error) {
+			assertions: func(t *testing.T, _, _ config.CLIConfig, err error) {
 				require.Error(t, err)
 				require.Equal(
 					t,
@@ -174,10 +175,10 @@ func TestRefreshToken(t *testing.T) {
 			) (string, string, error) {
 				return "new-token", "new-refresh-token", nil
 			},
-			saveCLIConfigFn: func(cfg config.CLIConfig) error {
+			saveCLIConfigFn: func(config.CLIConfig) error {
 				return nil
 			},
-			assertions: func(_, newConfig config.CLIConfig, err error) {
+			assertions: func(t *testing.T, _, newConfig config.CLIConfig, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "new-token", newConfig.BearerToken)
 				require.Equal(t, "new-refresh-token", newConfig.RefreshToken)
@@ -193,7 +194,7 @@ func TestRefreshToken(t *testing.T) {
 			cfg := testCase.setup()
 			newCfg, err :=
 				tf.refreshToken(context.Background(), testCase.setup(), false)
-			testCase.assertions(cfg, newCfg, err)
+			testCase.assertions(t, cfg, newCfg, err)
 		})
 	}
 }

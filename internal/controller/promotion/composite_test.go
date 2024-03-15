@@ -43,6 +43,7 @@ func TestCompositePromote(t *testing.T) {
 		promoMech  *compositeMechanism
 		newFreight kargoapi.FreightReference
 		assertions func(
+			t *testing.T,
 			promoStatus *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.FreightReference,
 			newFreightOut kargoapi.FreightReference,
@@ -68,9 +69,10 @@ func TestCompositePromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				promoStatus *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
+				_ kargoapi.FreightReference,
+				_ kargoapi.FreightReference,
 				err error,
 			) {
 				require.Error(t, err)
@@ -104,7 +106,8 @@ func TestCompositePromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				promoStatus *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -130,7 +133,7 @@ func TestCompositePromote(t *testing.T) {
 				&kargoapi.Promotion{},
 				testCase.newFreight,
 			)
-			testCase.assertions(promoStatus, testCase.newFreight, newFreightOut, err)
+			testCase.assertions(t, promoStatus, testCase.newFreight, newFreightOut, err)
 		})
 	}
 }

@@ -41,7 +41,7 @@ func TestValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating spec",
@@ -56,10 +56,10 @@ func TestValidateCreate(t *testing.T) {
 					}
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, int32(http.StatusUnprocessableEntity), statusErr.ErrStatus.Code)
 			},
 		},
@@ -73,10 +73,10 @@ func TestValidateCreate(t *testing.T) {
 					return apierrors.NewInternalError(errors.New("something went wrong"))
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, int32(http.StatusInternalServerError), statusErr.ErrStatus.Code)
 			},
 		},
@@ -95,11 +95,11 @@ func TestValidateCreate(t *testing.T) {
 				ctx,
 				&kargoapi.Project{
 					ObjectMeta: metav1.ObjectMeta{
-						UID: types.UID("fake-uid"),
+						UID: "fake-uid",
 					},
 				},
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -108,11 +108,11 @@ func TestValidateSpec(t *testing.T) {
 	testCases := []struct {
 		name       string
 		spec       *kargoapi.ProjectSpec
-		assertions func(*kargoapi.ProjectSpec, field.ErrorList)
+		assertions func(*testing.T, *kargoapi.ProjectSpec, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *kargoapi.ProjectSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.ProjectSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -125,7 +125,7 @@ func TestValidateSpec(t *testing.T) {
 					{Stage: "fake-stage"},
 				},
 			},
-			assertions: func(spec *kargoapi.ProjectSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, spec *kargoapi.ProjectSpec, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -147,7 +147,7 @@ func TestValidateSpec(t *testing.T) {
 					{Stage: "fake-stage"},
 				},
 			},
-			assertions: func(_ *kargoapi.ProjectSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.ProjectSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -156,6 +156,7 @@ func TestValidateSpec(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.spec,
 				w.validateSpec(field.NewPath("spec"), testCase.spec),
 			)
@@ -167,7 +168,7 @@ func TestEnsureNamespace(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 
 		{
@@ -185,10 +186,10 @@ func TestEnsureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, int32(http.StatusInternalServerError), statusErr.ErrStatus.Code)
 			},
 		},
@@ -208,10 +209,10 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, int32(http.StatusConflict), statusErr.ErrStatus.Code)
 			},
 		},
@@ -237,10 +238,10 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, int32(http.StatusConflict), statusErr.ErrStatus.Code)
 			},
 		},
@@ -262,10 +263,10 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, int32(http.StatusConflict), statusErr.ErrStatus.Code)
 			},
 		},
@@ -292,10 +293,10 @@ func TestEnsureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(
 					t,
 					int32(http.StatusInternalServerError),
@@ -326,7 +327,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -342,11 +343,12 @@ func TestEnsureNamespace(t *testing.T) {
 		)
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.webhook.ensureNamespace(
 					ctx,
 					&kargoapi.Project{
 						ObjectMeta: metav1.ObjectMeta{
-							UID: types.UID("fake-uid"),
+							UID: "fake-uid",
 						},
 					},
 				),
@@ -359,7 +361,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error creating role binding",
@@ -372,10 +374,10 @@ func TestEnsureSecretPermissions(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(
 					t,
 					int32(http.StatusInternalServerError),
@@ -394,7 +396,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -409,7 +411,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -425,6 +427,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 		)
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.webhook.ensureSecretPermissions(
 					ctx,
 					&kargoapi.Project{

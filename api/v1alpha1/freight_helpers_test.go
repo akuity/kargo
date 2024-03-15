@@ -19,12 +19,12 @@ func TestGetFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*Freight, error)
+		assertions func(*testing.T, *Freight, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(freight *Freight, err error) {
+			assertions: func(t *testing.T, freight *Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -40,7 +40,7 @@ func TestGetFreight(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(freight *Freight, err error) {
+			assertions: func(t *testing.T, freight *Freight, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-freight", freight.Name)
 				require.Equal(t, "fake-namespace", freight.Namespace)
@@ -58,7 +58,7 @@ func TestGetFreight(t *testing.T) {
 					Name:      "fake-freight",
 				},
 			)
-			testCase.assertions(freight, err)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }
@@ -70,12 +70,12 @@ func TestGetFreightByAlias(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*Freight, error)
+		assertions func(*testing.T, *Freight, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(freight *Freight, err error) {
+			assertions: func(t *testing.T, freight *Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -94,7 +94,7 @@ func TestGetFreightByAlias(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(freight *Freight, err error) {
+			assertions: func(t *testing.T, freight *Freight, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-freight", freight.Name)
 				require.Equal(t, "fake-namespace", freight.Namespace)
@@ -110,7 +110,7 @@ func TestGetFreightByAlias(t *testing.T) {
 				"fake-namespace",
 				"fake-alias",
 			)
-			testCase.assertions(freight, err)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }

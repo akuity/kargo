@@ -76,6 +76,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 		stage      *kargoapi.Stage
 		reconciler *reconciler
 		assertions func(
+			t *testing.T,
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
 			err error,
@@ -103,6 +104,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -138,6 +140,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -185,6 +188,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -233,6 +237,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -250,7 +255,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 				context.Background(),
 				testCase.stage,
 			)
-			testCase.assertions(testCase.stage.Status, newStatus, err)
+			testCase.assertions(t, testCase.stage.Status, newStatus, err)
 		})
 	}
 }
@@ -269,6 +274,7 @@ func TestSyncNormalStage(t *testing.T) {
 		stage      *kargoapi.Stage
 		reconciler *reconciler
 		assertions func(
+			t *testing.T,
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
 			err error,
@@ -287,6 +293,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -311,6 +318,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -370,6 +378,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -427,6 +436,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -469,6 +479,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -514,7 +525,7 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.Health {
 					return nil
 				},
-				getVerificationInfoFn: func(ctx context.Context, s *kargoapi.Stage) *kargoapi.VerificationInfo {
+				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) *kargoapi.VerificationInfo {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
 						Message: "something went wrong",
@@ -522,6 +533,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -596,6 +608,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -670,6 +683,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -705,6 +719,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -755,6 +770,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -805,6 +821,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -856,6 +873,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -913,6 +931,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -970,6 +989,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1035,6 +1055,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1104,6 +1125,7 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1200,7 +1222,8 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 			},
 			assertions: func(
-				initialStatus kargoapi.StageStatus,
+				t *testing.T,
+				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
@@ -1227,9 +1250,8 @@ func TestSyncNormalStage(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			newStatus, err :=
-				testCase.reconciler.syncNormalStage(context.Background(), testCase.stage)
-			testCase.assertions(testCase.stage.Status, newStatus, err)
+			newStatus, err := testCase.reconciler.syncNormalStage(context.Background(), testCase.stage)
+			testCase.assertions(t, testCase.stage.Status, newStatus, err)
 		})
 	}
 }
@@ -1239,6 +1261,7 @@ func TestSyncStageDelete(t *testing.T) {
 		name       string
 		reconciler *reconciler
 		assertions func(
+			t *testing.T,
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
 			err error,
@@ -1251,7 +1274,7 @@ func TestSyncStageDelete(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, initialStatus, newStatus kargoapi.StageStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error clearing verifications for Stage")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1269,7 +1292,7 @@ func TestSyncStageDelete(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, initialStatus, newStatus kargoapi.StageStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error clearing approvals for Stage")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1286,7 +1309,7 @@ func TestSyncStageDelete(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, initialStatus, newStatus kargoapi.StageStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error clearing AnalysisRuns for Stage")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1305,7 +1328,7 @@ func TestSyncStageDelete(t *testing.T) {
 				},
 				clearAnalysisRunsFn: func(context.Context, *kargoapi.Stage) error { return nil },
 			},
-			assertions: func(initialStatus, newStatus kargoapi.StageStatus, err error) {
+			assertions: func(t *testing.T, initialStatus, newStatus kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
@@ -1319,9 +1342,8 @@ func TestSyncStageDelete(t *testing.T) {
 					Finalizers: []string{kargoapi.FinalizerName},
 				},
 			}
-			newStatus, err :=
-				testCase.reconciler.syncStageDelete(context.Background(), testStage)
-			testCase.assertions(testStage.Status, newStatus, err)
+			newStatus, err := testCase.reconciler.syncStageDelete(context.Background(), testStage)
+			testCase.assertions(t, testStage.Status, newStatus, err)
 		})
 	}
 }
@@ -1330,7 +1352,7 @@ func TestClearVerification(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error listing verified Freight",
@@ -1343,7 +1365,7 @@ func TestClearVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error listing Freight verified in Stage")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1374,7 +1396,7 @@ func TestClearVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error patching status of Freight")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1405,7 +1427,7 @@ func TestClearVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -1413,6 +1435,7 @@ func TestClearVerification(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.clearVerifications(
 					context.Background(),
 					&kargoapi.Stage{},
@@ -1426,7 +1449,7 @@ func TestClearApprovals(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error listing approved Freight",
@@ -1439,7 +1462,7 @@ func TestClearApprovals(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error listing Freight approved for Stage")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1470,7 +1493,7 @@ func TestClearApprovals(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error patching status of Freight")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1501,7 +1524,7 @@ func TestClearApprovals(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -1509,6 +1532,7 @@ func TestClearApprovals(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.clearApprovals(
 					context.Background(),
 					&kargoapi.Stage{},
@@ -1522,7 +1546,7 @@ func TestHasNonTerminalPromotions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(bool, error)
+		assertions func(*testing.T, bool, error)
 	}{
 		{
 			name: "error listing Promotions",
@@ -1535,7 +1559,7 @@ func TestHasNonTerminalPromotions(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ bool, err error) {
+			assertions: func(t *testing.T, _ bool, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -1554,7 +1578,7 @@ func TestHasNonTerminalPromotions(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(result bool, err error) {
+			assertions: func(t *testing.T, result bool, err error) {
 				require.NoError(t, err)
 				require.True(t, result)
 			},
@@ -1573,7 +1597,7 @@ func TestHasNonTerminalPromotions(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(result bool, err error) {
+			assertions: func(t *testing.T, result bool, err error) {
 				require.NoError(t, err)
 				require.False(t, result)
 			},
@@ -1586,7 +1610,7 @@ func TestHasNonTerminalPromotions(t *testing.T) {
 				"fake-namespace",
 				"fake-stage",
 			)
-			testCase.assertions(result, err)
+			testCase.assertions(t, result, err)
 		})
 	}
 }
@@ -1595,7 +1619,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error getting Freight",
@@ -1608,7 +1632,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error finding Freight")
@@ -1625,7 +1649,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "found no Freight")
 			},
@@ -1647,7 +1671,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -1669,7 +1693,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -1692,7 +1716,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -1700,6 +1724,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.verifyFreightInStage(
 					context.Background(),
 					"fake-namespace",
@@ -1715,7 +1740,7 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(bool, error)
+		assertions func(*testing.T, bool, error)
 	}{
 		{
 			name: "error getting Project",
@@ -1728,7 +1753,7 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(allowed bool, err error) {
+			assertions: func(t *testing.T, allowed bool, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error finding Project")
@@ -1746,7 +1771,7 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(allowed bool, err error) {
+			assertions: func(t *testing.T, allowed bool, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "Project")
 				require.Contains(t, err.Error(), "not found")
@@ -1756,11 +1781,11 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 		{
 			name: "defaults to not permitted",
 			reconciler: &reconciler{
-				getProjectFn: func(ctx context.Context, c client.Client, s string) (*kargoapi.Project, error) {
+				getProjectFn: func(_ context.Context, _ client.Client, _ string) (*kargoapi.Project, error) {
 					return &kargoapi.Project{}, nil
 				},
 			},
-			assertions: func(result bool, err error) {
+			assertions: func(t *testing.T, result bool, err error) {
 				require.NoError(t, err)
 				require.False(t, result)
 			},
@@ -1768,7 +1793,7 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 		{
 			name: "explicitly not permitted",
 			reconciler: &reconciler{
-				getProjectFn: func(ctx context.Context, c client.Client, s string) (*kargoapi.Project, error) {
+				getProjectFn: func(_ context.Context, _ client.Client, _ string) (*kargoapi.Project, error) {
 					return &kargoapi.Project{
 						Spec: &kargoapi.ProjectSpec{
 							PromotionPolicies: []kargoapi.PromotionPolicy{
@@ -1781,7 +1806,7 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(result bool, err error) {
+			assertions: func(t *testing.T, result bool, err error) {
 				require.NoError(t, err)
 				require.False(t, result)
 			},
@@ -1789,7 +1814,7 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 		{
 			name: "permitted",
 			reconciler: &reconciler{
-				getProjectFn: func(ctx context.Context, c client.Client, s string) (*kargoapi.Project, error) {
+				getProjectFn: func(_ context.Context, _ client.Client, _ string) (*kargoapi.Project, error) {
 					return &kargoapi.Project{
 						Spec: &kargoapi.ProjectSpec{
 							PromotionPolicies: []kargoapi.PromotionPolicy{
@@ -1802,7 +1827,7 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(result bool, err error) {
+			assertions: func(t *testing.T, result bool, err error) {
 				require.NoError(t, err)
 				require.True(t, result)
 			},
@@ -1810,13 +1835,12 @@ func TestIsAutoPromotionPermitted(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.isAutoPromotionPermitted(
-					context.Background(),
-					"fake-namespace",
-					"fake-stage",
-				),
+			res, err := testCase.reconciler.isAutoPromotionPermitted(
+				context.Background(),
+				"fake-namespace",
+				"fake-stage",
 			)
+			testCase.assertions(t, res, err)
 		})
 	}
 }
@@ -1827,7 +1851,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 		name       string
 		subs       *kargoapi.Subscriptions
 		reconciler *reconciler
-		assertions func(*kargoapi.Freight, error)
+		assertions func(*testing.T, *kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting latest Freight from Warehouse",
@@ -1843,7 +1867,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error checking Warehouse")
@@ -1863,7 +1887,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -1882,7 +1906,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					return &kargoapi.Freight{}, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 			},
@@ -1901,7 +1925,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -1932,7 +1956,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -1963,7 +1987,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -1989,7 +2013,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 			},
@@ -2015,7 +2039,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					return &kargoapi.Freight{}, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 			},
@@ -2055,7 +2079,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				require.Equal(t, "newer-freight", freight.Name)
@@ -2096,7 +2120,7 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				require.Equal(t, "newer-freight", freight.Name)
@@ -2105,17 +2129,16 @@ func TestGetLatestAvailableFreight(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.getLatestAvailableFreight(
-					context.Background(),
-					"fake-namespace",
-					&kargoapi.Stage{
-						Spec: &kargoapi.StageSpec{
-							Subscriptions: testCase.subs,
-						},
+			freight, err := testCase.reconciler.getLatestAvailableFreight(
+				context.Background(),
+				"fake-namespace",
+				&kargoapi.Stage{
+					Spec: &kargoapi.StageSpec{
+						Subscriptions: testCase.subs,
 					},
-				),
+				},
 			)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }
@@ -2124,7 +2147,7 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*kargoapi.Freight, error)
+		assertions func(*testing.T, *kargoapi.Freight, error)
 	}{
 		{
 			name: "error listing Freight from Warehouse",
@@ -2137,7 +2160,7 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -2153,7 +2176,7 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -2189,7 +2212,7 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				// Be sure we got the latest
@@ -2199,13 +2222,12 @@ func TestGetLatestFreightFromWarehouse(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.getLatestFreightFromWarehouse(
-					context.Background(),
-					"fake-namespace",
-					"fake-warehouse",
-				),
+			freight, err := testCase.reconciler.getLatestFreightFromWarehouse(
+				context.Background(),
+				"fake-namespace",
+				"fake-warehouse",
 			)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }
@@ -2214,7 +2236,7 @@ func TestGetAllVerifiedFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func([]kargoapi.Freight, error)
+		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
 			name: "error listing Freight",
@@ -2227,7 +2249,7 @@ func TestGetAllVerifiedFreight(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -2248,7 +2270,7 @@ func TestGetAllVerifiedFreight(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -2281,7 +2303,7 @@ func TestGetAllVerifiedFreight(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				require.Len(t, freight, 2)
@@ -2290,17 +2312,16 @@ func TestGetAllVerifiedFreight(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.getAllVerifiedFreight(
-					context.Background(),
-					"fake-namespace",
-					[]kargoapi.StageSubscription{
-						{
-							Name: "fake-stage",
-						},
+			freight, err := testCase.reconciler.getAllVerifiedFreight(
+				context.Background(),
+				"fake-namespace",
+				[]kargoapi.StageSubscription{
+					{
+						Name: "fake-stage",
 					},
-				),
+				},
 			)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }
@@ -2309,7 +2330,7 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*kargoapi.Freight, error)
+		assertions func(*testing.T, *kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting all Freight verified in upstream Stages",
@@ -2322,7 +2343,7 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -2338,7 +2359,7 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Nil(t, freight)
 			},
@@ -2371,7 +2392,7 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, freight)
 				// Be sure we got the latest
@@ -2381,13 +2402,12 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.getLatestVerifiedFreight(
-					context.Background(),
-					"fake-namespace",
-					[]kargoapi.StageSubscription{},
-				),
+			freight, err := testCase.reconciler.getLatestVerifiedFreight(
+				context.Background(),
+				"fake-namespace",
+				[]kargoapi.StageSubscription{},
 			)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }

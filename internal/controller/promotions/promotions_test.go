@@ -107,7 +107,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
-			promoteFn: func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
 				panic("expected panic")
 			},
 		},
@@ -118,7 +118,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
-			promoteFn: func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
 				return nil, errors.New("expected error")
 			},
 		},

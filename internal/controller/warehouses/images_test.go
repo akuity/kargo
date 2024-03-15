@@ -17,7 +17,7 @@ func TestSelectImages(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func([]kargoapi.Image, error)
+		assertions func(*testing.T, []kargoapi.Image, error)
 	}{
 		{
 			name: "error getting latest version of an image",
@@ -40,7 +40,7 @@ func TestSelectImages(t *testing.T) {
 					return "", "", errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []kargoapi.Image, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Image, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -72,7 +72,7 @@ func TestSelectImages(t *testing.T) {
 					return "fake-tag", "fake-digest", nil
 				},
 			},
-			assertions: func(images []kargoapi.Image, err error) {
+			assertions: func(t *testing.T, images []kargoapi.Image, err error) {
 				require.NoError(t, err)
 				require.Len(t, images, 1)
 				require.Equal(
@@ -89,19 +89,18 @@ func TestSelectImages(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.selectImages(
-					context.Background(),
-					"fake-namespace",
-					[]kargoapi.RepoSubscription{
-						{
-							Image: &kargoapi.ImageSubscription{
-								RepoURL: "fake-url",
-							},
+			images, err := testCase.reconciler.selectImages(
+				context.Background(),
+				"fake-namespace",
+				[]kargoapi.RepoSubscription{
+					{
+						Image: &kargoapi.ImageSubscription{
+							RepoURL: "fake-url",
 						},
 					},
-				),
+				},
 			)
+			testCase.assertions(t, images, err)
 		})
 	}
 }

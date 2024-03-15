@@ -38,7 +38,7 @@ func newControllerCommand() *cobra.Command {
 		DisableAutoGenTag: true,
 		SilenceErrors:     true,
 		SilenceUsage:      true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 
 			version := versionpkg.GetVersion()

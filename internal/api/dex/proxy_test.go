@@ -39,14 +39,14 @@ func TestNewProxy(t *testing.T) {
 	testCases := []struct {
 		name       string
 		setup      func() ProxyConfig
-		assertions func(*httputil.ReverseProxy, error)
+		assertions func(*testing.T, *httputil.ReverseProxy, error)
 	}{
 		{
 			name: "no CA cert file specified",
 			setup: func() ProxyConfig {
 				return ProxyConfig{}
 			},
-			assertions: func(proxy *httputil.ReverseProxy, err error) {
+			assertions: func(t *testing.T, proxy *httputil.ReverseProxy, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, proxy)
 			},
@@ -58,7 +58,7 @@ func TestNewProxy(t *testing.T) {
 					CACertPath: "/bogus/path",
 				}
 			},
-			assertions: func(_ *httputil.ReverseProxy, err error) {
+			assertions: func(t *testing.T, _ *httputil.ReverseProxy, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error reading CA cert file")
 				require.Contains(t, err.Error(), "/bogus/path")
@@ -74,7 +74,7 @@ func TestNewProxy(t *testing.T) {
 				require.NoError(t, err)
 				return cfg
 			},
-			assertions: func(_ *httputil.ReverseProxy, err error) {
+			assertions: func(t *testing.T, _ *httputil.ReverseProxy, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error building CA cert pool")
 			},
@@ -89,7 +89,7 @@ func TestNewProxy(t *testing.T) {
 				require.NoError(t, err)
 				return cfg
 			},
-			assertions: func(proxy *httputil.ReverseProxy, err error) {
+			assertions: func(t *testing.T, proxy *httputil.ReverseProxy, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, proxy)
 			},
@@ -97,7 +97,8 @@ func TestNewProxy(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(NewProxy(testCase.setup()))
+			proxy, err := NewProxy(testCase.setup())
+			testCase.assertions(t, proxy, err)
 		})
 	}
 }
@@ -106,12 +107,12 @@ func TestBuildCACertPool(t *testing.T) {
 	testCases := []struct {
 		name        string
 		caCertBytes []byte
-		assertions  func(*x509.CertPool, error)
+		assertions  func(*testing.T, *x509.CertPool, error)
 	}{
 		{
 			name:        "invalid cert bytes provided",
 			caCertBytes: []byte("junk"),
-			assertions: func(_ *x509.CertPool, err error) {
+			assertions: func(t *testing.T, _ *x509.CertPool, err error) {
 				require.Error(t, err)
 				require.Equal(t, "invalid CA cert data", err.Error())
 			},
@@ -119,7 +120,7 @@ func TestBuildCACertPool(t *testing.T) {
 		{
 			name:        "valid cert bytes provided",
 			caCertBytes: dummyCACertBytes,
-			assertions: func(caCertPool *x509.CertPool, err error) {
+			assertions: func(t *testing.T, caCertPool *x509.CertPool, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, caCertPool)
 			},
@@ -127,7 +128,8 @@ func TestBuildCACertPool(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(buildCACertPool(testCase.caCertBytes))
+			caCertPool, err := buildCACertPool(testCase.caCertBytes)
+			testCase.assertions(t, caCertPool, err)
 		})
 	}
 }

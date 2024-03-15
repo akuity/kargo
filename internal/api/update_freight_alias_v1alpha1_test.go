@@ -19,13 +19,13 @@ func TestUpdateFreightAlias(t *testing.T) {
 		name       string
 		req        *svcv1alpha1.UpdateFreightAliasRequest
 		server     *server
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name:   "project not specified",
 			req:    &svcv1alpha1.UpdateFreightAliasRequest{},
 			server: &server{},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -38,7 +38,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Project: "fake-project",
 			},
 			server: &server{},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -52,7 +52,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				Name:    "fake-freight",
 			},
 			server: &server{},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -71,7 +71,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -95,7 +95,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -119,7 +119,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -154,7 +154,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -201,7 +201,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -233,7 +233,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				},
 				listFreightFn: func(
 					_ context.Context,
-					objList client.ObjectList,
+					_ client.ObjectList,
 					_ ...client.ListOption,
 				) error {
 					return nil
@@ -246,7 +246,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -274,7 +274,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				},
 				listFreightFn: func(
 					_ context.Context,
-					objList client.ObjectList,
+					_ client.ObjectList,
 					_ ...client.ListOption,
 				) error {
 					return nil
@@ -287,7 +287,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -298,7 +298,7 @@ func TestUpdateFreightAlias(t *testing.T) {
 				context.Background(),
 				connect.NewRequest(testCase.req),
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }

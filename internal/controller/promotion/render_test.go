@@ -34,6 +34,7 @@ func TestKargoRenderPromote(t *testing.T) {
 		stage      *kargoapi.Stage
 		newFreight kargoapi.FreightReference
 		assertions func(
+			t *testing.T,
 			status *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.FreightReference,
 			newFreightOut kargoapi.FreightReference,
@@ -49,7 +50,8 @@ func TestKargoRenderPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -90,7 +92,8 @@ func TestKargoRenderPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -132,7 +135,8 @@ func TestKargoRenderPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -150,7 +154,7 @@ func TestKargoRenderPromote(t *testing.T) {
 				&kargoapi.Promotion{},
 				testCase.newFreight,
 			)
-			testCase.assertions(status, testCase.newFreight, newFreightOut, err)
+			testCase.assertions(t, status, testCase.newFreight, newFreightOut, err)
 		})
 	}
 }
@@ -163,6 +167,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 		promoMech  *kargoRenderMechanism
 		update     kargoapi.GitRepoUpdate
 		assertions func(
+			t *testing.T,
 			newFreightIn kargoapi.FreightReference,
 			newFreightOut kargoapi.FreightReference,
 			err error,
@@ -179,6 +184,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -209,6 +215,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -252,6 +259,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -324,6 +332,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -409,6 +418,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -433,7 +443,7 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 				testCase.update,
 				testCase.freight,
 			)
-			testCase.assertions(testCase.freight, res, err)
+			testCase.assertions(t, testCase.freight, res, err)
 		})
 	}
 }

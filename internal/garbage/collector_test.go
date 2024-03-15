@@ -128,7 +128,7 @@ func TestRun(t *testing.T) {
 			cleanProjectsFn: func(
 				ctx context.Context,
 				projectCh <-chan string,
-				errCh chan<- struct{},
+				_ chan<- struct{},
 			) {
 				// All we want to do is receive one Project name and return
 				select {

@@ -21,7 +21,7 @@ func TestQueryFreight(t *testing.T) {
 		name       string
 		req        *svcv1alpha1.QueryFreightRequest
 		server     *server
-		assertions func(*connect.Response[svcv1alpha1.QueryFreightResponse], error)
+		assertions func(*testing.T, *connect.Response[svcv1alpha1.QueryFreightResponse], error)
 	}{
 		{
 			name: "empty project",
@@ -30,6 +30,7 @@ func TestQueryFreight(t *testing.T) {
 			},
 			server: &server{},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -51,6 +52,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -70,6 +72,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -101,6 +104,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -128,6 +132,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -172,6 +177,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -198,6 +204,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -233,6 +240,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				res *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -270,6 +278,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				res *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -327,6 +336,7 @@ func TestQueryFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				res *connect.Response[svcv1alpha1.QueryFreightResponse],
 				err error,
 			) {
@@ -347,12 +357,11 @@ func TestQueryFreight(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.server.QueryFreight(
-					context.Background(),
-					connect.NewRequest(testCase.req),
-				),
+			res, err := testCase.server.QueryFreight(
+				context.Background(),
+				connect.NewRequest(testCase.req),
 			)
+			testCase.assertions(t, res, err)
 		})
 	}
 }
@@ -362,7 +371,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 		name       string
 		subs       kargoapi.Subscriptions
 		server     *server
-		assertions func([]kargoapi.Freight, error)
+		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
 			name: "error getting Freight from Warehouse",
@@ -378,7 +387,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -408,7 +417,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(freight []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Len(t, freight, 2)
 			},
@@ -431,7 +440,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(f []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -466,7 +475,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(f []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -516,7 +525,7 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Len(t, freight, 2)
 			},
@@ -524,14 +533,13 @@ func TestGetAvailableFreightForStage(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.server.getAvailableFreightForStage(
-					context.Background(),
-					"fake-project",
-					"fake-stage",
-					testCase.subs,
-				),
+			freight, err := testCase.server.getAvailableFreightForStage(
+				context.Background(),
+				"fake-project",
+				"fake-stage",
+				testCase.subs,
 			)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }
@@ -540,7 +548,7 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 	testCases := []struct {
 		name       string
 		server     *server
-		assertions func([]kargoapi.Freight, error)
+		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
 			name: "error listing Freight",
@@ -553,7 +561,7 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error listing Freight for Warehouse")
@@ -584,7 +592,7 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Len(t, freight, 2)
 			},
@@ -592,13 +600,12 @@ func TestGetFreightFromWarehouse(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.server.getFreightFromWarehouse(
-					context.Background(),
-					"fake-project",
-					"fake-warehouse",
-				),
+			freight, err := testCase.server.getFreightFromWarehouse(
+				context.Background(),
+				"fake-project",
+				"fake-warehouse",
 			)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }
@@ -607,7 +614,7 @@ func TestGetVerifiedFreight(t *testing.T) {
 	testCases := []struct {
 		name       string
 		server     *server
-		assertions func([]kargoapi.Freight, error)
+		assertions func(*testing.T, []kargoapi.Freight, error)
 	}{
 		{
 			name: "error listing Freight",
@@ -620,7 +627,7 @@ func TestGetVerifiedFreight(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -655,7 +662,7 @@ func TestGetVerifiedFreight(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(freight []kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				// Ensured the list is de-duped. If it weren't there would be 4 here.
 				require.Len(t, freight, 2)
@@ -664,20 +671,19 @@ func TestGetVerifiedFreight(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.server.getVerifiedFreight(
-					context.Background(),
-					"fake-project",
-					[]kargoapi.StageSubscription{
-						{
-							Name: "fake-stage",
-						},
-						{
-							Name: "another-fake-stage",
-						},
+			freight, err := testCase.server.getVerifiedFreight(
+				context.Background(),
+				"fake-project",
+				[]kargoapi.StageSubscription{
+					{
+						Name: "fake-stage",
 					},
-				),
+					{
+						Name: "another-fake-stage",
+					},
+				},
 			)
+			testCase.assertions(t, freight, err)
 		})
 	}
 }
@@ -692,12 +698,12 @@ func TestGroupByImageRepo(t *testing.T) {
 	testCases := []struct {
 		name       string
 		group      string
-		assertions func(map[string]*svcv1alpha1.FreightList)
+		assertions func(*testing.T, map[string]*svcv1alpha1.FreightList)
 	}{
 		{
 			name:  "without group filter",
 			group: "",
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups, 2)
 				require.Len(t, groups["fake-repo-url"].Freight, 2)
 				require.Len(t, groups["another-fake-repo-url"].Freight, 2)
@@ -706,7 +712,7 @@ func TestGroupByImageRepo(t *testing.T) {
 		{
 			name:  "with group filter",
 			group: "fake-repo-url",
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups, 1)
 				require.Len(t, groups["fake-repo-url"].Freight, 2)
 			},
@@ -714,7 +720,7 @@ func TestGroupByImageRepo(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(groupByImageRepo(testFreight, testCase.group))
+			testCase.assertions(t, groupByImageRepo(testFreight, testCase.group))
 		})
 	}
 }
@@ -729,12 +735,12 @@ func TestGroupByGitRepo(t *testing.T) {
 	testCases := []struct {
 		name       string
 		group      string
-		assertions func(map[string]*svcv1alpha1.FreightList)
+		assertions func(*testing.T, map[string]*svcv1alpha1.FreightList)
 	}{
 		{
 			name:  "without group filter",
 			group: "",
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups, 2)
 				require.Len(t, groups["fake-repo-url"].Freight, 2)
 				require.Len(t, groups["another-fake-repo-url"].Freight, 2)
@@ -743,7 +749,7 @@ func TestGroupByGitRepo(t *testing.T) {
 		{
 			name:  "with group filter",
 			group: "fake-repo-url",
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups, 1)
 				require.Len(t, groups["fake-repo-url"].Freight, 2)
 			},
@@ -751,7 +757,7 @@ func TestGroupByGitRepo(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(groupByGitRepo(testFreight, testCase.group))
+			testCase.assertions(t, groupByGitRepo(testFreight, testCase.group))
 		})
 	}
 }
@@ -786,12 +792,12 @@ func TestGroupByChart(t *testing.T) {
 	testCases := []struct {
 		name       string
 		group      string
-		assertions func(map[string]*svcv1alpha1.FreightList)
+		assertions func(*testing.T, map[string]*svcv1alpha1.FreightList)
 	}{
 		{
 			name:  "without group filter",
 			group: "",
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups, 2)
 				require.Len(t, groups["fake-repo-url/fake-chart"].Freight, 2)
 				require.Len(t, groups["another-fake-repo-url/fake-chart"].Freight, 2)
@@ -800,7 +806,7 @@ func TestGroupByChart(t *testing.T) {
 		{
 			name:  "with group filter",
 			group: "fake-repo-url/fake-chart",
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups, 1)
 				require.Len(t, groups["fake-repo-url/fake-chart"].Freight, 2)
 			},
@@ -808,7 +814,7 @@ func TestGroupByChart(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(groupByChart(testFreight, testCase.group))
+			testCase.assertions(t, groupByChart(testFreight, testCase.group))
 		})
 	}
 }
@@ -820,7 +826,7 @@ func TestSortFreightGroups(t *testing.T) {
 		groups     map[string]*svcv1alpha1.FreightList
 		orderBy    string
 		reverse    bool
-		assertions func(map[string]*svcv1alpha1.FreightList)
+		assertions func(*testing.T, map[string]*svcv1alpha1.FreightList)
 	}{
 		{
 			name: "order by tag",
@@ -834,7 +840,7 @@ func TestSortFreightGroups(t *testing.T) {
 				},
 			},
 			orderBy: OrderByTag,
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups[""].Freight, 3)
 				require.Equal(t, "a", groups[""].Freight[0].Images[0].Tag)
 				require.Equal(t, "b", groups[""].Freight[1].Images[0].Tag)
@@ -854,7 +860,7 @@ func TestSortFreightGroups(t *testing.T) {
 			},
 			orderBy: OrderByTag,
 			reverse: true,
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups[""].Freight, 3)
 				require.Equal(t, "c", groups[""].Freight[0].Images[0].Tag)
 				require.Equal(t, "b", groups[""].Freight[1].Images[0].Tag)
@@ -885,7 +891,7 @@ func TestSortFreightGroups(t *testing.T) {
 				},
 			},
 			orderBy: OrderByFirstSeen,
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups[""].Freight, 3)
 				require.Equal(t, now.Add(-time.Hour), groups[""].Freight[0].CreationTimestamp.Time)
 				require.Equal(t, now, groups[""].Freight[1].CreationTimestamp.Time)
@@ -917,7 +923,7 @@ func TestSortFreightGroups(t *testing.T) {
 			},
 			orderBy: OrderByFirstSeen,
 			reverse: true,
-			assertions: func(groups map[string]*svcv1alpha1.FreightList) {
+			assertions: func(t *testing.T, groups map[string]*svcv1alpha1.FreightList) {
 				require.Len(t, groups[""].Freight, 3)
 				require.Equal(t, now.Add(time.Hour), groups[""].Freight[0].CreationTimestamp.Time)
 				require.Equal(t, now, groups[""].Freight[1].CreationTimestamp.Time)
@@ -928,7 +934,7 @@ func TestSortFreightGroups(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			sortFreightGroups(testCase.orderBy, testCase.reverse, testCase.groups)
-			testCase.assertions(testCase.groups)
+			testCase.assertions(t, testCase.groups)
 		})
 	}
 }

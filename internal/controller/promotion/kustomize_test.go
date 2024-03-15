@@ -22,11 +22,11 @@ func TestSelectKustomizeUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
 		updates    []kargoapi.GitRepoUpdate
-		assertions func(selectedUpdates []kargoapi.GitRepoUpdate)
+		assertions func(*testing.T, []kargoapi.GitRepoUpdate)
 	}{
 		{
 			name: "no updates",
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -37,7 +37,7 @@ func TestSelectKustomizeUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -56,14 +56,14 @@ func TestSelectKustomizeUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Len(t, selectedUpdates, 1)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(selectKustomizeUpdates(testCase.updates))
+			testCase.assertions(t, selectKustomizeUpdates(testCase.updates))
 		})
 	}
 }
@@ -73,7 +73,7 @@ func TestKustomizerApply(t *testing.T) {
 		name       string
 		update     kargoapi.GitRepoUpdate
 		kustomizer *kustomizer
-		assertions func(changes []string, err error)
+		assertions func(t *testing.T, changes []string, err error)
 	}{
 		{
 			name: "error running kustomize edit set image",
@@ -89,7 +89,7 @@ func TestKustomizerApply(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []string, err error) {
+			assertions: func(t *testing.T, _ []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error updating image")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -112,7 +112,7 @@ func TestKustomizerApply(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(changes []string, err error) {
+			assertions: func(t *testing.T, changes []string, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -141,7 +141,7 @@ func TestKustomizerApply(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(changes []string, err error) {
+			assertions: func(t *testing.T, changes []string, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -155,22 +155,21 @@ func TestKustomizerApply(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.kustomizer.apply(
-					testCase.update,
-					kargoapi.FreightReference{
-						Images: []kargoapi.Image{
-							{
-								RepoURL: "fake-image",
-								Tag:     "fake-tag",
-								Digest:  "fake-digest",
-							},
+			changes, err := testCase.kustomizer.apply(
+				testCase.update,
+				kargoapi.FreightReference{
+					Images: []kargoapi.Image{
+						{
+							RepoURL: "fake-image",
+							Tag:     "fake-tag",
+							Digest:  "fake-digest",
 						},
 					},
-					"",
-					"",
-				),
+				},
+				"",
+				"",
 			)
+			testCase.assertions(t, changes, err)
 		})
 	}
 }

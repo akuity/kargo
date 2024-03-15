@@ -32,7 +32,7 @@ func NewHandlerOption(
 	return connect.WithHandlerOptions(
 		connect.WithInterceptors(interceptors...),
 		connect.WithRecover(
-			func(ctx context.Context, spec connect.Spec, header http.Header, r any) error {
+			func(ctx context.Context, _ connect.Spec, _ http.Header, r any) error {
 				logging.LoggerFromContext(ctx).Log(log.ErrorLevel, takeStacktrace(defaultStackLength, 3))
 				return connect.NewError(
 					connect.CodeInternal, fmt.Errorf("panic: %v", r))

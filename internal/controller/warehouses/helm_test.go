@@ -23,7 +23,7 @@ func TestSelectCharts(t *testing.T) {
 			string,
 			*helm.Credentials,
 		) (string, error)
-		assertions func([]kargoapi.Chart, error)
+		assertions func(*testing.T, []kargoapi.Chart, error)
 	}{
 		{
 			name: "error getting repository credentials",
@@ -38,7 +38,7 @@ func TestSelectCharts(t *testing.T) {
 						errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []kargoapi.Chart, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -70,7 +70,7 @@ func TestSelectCharts(t *testing.T) {
 			) (string, error) {
 				return "", errors.New("something went wrong")
 			},
-			assertions: func(_ []kargoapi.Chart, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -102,7 +102,7 @@ func TestSelectCharts(t *testing.T) {
 			) (string, error) {
 				return "", nil
 			},
-			assertions: func(_ []kargoapi.Chart, err error) {
+			assertions: func(t *testing.T, _ []kargoapi.Chart, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "found no suitable version of chart")
 			},
@@ -129,7 +129,7 @@ func TestSelectCharts(t *testing.T) {
 			) (string, error) {
 				return "1.0.0", nil
 			},
-			assertions: func(charts []kargoapi.Chart, err error) {
+			assertions: func(t *testing.T, charts []kargoapi.Chart, err error) {
 				require.NoError(t, err)
 				require.Len(t, charts, 1)
 				require.Equal(
@@ -146,11 +146,10 @@ func TestSelectCharts(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			r := reconciler{
+			charts, err := (&reconciler{
 				credentialsDB:        testCase.credentialsDB,
 				selectChartVersionFn: testCase.selectChartVersionFn,
-			}
-			testCase.assertions(r.selectCharts(
+			}).selectCharts(
 				context.Background(),
 				"fake-namespace",
 				[]kargoapi.RepoSubscription{
@@ -161,7 +160,8 @@ func TestSelectCharts(t *testing.T) {
 						},
 					},
 				},
-			))
+			)
+			testCase.assertions(t, charts, err)
 		})
 	}
 }

@@ -15,7 +15,7 @@ func newVersionCommand() *cobra.Command {
 		DisableAutoGenTag: true,
 		SilenceErrors:     true,
 		SilenceUsage:      true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(*cobra.Command, []string) error {
 			version, err := json.MarshalIndent(versionpkg.GetVersion(), "", "  ")
 			if err != nil {
 				return fmt.Errorf("marshal version: %w", err)

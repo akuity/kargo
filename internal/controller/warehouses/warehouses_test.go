@@ -50,7 +50,7 @@ func TestSyncWarehouse(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error getting latest Freight from repos",
@@ -62,7 +62,7 @@ func TestSyncWarehouse(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -83,7 +83,7 @@ func TestSyncWarehouse(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -111,7 +111,7 @@ func TestSyncWarehouse(t *testing.T) {
 					)
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -133,7 +133,7 @@ func TestSyncWarehouse(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error creating Freight")
@@ -162,16 +162,15 @@ func TestSyncWarehouse(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err :=
-				testCase.reconciler.syncWarehouse(context.Background(), testWarehouse)
-			testCase.assertions(err)
+			_, err := testCase.reconciler.syncWarehouse(context.Background(), testWarehouse)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -195,7 +194,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error syncing git repo subscription")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -220,7 +219,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -256,7 +255,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,

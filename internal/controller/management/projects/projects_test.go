@@ -38,7 +38,7 @@ func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(ctrl.Result, error)
+		assertions func(*testing.T, ctrl.Result, error)
 	}{
 		{
 			name: "project not found",
@@ -51,7 +51,7 @@ func TestReconcile(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -73,7 +73,7 @@ func TestReconcile(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ ctrl.Result, err error) {
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -93,7 +93,7 @@ func TestReconcile(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -129,7 +129,7 @@ func TestReconcile(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(_ ctrl.Result, err error) {
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -159,16 +159,15 @@ func TestReconcile(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(_ ctrl.Result, err error) {
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
 				require.NoError(t, err)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.Reconcile(context.Background(), ctrl.Request{}),
-			)
+			res, err := testCase.reconciler.Reconcile(context.Background(), ctrl.Request{})
+			testCase.assertions(t, res, err)
 		})
 	}
 }
@@ -177,7 +176,7 @@ func TestSyncProject(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(kargoapi.ProjectStatus, error)
+		assertions func(*testing.T, kargoapi.ProjectStatus, error)
 	}{
 		{
 			name: "error ensuring namespace",
@@ -189,7 +188,7 @@ func TestSyncProject(t *testing.T) {
 					return *project.Status.DeepCopy(), errors.New("something went wrong")
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				// Still initializing because retry could succeed
@@ -208,7 +207,7 @@ func TestSyncProject(t *testing.T) {
 					return status, errors.New("something went very wrong")
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went very wrong")
 				// Failed because retry cannot possibly succeed
@@ -235,7 +234,7 @@ func TestSyncProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				// Still initializing because retry could succeed
@@ -258,7 +257,7 @@ func TestSyncProject(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
 				// Success == ready
 				require.Equal(t, kargoapi.ProjectPhaseReady, status.Phase)
@@ -275,7 +274,7 @@ func TestSyncProject(t *testing.T) {
 					},
 				},
 			)
-			testCase.assertions(status, err)
+			testCase.assertions(t, status, err)
 		})
 	}
 }
@@ -285,7 +284,7 @@ func TestEnsureNamespace(t *testing.T) {
 		name       string
 		project    *kargoapi.Project
 		reconciler *reconciler
-		assertions func(kargoapi.ProjectStatus, error)
+		assertions func(*testing.T, kargoapi.ProjectStatus, error)
 	}{
 		{
 			name: "error getting namespace",
@@ -304,7 +303,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error getting namespace")
@@ -342,7 +341,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error updating namespace")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -380,7 +379,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
 				// Phase wasn't changed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
@@ -403,7 +402,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "failed to initialize Project")
 				// Phase reflects the unrecoverable failure
@@ -436,7 +435,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
 				// Phase wasn't changed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
@@ -466,7 +465,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error creating namespace")
@@ -498,7 +497,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
 				// Phase wasn't changed
 				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
@@ -507,12 +506,11 @@ func TestEnsureNamespace(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.ensureNamespace(
-					context.Background(),
-					testCase.project,
-				),
+			res, err := testCase.reconciler.ensureNamespace(
+				context.Background(),
+				testCase.project,
 			)
+			testCase.assertions(t, res, err)
 		})
 	}
 }
@@ -521,7 +519,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error creating role binding",
@@ -534,7 +532,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error creating role binding")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -551,7 +549,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -566,7 +564,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -574,6 +572,7 @@ func TestEnsureSecretPermissions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.ensureSecretPermissions(
 					context.Background(),
 					&kargoapi.Project{},

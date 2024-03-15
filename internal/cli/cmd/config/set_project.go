@@ -30,7 +30,7 @@ kargo config set-project my-project
 # Unset a default project
 kargo config set-project ""
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
 			return cmdOpts.run()

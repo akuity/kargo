@@ -19,12 +19,12 @@ func TestCheckHealth(t *testing.T) {
 		freight          kargoapi.FreightReference
 		argoCDAppUpdates []kargoapi.ArgoCDAppUpdate
 		reconciler       *reconciler
-		assertions       func(*kargoapi.Health)
+		assertions       func(*testing.T, *kargoapi.Health)
 	}{
 		{
 			name:       "no argoCDAppUpdates are defined",
 			reconciler: &reconciler{},
-			assertions: func(health *kargoapi.Health) {
+			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.Nil(t, health)
 			},
 		},
@@ -32,7 +32,7 @@ func TestCheckHealth(t *testing.T) {
 			name:             "argo cd integration is not enabled",
 			argoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{{}},
 			reconciler:       &reconciler{},
-			assertions: func(health *kargoapi.Health) {
+			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.NotNil(t, health)
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 			},
@@ -56,7 +56,7 @@ func TestCheckHealth(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(health *kargoapi.Health) {
+			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 				require.Equal(
 					t,
@@ -107,7 +107,7 @@ func TestCheckHealth(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(health *kargoapi.Health) {
+			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 				require.Equal(
 					t,
@@ -170,7 +170,7 @@ func TestCheckHealth(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(health *kargoapi.Health) {
+			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
 				require.Equal(
 					t,
@@ -229,7 +229,7 @@ func TestCheckHealth(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(health *kargoapi.Health) {
+			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
 				require.Equal(
 					t,
@@ -295,7 +295,7 @@ func TestCheckHealth(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(health *kargoapi.Health) {
+			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health.Status)
 				require.Equal(
 					t,
@@ -361,7 +361,7 @@ func TestCheckHealth(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(health *kargoapi.Health) {
+			assertions: func(t *testing.T, health *kargoapi.Health) {
 				require.Equal(t, kargoapi.HealthStateHealthy, health.Status)
 				require.Equal(
 					t,
@@ -387,6 +387,7 @@ func TestCheckHealth(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.reconciler.checkHealth(
 					context.Background(),
 					testCase.freight,
@@ -402,11 +403,11 @@ func TestStageHealthForAppSync(t *testing.T) {
 		name       string
 		app        *argocd.Application
 		revision   string
-		assertions func(kargoapi.HealthState)
+		assertions func(*testing.T, kargoapi.HealthState)
 	}{
 		{
 			name: "revision is empty",
-			assertions: func(health kargoapi.HealthState) {
+			assertions: func(t *testing.T, health kargoapi.HealthState) {
 				require.Equal(t, kargoapi.HealthStateHealthy, health)
 			},
 		},
@@ -423,7 +424,7 @@ func TestStageHealthForAppSync(t *testing.T) {
 				},
 			},
 			revision: "fake-commit",
-			assertions: func(health kargoapi.HealthState) {
+			assertions: func(t *testing.T, health kargoapi.HealthState) {
 				require.Equal(t, kargoapi.HealthStateProgressing, health)
 			},
 		},
@@ -437,7 +438,7 @@ func TestStageHealthForAppSync(t *testing.T) {
 				},
 			},
 			revision: "fake-commit",
-			assertions: func(health kargoapi.HealthState) {
+			assertions: func(t *testing.T, health kargoapi.HealthState) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, health)
 			},
 		},
@@ -454,7 +455,7 @@ func TestStageHealthForAppSync(t *testing.T) {
 				},
 			},
 			revision: "fake-commit",
-			assertions: func(health kargoapi.HealthState) {
+			assertions: func(t *testing.T, health kargoapi.HealthState) {
 				require.Equal(t, kargoapi.HealthStateProgressing, health)
 			},
 		},
@@ -468,7 +469,7 @@ func TestStageHealthForAppSync(t *testing.T) {
 				},
 			},
 			revision: "fake-commit",
-			assertions: func(health kargoapi.HealthState) {
+			assertions: func(t *testing.T, health kargoapi.HealthState) {
 				require.Equal(t, kargoapi.HealthStateHealthy, health)
 			},
 		},
@@ -479,7 +480,7 @@ func TestStageHealthForAppSync(t *testing.T) {
 				testCase.app,
 				testCase.revision,
 			)
-			testCase.assertions(health)
+			testCase.assertions(t, health)
 		})
 	}
 }
