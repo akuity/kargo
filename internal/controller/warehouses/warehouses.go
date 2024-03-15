@@ -120,7 +120,9 @@ func SetupReconcilerWithManager(
 		).
 		WithEventFilter(shardPredicate).
 		WithEventFilter(kargo.IgnoreAnnotationRemoval{
-			AnnotationKey: kargoapi.AnnotationKeyRefresh,
+			Annotations: []string{
+				kargoapi.AnnotationKeyRefresh,
+			},
 		}).
 		WithOptions(controller.CommonOptions()).
 		Complete(newReconciler(mgr.GetClient(), credentialsDB)); err != nil {

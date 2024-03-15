@@ -114,14 +114,18 @@ func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
 	return false
 }
 
+// IgnoreAnnotationRemoval is a predicate that ignores the removal of specific
+// Annotations in an update event. This is useful when we want to ignore
+// updates that only remove an annotation and nothing else, which may be the
+// case when the annotation(s) are cleared by the controller itself.
 type IgnoreAnnotationRemoval struct {
 	predicate.Funcs
 
-	AnnotationKey string
+	Annotations []string
 }
 
-// Update returns false if the update event removed the AnnotationKey, true
-// otherwise.
+// Update returns false if the update event only removed any of the Annotations,
+// true otherwise.
 //
 // NOTE: this predicate assumes that the update was to clear the annotation and
 // nothing else. This is safe to assume as long as the helpers of the API are
@@ -130,16 +134,14 @@ func (i IgnoreAnnotationRemoval) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil || e.ObjectNew == nil {
 		return true
 	}
-	oldHasAnnotation := false
-	if oldAnnotations := e.ObjectOld.GetAnnotations(); oldAnnotations != nil {
-		_, oldHasAnnotation = oldAnnotations[i.AnnotationKey]
-	}
-	newHasAnnotation := false
-	if newAnnotations := e.ObjectNew.GetAnnotations(); newAnnotations != nil {
-		_, newHasAnnotation = newAnnotations[i.AnnotationKey]
-	}
-	if oldHasAnnotation && !newHasAnnotation {
-		return false
+	oldAnnotations := e.ObjectOld.GetAnnotations()
+	newAnnotations := e.ObjectNew.GetAnnotations()
+	for _, annotation := range i.Annotations {
+		_, oldHasAnnotation := oldAnnotations[annotation]
+		_, newHasAnnotation := newAnnotations[annotation]
+		if oldHasAnnotation && !newHasAnnotation {
+			return false
+		}
 	}
 	return true
 }

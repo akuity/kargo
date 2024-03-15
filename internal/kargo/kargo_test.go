@@ -146,7 +146,7 @@ func TestIgnoreAnnotationRemovalUpdates(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			p := IgnoreAnnotationRemoval{
-				AnnotationKey: kargoapi.AnnotationKeyRefresh,
+				Annotations: []string{kargoapi.AnnotationKeyRefresh},
 			}
 			e := event.UpdateEvent{
 				ObjectOld: tc.old,
