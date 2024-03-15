@@ -546,7 +546,7 @@ func TestSyncNormalStage(t *testing.T) {
 		},
 
 		{
-			name: "verification abort error",
+			name: "verification aborted",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -588,8 +588,11 @@ func TestSyncNormalStage(t *testing.T) {
 				abortVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-				) error {
-					return errors.New("something went wrong")
+				) *kargoapi.VerificationInfo {
+					return &kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseFailed,
+						Message: "aborted",
+					}
 				},
 			},
 			assertions: func(
@@ -597,7 +600,19 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
-				require.ErrorContains(t, err, "something went wrong")
+				require.NoError(t, err)
+				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseFailed,
+						Message: "aborted",
+					},
+					newStatus.CurrentFreight.VerificationInfo,
+				)
+
+				// Phase should be changed to Steady
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
 			},
 		},
 
@@ -646,9 +661,12 @@ func TestSyncNormalStage(t *testing.T) {
 				abortVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-				) error {
+				) *kargoapi.VerificationInfo {
 					// Should not be called
-					return errors.New("something went wrong")
+					return &kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseFailed,
+						Message: "aborted",
+					}
 				},
 			},
 			assertions: func(
@@ -657,6 +675,8 @@ func TestSyncNormalStage(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
+				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(t, kargoapi.VerificationPhaseError, newStatus.CurrentFreight.VerificationInfo.Phase)
 			},
 		},
 

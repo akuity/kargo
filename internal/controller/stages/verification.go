@@ -254,9 +254,14 @@ func (r *reconciler) getVerificationInfo(
 func (r *reconciler) abortVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-) error {
+) *kargoapi.VerificationInfo {
 	if r.rolloutsClient == nil {
-		return fmt.Errorf("rollouts integration is disabled on this controller; cannot abort verification")
+		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
+			Phase: kargoapi.VerificationPhaseError,
+			Message: "Rollouts integration is disabled on this controller; cannot " +
+				"abort verification",
+		}
 	}
 
 	ar := &rollouts.AnalysisRun{
@@ -270,9 +275,28 @@ func (r *reconciler) abortVerification(
 		ar,
 		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"terminate":true}}`)),
 	); err != nil {
-		return fmt.Errorf("error terminating AnalysisRun %q in namespace %q: %w", ar.Name, ar.Namespace, err)
+		return &kargoapi.VerificationInfo{
+			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
+			Phase: kargoapi.VerificationPhaseError,
+			Message: fmt.Errorf(
+				"error terminating AnalysisRun %q in namespace %q: %w",
+				ar.Name,
+				ar.Namespace,
+				err,
+			).Error(),
+		}
 	}
-	return nil
+
+	// Return a new VerificationInfo with the same ID and a message indicating
+	// that the verification was aborted. The Phase will be set to Failed, as
+	// the verification was not successful.
+	// We do not use the further information from the AnalysisRun, as this
+	// will indicate a "Succeeded" phase due to Argo Rollouts behavior.
+	return &kargoapi.VerificationInfo{
+		ID:      stage.Status.CurrentFreight.VerificationInfo.ID,
+		Phase:   kargoapi.VerificationPhaseFailed,
+		Message: "Verification aborted by user",
+	}
 }
 
 // getAnalysisRunNamespace determines the namespace in which to create the

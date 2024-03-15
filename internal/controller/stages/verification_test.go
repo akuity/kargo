@@ -660,13 +660,28 @@ func TestAbortVerification(t *testing.T) {
 		name       string
 		stage      *kargoapi.Stage
 		reconciler *reconciler
-		assertions func(*testing.T, error)
+		assertions func(*testing.T, *kargoapi.VerificationInfo)
 	}{
 		{
 			name:       "rollouts integration not enabled",
 			reconciler: &reconciler{},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "rollouts integration is disabled on this controller")
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							ID: "fake-id",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Equal(t, vi.ID, "fake-id")
+				require.Contains(
+					t,
+					vi.Message,
+					"Rollouts integration is disabled on this controller",
+				)
 			},
 		},
 		{
@@ -675,6 +690,7 @@ func TestAbortVerification(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
+							ID: "fake-id",
 							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
 								Namespace: "fake-namespace",
@@ -694,8 +710,11 @@ func TestAbortVerification(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "something went wrong")
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Equal(t, "fake-id", vi.ID)
+				require.Contains(t, vi.Message, "AnalysisRun")
+				require.Contains(t, vi.Message, "something went wrong")
 			},
 		},
 		{
@@ -704,6 +723,7 @@ func TestAbortVerification(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
+							ID: "fake-id",
 							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Name:      "fake-run",
 								Namespace: "fake-namespace",
@@ -723,8 +743,11 @@ func TestAbortVerification(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi)
+				require.Equal(t, "fake-id", vi.ID)
+				require.Equal(t, kargoapi.VerificationPhaseFailed, vi.Phase)
+				require.Equal(t, "Verification aborted by user", vi.Message)
 			},
 		},
 	}

@@ -92,7 +92,7 @@ type reconciler struct {
 	abortVerificationFn func(
 		context.Context,
 		*kargoapi.Stage,
-	) error
+	) *kargoapi.VerificationInfo
 
 	getVerificationInfoFn func(
 		context.Context,
@@ -765,14 +765,7 @@ func (r *reconciler) syncNormalStage(
 					if newInfo.ID != "" && !newInfo.Phase.IsTerminal() {
 						if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyAbort]; ok && v == newInfo.ID {
 							log.Debug("aborting verification")
-							if err := r.abortVerificationFn(ctx, stage); err != nil {
-								return status, fmt.Errorf(
-									"error aborting verification for Stage %q in namespace %q: %w",
-									stage.Name,
-									stage.Namespace,
-									err,
-								)
-							}
+							status.CurrentFreight.VerificationInfo = r.abortVerificationFn(ctx, stage)
 						}
 					}
 				}
