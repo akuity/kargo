@@ -74,11 +74,16 @@ func TestDefault(t *testing.T) {
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
+					return &kargoapi.Stage{
+						Spec: &kargoapi.StageSpec{
+							Shard: "fake-shard",
+						},
+					}, nil
 				},
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
+				require.Equal(t, "fake-shard", promo.Labels[kargoapi.ShardLabelKey])
 				require.NotEmpty(t, promo.OwnerReferences)
 			},
 		},

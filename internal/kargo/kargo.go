@@ -20,8 +20,8 @@ const (
 	maxStageNamePrefixLength = 218
 )
 
-// NewPromotion returns a new Promotion from a given stage and freight with our naming convention.
-// Ensures the owner reference is set to be the stage, and carries over any shard labels
+// NewPromotion returns a new Promotion from a given stage and freight with our
+// naming convention.
 func NewPromotion(stage kargoapi.Stage, freight string) kargoapi.Promotion {
 	shortHash := freight
 	if len(shortHash) > 7 {
@@ -36,23 +36,15 @@ func NewPromotion(stage kargoapi.Stage, freight string) kargoapi.Promotion {
 	// We just want a unique ID that can be sorted lexicographically
 	promoName := strings.ToLower(fmt.Sprintf("%s.%s.%s", shortStageName, ulid.Make(), shortHash))
 
-	ownerRef := metav1.NewControllerRef(&stage, kargoapi.GroupVersion.WithKind("Stage"))
-
 	promotion := kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            promoName,
-			Namespace:       stage.Namespace,
-			OwnerReferences: []metav1.OwnerReference{*ownerRef},
+			Name:      promoName,
+			Namespace: stage.Namespace,
 		},
 		Spec: &kargoapi.PromotionSpec{
 			Stage:   stage.Name,
 			Freight: freight,
 		},
-	}
-	if stage.Labels != nil && stage.Labels[kargoapi.ShardLabelKey] != "" {
-		promotion.ObjectMeta.Labels = map[string]string{
-			kargoapi.ShardLabelKey: stage.Labels[kargoapi.ShardLabelKey],
-		}
 	}
 	return promotion
 }

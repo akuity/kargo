@@ -45,26 +45,6 @@ func TestNewPromotion(t *testing.T) {
 			},
 		},
 		{
-			name: "Promote stage with shard",
-			stage: kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "80b44831-ac8d-4900-9df9-ee95f80c0fae",
-					Name:      "test",
-					Namespace: "kargo-demo",
-					Labels: map[string]string{
-						kargoapi.ShardLabelKey: "another-shard",
-					},
-				},
-			},
-			freight: testFreight,
-			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
-				parts := strings.Split(promo.Name, ".")
-				require.Equal(t, "test", parts[0])
-				require.Equal(t, testFreight[0:7], parts[2])
-				require.Equal(t, "another-shard", promo.Labels[kargoapi.ShardLabelKey])
-			},
-		},
-		{
 			name: "Promote stage with very long name",
 			stage: kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -86,7 +66,6 @@ func TestNewPromotion(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			promo := NewPromotion(tc.stage, tc.freight)
-			require.True(t, metav1.IsControlledBy(&promo, &tc.stage))
 			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.Equal(t, tc.stage.Name, promo.Spec.Stage)
 			require.Equal(t, tc.freight, promo.Spec.Freight)

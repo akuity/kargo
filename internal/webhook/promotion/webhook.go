@@ -110,6 +110,17 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
+
+	// Make sure the Promotion has the same shard as the Stage
+	if stage.Spec.Shard != "" {
+		if promo.Labels == nil {
+			promo.Labels = make(map[string]string, 1)
+		}
+		promo.Labels[kargoapi.ShardLabelKey] = stage.Spec.Shard
+	} else {
+		delete(promo.Labels, kargoapi.ShardLabelKey)
+	}
+
 	ownerRef :=
 		metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
 	promo.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
