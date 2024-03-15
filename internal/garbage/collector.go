@@ -23,9 +23,15 @@ type CollectorConfig struct {
 	// Tuning this too high will result in too many API calls and may result in
 	// throttling.
 	NumWorkers int `envconfig:"NUM_WORKERS" default:"3"`
-	// MaxRetainedPromotions specifies the maximum number of Promotions in
-	// terminal phases per Project that may be spared by the garbage collector.
+	// MaxRetainedPromotions specifies the ideal maximum number of Promotions
+	// OLDER than the oldest in a non-terminal state (associated with each Stage)
+	// that may be spared by the garbage collector. The ACTUAL number of
+	// Promotions spared may exceed this ideal if some Promotions that would
+	// otherwise be deleted do not meet the minimum age criterion.
 	MaxRetainedPromotions int `envconfig:"MAX_RETAINED_PROMOTIONS" default:"20"`
+	// MinPromotionDeletionAge specifies the minimum age Promotions must be before
+	// considered eligible for garbage collection.
+	MinPromotionDeletionAge time.Duration `envconfig:"MIN_PROMOTION_DELETION_AGE" default:"336h"` // 2 weeks
 	// MaxRetainedFreight specifies the ideal maximum number of Freight OLDER than
 	// the oldest still in use (from each Warehouse) that may be spared by the
 	// garbage collector. The ACTUAL number of older Freight spared may exceed
@@ -69,6 +75,12 @@ type collector struct {
 	) error
 
 	cleanProjectPromotionsFn func(context.Context, string) error
+
+	cleanStagePromotionsFn func(
+		ctx context.Context,
+		project string,
+		stage string,
+	) error
 
 	listProjectsFn func(
 		context.Context,
@@ -130,6 +142,7 @@ func NewCollector(kubeClient client.Client, cfg CollectorConfig) Collector {
 	c.cleanProjectsFn = c.cleanProjects
 	c.cleanProjectFn = c.cleanProject
 	c.cleanProjectPromotionsFn = c.cleanProjectPromotions
+	c.cleanStagePromotionsFn = c.cleanStagePromotions
 	c.listProjectsFn = kubeClient.List
 	c.listPromotionsFn = kubeClient.List
 	c.deletePromotionFn = kubeClient.Delete

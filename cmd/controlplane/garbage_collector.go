@@ -63,6 +63,10 @@ func newGarbageCollectorCommand() *cobra.Command {
 				); err != nil {
 					return fmt.Errorf("error initializing controller manager: %w", err)
 				}
+				// Index Promotions by Stage
+				if err = kubeclient.IndexPromotionsByStage(ctx, mgr); err != nil {
+					return fmt.Errorf("error indexing Promotions by Stage: %w", err)
+				}
 				// Index Freight by Warehouse
 				if err = kubeclient.IndexFreightByWarehouse(ctx, mgr); err != nil {
 					return fmt.Errorf("error indexing Freight by Warehouse: %w", err)
