@@ -138,9 +138,9 @@ func (c *collector) cleanWarehouseFreight(
 
 	if deleteErrCount > 0 {
 		return fmt.Errorf(
-			"error deleting one or more Freight from Project %q Warehouse %q",
-			project,
+			"error deleting one or more Freight from Warehouse %q in Project %q",
 			warehouse,
+			project,
 		)
 	}
 

@@ -21,6 +21,7 @@ func TestNewCollector(t *testing.T) {
 	require.NotNil(t, c.cleanProjectsFn)
 	require.NotNil(t, c.cleanProjectFn)
 	require.NotNil(t, c.cleanProjectPromotionsFn)
+	require.NotNil(t, c.cleanStagePromotionsFn)
 	require.NotNil(t, c.listProjectsFn)
 	require.NotNil(t, c.listPromotionsFn)
 	require.NotNil(t, c.deletePromotionFn)

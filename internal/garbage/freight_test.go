@@ -221,7 +221,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"error deleting one or more Freight from Project",
+					"error deleting one or more Freight from Warehouse",
 				)
 			},
 		},
