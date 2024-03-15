@@ -3609,6 +3609,20 @@ export class WarehouseList extends Message<WarehouseList> {
  */
 export class WarehouseSpec extends Message<WarehouseSpec> {
   /**
+   * Shard is the name of the shard that this Warehouse belongs to. This is an
+   * optional field. If not specified, the Warehouse will belong to the default
+   * shard. A defaulting webhook will sync this field with the value of the
+   * kargo.akuity.io/shard label. When the shard label is not present or differs
+   * from the value of this field, the defaulting webhook will set the label to
+   * the value of this field. If the shard label is present and this field is
+   * empty, the defaulting webhook will set the value of this field to the value
+   * of the shard label.
+   *
+   * @generated from field: optional string shard = 2;
+   */
+  shard?: string;
+
+  /**
    * Subscriptions describes sources of artifacts to be included in Freight
    * produced by this Warehouse.
    *
@@ -3626,6 +3640,7 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseSpec";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 2, name: "shard", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "subscriptions", kind: "message", T: RepoSubscription, repeated: true },
   ]);
 

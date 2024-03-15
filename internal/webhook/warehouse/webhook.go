@@ -47,6 +47,7 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 	w := newWebhook(mgr.GetClient())
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
+		WithDefaulter(w).
 		WithValidator(w).
 		Complete()
 }
@@ -59,6 +60,22 @@ func newWebhook(kubeClient client.Client) *webhook {
 	w.validateCreateOrUpdateFn = w.validateCreateOrUpdate
 	w.validateSpecFn = w.validateSpec
 	return w
+}
+
+func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
+	warehouse := obj.(*kargoapi.Warehouse) // nolint: forcetypeassert
+
+	// Sync the convenience shard field with the shard label
+	if warehouse.Spec.Shard != "" {
+		if warehouse.Labels == nil {
+			warehouse.Labels = make(map[string]string, 1)
+		}
+		warehouse.Labels[kargoapi.ShardLabelKey] = warehouse.Spec.Shard
+	} else if warehouse.Labels[kargoapi.ShardLabelKey] != "" {
+		warehouse.Spec.Shard = warehouse.Labels[kargoapi.ShardLabelKey]
+	}
+
+	return nil
 }
 
 func (w *webhook) ValidateCreate(

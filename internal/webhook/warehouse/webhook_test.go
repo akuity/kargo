@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +23,51 @@ func TestNewWebhook(t *testing.T) {
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.validateCreateOrUpdateFn)
 	require.NotNil(t, w.validateSpecFn)
+}
+
+func TestDefault(t *testing.T) {
+	const testShardName = "fake-shard"
+
+	w := &webhook{}
+
+	t.Run("shard stays default when not specified at all", func(t *testing.T) {
+		warehouse := &kargoapi.Warehouse{
+			Spec: &kargoapi.WarehouseSpec{},
+		}
+		err := w.Default(context.Background(), warehouse)
+		require.NoError(t, err)
+		require.Empty(t, warehouse.Labels)
+		require.Empty(t, warehouse.Spec.Shard)
+	})
+
+	t.Run("sync shard label to shard field", func(t *testing.T) {
+		warehouse := &kargoapi.Warehouse{
+			Spec: &kargoapi.WarehouseSpec{
+				Shard: testShardName,
+			},
+		}
+		err := w.Default(context.Background(), warehouse)
+		require.NoError(t, err)
+		require.Equal(t, testShardName, warehouse.Labels[kargoapi.ShardLabelKey])
+		require.Equal(t, testShardName, warehouse.Spec.Shard)
+	})
+
+	t.Run("sync shard field to shard label", func(t *testing.T) {
+		warehouse := &kargoapi.Warehouse{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					kargoapi.ShardLabelKey: testShardName,
+				},
+			},
+			Spec: &kargoapi.WarehouseSpec{
+				Shard: testShardName,
+			},
+		}
+		err := w.Default(context.Background(), warehouse)
+		require.NoError(t, err)
+		require.Equal(t, testShardName, warehouse.Labels[kargoapi.ShardLabelKey])
+		require.Equal(t, testShardName, warehouse.Spec.Shard)
+	})
 }
 
 func TestValidateCreate(t *testing.T) {
