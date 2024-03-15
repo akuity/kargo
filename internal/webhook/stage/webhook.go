@@ -69,7 +69,7 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 			stage.Labels = make(map[string]string, 1)
 		}
 		stage.Labels[kargoapi.ShardLabelKey] = stage.Spec.Shard
-	} else if stage.Labels != nil && stage.Labels[kargoapi.ShardLabelKey] != "" {
+	} else if stage.Labels[kargoapi.ShardLabelKey] != "" {
 		stage.Spec.Shard = stage.Labels[kargoapi.ShardLabelKey]
 	}
 
