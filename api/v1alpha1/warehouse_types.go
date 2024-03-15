@@ -52,7 +52,7 @@ type WarehouseSpec struct {
 	// the value of this field. If the shard label is present and this field is
 	// empty, the defaulting webhook will set the value of this field to the value
 	// of the shard label.
-	Shard string `json:"shard,omitempty"`
+	Shard string `json:"shard,omitempty" protobuf:"bytes,2,opt,name=shard"`
 	// Subscriptions describes sources of artifacts to be included in Freight
 	// produced by this Warehouse.
 	//
