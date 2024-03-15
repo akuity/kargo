@@ -19,12 +19,12 @@ func TestGetAnalysisTemplate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*AnalysisTemplate, error)
+		assertions func(*testing.T, *AnalysisTemplate, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(template *AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, template *AnalysisTemplate, err error) {
 				require.NoError(t, err)
 				require.Nil(t, template)
 			},
@@ -40,7 +40,7 @@ func TestGetAnalysisTemplate(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(template *AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, template *AnalysisTemplate, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-template", template.Name)
 				require.Equal(t, "fake-namespace", template.Namespace)
@@ -58,7 +58,7 @@ func TestGetAnalysisTemplate(t *testing.T) {
 					Name:      "fake-template",
 				},
 			)
-			testCase.assertions(template, err)
+			testCase.assertions(t, template, err)
 		})
 	}
 }
@@ -70,12 +70,12 @@ func TestGetAnalysisRun(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*AnalysisRun, error)
+		assertions func(*testing.T, *AnalysisRun, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(run *AnalysisRun, err error) {
+			assertions: func(t *testing.T, run *AnalysisRun, err error) {
 				require.NoError(t, err)
 				require.Nil(t, run)
 			},
@@ -91,7 +91,7 @@ func TestGetAnalysisRun(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(run *AnalysisRun, err error) {
+			assertions: func(t *testing.T, run *AnalysisRun, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-run", run.Name)
 				require.Equal(t, "fake-namespace", run.Namespace)
@@ -109,7 +109,7 @@ func TestGetAnalysisRun(t *testing.T) {
 					Name:      "fake-run",
 				},
 			)
-			testCase.assertions(run, err)
+			testCase.assertions(t, run, err)
 		})
 	}
 }

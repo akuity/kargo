@@ -87,7 +87,7 @@ func TestValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating project",
@@ -101,7 +101,7 @@ func TestValidateCreate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -123,7 +123,7 @@ func TestValidateCreate(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -145,7 +145,7 @@ func TestValidateCreate(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -156,7 +156,7 @@ func TestValidateCreate(t *testing.T) {
 				context.Background(),
 				&kargoapi.Stage{},
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -165,7 +165,7 @@ func TestValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating stage",
@@ -176,7 +176,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -190,7 +190,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -202,7 +202,7 @@ func TestValidateUpdate(t *testing.T) {
 				nil,
 				&kargoapi.Stage{},
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -217,7 +217,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating spec",
@@ -229,7 +229,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 					return field.ErrorList{{}}
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 			},
 		},
@@ -243,7 +243,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -251,7 +251,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := testCase.webhook.validateCreateOrUpdate(&kargoapi.Stage{})
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -260,11 +260,11 @@ func TestValidateSpec(t *testing.T) {
 	testCases := []struct {
 		name       string
 		spec       *kargoapi.StageSpec
-		assertions func(*kargoapi.StageSpec, field.ErrorList)
+		assertions func(*testing.T, *kargoapi.StageSpec, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *kargoapi.StageSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.StageSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -282,7 +282,7 @@ func TestValidateSpec(t *testing.T) {
 				// Doesn't actually define any mechanisms...
 				PromotionMechanisms: &kargoapi.PromotionMechanisms{},
 			},
-			assertions: func(spec *kargoapi.StageSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, spec *kargoapi.StageSpec, errs field.ErrorList) {
 				// We really want to see that all underlying errors have been bubbled up
 				// to this level and been aggregated.
 				require.Equal(
@@ -316,7 +316,7 @@ func TestValidateSpec(t *testing.T) {
 				// so for the purposes of this test, leaving those completely undefined
 				// should surface no errors.
 			},
-			assertions: func(_ *kargoapi.StageSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.StageSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -325,6 +325,7 @@ func TestValidateSpec(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.spec,
 				w.validateSpec(
 					field.NewPath("spec"),
@@ -339,11 +340,11 @@ func TestValidateSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
 		subs       *kargoapi.Subscriptions
-		assertions func(*kargoapi.Subscriptions, field.ErrorList)
+		assertions func(*testing.T, *kargoapi.Subscriptions, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *kargoapi.Subscriptions, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.Subscriptions, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -351,7 +352,7 @@ func TestValidateSubs(t *testing.T) {
 		{
 			name: "no subscriptions",
 			subs: &kargoapi.Subscriptions{},
-			assertions: func(subs *kargoapi.Subscriptions, errs field.ErrorList) {
+			assertions: func(t *testing.T, subs *kargoapi.Subscriptions, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -376,7 +377,7 @@ func TestValidateSubs(t *testing.T) {
 					{},
 				},
 			},
-			assertions: func(subs *kargoapi.Subscriptions, errs field.ErrorList) {
+			assertions: func(t *testing.T, subs *kargoapi.Subscriptions, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -398,7 +399,7 @@ func TestValidateSubs(t *testing.T) {
 			subs: &kargoapi.Subscriptions{
 				Warehouse: "test-warehouse",
 			},
-			assertions: func(_ *kargoapi.Subscriptions, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.Subscriptions, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -407,6 +408,7 @@ func TestValidateSubs(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.subs,
 				w.validateSubs(
 					field.NewPath("subscriptions"),
@@ -421,11 +423,11 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMechs *kargoapi.PromotionMechanisms
-		assertions func(*kargoapi.PromotionMechanisms, field.ErrorList)
+		assertions func(*testing.T, *kargoapi.PromotionMechanisms, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *kargoapi.PromotionMechanisms, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.PromotionMechanisms, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -435,6 +437,7 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 			// Does not define any mechanisms
 			promoMechs: &kargoapi.PromotionMechanisms{},
 			assertions: func(
+				t *testing.T,
 				promoMechs *kargoapi.PromotionMechanisms,
 				errs field.ErrorList,
 			) {
@@ -464,7 +467,7 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(_ *kargoapi.PromotionMechanisms, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.PromotionMechanisms, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -473,6 +476,7 @@ func TestValidatePromotionMechanisms(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.promoMechs,
 				w.validatePromotionMechanisms(
 					field.NewPath("promotionMechanisms"),
@@ -487,7 +491,7 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
 		update     kargoapi.GitRepoUpdate
-		assertions func(kargoapi.GitRepoUpdate, field.ErrorList)
+		assertions func(*testing.T, kargoapi.GitRepoUpdate, field.ErrorList)
 	}{
 		{
 			name: "more than one config management tool specified",
@@ -496,7 +500,7 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 				Kustomize: &kargoapi.KustomizePromotionMechanism{},
 				Helm:      &kargoapi.HelmPromotionMechanism{},
 			},
-			assertions: func(update kargoapi.GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(t *testing.T, update kargoapi.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -519,7 +523,7 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 			update: kargoapi.GitRepoUpdate{
 				Kustomize: &kargoapi.KustomizePromotionMechanism{},
 			},
-			assertions: func(_ kargoapi.GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ kargoapi.GitRepoUpdate, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -528,6 +532,7 @@ func TestValidateGitRepoUpdates(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.update,
 				w.validateGitRepoUpdates(
 					field.NewPath("gitRepoUpdates"),
@@ -544,7 +549,7 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		update     kargoapi.GitRepoUpdate
-		assertions func(kargoapi.GitRepoUpdate, field.ErrorList)
+		assertions func(*testing.T, kargoapi.GitRepoUpdate, field.ErrorList)
 	}{
 		{
 			name: "more than one config management tool specified",
@@ -553,7 +558,7 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 				Kustomize: &kargoapi.KustomizePromotionMechanism{},
 				Helm:      &kargoapi.HelmPromotionMechanism{},
 			},
-			assertions: func(update kargoapi.GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(t *testing.T, update kargoapi.GitRepoUpdate, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -576,7 +581,7 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 			update: kargoapi.GitRepoUpdate{
 				Kustomize: &kargoapi.KustomizePromotionMechanism{},
 			},
-			assertions: func(_ kargoapi.GitRepoUpdate, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ kargoapi.GitRepoUpdate, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -585,6 +590,7 @@ func TestValidateGitRepoUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.update,
 				w.validateGitRepoUpdate(
 					field.NewPath("gitRepoUpdate"),
@@ -599,11 +605,11 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 	testCases := []struct {
 		name       string
 		promoMech  *kargoapi.HelmPromotionMechanism
-		assertions func(*kargoapi.HelmPromotionMechanism, field.ErrorList)
+		assertions func(*testing.T, *kargoapi.HelmPromotionMechanism, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *kargoapi.HelmPromotionMechanism, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.HelmPromotionMechanism, errs field.ErrorList) {
 				require.Empty(t, errs)
 			},
 		},
@@ -613,6 +619,7 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 			// Doesn't define any changes
 			promoMech: &kargoapi.HelmPromotionMechanism{},
 			assertions: func(
+				t *testing.T,
 				promoMech *kargoapi.HelmPromotionMechanism,
 				errs field.ErrorList,
 			) {
@@ -639,7 +646,7 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 					{},
 				},
 			},
-			assertions: func(_ *kargoapi.HelmPromotionMechanism, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.HelmPromotionMechanism, errs field.ErrorList) {
 				require.Empty(t, errs)
 			},
 		},
@@ -648,6 +655,7 @@ func TestValidateHelmPromotionMechanism(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.promoMech,
 				w.validateHelmPromotionMechanism(
 					field.NewPath("helm"),

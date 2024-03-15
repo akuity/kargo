@@ -20,13 +20,14 @@ func TestApproveFreight(t *testing.T) {
 		name       string
 		req        *svcv1alpha1.ApproveFreightRequest
 		server     *server
-		assertions func(*connect.Response[svcv1alpha1.ApproveFreightResponse], error)
+		assertions func(*testing.T, *connect.Response[svcv1alpha1.ApproveFreightResponse], error)
 	}{
 		{
 			name:   "input validation error",
 			req:    &svcv1alpha1.ApproveFreightRequest{},
 			server: &server{},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -44,11 +45,12 @@ func TestApproveFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectExistsFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return errors.New("something went wrong")
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -64,7 +66,7 @@ func TestApproveFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectExistsFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -78,6 +80,7 @@ func TestApproveFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -93,7 +96,7 @@ func TestApproveFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectExistsFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -107,6 +110,7 @@ func TestApproveFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -126,7 +130,7 @@ func TestApproveFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectExistsFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -147,6 +151,7 @@ func TestApproveFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -162,7 +167,7 @@ func TestApproveFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectExistsFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -183,6 +188,7 @@ func TestApproveFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -202,7 +208,7 @@ func TestApproveFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectExistsFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -232,6 +238,7 @@ func TestApproveFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -247,7 +254,7 @@ func TestApproveFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectExistsFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -284,6 +291,7 @@ func TestApproveFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -299,7 +307,7 @@ func TestApproveFreight(t *testing.T) {
 				Stage:   "fake-stage",
 			},
 			server: &server{
-				validateProjectExistsFn: func(ctx context.Context, project string) error {
+				validateProjectExistsFn: func(context.Context, string) error {
 					return nil
 				},
 				getFreightByNameOrAliasFn: func(
@@ -336,6 +344,7 @@ func TestApproveFreight(t *testing.T) {
 				},
 			},
 			assertions: func(
+				t *testing.T,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -349,7 +358,7 @@ func TestApproveFreight(t *testing.T) {
 				context.Background(),
 				connect.NewRequest(testCase.req),
 			)
-			testCase.assertions(resp, err)
+			testCase.assertions(t, resp, err)
 		})
 	}
 }

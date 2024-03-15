@@ -49,7 +49,7 @@ kargo create -f stage.yaml
 # Create a project
 kargo create project my-project
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err
 			}

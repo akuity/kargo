@@ -24,12 +24,7 @@ func TestNewGitMechanism(t *testing.T) {
 		func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
 			return nil
 		},
-		func(
-			update kargoapi.GitRepoUpdate,
-			newFreight kargoapi.FreightReference,
-			homeDir string,
-			workingDir string,
-		) ([]string, error) {
+		func(kargoapi.GitRepoUpdate, kargoapi.FreightReference, string, string) ([]string, error) {
 			return nil, nil
 		},
 	)
@@ -55,6 +50,7 @@ func TestGitPromote(t *testing.T) {
 		name       string
 		promoMech  *gitMechanism
 		assertions func(
+			t *testing.T,
 			status *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.FreightReference,
 			newFreightOut kargoapi.FreightReference,
@@ -69,7 +65,8 @@ func TestGitPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -94,7 +91,8 @@ func TestGitPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -120,7 +118,8 @@ func TestGitPromote(t *testing.T) {
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -143,7 +142,7 @@ func TestGitPromote(t *testing.T) {
 				&kargoapi.Promotion{},
 				newFreightIn,
 			)
-			testCase.assertions(status, newFreightIn, newFreightOut, err)
+			testCase.assertions(t, status, newFreightIn, newFreightOut, err)
 		})
 	}
 }
@@ -154,6 +153,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 		name       string
 		promoMech  *gitMechanism
 		assertions func(
+			t *testing.T,
 			status *kargoapi.PromotionStatus,
 			newFreightIn kargoapi.FreightReference,
 			newFreightOut kargoapi.FreightReference,
@@ -171,7 +171,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -199,7 +200,8 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -226,17 +228,18 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					return nil, nil
 				},
 				gitCommitFn: func(
-					update kargoapi.GitRepoUpdate,
-					newFreight kargoapi.FreightReference,
-					readRef string,
-					writeBranch string,
-					repo git.Repo,
+					kargoapi.GitRepoUpdate,
+					kargoapi.FreightReference,
+					string,
+					string,
+					git.Repo,
 				) (string, error) {
 					return "", errors.New("something went wrong")
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -263,17 +266,18 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					return nil, nil
 				},
 				gitCommitFn: func(
-					update kargoapi.GitRepoUpdate,
-					newFreight kargoapi.FreightReference,
-					readRef string,
-					writeBranch string,
-					repo git.Repo,
+					kargoapi.GitRepoUpdate,
+					kargoapi.FreightReference,
+					string,
+					string,
+					git.Repo,
 				) (string, error) {
 					return "fake-commit-id", nil
 				},
 			},
 			assertions: func(
-				status *kargoapi.PromotionStatus,
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
 				newFreightIn kargoapi.FreightReference,
 				newFreightOut kargoapi.FreightReference,
 				err error,
@@ -303,7 +307,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				kargoapi.GitRepoUpdate{RepoURL: "https://github.com/akuity/kargo"},
 				newFreightIn,
 			)
-			testCase.assertions(status, newFreightIn, newFreightOut, err)
+			testCase.assertions(t, status, newFreightIn, newFreightOut, err)
 		})
 	}
 }
@@ -314,7 +318,7 @@ func TestGetReadRef(t *testing.T) {
 		name       string
 		update     kargoapi.GitRepoUpdate
 		commits    []kargoapi.GitCommit
-		assertions func(readBranch string, commitIndex int, err error)
+		assertions func(t *testing.T, readBranch string, commitIndex int, err error)
 	}{
 		{
 			name: "update's RepoURL does not match any subscription",
@@ -322,7 +326,7 @@ func TestGetReadRef(t *testing.T) {
 				RepoURL:    "fake-url",
 				ReadBranch: testBranch,
 			},
-			assertions: func(readBranch string, commitIndex int, err error) {
+			assertions: func(t *testing.T, readBranch string, commitIndex int, err error) {
 				require.NoError(t, err)
 				require.Equal(t, testBranch, readBranch)
 				require.Equal(t, -1, commitIndex)
@@ -340,7 +344,7 @@ func TestGetReadRef(t *testing.T) {
 					Branch:  testBranch,
 				},
 			},
-			assertions: func(_ string, _ int, err error) {
+			assertions: func(t *testing.T, _ string, _ int, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -361,7 +365,7 @@ func TestGetReadRef(t *testing.T) {
 					Branch:  testBranch,
 				},
 			},
-			assertions: func(readBranch string, commitIndex int, err error) {
+			assertions: func(t *testing.T, readBranch string, commitIndex int, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-commit-id", readBranch)
 				require.Equal(t, 0, commitIndex)
@@ -370,9 +374,8 @@ func TestGetReadRef(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				getReadRef(testCase.update, testCase.commits),
-			)
+			readBranch, commitIndex, err := getReadRef(testCase.update, testCase.commits)
+			testCase.assertions(t, readBranch, commitIndex, err)
 		})
 	}
 }
@@ -381,7 +384,7 @@ func TestGetRepoCredentials(t *testing.T) {
 	testCases := []struct {
 		name          string
 		credentialsDB credentials.Database
-		assertions    func(*git.RepoCredentials, error)
+		assertions    func(*testing.T, *git.RepoCredentials, error)
 	}{
 		{
 			name: "error getting credentials from database",
@@ -396,7 +399,7 @@ func TestGetRepoCredentials(t *testing.T) {
 						false, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *git.RepoCredentials, err error) {
+			assertions: func(t *testing.T, _ *git.RepoCredentials, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error obtaining credentials")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -414,7 +417,7 @@ func TestGetRepoCredentials(t *testing.T) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
-			assertions: func(creds *git.RepoCredentials, err error) {
+			assertions: func(t *testing.T, creds *git.RepoCredentials, err error) {
 				require.NoError(t, err)
 				require.Nil(t, creds)
 			},
@@ -434,7 +437,7 @@ func TestGetRepoCredentials(t *testing.T) {
 					}, true, nil
 				},
 			},
-			assertions: func(creds *git.RepoCredentials, err error) {
+			assertions: func(t *testing.T, creds *git.RepoCredentials, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -449,13 +452,12 @@ func TestGetRepoCredentials(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				getRepoCredentialsFn(testCase.credentialsDB)(
-					context.Background(),
-					"fake-namespace",
-					"fake-repo-url",
-				),
+			creds, err := getRepoCredentialsFn(testCase.credentialsDB)(
+				context.Background(),
+				"fake-namespace",
+				"fake-repo-url",
 			)
+			testCase.assertions(t, creds, err)
 		})
 	}
 }
@@ -520,14 +522,14 @@ func TestBuildCommitMessage(t *testing.T) {
 	testCases := []struct {
 		name          string
 		changeSummary []string
-		assertions    func(msg string)
+		assertions    func(t *testing.T, msg string)
 	}{
 		{
 			// This shouldn't really happen, but we're careful to handle it anyway,
 			// so we might as well test it.
 			name:          "nil change summary",
 			changeSummary: nil,
-			assertions: func(msg string) {
+			assertions: func(t *testing.T, msg string) {
 				require.Equal(t, "Kargo applied some changes", msg)
 			},
 		},
@@ -536,7 +538,7 @@ func TestBuildCommitMessage(t *testing.T) {
 			// so we might as well test it.
 			name:          "empty change summary",
 			changeSummary: []string{},
-			assertions: func(msg string) {
+			assertions: func(t *testing.T, msg string) {
 				require.Equal(t, "Kargo applied some changes", msg)
 			},
 		},
@@ -545,7 +547,7 @@ func TestBuildCommitMessage(t *testing.T) {
 			changeSummary: []string{
 				"fake-change",
 			},
-			assertions: func(msg string) {
+			assertions: func(t *testing.T, msg string) {
 				require.Equal(t, "fake-change", msg)
 			},
 		},
@@ -555,7 +557,7 @@ func TestBuildCommitMessage(t *testing.T) {
 				"fake-change",
 				"another-fake-change",
 			},
-			assertions: func(msg string) {
+			assertions: func(t *testing.T, msg string) {
 				require.Equal(
 					t,
 					[]string{
@@ -573,7 +575,7 @@ func TestBuildCommitMessage(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(buildCommitMessage(testCase.changeSummary))
+			testCase.assertions(t, buildCommitMessage(testCase.changeSummary))
 		})
 	}
 }

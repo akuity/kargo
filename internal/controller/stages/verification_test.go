@@ -128,7 +128,7 @@ func TestStartVerification(t *testing.T) {
 				) (*rollouts.AnalysisTemplate, error) {
 					return &rollouts.AnalysisTemplate{}, nil
 				},
-				getFreightFn: func(ctx context.Context, c client.Client, name types.NamespacedName) (*kargoapi.Freight, error) {
+				getFreightFn: func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
 				buildAnalysisRunFn: func(
@@ -461,7 +461,11 @@ func TestStartVerification(t *testing.T) {
 				) (*rollouts.AnalysisTemplate, error) {
 					return &rollouts.AnalysisTemplate{}, nil
 				},
-				getFreightFn: func(ctx context.Context, c client.Client, name types.NamespacedName) (*kargoapi.Freight, error) {
+				getFreightFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ types.NamespacedName,
+				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
 				buildAnalysisRunFn: func(

@@ -18,13 +18,13 @@ func TestValidateFieldNotEmpty(t *testing.T) {
 		name       string
 		fieldName  string
 		fieldValue string
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name:       "field is empty",
 			fieldName:  "project",
 			fieldValue: "",
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -36,7 +36,7 @@ func TestValidateFieldNotEmpty(t *testing.T) {
 			name:       "field is not empty",
 			fieldName:  "project",
 			fieldValue: "fake-project",
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -44,6 +44,7 @@ func TestValidateFieldNotEmpty(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				validateFieldNotEmpty(testCase.fieldName, testCase.fieldValue),
 			)
 		})
@@ -54,7 +55,7 @@ func TestValidateProjectExists(t *testing.T) {
 	testCases := []struct {
 		name       string
 		server     *server
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "project not found",
@@ -67,7 +68,7 @@ func TestValidateProjectExists(t *testing.T) {
 					return validation.ErrProjectNotFound
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -85,7 +86,7 @@ func TestValidateProjectExists(t *testing.T) {
 					return &field.Error{}
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -103,7 +104,7 @@ func TestValidateProjectExists(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 			},
 		},
@@ -118,7 +119,7 @@ func TestValidateProjectExists(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -126,6 +127,7 @@ func TestValidateProjectExists(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.server.validateProjectExists(context.Background(), "fake-project"),
 			)
 		})
@@ -138,13 +140,13 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 		group      string
 		groupBy    string
 		orderBy    string
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name:    "group is not empty but group by is empty",
 			group:   "fake-group",
 			groupBy: "",
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -159,7 +161,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 		{
 			name:    "invalid group by",
 			groupBy: "bogus-group-by",
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -171,7 +173,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			name:    "invalid ordering by tag",
 			groupBy: GroupByGitRepository,
 			orderBy: OrderByTag,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -186,7 +188,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 		{
 			name:    "invalid order by",
 			orderBy: "bogus-order-by",
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
@@ -198,7 +200,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 			name:    "valid group by and order by",
 			groupBy: GroupByGitRepository,
 			orderBy: OrderByFirstSeen,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -206,6 +208,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				validateGroupByOrderBy(
 					testCase.group,
 					testCase.groupBy,

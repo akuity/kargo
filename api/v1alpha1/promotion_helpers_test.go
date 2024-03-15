@@ -19,12 +19,12 @@ func TestGetPromotion(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*Promotion, error)
+		assertions func(*testing.T, *Promotion, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(promo *Promotion, err error) {
+			assertions: func(t *testing.T, promo *Promotion, err error) {
 				require.NoError(t, err)
 				require.Nil(t, promo)
 			},
@@ -40,7 +40,7 @@ func TestGetPromotion(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(promo *Promotion, err error) {
+			assertions: func(t *testing.T, promo *Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-promotion", promo.Name)
 				require.Equal(t, "fake-namespace", promo.Namespace)
@@ -58,7 +58,7 @@ func TestGetPromotion(t *testing.T) {
 					Name:      "fake-promotion",
 				},
 			)
-			testCase.assertions(promo, err)
+			testCase.assertions(t, promo, err)
 		})
 	}
 }

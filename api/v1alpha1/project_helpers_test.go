@@ -18,12 +18,12 @@ func TestGetProject(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*Project, error)
+		assertions func(*testing.T, *Project, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(project *Project, err error) {
+			assertions: func(t *testing.T, project *Project, err error) {
 				require.NoError(t, err)
 				require.Nil(t, project)
 			},
@@ -38,7 +38,7 @@ func TestGetProject(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(project *Project, err error) {
+			assertions: func(t *testing.T, project *Project, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-project", project.Name)
 			},
@@ -52,7 +52,7 @@ func TestGetProject(t *testing.T) {
 				testCase.client,
 				"fake-project",
 			)
-			testCase.assertions(project, err)
+			testCase.assertions(t, project, err)
 		})
 	}
 }

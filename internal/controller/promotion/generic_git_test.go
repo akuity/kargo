@@ -21,11 +21,11 @@ func TestSelectGenericGitUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
 		updates    []kargoapi.GitRepoUpdate
-		assertions func(selectedUpdates []kargoapi.GitRepoUpdate)
+		assertions func(*testing.T, []kargoapi.GitRepoUpdate)
 	}{
 		{
 			name: "no updates",
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -37,7 +37,7 @@ func TestSelectGenericGitUpdates(t *testing.T) {
 					Kustomize: &kargoapi.KustomizePromotionMechanism{},
 				},
 			},
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -56,14 +56,14 @@ func TestSelectGenericGitUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Len(t, selectedUpdates, 1)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(selectGenericGitUpdates(testCase.updates))
+			testCase.assertions(t, selectGenericGitUpdates(testCase.updates))
 		})
 	}
 }

@@ -42,13 +42,13 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 		name       string
 		repoURL    string
 		chart      string
-		assertions func(versions []string, err error)
+		assertions func(t *testing.T, versions []string, err error)
 	}{
 		{
 			name:    "request for repo index returns non-200 status",
 			repoURL: fmt.Sprintf("%s/non-existent-repo", testServer.URL),
 			chart:   "fake-chart",
-			assertions: func(versions []string, err error) {
+			assertions: func(t *testing.T, _ []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "received unexpected HTTP 404")
 			},
@@ -57,7 +57,7 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 			name:    "index isn't valid YAML",
 			repoURL: fmt.Sprintf("%s/bad-repo", testServer.URL),
 			chart:   "fake-chart",
-			assertions: func(versions []string, err error) {
+			assertions: func(t *testing.T, _ []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error unmarshaling repository index")
 			},
@@ -66,7 +66,7 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 			name:    "no versions found",
 			repoURL: fmt.Sprintf("%s/fake-repo", testServer.URL),
 			chart:   "non-existent-chart",
-			assertions: func(versions []string, err error) {
+			assertions: func(t *testing.T, _ []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "no versions of chart")
 				require.Contains(t, err.Error(), "found in repository index")
@@ -76,7 +76,7 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 			name:    "success",
 			repoURL: fmt.Sprintf("%s/fake-repo", testServer.URL),
 			chart:   "fake-chart",
-			assertions: func(versions []string, err error) {
+			assertions: func(t *testing.T, versions []string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, []string{"1.0.0", "1.1.0", "1.2.0"}, versions)
 			},
@@ -84,13 +84,12 @@ func TestGetChartVersionsFromClassicRepo(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				getChartVersionsFromClassicRepo(
-					testCase.repoURL,
-					testCase.chart,
-					nil,
-				),
+			versions, err := getChartVersionsFromClassicRepo(
+				testCase.repoURL,
+				testCase.chart,
+				nil,
 			)
+			testCase.assertions(t, versions, err)
 		})
 	}
 }
@@ -112,12 +111,12 @@ func TestGetLatestVersion(t *testing.T) {
 		name       string
 		unsorted   []string
 		constraint string
-		assertions func(latest string, err error)
+		assertions func(t *testing.T, latest string, err error)
 	}{
 		{
 			name:     "error parsing versions",
 			unsorted: []string{"not-semantic"},
-			assertions: func(_ string, err error) {
+			assertions: func(t *testing.T, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing version")
 			},
@@ -126,7 +125,7 @@ func TestGetLatestVersion(t *testing.T) {
 			name:       "error parsing constraint",
 			unsorted:   []string{"1.0.0"},
 			constraint: "invalid",
-			assertions: func(_ string, err error) {
+			assertions: func(t *testing.T, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing constraint")
 			},
@@ -135,7 +134,7 @@ func TestGetLatestVersion(t *testing.T) {
 			name:       "success with constraint",
 			unsorted:   []string{"2.0.0", "1.0.0", "1.1.0"},
 			constraint: "^1.0.0",
-			assertions: func(latest string, err error) {
+			assertions: func(t *testing.T, latest string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "1.1.0", latest)
 			},
@@ -143,7 +142,7 @@ func TestGetLatestVersion(t *testing.T) {
 		{
 			name:     "success with no constraint",
 			unsorted: []string{"2.0.0", "1.0.0", "1.1.0"},
-			assertions: func(latest string, err error) {
+			assertions: func(t *testing.T, latest string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "2.0.0", latest)
 			},
@@ -152,7 +151,7 @@ func TestGetLatestVersion(t *testing.T) {
 			name:       "success with no constraint",
 			unsorted:   []string{"2.0.0", "1.0.0", "1.1.0"},
 			constraint: "^3.0.0",
-			assertions: func(latest string, err error) {
+			assertions: func(t *testing.T, latest string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "", latest)
 			},
@@ -160,9 +159,8 @@ func TestGetLatestVersion(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				getLatestVersion(testCase.unsorted, testCase.constraint),
-			)
+			latest, err := getLatestVersion(testCase.unsorted, testCase.constraint)
+			testCase.assertions(t, latest, err)
 		})
 	}
 }

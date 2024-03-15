@@ -19,12 +19,12 @@ func TestGetWarehouse(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*Warehouse, error)
+		assertions func(*testing.T, *Warehouse, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(warehouse *Warehouse, err error) {
+			assertions: func(t *testing.T, warehouse *Warehouse, err error) {
 				require.NoError(t, err)
 				require.Nil(t, warehouse)
 			},
@@ -40,7 +40,7 @@ func TestGetWarehouse(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(warehouse *Warehouse, err error) {
+			assertions: func(t *testing.T, warehouse *Warehouse, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-warehouse", warehouse.Name)
 				require.Equal(t, "fake-namespace", warehouse.Namespace)
@@ -58,7 +58,7 @@ func TestGetWarehouse(t *testing.T) {
 					Name:      "fake-warehouse",
 				},
 			)
-			testCase.assertions(warehouse, err)
+			testCase.assertions(t, warehouse, err)
 		})
 	}
 }

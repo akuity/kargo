@@ -28,7 +28,7 @@ func TestValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating project",
@@ -42,7 +42,7 @@ func TestValidateCreate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -64,7 +64,7 @@ func TestValidateCreate(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -86,7 +86,7 @@ func TestValidateCreate(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -97,7 +97,7 @@ func TestValidateCreate(t *testing.T) {
 				context.Background(),
 				&kargoapi.Warehouse{},
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -106,7 +106,7 @@ func TestValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating warehouse",
@@ -117,7 +117,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -131,7 +131,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -143,7 +143,7 @@ func TestValidateUpdate(t *testing.T) {
 				nil,
 				&kargoapi.Warehouse{},
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -158,7 +158,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating spec",
@@ -170,7 +170,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 					return field.ErrorList{{}}
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 			},
 		},
@@ -184,7 +184,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -192,7 +192,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := testCase.webhook.validateCreateOrUpdate(&kargoapi.Warehouse{})
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -201,11 +201,11 @@ func TestValidateSpec(t *testing.T) {
 	testCases := []struct {
 		name       string
 		spec       *kargoapi.WarehouseSpec
-		assertions func(*kargoapi.WarehouseSpec, field.ErrorList)
+		assertions func(*testing.T, *kargoapi.WarehouseSpec, field.ErrorList)
 	}{
 		{
 			name: "nil",
-			assertions: func(_ *kargoapi.WarehouseSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.WarehouseSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -232,7 +232,7 @@ func TestValidateSpec(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(spec *kargoapi.WarehouseSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, spec *kargoapi.WarehouseSpec, errs field.ErrorList) {
 				// We really want to see that all underlying errors have been bubbled up
 				// to this level and been aggregated.
 				require.Equal(
@@ -279,7 +279,7 @@ func TestValidateSpec(t *testing.T) {
 				// this test, leaving that completely undefined should surface no
 				// errors.
 			},
-			assertions: func(_ *kargoapi.WarehouseSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ *kargoapi.WarehouseSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -288,6 +288,7 @@ func TestValidateSpec(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.spec,
 				w.validateSpec(
 					field.NewPath("spec"),
@@ -302,11 +303,11 @@ func TestValidateSubs(t *testing.T) {
 	testCases := []struct {
 		name       string
 		subs       []kargoapi.RepoSubscription
-		assertions func([]kargoapi.RepoSubscription, field.ErrorList)
+		assertions func(*testing.T, []kargoapi.RepoSubscription, field.ErrorList)
 	}{
 		{
 			name: "empty",
-			assertions: func(_ []kargoapi.RepoSubscription, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ []kargoapi.RepoSubscription, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -331,7 +332,7 @@ func TestValidateSubs(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(subs []kargoapi.RepoSubscription, errs field.ErrorList) {
+			assertions: func(t *testing.T, subs []kargoapi.RepoSubscription, errs field.ErrorList) {
 				require.Len(t, errs, 5)
 				require.Equal(
 					t,
@@ -374,7 +375,7 @@ func TestValidateSubs(t *testing.T) {
 			subs: []kargoapi.RepoSubscription{
 				{Image: &kargoapi.ImageSubscription{}},
 			},
-			assertions: func(_ []kargoapi.RepoSubscription, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ []kargoapi.RepoSubscription, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -383,6 +384,7 @@ func TestValidateSubs(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.subs,
 				w.validateSubs(field.NewPath("subs"), testCase.subs),
 			)
@@ -395,7 +397,7 @@ func TestValidateSub(t *testing.T) {
 		name       string
 		sub        kargoapi.RepoSubscription
 		seen       uniqueSubSet
-		assertions func(kargoapi.RepoSubscription, field.ErrorList)
+		assertions func(*testing.T, kargoapi.RepoSubscription, field.ErrorList)
 	}{
 		{
 			name: "invalid subscription",
@@ -417,7 +419,7 @@ func TestValidateSub(t *testing.T) {
 					id:   "bogus",
 				}: field.NewPath("spec.subscriptions[0].git"),
 			},
-			assertions: func(sub kargoapi.RepoSubscription, errs field.ErrorList) {
+			assertions: func(t *testing.T, sub kargoapi.RepoSubscription, errs field.ErrorList) {
 				require.Len(t, errs, 5)
 				require.Equal(
 					t,
@@ -460,7 +462,7 @@ func TestValidateSub(t *testing.T) {
 				Image: &kargoapi.ImageSubscription{},
 			},
 			seen: uniqueSubSet{},
-			assertions: func(_ kargoapi.RepoSubscription, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ kargoapi.RepoSubscription, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -469,6 +471,7 @@ func TestValidateSub(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.sub,
 				w.validateSub(field.NewPath("sub"), testCase.sub, testCase.seen),
 			)
@@ -481,7 +484,7 @@ func TestValidateGitSub(t *testing.T) {
 		name       string
 		sub        kargoapi.GitSubscription
 		seen       uniqueSubSet
-		assertions func(field.ErrorList)
+		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
 			name: "invalid",
@@ -495,7 +498,7 @@ func TestValidateGitSub(t *testing.T) {
 					id:   "bogus",
 				}: field.NewPath("spec.subscriptions[0].git"),
 			},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -519,7 +522,7 @@ func TestValidateGitSub(t *testing.T) {
 		{
 			name: "valid",
 			seen: uniqueSubSet{},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -528,6 +531,7 @@ func TestValidateGitSub(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				w.validateGitSub(
 					field.NewPath("git"),
 					testCase.sub,
@@ -543,7 +547,7 @@ func TestValidateImageSub(t *testing.T) {
 		name       string
 		sub        kargoapi.ImageSubscription
 		seen       uniqueSubSet
-		assertions func(field.ErrorList)
+		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
 			name: "invalid",
@@ -558,7 +562,7 @@ func TestValidateImageSub(t *testing.T) {
 					id:   "bogus",
 				}: field.NewPath("spec.subscriptions[0].image"),
 			},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -587,7 +591,7 @@ func TestValidateImageSub(t *testing.T) {
 		{
 			name: "valid",
 			seen: uniqueSubSet{},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -596,6 +600,7 @@ func TestValidateImageSub(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				w.validateImageSub(
 					field.NewPath("image"),
 					testCase.sub,
@@ -611,7 +616,7 @@ func TestValidateChartSub(t *testing.T) {
 		name       string
 		sub        kargoapi.ChartSubscription
 		seen       uniqueSubSet
-		assertions func(field.ErrorList)
+		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
 			name: "invalid semverConstraint and oci repoURL with name",
@@ -621,7 +626,7 @@ func TestValidateChartSub(t *testing.T) {
 				SemverConstraint: "bogus",
 			},
 			seen: uniqueSubSet{},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -648,7 +653,7 @@ func TestValidateChartSub(t *testing.T) {
 				RepoURL: "https://fake-url",
 			},
 			seen: uniqueSubSet{},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -676,7 +681,7 @@ func TestValidateChartSub(t *testing.T) {
 					id:   "https://fake-url:bogus",
 				}: field.NewPath("spec.subscriptions[0].chart"),
 			},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -703,7 +708,7 @@ func TestValidateChartSub(t *testing.T) {
 					id:   "fake-url",
 				}: field.NewPath("spec.subscriptions[0].chart"),
 			},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -723,7 +728,7 @@ func TestValidateChartSub(t *testing.T) {
 			name: "valid",
 			sub:  kargoapi.ChartSubscription{},
 			seen: uniqueSubSet{},
-			assertions: func(errs field.ErrorList) {
+			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -732,6 +737,7 @@ func TestValidateChartSub(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				w.validateChartSub(
 					field.NewPath("chart"),
 					testCase.sub,
@@ -746,11 +752,11 @@ func TestValidateSemverConstraint(t *testing.T) {
 	testCases := []struct {
 		name             string
 		semverConstraint string
-		assertions       func(error)
+		assertions       func(*testing.T, error)
 	}{
 		{
 			name: "empty string",
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Nil(t, err)
 			},
 		},
@@ -758,7 +764,7 @@ func TestValidateSemverConstraint(t *testing.T) {
 		{
 			name:             "invalid",
 			semverConstraint: "bogus",
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NotNil(t, err)
 				require.Equal(
 					t,
@@ -775,7 +781,7 @@ func TestValidateSemverConstraint(t *testing.T) {
 		{
 			name:             "valid",
 			semverConstraint: "^1.0.0",
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Nil(t, err)
 			},
 		},
@@ -783,6 +789,7 @@ func TestValidateSemverConstraint(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				validateSemverConstraint(
 					field.NewPath("semverConstraint"),
 					testCase.semverConstraint,

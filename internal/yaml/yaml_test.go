@@ -297,7 +297,7 @@ func TestSetStringsInBytes(t *testing.T) {
 		name       string
 		inBytes    []byte
 		changes    map[string]string
-		assertions func([]byte, error)
+		assertions func(*testing.T, []byte, error)
 	}{
 		{
 			name: "invalid YAML",
@@ -307,7 +307,7 @@ characters:
 - name: Anakin
 	affiliation: Light side
 `),
-			assertions: func(bytes []byte, err error) {
+			assertions: func(t *testing.T, bytes []byte, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error unmarshaling input")
 				require.Nil(t, bytes)
@@ -323,7 +323,7 @@ characters:
 			changes: map[string]string{
 				"characters.0.affiliation": "Dark side",
 			},
-			assertions: func(bytes []byte, err error) {
+			assertions: func(t *testing.T, bytes []byte, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -339,9 +339,8 @@ characters:
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				SetStringsInBytes(testCase.inBytes, testCase.changes),
-			)
+			b, err := SetStringsInBytes(testCase.inBytes, testCase.changes)
+			testCase.assertions(t, b, err)
 		})
 	}
 }
@@ -355,12 +354,12 @@ characters:
 	testCases := []struct {
 		name       string
 		keyPath    string
-		assertions func(found bool, line, col int)
+		assertions func(t *testing.T, found bool, line, col int)
 	}{
 		{
 			name:    "node not found",
 			keyPath: "characters.imperials",
-			assertions: func(found bool, line, col int) {
+			assertions: func(t *testing.T, found bool, line, col int) {
 				require.False(t, found)
 				require.Zero(t, line)
 				require.Zero(t, col)
@@ -371,7 +370,7 @@ characters:
 			// Really, this is a special case of a key that doesn't address a node,
 			// because there is alpha input where numeric input would be expected.
 			keyPath: "characters.rebels.first.name",
-			assertions: func(found bool, line, col int) {
+			assertions: func(t *testing.T, found bool, line, col int) {
 				require.False(t, found)
 				require.Zero(t, line)
 				require.Zero(t, col)
@@ -380,7 +379,7 @@ characters:
 		{
 			name:    "node found, but isn't a scalar node",
 			keyPath: "characters.rebels",
-			assertions: func(found bool, line, col int) {
+			assertions: func(t *testing.T, found bool, line, col int) {
 				require.False(t, found)
 				require.Zero(t, line)
 				require.Zero(t, col)
@@ -389,7 +388,7 @@ characters:
 		{
 			name:    "success",
 			keyPath: "characters.rebels.0.name",
-			assertions: func(found bool, line, col int) {
+			assertions: func(t *testing.T, found bool, line, col int) {
 				require.True(t, found)
 				require.Equal(t, 3, line)
 				require.Equal(t, 10, col)
@@ -401,9 +400,8 @@ characters:
 	require.NoError(t, err)
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				findScalarNode(doc, strings.Split(testCase.keyPath, ".")),
-			)
+			found, line, col := findScalarNode(doc, strings.Split(testCase.keyPath, "."))
+			testCase.assertions(t, found, line, col)
 		})
 	}
 }

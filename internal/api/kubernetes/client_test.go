@@ -171,12 +171,12 @@ func TestAllClientOperations(t *testing.T) {
 		name       string
 		op         func(client *client) error
 		allowed    bool
-		assertions func(err error)
+		assertions func(t *testing.T, err error)
 	}{
 		{
 			name: "get unauthorized",
 			op:   getOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -186,7 +186,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "get authorized",
 			op:      getOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "not found")
 			},
@@ -195,7 +195,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "list unauthorized",
 			op:   listOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -205,7 +205,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "list authorized",
 			op:      listOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -213,7 +213,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "create unauthorized",
 			op:   createOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -223,7 +223,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "create authorized",
 			op:      createOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -231,7 +231,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "delete unauthorized",
 			op:   deleteOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -241,7 +241,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "delete authorized",
 			op:      deleteOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "not found")
 			},
@@ -250,7 +250,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "update unauthorized",
 			op:   updateOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -260,7 +260,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "update authorized",
 			op:      updateOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "not found")
 			},
@@ -269,7 +269,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "patch unauthorized",
 			op:   patchOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -279,7 +279,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "patch authorized",
 			op:      patchOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "not found")
 			},
@@ -288,7 +288,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "delete all of unauthorized",
 			op:   deleteAllOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -298,7 +298,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "delete all of authorized",
 			op:      deleteAllOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -306,7 +306,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "update status unauthorized",
 			op:   updateStatusOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -316,7 +316,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "update status authorized",
 			op:      updateStatusOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "not found")
 			},
@@ -325,7 +325,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "patch status unauthorized",
 			op:   patchStatusOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -335,7 +335,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "patch status authorized",
 			op:      patchStatusOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "not found")
 			},
@@ -344,7 +344,7 @@ func TestAllClientOperations(t *testing.T) {
 		{
 			name: "watch unauthorized",
 			op:   watchOp,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -354,7 +354,7 @@ func TestAllClientOperations(t *testing.T) {
 			name:    "watch authorized",
 			op:      watchOp,
 			allowed: true,
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -405,7 +405,7 @@ func TestAllClientOperations(t *testing.T) {
 					return client.internalClient, nil
 				}
 			}
-			testCase.assertions(testCase.op(client))
+			testCase.assertions(t, testCase.op(client))
 		})
 	}
 }
@@ -415,11 +415,11 @@ func TestGetAuthorizedClient(t *testing.T) {
 	testCases := []struct {
 		name     string
 		userInfo *user.Info
-		assert   func(libClient.Client, error)
+		assert   func(*testing.T, libClient.Client, error)
 	}{
 		{
 			name: "no context-bound user.Info",
-			assert: func(_ libClient.Client, err error) {
+			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.Error(t, err)
 				require.Equal(t, "not allowed", err.Error())
 			},
@@ -429,7 +429,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 			userInfo: &user.Info{
 				IsAdmin: true,
 			},
-			assert: func(client libClient.Client, err error) {
+			assert: func(t *testing.T, client libClient.Client, err error) {
 				require.NoError(t, err)
 				require.Same(t, testInternalClient, client)
 			},
@@ -439,7 +439,7 @@ func TestGetAuthorizedClient(t *testing.T) {
 			userInfo: &user.Info{
 				Subject: "test-user",
 			},
-			assert: func(client libClient.Client, err error) {
+			assert: func(t *testing.T, _ libClient.Client, err error) {
 				require.True(t, kubeerr.IsForbidden(err))
 			},
 		},
@@ -448,16 +448,15 @@ func TestGetAuthorizedClient(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			if testCase.userInfo != nil {
 				ctx := user.ContextWithInfo(context.Background(), *testCase.userInfo)
-				testCase.assert(
-					getAuthorizedClient(nil)(
-						ctx,
-						testInternalClient,
-						"", // Verb doesn't matter for these tests
-						schema.GroupVersionResource{},
-						"",                    // Subresource doesn't matter for these tests
-						libClient.ObjectKey{}, // Object key doesn't matter for these tests
-					),
+				client, err := getAuthorizedClient(nil)(
+					ctx,
+					testInternalClient,
+					"", // Verb doesn't matter for these tests
+					schema.GroupVersionResource{},
+					"",                    // Subresource doesn't matter for these tests
+					libClient.ObjectKey{}, // Object key doesn't matter for these tests
 				)
+				testCase.assert(t, client, err)
 			}
 		})
 	}

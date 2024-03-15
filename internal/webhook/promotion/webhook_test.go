@@ -32,7 +32,7 @@ func TestDefault(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(*kargoapi.Promotion, error)
+		assertions func(*testing.T, *kargoapi.Promotion, error)
 	}{
 		{
 			name: "error getting stage",
@@ -45,7 +45,7 @@ func TestDefault(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -61,7 +61,7 @@ func TestDefault(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(_ *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "could not find Stage")
 			},
@@ -77,7 +77,7 @@ func TestDefault(t *testing.T) {
 					return &kargoapi.Stage{}, nil
 				},
 			},
-			assertions: func(promo *kargoapi.Promotion, err error) {
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.NotEmpty(t, promo.OwnerReferences)
 			},
@@ -91,7 +91,7 @@ func TestDefault(t *testing.T) {
 				},
 			}
 			err := testCase.webhook.Default(context.Background(), promo)
-			testCase.assertions(promo, err)
+			testCase.assertions(t, promo, err)
 		})
 	}
 }
@@ -100,7 +100,7 @@ func TestValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating project",
@@ -114,7 +114,7 @@ func TestValidateCreate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -134,7 +134,7 @@ func TestValidateCreate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -154,7 +154,7 @@ func TestValidateCreate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -165,7 +165,7 @@ func TestValidateCreate(t *testing.T) {
 				context.Background(),
 				&kargoapi.Promotion{},
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -179,7 +179,7 @@ func TestValidateUpdate(t *testing.T) {
 			promo *kargoapi.Promotion,
 			action string,
 		) error
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "authorization error",
@@ -189,7 +189,7 @@ func TestValidateUpdate(t *testing.T) {
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -215,7 +215,7 @@ func TestValidateUpdate(t *testing.T) {
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 				return nil
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "\"fake-name\" is invalid")
 				require.Contains(t, err.Error(), "spec is immutable")
@@ -241,7 +241,7 @@ func TestValidateUpdate(t *testing.T) {
 			authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 				return nil
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -253,7 +253,7 @@ func TestValidateUpdate(t *testing.T) {
 			}
 			oldPromo, newPromo := testCase.setup()
 			_, err := w.ValidateUpdate(context.Background(), oldPromo, newPromo)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -262,7 +262,7 @@ func TestValidateDelete(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "authorization error",
@@ -271,7 +271,7 @@ func TestValidateDelete(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -283,7 +283,7 @@ func TestValidateDelete(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -294,7 +294,7 @@ func TestValidateDelete(t *testing.T) {
 				context.Background(),
 				&kargoapi.Promotion{},
 			)
-			testCase.assertions(err)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -310,7 +310,7 @@ func TestAuthorize(t *testing.T) {
 			client.Object,
 			...client.CreateOption,
 		) error
-		assertions func(err error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error getting admission request bound to context",
@@ -319,7 +319,7 @@ func TestAuthorize(t *testing.T) {
 			) (admission.Request, error) {
 				return admission.Request{}, errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -342,7 +342,7 @@ func TestAuthorize(t *testing.T) {
 			) error {
 				return errors.New("something went wrong")
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error creating SubjectAccessReview")
 			},
@@ -362,7 +362,7 @@ func TestAuthorize(t *testing.T) {
 				obj.(*authzv1.SubjectAccessReview).Status.Allowed = false // nolint: forcetypeassert
 				return nil
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "is not permitted")
 			},
@@ -382,7 +382,7 @@ func TestAuthorize(t *testing.T) {
 				obj.(*authzv1.SubjectAccessReview).Status.Allowed = true // nolint: forcetypeassert
 				return nil
 			},
-			assertions: func(err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -394,6 +394,7 @@ func TestAuthorize(t *testing.T) {
 				createSubjectAccessReviewFn:   testCase.createSubjectAccessReviewFn,
 			}
 			testCase.assertions(
+				t,
 				w.authorize(
 					context.Background(),
 					&kargoapi.Promotion{

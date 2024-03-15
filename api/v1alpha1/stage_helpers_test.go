@@ -19,12 +19,12 @@ func TestGetStage(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*Stage, error)
+		assertions func(*testing.T, *Stage, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(stage *Stage, err error) {
+			assertions: func(t *testing.T, stage *Stage, err error) {
 				require.NoError(t, err)
 				require.Nil(t, stage)
 			},
@@ -40,7 +40,7 @@ func TestGetStage(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(stage *Stage, err error) {
+			assertions: func(t *testing.T, stage *Stage, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-stage", stage.Name)
 				require.Equal(t, "fake-namespace", stage.Namespace)
@@ -58,7 +58,7 @@ func TestGetStage(t *testing.T) {
 					Name:      "fake-stage",
 				},
 			)
-			testCase.assertions(stage, err)
+			testCase.assertions(t, stage, err)
 		})
 	}
 }

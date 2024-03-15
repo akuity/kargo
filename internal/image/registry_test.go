@@ -26,12 +26,12 @@ func TestGetRegistry(t *testing.T) {
 	testCases := []struct {
 		name        string
 		imagePrefix string
-		assertions  func(*registry)
+		assertions  func(*testing.T, *registry)
 	}{
 		{
 			name:        "hit",
 			imagePrefix: "", // Docker Hub
-			assertions: func(reg *registry) {
+			assertions: func(t *testing.T, reg *registry) {
 				require.NotNil(t, reg)
 				require.Equal(t, "Docker Hub", reg.name)
 			},
@@ -39,7 +39,7 @@ func TestGetRegistry(t *testing.T) {
 		{
 			name:        "miss",
 			imagePrefix: "fake-prefix",
-			assertions: func(reg *registry) {
+			assertions: func(t *testing.T, reg *registry) {
 				require.NotNil(t, reg)
 				require.Equal(t, "fake-prefix", reg.name)
 				// Check that it was added to the registries map
@@ -50,7 +50,7 @@ func TestGetRegistry(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(getRegistry(testCase.imagePrefix))
+			testCase.assertions(t, getRegistry(testCase.imagePrefix))
 		})
 	}
 }
@@ -60,13 +60,13 @@ func TestNormalizeImageName(t *testing.T) {
 		name       string
 		imageName  string
 		registry   *registry
-		assertions func(string)
+		assertions func(*testing.T, string)
 	}{
 		{
 			name:      "registry has no default namespace",
 			imageName: "fake-image",
 			registry:  &registry{},
-			assertions: func(normalizedName string) {
+			assertions: func(t *testing.T, normalizedName string) {
 				require.Equal(t, "fake-image", normalizedName)
 			},
 		},
@@ -76,7 +76,7 @@ func TestNormalizeImageName(t *testing.T) {
 			registry: &registry{
 				defaultNamespace: "library",
 			},
-			assertions: func(normalizedName string) {
+			assertions: func(t *testing.T, normalizedName string) {
 				require.Equal(t, "fake-namespace/fake-image", normalizedName)
 			},
 		},
@@ -86,7 +86,7 @@ func TestNormalizeImageName(t *testing.T) {
 			registry: &registry{
 				defaultNamespace: "library",
 			},
-			assertions: func(normalizedName string) {
+			assertions: func(t *testing.T, normalizedName string) {
 				require.Equal(t, "library/fake-image", normalizedName)
 			},
 		},
@@ -94,6 +94,7 @@ func TestNormalizeImageName(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
+				t,
 				testCase.registry.normalizeImageName(testCase.imageName),
 			)
 		})

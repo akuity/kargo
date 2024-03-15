@@ -30,7 +30,7 @@ func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(ctrl.Result, error)
+		assertions func(*testing.T, ctrl.Result, error)
 	}{
 		{
 			name: "namespace not not found",
@@ -44,7 +44,7 @@ func TestReconcile(t *testing.T) {
 					return apierrors.NewNotFound(schema.GroupResource{}, "")
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -67,7 +67,7 @@ func TestReconcile(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -86,7 +86,7 @@ func TestReconcile(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -111,7 +111,7 @@ func TestReconcile(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -151,7 +151,7 @@ func TestReconcile(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -184,7 +184,7 @@ func TestReconcile(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error deleting Project")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -219,7 +219,7 @@ func TestReconcile(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error removing finalizer")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -254,7 +254,7 @@ func TestReconcile(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(result ctrl.Result, err error) {
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				require.Equal(
 					t,
@@ -268,9 +268,8 @@ func TestReconcile(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.reconciler.Reconcile(context.Background(), ctrl.Request{}),
-			)
+			res, err := testCase.reconciler.Reconcile(context.Background(), ctrl.Request{})
+			testCase.assertions(t, res, err)
 		})
 	}
 }

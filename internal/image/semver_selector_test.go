@@ -17,12 +17,12 @@ func TestNewSemVerSelector(t *testing.T) {
 	testCases := []struct {
 		name       string
 		constraint string
-		assertions func(s Selector, err error)
+		assertions func(t *testing.T, s Selector, err error)
 	}{
 		{
 			name:       "invalid semver constraint",
 			constraint: "invalid",
-			assertions: func(s Selector, err error) {
+			assertions: func(t *testing.T, _ Selector, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing semver constraint")
 			},
@@ -30,7 +30,7 @@ func TestNewSemVerSelector(t *testing.T) {
 		{
 			name:       "no semver constraint",
 			constraint: "",
-			assertions: func(s Selector, err error) {
+			assertions: func(t *testing.T, s Selector, err error) {
 				require.NoError(t, err)
 				selector, ok := s.(*semVerSelector)
 				require.True(t, ok)
@@ -43,7 +43,7 @@ func TestNewSemVerSelector(t *testing.T) {
 		{
 			name:       "valid semver constraint",
 			constraint: "^1.24",
-			assertions: func(s Selector, err error) {
+			assertions: func(t *testing.T, s Selector, err error) {
 				require.NoError(t, err)
 				selector, ok := s.(*semVerSelector)
 				require.True(t, ok)
@@ -56,15 +56,14 @@ func TestNewSemVerSelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				newSemVerSelector(
-					nil,
-					testAllowRegex,
-					testIgnore,
-					testCase.constraint,
-					testPlatform,
-				),
+			s, err := newSemVerSelector(
+				nil,
+				testAllowRegex,
+				testIgnore,
+				testCase.constraint,
+				testPlatform,
 			)
+			testCase.assertions(t, s, err)
 		})
 	}
 }

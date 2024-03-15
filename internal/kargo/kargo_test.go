@@ -38,7 +38,7 @@ func TestNewPromotion(t *testing.T) {
 				},
 			},
 			freight: testFreight,
-			assertions: func(t *testing.T, stage kargoapi.Stage, promo kargoapi.Promotion) {
+			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, "test", parts[0])
 				require.Equal(t, testFreight[0:7], parts[2])
@@ -57,7 +57,7 @@ func TestNewPromotion(t *testing.T) {
 				},
 			},
 			freight: testFreight,
-			assertions: func(t *testing.T, stage kargoapi.Stage, promo kargoapi.Promotion) {
+			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, "test", parts[0])
 				require.Equal(t, testFreight[0:7], parts[2])
@@ -74,7 +74,7 @@ func TestNewPromotion(t *testing.T) {
 				},
 			},
 			freight: testFreight,
-			assertions: func(t *testing.T, stage kargoapi.Stage, promo kargoapi.Promotion) {
+			assertions: func(t *testing.T, _ kargoapi.Stage, promo kargoapi.Promotion) {
 				require.Len(t, promo.Name, 253)
 				parts := strings.Split(promo.Name, ".")
 				require.Equal(t, veryLongResourceName[0:maxStageNamePrefixLength], parts[0])

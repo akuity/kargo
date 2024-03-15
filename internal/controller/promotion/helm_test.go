@@ -24,11 +24,11 @@ func TestSelectHelmUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
 		updates    []kargoapi.GitRepoUpdate
-		assertions func(selectedUpdates []kargoapi.GitRepoUpdate)
+		assertions func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate)
 	}{
 		{
 			name: "no updates",
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -39,7 +39,7 @@ func TestSelectHelmUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Empty(t, selectedUpdates)
 			},
 		},
@@ -58,14 +58,14 @@ func TestSelectHelmUpdates(t *testing.T) {
 					RepoURL: "fake-url",
 				},
 			},
-			assertions: func(selectedUpdates []kargoapi.GitRepoUpdate) {
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
 				require.Len(t, selectedUpdates, 1)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(selectHelmUpdates(testCase.updates))
+			testCase.assertions(t, selectHelmUpdates(testCase.updates))
 		})
 	}
 }
@@ -79,7 +79,7 @@ func TestHelmerApply(t *testing.T) {
 	testCases := []struct {
 		name       string
 		helmer     *helmer
-		assertions func(changes []string, err error)
+		assertions func(t *testing.T, changes []string, err error)
 	}{
 		{
 			name: "error updating values file",
@@ -98,7 +98,7 @@ func TestHelmerApply(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []string, err error) {
+			assertions: func(t *testing.T, _ []string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error updating values in file")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -124,7 +124,7 @@ func TestHelmerApply(t *testing.T) {
 					return nil, nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []string, err error) {
+			assertions: func(t *testing.T, _ []string, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -161,7 +161,7 @@ func TestHelmerApply(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []string, err error) {
+			assertions: func(t *testing.T, _ []string, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -198,7 +198,7 @@ func TestHelmerApply(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(_ []string, err error) {
+			assertions: func(t *testing.T, _ []string, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -239,7 +239,7 @@ func TestHelmerApply(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(changes []string, err error) {
+			assertions: func(t *testing.T, changes []string, err error) {
 				require.NoError(t, err)
 				require.Len(t, changes, 2)
 			},
@@ -247,16 +247,15 @@ func TestHelmerApply(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				testCase.helmer.apply(
-					kargoapi.GitRepoUpdate{
-						Helm: &kargoapi.HelmPromotionMechanism{},
-					},
-					kargoapi.FreightReference{}, // The way the tests are structured, this value doesn't matter
-					"",
-					"",
-				),
+			changes, err := testCase.helmer.apply(
+				kargoapi.GitRepoUpdate{
+					Helm: &kargoapi.HelmPromotionMechanism{},
+				},
+				kargoapi.FreightReference{}, // The way the tests are structured, this value doesn't matter
+				"",
+				"",
 			)
+			testCase.assertions(t, changes, err)
 		})
 	}
 }
