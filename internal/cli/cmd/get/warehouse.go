@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
@@ -154,4 +157,27 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		return fmt.Errorf("print warehouses: %w", err)
 	}
 	return errors.Join(errs...)
+}
+
+func newWarehouseTable(list *metav1.List) *metav1.Table {
+	rows := make([]metav1.TableRow, len(list.Items))
+	for i, item := range list.Items {
+		warehouse := item.Object.(*kargoapi.Warehouse) // nolint: forcetypeassert
+		rows[i] = metav1.TableRow{
+			Cells: []any{
+				warehouse.Name,
+				warehouse.Spec.Shard,
+				duration.HumanDuration(time.Since(warehouse.CreationTimestamp.Time)),
+			},
+			Object: list.Items[i],
+		}
+	}
+	return &metav1.Table{
+		ColumnDefinitions: []metav1.TableColumnDefinition{
+			{Name: "Name", Type: "string"},
+			{Name: "Shard", Type: "string"},
+			{Name: "Age", Type: "string"},
+		},
+		Rows: rows,
+	}
 }

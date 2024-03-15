@@ -84,6 +84,8 @@ func printObjects[T runtime.Object](
 		printObj = newPromotionTable(list)
 	case *kargoapi.Stage:
 		printObj = newStageTable(list)
+	case *kargoapi.Warehouse:
+		printObj = newWarehouseTable(list)
 	default:
 		printObj = list
 	}
