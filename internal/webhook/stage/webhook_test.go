@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -28,59 +29,101 @@ func TestNewWebhook(t *testing.T) {
 
 func TestDefault(t *testing.T) {
 	const testShardName = "fake-shard"
-
-	w := &webhook{}
-
-	t.Run("shard stays default when not specified at all", func(t *testing.T) {
-		stage := &kargoapi.Stage{
-			Spec: &kargoapi.StageSpec{},
-		}
-		err := w.Default(context.Background(), stage)
-		require.NoError(t, err)
-		require.Empty(t, stage.Labels)
-		require.Empty(t, stage.Spec.Shard)
-	})
-
-	t.Run("sync shard label to shard field", func(t *testing.T) {
-		stage := &kargoapi.Stage{
-			Spec: &kargoapi.StageSpec{
-				Shard: testShardName,
+	testCases := []struct {
+		name       string
+		operation  admissionv1.Operation
+		stage      *kargoapi.Stage
+		assertions func(*testing.T, *kargoapi.Stage, error)
+	}{
+		{
+			name:      "shard stays default when not specified at all",
+			operation: admissionv1.Create,
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{},
 			},
-		}
-		err := w.Default(context.Background(), stage)
-		require.NoError(t, err)
-		require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
-		require.Equal(t, testShardName, stage.Spec.Shard)
-	})
-
-	t.Run("sync shard field to shard label", func(t *testing.T) {
-		stage := &kargoapi.Stage{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{
-					kargoapi.ShardLabelKey: testShardName,
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Empty(t, stage.Labels)
+				require.Empty(t, stage.Spec.Shard)
+			},
+		},
+		{
+			name:      "sync shard label to shard field",
+			operation: admissionv1.Create,
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					Shard: testShardName,
 				},
 			},
-			Spec: &kargoapi.StageSpec{
-				Shard: testShardName,
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
+				require.Equal(t, testShardName, stage.Spec.Shard)
 			},
-		}
-		err := w.Default(context.Background(), stage)
-		require.NoError(t, err)
-		require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
-		require.Equal(t, testShardName, stage.Spec.Shard)
-	})
-
-	t.Run("finalizer gets added", func(t *testing.T) {
-		stage := &kargoapi.Stage{
-			Spec: &kargoapi.StageSpec{},
-		}
-		err := w.Default(context.Background(), stage)
-		require.NoError(t, err)
-		require.True(
-			t,
-			controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName),
-		)
-	})
+		},
+		{
+			name:      "sync shard field to shard label",
+			operation: admissionv1.Create,
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.ShardLabelKey: testShardName,
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
+				require.Equal(t, testShardName, stage.Spec.Shard)
+			},
+		},
+		{
+			name:      "finalizer gets added on create",
+			operation: admissionv1.Create,
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.True(
+					t,
+					controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName),
+				)
+			},
+		},
+		{
+			name:      "finalizer does not get added on update",
+			operation: admissionv1.Update,
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.False(
+					t,
+					controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName),
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := admission.NewContextWithRequest(
+				context.Background(),
+				admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Operation: testCase.operation,
+					},
+				},
+			)
+			testCase.assertions(
+				t,
+				testCase.stage,
+				(&webhook{}).Default(ctx, testCase.stage),
+			)
+		})
+	}
 }
 
 func TestValidateCreate(t *testing.T) {

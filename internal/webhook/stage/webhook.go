@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -11,7 +12,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	admission "sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
@@ -60,7 +61,7 @@ func newWebhook(kubeClient client.Client) *webhook {
 	return w
 }
 
-func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
+func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 
 	// Sync the convenience shard field with the shard label
@@ -73,7 +74,18 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 		stage.Spec.Shard = stage.Labels[kargoapi.ShardLabelKey]
 	}
 
-	controllerutil.AddFinalizer(stage, kargoapi.FinalizerName)
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return apierrors.NewInternalError(
+			fmt.Errorf("error getting admission request from context: %w", err),
+		)
+	}
+
+	// Determine if this is a create or update. We don't want to add a finalizer
+	// during update, because that would make it impossible to remove!
+	if req.Operation == admissionv1.Create {
+		controllerutil.AddFinalizer(stage, kargoapi.FinalizerName)
+	}
 
 	return nil
 }
