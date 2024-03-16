@@ -158,6 +158,8 @@ k8s_resource(
     'kargo-webhooks-server:clusterrole',
     'kargo-webhooks-server:clusterrolebinding',
     'kargo-webhooks-server:configmap',
+    'kargo-webhooks-server-generic-gc:clusterrole',
+    'kargo-webhooks-server-generic-gc:clusterrolebinding',
     'kargo-webhooks-server:serviceaccount',
     'kargo-webhooks-server-ns-controller:clusterrole',
     'kargo-webhooks-server-ns-controller:clusterrolebinding'
