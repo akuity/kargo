@@ -15,6 +15,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.shard
+      name: Shard
+      type: string
     - jsonPath: .status.currentFreight.name
       name: Current Freight
       type: string
