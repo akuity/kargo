@@ -6,7 +6,30 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+func AddFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
+	if controllerutil.AddFinalizer(obj, FinalizerName) {
+		patchBytes := []byte(`{"metadata":{"finalizers":[`)
+		for i, finalizer := range obj.GetFinalizers() {
+			if i > 0 {
+				patchBytes = append(patchBytes, ',')
+			}
+			patchBytes = append(patchBytes, fmt.Sprintf("%q", finalizer)...)
+		}
+		patchBytes = append(patchBytes, "]}}"...)
+		if err := c.Patch(
+			ctx,
+			obj,
+			client.RawPatch(types.MergePatchType, patchBytes),
+		); err != nil {
+			return fmt.Errorf("patch annotation: %w", err)
+		}
+		return nil
+	}
+	return nil
+}
 
 func ClearAnnotations(ctx context.Context, c client.Client, obj client.Object, keys ...string) error {
 	if len(keys) == 0 {
