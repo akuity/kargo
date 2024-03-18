@@ -149,3 +149,52 @@ func TestFreightReferenceStackPush(t *testing.T) {
 		})
 	}
 }
+
+func TestVerificationInfoStack_UpdateOrAppend(t *testing.T) {
+	testCases := []struct {
+		name          string
+		stack         VerificationInfoStack
+		newInfo       []VerificationInfo
+		expectedStack VerificationInfoStack
+	}{
+		{
+			name:          "initial stack is nil",
+			stack:         nil,
+			newInfo:       []VerificationInfo{{ID: "foo"}, {ID: "bar"}},
+			expectedStack: VerificationInfoStack{{ID: "foo"}, {ID: "bar"}},
+		},
+		{
+			name:          "initial stack is not nil",
+			stack:         VerificationInfoStack{{ID: "foo"}},
+			newInfo:       []VerificationInfo{{ID: "bar"}, {ID: "baz"}},
+			expectedStack: VerificationInfoStack{{ID: "bar"}, {ID: "baz"}, {ID: "foo"}},
+		},
+		{
+			name:    "initial stack has matching IDs",
+			stack:   VerificationInfoStack{{ID: "foo"}, {ID: "bar"}},
+			newInfo: []VerificationInfo{{ID: "bar", Phase: VerificationPhaseFailed}, {ID: "baz"}, {ID: "zab"}},
+			expectedStack: VerificationInfoStack{
+				{ID: "baz"},
+				{ID: "zab"},
+				{ID: "foo"},
+				{ID: "bar", Phase: VerificationPhaseFailed},
+			},
+		},
+		{
+			name: "initial stack is full",
+			stack: VerificationInfoStack{
+				{}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+			},
+			newInfo: []VerificationInfo{{ID: "foo"}},
+			expectedStack: VerificationInfoStack{
+				{ID: "foo"}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.stack.UpdateOrAppend(testCase.newInfo...)
+			require.Equal(t, testCase.expectedStack, testCase.stack)
+		})
+	}
+}
