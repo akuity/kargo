@@ -752,6 +752,10 @@ func TestAbortVerification(t *testing.T) {
 				require.Equal(t, "fake-id", vi.ID)
 				require.Equal(t, kargoapi.VerificationPhaseAborted, vi.Phase)
 				require.Equal(t, "Verification aborted by user", vi.Message)
+				require.Equal(t, &kargoapi.AnalysisRunReference{
+					Name:      "fake-run",
+					Namespace: "fake-namespace",
+				}, vi.AnalysisRun)
 			},
 		},
 	}
