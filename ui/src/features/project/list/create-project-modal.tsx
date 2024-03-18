@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { Modal } from 'antd';
+import { Form, Input, Modal, Tabs } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
+import React from 'react';
 import { useForm } from 'react-hook-form';
+import yaml from 'yaml';
 import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
@@ -24,9 +26,9 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
     onSuccess: () => hide()
   });
 
-  const { control, handleSubmit } = useForm({
+  const { control, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
-      value: projectYAMLExample
+      value: yaml.stringify(projectYAMLExample)
     },
     resolver: zodResolver(formSchema)
   });
@@ -38,27 +40,76 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
     });
   });
 
+  const yamlValue = watch('value');
+
+  const name = React.useMemo(() => {
+    try {
+      return yaml.parse(yamlValue).metadata.name;
+    } catch (err) {
+      return '';
+    }
+  }, [yamlValue]);
+
+  const setName: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const data = {
+      ...projectYAMLExample,
+      metadata: {
+        name: e.target.value
+      }
+    };
+
+    setValue('value', yaml.stringify(data));
+  };
+
   return (
     <Modal
       open={visible}
       title='Create Project'
-      width={680}
+      width={640}
       onCancel={hide}
       okText='Create'
       onOk={onSubmit}
       okButtonProps={{ loading: isPending }}
     >
-      <FieldContainer label='YAML' name='value' control={control}>
-        {({ field: { value, onChange } }) => (
-          <YamlEditor
-            value={value}
-            onChange={(e) => onChange(e || '')}
-            height='500px'
-            schema={schema as JSONSchema4}
-            placeholder={projectYAMLExample}
-          />
-        )}
-      </FieldContainer>
+      <Tabs
+        items={[
+          {
+            key: '1',
+            label: 'Form',
+            children: (
+              <>
+                <Form layout='vertical' component='div'>
+                  <Form.Item label='Project name'>
+                    <Input
+                      className='max-w-sm'
+                      value={name}
+                      onChange={setName}
+                      placeholder='kargo-demo'
+                    />
+                  </Form.Item>
+                </Form>
+              </>
+            )
+          },
+          {
+            key: '2',
+            label: 'YAML',
+            children: (
+              <FieldContainer name='value' control={control}>
+                {({ field: { value, onChange } }) => (
+                  <YamlEditor
+                    value={value}
+                    onChange={(e) => onChange(e || '')}
+                    height='500px'
+                    schema={schema as JSONSchema4}
+                    placeholder={yaml.stringify(projectYAMLExample)}
+                  />
+                )}
+              </FieldContainer>
+            )
+          }
+        ]}
+      />
     </Modal>
   );
 };
