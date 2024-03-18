@@ -41,6 +41,7 @@ func (p *PromotionPhase) IsTerminal() bool {
 //+kubebuilder:resource:shortName={promo,promos}
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.metadata.labels.kargo\.akuity\.io/shard`
 //+kubebuilder:printcolumn:name=Stage,type=string,JSONPath=`.spec.stage`
 //+kubebuilder:printcolumn:name=Freight,type=string,JSONPath=`.spec.freight`
 //+kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`

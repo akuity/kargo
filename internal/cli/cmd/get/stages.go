@@ -170,6 +170,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				stage.Name,
+				stage.Spec.Shard,
 				currentFreightID,
 				health,
 				stage.Status.Phase,
@@ -181,6 +182,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 	return &metav1.Table{
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string"},
+			{Name: "Shard", Type: "string"},
 			{Name: "Current Freight", Type: "string"},
 			{Name: "Health", Type: "string"},
 			{Name: "Phase", Type: "string"},

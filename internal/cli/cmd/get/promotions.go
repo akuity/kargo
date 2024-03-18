@@ -172,9 +172,14 @@ func newPromotionTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		promo := item.Object.(*kargoapi.Promotion) // nolint: forcetypeassert
+		var shard string
+		if promo.Labels != nil {
+			shard = promo.Labels[kargoapi.ShardLabelKey]
+		}
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				promo.GetName(),
+				shard,
 				promo.Spec.Stage,
 				promo.Spec.Freight,
 				promo.GetStatus().Phase,
@@ -186,6 +191,7 @@ func newPromotionTable(list *metav1.List) *metav1.Table {
 	return &metav1.Table{
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string"},
+			{Name: "Shard", Type: "string"},
 			{Name: "Stage", Type: "string"},
 			{Name: "Freight", Type: "string"},
 			{Name: "Phase", Type: "string"},

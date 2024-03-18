@@ -18,6 +18,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .metadata.labels.kargo\.akuity\.io/shard
+      name: Shard
+      type: string
     - jsonPath: .spec.stage
       name: Stage
       type: string

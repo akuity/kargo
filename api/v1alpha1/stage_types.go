@@ -114,6 +114,7 @@ const (
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
 //+kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.currentFreight.name`
 //+kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
 //+kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
