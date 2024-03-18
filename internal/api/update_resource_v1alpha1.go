@@ -21,14 +21,18 @@ func (s *server) UpdateResource(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse manifest: %w", err))
 	}
 	resources := append(projects, otherResources...)
-	res := make([]*svcv1alpha1.UpdateResourceResult, 0, len(resources))
+	results := make([]*svcv1alpha1.UpdateResourceResult, 0, len(resources))
 	for _, r := range resources {
 		resource := r // Avoid implicit memory aliasing
-		res = append(res, s.updateResource(ctx, &resource))
+		result, err := s.updateResource(ctx, &resource)
+		if err != nil && len(resources) == 1 {
+			return nil, err
+		}
+		results = append(results, result)
 	}
 	return &connect.Response[svcv1alpha1.UpdateResourceResponse]{
 		Msg: &svcv1alpha1.UpdateResourceResponse{
-			Results: res,
+			Results: results,
 		},
 	}, nil
 }
@@ -36,36 +40,41 @@ func (s *server) UpdateResource(
 func (s *server) updateResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
-) *svcv1alpha1.UpdateResourceResult {
-	currentObj := obj.DeepCopy()
-	if err := s.client.Get(ctx, client.ObjectKeyFromObject(obj), currentObj); err != nil {
+) (*svcv1alpha1.UpdateResourceResult, error) {
+	// Note: We don't blindly attempt updating the resource because many resources
+	// types have defaulting and/or validating webhooks and what we do not want is
+	// for some error from a webhook to obscure the fact that the resource does
+	// not exist.
+	existingObj := obj.DeepCopy()
+	if err := s.client.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); err != nil {
 		return &svcv1alpha1.UpdateResourceResult{
 			Result: &svcv1alpha1.UpdateResourceResult_Error{
 				Error: fmt.Errorf("get resource: %w", err).Error(),
 			},
-		}
+		}, err
 	}
 
-	obj.SetResourceVersion(currentObj.GetResourceVersion())
+	// If we get to here, the resource already exists, so we can update it.
+
+	obj.SetResourceVersion(existingObj.GetResourceVersion())
 	if err := s.client.Update(ctx, obj); err != nil {
 		return &svcv1alpha1.UpdateResourceResult{
 			Result: &svcv1alpha1.UpdateResourceResult_Error{
 				Error: fmt.Errorf("update resource: %w", err).Error(),
 			},
-		}
+		}, err
 	}
-
 	updatedManifest, err := sigyaml.Marshal(obj)
 	if err != nil {
 		return &svcv1alpha1.UpdateResourceResult{
 			Result: &svcv1alpha1.UpdateResourceResult_Error{
 				Error: fmt.Errorf("marshal updated manifest: %w", err).Error(),
 			},
-		}
+		}, err
 	}
 	return &svcv1alpha1.UpdateResourceResult{
 		Result: &svcv1alpha1.UpdateResourceResult_UpdatedResourceManifest{
 			UpdatedResourceManifest: updatedManifest,
 		},
-	}
+	}, nil
 }
