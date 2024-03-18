@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -76,34 +75,6 @@ func TestDefault(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
 				require.Equal(t, testShardName, stage.Spec.Shard)
-			},
-		},
-		{
-			name:      "finalizer gets added on create",
-			operation: admissionv1.Create,
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{},
-			},
-			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
-				require.NoError(t, err)
-				require.True(
-					t,
-					controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName),
-				)
-			},
-		},
-		{
-			name:      "finalizer does not get added on update",
-			operation: admissionv1.Update,
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{},
-			},
-			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
-				require.NoError(t, err)
-				require.False(
-					t,
-					controllerutil.ContainsFinalizer(stage, kargoapi.FinalizerName),
-				)
 			},
 		},
 	}

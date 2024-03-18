@@ -533,10 +533,17 @@ func (r *reconciler) Reconcile(
 				err = fmt.Errorf("error removing finalizer: %w", err)
 			}
 		}
-	} else if stage.Spec.PromotionMechanisms == nil {
-		newStatus, err = r.syncControlFlowStage(ctx, stage)
 	} else {
-		newStatus, err = r.syncNormalStage(ctx, stage)
+		err = kargoapi.AddFinalizer(ctx, r.kargoClient, stage)
+		if err != nil {
+			newStatus = stage.Status
+		} else {
+			if stage.Spec.PromotionMechanisms == nil {
+				newStatus, err = r.syncControlFlowStage(ctx, stage)
+			} else {
+				newStatus, err = r.syncNormalStage(ctx, stage)
+			}
+		}
 	}
 	if err != nil {
 		newStatus.Message = err.Error()

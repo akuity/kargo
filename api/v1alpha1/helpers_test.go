@@ -7,9 +7,46 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+func TestAddFinalizer(t *testing.T) {
+	const testNamespace = "fake-namespace"
+	const testStageName = "fake-stage"
+
+	ctx := context.Background()
+
+	stage := &Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      testStageName,
+		},
+	}
+
+	scheme := k8sruntime.NewScheme()
+	err := AddToScheme(scheme)
+	require.NoError(t, err)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(stage).Build()
+
+	err = AddFinalizer(ctx, c, stage)
+	require.NoError(t, err)
+
+	patchedStage := &Stage{}
+	err = c.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: testNamespace,
+			Name:      testStageName,
+		},
+		patchedStage,
+	)
+	require.NoError(t, err)
+
+	require.True(t, controllerutil.ContainsFinalizer(patchedStage, FinalizerName))
+}
 
 func TestClearAnnotations(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
