@@ -751,14 +751,14 @@ type VerificationInfo struct {
 
 type VerificationInfoStack []VerificationInfo
 
-// UpdateOrAppend updates the VerificationInfo with the same ID as the provided
+// UpdateOrPush updates the VerificationInfo with the same ID as the provided
 // VerificationInfo or appends the provided VerificationInfo to the stack if no
 // such VerificationInfo is found.
 //
 // The order of existing items in the stack is preserved, and new items without
 // a matching ID are appended to the top of the stack. If the stack grows beyond
 // 10 items, the bottom items are removed.
-func (v *VerificationInfoStack) UpdateOrAppend(info ...VerificationInfo) {
+func (v *VerificationInfoStack) UpdateOrPush(info ...VerificationInfo) {
 	var newStack VerificationInfoStack
 	for _, i := range info {
 		var found bool

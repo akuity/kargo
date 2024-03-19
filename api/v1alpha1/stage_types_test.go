@@ -150,7 +150,7 @@ func TestFreightReferenceStackPush(t *testing.T) {
 	}
 }
 
-func TestVerificationInfoStack_UpdateOrAppend(t *testing.T) {
+func TestVerificationInfoStack_UpdateOrPush(t *testing.T) {
 	testCases := []struct {
 		name          string
 		stack         VerificationInfoStack
@@ -193,7 +193,7 @@ func TestVerificationInfoStack_UpdateOrAppend(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.stack.UpdateOrAppend(testCase.newInfo...)
+			testCase.stack.UpdateOrPush(testCase.newInfo...)
 			require.Equal(t, testCase.expectedStack, testCase.stack)
 		})
 	}

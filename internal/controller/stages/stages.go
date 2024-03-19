@@ -786,7 +786,7 @@ func (r *reconciler) syncNormalStage(
 			// to ensure we add any previous verification attempt which may have
 			// been recorded before we started tracking history.
 			if status.CurrentFreight.VerificationInfo != nil {
-				status.CurrentFreight.VerificationHistory.UpdateOrAppend(*status.CurrentFreight.VerificationInfo)
+				status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
 			}
 		}
 
