@@ -16,13 +16,23 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 )
 
+// startVerification starts a verification for the given Stage. If the Stage
+// does not have a reverification annotation, it checks if there is an existing
+// AnalysisRun for the Stage and Freight. If there is, it returns the status of
+// this AnalysisRun. If there is not, it creates a new AnalysisRun for the Stage
+// and Freight.
+//
+// In case of an error, it returns a VerificationInfo with the error message and
+// the phase set to Error. If the error may be due to a transient issue, it is
+// returned, so that the caller can retry the operation.
 func (r *reconciler) startVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-) *kargoapi.VerificationInfo {
+) (*kargoapi.VerificationInfo, error) {
 	if !r.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:        uuid.NewString(),
@@ -30,7 +40,7 @@ func (r *reconciler) startVerification(
 			Phase:     kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; " +
 				"cannot start verification",
-		}
+		}, nil
 	}
 
 	logger := logging.LoggerFromContext(ctx)
@@ -64,7 +74,7 @@ func (r *reconciler) startVerification(
 					stage.Namespace,
 					err,
 				).Error(),
-			}
+			}, err
 		}
 		if len(analysisRuns.Items) > 0 {
 			// Sort the AnalysisRuns by creation timestamp, so that the most recent
@@ -84,7 +94,7 @@ func (r *reconciler) startVerification(
 					Namespace: latestAnalysisRun.Namespace,
 					Phase:     string(latestAnalysisRun.Status.Phase),
 				},
-			}
+			}, nil
 		}
 	}
 
@@ -111,7 +121,7 @@ func (r *reconciler) startVerification(
 					stage.Namespace,
 					err,
 				).Error(),
-			}
+			}, err
 		}
 		if template == nil {
 			return &kargoapi.VerificationInfo{
@@ -123,7 +133,7 @@ func (r *reconciler) startVerification(
 					templateRef.Name,
 					stage.Namespace,
 				).Error(),
-			}
+			}, nil
 		}
 		templates[i] = template
 	}
@@ -147,7 +157,7 @@ func (r *reconciler) startVerification(
 				stage.Namespace,
 				err,
 			).Error(),
-		}
+		}, err
 	}
 	if freight == nil {
 		return &kargoapi.VerificationInfo{
@@ -159,7 +169,7 @@ func (r *reconciler) startVerification(
 				stage.Status.CurrentFreight.Name,
 				stage.Namespace,
 			).Error(),
-		}
+		}, nil
 	}
 
 	run, err := r.buildAnalysisRunFn(stage, freight, templates)
@@ -175,7 +185,7 @@ func (r *reconciler) startVerification(
 				stage.Namespace,
 				err,
 			).Error(),
-		}
+		}, nil
 	}
 
 	if err := r.createAnalysisRunFn(ctx, run); err != nil {
@@ -189,7 +199,7 @@ func (r *reconciler) startVerification(
 				run.Namespace,
 				err,
 			).Error(),
-		}
+		}, kubeclient.IgnoreInvalid(err) // Ignore errors which are due to validation issues
 	}
 
 	return &kargoapi.VerificationInfo{
@@ -200,13 +210,22 @@ func (r *reconciler) startVerification(
 			Name:      run.Name,
 			Namespace: run.Namespace,
 		},
-	}
+	}, nil
 }
 
+// getVerificationInfo returns the status of the AnalysisRun for the given Stage.
+//
+// In case of an error, it returns a VerificationInfo with the error message and
+// the phase set to Error. If the error may be due to a transient issue, it is
+// returned, so that the caller can retry the operation.
+//
+// If an error is returned, the AnalysisRun reference in the VerificationInfo
+// will always be set to the AnalysisRun that was being checked. This is to
+// ensure the caller can continue to track the status of the AnalysisRun.
 func (r *reconciler) getVerificationInfo(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-) *kargoapi.VerificationInfo {
+) (*kargoapi.VerificationInfo, error) {
 	if !r.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:        stage.Status.CurrentFreight.VerificationInfo.ID,
@@ -214,7 +233,7 @@ func (r *reconciler) getVerificationInfo(
 			Phase:     kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; cannot " +
 				"get verification info",
-		}
+		}, nil
 	}
 
 	analysisRunName := stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Name
@@ -237,7 +256,8 @@ func (r *reconciler) getVerificationInfo(
 				stage.Namespace,
 				err,
 			).Error(),
-		}
+			AnalysisRun: stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.DeepCopy(),
+		}, err
 	}
 	if analysisRun == nil {
 		return &kargoapi.VerificationInfo{
@@ -249,7 +269,7 @@ func (r *reconciler) getVerificationInfo(
 				analysisRunName,
 				stage.Namespace,
 			).Error(),
-		}
+		}, nil
 	}
 	return &kargoapi.VerificationInfo{
 		ID:        stage.Status.CurrentFreight.VerificationInfo.ID,
@@ -260,7 +280,7 @@ func (r *reconciler) getVerificationInfo(
 			Namespace: analysisRun.Namespace,
 			Phase:     string(analysisRun.Status.Phase),
 		},
-	}
+	}, nil
 }
 
 func (r *reconciler) abortVerification(
@@ -298,6 +318,7 @@ func (r *reconciler) abortVerification(
 				ar.Namespace,
 				err,
 			).Error(),
+			AnalysisRun: stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.DeepCopy(),
 		}
 	}
 
@@ -307,14 +328,11 @@ func (r *reconciler) abortVerification(
 	// We do not use the further information from the AnalysisRun, as this
 	// will indicate a "Succeeded" phase due to Argo Rollouts behavior.
 	return &kargoapi.VerificationInfo{
-		ID:        stage.Status.CurrentFreight.VerificationInfo.ID,
-		StartTime: ptr.To(ar.CreationTimestamp),
-		Phase:     kargoapi.VerificationPhaseAborted,
-		Message:   "Verification aborted by user",
-		AnalysisRun: &kargoapi.AnalysisRunReference{
-			Name:      ar.Name,
-			Namespace: ar.Namespace,
-		},
+		ID:          stage.Status.CurrentFreight.VerificationInfo.ID,
+		StartTime:   ptr.To(ar.CreationTimestamp),
+		Phase:       kargoapi.VerificationPhaseAborted,
+		Message:     "Verification aborted by user",
+		AnalysisRun: stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.DeepCopy(),
 	}
 }
 

@@ -738,6 +738,12 @@ type VerificationInfo struct {
 	AnalysisRun *AnalysisRunReference `json:"analysisRun,omitempty" protobuf:"bytes,3,opt,name=analysisRun"`
 }
 
+// HasAnalysisRun returns a bool indicating whether the VerificationInfo has an
+// associated AnalysisRun.
+func (v *VerificationInfo) HasAnalysisRun() bool {
+	return v != nil && v.AnalysisRun != nil
+}
+
 type VerificationInfoStack []VerificationInfo
 
 // UpdateOrPush updates the VerificationInfo with the same ID as the provided
