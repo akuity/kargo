@@ -125,7 +125,7 @@ type GitSubscription struct {
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.
-	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,7,opt,name=insecureSkipTLSVerify"`
 	// ScanPaths is a list of regular expressions that can optinally be used to
 	// limit file paths in repository, changes in which will result in creation of
 	// new freight. When not specified - changes in any path will produce new
@@ -133,13 +133,13 @@ type GitSubscription struct {
 	// When both ScanPaths and IgnorePaths are specified and match same path/paths,
 	// IgnorePaths will prevail over ScanPaths.
 	//+kubebuilder:validation:Optional
-	ScanPaths []string `json:"scanPaths,omitempty"`
+	ScanPaths []string `json:"scanPaths,omitempty" protobuf:"bytes,8,rep,name=scanPaths"`
 	// IgnorePaths is an optional list of regular expressions used to specify paths
 	// in git repository, changes in which should never produce new freight. When used
 	// in conjuction with ScanPaths, both matching same path/paths, IgnorePaths takes
 	// precedence over ScanPaths.
 	//+kubebuilder:validation:Optional
-	IgnorePaths []string `json:"ignorePaths,omitempty"`
+	IgnorePaths []string `json:"ignorePaths,omitempty" protobuf:"bytes,9,rep,name=ignorePaths"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -244,9 +244,9 @@ type WarehouseStatus struct {
 	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
 	// LastFreight refers to the last Freight produced by this Warehouse
-	LastFreight *FreightReference `json:"lastFreight,omitempty"`
+	LastFreight *FreightReference `json:"lastFreight,omitempty" protobuf:"bytes,5,opt,name=lastFreight"`
 }
 
 //+kubebuilder:object:root=true

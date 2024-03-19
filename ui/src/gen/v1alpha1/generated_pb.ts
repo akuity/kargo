@@ -1560,6 +1560,30 @@ export class GitSubscription extends Message<GitSubscription> {
    */
   insecureSkipTLSVerify?: boolean;
 
+  /**
+   * ScanPaths is a list of regular expressions that can optinally be used to
+   * limit file paths in repository, changes in which will result in creation of
+   * new freight. When not specified - changes in any path will produce new
+   * freight, it is equivalent to having a ScanPaths with an entry of ".*"
+   * When both ScanPaths and IgnorePaths are specified and match same path/paths,
+   * IgnorePaths will prevail over ScanPaths.
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: repeated string scanPaths = 8;
+   */
+  scanPaths: string[] = [];
+
+  /**
+   * IgnorePaths is an optional list of regular expressions used to specify paths
+   * in git repository, changes in which should never produce new freight. When used
+   * in conjuction with ScanPaths, both matching same path/paths, IgnorePaths takes
+   * precedence over ScanPaths.
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: repeated string ignorePaths = 9;
+   */
+  ignorePaths: string[] = [];
+
   constructor(data?: PartialMessage<GitSubscription>) {
     super();
     proto2.util.initPartial(data, this);
@@ -1575,6 +1599,8 @@ export class GitSubscription extends Message<GitSubscription> {
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "insecureSkipTLSVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 8, name: "scanPaths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "ignorePaths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitSubscription {
@@ -3688,9 +3714,16 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
    * ObservedGeneration represents the .metadata.generation that this Warehouse
    * was reconciled against.
    *
-   * @generated from field: optional int64 observedGeneration = 2;
+   * @generated from field: optional int64 observedGeneration = 4;
    */
   observedGeneration?: bigint;
+
+  /**
+   * LastFreight refers to the last Freight produced by this Warehouse
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference lastFreight = 5;
+   */
+  lastFreight?: FreightReference;
 
   constructor(data?: PartialMessage<WarehouseStatus>) {
     super();
@@ -3701,7 +3734,8 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 2, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 5, name: "lastFreight", kind: "message", T: FreightReference, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WarehouseStatus {
