@@ -248,9 +248,14 @@ type GitRepoUpdate struct {
 type PullRequestPromotionMechanism struct {
 	// GitHub indicates git provider is GitHub
 	GitHub *GitHubPullRequest `json:"github,omitempty" protobuf:"bytes,1,opt,name=github"`
+	// GitHub indicates git provider is Gitlab
+	Gitlab *GitlabPullRequest `json:"gitlab,omitempty" protobuf:"bytes,1,opt,name=gitlab"`
 }
 
 type GitHubPullRequest struct {
+}
+
+type GitlabPullRequest struct {
 }
 
 // KargoRenderPromotionMechanism describes how to use Kargo Render to
