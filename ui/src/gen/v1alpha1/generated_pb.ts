@@ -1124,6 +1124,14 @@ export class FreightReference extends Message<FreightReference> {
    */
   verificationInfo?: VerificationInfo;
 
+  /**
+   * VerificationHistory is a stack of recent VerificationInfo. By default,
+   * the last ten VerificationInfo are stored.
+   *
+   * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.VerificationInfo verificationHistory = 7;
+   */
+  verificationHistory: VerificationInfo[] = [];
+
   constructor(data?: PartialMessage<FreightReference>) {
     super();
     proto2.util.initPartial(data, this);
@@ -1138,6 +1146,7 @@ export class FreightReference extends Message<FreightReference> {
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },
     { no: 4, name: "charts", kind: "message", T: Chart, repeated: true },
     { no: 5, name: "verificationInfo", kind: "message", T: VerificationInfo, opt: true },
+    { no: 7, name: "verificationHistory", kind: "message", T: VerificationInfo, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FreightReference {

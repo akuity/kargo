@@ -296,6 +296,10 @@ func (r *reconciler) abortVerification(
 		ID:      stage.Status.CurrentFreight.VerificationInfo.ID,
 		Phase:   kargoapi.VerificationPhaseAborted,
 		Message: "Verification aborted by user",
+		AnalysisRun: &kargoapi.AnalysisRunReference{
+			Name:      ar.Name,
+			Namespace: ar.Namespace,
+		},
 	}
 }
 

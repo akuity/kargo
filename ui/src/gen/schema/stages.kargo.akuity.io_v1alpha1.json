@@ -541,6 +541,51 @@
               "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
               "type": "string"
             },
+            "verificationHistory": {
+              "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+              "items": {
+                "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                "properties": {
+                  "analysisRun": {
+                    "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                    "properties": {
+                      "name": {
+                        "description": "Name is the name of the AnalysisRun.",
+                        "type": "string"
+                      },
+                      "namespace": {
+                        "description": "Namespace is the namespace of the AnalysisRun.",
+                        "type": "string"
+                      },
+                      "phase": {
+                        "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "namespace",
+                      "phase"
+                    ],
+                    "type": "object"
+                  },
+                  "id": {
+                    "description": "ID is the identifier of the Verification process.",
+                    "type": "string"
+                  },
+                  "message": {
+                    "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                    "type": "string"
+                  },
+                  "phase": {
+                    "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": "array"
+            },
             "verificationInfo": {
               "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
               "properties": {
@@ -684,6 +729,51 @@
                 "name": {
                   "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                   "type": "string"
+                },
+                "verificationHistory": {
+                  "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                  "items": {
+                    "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                    "properties": {
+                      "analysisRun": {
+                        "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                        "properties": {
+                          "name": {
+                            "description": "Name is the name of the AnalysisRun.",
+                            "type": "string"
+                          },
+                          "namespace": {
+                            "description": "Namespace is the namespace of the AnalysisRun.",
+                            "type": "string"
+                          },
+                          "phase": {
+                            "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "namespace",
+                          "phase"
+                        ],
+                        "type": "object"
+                      },
+                      "id": {
+                        "description": "ID is the identifier of the Verification process.",
+                        "type": "string"
+                      },
+                      "message": {
+                        "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                        "type": "string"
+                      },
+                      "phase": {
+                        "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
                 },
                 "verificationInfo": {
                   "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
@@ -913,6 +1003,51 @@
               "name": {
                 "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
                 "type": "string"
+              },
+              "verificationHistory": {
+                "description": "VerificationHistory is a stack of recent VerificationInfo. By default,\nthe last ten VerificationInfo are stored.",
+                "items": {
+                  "description": "VerificationInfo contains information about the currently running\nVerification process.",
+                  "properties": {
+                    "analysisRun": {
+                      "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
+                      "properties": {
+                        "name": {
+                          "description": "Name is the name of the AnalysisRun.",
+                          "type": "string"
+                        },
+                        "namespace": {
+                          "description": "Namespace is the namespace of the AnalysisRun.",
+                          "type": "string"
+                        },
+                        "phase": {
+                          "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "namespace",
+                        "phase"
+                      ],
+                      "type": "object"
+                    },
+                    "id": {
+                      "description": "ID is the identifier of the Verification process.",
+                      "type": "string"
+                    },
+                    "message": {
+                      "description": "Message may contain additional information about why the verification\nprocess is in its current phase.",
+                      "type": "string"
+                    },
+                    "phase": {
+                      "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
               },
               "verificationInfo": {
                 "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",

@@ -422,6 +422,14 @@ func TestSyncNormalStage(t *testing.T) {
 								Name: "fake-analysis-run",
 							},
 						},
+						VerificationHistory: []kargoapi.VerificationInfo{
+							{
+								Phase: kargoapi.VerificationPhaseFailed,
+								AnalysisRun: &kargoapi.AnalysisRunReference{
+									Name: "fake-analysis-run",
+								},
+							},
+						},
 					},
 				},
 			},
@@ -487,16 +495,25 @@ func TestSyncNormalStage(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, newStatus.CurrentFreight)
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+
+				expectInfo := kargoapi.VerificationInfo{
+					Phase:   kargoapi.VerificationPhaseError,
+					Message: "something went wrong",
+				}
+
 				require.Equal(
 					t,
-					&kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseError,
-						Message: "something went wrong",
-					},
+					&expectInfo,
 					newStatus.CurrentFreight.VerificationInfo,
+				)
+				require.Equal(
+					t,
+					kargoapi.VerificationInfoStack{expectInfo},
+					newStatus.CurrentFreight.VerificationHistory,
 				)
 				// Everything else should be returned unchanged
 				newStatus.CurrentFreight.VerificationInfo = nil
+				newStatus.CurrentFreight.VerificationHistory = nil
 				newStatus.Phase = initialStatus.Phase
 				require.Equal(t, initialStatus, newStatus)
 			},

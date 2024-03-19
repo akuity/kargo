@@ -540,19 +540,22 @@ type FreightReference struct {
 	// VerificationInfo is information about any verification process that was
 	// associated with this Freight for this Stage.
 	VerificationInfo *VerificationInfo `json:"verificationInfo,omitempty" protobuf:"bytes,5,opt,name=verificationInfo"`
+	// VerificationHistory is a stack of recent VerificationInfo. By default,
+	// the last ten VerificationInfo are stored.
+	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,7,rep,name=verificationHistory"`
 }
 
 type FreightReferenceStack []FreightReference
 
-// Empty returns a bool indicating whether or not the FreightReferenceStack is
-// empty. nil counts as empty.
+// Empty returns a bool indicating whether the FreightReferenceStack is
+// empty. Nil counts as empty.
 func (f FreightReferenceStack) Empty() bool {
 	return len(f) == 0
 }
 
 // Pop removes and returns the leading element from a FreightReferenceStack. If
 // the FreightReferenceStack is empty, the FreightReferenceStack is not modified
-// and a empty FreightReference is returned instead. A boolean is also returned
+// and an empty FreightReference is returned instead. A boolean is also returned
 // indicating whether the returned FreightReference came from the top of the
 // stack (true) or is a zero value for that type (false).
 func (f *FreightReferenceStack) Pop() (FreightReference, bool) {
@@ -576,7 +579,7 @@ func (f FreightReferenceStack) Top() (FreightReference, bool) {
 	return item, true
 }
 
-// Push pushes one or more Freight onto the FreightStack. The order of
+// Push pushes one or more Freight onto the FreightReferenceStack. The order of
 // the new elements at the top of the stack will be equal to the order in which
 // they were passed to this function. i.e. The first new element passed will be
 // the element at the top of the stack. If resulting modification grow the depth
@@ -584,9 +587,9 @@ func (f FreightReferenceStack) Top() (FreightReference, bool) {
 // Modified to contain only the top 10 elements.
 func (f *FreightReferenceStack) Push(freight ...FreightReference) {
 	*f = append(freight, *f...)
-	const max = 10
-	if len(*f) > max {
-		*f = (*f)[:max]
+	const maxSize = 10
+	if len(*f) > maxSize {
+		*f = (*f)[:maxSize]
 	}
 }
 
@@ -745,6 +748,39 @@ type VerificationInfo struct {
 	// AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
 	// the Verification process.
 	AnalysisRun *AnalysisRunReference `json:"analysisRun,omitempty" protobuf:"bytes,3,opt,name=analysisRun"`
+}
+
+type VerificationInfoStack []VerificationInfo
+
+// UpdateOrPush updates the VerificationInfo with the same ID as the provided
+// VerificationInfo or appends the provided VerificationInfo to the stack if no
+// such VerificationInfo is found.
+//
+// The order of existing items in the stack is preserved, and new items without
+// a matching ID are appended to the top of the stack. If the stack grows beyond
+// 10 items, the bottom items are removed.
+func (v *VerificationInfoStack) UpdateOrPush(info ...VerificationInfo) {
+	var newStack VerificationInfoStack
+	for _, i := range info {
+		var found bool
+		for vi, item := range *v {
+			if i.ID == item.ID {
+				(*v)[vi] = i
+				found = true
+				break
+			}
+		}
+		if !found {
+			newStack = append(newStack, i)
+		}
+	}
+
+	*v = append(newStack, *v...)
+
+	const maxSize = 10
+	if len(*v) > maxSize {
+		*v = (*v)[:maxSize]
+	}
 }
 
 // AnalysisRunReference is a reference to an AnalysisRun.

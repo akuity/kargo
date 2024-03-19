@@ -787,6 +787,14 @@ func (r *reconciler) syncNormalStage(
 					}
 				}
 			}
+
+			// Update the verification history with the latest verification info.
+			// NOTE: We do this regardless of the phase of the verification process,
+			// to ensure we add any previous verification attempt which may have
+			// been recorded before we started tracking history.
+			if status.CurrentFreight.VerificationInfo != nil {
+				status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
+			}
 		}
 
 		// If health is not applicable or healthy

@@ -332,6 +332,10 @@ message FreightReference {
   // VerificationInfo is information about any verification process that was
   // associated with this Freight for this Stage.
   optional VerificationInfo verificationInfo = 5;
+
+  // VerificationHistory is a stack of recent VerificationInfo. By default,
+  // the last ten VerificationInfo are stored.
+  repeated VerificationInfo verificationHistory = 7;
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.
