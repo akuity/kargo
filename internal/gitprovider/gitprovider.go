@@ -8,7 +8,7 @@ import (
 // when interacting against a single git repository (e.g. managing pull requests).
 type GitProviderService interface { // nolint: revive
 	// WithAuthToken sets an authorization token to the client
-	WithAuthToken(token string) GitProviderService
+	WithAuthToken(token string) (GitProviderService, error)
 
 	// CreatePullRequest creates a pull request
 	CreatePullRequest(ctx context.Context, repoURL string, opts CreatePullRequestOpts) (*PullRequest, error)
