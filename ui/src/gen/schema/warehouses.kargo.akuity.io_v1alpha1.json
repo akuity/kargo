@@ -72,13 +72,6 @@
                     ],
                     "type": "string"
                   },
-                  "ignorePaths": {
-                    "description": "IgnorePaths is an optional list of regular expressions used to specify paths in git repository, changes in which should never produce new freight. When used in conjuction with ScanPaths, both matching same path/paths, IgnorePaths takes precedence over ScanPaths.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
                   "ignoreTags": {
                     "description": "IgnoreTags is a list of tags that must be ignored when determining the\nnewest commit of interest. No regular expressions or glob patterns are\nsupported yet. The value in this field only has any effect when the\nCommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is\noptional.",
                     "items": {
@@ -95,13 +88,6 @@
                     "minLength": 1,
                     "pattern": "^https?://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
                     "type": "string"
-                  },
-                  "scanPaths": {
-                    "description": "ScanPaths is a list of regular expressions that can optinally be used to limit file paths in repository, changes in which will result in creation of new freight. When not specified - changes in any path will produce new freight, it is equivalent to having a ScanPaths with an entry of \".*\" When both ScanPaths and IgnorePaths are specified and match same path/paths, IgnorePaths will prevail over ScanPaths.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
                   },
                   "semverConstraint": {
                     "description": "SemverConstraint specifies constraints on what new tagged commits are\nconsidered in determining the newest commit of interest. The value in this\nfield only has any effect when the CommitSelectionStrategy is SemVer. This\nfield is optional. When left unspecified, there will be no constraints,\nwhich means the latest semantically tagged commit will always be used. Care\nshould be taken with leaving this field unspecified, as it can lead to the\nunanticipated rollout of breaking changes.",
@@ -185,139 +171,6 @@
         "message": {
           "description": "Message describes any errors that are preventing the Warehouse controller\nfrom polling repositories to discover new Freight.",
           "type": "string"
-        },
-        "lastFreight": {
-          "description": "LastFreight refers to the last Freight produced by this Warehouse",
-          "properties": {
-            "charts": {
-              "description": "Charts describes specific versions of specific Helm charts.",
-              "items": {
-                "description": "Chart describes a specific version of a Helm chart.",
-                "properties": {
-                  "name": {
-                    "description": "Name specifies the name of the chart.",
-                    "type": "string"
-                  },
-                  "repoURL": {
-                    "description": "RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty.",
-                    "type": "string"
-                  },
-                  "version": {
-                    "description": "Version specifies a particular version of the chart.",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "commits": {
-              "description": "Commits describes specific Git repository commits.",
-              "items": {
-                "description": "GitCommit describes a specific commit from a specific Git repository.",
-                "properties": {
-                  "author": {
-                    "description": "Author is the git commit author",
-                    "type": "string"
-                  },
-                  "branch": {
-                    "description": "Branch denotes the branch of the repository where this commit was found.",
-                    "type": "string"
-                  },
-                  "healthCheckCommit": {
-                    "description": "HealthCheckCommit is the ID of a specific commit. When specified, assessments of Stage health will used this value (instead of ID) when determining if applicable sources of Argo CD Application resources associated with the Stage are or are not synced to this commit. Note that there are cases (as in that of Kargo Render being utilized as a promotion mechanism) wherein the value of this field may differ from the commit ID found in the ID field.",
-                    "type": "string"
-                  },
-                  "id": {
-                    "description": "ID is the ID of a specific commit in the Git repository specified by RepoURL.",
-                    "type": "string"
-                  },
-                  "message": {
-                    "description": "Message is the git commit message",
-                    "type": "string"
-                  },
-                  "repoURL": {
-                    "description": "RepoURL is the URL of a Git repository.",
-                    "type": "string"
-                  },
-                  "tag": {
-                    "description": "Tag denotes a tag in the repository that matched selection criteria and resolved to this commit.",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "id": {
-              "description": "ID is system-assigned value that is derived deterministically from the contents of the Freight. i.e. Two pieces of Freight can be compared for equality by comparing their IDs.",
-              "type": "string"
-            },
-            "images": {
-              "description": "Images describes specific versions of specific container images.",
-              "items": {
-                "description": "Image describes a specific version of a container image.",
-                "properties": {
-                  "digest": {
-                    "description": "Digest identifies a specific version of the image in the repository specified by RepoURL. This is a more precise identifier than Tag.",
-                    "type": "string"
-                  },
-                  "gitRepoURL": {
-                    "description": "GitRepoURL specifies the URL of a Git repository that contains the source code for the image repository referenced by the RepoURL field if Kargo was able to infer it.",
-                    "type": "string"
-                  },
-                  "repoURL": {
-                    "description": "RepoURL describes the repository in which the image can be found.",
-                    "type": "string"
-                  },
-                  "tag": {
-                    "description": "Tag identifies a specific version of the image in the repository specified by RepoURL.",
-                    "type": "string"
-                  }
-                },
-                "type": "object"
-              },
-              "type": "array"
-            },
-            "verificationInfo": {
-              "description": "VerificationInfo is information about any verification process that was associated with this Freight for this Stage.",
-              "properties": {
-                "analysisRun": {
-                  "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements the Verification process.",
-                  "properties": {
-                    "name": {
-                      "description": "Name is the name of the AnalysisRun.",
-                      "type": "string"
-                    },
-                    "namespace": {
-                      "description": "Namespace is the namespace of the AnalysisRun.",
-                      "type": "string"
-                    },
-                    "phase": {
-                      "description": "Phase is the last observed phase of the AnalysisRun referenced by Name.",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "name",
-                    "namespace",
-                    "phase"
-                  ],
-                  "type": "object"
-                },
-                "message": {
-                  "description": "Message may contain additional information about why the verification process is in its current phase.",
-                  "type": "string"
-                },
-                "phase": {
-                  "description": "Phase describes the current phase of the Verification process. Generally, this will be a reflection of the underlying AnalysisRun's phase, however, there are exceptions to this, such as in the case where an AnalysisRun cannot be launched successfully.",
-                  "type": "string"
-                }
-              },
-              "type": "object"
-            }
-          },
-          "type": "object"
         },
         "observedGeneration": {
           "description": "ObservedGeneration represents the .metadata.generation that this Warehouse\nwas reconciled against.",
