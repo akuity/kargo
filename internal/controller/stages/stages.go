@@ -739,6 +739,15 @@ func (r *reconciler) syncNormalStage(
 
 		// Initiate or follow-up on verification if required
 		if stage.Spec.Verification != nil {
+			// Update the verification history with the current verification info.
+			// NOTE: We do this regardless of the phase of the verification process
+			// and before potentially creating a new AnalysisRun to ensure we add
+			// any previous verification attempt which may have been recorded
+			// before we started tracking history.
+			if status.CurrentFreight.VerificationInfo != nil {
+				status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
+			}
+
 			// Confirm if a reverification is requested. If so, clear the
 			// verification info to start the verification process again.
 			info := status.CurrentFreight.VerificationInfo
@@ -780,20 +789,16 @@ func (r *reconciler) syncNormalStage(
 						"verification phase is %s",
 						status.CurrentFreight.VerificationInfo.Phase,
 					)
+
 					if status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
 						// Verification is complete
 						status.Phase = kargoapi.StagePhaseSteady
 						log.Debug("verification is complete")
 					}
-				}
-			}
 
-			// Update the verification history with the latest verification info.
-			// NOTE: We do this regardless of the phase of the verification process,
-			// to ensure we add any previous verification attempt which may have
-			// been recorded before we started tracking history.
-			if status.CurrentFreight.VerificationInfo != nil {
-				status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
+					// Add latest verification info to history.
+					status.CurrentFreight.VerificationHistory.UpdateOrPush(*status.CurrentFreight.VerificationInfo)
+				}
 			}
 		}
 
