@@ -323,7 +323,7 @@ func (r *repo) GetDiffPathsSinceCommitID(commitId string) ([]string, error) {
 	resBytes, err := libExec.Exec(r.buildCommand("diff", "--name-only", commitId+"..HEAD"))
 	if err != nil {
 		return nil,
-			errors.Wrapf(err, "error getting diffs since commit %q", commitId)
+			fmt.Errorf("error getting diffs since commit %q %w", commitId, err)
 	}
 	paths := []string{}
 	scanner := bufio.NewScanner(bytes.NewReader(resBytes))

@@ -2,11 +2,11 @@ package warehouses
 
 import (
 	"context"
-	"errors"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -19,7 +19,7 @@ func TestSelectCommits(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(t *testing.T, commits []kargoapi.GitCommit, err error)
+		assertions func(commits []kargoapi.GitCommit, err error)
 	}{
 		{
 			name: "error getting repo credentials",
@@ -36,7 +36,7 @@ func TestSelectCommits(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, commits []kargoapi.GitCommit, err error) {
+			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -70,7 +70,7 @@ func TestSelectCommits(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, commits []kargoapi.GitCommit, err error) {
+			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -104,7 +104,7 @@ func TestSelectCommits(t *testing.T) {
 					return &gitMeta{Commit: "fake-commit", Message: "message"}, nil
 				},
 			},
-			assertions: func(t *testing.T, commits []kargoapi.GitCommit, err error) {
+			assertions: func(commits []kargoapi.GitCommit, err error) {
 				require.NoError(t, err)
 				require.Len(t, commits, 1)
 				require.Equal(
@@ -121,19 +121,20 @@ func TestSelectCommits(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			commits, err := testCase.reconciler.selectCommits(
-				context.Background(),
-				"fake-namespace",
-				[]kargoapi.RepoSubscription{
-					{
-						Git: &kargoapi.GitSubscription{
-							RepoURL: "fake-url",
+			testCase.assertions(
+				testCase.reconciler.selectCommits(
+					context.Background(),
+					"fake-namespace",
+					[]kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "fake-url",
+							},
 						},
 					},
 					&kargoapi.FreightReference{},
 				),
 			)
-			testCase.assertions(t, commits, err)
 		})
 	}
 }
@@ -143,7 +144,7 @@ func TestSelectCommitMeta(t *testing.T) {
 		name       string
 		sub        kargoapi.GitSubscription
 		reconciler *reconciler
-		assertions func(*testing.T, *gitMeta, error)
+		assertions func(*gitMeta, error)
 	}{
 		{
 			name: "error cloning repo",
@@ -151,7 +152,7 @@ func TestSelectCommitMeta(t *testing.T) {
 				RepoURL: "fake-url", // This should force a failure
 			},
 			reconciler: &reconciler{},
-			assertions: func(t *testing.T, _ *gitMeta, err error) {
+			assertions: func(_ *gitMeta, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error cloning git repo")
 			},
@@ -162,7 +163,7 @@ func TestSelectCommitMeta(t *testing.T) {
 				RepoURL: "https://github.com/akuity/kargo.git",
 			},
 			reconciler: newReconciler(fake.NewClientBuilder().Build(), nil),
-			assertions: func(t *testing.T, gm *gitMeta, err error) {
+			assertions: func(gm *gitMeta, err error) {
 				require.NoError(t, err)
 				require.NotEmpty(t, gm.Commit)
 				require.NotEmpty(t, gm.Message)
@@ -180,7 +181,6 @@ func TestSelectCommitMeta(t *testing.T) {
 					"",
 				),
 			)
-			testCase.assertions(t, gm, err)
 		})
 	}
 }
@@ -190,7 +190,7 @@ func TestSelectCommitID(t *testing.T) {
 		name       string
 		sub        kargoapi.GitSubscription
 		reconciler *reconciler
-		assertions func(t *testing.T, tag string, commit string, err error)
+		assertions func(tag string, commit string, err error)
 	}{
 		{
 			name: "newest from branch; error getting commit ID",
@@ -202,7 +202,7 @@ func TestSelectCommitID(t *testing.T) {
 					return "", errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(_, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(
 					t,
@@ -222,7 +222,7 @@ func TestSelectCommitID(t *testing.T) {
 					return "fake-commit", nil
 				},
 			},
-			assertions: func(t *testing.T, tag, commit string, err error) {
+			assertions: func(tag, commit string, err error) {
 				require.NoError(t, err)
 				require.Empty(t, tag)
 				require.Equal(t, "fake-commit", commit)
@@ -314,7 +314,7 @@ func TestSelectCommitID(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(_, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error listing tags from git repo")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -331,7 +331,7 @@ func TestSelectCommitID(t *testing.T) {
 					return []string{"abc"}, nil
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(_, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error compiling regular expression")
 			},
@@ -347,7 +347,7 @@ func TestSelectCommitID(t *testing.T) {
 					return []string{"abc"}, nil
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(_, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "found no applicable tags in repo")
 			},
@@ -362,7 +362,7 @@ func TestSelectCommitID(t *testing.T) {
 					return []string{"abc"}, nil
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(_, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "unknown commit selection strategy")
 			},
@@ -380,7 +380,7 @@ func TestSelectCommitID(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(_, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error checking out tag")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -402,7 +402,7 @@ func TestSelectCommitID(t *testing.T) {
 					return "", errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(_, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error determining commit ID of tag")
 				require.Contains(t, err.Error(), "something went wrong")
@@ -424,7 +424,7 @@ func TestSelectCommitID(t *testing.T) {
 					return "fake-commit", nil
 				},
 			},
-			assertions: func(t *testing.T, tag, commit string, err error) {
+			assertions: func(tag, commit string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "xyz", tag)
 				require.Equal(t, "fake-commit", commit)
@@ -446,7 +446,7 @@ func TestSelectCommitID(t *testing.T) {
 					return "fake-commit", nil
 				},
 			},
-			assertions: func(t *testing.T, tag, commit string, err error) {
+			assertions: func(tag, commit string, err error) {
 				require.Equal(t, "abc", tag)
 				require.NoError(t, err)
 				require.Equal(t, "fake-commit", commit)
@@ -463,7 +463,7 @@ func TestSelectCommitID(t *testing.T) {
 					return []string{"1.0.0", "2.0.0"}, nil
 				},
 			},
-			assertions: func(t *testing.T, _, _ string, err error) {
+			assertions: func(_, _ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing semver constraint")
 			},
@@ -484,7 +484,7 @@ func TestSelectCommitID(t *testing.T) {
 					return "fake-commit", nil
 				},
 			},
-			assertions: func(t *testing.T, tag, commit string, err error) {
+			assertions: func(tag, commit string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "2.0.0", tag)
 				require.Equal(t, "fake-commit", commit)
@@ -500,7 +500,6 @@ func TestSelectCommitID(t *testing.T) {
 					"sha",
 				),
 			)
-			testCase.assertions(t, tag, commit, err)
 		})
 	}
 }
@@ -605,13 +604,13 @@ func TestSelectSemverTag(t *testing.T) {
 		name       string
 		constraint string
 		tags       []string
-		assertions func(*testing.T, string, error)
+		assertions func(string, error)
 	}{
 		{
 			name:       "error parsing constraint",
 			constraint: "invalid",
 			tags:       nil,
-			assertions: func(t *testing.T, _ string, err error) {
+			assertions: func(_ string, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error parsing semver constraint")
 			},
@@ -619,7 +618,7 @@ func TestSelectSemverTag(t *testing.T) {
 		{
 			name: "empty/nil tag list",
 			tags: nil,
-			assertions: func(t *testing.T, tag string, err error) {
+			assertions: func(tag string, err error) {
 				require.NoError(t, err)
 				require.Empty(t, tag)
 			},
@@ -627,7 +626,7 @@ func TestSelectSemverTag(t *testing.T) {
 		{
 			name: "no semantic tags in tag list",
 			tags: []string{"abc", "xyz", "foo", "bar"},
-			assertions: func(t *testing.T, tag string, err error) {
+			assertions: func(tag string, err error) {
 				require.NoError(t, err)
 				require.Empty(t, tag)
 			},
@@ -636,7 +635,7 @@ func TestSelectSemverTag(t *testing.T) {
 			name:       "no constraint matches",
 			constraint: ">=2.0.0",
 			tags:       []string{"v1.0.0", "v1.2.3"},
-			assertions: func(t *testing.T, tag string, err error) {
+			assertions: func(tag string, err error) {
 				require.NoError(t, err)
 				require.Empty(t, tag)
 			},
@@ -644,7 +643,7 @@ func TestSelectSemverTag(t *testing.T) {
 		{
 			name: "success with no constraint",
 			tags: []string{"v1.0.0", "v1.2.3"},
-			assertions: func(t *testing.T, tag string, err error) {
+			assertions: func(tag string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "v1.2.3", tag)
 			},
@@ -653,7 +652,7 @@ func TestSelectSemverTag(t *testing.T) {
 			name:       "success with constraint",
 			constraint: "<2.0.0",
 			tags:       []string{"v1.0.0", "v2.2.3"},
-			assertions: func(t *testing.T, tag string, err error) {
+			assertions: func(tag string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "v1.0.0", tag)
 			},
@@ -661,8 +660,9 @@ func TestSelectSemverTag(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			tag, err := selectSemverTag(testCase.tags, testCase.constraint)
-			testCase.assertions(t, tag, err)
+			testCase.assertions(
+				selectSemverTag(testCase.tags, testCase.constraint),
+			)
 		})
 	}
 }
