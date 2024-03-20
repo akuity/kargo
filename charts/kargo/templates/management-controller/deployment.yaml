@@ -50,6 +50,8 @@ spec:
           name: kubeconfigs
           readOnly: true
         {{- end }}
+        securityContext:
+          {{- toYaml .Values.managementController.securityContext | nindent 10 }}
         resources:
           {{- toYaml .Values.managementController.resources | nindent 10 }}
       {{- if .Values.kubeconfigSecrets.kargo }}

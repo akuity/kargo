@@ -48,6 +48,8 @@ spec:
         - mountPath: /etc/dex
           name: config
           readOnly: true
+        securityContext:
+          {{- toYaml .Values.api.oidc.dex.securityContext | nindent 10 }}
         resources:
           {{- toYaml .Values.api.oidc.dex.resources | nindent 10 }}
         {{- if .Values.api.oidc.dex.probes.enabled }}
