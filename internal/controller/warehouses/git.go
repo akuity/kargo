@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -109,7 +108,7 @@ func (r *reconciler) selectCommitMeta(
 	}
 	// when scanPaths and/or ignorePaths filters are used we can't use shallow clone
 	// as we need diffs between HEAD and a baseCommit which depth in git history is unknown
-	var shallowClone bool = true
+	var shallowClone = true
 	if (len(sub.ScanPaths) != 0 || len(sub.IgnorePaths) != 0) && baseCommit != "" {
 		shallowClone = false
 	}
@@ -165,9 +164,11 @@ func (r *reconciler) selectTagAndCommitID(
 		commit, err := r.getLastCommitIDFn(repo)
 		if err != nil {
 			return "", "",
-				errors.Wrapf(err, "error determining commit ID at head of branch %q in git repo %q",
+				fmt.Errorf("error determining commit ID at head of branch %q in git repo %q: %w",
 					sub.Branch,
-					sub.RepoURL)
+					sub.RepoURL,
+					err,
+				)
 		}
 		// In case scanPaths/ignorePaths filters are configured in a git subscription
 		// below if clause deals with it. There is a special case - Warehouse has not
@@ -179,22 +180,26 @@ func (r *reconciler) selectTagAndCommitID(
 			diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
 			if err != nil {
 				return "", "",
-					errors.Wrapf(err, "error getting diffs since commit %q in git repo %q",
+					fmt.Errorf("error getting diffs since commit %q in git repo %q: %w",
 						baseCommit,
-						sub.RepoURL)
+						sub.RepoURL,
+						err,
+					)
 			}
 
 			matchesPathsFilters, err := matchesPathsFilters(sub.ScanPaths, sub.IgnorePaths, diffs)
 			if err != nil {
 				return "", "",
-					errors.Wrapf(err, "error checking scanPaths/ignorePaths match for commit %q in git repo %q",
+					fmt.Errorf("error checking scanPaths/ignorePaths match for commit %q in git repo %q: %w",
 						commit,
-						sub.RepoURL)
+						sub.RepoURL,
+						err,
+					)
 			}
 
 			if !matchesPathsFilters {
 				return "", "",
-					errors.Errorf("Commit %q not applicable due to scanPaths/ignorePaths configuration in repo %q",
+					fmt.Errorf("commit %q not applicable due to scanPaths/ignorePaths configuration in repo %q",
 						commit,
 						sub.RepoURL,
 					)
@@ -292,17 +297,17 @@ func matchesPathsFilters(scanPaths []string, ignorePaths []string, diffs []strin
 
 	scanPathsRegexps, err := compileRegexps(scanPaths)
 	if err != nil {
-		return false, errors.Wrapf(
+		return false, fmt.Errorf(
+			"error compiling scanPaths regexps: %w",
 			err,
-			"error compiling scanPaths regexps",
 		)
 	}
 
 	ignorePathsRegexps, err := compileRegexps(ignorePaths)
 	if err != nil {
-		return false, errors.Wrapf(
+		return false, fmt.Errorf(
+			"error compiling ignorePaths regexps: %w",
 			err,
-			"error compiling ignorePaths regexps",
 		)
 	}
 
@@ -339,10 +344,10 @@ func compileRegexps(regexpStrings []string) (regexps []*regexp.Regexp, err error
 	for _, regexpString := range regexpStrings {
 		regex, err := regexp.Compile(regexpString)
 		if err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"error compiling string %q into a regular expression",
+			return nil, fmt.Errorf(
+				"error compiling string %q into a regular expression: %w",
 				regexpString,
+				err,
 			)
 		}
 		regexpsSlice = append(regexpsSlice, regex)

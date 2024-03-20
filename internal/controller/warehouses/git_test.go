@@ -2,11 +2,11 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -300,7 +300,7 @@ func TestSelectCommitID(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"Commit \"fake-commit\" not applicable due to scanPaths/ignorePaths configuration in repo",
+					"commit \"fake-commit\" not applicable due to scanPaths/ignorePaths configuration in repo",
 				)
 			},
 		},
