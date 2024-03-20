@@ -12,6 +12,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -35,13 +36,13 @@ func NewCommand(cfg config.CLIConfig) *cobra.Command {
 		Use:   "refresh TYPE NAME [--wait]",
 		Short: "Refresh a stage or warehouse",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Refresh a warehouse
 kargo refresh warehouse --project=my-project my-warehouse
 
 # Refresh a stage
 kargo refresh stage --project=my-project my-stage
-`,
+`),
 	}
 
 	// Register subcommands.

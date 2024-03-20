@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -46,7 +47,7 @@ func newGetCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOS
 		Use:     "credentials [--project=project] [NAME ...]",
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Display one or many credentials",
-		Example: `
+		Example: templates.Example(`
 # List all credentials in my-project
 kargo get credentials --project=my-project
 
@@ -59,7 +60,7 @@ kargo get credentials
 
 # Get specific credentials in the default project
 kargo config set-project my-project
-kargo get credentials my-credentials`,
+kargo get credentials my-credentials`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

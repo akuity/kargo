@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	versionpkg "github.com/akuity/kargo/internal/version"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -44,13 +45,13 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Use:   "version [--client]",
 		Short: "Show the client and server version information",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Print the client and server version information
 kargo version
 
 # Print the client version information only
 kargo version --client
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdOpts.run(cmd.Context())
 		},

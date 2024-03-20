@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -48,7 +49,7 @@ func newGetWarehousesCommand(
 		Use:     "warehouses [--project=project] [NAME ...]",
 		Aliases: []string{"warehouse"},
 		Short:   "Display one or many warehouses",
-		Example: `
+		Example: templates.Example(`
 # List all warehouses in my-project
 kargo get warehouses --project=my-project
 
@@ -65,7 +66,7 @@ kargo get warehouses
 # Get a specific warehouse in the default project
 kargo config set-project my-project
 kargo get warehouse my-warehouse
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

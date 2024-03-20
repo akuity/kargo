@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -43,10 +44,10 @@ func newProjectCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams)
 		Use:   "project NAME",
 		Short: "Create a project",
 		Args:  option.ExactArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Create project
 kargo create project my-project
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

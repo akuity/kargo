@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -43,7 +44,7 @@ func newStageCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *
 		Use:   "stage [--project=project] (NAME ...)",
 		Short: "Delete stage by name",
 		Args:  option.MinimumNArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Delete a stage
 kargo delete stage --project=my-project my-stage
 
@@ -53,7 +54,7 @@ kargo delete stage --project=my-project my-stage1 my-stage2
 # Delete a stage in the default project
 kargo config set-project my-project
 kargo delete stage my-stage
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

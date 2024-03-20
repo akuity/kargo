@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -42,7 +43,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Use:   "delete (-f FILENAME | TYPE (NAME ...))",
 		Short: "Delete resources by file and names",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Delete a stage using the data in stage.yaml
 kargo delete -f stage.yaml
 
@@ -57,7 +58,7 @@ kargo delete stage --project=my-project my-stage
 
 # Delete a warehouse
 kargo delete warehouse --project=my-project my-warehouse
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

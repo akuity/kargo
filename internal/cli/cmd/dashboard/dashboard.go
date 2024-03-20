@@ -9,6 +9,7 @@ import (
 
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 )
 
 type dashboardOptions struct {
@@ -22,10 +23,10 @@ func NewCommand(cfg config.CLIConfig) *cobra.Command {
 		Use:   "dashboard",
 		Short: "Open the Kargo Dashboard in your default browser",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Open the Kargo Dashboard in the browser
 kargo dashboard
-`,
+`),
 		RunE: func(*cobra.Command, []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

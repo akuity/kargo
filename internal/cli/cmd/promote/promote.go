@@ -15,6 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -44,7 +45,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 			"(--stage=stage | --subscribers-of=stage)",
 		Short: "Promote a piece of freight",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Promote a piece of freight specified by name to the QA stage
 kargo promote --project=my-project --freight=abc123 --stage=qa
 
@@ -72,7 +73,7 @@ kargo promote --freight=abc123 --subscribers-of=qa
 # Promote a piece of freight specified by alias to subscribers of the QA stage in the default project
 kargo config set-project my-project
 kargo promote --freight-alias=wonky-wombat --subscribers-of=qas
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

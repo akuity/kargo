@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	"github.com/akuity/kargo/internal/credentials"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -56,7 +57,7 @@ func newUpdateCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Update credentials for accessing a repository",
 		Args:    cobra.ExactArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Update the password in my-credentials
 kargo update credentials --project=my-project my-credentials --password=my-password
 
@@ -76,7 +77,8 @@ kargo update credentials my-credentials --username=my-username
 
 # Update the credentials type of my-credentials in the default project
 kargo config set-project my-project
-kargo update credentials my-credentials --git`,
+kargo update credentials my-credentials --git
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

@@ -27,6 +27,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	libConfig "github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	"github.com/akuity/kargo/internal/kubeclient"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -53,7 +54,7 @@ func NewCommand() *cobra.Command {
 		Use:   "login SERVER_ADDRESS (--admin | --kubeconfig | --sso)",
 		Args:  option.ExactArgs(1),
 		Short: "Log in to a Kargo API server",
-		Example: `
+		Example: templates.Example(`
 # Log in using SSO
 kargo login https://kargo.example.com --sso
 
@@ -65,7 +66,7 @@ kargo login https://kargo.example.com --kubeconfig
 
 # Log in using the local kubeconfig and ignore cert warnings
 kargo login https://kargo.example.com --kubeconfig --insecure-tls
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

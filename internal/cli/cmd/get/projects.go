@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -43,7 +44,7 @@ func newGetProjectsCommand(cfg config.CLIConfig, streams genericiooptions.IOStre
 		Use:     "projects [NAME ...]",
 		Aliases: []string{"project"},
 		Short:   "Display one or many projects",
-		Example: `
+		Example: templates.Example(`
 # List all projects
 kargo get projects
 
@@ -52,7 +53,7 @@ kargo get projects -o json
 
 # Get a single project by name
 kargo get project my-project
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

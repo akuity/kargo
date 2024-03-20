@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -42,7 +43,7 @@ func newWarehouseCommand(cfg config.CLIConfig, streams genericiooptions.IOStream
 		Use:   "warehouse [--project=project] (NAME ...)",
 		Short: "Delete warehouse by name",
 		Args:  option.MinimumNArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Delete a warehouse
 kargo delete warehouse --project=my-project my-warehouse
 
@@ -52,7 +53,7 @@ kargo delete warehouse --project=my-project my-warehouse1 my-warehouse2
 # Delete a warehouse in the default project
 kargo config set-project my-project
 kargo delete warehouse my-warehouse
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
