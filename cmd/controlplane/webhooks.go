@@ -27,6 +27,8 @@ import (
 )
 
 type webhooksServerOptions struct {
+	KubeConfig string
+
 	Logger *log.Logger
 }
 
@@ -41,11 +43,17 @@ func newWebhooksServerCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmdOpts.complete()
+
 			return cmdOpts.run(cmd.Context())
 		},
 	}
 
 	return cmd
+}
+
+func (o *webhooksServerOptions) complete() {
+	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 }
 
 func (o *webhooksServerOptions) run(ctx context.Context) error {
@@ -55,7 +63,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		"commit":  version.GitCommit,
 	}).Info("Starting Kargo Webhooks Server")
 
-	restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
+	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error getting REST config: %w", err)
 	}
