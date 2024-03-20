@@ -43,7 +43,7 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	// Register the subcommands.
 	cmd.AddCommand(apply.NewCommand(cfg, streams))
 	cmd.AddCommand(approve.NewCommand(cfg))
-	cmd.AddCommand(cliconfigcmd.NewCommand(cfg))
+	cmd.AddCommand(cliconfigcmd.NewCommand(cfg, streams))
 	cmd.AddCommand(create.NewCommand(cfg, streams))
 	cmd.AddCommand(delete.NewCommand(cfg, streams))
 	cmd.AddCommand(get.NewCommand(cfg, streams))
