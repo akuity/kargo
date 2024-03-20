@@ -120,7 +120,7 @@ func TestSelectCommits(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(testCase.name, func(_ *testing.T) {
 			testCase.assertions(
 				testCase.reconciler.selectCommits(
 					context.Background(),
@@ -172,7 +172,7 @@ func TestSelectCommitMeta(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(testCase.name, func(_ *testing.T) {
 			testCase.assertions(
 				testCase.reconciler.selectCommitMeta(
 					context.Background(),
@@ -492,7 +492,7 @@ func TestSelectCommitID(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(testCase.name, func(_ *testing.T) {
 			testCase.assertions(
 				testCase.reconciler.selectTagAndCommitID(
 					nil,
@@ -659,7 +659,7 @@ func TestSelectSemverTag(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(testCase.name, func(_ *testing.T) {
 			testCase.assertions(
 				selectSemverTag(testCase.tags, testCase.constraint),
 			)
@@ -717,7 +717,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(testCase.name, func(_ *testing.T) {
 			testCase.assertions(
 				matchesPathsFilters(testCase.scanPaths, testCase.ignorePaths, testCase.diffs),
 			)
