@@ -22,6 +22,8 @@ import (
 )
 
 type managementControllerOptions struct {
+	KubeConfig string
+
 	Logger *log.Logger
 }
 
@@ -36,11 +38,17 @@ func newManagementControllerCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmdOpts.complete()
+
 			return cmdOpts.run(cmd.Context())
 		},
 	}
 
 	return cmd
+}
+
+func (o *managementControllerOptions) complete() {
+	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 }
 
 func (o *managementControllerOptions) run(ctx context.Context) error {
@@ -51,45 +59,9 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		"commit":  version.GitCommit,
 	}).Info("Starting Kargo Management Controller")
 
-	var kargoMgr manager.Manager
-	{
-		restCfg, err :=
-			kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
-		if err != nil {
-			return fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
-		}
-		restCfg.ContentType = runtime.ContentTypeJSON
-
-		scheme := runtime.NewScheme()
-		if err = corev1.AddToScheme(scheme); err != nil {
-			return fmt.Errorf(
-				"error adding Kubernetes core API to Kargo controller manager scheme: %w",
-				err,
-			)
-		}
-		if err = rbacv1.AddToScheme(scheme); err != nil {
-			return fmt.Errorf(
-				"error adding Kubernetes RBAC API to Kargo controller manager scheme: %w",
-				err,
-			)
-		}
-		if err = kargoapi.AddToScheme(scheme); err != nil {
-			return fmt.Errorf(
-				"error adding Kargo API to Kargo controller manager scheme: %w",
-				err,
-			)
-		}
-		if kargoMgr, err = ctrl.NewManager(
-			restCfg,
-			ctrl.Options{
-				Scheme: scheme,
-				Metrics: server.Options{
-					BindAddress: "0",
-				},
-			},
-		); err != nil {
-			return fmt.Errorf("error initializing Kargo controller manager: %w", err)
-		}
+	kargoMgr, err := o.setupManager(ctx)
+	if err != nil {
+		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
 
 	if err := namespaces.SetupReconcilerWithManager(kargoMgr); err != nil {
@@ -107,4 +79,42 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error starting kargo manager: %w", err)
 	}
 	return nil
+}
+
+func (o *managementControllerOptions) setupManager(ctx context.Context) (manager.Manager, error) {
+	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
+	}
+	restCfg.ContentType = runtime.ContentTypeJSON
+
+	scheme := runtime.NewScheme()
+	if err = corev1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf(
+			"error adding Kubernetes core API to Kargo controller manager scheme: %w",
+			err,
+		)
+	}
+	if err = rbacv1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf(
+			"error adding Kubernetes RBAC API to Kargo controller manager scheme: %w",
+			err,
+		)
+	}
+	if err = kargoapi.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf(
+			"error adding Kargo API to Kargo controller manager scheme: %w",
+			err,
+		)
+	}
+
+	return ctrl.NewManager(
+		restCfg,
+		ctrl.Options{
+			Scheme: scheme,
+			Metrics: server.Options{
+				BindAddress: "0",
+			},
+		},
+	)
 }
