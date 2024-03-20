@@ -27,6 +27,12 @@ import (
 )
 
 type apiOptions struct {
+	KubeConfig      string
+	RolloutsEnabled bool
+
+	Host string
+	Port string
+
 	Logger *log.Logger
 }
 
@@ -41,11 +47,20 @@ func newAPICommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmdOpts.complete()
+
 			return cmdOpts.run(cmd.Context())
 		},
 	}
 
 	return cmd
+}
+
+func (o *apiOptions) complete() {
+	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.RolloutsEnabled = types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true"))
+	o.Host = os.GetEnv("HOST", "0.0.0.0")
+	o.Port = os.GetEnv("PORT", "8080")
 }
 
 func (o *apiOptions) run(ctx context.Context) error {
@@ -56,7 +71,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 	}).Info("Starting Kargo API Server")
 
 	cfg := config.ServerConfigFromEnv()
-	restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
+	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error loading REST config: %w", err)
 	}
@@ -65,7 +80,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 	if err = kubescheme.AddToScheme(scheme); err != nil {
 		return fmt.Errorf("add Kubernetes api to scheme: %w", err)
 	}
-	if types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true")) {
+	if o.RolloutsEnabled {
 		if argoRolloutsExists(ctx, restCfg) {
 			o.Logger.Info("Argo Rollouts integration is enabled")
 			if err = rollouts.AddToScheme(scheme); err != nil {
@@ -113,14 +128,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 	}
 
 	srv := api.NewServer(cfg, kubeClient, internalClient)
-	l, err := net.Listen(
-		"tcp",
-		fmt.Sprintf(
-			"%s:%s",
-			os.GetEnv("HOST", "0.0.0.0"),
-			os.GetEnv("PORT", "8080"),
-		),
-	)
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}
