@@ -14,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 )
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -21,7 +22,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Use:   "get TYPE [NAME ...]",
 		Short: "Display one or many resources",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # List all projects
 kargo get projects
 
@@ -30,7 +31,7 @@ kargo get stages --project=my-project
 
 # List all promotions for the given stage
 kargo get promotions --project=my-project --stage=my-stage
-`,
+`),
 	}
 
 	// Register subcommands.

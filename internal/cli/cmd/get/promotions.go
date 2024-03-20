@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -46,7 +47,7 @@ func newGetPromotionsCommand(cfg config.CLIConfig, streams genericiooptions.IOSt
 		Use:     "promotions [--project=project] [--stage=stage] [NAME ...]",
 		Aliases: []string{"promotion", "promos", "promo"},
 		Short:   "Display one or many promotions",
-		Example: `
+		Example: templates.Example(`
 # List all promotions in my-project
 kargo get promotions --project=my-project
 
@@ -70,7 +71,7 @@ kargo get promotions --stage=qa
 # Get a specific promotion in the default project
 kargo config set-project my-project
 kargo get promotion abc1234
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

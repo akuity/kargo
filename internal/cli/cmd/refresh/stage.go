@@ -11,6 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -23,7 +24,7 @@ func newRefreshStageCommand(cfg config.CLIConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "stage [--project=project] NAME [--wait]",
 		Args: option.ExactArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Refresh a stage
 kargo refresh stage --project=my-project my-stage
 
@@ -33,7 +34,7 @@ kargo refresh stage --project=my-project my-stage --wait
 # Refresh a stage in the default project
 kargo config set-project my-project
 kargo refresh stage my-stage
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(refreshResourceTypeStage, args)
 

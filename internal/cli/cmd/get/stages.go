@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -45,7 +46,7 @@ func newGetStagesCommand(cfg config.CLIConfig, streams genericiooptions.IOStream
 		Use:     "stages [--project=project] [NAME ...]",
 		Aliases: []string{"stage"},
 		Short:   "Display one or many stages",
-		Example: `
+		Example: templates.Example(`
 # List all stages in my-project
 kargo get stages --project=my-project
 
@@ -62,7 +63,7 @@ kargo get stages
 # Get a the QA stage in the default project
 kargo config set-project my-project
 kargo get stage qa
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

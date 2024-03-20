@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -42,13 +43,13 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Use:   "create -f FILENAME",
 		Short: "Create a resource from a file or from stdin",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Create a stage using the data in stage.yaml
 kargo create -f stage.yaml
 
 # Create a project
 kargo create project my-project
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

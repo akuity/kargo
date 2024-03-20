@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	"github.com/akuity/kargo/internal/credentials"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -55,7 +56,7 @@ func newCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStre
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Create new credentials for accessing a repository",
 		Args:    cobra.ExactArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Create credentials for a Git repository
 kargo create credentials --project=my-project my-credentials \
   --git --repo-url=https://github.com/my-org/my-repo.git \
@@ -87,7 +88,8 @@ kargo create credentials my-credentials \
 kargo config set-project my-project
 kargo create credentials my-credentials \
   --image --repo-url=ghcr.io/my-org/my-image \
-  --username=my-username --password=my-password`,
+  --username=my-username --password=my-password
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

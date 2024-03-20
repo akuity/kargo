@@ -8,6 +8,7 @@ import (
 
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 )
 
 type setProjectOptions struct {
@@ -23,13 +24,13 @@ func newSetProjectCommand(cfg config.CLIConfig) *cobra.Command {
 		Use:   "set-project NAME",
 		Short: "Set the default project",
 		Args:  option.ExactArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Set a default project
 kargo config set-project my-project
 
 # Unset a default project
 kargo config set-project ""
-`,
+`),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

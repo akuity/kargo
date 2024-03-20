@@ -5,6 +5,7 @@ import (
 
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 )
 
 func NewCommand(cfg config.CLIConfig) *cobra.Command {
@@ -12,10 +13,10 @@ func NewCommand(cfg config.CLIConfig) *cobra.Command {
 		Use:   "verify SUBCOMMAND",
 		Short: "Verify a stage",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Verify a stage
 kargo verify stage --project=my-project my-stage
-`,
+`),
 	}
 
 	// Register subcommands.

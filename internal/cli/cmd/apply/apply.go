@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -43,13 +44,13 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Use:   "apply -f FILENAME",
 		Short: "Apply a resource from a file or from stdin",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Apply a stage using the data in stage.yaml
 kargo apply -f stage.yaml
 
 # Apply the YAML resources in the stages directory
 kargo apply -f stages/
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

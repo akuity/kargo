@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -44,7 +45,7 @@ func newCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStre
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Delete credentials by name",
 		Args:    cobra.MinimumNArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Delete credentials
 kargo delete credentials --project=my-project my-credentials
 
@@ -53,7 +54,7 @@ kargo delete credentials --project=my-project my-credentials1 my-credentials2
 
 # Delete credentials from default project
 kargo config set-project my-project
-kargo delete credentials my-credentials`,
+kargo delete credentials my-credentials`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

@@ -11,6 +11,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -33,7 +34,7 @@ func NewCommand(cfg config.CLIConfig) *cobra.Command {
 		Use:   "approve [--project=project] (--freight=freight | --freight-alias=alias) --stage=stage",
 		Short: "Manually approve a piece of freight for promotion to a stage",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Approve a piece of freight specified by name for the QA stage
 kargo approve --project=my-project --freight=abc1234 --stage=qa
 
@@ -47,7 +48,7 @@ kargo approve --freight=abc1234 --stage=qa
 # Approve a piece of freight specified by alias for the QA stage in the default project
 kargo config set-project my-project
 kargo approve --freight-alias=wonky-wombat --stage=qa
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

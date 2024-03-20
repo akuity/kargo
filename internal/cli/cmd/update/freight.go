@@ -11,6 +11,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -33,7 +34,7 @@ func newUpdateFreightAliasCommand(cfg config.CLIConfig) *cobra.Command {
 		Use:   "freight [--project=project] (--name=name | --old-alias=old-alias) --new-alias=new-alias",
 		Short: "Update the alias of a piece of freight",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Update the alias of a piece of freight specified by name
 kargo update freight --project=my-project --name=abc1234 --new-alias=frozen-fox
 
@@ -47,7 +48,7 @@ kargo update freight --name=abc123 --new-alias=frozen-fox
 # Update the alias of a piece of freight specified by its existing alias in the default project
 kargo config set-project my-project
 kargo update freight --old-alias=wonky-wombat --new-alias=frozen-fox
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

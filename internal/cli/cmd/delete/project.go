@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -42,13 +43,13 @@ func newProjectCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams)
 		Use:   "project (NAME ...)",
 		Short: "Delete project by name",
 		Args:  option.MinimumNArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Delete a project
 kargo delete project my-project
 
 # Delete multiple projects
 kargo delete project my-project1 my-project2
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

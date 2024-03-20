@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -45,7 +46,7 @@ func newGetFreightCommand(cfg config.CLIConfig, streams genericiooptions.IOStrea
 		Use:   "freight [--project=project] [--name=name | --alias=alias]",
 		Short: "Display one or many pieces of freight",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # List all freight in my-project
 kargo get freight --project=my-project
 
@@ -69,7 +70,7 @@ kargo get freight --name=abc1234
 # Get a single piece of freight by alias in the default project
 kargo config set-project my-project
 kargo get freight --alias=wonky-wombat
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

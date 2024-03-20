@@ -13,6 +13,7 @@ import (
 	apiconfig "github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 )
 
 type serverOptions struct {
@@ -26,13 +27,13 @@ func NewCommand() *cobra.Command {
 		Use:   "server",
 		Short: "Start a local Kargo API server",
 		Args:  option.NoArgs,
-		Example: `
+		Example: templates.Example(`
 # Start a local Kargo API server on a random port
 kargo server
 
 # Start a local Kargo API server on a specific address
 kargo server --address=127.0.0.1:3000
-`,
+`),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
 				return err

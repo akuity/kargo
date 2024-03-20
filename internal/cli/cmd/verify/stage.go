@@ -12,6 +12,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -33,7 +34,7 @@ func newVerifyStageCommand(cfg config.CLIConfig) *cobra.Command {
 		Use:   "stage [--project=project] (NAME) [--abort]",
 		Short: "(Re)run or abort the verification of the stage's current freight",
 		Args:  option.ExactArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Rerun the verification of the stage's current freight
 kargo verify stage --project=my-project my-stage
 
@@ -47,7 +48,7 @@ kargo verify stage --project=my-project my-stage --abort
 # Abort the verification of a stage in the default project
 kargo config set-project my-project
 kargo verify stage my-stage --abort
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 

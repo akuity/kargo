@@ -11,6 +11,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
+	"github.com/akuity/kargo/internal/cli/templates"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -23,7 +24,7 @@ func newRefreshWarehouseCommand(cfg config.CLIConfig) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "warehouse [--project=project] NAME [--wait]",
 		Args: option.ExactArgs(1),
-		Example: `
+		Example: templates.Example(`
 # Refresh a warehouse
 kargo refresh warehouse --project=my-project my-warehouse
 
@@ -33,7 +34,7 @@ kargo refresh warehouse --project=my-project my-warehouse --wait
 # Refresh a warehouse in the default project
 kargo config set-project my-project
 kargo refresh warehouse my-warehouse
-`,
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(refreshResourceTypeWarehouse, args)
 
