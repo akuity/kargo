@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Form, Input, Modal, Tabs } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import React from 'react';
@@ -11,7 +11,10 @@ import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import schema from '@ui/gen/schema/projects.kargo.akuity.io_v1alpha1.json';
-import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import {
+  createResource,
+  listProjects
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
 import { projectYAMLExample } from './utils/project-yaml-example';
@@ -21,6 +24,7 @@ const formSchema = z.object({
 });
 
 export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
+  const queryClient = useQueryClient();
   const { mutateAsync, isPending } = useMutation({
     ...createResource.useMutation(),
     onSuccess: () => hide()
@@ -35,9 +39,14 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
 
   const onSubmit = handleSubmit(async (data) => {
     const textEncoder = new TextEncoder();
-    await mutateAsync({
-      manifest: textEncoder.encode(data.value)
-    });
+    await mutateAsync(
+      {
+        manifest: textEncoder.encode(data.value)
+      },
+      {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: listProjects.getQueryKey() })
+      }
+    );
   });
 
   const yamlValue = watch('value');
