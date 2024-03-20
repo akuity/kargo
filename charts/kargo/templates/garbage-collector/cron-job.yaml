@@ -7,6 +7,10 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.garbageCollector.labels" . | nindent 4 }}
+  {{- with .Values.garbageCollector.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   schedule: {{ quote .Values.garbageCollector.schedule }}
   concurrencyPolicy: Forbid
