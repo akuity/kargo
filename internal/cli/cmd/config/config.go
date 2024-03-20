@@ -18,6 +18,7 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	// Register subcommands.
 	cmd.AddCommand(newGetProjectCommand(cfg, streams))
 	cmd.AddCommand(newSetProjectCommand(cfg))
+	cmd.AddCommand(newViewCommand(cfg, streams))
 
 	return cmd
 }

@@ -9,6 +9,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const dataMask = "*** REDACTED ***"
+
 var xdgConfigPath string
 
 func init() {
@@ -130,4 +132,15 @@ func deleteCLIConfig(configPath string) error {
 		return fmt.Errorf("error deleting configuration: %w", err)
 	}
 	return nil
+}
+
+func MaskedConfig(config CLIConfig) CLIConfig {
+	// We reconstruct the config to avoid accidentally exposing new fields.
+	return CLIConfig{
+		APIAddress:            config.APIAddress,
+		BearerToken:           dataMask,
+		RefreshToken:          dataMask,
+		InsecureSkipTLSVerify: config.InsecureSkipTLSVerify,
+		Project:               config.Project,
+	}
 }

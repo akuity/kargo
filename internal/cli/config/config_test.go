@@ -114,6 +114,23 @@ func TestDeleteCLIConfig(t *testing.T) {
 	}
 }
 
+func TestMaskedConfig(t *testing.T) {
+	testConfig := CLIConfig{
+		APIAddress:            "http://localhost:8080",
+		BearerToken:           "secret",
+		RefreshToken:          "secret",
+		InsecureSkipTLSVerify: true,
+		Project:               "project",
+	}
+	maskedConfig := MaskedConfig(testConfig)
+
+	require.Equal(t, "http://localhost:8080", maskedConfig.APIAddress)
+	require.Equal(t, dataMask, maskedConfig.BearerToken)
+	require.Equal(t, dataMask, maskedConfig.RefreshToken)
+	require.Equal(t, true, maskedConfig.InsecureSkipTLSVerify)
+	require.Equal(t, "project", maskedConfig.Project)
+}
+
 func getTestConfigPath() string {
 	return filepath.Join(os.TempDir(), "config")
 }
