@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.3
 
 require (
-	connectrpc.com/connect v1.15.0
+	connectrpc.com/connect v1.16.0
 	connectrpc.com/grpchealth v1.3.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver v1.5.0
@@ -13,7 +13,7 @@ require (
 	github.com/adrg/xdg v0.4.0
 	github.com/bacongobbler/browser v1.1.0
 	github.com/bombsimon/logrusr/v4 v4.1.0
-	github.com/coreos/go-oidc/v3 v3.9.0
+	github.com/coreos/go-oidc/v3 v3.10.0
 	github.com/distribution/distribution/v3 v3.0.0-20230722181636-7b502560cad4
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/fatih/structtag v1.2.0
@@ -55,6 +55,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
+require github.com/go-jose/go-jose/v4 v4.0.1 // indirect
+
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
@@ -79,7 +81,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
