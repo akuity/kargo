@@ -325,7 +325,7 @@ func (r *repo) GetDiffPathsSinceCommitID(commitId string) ([]string, error) {
 		return nil,
 			fmt.Errorf("error getting diffs since commit %q %w", commitId, err)
 	}
-	paths := []string{}
+	var paths []string
 	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
 	scanner.Split(bufio.ScanLines)
 	for scanner.Scan() {

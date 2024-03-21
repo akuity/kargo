@@ -1561,28 +1561,28 @@ export class GitSubscription extends Message<GitSubscription> {
   insecureSkipTLSVerify?: boolean;
 
   /**
-   * ScanPaths is a list of regular expressions that can optinally be used to
+   * IncludePaths is a list of regular expressions that can optionally be used to
    * limit file paths in repository, changes in which will result in creation of
    * new freight. When not specified - changes in any path will produce new
-   * freight, it is equivalent to having a ScanPaths with an entry of ".*"
-   * When both ScanPaths and IgnorePaths are specified and match same path/paths,
-   * IgnorePaths will prevail over ScanPaths.
+   * freight, it is equivalent to having a IncludePaths with an entry of ".*"
+   * When both IncludePaths and ExcludePaths are specified and match same path/paths,
+   * ExcludePaths will prevail over IncludePaths.
    * +kubebuilder:validation:Optional
    *
-   * @generated from field: repeated string scanPaths = 8;
+   * @generated from field: repeated string includePaths = 8;
    */
-  scanPaths: string[] = [];
+  includePaths: string[] = [];
 
   /**
-   * IgnorePaths is an optional list of regular expressions used to specify paths
+   * ExcludePaths is an optional list of regular expressions used to specify paths
    * in git repository, changes in which should never produce new freight. When used
-   * in conjuction with ScanPaths, both matching same path/paths, IgnorePaths takes
-   * precedence over ScanPaths.
+   * in conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes
+   * precedence over IncludePaths.
    * +kubebuilder:validation:Optional
    *
-   * @generated from field: repeated string ignorePaths = 9;
+   * @generated from field: repeated string excludePaths = 9;
    */
-  ignorePaths: string[] = [];
+  excludePaths: string[] = [];
 
   constructor(data?: PartialMessage<GitSubscription>) {
     super();
@@ -1599,8 +1599,8 @@ export class GitSubscription extends Message<GitSubscription> {
     { no: 5, name: "allowTags", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "ignoreTags", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "insecureSkipTLSVerify", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 8, name: "scanPaths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 9, name: "ignorePaths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 8, name: "includePaths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "excludePaths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitSubscription {

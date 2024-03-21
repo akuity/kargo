@@ -30,8 +30,9 @@ func (r *reconciler) selectCommits(
 ) ([]kargoapi.GitCommit, error) {
 	latestCommits := make([]kargoapi.GitCommit, 0, len(subs))
 
-	repoCommitMappings := map[string]string{}
+	var repoCommitMappings map[string]string
 	if lastFreight != nil {
+		repoCommitMappings = make(map[string]string, len(lastFreight.Commits))
 		for _, commit := range lastFreight.Commits {
 			repoCommitMappings[commit.RepoURL+"#"+commit.Branch] = commit.ID
 		}
@@ -106,10 +107,10 @@ func (r *reconciler) selectCommitMeta(
 	if sub.CommitSelectionStrategy == "" {
 		sub.CommitSelectionStrategy = kargoapi.CommitSelectionStrategyNewestFromBranch
 	}
-	// when scanPaths and/or ignorePaths filters are used we can't use shallow clone
+	// when includePaths and/or excludePaths filters are used we can't use shallow clone
 	// as we need diffs between HEAD and a baseCommit which depth in git history is unknown
 	var shallowClone = true
-	if (len(sub.ScanPaths) != 0 || len(sub.IgnorePaths) != 0) && baseCommit != "" {
+	if (len(sub.IncludePaths) != 0 || len(sub.ExcludePaths) != 0) && baseCommit != "" {
 		shallowClone = false
 	}
 	repo, err := git.Clone(
@@ -159,7 +160,7 @@ func (r *reconciler) selectTagAndCommitID(
 
 	if sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch {
 		// In this case, there is nothing to do except return the commit ID at the
-		// head of the branch unless there are scanPaths/ignorePaths configured to
+		// head of the branch unless there are includePaths/excludePaths configured to
 		// handle.
 		commit, err := r.getLastCommitIDFn(repo)
 		if err != nil {
@@ -170,11 +171,11 @@ func (r *reconciler) selectTagAndCommitID(
 					err,
 				)
 		}
-		// In case scanPaths/ignorePaths filters are configured in a git subscription
+		// In case includePaths/excludePaths filters are configured in a git subscription
 		// below if clause deals with it. There is a special case - Warehouse has not
 		// produced any Freight yet, this is sorted by creating Freight based on last
 		// commit without applying filters.
-		if (sub.ScanPaths != nil || sub.IgnorePaths != nil) && baseCommit != "" {
+		if (sub.IncludePaths != nil || sub.ExcludePaths != nil) && baseCommit != "" {
 
 			// getting actual diffPaths since baseCommit
 			diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
@@ -187,10 +188,10 @@ func (r *reconciler) selectTagAndCommitID(
 					)
 			}
 
-			matchesPathsFilters, err := matchesPathsFilters(sub.ScanPaths, sub.IgnorePaths, diffs)
+			matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffs)
 			if err != nil {
 				return "", "",
-					fmt.Errorf("error checking scanPaths/ignorePaths match for commit %q in git repo %q: %w",
+					fmt.Errorf("error checking includePaths/excludePaths match for commit %q in git repo %q: %w",
 						commit,
 						sub.RepoURL,
 						err,
@@ -199,7 +200,7 @@ func (r *reconciler) selectTagAndCommitID(
 
 			if !matchesPathsFilters {
 				return "", "",
-					fmt.Errorf("commit %q not applicable due to scanPaths/ignorePaths configuration in repo %q",
+					fmt.Errorf("commit %q not applicable due to includePaths/excludePaths configuration in repo %q",
 						commit,
 						sub.RepoURL,
 					)
@@ -290,42 +291,37 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
-// pathsFilterPositive returns true when ScanPaths and/or IgnorePaths
+// pathsFilterPositive returns true when IncludePaths and/or ExcludePaths
 // filters match one or more commit diffs and new Freight is
 // to be produced. It returns false otherwise.
-func matchesPathsFilters(scanPaths []string, ignorePaths []string, diffs []string) (bool, error) {
+func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
 
-	scanPathsRegexps, err := compileRegexps(scanPaths)
+	includePathsRegexps, err := compileRegexps(includePaths)
 	if err != nil {
 		return false, fmt.Errorf(
-			"error compiling scanPaths regexps: %w",
+			"error compiling includePaths regexps: %w",
 			err,
 		)
 	}
 
-	ignorePathsRegexps, err := compileRegexps(ignorePaths)
+	excludePathsRegexps, err := compileRegexps(excludePaths)
 	if err != nil {
 		return false, fmt.Errorf(
-			"error compiling ignorePaths regexps: %w",
+			"error compiling excludePaths regexps: %w",
 			err,
 		)
 	}
 
 	filteredDiffs := make([]string, 0, len(diffs))
 	for _, diffPath := range diffs {
-		// matchesScanPaths case is a bit different from matchesIgnorePaths
-		// in the way that if scanPaths string array is empty - it matches
+		// matchesIncludePaths case is a bit different from matchesExcludePaths
+		// in the way that if includePaths string array is empty - it matches
 		// ANY change so we need to have a check for that
-		var matchesScanPaths bool
-		if scanPaths == nil {
-			matchesScanPaths = true
-		} else {
-			matchesScanPaths = matchesRegexpList(diffPath, scanPathsRegexps)
-		}
-		matchesIgnorePaths := matchesRegexpList(diffPath, ignorePathsRegexps)
-		// combined filter decision, positive for matching scanPaths and
-		// unmatching ignorePaths
-		if matchesScanPaths && !matchesIgnorePaths {
+		matchesIncludePaths := len(includePaths) == 0 || matchesRegexpList(diffPath, includePathsRegexps)
+		matchesExcludePaths := matchesRegexpList(diffPath, excludePathsRegexps)
+		// combined filter decision, positive for matching includePaths and
+		// unmatching excludePaths
+		if matchesIncludePaths && !matchesExcludePaths {
 			filteredDiffs = append(filteredDiffs, diffPath)
 		}
 	}

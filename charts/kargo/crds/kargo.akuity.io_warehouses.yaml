@@ -136,12 +136,12 @@ spec:
                           - NewestTag
                           - SemVer
                           type: string
-                        ignorePaths:
+                        excludePaths:
                           description: |-
-                            IgnorePaths is an optional list of regular expressions used to specify paths
+                            ExcludePaths is an optional list of regular expressions used to specify paths
                             in git repository, changes in which should never produce new freight. When used
-                            in conjuction with ScanPaths, both matching same path/paths, IgnorePaths takes
-                            precedence over ScanPaths.
+                            in conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes
+                            precedence over IncludePaths.
                           items:
                             type: string
                           type: array
@@ -152,6 +152,17 @@ spec:
                             supported yet. The value in this field only has any effect when the
                             CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
                             optional.
+                          items:
+                            type: string
+                          type: array
+                        includePaths:
+                          description: |-
+                            IncludePaths is a list of regular expressions that can optionally be used to
+                            limit file paths in repository, changes in which will result in creation of
+                            new freight. When not specified - changes in any path will produce new
+                            freight, it is equivalent to having a IncludePaths with an entry of ".*"
+                            When both IncludePaths and ExcludePaths are specified and match same path/paths,
+                            ExcludePaths will prevail over IncludePaths.
                           items:
                             type: string
                           type: array
@@ -167,17 +178,6 @@ spec:
                           minLength: 1
                           pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
                           type: string
-                        scanPaths:
-                          description: |-
-                            ScanPaths is a list of regular expressions that can optinally be used to
-                            limit file paths in repository, changes in which will result in creation of
-                            new freight. When not specified - changes in any path will produce new
-                            freight, it is equivalent to having a ScanPaths with an entry of ".*"
-                            When both ScanPaths and IgnorePaths are specified and match same path/paths,
-                            IgnorePaths will prevail over ScanPaths.
-                          items:
-                            type: string
-                          type: array
                         semverConstraint:
                           description: |-
                             SemverConstraint specifies constraints on what new tagged commits are

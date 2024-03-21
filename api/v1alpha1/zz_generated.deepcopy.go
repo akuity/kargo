@@ -534,13 +534,13 @@ func (in *GitSubscription) DeepCopyInto(out *GitSubscription) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.ScanPaths != nil {
-		in, out := &in.ScanPaths, &out.ScanPaths
+	if in.IncludePaths != nil {
+		in, out := &in.IncludePaths, &out.IncludePaths
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.IgnorePaths != nil {
-		in, out := &in.IgnorePaths, &out.IgnorePaths
+	if in.ExcludePaths != nil {
+		in, out := &in.ExcludePaths, &out.ExcludePaths
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

@@ -497,21 +497,21 @@ message GitSubscription {
   // only with great caution.
   optional bool insecureSkipTLSVerify = 7;
 
-  // ScanPaths is a list of regular expressions that can optinally be used to
+  // IncludePaths is a list of regular expressions that can optionally be used to
   // limit file paths in repository, changes in which will result in creation of
   // new freight. When not specified - changes in any path will produce new
-  // freight, it is equivalent to having a ScanPaths with an entry of ".*"
-  // When both ScanPaths and IgnorePaths are specified and match same path/paths,
-  // IgnorePaths will prevail over ScanPaths.
+  // freight, it is equivalent to having a IncludePaths with an entry of ".*"
+  // When both IncludePaths and ExcludePaths are specified and match same path/paths,
+  // ExcludePaths will prevail over IncludePaths.
   // +kubebuilder:validation:Optional
-  repeated string scanPaths = 8;
+  repeated string includePaths = 8;
 
-  // IgnorePaths is an optional list of regular expressions used to specify paths
+  // ExcludePaths is an optional list of regular expressions used to specify paths
   // in git repository, changes in which should never produce new freight. When used
-  // in conjuction with ScanPaths, both matching same path/paths, IgnorePaths takes
-  // precedence over ScanPaths.
+  // in conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes
+  // precedence over IncludePaths.
   // +kubebuilder:validation:Optional
-  repeated string ignorePaths = 9;
+  repeated string excludePaths = 9;
 }
 
 // Health describes the health of a Stage.

@@ -232,7 +232,7 @@ func TestSelectCommitID(t *testing.T) {
 			name: "newest from branch with path filters; error getting diffPaths",
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-				ScanPaths:               []string{".*"},
+				IncludePaths:            []string{".*"},
 			},
 			reconciler: &reconciler{
 				getLastCommitIDFn: func(git.Repo) (string, error) {
@@ -256,7 +256,7 @@ func TestSelectCommitID(t *testing.T) {
 			name: "newest from branch with path filters; error matching filters; invalid regex",
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-				ScanPaths:               []string{"["},
+				IncludePaths:            []string{"["},
 			},
 			reconciler: &reconciler{
 				getLastCommitIDFn: func(git.Repo) (string, error) {
@@ -271,12 +271,12 @@ func TestSelectCommitID(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"error checking scanPaths/ignorePaths match for commit \"fake-commit\"",
+					"error checking includePaths/excludePaths match for commit \"fake-commit\"",
 				)
 				require.Contains(
 					t,
 					err.Error(),
-					"error compiling scanPaths regexps: error compiling string \"[\" into a regular expression",
+					"error compiling includePaths regexps: error compiling string \"[\" into a regular expression",
 				)
 				require.Contains(t, err.Error(), "error parsing regexp: missing closing ]")
 			},
@@ -285,7 +285,7 @@ func TestSelectCommitID(t *testing.T) {
 			name: "newest from branch with path filters; error matching filters; no diff matching",
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-				ScanPaths:               []string{"^third.*"},
+				IncludePaths:            []string{"^third.*"},
 			},
 			reconciler: &reconciler{
 				getLastCommitIDFn: func(git.Repo) (string, error) {
@@ -300,7 +300,7 @@ func TestSelectCommitID(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"commit \"fake-commit\" not applicable due to scanPaths/ignorePaths configuration in repo",
+					"commit \"fake-commit\" not applicable due to includePaths/excludePaths configuration in repo",
 				)
 			},
 		},
@@ -669,49 +669,49 @@ func TestSelectSemverTag(t *testing.T) {
 
 func TestMatchesPathsFilters(t *testing.T) {
 	testCases := []struct {
-		name        string
-		scanPaths   []string
-		ignorePaths []string
-		diffs       []string
-		assertions  func(bool, error)
+		name         string
+		includePaths []string
+		excludePaths []string
+		diffs        []string
+		assertions   func(bool, error)
 	}{
 		{
-			name:        "success with no scanPaths configured",
-			ignorePaths: []string{"nonexistent"},
-			diffs:       []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			name:         "success with no includePaths configured",
+			excludePaths: []string{"nonexistent"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(matchFound bool, err error) {
 				require.NoError(t, err)
 				require.Equal(t, true, matchFound)
 			},
 		},
 		{
-			name:        "success with a matching filters configuration",
-			scanPaths:   []string{"values\\.ya?ml$"},
-			ignorePaths: []string{"nonexistent"},
-			diffs:       []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			name:         "success with a matching filters configuration",
+			includePaths: []string{"values\\.ya?ml$"},
+			excludePaths: []string{"nonexistent"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(matchFound bool, err error) {
 				require.NoError(t, err)
 				require.Equal(t, true, matchFound)
 			},
 		},
 		{
-			name:        "success with unmatching filters configuration",
-			scanPaths:   []string{"values\\.ya?ml$"},
-			ignorePaths: []string{"nonexistent", ".*val.*"},
-			diffs:       []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			name:         "success with unmatching filters configuration",
+			includePaths: []string{"values\\.ya?ml$"},
+			excludePaths: []string{"nonexistent", ".*val.*"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(matchFound bool, err error) {
 				require.NoError(t, err)
 				require.Equal(t, false, matchFound)
 			},
 		},
 		{
-			name:        "error with invalid regexp in ignorePaths configuration",
-			scanPaths:   []string{"values\\.ya?ml$"},
-			ignorePaths: []string{"nonexistent", ".*val.*", "["},
-			diffs:       []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			name:         "error with invalid regexp in excludePaths configuration",
+			includePaths: []string{"values\\.ya?ml$"},
+			excludePaths: []string{"nonexistent", ".*val.*", "["},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(_ bool, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "error compiling ignorePaths regexps:")
+				require.Contains(t, err.Error(), "error compiling excludePaths regexps:")
 				require.Contains(t, err.Error(), "error compiling string \"[\" into a regular expression")
 			},
 		},
@@ -719,7 +719,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(_ *testing.T) {
 			testCase.assertions(
-				matchesPathsFilters(testCase.scanPaths, testCase.ignorePaths, testCase.diffs),
+				matchesPathsFilters(testCase.includePaths, testCase.excludePaths, testCase.diffs),
 			)
 		})
 	}
