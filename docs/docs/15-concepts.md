@@ -487,6 +487,12 @@ a human-readable string that is unique within the `Project` to which the
 `Freight` belongs. While it can be set manually (and changed), by default,
 Kargo will automatically generate a unique alias for each `Freight` resource.
 
+:::note
+For more information on aliases, refer to the [aliases](./30-how-to-guides/15-working-with-freight.md#aliases)
+and [updating aliases](./30-how-to-guides/15-working-with-freight.md#updating-aliases)
+sections of the "Working with Freight" how-to guide.
+:::
+
 A `Freight` resource's `status` field records a list of `Stage` resources in
 which the `Freight` has been _verified_ and a separate list of `Stage` resources
 for which the `Freight` has been manually _approved_.
