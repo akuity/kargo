@@ -98,10 +98,9 @@ over its alias.
 :::
 
 :::note
-Some, but not all, Kargo CLI commands will accept `Freight` aliases as an
-alternative to `Freights` IDs.
-
-Eventually, all Kargo CLI commands will accept aliases as an alternative.
+Kargo CLI commands will accept `Freight` aliases as an alternative to a
+`Freight` name. Refer to the help text for the `kargo` command for more
+information.
 :::
 
 ### Updating Aliases
