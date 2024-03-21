@@ -113,6 +113,15 @@ In future releases, the team also expects to also aggregate project-level status
 and statistics in `Project` resources.
 :::
 
+:::info
+The `Project` resource expects to assume sole ownership of the `Namespace`
+resource it represents.  However, there may be scenarios where shared ownership
+is desired, such as another controller creating the namespace and maintaining
+ownership.  To allow shared ownership between the other controller and
+`Project`, add `kargo.akuity.io/allow-shared-ownership: "true"` to the
+`Namespace` labels.
+:::
+
 #### Promotion Policies
 
 A `Project` resource can additionally define project-level configuration. At

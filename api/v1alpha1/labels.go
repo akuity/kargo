@@ -16,4 +16,6 @@ const (
 	LabelTrueValue = "true"
 
 	FinalizerName = "kargo.akuity.io/finalizer"
+
+	AllowSharedOwnershipLabelKey = "kargo.akuity.io/allow-shared-ownership"
 )
