@@ -25,38 +25,21 @@ visit the [concepts doc](../concepts).
 The remainder of this page describes features of freight that will enabled you
 to work more effectively.
 
-## IDs
+## Names
 
 Like all Kubernetes resources, Kargo `Freight` resources have a `metadata.name`
 field, which uniquely identifies each resource of that type within a given Kargo
 project (a specially labeled Kubernetes namespace). When a `Warehouse` produces
 a new `Freight` resource, it will compute a canonical representation of the
 artifacts referenced by that resource and use that, in turn, to compute a SHA-1
-hash. This becomes the value of both the resources's `metadata.name` _and_ `id`
-fields. The deterministic method of computing this value makes it a unique
-"fingerprint" of the collection of artifacts referenced by the `Freight`
-resource.
-
-:::info
-Why include the same information in two different fields?
-
-The Kargo team anticipates the possibility of someday permitting users to
-manually create their own `Freight` resources -- i.e. `Freight` resources not
-created by a `Warehouse`. In such a scenario, the value of the `metadata.name`
-field would be user-defined and would not be guaranteed to reflect the artifacts
-referenced by the resource.
-
-Because Kargo utilizes a
-[mutating admission webhooks](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#mutatingadmissionwebhook)
-to ensure that the value of the `id` field is _always_ set correctly, Kargo can
-rely on the value of that field to _always_ reflect the artifacts referenced by
-the resource, even when the `metadata.name` field does not.
-:::
+hash. This becomes the value of the `metadata.name` field. The deterministic
+method of computing this value makes it a unique "fingerprint" of the
+collection of artifacts referenced by the `Freight` resource.
 
 ## Aliases
 
-While the `id` field (and `metadata.name` field, for now) contain predictably
-computed SHA-1 hashes, such identifiers are, unarguably, not very user-friendly.
+While the `metadata.name` field contains a predictably computed SHA-1 hash,
+such identifiers are, unarguably, not very user-friendly.
 To make `Freight` resources easier for human users to identify, `Warehouse`s
 automatically generate a human-friendly alias for every `Freight` resource they
 produce and apply it as the value of the `Freight` resource's
@@ -73,12 +56,12 @@ by users.
 Why a label?
 
 Kubernetes enforces the immutability of the `metadata.name` field for all
-resources and a Kargo webhook enforces the immutability of the `id` field.
+resources.
 
 Kubernetes
 [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/),
-by contrast, are both mutable and indexed, which which makes them ideal for use
-as secondary identifiers.
+by contrast, are both mutable and indexed, which makes them ideal for use as
+secondary identifiers.
 :::
 
 When using the Kargo CLI to query for `Freight` resources, the `alias` field is
@@ -91,7 +74,7 @@ kargo get freight --project kargo-demo
 Sample output:
 
 ```shell
-NAME/ID                                    ALIAS              AGE
+NAME                                       ALIAS              AGE
 f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
 ```
 
@@ -110,15 +93,14 @@ f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
 
 :::info
 The Kargo UI, to make efficient use of screen real estate, displays aliases
-only, but a `Freight` resource's `id` can always be discovered by hovering over
-its alias.
+only, but a `Freight` resource's `name` can always be discovered by hovering
+over its alias.
 :::
 
 :::note
-Some, but not all, Kargo CLI commands will accepts `Freight` aliases as an
-alternative to `Freights` IDs.
-
-Eventually, all Kargo CLI commands will accept aliases as an alternative.
+Kargo CLI commands will accept `Freight` aliases as an alternative to a
+`Freight` name. Refer to the help text for the `kargo` command for more
+information.
 :::
 
 ### Updating Aliases
@@ -138,7 +120,20 @@ kargo update freight \
 ```
 
 This can also be accomplished via `kubectl` commands `apply`, `edit`, `patch`,
-etc.
+etc. by updating the `alias` field of the `Freight` resource.
+
+:::info
+The `alias` field is a convenient way to update the `Freight` resource's
+`kargo.akuity.io/alias` label, which causes a webhook to sync the field value
+to the label value. The precedence rules for syncing between the field and
+label values are as follows:
+
+- If the field has a non-empty value, the label will assume the field's value.
+- If the field has an empty value, the field will assume the label's value.
+
+It's worth noting that removing an alias entirely requires clearing both the
+field and label values, but this is expected to be a rare occurrence.
+:::
 
 ## Manual Approvals
 

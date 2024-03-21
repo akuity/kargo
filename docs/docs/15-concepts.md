@@ -170,7 +170,7 @@ For each `Stage`, the Kargo controller will periodically check for `Freight`
 resources that are newly qualified for promotion to that `Stage`.
 
 For any `Stage` subscribed directly to a `Warehouse`, _any_ new `Freight`
-resource from that `Warehouse` is tacitly consider to have been _verified_
+resource from that `Warehouse` is tacitly considered to have been _verified_
 upstream, and is therefore immediately qualified for promotion to such a
 `Stage`.
 
@@ -404,7 +404,7 @@ A `Stage` resource's `status` field records:
 * History of `Freight` that has been deployed to the `Stage`. (From most to
   least recent.)
 
-* The health status any any associated Argo CD `Application` resources.
+* The health status of any associated Argo CD `Application` resources.
 
 * The status of any in-progress of completed verification processes.
 
@@ -414,18 +414,27 @@ For example:
 status:
   phase: Steady
   currentFreight:
-    id: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
     images:
     - repoURL: nginx
       tag: 1.25.3
     commits:
     - repoURL: https://github.com/example/kargo-demo.git
       id: 1234abc
-    verificationResult:
+    name: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
+    verificationInfo:
       analysisRun:
         namespace: kargo-demo
         name: test.ab85b188-0ad5-43d9-a36d-ddcf63666183.47b33c0
         phase: Successful
+      id: 69219d8d-cf5e-414e-8ee9-7d3e3a7c3f15
+      phase: Successful
+    verificationHistory:
+    - analysisRun:
+        namespace: kargo-demo
+        name: test.ab85b188-0ad5-43d9-a36d-ddcf63666183.47b33c0
+        phase: Successful
+      id: 69219d8d-cf5e-414e-8ee9-7d3e3a7c3f15
+      phase: Successful
   health:
     argoCDApps:
     - healthStatus:
@@ -437,18 +446,21 @@ status:
         status: Synced
     status: Healthy
   history:
-  - id: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
-    images:
-    - repoURL: nginx
-      tag: 1.25.3
-    commits:
+  - commits:
     - repoURL: https://github.com/example/kargo-demo.git
       id: 1234abc
-    verificationResult:
+    images:
+      - repoURL: nginx
+        tag: 1.25.3
+    name: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
+    warehouse: my-warehouse
+    verificationInfo:
       analysisRun:
         namespace: kargo-demo
         name: test.ab85b188-0ad5-43d9-a36d-ddcf63666183.47b33c0
         phase: Successful
+      id: 69219d8d-cf5e-414e-8ee9-7d3e3a7c3f15
+      phase: Successful
 ```
 
 ### `Freight` Resources
@@ -464,11 +476,22 @@ A single `Freight` resource references one or more versioned artifacts, such as:
 
 * Helm charts (from chart repositories)
 
-A `Freight` resource's `id` field _and_ `metadata.name` field are both (for now)
-set to the same value, which is a SHA1 hash of a canonical representation of the
-artifacts referenced by the `Freight` resource. (This is enforced by an
-admission webhook.) The `id` and `metadata.name` fields, therefore, are both
-"fingerprints," deterministically derived from the `Freight`'s contents.
+A `Freight` resource's `metadata.name` field is a SHA1 hash of a canonical
+representation of the artifacts referenced by the `Freight` resource. (This is
+enforced by an admission webhook.) The `metadata.name` field is therefore a
+"fingerprint", deterministically derived from the `Freight`'s contents.
+
+To provide a human-readable identifier for a `Freight` resource, a `Freight`
+resource has an `alias` field and `kargo.akuity.io/alias` label. This alias is
+a human-readable string that is unique within the `Project` to which the
+`Freight` belongs. While it can be set manually (and changed), by default,
+Kargo will automatically generate a unique alias for each `Freight` resource.
+
+:::note
+For more information on aliases, refer to the [aliases](./30-how-to-guides/15-working-with-freight.md#aliases)
+and [updating aliases](./30-how-to-guides/15-working-with-freight.md#updating-aliases)
+sections of the "Working with Freight" how-to guide.
+:::
 
 A `Freight` resource's `status` field records a list of `Stage` resources in
 which the `Freight` has been _verified_ and a separate list of `Stage` resources
@@ -482,13 +505,16 @@ kind: Freight
 metadata:
   name: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
   namespace: kargo-demo
-id: 47b33c0c92b54439e5eb7fb80ecc83f8626fe390
+  labels:
+    kargo.akuity.io/alias: fruitful-ferret
+alias: fruitful-ferret
 images:
 - repoURL: nginx
   tag: 1.25.3
 commits:
 - repoURL: https://github.com/example/kargo-demo.git
   id: 1234abc
+warehouse: my-warehouse
 status:
   verifiedIn:
     test: {}
