@@ -46,10 +46,8 @@ const authHandler: Interceptor = (next) => async (req) => {
   return next(req);
 };
 
-const errorHandler: Interceptor = (next) => (req) => {
-  try {
-    return next(req);
-  } catch (err) {
+const errorHandler: Interceptor = (next) => (req) =>
+  next(req).catch((err) => {
     if (req.signal.aborted) {
       throw err;
     }
@@ -62,8 +60,7 @@ const errorHandler: Interceptor = (next) => (req) => {
     }
 
     throw err;
-  }
-};
+  });
 
 export const transport = createConnectTransport({
   baseUrl: '',
@@ -74,5 +71,5 @@ export const transport = createConnectTransport({
 export const transportWithAuth = createConnectTransport({
   baseUrl: '',
   useBinaryFormat: true,
-  interceptors: [authHandler, errorHandler],
+  interceptors: [authHandler, errorHandler]
 });
