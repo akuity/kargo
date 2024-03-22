@@ -565,7 +565,7 @@ only want to produce new `Freight` when a commit contains changes to a specific
 directory.
 
 To accomplish this, a `Warehouse` resource's `spec.subscriptions.git` field may
-include a `includePaths` and/or `excludePaths` field with a list of regular
+include an `includePaths` and/or `excludePaths` field with a list of regular
 expressions.
 
 When these fields are present, the `Warehouse` will only produce a new `Freight`
