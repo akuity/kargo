@@ -22,6 +22,11 @@ rbac:
   ## @param rbac.installClusterRoleBindings Indicates if `ClusterRoleBindings` should be installed.
   installClusterRoleBindings: true
 
+## @section CRDs
+crds:
+  ## @param crds.install Indicates if CRDs should be managed as part of the Helm release. If set to `false`, the CRDs are only installed if they do not already exist.
+  install: true
+
 ## @section KubeConfigs
 ## @descriptionStart
 ## Optionally point to Kubernetes Secrets containing kubeconfig for:

@@ -19,6 +19,12 @@
 | `rbac.installClusterRoles`        | Indicates if `ClusterRoles` should be installed.        | `true` |
 | `rbac.installClusterRoleBindings` | Indicates if `ClusterRoleBindings` should be installed. | `true` |
 
+### CRDs
+
+| Name           | Description                                                                                                                                   | Value  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `crds.install` | Indicates if CRDs should be managed as part of the Helm release. If set to `false`, the CRDs are only installed if they do not already exist. | `true` |
+
 ### KubeConfigs
 
 Optionally point to Kubernetes Secrets containing kubeconfig for:
