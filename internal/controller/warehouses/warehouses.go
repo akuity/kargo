@@ -42,9 +42,12 @@ type reconciler struct {
 		ctx context.Context,
 		namespace string,
 		subs []kargoapi.RepoSubscription,
+		LastFreight *kargoapi.FreightReference,
 	) ([]kargoapi.GitCommit, error)
 
 	getLastCommitIDFn func(repo git.Repo) (string, error)
+
+	getDiffPathsSinceCommitIDFn func(repo git.Repo, commitId string) ([]string, error)
 
 	listTagsFn func(repo git.Repo) ([]string, error)
 
@@ -80,6 +83,7 @@ type reconciler struct {
 		context.Context,
 		kargoapi.GitSubscription,
 		*git.RepoCredentials,
+		string,
 	) (*gitMeta, error)
 
 	createFreightFn func(
@@ -145,6 +149,7 @@ func newReconciler(
 	r.getLatestFreightFromReposFn = r.getLatestFreightFromRepos
 	r.selectCommitsFn = r.selectCommits
 	r.getLastCommitIDFn = r.getLastCommitID
+	r.getDiffPathsSinceCommitIDFn = r.getDiffPathsSinceCommitID
 	r.listTagsFn = r.listTags
 	r.checkoutTagFn = r.checkoutTag
 	r.selectImagesFn = r.selectImages
@@ -269,6 +274,12 @@ func (r *reconciler) syncWarehouse(
 		freight.Name,
 		freight.Namespace,
 	)
+	status.LastFreight = &kargoapi.FreightReference{
+		Name:    freight.Name,
+		Commits: freight.Commits,
+		Images:  freight.Images,
+		Charts:  freight.Charts,
+	}
 
 	return status, nil
 }
@@ -283,6 +294,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 		ctx,
 		warehouse.Namespace,
 		warehouse.Spec.Subscriptions,
+		warehouse.Status.LastFreight,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error syncing git repo subscriptions: %w", err)

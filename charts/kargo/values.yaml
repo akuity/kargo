@@ -22,6 +22,13 @@ rbac:
   ## @param rbac.installClusterRoleBindings Indicates if `ClusterRoleBindings` should be installed.
   installClusterRoleBindings: true
 
+## @section CRDs
+crds:
+  ## @param crds.install Indicates if Custom Resource Definitions should be installed and upgraded as part of the release. If set to `false`, the CRDs will only be installed if they do not already exist.
+  install: true
+  ## @param crds.keep Indicates if Custom Resource Definitions should be kept when a release is uninstalled.
+  keep: true
+
 ## @section KubeConfigs
 ## @descriptionStart
 ## Optionally point to Kubernetes Secrets containing kubeconfig for:

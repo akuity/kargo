@@ -1,5 +1,5 @@
+import { useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
 import { Button, Modal, Space, Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import { useForm } from 'react-hook-form';
@@ -23,8 +23,7 @@ const formSchema = z.object({
 });
 
 export const CreateStageModal = ({ visible, hide, project }: Props) => {
-  const { mutateAsync, isPending } = useMutation({
-    ...createResource.useMutation(),
+  const { mutateAsync, isPending } = useMutation(createResource, {
     onSuccess: () => hide()
   });
 
