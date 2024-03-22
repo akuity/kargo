@@ -587,7 +587,7 @@ spec:
   - git:
       repoURL: https://github.com/example/kargo-demo.git
       includePaths:
-      - apps/guestbook/.*
+      - regex:^apps/guestbook/.*$
 ```
 
 The next example shows a `Warehouse` resource that subscribes to a Git repository
@@ -605,10 +605,16 @@ spec:
     - git:
         repoURL: https://github.com/example/kargo-demo.git
       includePaths:
-      - apps/guestbook/.*
+      - regex:^apps/guestbook/.*$
       excludePaths:
-      - apps/guestbook/README.md
+      - regex:^apps/guestbook/README\.md$
 ```
+
+:::info
+Note the requirement of the `regex:` (or `regexp:`) prefix on all regular expressions listed in the `includePaths` or `excludePaths` fields.
+
+This requirement exists so that when support for other, familiar path matching strategies is added in the future, Kargo cannot misinterpret the `*` character. If not for this safeguard, a user expressing desired paths as `example/*`, for instance, could be surprised to find it matches `my-examples/unwanted/file`.
+:::
 
 ### `Promotion` Resources
 
