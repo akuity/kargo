@@ -5,18 +5,18 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
-  '@bufbuild/connect':
-    specifier: 0.13.0
-    version: 0.13.0(@bufbuild/protobuf@1.6.0)
-  '@bufbuild/connect-query':
-    specifier: 0.4.1
-    version: 0.4.1(@bufbuild/connect@0.13.0)(@bufbuild/protobuf@1.6.0)(@tanstack/react-query@5.17.10)(react-dom@18.2.0)(react@18.2.0)
-  '@bufbuild/connect-web':
-    specifier: ^0.13.0
-    version: 0.13.0(@bufbuild/protobuf@1.6.0)
   '@bufbuild/protobuf':
-    specifier: 1.6.0
-    version: 1.6.0
+    specifier: 1.8.0
+    version: 1.8.0
+  '@connectrpc/connect':
+    specifier: 1.4.0
+    version: 1.4.0(@bufbuild/protobuf@1.8.0)
+  '@connectrpc/connect-query':
+    specifier: 1.3.1
+    version: 1.3.1(@bufbuild/protobuf@1.8.0)(@connectrpc/connect@1.4.0)(@tanstack/react-query@5.17.10)(react-dom@18.2.0)(react@18.2.0)
+  '@connectrpc/connect-web':
+    specifier: 1.4.0
+    version: 1.4.0(@bufbuild/protobuf@1.8.0)(@connectrpc/connect@1.4.0)
   '@fortawesome/fontawesome-svg-core':
     specifier: ^6.5.1
     version: 6.5.1
@@ -473,45 +473,43 @@ packages:
       to-fast-properties: 2.0.0
     dev: true
 
-  /@bufbuild/connect-query@0.4.1(@bufbuild/connect@0.13.0)(@bufbuild/protobuf@1.6.0)(@tanstack/react-query@5.17.10)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-rkQB+oin+1Nab91mx8CDHwkGn3AqXT22IEXLRMUZqkSODDjn9sFAGFc/mz5K6Fpsf0Qd50B/792vjkLd1y3fRA==}
-    deprecated: Connect has moved to its own org @connectrpc and has a stable v1. Run `npx @connectrpc/connect-migrate@latest` to update. See https://github.com/connectrpc/connect-es/releases/tag/v0.13.1 for details.
+  /@bufbuild/protobuf@1.8.0:
+    resolution: {integrity: sha512-qR9FwI8QKIveDnUYutvfzbC21UZJJryYrLuZGjeZ/VGz+vXelUkK+xgkOHsvPEdYEdxtgUUq4313N8QtOehJ1Q==}
+    dev: false
+
+  /@connectrpc/connect-query@1.3.1(@bufbuild/protobuf@1.8.0)(@connectrpc/connect@1.4.0)(@tanstack/react-query@5.17.10)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-VAogPNGVfnH2satUhXuG+ZUMj63xmTMl4McqyzCYw0ezzqt8i/tpbpf6OetlbvO45TTUYwaR4cAbzu8AgMNaFQ==}
     peerDependencies:
-      '@bufbuild/connect': '>=0.12.0'
-      '@bufbuild/protobuf': '>=1.3.0'
-      '@tanstack/react-query': ^4.20.4
+      '@bufbuild/protobuf': ^1.3.3
+      '@connectrpc/connect': ^1.1.2
+      '@tanstack/react-query': 5.x
       react: ^18.2.0
       react-dom: ^18.2.0
     dependencies:
-      '@bufbuild/connect': 0.13.0(@bufbuild/protobuf@1.6.0)
-      '@bufbuild/protobuf': 1.6.0
+      '@bufbuild/protobuf': 1.8.0
+      '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.8.0)
       '@tanstack/react-query': 5.17.10(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      stable-hash: 0.0.3
+      stable-hash: 0.0.4
     dev: false
 
-  /@bufbuild/connect-web@0.13.0(@bufbuild/protobuf@1.6.0):
-    resolution: {integrity: sha512-Ys9VFDWYktD9yFQSLOlkpsD42LonDNMCysLCfjXFuxlupYuf4f7qg0zkT5bESyTfqk4xtRDSSGR3xygaj/ONIQ==}
-    deprecated: Connect has moved to its own org @connectrpc and has a stable v1. Run `npx @connectrpc/connect-migrate@latest` to update. See https://github.com/connectrpc/connect-es/releases/tag/v0.13.1 for details.
+  /@connectrpc/connect-web@1.4.0(@bufbuild/protobuf@1.8.0)(@connectrpc/connect@1.4.0):
+    resolution: {integrity: sha512-13aO4psFbbm7rdOFGV0De2Za64DY/acMspgloDlcOKzLPPs0yZkhp1OOzAQeiAIr7BM/VOHIA3p8mF0inxCYTA==}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.2.1
+      '@bufbuild/protobuf': ^1.4.2
+      '@connectrpc/connect': 1.4.0
     dependencies:
-      '@bufbuild/connect': 0.13.0(@bufbuild/protobuf@1.6.0)
-      '@bufbuild/protobuf': 1.6.0
+      '@bufbuild/protobuf': 1.8.0
+      '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.8.0)
     dev: false
 
-  /@bufbuild/connect@0.13.0(@bufbuild/protobuf@1.6.0):
-    resolution: {integrity: sha512-eZSMbVLyUFtXiZNORgCEvv580xKZeYQdMOWj2i/nxOcpXQcrEzTMTA7SZzWv4k4gveWCOSRoWmYDeOhfWXJv0g==}
-    deprecated: Connect has moved to its own org @connectrpc and has a stable v1. Run `npx @connectrpc/connect-migrate@latest` to update. See https://github.com/connectrpc/connect-es/releases/tag/v0.13.1 for details.
+  /@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.8.0):
+    resolution: {integrity: sha512-vZeOkKaAjyV4+RH3+rJZIfDFJAfr+7fyYr6sLDKbYX3uuTVszhFe9/YKf5DNqrDb5cKdKVlYkGn6DTDqMitAnA==}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.2.1
+      '@bufbuild/protobuf': ^1.4.2
     dependencies:
-      '@bufbuild/protobuf': 1.6.0
-    dev: false
-
-  /@bufbuild/protobuf@1.6.0:
-    resolution: {integrity: sha512-hp19vSFgNw3wBBcVBx5qo5pufCqjaJ0Cfk5H/pfjNOfNWU+4/w0QVOmfAOZNRrNWRrVuaJWxcN8P2vhOkkzbBQ==}
+      '@bufbuild/protobuf': 1.8.0
     dev: false
 
   /@ctrl/tinycolor@3.6.1:
@@ -5132,8 +5130,8 @@ packages:
       through: 2.3.8
     dev: true
 
-  /stable-hash@0.0.3:
-    resolution: {integrity: sha512-c63fvNCQ7ip1wBfPv54MflMA5L6OE5J0p6Fg13IpKft4JAFoNal8+s/jtJ8PibrwqXm4onnbeQsADs8k0NQGUA==}
+  /stable-hash@0.0.4:
+    resolution: {integrity: sha512-LjdcbuBeLcdETCrPn9i8AYAZ1eCtu4ECAWtP7UleOiZ9LzVxRzzUZEoZ8zB24nhkQnDWyET0I+3sWokSDS3E7g==}
     dev: false
 
   /stackback@0.0.2:

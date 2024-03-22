@@ -1,7 +1,7 @@
+import { useMutation } from '@connectrpc/connect-query';
 import { faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
 import { Input, Modal, message } from 'antd';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -31,8 +31,7 @@ export const UpdateFreightAliasModal = ({ freight, project, onSubmit, hide, ...p
     resolver: zodResolver(formSchema)
   });
 
-  const { mutateAsync: updateAliasAction } = useMutation({
-    ...updateFreightAlias.useMutation(),
+  const { mutateAsync: updateAliasAction } = useMutation(updateFreightAlias, {
     onError: (err) => {
       message.error(err?.toString());
     },

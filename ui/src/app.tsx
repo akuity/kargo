@@ -1,4 +1,4 @@
-import { TransportProvider } from '@bufbuild/connect-query';
+import { TransportProvider } from '@connectrpc/connect-query';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';

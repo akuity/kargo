@@ -1,6 +1,7 @@
+import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
 import { faChevronDown, faPen, faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Space } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -26,8 +27,8 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
   const queryClient = useQueryClient();
   const [shouldRefetchFreights, setShouldRefetchFreights] = React.useState(false);
 
-  const { mutate, isPending: isLoadingDelete } = useMutation(deleteStage.useMutation());
-  const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshStage.useMutation());
+  const { mutate, isPending: isLoadingDelete } = useMutation(deleteStage);
+  const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshStage);
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
 
@@ -56,12 +57,12 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
     }
 
     if (!stage?.metadata?.annotations['kargo.akuity.io/refresh'] && shouldRefetchFreights) {
-      queryClient.invalidateQueries({ queryKey: queryFreight.getPartialQueryKey() });
+      queryClient.invalidateQueries({ queryKey: createConnectQueryKey(queryFreight) });
       setShouldRefetchFreights(false);
     }
   }, [stage, shouldRefetchFreights]);
 
-  const { data: config } = useQuery(getConfig.useQuery());
+  const { data: config } = useQuery(getConfig);
   const argoCDAppsLinks = React.useMemo(() => {
     const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
     const shard = config?.argocdShards?.[shardKey];
