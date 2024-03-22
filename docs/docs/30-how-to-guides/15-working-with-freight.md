@@ -22,7 +22,7 @@ To learn the fundamentals of freight and the warehouses that produce freight,
 visit the [concepts doc](../concepts).
 :::
 
-The remainder of this page describes features of freight that will enabled you
+The remainder of this page describes features of freight that will enable you
 to work more effectively.
 
 ## Names

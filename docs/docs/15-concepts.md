@@ -557,6 +557,59 @@ spec:
 Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
 :::
 
+#### Git Subscription Filtering
+
+In some cases, it may be necessary to filter the artifacts that a `Warehouse`
+subscribes to. For example, a `Warehouse` may subscribe to a Git repository but
+only want to produce new `Freight` when a commit contains changes to a specific
+directory.
+
+To accomplish this, a `Warehouse` resource's `spec.subscriptions.git` field may
+include a `includePaths` and/or `excludePaths` field with a list of regular
+expressions.
+
+When these fields are present, the `Warehouse` will only produce a new `Freight`
+when a commit contains changes to a file in a directory that matches one of the
+`includePaths` and does not match any of the `excludePaths`.
+
+The following example shows a `Warehouse` resource that subscribes to a Git
+repository but only produces new `Freight` when a commit contains changes to
+the `apps/guestbook` directory:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: my-warehouse
+  namespace: kargo-demo
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/kargo-demo.git
+      includePaths:
+      - apps/guestbook/.*
+```
+
+The next example shows a `Warehouse` resource that subscribes to a Git repository
+but only produces new `Freight` when a commit contains changes to the `apps/guestbook`
+while excluding the `apps/guestbook/README.md` file:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: my-warehouse
+  namespace: kargo-demo
+spec:
+    subscriptions:
+    - git:
+        repoURL: https://github.com/example/kargo-demo.git
+      includePaths:
+      - apps/guestbook/.*
+      excludePaths:
+      - apps/guestbook/README.md
+```
+
 ### `Promotion` Resources
 
 Each Kargo promotion is represented by a Kubernetes resource of type
