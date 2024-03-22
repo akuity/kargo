@@ -1,4 +1,5 @@
-import { createPromiseClient } from '@bufbuild/connect';
+import { createPromiseClient } from '@connectrpc/connect';
+import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
   faCircleCheck,
@@ -13,7 +14,7 @@ import {
   faTimeline
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Empty, message } from 'antd';
 import { graphlib, layout } from 'dagre';
 import React from 'react';
@@ -70,16 +71,16 @@ const getSeconds = (ts?: Time): number => Number(ts?.seconds) || 0;
 
 export const ProjectDetails = () => {
   const { name, stageName } = useParams();
-  const { data, isLoading } = useQuery(listStages.useQuery({ project: name }));
+  const { data, isLoading } = useQuery(listStages, { project: name });
   const {
     data: freightData,
     isLoading: isLoadingFreight,
     refetch: refetchFreightData
-  } = useQuery(queryFreight.useQuery({ project: name }));
+  } = useQuery(queryFreight, { project: name });
 
-  const { data: warehouseData, isLoading: isLoadingWarehouses } = useQuery(
-    listWarehouses.useQuery({ project: name })
-  );
+  const { data: warehouseData, isLoading: isLoadingWarehouses } = useQuery(listWarehouses, {
+    project: name
+  });
 
   const client = useQueryClient();
 
@@ -88,8 +89,7 @@ export const ProjectDetails = () => {
     () => document.visibilityState === 'visible'
   );
 
-  const { mutate: refreshWarehouseAction } = useMutation({
-    ...refreshWarehouse.useMutation(),
+  const { mutate: refreshWarehouseAction } = useMutation(refreshWarehouse, {
     onError: (err) => {
       message.error(err?.toString());
     },
@@ -135,11 +135,11 @@ export const ProjectDetails = () => {
         }
 
         // Update Stages list
-        const listStagesQueryKey = listStages.getQueryKey({ project: name });
+        const listStagesQueryKey = createConnectQueryKey(listStages, { project: name });
         client.setQueryData(listStagesQueryKey, { stages });
 
         // Update Stage details
-        const getStageQueryKey = getStage.getQueryKey({
+        const getStageQueryKey = createConnectQueryKey(getStage, {
           project: name,
           name: e.stage?.metadata?.name
         });
@@ -185,10 +185,10 @@ export const ProjectDetails = () => {
           refetchAvailableFreight();
         }
 
-        const listWarehousesQueryKey = listWarehouses.getQueryKey({ project: name });
+        const listWarehousesQueryKey = createConnectQueryKey(listWarehouses, { project: name });
         client.setQueryData(listWarehousesQueryKey, { warehouses });
 
-        const getWarehouseQueryKey = getStage.getQueryKey({
+        const getWarehouseQueryKey = createConnectQueryKey(getStage, {
           project: name,
           name: e.warehouse?.metadata?.name
         });
@@ -424,8 +424,7 @@ export const ProjectDetails = () => {
   const [promotionEligible, setPromotionEligible] = React.useState<{ [key: string]: boolean }>({});
   const [manuallyApproving, setManuallyApproving] = React.useState<string | undefined>();
 
-  const { mutate: manualApproveAction } = useMutation({
-    ...approveFreight.useMutation(),
+  const { mutate: manualApproveAction } = useMutation(approveFreight, {
     onError: (err) => {
       message.error(err?.toString());
     },
@@ -435,8 +434,7 @@ export const ProjectDetails = () => {
     }
   });
 
-  const { mutate: promoteToStageSubscribersAction } = useMutation({
-    ...promoteToStageSubscribers.useMutation(),
+  const { mutate: promoteToStageSubscribersAction } = useMutation(promoteToStageSubscribers, {
     onError: (err) => {
       message.error(err?.toString());
     },
@@ -448,8 +446,7 @@ export const ProjectDetails = () => {
     }
   });
 
-  const { mutate: promoteAction } = useMutation({
-    ...promoteToStage.useMutation(),
+  const { mutate: promoteAction } = useMutation(promoteToStage, {
     onError: (err) => {
       message.error(err?.toString());
     },
@@ -465,9 +462,7 @@ export const ProjectDetails = () => {
     data: availableFreightData,
     refetch: refetchAvailableFreight,
     isLoading: isLoadingAvailableFreight
-  } = useQuery(
-    queryFreight.useQuery({ project: name, stage: promotingStage?.metadata?.name || '' })
-  );
+  } = useQuery(queryFreight, { project: name, stage: promotingStage?.metadata?.name || '' });
 
   const freightModeFor = (freightID: string): FreightMode => {
     if (manuallyApproving) {

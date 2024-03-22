@@ -1,5 +1,5 @@
-import { Code, ConnectError, Interceptor } from '@bufbuild/connect';
-import { createConnectTransport } from '@bufbuild/connect-web';
+import { Code, ConnectError, Interceptor } from '@connectrpc/connect';
+import { createConnectTransport } from '@connectrpc/connect-web';
 import { notification } from 'antd';
 
 import { authTokenKey, redirectToQueryParam, refreshTokenKey } from './auth';
@@ -74,5 +74,5 @@ export const transport = createConnectTransport({
 export const transportWithAuth = createConnectTransport({
   baseUrl: '',
   useBinaryFormat: true,
-  interceptors: [authHandler, errorHandler],
+  interceptors: [authHandler, errorHandler]
 });

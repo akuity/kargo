@@ -1,4 +1,4 @@
-import { TransportProvider } from '@bufbuild/connect-query';
+import { TransportProvider } from '@connectrpc/connect-query';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 

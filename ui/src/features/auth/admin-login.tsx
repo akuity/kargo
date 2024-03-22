@@ -1,5 +1,5 @@
+import { useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
 import { Button, Input } from 'antd';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -17,8 +17,7 @@ const formSchema = z.object({
 
 export const AdminLogin = () => {
   const { login } = useAuthContext();
-  const { mutate, isPending } = useMutation({
-    ...adminLogin.useMutation(),
+  const { mutate, isPending } = useMutation(adminLogin, {
     onSuccess: (response) => login(response.idToken)
   });
 

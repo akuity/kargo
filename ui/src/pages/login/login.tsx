@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@connectrpc/connect-query';
 import { Divider, Typography } from 'antd';
 import { Navigate } from 'react-router-dom';
 
@@ -12,7 +12,7 @@ import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_c
 import * as styles from './login.module.less';
 
 export const Login = () => {
-  const { data, isLoading } = useQuery(getPublicConfig.useQuery());
+  const { data, isLoading } = useQuery(getPublicConfig);
   const { isLoggedIn } = useAuthContext();
 
   if (isLoggedIn) {

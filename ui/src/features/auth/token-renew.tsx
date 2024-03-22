@@ -1,3 +1,4 @@
+import { useQuery as useConnectQuery } from '@connectrpc/connect-query';
 import { useQuery } from '@tanstack/react-query';
 import { notification } from 'antd';
 import * as oauth from 'oauth4webapi';
@@ -17,7 +18,7 @@ export const TokenRenew = () => {
   const [searchParams] = useSearchParams();
   const { login: onLogin, logout } = useAuthContext();
 
-  const { data, isError } = useQuery(getPublicConfig.useQuery());
+  const { data, isError } = useConnectQuery(getPublicConfig);
 
   const issuerUrl = React.useMemo(() => {
     try {

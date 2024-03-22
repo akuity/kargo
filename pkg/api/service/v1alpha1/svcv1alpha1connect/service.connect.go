@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// KargoServiceName is the fully-qualified name of the KargoService service.
@@ -145,6 +145,50 @@ const (
 	KargoServiceUpdateCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateCredentials"
 )
 
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	kargoServiceServiceDescriptor                         = v1alpha1.File_service_v1alpha1_service_proto.Services().ByName("KargoService")
+	kargoServiceGetVersionInfoMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetVersionInfo")
+	kargoServiceGetConfigMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("GetConfig")
+	kargoServiceGetPublicConfigMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("GetPublicConfig")
+	kargoServiceAdminLoginMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("AdminLogin")
+	kargoServiceCreateResourceMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("CreateResource")
+	kargoServiceCreateOrUpdateResourceMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("CreateOrUpdateResource")
+	kargoServiceUpdateResourceMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("UpdateResource")
+	kargoServiceDeleteResourceMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("DeleteResource")
+	kargoServiceListStagesMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ListStages")
+	kargoServiceGetStageMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("GetStage")
+	kargoServiceWatchStagesMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("WatchStages")
+	kargoServiceDeleteStageMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("DeleteStage")
+	kargoServiceRefreshStageMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("RefreshStage")
+	kargoServiceListPromotionsMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("ListPromotions")
+	kargoServiceWatchPromotionsMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotions")
+	kargoServiceGetPromotionMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetPromotion")
+	kargoServiceWatchPromotionMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotion")
+	kargoServiceDeleteProjectMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("DeleteProject")
+	kargoServiceGetProjectMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetProject")
+	kargoServiceListProjectsMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("ListProjects")
+	kargoServiceApproveFreightMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("ApproveFreight")
+	kargoServiceDeleteFreightMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("DeleteFreight")
+	kargoServiceGetFreightMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetFreight")
+	kargoServicePromoteToStageMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("PromoteToStage")
+	kargoServicePromoteToStageSubscribersMethodDescriptor = kargoServiceServiceDescriptor.Methods().ByName("PromoteToStageSubscribers")
+	kargoServiceQueryFreightMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("QueryFreight")
+	kargoServiceUpdateFreightAliasMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("UpdateFreightAlias")
+	kargoServiceReverifyMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("Reverify")
+	kargoServiceAbortVerificationMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("AbortVerification")
+	kargoServiceListWarehousesMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("ListWarehouses")
+	kargoServiceGetWarehouseMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetWarehouse")
+	kargoServiceWatchWarehousesMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("WatchWarehouses")
+	kargoServiceDeleteWarehouseMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteWarehouse")
+	kargoServiceRefreshWarehouseMethodDescriptor          = kargoServiceServiceDescriptor.Methods().ByName("RefreshWarehouse")
+	kargoServiceCreateCredentialsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("CreateCredentials")
+	kargoServiceDeleteCredentialsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("DeleteCredentials")
+	kargoServiceGetCredentialsMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetCredentials")
+	kargoServiceListCredentialsMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("ListCredentials")
+	kargoServiceUpdateCredentialsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("UpdateCredentials")
+)
+
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
 type KargoServiceClient interface {
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
@@ -205,197 +249,236 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 		getVersionInfo: connect.NewClient[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse](
 			httpClient,
 			baseURL+KargoServiceGetVersionInfoProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetVersionInfoMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getConfig: connect.NewClient[v1alpha1.GetConfigRequest, v1alpha1.GetConfigResponse](
 			httpClient,
 			baseURL+KargoServiceGetConfigProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getPublicConfig: connect.NewClient[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse](
 			httpClient,
 			baseURL+KargoServiceGetPublicConfigProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetPublicConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		adminLogin: connect.NewClient[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse](
 			httpClient,
 			baseURL+KargoServiceAdminLoginProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceAdminLoginMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		createResource: connect.NewClient[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse](
 			httpClient,
 			baseURL+KargoServiceCreateResourceProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceCreateResourceMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		createOrUpdateResource: connect.NewClient[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse](
 			httpClient,
 			baseURL+KargoServiceCreateOrUpdateResourceProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceCreateOrUpdateResourceMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		updateResource: connect.NewClient[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse](
 			httpClient,
 			baseURL+KargoServiceUpdateResourceProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceUpdateResourceMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deleteResource: connect.NewClient[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteResourceProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceDeleteResourceMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		listStages: connect.NewClient[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse](
 			httpClient,
 			baseURL+KargoServiceListStagesProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceListStagesMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getStage: connect.NewClient[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse](
 			httpClient,
 			baseURL+KargoServiceGetStageProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetStageMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		watchStages: connect.NewClient[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse](
 			httpClient,
 			baseURL+KargoServiceWatchStagesProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceWatchStagesMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deleteStage: connect.NewClient[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteStageProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceDeleteStageMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		refreshStage: connect.NewClient[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse](
 			httpClient,
 			baseURL+KargoServiceRefreshStageProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceRefreshStageMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		listPromotions: connect.NewClient[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse](
 			httpClient,
 			baseURL+KargoServiceListPromotionsProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceListPromotionsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		watchPromotions: connect.NewClient[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse](
 			httpClient,
 			baseURL+KargoServiceWatchPromotionsProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceWatchPromotionsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getPromotion: connect.NewClient[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse](
 			httpClient,
 			baseURL+KargoServiceGetPromotionProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetPromotionMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		watchPromotion: connect.NewClient[v1alpha1.WatchPromotionRequest, v1alpha1.WatchPromotionResponse](
 			httpClient,
 			baseURL+KargoServiceWatchPromotionProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceWatchPromotionMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deleteProject: connect.NewClient[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteProjectProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceDeleteProjectMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getProject: connect.NewClient[v1alpha1.GetProjectRequest, v1alpha1.GetProjectResponse](
 			httpClient,
 			baseURL+KargoServiceGetProjectProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetProjectMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		listProjects: connect.NewClient[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse](
 			httpClient,
 			baseURL+KargoServiceListProjectsProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceListProjectsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		approveFreight: connect.NewClient[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse](
 			httpClient,
 			baseURL+KargoServiceApproveFreightProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceApproveFreightMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deleteFreight: connect.NewClient[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteFreightProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceDeleteFreightMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getFreight: connect.NewClient[v1alpha1.GetFreightRequest, v1alpha1.GetFreightResponse](
 			httpClient,
 			baseURL+KargoServiceGetFreightProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetFreightMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		promoteToStage: connect.NewClient[v1alpha1.PromoteToStageRequest, v1alpha1.PromoteToStageResponse](
 			httpClient,
 			baseURL+KargoServicePromoteToStageProcedure,
-			opts...,
+			connect.WithSchema(kargoServicePromoteToStageMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		promoteToStageSubscribers: connect.NewClient[v1alpha1.PromoteToStageSubscribersRequest, v1alpha1.PromoteToStageSubscribersResponse](
 			httpClient,
 			baseURL+KargoServicePromoteToStageSubscribersProcedure,
-			opts...,
+			connect.WithSchema(kargoServicePromoteToStageSubscribersMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		queryFreight: connect.NewClient[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse](
 			httpClient,
 			baseURL+KargoServiceQueryFreightProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceQueryFreightMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		updateFreightAlias: connect.NewClient[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse](
 			httpClient,
 			baseURL+KargoServiceUpdateFreightAliasProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceUpdateFreightAliasMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		reverify: connect.NewClient[v1alpha1.ReverifyRequest, v1alpha1.ReverifyResponse](
 			httpClient,
 			baseURL+KargoServiceReverifyProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceReverifyMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		abortVerification: connect.NewClient[v1alpha1.AbortVerificationRequest, v1alpha1.AbortVerificationResponse](
 			httpClient,
 			baseURL+KargoServiceAbortVerificationProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceAbortVerificationMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		listWarehouses: connect.NewClient[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse](
 			httpClient,
 			baseURL+KargoServiceListWarehousesProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceListWarehousesMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getWarehouse: connect.NewClient[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse](
 			httpClient,
 			baseURL+KargoServiceGetWarehouseProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetWarehouseMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		watchWarehouses: connect.NewClient[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse](
 			httpClient,
 			baseURL+KargoServiceWatchWarehousesProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceWatchWarehousesMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deleteWarehouse: connect.NewClient[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteWarehouseProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceDeleteWarehouseMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		refreshWarehouse: connect.NewClient[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse](
 			httpClient,
 			baseURL+KargoServiceRefreshWarehouseProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceRefreshWarehouseMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		createCredentials: connect.NewClient[v1alpha1.CreateCredentialsRequest, v1alpha1.CreateCredentialsResponse](
 			httpClient,
 			baseURL+KargoServiceCreateCredentialsProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceCreateCredentialsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deleteCredentials: connect.NewClient[v1alpha1.DeleteCredentialsRequest, v1alpha1.DeleteCredentialsResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteCredentialsProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceDeleteCredentialsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getCredentials: connect.NewClient[v1alpha1.GetCredentialsRequest, v1alpha1.GetCredentialsResponse](
 			httpClient,
 			baseURL+KargoServiceGetCredentialsProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceGetCredentialsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		listCredentials: connect.NewClient[v1alpha1.ListCredentialsRequest, v1alpha1.ListCredentialsResponse](
 			httpClient,
 			baseURL+KargoServiceListCredentialsProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceListCredentialsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		updateCredentials: connect.NewClient[v1alpha1.UpdateCredentialsRequest, v1alpha1.UpdateCredentialsResponse](
 			httpClient,
 			baseURL+KargoServiceUpdateCredentialsProcedure,
-			opts...,
+			connect.WithSchema(kargoServiceUpdateCredentialsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
@@ -697,197 +780,236 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 	kargoServiceGetVersionInfoHandler := connect.NewUnaryHandler(
 		KargoServiceGetVersionInfoProcedure,
 		svc.GetVersionInfo,
-		opts...,
+		connect.WithSchema(kargoServiceGetVersionInfoMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetConfigHandler := connect.NewUnaryHandler(
 		KargoServiceGetConfigProcedure,
 		svc.GetConfig,
-		opts...,
+		connect.WithSchema(kargoServiceGetConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetPublicConfigHandler := connect.NewUnaryHandler(
 		KargoServiceGetPublicConfigProcedure,
 		svc.GetPublicConfig,
-		opts...,
+		connect.WithSchema(kargoServiceGetPublicConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceAdminLoginHandler := connect.NewUnaryHandler(
 		KargoServiceAdminLoginProcedure,
 		svc.AdminLogin,
-		opts...,
+		connect.WithSchema(kargoServiceAdminLoginMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceCreateResourceHandler := connect.NewUnaryHandler(
 		KargoServiceCreateResourceProcedure,
 		svc.CreateResource,
-		opts...,
+		connect.WithSchema(kargoServiceCreateResourceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceCreateOrUpdateResourceHandler := connect.NewUnaryHandler(
 		KargoServiceCreateOrUpdateResourceProcedure,
 		svc.CreateOrUpdateResource,
-		opts...,
+		connect.WithSchema(kargoServiceCreateOrUpdateResourceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceUpdateResourceHandler := connect.NewUnaryHandler(
 		KargoServiceUpdateResourceProcedure,
 		svc.UpdateResource,
-		opts...,
+		connect.WithSchema(kargoServiceUpdateResourceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceDeleteResourceHandler := connect.NewUnaryHandler(
 		KargoServiceDeleteResourceProcedure,
 		svc.DeleteResource,
-		opts...,
+		connect.WithSchema(kargoServiceDeleteResourceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceListStagesHandler := connect.NewUnaryHandler(
 		KargoServiceListStagesProcedure,
 		svc.ListStages,
-		opts...,
+		connect.WithSchema(kargoServiceListStagesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetStageHandler := connect.NewUnaryHandler(
 		KargoServiceGetStageProcedure,
 		svc.GetStage,
-		opts...,
+		connect.WithSchema(kargoServiceGetStageMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceWatchStagesHandler := connect.NewServerStreamHandler(
 		KargoServiceWatchStagesProcedure,
 		svc.WatchStages,
-		opts...,
+		connect.WithSchema(kargoServiceWatchStagesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceDeleteStageHandler := connect.NewUnaryHandler(
 		KargoServiceDeleteStageProcedure,
 		svc.DeleteStage,
-		opts...,
+		connect.WithSchema(kargoServiceDeleteStageMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceRefreshStageHandler := connect.NewUnaryHandler(
 		KargoServiceRefreshStageProcedure,
 		svc.RefreshStage,
-		opts...,
+		connect.WithSchema(kargoServiceRefreshStageMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceListPromotionsHandler := connect.NewUnaryHandler(
 		KargoServiceListPromotionsProcedure,
 		svc.ListPromotions,
-		opts...,
+		connect.WithSchema(kargoServiceListPromotionsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceWatchPromotionsHandler := connect.NewServerStreamHandler(
 		KargoServiceWatchPromotionsProcedure,
 		svc.WatchPromotions,
-		opts...,
+		connect.WithSchema(kargoServiceWatchPromotionsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetPromotionHandler := connect.NewUnaryHandler(
 		KargoServiceGetPromotionProcedure,
 		svc.GetPromotion,
-		opts...,
+		connect.WithSchema(kargoServiceGetPromotionMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceWatchPromotionHandler := connect.NewServerStreamHandler(
 		KargoServiceWatchPromotionProcedure,
 		svc.WatchPromotion,
-		opts...,
+		connect.WithSchema(kargoServiceWatchPromotionMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceDeleteProjectHandler := connect.NewUnaryHandler(
 		KargoServiceDeleteProjectProcedure,
 		svc.DeleteProject,
-		opts...,
+		connect.WithSchema(kargoServiceDeleteProjectMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetProjectHandler := connect.NewUnaryHandler(
 		KargoServiceGetProjectProcedure,
 		svc.GetProject,
-		opts...,
+		connect.WithSchema(kargoServiceGetProjectMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceListProjectsHandler := connect.NewUnaryHandler(
 		KargoServiceListProjectsProcedure,
 		svc.ListProjects,
-		opts...,
+		connect.WithSchema(kargoServiceListProjectsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceApproveFreightHandler := connect.NewUnaryHandler(
 		KargoServiceApproveFreightProcedure,
 		svc.ApproveFreight,
-		opts...,
+		connect.WithSchema(kargoServiceApproveFreightMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceDeleteFreightHandler := connect.NewUnaryHandler(
 		KargoServiceDeleteFreightProcedure,
 		svc.DeleteFreight,
-		opts...,
+		connect.WithSchema(kargoServiceDeleteFreightMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetFreightHandler := connect.NewUnaryHandler(
 		KargoServiceGetFreightProcedure,
 		svc.GetFreight,
-		opts...,
+		connect.WithSchema(kargoServiceGetFreightMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServicePromoteToStageHandler := connect.NewUnaryHandler(
 		KargoServicePromoteToStageProcedure,
 		svc.PromoteToStage,
-		opts...,
+		connect.WithSchema(kargoServicePromoteToStageMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServicePromoteToStageSubscribersHandler := connect.NewUnaryHandler(
 		KargoServicePromoteToStageSubscribersProcedure,
 		svc.PromoteToStageSubscribers,
-		opts...,
+		connect.WithSchema(kargoServicePromoteToStageSubscribersMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceQueryFreightHandler := connect.NewUnaryHandler(
 		KargoServiceQueryFreightProcedure,
 		svc.QueryFreight,
-		opts...,
+		connect.WithSchema(kargoServiceQueryFreightMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceUpdateFreightAliasHandler := connect.NewUnaryHandler(
 		KargoServiceUpdateFreightAliasProcedure,
 		svc.UpdateFreightAlias,
-		opts...,
+		connect.WithSchema(kargoServiceUpdateFreightAliasMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceReverifyHandler := connect.NewUnaryHandler(
 		KargoServiceReverifyProcedure,
 		svc.Reverify,
-		opts...,
+		connect.WithSchema(kargoServiceReverifyMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceAbortVerificationHandler := connect.NewUnaryHandler(
 		KargoServiceAbortVerificationProcedure,
 		svc.AbortVerification,
-		opts...,
+		connect.WithSchema(kargoServiceAbortVerificationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceListWarehousesHandler := connect.NewUnaryHandler(
 		KargoServiceListWarehousesProcedure,
 		svc.ListWarehouses,
-		opts...,
+		connect.WithSchema(kargoServiceListWarehousesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetWarehouseHandler := connect.NewUnaryHandler(
 		KargoServiceGetWarehouseProcedure,
 		svc.GetWarehouse,
-		opts...,
+		connect.WithSchema(kargoServiceGetWarehouseMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceWatchWarehousesHandler := connect.NewServerStreamHandler(
 		KargoServiceWatchWarehousesProcedure,
 		svc.WatchWarehouses,
-		opts...,
+		connect.WithSchema(kargoServiceWatchWarehousesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceDeleteWarehouseHandler := connect.NewUnaryHandler(
 		KargoServiceDeleteWarehouseProcedure,
 		svc.DeleteWarehouse,
-		opts...,
+		connect.WithSchema(kargoServiceDeleteWarehouseMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceRefreshWarehouseHandler := connect.NewUnaryHandler(
 		KargoServiceRefreshWarehouseProcedure,
 		svc.RefreshWarehouse,
-		opts...,
+		connect.WithSchema(kargoServiceRefreshWarehouseMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceCreateCredentialsHandler := connect.NewUnaryHandler(
 		KargoServiceCreateCredentialsProcedure,
 		svc.CreateCredentials,
-		opts...,
+		connect.WithSchema(kargoServiceCreateCredentialsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceDeleteCredentialsHandler := connect.NewUnaryHandler(
 		KargoServiceDeleteCredentialsProcedure,
 		svc.DeleteCredentials,
-		opts...,
+		connect.WithSchema(kargoServiceDeleteCredentialsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetCredentialsHandler := connect.NewUnaryHandler(
 		KargoServiceGetCredentialsProcedure,
 		svc.GetCredentials,
-		opts...,
+		connect.WithSchema(kargoServiceGetCredentialsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceListCredentialsHandler := connect.NewUnaryHandler(
 		KargoServiceListCredentialsProcedure,
 		svc.ListCredentials,
-		opts...,
+		connect.WithSchema(kargoServiceListCredentialsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceUpdateCredentialsHandler := connect.NewUnaryHandler(
 		KargoServiceUpdateCredentialsProcedure,
 		svc.UpdateCredentials,
-		opts...,
+		connect.WithSchema(kargoServiceUpdateCredentialsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

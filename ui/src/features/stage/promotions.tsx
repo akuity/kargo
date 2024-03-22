@@ -1,4 +1,5 @@
-import { createPromiseClient } from '@bufbuild/connect';
+import { createPromiseClient } from '@connectrpc/connect';
+import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
 import {
   faCircleCheck,
   faCircleExclamation,
@@ -6,7 +7,7 @@ import {
   faHourglassStart
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Popover, Table, Tooltip, theme } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
@@ -24,10 +25,11 @@ import { sortPromotions } from './utils/sort';
 export const Promotions = () => {
   const client = useQueryClient();
   const { name: projectName, stageName } = useParams();
-  const { data: promotionsResponse, isLoading } = useQuery({
-    ...listPromotions.useQuery({ project: projectName, stage: stageName }),
-    enabled: !!stageName
-  });
+  const { data: promotionsResponse, isLoading } = useQuery(
+    listPromotions,
+    { project: projectName, stage: stageName },
+    { enabled: !!stageName }
+  );
 
   useEffect(() => {
     if (isLoading || !promotionsResponse) {
@@ -65,7 +67,7 @@ export const Promotions = () => {
         }
 
         // Update Promotions list
-        const listPromotionsQueryKey = listPromotions.getQueryKey({
+        const listPromotionsQueryKey = createConnectQueryKey(listPromotions, {
           project: projectName,
           stage: stageName
         });

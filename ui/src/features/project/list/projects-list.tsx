@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@connectrpc/connect-query';
 import { Empty } from 'antd';
 
 import { LoadingState } from '@ui/features/common';
@@ -8,7 +8,7 @@ import { ProjectItem } from './project-item/project-item';
 import * as styles from './projects-list.module.less';
 
 export const ProjectsList = () => {
-  const { data, isLoading } = useQuery(listProjects.useQuery({}));
+  const { data, isLoading } = useQuery(listProjects, {});
 
   if (isLoading) return <LoadingState />;
 

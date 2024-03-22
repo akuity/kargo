@@ -1,5 +1,5 @@
+import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button, Modal, Space, Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import { useForm } from 'react-hook-form';
@@ -28,11 +28,10 @@ const formSchema = z.object({
 });
 
 export const EditStageModal = ({ visible, hide, projectName, stageName }: Props) => {
-  const { data } = useQuery(listStages.useQuery({ project: projectName }));
+  const { data } = useQuery(listStages, { project: projectName });
   const stage = data?.stages.find((item) => item.metadata?.name === stageName);
 
-  const { mutateAsync, isPending } = useMutation({
-    ...updateResource.useMutation(),
+  const { mutateAsync, isPending } = useMutation(updateResource, {
     onSuccess: () => hide()
   });
 
