@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Form, Input, Modal, Tabs } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import React from 'react';
@@ -25,8 +26,7 @@ const formSchema = z.object({
 
 export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
   const queryClient = useQueryClient();
-  const { mutateAsync, isPending } = useMutation({
-    ...createResource.useMutation(),
+  const { mutateAsync, isPending } = useMutation(createResource, {
     onSuccess: () => hide()
   });
 
@@ -44,7 +44,7 @@ export const CreateProjectModal = ({ visible, hide }: ModalComponentProps) => {
         manifest: textEncoder.encode(data.value)
       },
       {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: listProjects.getQueryKey() })
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: createConnectQueryKey(listProjects) })
       }
     );
   });
