@@ -21,9 +21,10 @@
 
 ### CRDs
 
-| Name           | Description                                                                                                                                   | Value  |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `crds.install` | Indicates if CRDs should be managed as part of the Helm release. If set to `false`, the CRDs are only installed if they do not already exist. | `true` |
+| Name           | Description                                                                                                                                                                        | Value  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `crds.install` | Indicates if Custom Resource Definitions should be installed and upgraded as part of the release. If set to `false`, the CRDs will only be installed if they do not already exist. | `true` |
+| `crds.keep`    | Indicates if Custom Resource Definitions should be kept when a release is uninstalled.                                                                                             | `true` |
 
 ### KubeConfigs
 
