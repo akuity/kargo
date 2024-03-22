@@ -39,6 +39,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.selectChartVersionFn)
 	require.NotNil(t, e.selectCommitMetaFn)
 	require.NotNil(t, e.createFreightFn)
+	require.NotNil(t, e.getDiffPathsSinceCommitIDFn)
 }
 
 func TestSyncWarehouse(t *testing.T) {
@@ -190,6 +191,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.FreightReference,
 				) ([]kargoapi.GitCommit, error) {
 					return nil, errors.New("something went wrong")
 				},
@@ -208,6 +210,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.FreightReference,
 				) ([]kargoapi.GitCommit, error) {
 					return nil, nil
 				},
@@ -237,6 +240,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.FreightReference,
 				) ([]kargoapi.GitCommit, error) {
 					return nil, nil
 				},
@@ -273,6 +277,7 @@ func TestGetLatestFreightFromRepos(t *testing.T) {
 					context.Context,
 					string,
 					[]kargoapi.RepoSubscription,
+					*kargoapi.FreightReference,
 				) ([]kargoapi.GitCommit, error) {
 					return []kargoapi.GitCommit{
 						{

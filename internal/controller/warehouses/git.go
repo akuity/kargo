@@ -15,6 +15,11 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const (
+	regexpPrefix = "regexp:"
+	regexPrefix  = "regex:"
+)
+
 type gitMeta struct {
 	Commit  string
 	Tag     string
@@ -26,8 +31,18 @@ func (r *reconciler) selectCommits(
 	ctx context.Context,
 	namespace string,
 	subs []kargoapi.RepoSubscription,
+	lastFreight *kargoapi.FreightReference,
 ) ([]kargoapi.GitCommit, error) {
 	latestCommits := make([]kargoapi.GitCommit, 0, len(subs))
+
+	var repoCommitMappings map[string]string
+	if lastFreight != nil {
+		repoCommitMappings = make(map[string]string, len(lastFreight.Commits))
+		for _, commit := range lastFreight.Commits {
+			repoCommitMappings[commit.RepoURL+"#"+commit.Branch] = commit.ID
+		}
+	}
+
 	for _, s := range subs {
 		if s.Git == nil {
 			continue
@@ -55,7 +70,9 @@ func (r *reconciler) selectCommits(
 			logger.Debug("found no credentials for git repo")
 		}
 
-		gm, err := r.selectCommitMetaFn(ctx, *s.Git, repoCreds)
+		baseCommit := repoCommitMappings[sub.RepoURL+"#"+sub.Branch]
+
+		gm, err := r.selectCommitMetaFn(ctx, *s.Git, repoCreds, baseCommit)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error determining latest commit ID of git repo %q: %w",
@@ -86,6 +103,7 @@ func (r *reconciler) selectCommitMeta(
 	ctx context.Context,
 	sub kargoapi.GitSubscription,
 	creds *git.RepoCredentials,
+	baseCommit string,
 ) (*gitMeta, error) {
 	logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
 	if creds == nil {
@@ -94,20 +112,26 @@ func (r *reconciler) selectCommitMeta(
 	if sub.CommitSelectionStrategy == "" {
 		sub.CommitSelectionStrategy = kargoapi.CommitSelectionStrategyNewestFromBranch
 	}
+	// when includePaths and/or excludePaths filters are used we can't use shallow clone
+	// as we need diffs between HEAD and a baseCommit which depth in git history is unknown
+	var shallowClone = true
+	if (len(sub.IncludePaths) != 0 || len(sub.ExcludePaths) != 0) && baseCommit != "" {
+		shallowClone = false
+	}
 	repo, err := git.Clone(
 		sub.RepoURL,
 		*creds,
 		&git.CloneOptions{
 			Branch:                sub.Branch,
 			SingleBranch:          true,
-			Shallow:               true,
+			Shallow:               shallowClone,
 			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error cloning git repo %q: %w", sub.RepoURL, err)
 	}
-	selectedTag, selectedCommit, err := r.selectTagAndCommitID(repo, sub)
+	selectedTag, selectedCommit, err := r.selectTagAndCommitID(repo, sub, baseCommit)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error selecting commit from git repo %q: %w",
@@ -136,20 +160,67 @@ func (r *reconciler) selectCommitMeta(
 func (r *reconciler) selectTagAndCommitID(
 	repo git.Repo,
 	sub kargoapi.GitSubscription,
+	baseCommit string,
 ) (string, string, error) {
+
 	if sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch {
 		// In this case, there is nothing to do except return the commit ID at the
-		// head of the branch.
+		// head of the branch unless there are includePaths/excludePaths configured to
+		// handle.
 		commit, err := r.getLastCommitIDFn(repo)
 		if err != nil {
-			return "", "", fmt.Errorf(
-				"error determining commit ID at head of branch %q in git repo %q: %w",
-				sub.Branch,
-				sub.RepoURL,
-				err,
-			)
+			return "", "",
+				fmt.Errorf("error determining commit ID at head of branch %q in git repo %q: %w",
+					sub.Branch,
+					sub.RepoURL,
+					err,
+				)
 		}
+		// In case includePaths/excludePaths filters are configured in a git subscription
+		// below if clause deals with it. There is a special case - Warehouse has not
+		// produced any Freight yet, this is sorted by creating Freight based on last
+		// commit without applying filters.
+		if (sub.IncludePaths != nil || sub.ExcludePaths != nil) && baseCommit != "" {
+
+			// this shortcircuits to just return the last commit in case it is same as
+			// baseCommit so we do not spam logs with errors of a valid not getting diffs
+			// between baseCommit and HEAD (pointing to baseCommit in this case)
+			if baseCommit == commit {
+				return "", commit, nil
+			}
+
+			// getting actual diffPaths since baseCommit
+			diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
+			if err != nil {
+				return "", "",
+					fmt.Errorf("error getting diffs since commit %q in git repo %q: %w",
+						baseCommit,
+						sub.RepoURL,
+						err,
+					)
+			}
+
+			matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffs)
+			if err != nil {
+				return "", "",
+					fmt.Errorf("error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
+						commit,
+						sub.RepoURL,
+						err,
+					)
+			}
+
+			if !matchesPathsFilters {
+				return "", "",
+					fmt.Errorf("commit %q not applicable due to includePaths/excludePaths configuration for repo %q",
+						commit,
+						sub.RepoURL,
+					)
+			}
+		}
+
 		return "", commit, nil
+
 	}
 
 	tags, err := r.listTagsFn(repo) // These are ordered newest to oldest
@@ -232,6 +303,92 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
+// pathsFilterPositive returns true when IncludePaths and/or ExcludePaths
+// filters match one or more commit diffs and new Freight is
+// to be produced. It returns false otherwise.
+func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
+	includePathsRegexps, err := compileRegexps(includePaths)
+	if err != nil {
+		return false, fmt.Errorf(
+			"error compiling includePaths regexps: %w",
+			err,
+		)
+	}
+
+	excludePathsRegexps, err := compileRegexps(excludePaths)
+	if err != nil {
+		return false, fmt.Errorf(
+			"error compiling excludePaths regexps: %w",
+			err,
+		)
+	}
+
+	filteredDiffs := make([]string, 0, len(diffs))
+	for _, diffPath := range diffs {
+		// matchesIncludePaths case is a bit different from matchesExcludePaths
+		// in the way that if includePaths string array is empty - it matches
+		// ANY change so we need to have a check for that
+		matchesIncludePaths := len(includePaths) == 0 || matchesRegexpList(diffPath, includePathsRegexps)
+		matchesExcludePaths := matchesRegexpList(diffPath, excludePathsRegexps)
+		// combined filter decision, positive for matching includePaths and
+		// unmatching excludePaths
+		if matchesIncludePaths && !matchesExcludePaths {
+			filteredDiffs = append(filteredDiffs, diffPath)
+		}
+	}
+	if len(filteredDiffs) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+// compileRegexps is a general purpose function taking a slice of strings
+// as argument and compiling them into a slice of *regexp.Regexp. It
+// returns the compiled regexps in case of success and if it fails to compile
+// a string - nil and error is returned
+func compileRegexps(regexpStrings []string) (regexps []*regexp.Regexp, err error) {
+	regexpsSlice := make([]*regexp.Regexp, 0, len(regexpStrings))
+	for _, regexpString := range regexpStrings {
+		switch {
+		case strings.HasPrefix(regexpString, regexpPrefix):
+			regexpString = strings.TrimPrefix(regexpString, regexpPrefix)
+		case strings.HasPrefix(regexpString, regexPrefix):
+			regexpString = strings.TrimPrefix(regexpString, regexPrefix)
+		default:
+			return nil, fmt.Errorf(
+				"error compiling %q into a regular expression: string must start with %q or %q",
+				regexpString, regexpPrefix, regexPrefix,
+			)
+		}
+
+		regex, err := regexp.Compile(regexpString)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error compiling string %q into a regular expression: %w",
+				regexpString,
+				err,
+			)
+		}
+		regexpsSlice = append(regexpsSlice, regex)
+	}
+	return regexpsSlice, nil
+}
+
+// matchesRegexpList is a general purpose function iterating given slice of
+// *regexp.Regexp (regexpList) to check if any of regexps match
+// stringToMatch string, if match is found it returns true and if match
+// is not found it returns false.
+func matchesRegexpList(stringToMatch string, regexpList []*regexp.Regexp) bool {
+	foundMatch := false
+	for _, regex := range regexpList {
+		if regex == nil || regex.MatchString(stringToMatch) {
+			foundMatch = true
+			break
+		}
+	}
+	return foundMatch
+}
+
 // selectLexicallyLastTag sorts the provided tag name in reverse lexicographic
 // order and returns the first tag name in the sorted list. If the list is
 // empty, it returns an empty string.
@@ -298,4 +455,8 @@ func (r *reconciler) listTags(repo git.Repo) ([]string, error) {
 
 func (r *reconciler) checkoutTag(repo git.Repo, tag string) error {
 	return repo.Checkout(tag)
+}
+
+func (r *reconciler) getDiffPathsSinceCommitID(repo git.Repo, commitId string) ([]string, error) {
+	return repo.GetDiffPathsSinceCommitID(commitId)
 }

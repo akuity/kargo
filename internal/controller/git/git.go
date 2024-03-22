@@ -64,6 +64,9 @@ type Repo interface {
 	// GetDiffPaths returns a string slice indicating the paths, relative to the
 	// root of the repository, of any new or modified files.
 	GetDiffPaths() ([]string, error)
+	// GetDiffPathsForCommitID returns a string slice indicating the paths, relative to the
+	// root of the repository, of any files that are new or modified since the given commit ID.
+	GetDiffPathsSinceCommitID(commitId string) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
 	IsAncestor(parent string, child string) (bool, error)
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
@@ -311,6 +314,24 @@ func (r *repo) GetDiffPaths() ([]string, error) {
 		paths = append(
 			paths,
 			strings.SplitN(strings.TrimSpace(scanner.Text()), " ", 2)[1],
+		)
+	}
+	return paths, nil
+}
+
+func (r *repo) GetDiffPathsSinceCommitID(commitId string) ([]string, error) {
+	resBytes, err := libExec.Exec(r.buildCommand("diff", "--name-only", commitId+"..HEAD"))
+	if err != nil {
+		return nil,
+			fmt.Errorf("error getting diffs since commit %q %w", commitId, err)
+	}
+	var paths []string
+	scanner := bufio.NewScanner(bytes.NewReader(resBytes))
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		paths = append(
+			paths,
+			scanner.Text(),
 		)
 	}
 	return paths, nil

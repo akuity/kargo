@@ -126,6 +126,20 @@ type GitSubscription struct {
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,7,opt,name=insecureSkipTLSVerify"`
+	// IncludePaths is a list of regular expressions that can optionally be used to
+	// limit file paths in repository, changes in which will result in creation of
+	// new freight. When not specified - changes in any path will produce new
+	// freight, it is equivalent to having a IncludePaths with an entry of ".*"
+	// When both IncludePaths and ExcludePaths are specified and match same path/paths,
+	// ExcludePaths will prevail over IncludePaths.
+	//+kubebuilder:validation:Optional
+	IncludePaths []string `json:"includePaths,omitempty" protobuf:"bytes,8,rep,name=includePaths"`
+	// ExcludePaths is an optional list of regular expressions used to specify paths
+	// in git repository, changes in which should never produce new freight. When used
+	// in conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes
+	// precedence over IncludePaths.
+	//+kubebuilder:validation:Optional
+	ExcludePaths []string `json:"excludePaths,omitempty" protobuf:"bytes,9,rep,name=excludePaths"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
@@ -230,7 +244,9 @@ type WarehouseStatus struct {
 	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Warehouse
 	// was reconciled against.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
+	// LastFreight refers to the last Freight produced by this Warehouse
+	LastFreight *FreightReference `json:"lastFreight,omitempty" protobuf:"bytes,5,opt,name=lastFreight"`
 }
 
 //+kubebuilder:object:root=true
