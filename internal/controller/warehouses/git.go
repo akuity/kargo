@@ -177,6 +177,13 @@ func (r *reconciler) selectTagAndCommitID(
 		// commit without applying filters.
 		if (sub.IncludePaths != nil || sub.ExcludePaths != nil) && baseCommit != "" {
 
+			// this shortcircuits to just return the last commit in case it is same as
+			// baseCommit so we do not spam logs with errors of a valid not getting diffs
+			// between baseCommit and HEAD (pointing to baseCommit in this case)
+			if baseCommit == commit {
+				return "", commit, nil
+			}
+
 			// getting actual diffPaths since baseCommit
 			diffs, err := r.getDiffPathsSinceCommitIDFn(repo, baseCommit)
 			if err != nil {
