@@ -15,6 +15,11 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const (
+	regexpPrefix = "regexp:"
+	regexPrefix  = "regex:"
+)
+
 type gitMeta struct {
 	Commit  string
 	Tag     string
@@ -198,7 +203,7 @@ func (r *reconciler) selectTagAndCommitID(
 			matchesPathsFilters, err := matchesPathsFilters(sub.IncludePaths, sub.ExcludePaths, diffs)
 			if err != nil {
 				return "", "",
-					fmt.Errorf("error checking includePaths/excludePaths match for commit %q in git repo %q: %w",
+					fmt.Errorf("error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
 						commit,
 						sub.RepoURL,
 						err,
@@ -207,7 +212,7 @@ func (r *reconciler) selectTagAndCommitID(
 
 			if !matchesPathsFilters {
 				return "", "",
-					fmt.Errorf("commit %q not applicable due to includePaths/excludePaths configuration in repo %q",
+					fmt.Errorf("commit %q not applicable due to includePaths/excludePaths configuration for repo %q",
 						commit,
 						sub.RepoURL,
 					)
@@ -302,7 +307,6 @@ func ignores(tagName string, ignore []string) bool {
 // filters match one or more commit diffs and new Freight is
 // to be produced. It returns false otherwise.
 func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
-
 	includePathsRegexps, err := compileRegexps(includePaths)
 	if err != nil {
 		return false, fmt.Errorf(
@@ -345,6 +349,18 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 func compileRegexps(regexpStrings []string) (regexps []*regexp.Regexp, err error) {
 	regexpsSlice := make([]*regexp.Regexp, 0, len(regexpStrings))
 	for _, regexpString := range regexpStrings {
+		switch {
+		case strings.HasPrefix(regexpString, regexpPrefix):
+			regexpString = strings.TrimPrefix(regexpString, regexpPrefix)
+		case strings.HasPrefix(regexpString, regexPrefix):
+			regexpString = strings.TrimPrefix(regexpString, regexPrefix)
+		default:
+			return nil, fmt.Errorf(
+				"error compiling %q into a regular expression: string must start with %q or %q",
+				regexpString, regexpPrefix, regexPrefix,
+			)
+		}
+
 		regex, err := regexp.Compile(regexpString)
 		if err != nil {
 			return nil, fmt.Errorf(

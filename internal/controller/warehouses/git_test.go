@@ -256,7 +256,7 @@ func TestSelectCommitID(t *testing.T) {
 			name: "newest from branch with path filters; error matching filters; invalid regex",
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-				IncludePaths:            []string{"["},
+				IncludePaths:            []string{regexpPrefix + "["},
 			},
 			reconciler: &reconciler{
 				getLastCommitIDFn: func(git.Repo) (string, error) {
@@ -285,7 +285,7 @@ func TestSelectCommitID(t *testing.T) {
 			name: "newest from branch with path filters; error matching filters; no diff matching",
 			sub: kargoapi.GitSubscription{
 				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-				IncludePaths:            []string{"^third.*"},
+				IncludePaths:            []string{regexpPrefix + "^third.*"},
 			},
 			reconciler: &reconciler{
 				getLastCommitIDFn: func(git.Repo) (string, error) {
@@ -300,7 +300,7 @@ func TestSelectCommitID(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"commit \"fake-commit\" not applicable due to includePaths/excludePaths configuration in repo",
+					"commit \"fake-commit\" not applicable due to includePaths/excludePaths configuration for repo",
 				)
 			},
 		},
@@ -677,7 +677,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 	}{
 		{
 			name:         "success with no includePaths configured",
-			excludePaths: []string{"nonexistent"},
+			excludePaths: []string{regexpPrefix + "nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(matchFound bool, err error) {
 				require.NoError(t, err)
@@ -686,8 +686,8 @@ func TestMatchesPathsFilters(t *testing.T) {
 		},
 		{
 			name:         "success with a matching filters configuration",
-			includePaths: []string{"values\\.ya?ml$"},
-			excludePaths: []string{"nonexistent"},
+			includePaths: []string{regexpPrefix + "values\\.ya?ml$"},
+			excludePaths: []string{regexPrefix + "nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(matchFound bool, err error) {
 				require.NoError(t, err)
@@ -696,8 +696,8 @@ func TestMatchesPathsFilters(t *testing.T) {
 		},
 		{
 			name:         "success with unmatching filters configuration",
-			includePaths: []string{"values\\.ya?ml$"},
-			excludePaths: []string{"nonexistent", ".*val.*"},
+			includePaths: []string{regexpPrefix + "values\\.ya?ml$"},
+			excludePaths: []string{regexPrefix + "nonexistent", regexpPrefix + ".*val.*"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(matchFound bool, err error) {
 				require.NoError(t, err)
@@ -706,13 +706,31 @@ func TestMatchesPathsFilters(t *testing.T) {
 		},
 		{
 			name:         "error with invalid regexp in excludePaths configuration",
-			includePaths: []string{"values\\.ya?ml$"},
-			excludePaths: []string{"nonexistent", ".*val.*", "["},
+			includePaths: []string{regexPrefix + "values\\.ya?ml$"},
+			excludePaths: []string{regexpPrefix + "nonexistent", regexpPrefix + ".*val.*", regexPrefix + "["},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(_ bool, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "error compiling excludePaths regexps:")
 				require.Contains(t, err.Error(), "error compiling string \"[\" into a regular expression")
+			},
+		},
+		{
+			name:         "error without prefix in includePaths configuration",
+			includePaths: []string{"values\\.ya?ml$"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			assertions: func(_ bool, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "string must start with")
+			},
+		},
+		{
+			name:         "error without prefix in excludePaths configuration",
+			excludePaths: []string{"values\\.ya?ml$"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			assertions: func(_ bool, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "string must start with")
 			},
 		},
 	}
