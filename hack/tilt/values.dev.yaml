@@ -21,6 +21,8 @@ api:
         enabled: false
 controller:
   logLevel: DEBUG
+crds:
+  install: false
 managementController:
   logLevel: DEBUG
 webhooksServer:
