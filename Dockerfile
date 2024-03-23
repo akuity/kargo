@@ -68,7 +68,7 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.35 as back-end-dev
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.37 as back-end-dev
 
 USER root
 
@@ -103,7 +103,7 @@ CMD ["pnpm", "dev"]
 # - the official image we publish
 # - purposefully last so that it is the default target when building
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.35 as final
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.37 as final
 
 USER root
 
