@@ -24,7 +24,11 @@ func TestNewGitMechanism(t *testing.T) {
 		func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate {
 			return nil
 		},
-		func(kargoapi.GitRepoUpdate, kargoapi.FreightReference, string, string) ([]string, error) {
+		func(
+			kargoapi.GitRepoUpdate,
+			kargoapi.FreightReference,
+			string, string, string,
+		) ([]string, error) {
 			return nil, nil
 		},
 	)

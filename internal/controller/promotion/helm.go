@@ -64,6 +64,7 @@ type helmer struct {
 func (h *helmer) apply(
 	update kargoapi.GitRepoUpdate,
 	newFreight kargoapi.FreightReference,
+	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	homeDir string,
 	workingDir string,
 ) ([]string, error) {

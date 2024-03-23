@@ -45,6 +45,7 @@ type gitMechanism struct {
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		sourceCommit string,
 		homeDir string,
 		workingDir string,
 	) ([]string, error)
@@ -61,6 +62,7 @@ func newGitMechanism(
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		sourceCommit string,
 		homeDir string,
 		workingDir string,
 	) ([]string, error),
@@ -294,11 +296,17 @@ func (g *gitMechanism) gitCommit(
 		}
 	}
 
+	sourceCommitID, err := repo.LastCommitID()
+	if err != nil {
+		return "", err // TODO: Wrap this
+	}
+
 	var changes []string
 	if g.applyConfigManagementFn != nil {
 		if changes, err = g.applyConfigManagementFn(
 			update,
 			newFreight,
+			sourceCommitID,
 			repo.HomeDir(),
 			repo.WorkingDir(),
 		); err != nil {

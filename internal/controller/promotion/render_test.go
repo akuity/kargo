@@ -1,12 +1,13 @@
 package promotion
 
 import (
-	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -15,343 +16,152 @@ import (
 
 func TestNewKargoRenderMechanism(t *testing.T) {
 	pm := newKargoRenderMechanism(&credentials.FakeDB{})
-	krpm, ok := pm.(*kargoRenderMechanism)
+	kpm, ok := pm.(*gitMechanism)
 	require.True(t, ok)
-	require.NotNil(t, krpm.doSingleUpdateFn)
-	require.NotNil(t, krpm.getReadRefFn)
-	require.NotNil(t, krpm.getCredentialsFn)
-	require.NotNil(t, krpm.renderManifestsFn)
+	require.NotNil(t, kpm.selectUpdatesFn)
+	require.NotNil(t, kpm.applyConfigManagementFn)
 }
 
-func TestKargoRenderGetName(t *testing.T) {
-	require.NotEmpty(t, (&kargoRenderMechanism{}).GetName())
-}
-
-func TestKargoRenderPromote(t *testing.T) {
+func TestSelectKargoRenderUpdates(t *testing.T) {
 	testCases := []struct {
 		name       string
-		promoMech  *kargoRenderMechanism
-		stage      *kargoapi.Stage
-		newFreight kargoapi.FreightReference
-		assertions func(
-			t *testing.T,
-			status *kargoapi.PromotionStatus,
-			newFreightIn kargoapi.FreightReference,
-			newFreightOut kargoapi.FreightReference,
-			err error,
-		)
+		updates    []kargoapi.GitRepoUpdate
+		assertions func(*testing.T, []kargoapi.GitRepoUpdate)
 	}{
 		{
-			name:      "no updates",
-			promoMech: &kargoRenderMechanism{},
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.Equal(t, newFreightIn, newFreightOut)
+			name: "no updates",
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+				require.Empty(t, selectedUpdates)
 			},
 		},
 		{
-			name: "error applying update",
-			promoMech: &kargoRenderMechanism{
-				doSingleUpdateFn: func(
-					_ context.Context,
-					_ *kargoapi.Promotion,
-					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.FreightReference,
-				) (kargoapi.FreightReference, error) {
-					return newFreight, errors.New("something went wrong")
+			name: "no kargo render updates",
+			updates: []kargoapi.GitRepoUpdate{
+				{
+					RepoURL: "fake-url",
 				},
 			},
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						GitRepoUpdates: []kargoapi.GitRepoUpdate{
-							{
-								Render: &kargoapi.KargoRenderPromotionMechanism{},
-							},
-						},
-					},
-				},
-			},
-			newFreight: kargoapi.FreightReference{
-				Images: []kargoapi.Image{
-					{
-						RepoURL: "fake-url",
-						Tag:     "fake-tag",
-					},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
-				err error,
-			) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newFreightIn, newFreightOut)
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+				require.Empty(t, selectedUpdates)
 			},
 		},
 		{
-			name: "success",
-			promoMech: &kargoRenderMechanism{
-				doSingleUpdateFn: func(
-					_ context.Context,
-					_ *kargoapi.Promotion,
-					_ kargoapi.GitRepoUpdate,
-					newFreight kargoapi.FreightReference,
-				) (kargoapi.FreightReference, error) {
-					return newFreight, nil
+			name: "some kargo render updates",
+			updates: []kargoapi.GitRepoUpdate{
+				{
+					RepoURL: "fake-url",
+					Render:  &kargoapi.KargoRenderPromotionMechanism{},
+				},
+				{
+					RepoURL: "fake-url",
+					Helm:    &kargoapi.HelmPromotionMechanism{},
+				},
+				{
+					RepoURL: "fake-url",
 				},
 			},
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					PromotionMechanisms: &kargoapi.PromotionMechanisms{
-						GitRepoUpdates: []kargoapi.GitRepoUpdate{
-							{
-								Render: &kargoapi.KargoRenderPromotionMechanism{},
-							},
-						},
-					},
-				},
-			},
-			newFreight: kargoapi.FreightReference{
-				Images: []kargoapi.Image{
-					{
-						RepoURL: "fake-url",
-						Tag:     "fake-tag",
-					},
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_ *kargoapi.PromotionStatus,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.Equal(t, newFreightIn, newFreightOut)
+			assertions: func(t *testing.T, selectedUpdates []kargoapi.GitRepoUpdate) {
+				require.Len(t, selectedUpdates, 1)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			status, newFreightOut, err := testCase.promoMech.Promote(
-				context.Background(),
-				testCase.stage,
-				&kargoapi.Promotion{},
-				testCase.newFreight,
-			)
-			testCase.assertions(t, status, testCase.newFreight, newFreightOut, err)
+			testCase.assertions(t, selectKargoRenderUpdates(testCase.updates))
 		})
 	}
 }
 
-func TestKargoRenderDoSingleUpdate(t *testing.T) {
-	const testRef = "fake-ref"
+func TestKargoRenderApply(t *testing.T) {
+	testRenderedManifestName := "fake-filename"
+	testRenderedManifest := []byte("fake-rendered-manifest")
+	testSourceCommitID := "fake-commit-id"
 	testCases := []struct {
 		name       string
-		freight    kargoapi.FreightReference
-		promoMech  *kargoRenderMechanism
 		update     kargoapi.GitRepoUpdate
-		assertions func(
-			t *testing.T,
-			newFreightIn kargoapi.FreightReference,
-			newFreightOut kargoapi.FreightReference,
-			err error,
-		)
+		newFreight kargoapi.FreightReference
+		renderer   *renderer
+		assertions func(t *testing.T, changes []string, workDir string, err error)
 	}{
 		{
-			name: "error getting readref",
-			promoMech: &kargoRenderMechanism{
-				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return "", 0, errors.New("something went wrong")
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
-				err error,
-			) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
-				require.Equal(t, newFreightIn, newFreightOut)
-			},
-		},
-		{
-			name: "error getting repo credentials",
-			promoMech: &kargoRenderMechanism{
-				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return testRef, 0, nil
-				},
-				getCredentialsFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{},
-						false,
-						errors.New("something went wrong")
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
-				err error,
-			) {
-				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error obtaining credentials for git repo",
-				)
-				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, newFreightIn, newFreightOut)
-			},
-		},
-		{
-			name: "error rendering manifests",
+			name: "error running Kargo Render",
 			update: kargoapi.GitRepoUpdate{
-				RepoURL: "fake-url",
-				Render:  &kargoapi.KargoRenderPromotionMechanism{},
+				Render: &kargoapi.KargoRenderPromotionMechanism{},
 			},
-			promoMech: &kargoRenderMechanism{
-				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return testRef, 0, nil
-				},
-				getCredentialsFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
-						Username: "fake-username",
-						Password: "fake-personal-access-token",
-					}, true, nil
-				},
-				renderManifestsFn: func(render.Request) (render.Response, error) {
-					return render.Response{}, errors.New("something went wrong")
+			renderer: &renderer{
+				renderManifestsFn: func(render.Request) error {
+					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(
-				t *testing.T,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
-				err error,
-			) {
+			assertions: func(t *testing.T, _ []string, _ string, err error) {
 				require.Error(t, err)
-				require.Contains(
-					t,
-					err.Error(),
-					"error rendering manifests for git repo",
-				)
+				require.Contains(t, err.Error(), "error rendering manifests via Kargo Render")
 				require.Contains(t, err.Error(), "something went wrong")
-				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
-			name: "success -- all images -- no action",
-			freight: kargoapi.FreightReference{
-				Commits: []kargoapi.GitCommit{{}},
+			name: "update doesn't specify images",
+			update: kargoapi.GitRepoUpdate{
+				Render: &kargoapi.KargoRenderPromotionMechanism{},
+			},
+			newFreight: kargoapi.FreightReference{
 				Images: []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
 						Tag:     "fake-tag",
-					},
-					{
-						RepoURL: "second-fake-url",
-						Tag:     "second-fake-tag",
-					},
-					{
-						RepoURL: "third-fake-url",
-						Tag:     "third-fake-tag",
+						Digest:  "fake-digest",
 					},
 				},
 			},
-			update: kargoapi.GitRepoUpdate{
-				RepoURL: "fake-url",
-				Render:  &kargoapi.KargoRenderPromotionMechanism{},
-			},
-			promoMech: &kargoRenderMechanism{
-				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return testRef, 0, nil
-				},
-				getCredentialsFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
-						Username: "fake-username",
-						Password: "fake-personal-access-token",
-					}, true, nil
-				},
-				renderManifestsFn: func(req render.Request) (render.Response, error) {
-					require.Equal(
-						t,
-						[]string{
-							"fake-url:fake-tag",
-							"second-fake-url:second-fake-tag",
-							"third-fake-url:third-fake-tag",
-						},
-						req.Images,
+			renderer: &renderer{
+				renderManifestsFn: func(req render.Request) error {
+					if err := os.MkdirAll(req.LocalOutPath, 0755); err != nil {
+						return err
+					}
+					return os.WriteFile(
+						filepath.Join(req.LocalOutPath, testRenderedManifestName),
+						testRenderedManifest,
+						0600,
 					)
-					return render.Response{
-						ActionTaken: render.ActionTakenNone,
-						CommitID:    "fake-commit-id",
-					}, nil
 				},
 			},
-			assertions: func(
-				t *testing.T,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
-				err error,
-			) {
+			assertions: func(t *testing.T, changeSummary []string, workDir string, err error) {
 				require.NoError(t, err)
+				// The work directory should contain the rendered manifest
+				files, err := os.ReadDir(workDir)
+				require.NoError(t, err)
+				require.Len(t, files, 1)
+				require.Equal(t, testRenderedManifestName, files[0].Name())
+				contents, err := os.ReadFile(filepath.Join(workDir, testRenderedManifestName))
+				require.NoError(t, err)
+				require.Equal(t, testRenderedManifest, contents)
+				// Inspect the change summary
 				require.Equal(
 					t,
-					"fake-commit-id",
-					newFreightOut.Commits[0].HealthCheckCommit,
+					[]string{
+						fmt.Sprintf("rendered manifests from commit %s", testSourceCommitID[:7]),
+						"updated manifests to use image fake-url:fake-tag",
+					},
+					changeSummary,
 				)
-				// The newFreight is otherwise unaltered
-				newFreightIn.Commits[0].HealthCheckCommit = ""
-				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 		{
-			name: "success -- some images -- commit",
-			freight: kargoapi.FreightReference{
-				Commits: []kargoapi.GitCommit{{}},
+			name: "update specifies images",
+			update: kargoapi.GitRepoUpdate{
+				Render: &kargoapi.KargoRenderPromotionMechanism{
+					Images: []kargoapi.KargoRenderImageUpdate{
+						{
+							Image: "fake-url",
+						},
+						{
+							Image:     "another-fake-url",
+							UseDigest: true,
+						},
+					},
+				},
+			},
+			newFreight: kargoapi.FreightReference{
 				Images: []kargoapi.Image{
 					{
 						RepoURL: "fake-url",
@@ -359,91 +169,58 @@ func TestKargoRenderDoSingleUpdate(t *testing.T) {
 						Digest:  "fake-digest",
 					},
 					{
-						RepoURL: "second-fake-url",
-						Tag:     "second-fake-tag",
-						Digest:  "second-fake-digest",
-					},
-					{
-						RepoURL: "third-fake-url",
-						Tag:     "third-fake-tag",
-						Digest:  "third-fake-digest",
+						RepoURL: "another-fake-url",
+						Tag:     "another-fake-tag",
+						Digest:  "another-fake-digest",
 					},
 				},
 			},
-			update: kargoapi.GitRepoUpdate{
-				RepoURL: "fake-url",
-				Render: &kargoapi.KargoRenderPromotionMechanism{
-					Images: []kargoapi.KargoRenderImageUpdate{
-						{
-							Image: "fake-url",
-						},
-						{
-							Image:     "second-fake-url",
-							UseDigest: true,
-						},
-					},
-				},
-			},
-			promoMech: &kargoRenderMechanism{
-				getReadRefFn: func(
-					kargoapi.GitRepoUpdate,
-					[]kargoapi.GitCommit,
-				) (string, int, error) {
-					return testRef, 0, nil
-				},
-				getCredentialsFn: func(
-					context.Context,
-					string,
-					credentials.Type,
-					string,
-				) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
-						Username: "fake-username",
-						Password: "fake-personal-access-token",
-					}, true, nil
-				},
-				renderManifestsFn: func(req render.Request) (render.Response, error) {
-					require.Equal(
-						t,
-						[]string{
-							"fake-url:fake-tag",
-							"second-fake-url@second-fake-digest",
-						},
-						req.Images,
+			renderer: &renderer{
+				renderManifestsFn: func(req render.Request) error {
+					if err := os.MkdirAll(req.LocalOutPath, 0755); err != nil {
+						return err
+					}
+					return os.WriteFile(
+						filepath.Join(req.LocalOutPath, testRenderedManifestName),
+						testRenderedManifest,
+						0600,
 					)
-					return render.Response{
-						ActionTaken: render.ActionTakenPushedDirectly,
-						CommitID:    "fake-commit-id",
-					}, nil
 				},
 			},
-			assertions: func(
-				t *testing.T,
-				newFreightIn kargoapi.FreightReference,
-				newFreightOut kargoapi.FreightReference,
-				err error,
-			) {
+			assertions: func(t *testing.T, changeSummary []string, workDir string, err error) {
 				require.NoError(t, err)
+				// The work directory should contain the rendered manifest
+				files, err := os.ReadDir(workDir)
+				require.NoError(t, err)
+				require.Len(t, files, 1)
+				require.Equal(t, testRenderedManifestName, files[0].Name())
+				contents, err := os.ReadFile(filepath.Join(workDir, testRenderedManifestName))
+				require.NoError(t, err)
+				require.Equal(t, testRenderedManifest, contents)
+				// Inspect the change summary
 				require.Equal(
 					t,
-					"fake-commit-id",
-					newFreightOut.Commits[0].HealthCheckCommit,
+					[]string{
+						fmt.Sprintf("rendered manifests from commit %s", testSourceCommitID[:7]),
+						"updated manifests to use image another-fake-url@another-fake-digest",
+						"updated manifests to use image fake-url:fake-tag",
+					},
+					changeSummary,
 				)
-				// The newFreight is otherwise unaltered
-				newFreightIn.Commits[0].HealthCheckCommit = ""
-				require.Equal(t, newFreightIn, newFreightOut)
 			},
 		},
 	}
 	for _, testCase := range testCases {
+		testWorkDir := t.TempDir()
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := testCase.promoMech.doSingleUpdate(
-				context.Background(),
-				&kargoapi.Promotion{ObjectMeta: metav1.ObjectMeta{Namespace: "fake-namespace"}},
+			changes, err := testCase.renderer.apply(
 				testCase.update,
-				testCase.freight,
+				testCase.newFreight,
+				testSourceCommitID,
+				"", // Home directory is not used by this implementation
+				testWorkDir,
 			)
-			testCase.assertions(t, testCase.freight, res, err)
+			testCase.assertions(t, changes, testWorkDir, err)
 		})
 	}
 }
