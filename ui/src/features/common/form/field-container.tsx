@@ -9,7 +9,7 @@ import {
 
 interface Props<T extends FieldValues> extends UseControllerProps<T> {
   children: (props: UseControllerReturn<T>) => React.ReactNode;
-  label: string;
+  label?: string;
   formItemOptions?: Omit<FormItemProps, 'label'>;
 }
 
