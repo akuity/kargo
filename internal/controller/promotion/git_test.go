@@ -471,7 +471,6 @@ func TestMoveRepoContents(t *testing.T) {
 	const fileCount = 50
 	// Create dummy repo dir
 	srcDir, err := createDummyRepoDir(t, subdirCount, fileCount)
-	defer os.RemoveAll(srcDir)
 	require.NoError(t, err)
 	// Double-check the setup
 	dirEntries, err := os.ReadDir(srcDir)

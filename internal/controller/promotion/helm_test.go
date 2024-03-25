@@ -346,7 +346,6 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 func TestBuildChartDependencyChanges(t *testing.T) {
 	// Set up a couple of fake Chart.yaml files
 	testDir := t.TempDir()
-	defer os.RemoveAll(testDir)
 
 	testChartsDir := filepath.Join(testDir, "charts")
 	err := os.Mkdir(testChartsDir, 0755)
