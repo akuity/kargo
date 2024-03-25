@@ -239,19 +239,20 @@ func (r *reconciler) ensureNamespace(
 		}
 		if ns.Labels != nil &&
 			ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue {
-			if len(ns.OwnerReferences) == 0 {
+			switch {
+			case len(ns.OwnerReferences) == 0:
 				logger.Debug(
 					"namespace exists, but is not owned by this Project, but has the " +
 						"project label; Project will adopt it",
 				)
 				ns.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-			} else if ns.Labels[kargoapi.AllowSharedOwnershipLabelKey] == kargoapi.LabelTrueValue {
+			case ns.Labels[kargoapi.AllowSharedOwnershipLabelKey] == kargoapi.LabelTrueValue:
 				logger.Debug(
 					"namespace exists, but is not owned by this Project, but has the " +
 						"project label, and allows shared ownership; Project will adopt it",
 				)
 				ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
-			} else {
+			default:
 				logger.Debug(
 					"namespace exists, but is not owned by this Project, but has the " +
 						"project label, but does not allow shared ownership; Project " +
@@ -262,6 +263,7 @@ func (r *reconciler) ensureNamespace(
 						"shared ownership", project.Name,
 				)
 			}
+
 			controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
 			if err = r.updateNamespaceFn(ctx, ns); err != nil {
 				return status, fmt.Errorf("error updating namespace %q: %w", project.Name, err)

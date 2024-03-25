@@ -17,5 +17,5 @@ const (
 
 	FinalizerName = "kargo.akuity.io/finalizer"
 
-	AllowSharedOwnershipLabelKey = "kargo.akuity.io/allow-shared-ownership"
+	AllowSharedOwnershipLabelKey = "kargo.akuity.io/shared-owner"
 )

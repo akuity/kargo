@@ -118,7 +118,7 @@ The `Project` resource expects to assume sole ownership of the `Namespace`
 resource it represents.  However, there may be scenarios where shared ownership
 is desired, such as another controller creating the namespace and maintaining
 ownership.  To allow shared ownership between the other controller and
-`Project`, add `kargo.akuity.io/allow-shared-ownership: "true"` to the
+`Project`, add `kargo.akuity.io/shared-owner: "true"` to the
 `Namespace` labels.
 :::
 
