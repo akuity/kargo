@@ -251,6 +251,7 @@ func (r *reconciler) ensureNamespace(
 					"namespace exists, but is not owned by this Project, but has the " +
 						"project label, and allows shared ownership; Project will adopt it",
 				)
+				ownerRef.Controller = ptr.To(false)
 				ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
 			default:
 				logger.Debug(
