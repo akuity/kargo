@@ -85,7 +85,7 @@ func (r *renderer) apply(
 
 	sort.StringSlice(images).Sort()
 
-	tempDir, err := os.MkdirTemp("", "")
+	tempDir, err := os.MkdirTemp("", tmpPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("error creating temporary directory: %w", err)
 	}

@@ -141,7 +141,7 @@ func Clone(
 	repoCreds RepoCredentials,
 	opts *CloneOptions,
 ) (Repo, error) {
-	homeDir, err := os.MkdirTemp("", "")
+	homeDir, err := os.MkdirTemp("", "repo-")
 	if err != nil {
 		return nil, fmt.Errorf("error creating home directory for repo %q: %w", repoURL, err)
 	}
