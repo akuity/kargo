@@ -466,17 +466,14 @@ func TestMoveRepoContents(t *testing.T) {
 	const subdirCount = 50
 	const fileCount = 50
 	// Create dummy repo dir
-	srcDir, err := createDummyRepoDir(subdirCount, fileCount)
-	defer os.RemoveAll(srcDir)
+	srcDir, err := createDummyRepoDir(t, subdirCount, fileCount)
 	require.NoError(t, err)
 	// Double-check the setup
 	dirEntries, err := os.ReadDir(srcDir)
 	require.NoError(t, err)
 	require.Len(t, dirEntries, subdirCount+fileCount+1)
 	// Create destination dir
-	destDir, err := os.MkdirTemp("", "")
-	defer os.RemoveAll(destDir)
-	require.NoError(t, err)
+	destDir := t.TempDir()
 	// Move
 	err = moveRepoContents(srcDir, destDir)
 	require.NoError(t, err)
@@ -499,8 +496,7 @@ func TestDeleteRepoContents(t *testing.T) {
 	const subdirCount = 50
 	const fileCount = 50
 	// Create dummy repo dir
-	dir, err := createDummyRepoDir(subdirCount, fileCount)
-	defer os.RemoveAll(dir)
+	dir, err := createDummyRepoDir(t, subdirCount, fileCount)
 	require.NoError(t, err)
 	// Double-check the setup
 	dirEntries, err := os.ReadDir(dir)
@@ -580,19 +576,17 @@ func TestBuildCommitMessage(t *testing.T) {
 	}
 }
 
-func createDummyRepoDir(dirCount, fileCount int) (string, error) {
-	// Create a directory
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		return dir, err
-	}
+func createDummyRepoDir(t *testing.T, dirCount, fileCount int) (string, error) {
+	t.Helper()
+	// Create a temporary directory
+	dir := t.TempDir()
 	// Add a dummy .git/ subdir
-	if err = os.Mkdir(filepath.Join(dir, ".git"), 0755); err != nil {
+	if err := os.Mkdir(filepath.Join(dir, ".git"), 0755); err != nil {
 		return dir, err
 	}
 	// Add some dummy dirs
 	for i := 0; i < dirCount; i++ {
-		if err = os.Mkdir(
+		if err := os.Mkdir(
 			filepath.Join(dir, fmt.Sprintf("dir-%d", i)),
 			0755,
 		); err != nil {
