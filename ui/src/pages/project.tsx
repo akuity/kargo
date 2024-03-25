@@ -1,6 +1,11 @@
-import { faPalette, faPlus, faWandSparkles } from '@fortawesome/free-solid-svg-icons';
+import {
+  faChevronDown,
+  faPalette,
+  faPlus,
+  faWandSparkles
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Dropdown, Tooltip } from 'antd';
+import { Button, Dropdown, Space, Tooltip } from 'antd';
 import { useParams } from 'react-router-dom';
 
 import { useModal } from '@ui/features/common/modal/use-modal';
@@ -66,7 +71,10 @@ export const Project = () => {
             trigger={['click']}
           >
             <Button type='primary' icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}>
-              Create
+              <Space>
+                Create
+                <FontAwesomeIcon icon={faChevronDown} size='xs' />
+              </Space>
             </Button>
           </Dropdown>
         </div>
