@@ -344,12 +344,10 @@ func TestBuildValuesFilesChanges(t *testing.T) {
 
 func TestBuildChartDependencyChanges(t *testing.T) {
 	// Set up a couple of fake Chart.yaml files
-	testDir, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
-	defer os.RemoveAll(testDir)
+	testDir := t.TempDir()
 
 	testChartsDir := filepath.Join(testDir, "charts")
-	err = os.Mkdir(testChartsDir, 0755)
+	err := os.Mkdir(testChartsDir, 0755)
 	require.NoError(t, err)
 
 	testFooChartDir := filepath.Join(testChartsDir, "foo")
