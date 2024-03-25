@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,6 +22,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
@@ -32,12 +33,12 @@ type apiOptions struct {
 	Host string
 	Port string
 
-	Logger *log.Logger
+	Logger logr.Logger
 }
 
 func newAPICommand() *cobra.Command {
 	cmdOpts := &apiOptions{
-		Logger: log.StandardLogger(),
+		Logger: logging.LoggerFromContext(context.Background()),
 	}
 
 	cmd := &cobra.Command{
@@ -64,10 +65,10 @@ func (o *apiOptions) complete() {
 
 func (o *apiOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
-	o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	}).Info("Starting Kargo API Server")
+	o.Logger.WithValues(
+		"version", version.Version,
+		"commit", version.GitCommit,
+	).Info("Starting Kargo API Server")
 
 	cfg := config.ServerConfigFromEnv()
 
@@ -84,7 +85,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 	case !cfg.RolloutsIntegrationEnabled:
 		o.Logger.Info("Argo Rollouts integration is disabled")
 	case !argoRolloutsExists(ctx, clientCfg):
-		o.Logger.Warn(
+		o.Logger.Info(
 			"Argo Rollouts integration was enabled, but no Argo Rollouts " +
 				"CRDs were found. Proceeding without Argo Rollouts integration.",
 		)
@@ -97,11 +98,11 @@ func (o *apiOptions) run(ctx context.Context) error {
 		o.Logger.Info("admin account is enabled")
 	}
 	if cfg.OIDCConfig != nil {
-		o.Logger.WithFields(log.Fields{
-			"issuerURL":   cfg.OIDCConfig.IssuerURL,
-			"clientID":    cfg.OIDCConfig.ClientID,
-			"cliClientID": cfg.OIDCConfig.CLIClientID,
-		}).Info("SSO via OpenID Connect is enabled")
+		o.Logger.WithValues(
+			"issuerURL", cfg.OIDCConfig.IssuerURL,
+			"clientID", cfg.OIDCConfig.ClientID,
+			"cliClientID", cfg.OIDCConfig.CLIClientID,
+		).Info("SSO via OpenID Connect is enabled")
 	}
 
 	srv := api.NewServer(cfg, kubeClient, internalClient, recorder)

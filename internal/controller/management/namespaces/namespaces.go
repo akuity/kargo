@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -81,11 +80,11 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": req.NamespacedName.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	logger.Debug("reconciling Namespace")
+	logger.V(1).Info("reconciling Namespace")
 
 	// Find the Namespace
 	ns := &corev1.Namespace{}
@@ -99,12 +98,12 @@ func (r *reconciler) Reconcile(
 	if ns.DeletionTimestamp == nil {
 		return ctrl.Result{}, nil
 	}
-	logger.Debug("Namespace is being deleted")
+	logger.V(1).Info("Namespace is being deleted")
 
 	if !controllerutil.ContainsFinalizer(ns, kargoapi.FinalizerName) {
 		return ctrl.Result{}, nil
 	}
-	logger.Debug("Namespace needs finalizing")
+	logger.V(1).Info("Namespace needs finalizing")
 
 	// Ignore not found errors to keep this idempotent.
 	if err := client.IgnoreNotFound(
@@ -124,6 +123,6 @@ func (r *reconciler) Reconcile(
 			return ctrl.Result{}, fmt.Errorf("error removing finalizer: %w", err)
 		}
 	}
-	logger.Debug("done reconciling Namespace")
+	logger.V(1).Info("done reconciling Namespace")
 	return ctrl.Result{}, nil
 }

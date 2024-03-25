@@ -7,8 +7,6 @@ import (
 	"sort"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -39,13 +37,13 @@ func newNewestBuildSelector(
 
 // Select implements the Selector interface.
 func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            n.repoClient.registry.name,
-		"image":               n.repoClient.image,
-		"selectionStrategy":   SelectionStrategyNewestBuild,
-		"platformConstrained": n.platform != nil,
-	})
-	logger.Trace("selecting image")
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"registry", n.repoClient.registry.name,
+		"image", n.repoClient.image,
+		"selectionStrategy", SelectionStrategyNewestBuild,
+		"platformConstrained", n.platform != nil,
+	)
+	logger.V(2).Info("selecting image")
 
 	ctx = logging.ContextWithLogger(ctx, logger)
 
@@ -54,10 +52,10 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 		return nil, fmt.Errorf("error listing tags: %w", err)
 	}
 	if len(tags) == 0 {
-		logger.Trace("found no tags")
+		logger.V(2).Info("found no tags")
 		return nil, nil
 	}
-	logger.Trace("got all tags")
+	logger.V(2).Info("got all tags")
 
 	if n.allowRegex != nil || len(n.ignore) > 0 {
 		matchedTags := make([]string, 0, len(tags))
@@ -67,14 +65,14 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 			}
 		}
 		if len(matchedTags) == 0 {
-			logger.Trace("no tags matched criteria")
+			logger.V(2).Info("no tags matched criteria")
 			return nil, nil
 		}
 		tags = matchedTags
 	}
-	logger.Tracef("%d tags matched criteria", len(tags))
+	logger.V(2).Info("some tags matched criteria", "tags", len(tags))
 
-	logger.Trace("retrieving images for all tags that matched criteria")
+	logger.V(2).Info("retrieving images for all tags that matched criteria")
 	images, err := n.getImagesByTags(ctx, tags)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving images for all matched tags: %w", err)
@@ -84,15 +82,15 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 		return nil, nil
 	}
 
-	logger.Trace("sorting images by date")
+	logger.V(2).Info("sorting images by date")
 	sortImagesByDate(images)
 
 	if n.platform == nil {
 		image := images[0]
-		logger.WithFields(log.Fields{
-			"tag":    image.Tag,
-			"digest": image.Digest.String(),
-		}).Trace("found image")
+		logger.WithValues(
+			"tag", image.Tag,
+			"digest", image.Digest.String(),
+		).V(2).Info("found image")
 		return &image, nil
 	}
 
@@ -103,18 +101,18 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 		return nil, fmt.Errorf("error retrieving image with digest %q: %w", digest.String(), err)
 	}
 	if image == nil {
-		logger.Tracef(
-			"image with digest %q was found, but did not match platform constraint",
-			digest.String(),
+		logger.V(2).Info(
+			"image with a digest was found, but did not match platform constraint",
+			"digest", digest.String(),
 		)
 		return nil, nil
 	}
 	image.Tag = tag
 
-	logger.WithFields(log.Fields{
-		"tag":    image.Tag,
-		"digest": image.Digest.String(),
-	}).Trace("found image")
+	logger.WithValues(
+		"tag", image.Tag,
+		"digest", image.Digest.String(),
+	).V(2).Info("found image")
 	return image, nil
 }
 

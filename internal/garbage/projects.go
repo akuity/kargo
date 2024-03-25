@@ -23,16 +23,16 @@ func (c *collector) cleanProjects(
 			if !ok {
 				return // Channel was closed
 			}
-			projectLogger := logger.WithField("project", project)
+			projectLogger := logger.WithValues("project", project)
 			if err := c.cleanProjectFn(ctx, project); err != nil {
-				projectLogger.Errorf("error cleaning Project: %s", err)
+				projectLogger.Error(err, "error cleaning Project")
 				select {
 				case errCh <- struct{}{}:
 				case <-ctx.Done():
 					return
 				}
 			} else {
-				projectLogger.Debug("cleaned Project")
+				projectLogger.V(1).Info("cleaned Project")
 			}
 		case <-ctx.Done():
 			return

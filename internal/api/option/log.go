@@ -2,11 +2,12 @@ package option
 
 import (
 	"context"
+	"log/slog"
 	"path"
 	"time"
 
 	"connectrpc.com/connect"
-	log "github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -23,12 +24,12 @@ var (
 )
 
 type logInterceptor struct {
-	logger           *log.Entry
+	logger           logr.Logger
 	ignorableMethods map[string]bool
 }
 
 func newLogInterceptor(
-	logger *log.Entry,
+	logger logr.Logger,
 	ignorableMethods map[string]bool,
 ) connect.Interceptor {
 	return &logInterceptor{
@@ -49,18 +50,18 @@ func (i *logInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		}
 
 		res, err := next(ctx, req)
-		fields := log.Fields{
+		fields := map[string]any{
 			"connect.duration": time.Since(start).String(),
 		}
-		level := log.InfoLevel
+		level := slog.LevelInfo
 		if err != nil {
-			level = log.ErrorLevel
+			level = slog.LevelError
 			fields["connect.code"] = connect.CodeOf(err).String()
 		}
 		logging.
 			LoggerFromContext(ctx).
-			WithFields(fields).
-			Log(level, "finished unary call")
+			WithValues(fields).
+			V(int(level)).Info("finished unary call")
 		return res, err
 	}
 }
@@ -81,18 +82,19 @@ func (i *logInterceptor) WrapStreamingHandler(
 		}
 
 		err := next(ctx, conn)
-		fields := log.Fields{
+		fields := map[string]any{
 			"connect.duration": time.Since(start),
 		}
-		level := log.InfoLevel
+		level := slog.LevelInfo
 		if err != nil {
-			level = log.ErrorLevel
+			level = slog.LevelInfo
 			fields["connect.code"] = connect.CodeOf(err).String()
 		}
 		logging.
 			LoggerFromContext(ctx).
-			WithFields(fields).
-			Log(level, "finished streaming call")
+			WithValues(fields).
+			V(int(level)).
+			Info("finished streaming call")
 		return err
 	}
 }
@@ -101,11 +103,11 @@ func (i *logInterceptor) newLogger(
 	ctx context.Context, procedure string, start time.Time) context.Context {
 	service := path.Dir(procedure)[1:]
 	method := path.Base(procedure)
-	logger := i.logger.WithFields(log.Fields{
-		"connect.service":    service,
-		"connect.method":     method,
-		"connect.start_time": start.Format(time.RFC3339),
-	})
+	logger := i.logger.WithValues(
+		"connect.service", service,
+		"connect.method", method,
+		"connect.start_time", start.Format(time.RFC3339),
+	)
 	return logging.ContextWithLogger(ctx, logger)
 }
 

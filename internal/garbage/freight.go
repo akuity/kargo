@@ -6,7 +6,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -20,7 +19,7 @@ import (
 //     Freight (from the same Warehouse) that remains in use.
 //   - Older than some configurable minimum age.
 func (c *collector) cleanProjectFreight(ctx context.Context, project string) error {
-	logger := logging.LoggerFromContext(ctx).WithField("project", project)
+	logger := logging.LoggerFromContext(ctx).WithValues("project", project)
 
 	warehouses := &kargoapi.WarehouseList{}
 	if err := c.listWarehousesFn(
@@ -33,13 +32,13 @@ func (c *collector) cleanProjectFreight(ctx context.Context, project string) err
 
 	var cleanErrCount int
 	for _, warehouse := range warehouses.Items {
-		warehouseLogger := logger.WithField("warehouse", warehouse.Name)
+		warehouseLogger := logger.WithValues("warehouse", warehouse.Name)
 		if err := c.cleanWarehouseFreightFn(ctx, project, warehouse.Name); err != nil {
-			warehouseLogger.Error("error cleaning Freight from Warehouse")
+			warehouseLogger.Error(err, "error cleaning Freight from Warehouse")
 			cleanErrCount++
 			continue
 		}
-		warehouseLogger.Debug("cleaned Freight from Warehouse")
+		warehouseLogger.V(1).Info("cleaned Freight from Warehouse")
 	}
 
 	if cleanErrCount > 0 {
@@ -62,10 +61,10 @@ func (c *collector) cleanWarehouseFreight(
 	project string,
 	warehouse string,
 ) error {
-	logger := logging.LoggerFromContext(ctx).WithFields(logrus.Fields{
-		"project":   project,
-		"warehouse": warehouse,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project,
+		"warehouse", warehouse,
+	)
 
 	freight := kargoapi.FreightList{}
 	if err := c.listFreightFn(
@@ -103,7 +102,7 @@ func (c *collector) cleanWarehouseFreight(
 				kubeclient.StagesByFreightIndexField: f.Name,
 			},
 		); err != nil {
-			logger.WithField("freight", f).Error("error listing Stages using Freight")
+			logger.WithValues("freight", f).Error(err, "error listing Stages using Freight")
 			return fmt.Errorf(
 				"error listing Stages in Project %q using Freight %q: %w",
 				project,
@@ -127,12 +126,12 @@ func (c *collector) cleanWarehouseFreight(
 		if time.Since(f.CreationTimestamp.Time) < c.cfg.MinFreightDeletionAge {
 			continue // Not old enough
 		}
-		freightLogger := logger.WithField("freight", f.Name)
+		freightLogger := logger.WithValues("freight", f.Name)
 		if err := c.deleteFreightFn(ctx, &f); err != nil {
-			freightLogger.Errorf("error deleting Freight: %s", err)
+			freightLogger.Error(err, "error deleting Freight")
 			deleteErrCount++
 		} else {
-			freightLogger.Debug("deleted Freight")
+			freightLogger.V(1).Info("deleted Freight")
 		}
 	}
 

@@ -24,9 +24,9 @@ func (r *reconciler) selectCharts(
 
 		sub := s.Chart
 
-		logger := logging.LoggerFromContext(ctx).WithField("repoURL", sub.RepoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues("repoURL", sub.RepoURL)
 		if sub.Name != "" {
-			logger = logger.WithField("chart", sub.Name)
+			logger = logger.WithValues("chart", sub.Name)
 		}
 
 		creds, ok, err :=
@@ -45,9 +45,9 @@ func (r *reconciler) selectCharts(
 				Username: creds.Username,
 				Password: creds.Password,
 			}
-			logger.Debug("obtained credentials for chart repo")
+			logger.V(1).Info("obtained credentials for chart repo")
 		} else {
-			logger.Debug("found no credentials for chart repo")
+			logger.V(1).Info("found no credentials for chart repo")
 		}
 
 		vers, err := r.selectChartVersionFn(
@@ -74,7 +74,7 @@ func (r *reconciler) selectCharts(
 		}
 
 		if vers == "" {
-			logger.Error("found no suitable chart version")
+			logger.Error(nil, "found no suitable chart version")
 			if sub.Name == "" {
 				return nil, fmt.Errorf(
 					"found no suitable version of chart in repository %q",
@@ -87,8 +87,8 @@ func (r *reconciler) selectCharts(
 				sub.RepoURL,
 			)
 		}
-		logger.WithField("version", vers).
-			Debug("found latest suitable chart version")
+		logger.WithValues("version", vers).
+			V(1).Info("found latest suitable chart version")
 
 		charts = append(
 			charts,

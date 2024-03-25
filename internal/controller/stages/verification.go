@@ -86,7 +86,7 @@ func (r *reconciler) startVerification(
 				return analysisRuns.Items[j].CreationTimestamp.Before(&analysisRuns.Items[i].CreationTimestamp)
 			})
 
-			logger.Debug("AnalysisRun already exists for Freight")
+			logger.V(1).Info("AnalysisRun already exists for Freight")
 			latestAnalysisRun := analysisRuns.Items[0]
 			return &kargoapi.VerificationInfo{
 				ID:         uuid.NewString(),

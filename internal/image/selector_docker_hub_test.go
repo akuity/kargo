@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/internal/logging"
@@ -28,7 +27,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	ctx := context.Background()
 	logger := logging.LoggerFromContext(ctx)
-	logger.Logger.SetLevel(log.TraceLevel)
+	logging.SetLevel(logging.LevelTrace)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	t.Run("digest strategy miss", func(t *testing.T) {

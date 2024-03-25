@@ -244,7 +244,7 @@ var getChallengeManager = func(
 // getTags retrieves a list of all tags from the repository.
 func (r *repositoryClient) getTags(ctx context.Context) ([]string, error) {
 	logger := logging.LoggerFromContext(ctx)
-	logger.Trace("retrieving tags for image")
+	logger.V(2).Info("retrieving tags for image")
 	tagSvc := r.repo.Tags(ctx)
 	tags, err := tagSvc.All(ctx)
 	if err != nil {
@@ -282,14 +282,14 @@ func (r *repositoryClient) getImageByDigest(
 	platform *platformConstraint,
 ) (*Image, error) {
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("retrieving image for manifest %s", d)
+	logger.V(2).Info("retrieving image for manifest", "digest", d)
 
 	if entry, exists := r.registry.imageCache.Get(d.String()); exists {
 		image := entry.(Image) // nolint: forcetypeassert
 		return &image, nil
 	}
 
-	logger.Tracef("image for manifest %s NOT found in cache", d)
+	logger.V(2).Info("image for manifest NOT found in cache", "digest", d)
 
 	manifest, err := r.getManifestByDigestFn(ctx, d)
 	if err != nil {
@@ -303,7 +303,7 @@ func (r *repositoryClient) getImageByDigest(
 	if image != nil {
 		// Cache the image
 		r.registry.imageCache.Set(d.String(), *image, cache.DefaultExpiration)
-		logger.Tracef("cached image for manifest %s", d)
+		logger.V(2).Info("cached image for manifest", "digest", d)
 	}
 
 	return image, nil
@@ -315,7 +315,7 @@ func (r *repositoryClient) getManifestByTag(
 	tag string,
 ) (distribution.Manifest, error) {
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("retrieving manifest for tag %q from repository", tag)
+	logger.V(2).Info("retrieving manifest from repository", "tag", tag)
 	manifestSvc, err := r.repo.Manifests(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting manifest service: %w", err)
@@ -338,7 +338,7 @@ func (r *repositoryClient) getManifestByDigest(
 	d digest.Digest,
 ) (distribution.Manifest, error) {
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("retrieving manifest for digest %q from repository", d.String())
+	logger.V(2).Info("retrieving manifest from repository", "digest", d.String())
 	manifestSvc, err := r.repo.Manifests(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting manifest service: %w", err)
@@ -399,7 +399,7 @@ func (r *repositoryClient) extractImageFromV1Manifest(
 	digest := digest.FromBytes(manifestBytes)
 
 	logger := logging.LoggerFromContext(context.Background())
-	logger.Tracef("extracting image from V1 manifest %s", digest)
+	logger.V(2).Info("extracting image from V1 manifest", "digest", digest)
 
 	if len(manifest.History) == 0 {
 		return nil, fmt.Errorf("no history information found in V1 manifest %s", digest)
@@ -449,7 +449,7 @@ func (r *repositoryClient) extractImageFromV2Manifest(
 	digest := digest.FromBytes(manifestBytes)
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("extracting image from V2 manifest %s", digest)
+	logger.V(2).Info("extracting image from V2 manifest", "digest", digest)
 
 	// This referenced config object has platform information and creation
 	// timestamp
@@ -509,7 +509,7 @@ func (r *repositoryClient) extractImageFromOCIManifest(
 	digest := digest.FromBytes(manifestBytes)
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("extracting image from OCI manifest %s", digest)
+	logger.V(2).Info("extracting image from OCI manifest", "digest", digest)
 
 	// This referenced config object has platform information and creation
 	// timestamp
@@ -577,9 +577,9 @@ func (r *repositoryClient) extractImageFromCollection(
 	digest := digest.FromBytes(manifestBytes)
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef(
-		"extracting image from V2 manifest list or OCI index %s",
-		digest,
+	logger.V(2).Info(
+		"extracting image from V2 manifest list or OCI index",
+		"digest", digest,
 	)
 
 	refs := make([]distribution.Descriptor, 0, len(collection.References()))
@@ -688,7 +688,7 @@ func (r *repositoryClient) getBlob(
 	digest digest.Digest,
 ) ([]byte, error) {
 	logger := logging.LoggerFromContext(ctx)
-	logger.Tracef("retrieving blob for digest %q", digest.String())
+	logger.V(2).Info("retrieving blob for digest", "digest", digest.String())
 	return r.repo.Blobs(ctx).Get(ctx, digest)
 }
 

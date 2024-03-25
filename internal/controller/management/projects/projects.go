@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -135,11 +134,11 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": req.NamespacedName.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	logger.Debug("reconciling Project")
+	logger.V(1).Info("reconciling Project")
 
 	// Find the Project
 	project, err := r.getProjectFn(ctx, r.client, req.NamespacedName.Name)
@@ -153,19 +152,19 @@ func (r *reconciler) Reconcile(
 	}
 
 	if project.DeletionTimestamp != nil {
-		logger.Debug("Project is being deleted; nothing to do")
+		logger.V(1).Info("Project is being deleted; nothing to do")
 		return ctrl.Result{}, nil
 	}
 
 	if project.Status.Phase.IsTerminal() {
-		logger.Debugf("Project is %s; nothing to do", project.Status.Phase)
+		logger.V(1).Info("nothing to do", "projectPhase", project.Status.Phase)
 		return ctrl.Result{}, nil
 	}
 
 	newStatus, err := r.syncProjectFn(ctx, project)
 	if err != nil {
 		newStatus.Message = err.Error()
-		logger.Errorf("error syncing Project: %s", err)
+		logger.Error(err, "error syncing Project")
 	} else {
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
@@ -174,7 +173,7 @@ func (r *reconciler) Reconcile(
 
 	patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
 	if patchErr != nil {
-		logger.Errorf("error updating Project status: %s", patchErr)
+		logger.Error(patchErr, "error updating Project status")
 	}
 
 	// If we had no error, but couldn't patch, then we DO have an error. But we
@@ -183,7 +182,7 @@ func (r *reconciler) Reconcile(
 	if err == nil {
 		err = patchErr
 	}
-	logger.Debug("done reconciling Project")
+	logger.V(1).Info("done reconciling Project")
 
 	// Controller runtime automatically gives us a progressive backoff if err is
 	// not nil
@@ -213,9 +212,9 @@ func (r *reconciler) ensureNamespace(
 ) (kargoapi.ProjectStatus, error) {
 	status := *project.Status.DeepCopy()
 
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": project.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+	)
 
 	ownerRef := metav1.NewControllerRef(
 		project,
@@ -233,14 +232,14 @@ func (r *reconciler) ensureNamespace(
 		// We found an existing namespace with the same name as the Project.
 		for _, ownerRef := range ns.OwnerReferences {
 			if ownerRef.UID == project.UID {
-				logger.Debug("namespace exists and is owned by this Project")
+				logger.V(1).Info("namespace exists and is owned by this Project")
 				return status, nil
 			}
 		}
 		if ns.Labels != nil &&
 			ns.Labels[kargoapi.ProjectLabelKey] == kargoapi.LabelTrueValue &&
 			len(ns.OwnerReferences) == 0 {
-			logger.Debug(
+			logger.V(1).Info(
 				"namespace exists, but is not owned by this Project, but has the " +
 					"project label; Project will adopt it",
 			)
@@ -249,7 +248,7 @@ func (r *reconciler) ensureNamespace(
 			if err = r.updateNamespaceFn(ctx, ns); err != nil {
 				return status, fmt.Errorf("error updating namespace %q: %w", project.Name, err)
 			}
-			logger.Debug("updated namespace with Project as owner")
+			logger.V(1).Info("updated namespace with Project as owner")
 			return status, nil
 		}
 		status.Phase = kargoapi.ProjectPhaseInitializationFailed
@@ -263,7 +262,7 @@ func (r *reconciler) ensureNamespace(
 		return status, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 	}
 
-	logger.Debug("namespace does not exist yet; creating namespace")
+	logger.V(1).Info("namespace does not exist yet; creating namespace")
 
 	ns = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -283,7 +282,7 @@ func (r *reconciler) ensureNamespace(
 	if err := r.createNamespaceFn(ctx, ns); err != nil {
 		return status, fmt.Errorf("error creating namespace %q: %w", project.Name, err)
 	}
-	logger.Debug("created namespace")
+	logger.V(1).Info("created namespace")
 
 	return status, nil
 }
@@ -294,12 +293,12 @@ func (r *reconciler) ensureSecretPermissions(
 ) error {
 	const roleBindingName = "kargo-api-server-manage-project-secrets"
 
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project":     project.Name,
-		"name":        project.Name,
-		"namespace":   project.Name,
-		"roleBinding": roleBindingName,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+		"namespace", project.Name,
+		"roleBinding", roleBindingName,
+	)
 
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -326,7 +325,7 @@ func (r *reconciler) ensureSecretPermissions(
 	}
 	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			logger.Debug("role binding already exists in project namespace")
+			logger.V(1).Info("role binding already exists in project namespace")
 			return nil
 		}
 		return fmt.Errorf(
@@ -336,7 +335,7 @@ func (r *reconciler) ensureSecretPermissions(
 			err,
 		)
 	}
-	logger.Debug("granted API server access to manage project secrets")
+	logger.V(1).Info("granted API server access to manage project secrets")
 
 	return nil
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -169,12 +168,12 @@ func (r *reconciler) Reconcile(
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	logger = logger.WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"warehouse": req.NamespacedName.Name,
-	})
+	logger = logger.WithValues(
+		"namespace", req.NamespacedName.Namespace,
+		"warehouse", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	logger.Debug("reconciling Warehouse")
+	logger.V(1).Info("reconciling Warehouse")
 
 	// Find the Warehouse
 	warehouse, err := kargoapi.GetWarehouse(ctx, r.client, req.NamespacedName)
@@ -190,7 +189,7 @@ func (r *reconciler) Reconcile(
 	newStatus, err := r.syncWarehouse(ctx, warehouse)
 	if err != nil {
 		newStatus.Message = err.Error()
-		logger.Errorf("error syncing Warehouse: %s", err)
+		logger.Error(err, "error syncing Warehouse")
 	}
 
 	updateErr := kubeclient.PatchStatus(
@@ -202,7 +201,7 @@ func (r *reconciler) Reconcile(
 		},
 	)
 	if updateErr != nil {
-		logger.Errorf("error updating Warehouse status: %s", updateErr)
+		logger.Error(updateErr, "error updating Warehouse status")
 	}
 	if clearRefreshErr := kargoapi.ClearAnnotations(
 		ctx,
@@ -210,7 +209,7 @@ func (r *reconciler) Reconcile(
 		warehouse,
 		kargoapi.AnnotationKeyRefresh,
 	); clearRefreshErr != nil {
-		logger.Errorf("error clearing Warehouse refresh annotation: %s", clearRefreshErr)
+		logger.Error(clearRefreshErr, "error clearing Warehouse refresh annotation")
 	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
@@ -219,7 +218,7 @@ func (r *reconciler) Reconcile(
 	if err == nil {
 		err = updateErr
 	}
-	logger.Debug("done reconciling Warehouse")
+	logger.V(1).Info("done reconciling Warehouse")
 
 	// Controller runtime automatically gives us a progressive backoff if err is
 	// not nil
@@ -248,17 +247,17 @@ func (r *reconciler) syncWarehouse(
 		return status, fmt.Errorf("error getting latest Freight from repositories: %w", err)
 	}
 	if freight == nil {
-		logger.Debug("found no Freight from repositories")
+		logger.V(1).Info("found no Freight from repositories")
 		return status, nil
 	}
-	logger.Debug("got latest Freight from repositories")
+	logger.V(1).Info("got latest Freight from repositories")
 
 	if err = r.createFreightFn(ctx, freight); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			logger.Debugf(
-				"Freight %q in namespace %q already exists",
-				freight.Name,
-				freight.Namespace,
+			logger.V(1).Info(
+				"Freight already exists",
+				"freight", freight.Name,
+				"namespace", freight.Namespace,
 			)
 			return status, nil
 		}
@@ -269,10 +268,10 @@ func (r *reconciler) syncWarehouse(
 			err,
 		)
 	}
-	log.Debugf(
-		"created Freight %q in namespace %q",
-		freight.Name,
-		freight.Namespace,
+	logger.V(1).Info(
+		"created Freight",
+		"freight", freight.Name,
+		"namespace", freight.Namespace,
 	)
 	status.LastFreight = &kargoapi.FreightReference{
 		Name:    freight.Name,
@@ -299,7 +298,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 	if err != nil {
 		return nil, fmt.Errorf("error syncing git repo subscriptions: %w", err)
 	}
-	logger.Debug("synced git repo subscriptions")
+	logger.V(1).Info("synced git repo subscriptions")
 
 	selectedImages, err := r.selectImagesFn(
 		ctx,
@@ -309,7 +308,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 	if err != nil {
 		return nil, fmt.Errorf("error syncing image repo subscriptions: %w", err)
 	}
-	logger.Debug("synced image repo subscriptions")
+	logger.V(1).Info("synced image repo subscriptions")
 
 	selectedCharts, err := r.selectChartsFn(
 		ctx,
@@ -319,7 +318,7 @@ func (r *reconciler) getLatestFreightFromRepos(
 	if err != nil {
 		return nil, fmt.Errorf("error syncing chart repo subscriptions: %w", err)
 	}
-	logger.Debug("synced chart repo subscriptions")
+	logger.V(1).Info("synced chart repo subscriptions")
 
 	freight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{

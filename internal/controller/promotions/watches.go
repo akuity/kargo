@@ -3,7 +3,7 @@ package promotions
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,7 +16,7 @@ import (
 // EnqueueHighestPriorityPromotionHandler is an event handler that enqueues the next
 // highest priority Promotion for reconciliation when an active Promotion becomes terminal
 type EnqueueHighestPriorityPromotionHandler struct {
-	logger      *log.Entry
+	logger      logr.Logger
 	ctx         context.Context
 	pqs         *promoQueues
 	kargoClient client.Client
@@ -65,12 +65,12 @@ func (e *EnqueueHighestPriorityPromotionHandler) Update(
 	wq workqueue.RateLimitingInterface,
 ) {
 	if evt.ObjectNew == nil {
-		e.logger.Errorf("Update event has no new object to update: %v", evt)
+		e.logger.Error(nil, "Update event has no new object to update", "object", evt)
 		return
 	}
 	promo, ok := evt.ObjectNew.(*kargoapi.Promotion)
 	if !ok {
-		e.logger.Errorf("Failed to convert new Promotion: %v", evt.ObjectNew)
+		e.logger.Error(nil, "Failed to convert new Promotion", "promotion", evt.ObjectNew)
 		return
 	}
 	if promo.Status.Phase.IsTerminal() {
@@ -116,7 +116,7 @@ func (e *EnqueueHighestPriorityPromotionHandler) enqueueNext(
 		firstKey := types.NamespacedName{Namespace: first.GetNamespace(), Name: first.GetName()}
 		promo, err := kargoapi.GetPromotion(e.ctx, e.kargoClient, firstKey)
 		if err != nil {
-			e.logger.Errorf("Failed to get next highest priority Promotion (%s) for enqueue: %v", firstKey, err)
+			e.logger.Error(err, "Failed to get next highest priority Promotion for enqueue", "promotion", firstKey)
 			return
 		}
 		if promo == nil || promo.Status.Phase.IsTerminal() {
@@ -133,11 +133,11 @@ func (e *EnqueueHighestPriorityPromotionHandler) enqueueNext(
 				},
 			},
 		)
-		e.logger.WithFields(log.Fields{
-			"promotion": promo.Name,
-			"namespace": promo.Namespace,
-			"stage":     promo.Spec.Stage,
-		}).Debug("enqueued promo")
+		e.logger.WithValues(
+			"promotion", promo.Name,
+			"namespace", promo.Namespace,
+			"stage", promo.Spec.Stage,
+		).V(1).Info("enqueued promo")
 		return
 	}
 }

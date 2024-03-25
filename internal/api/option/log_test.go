@@ -1,14 +1,16 @@
 package option
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
 	grpchealth "connectrpc.com/grpchealth"
-	testlog "github.com/sirupsen/logrus/hooks/test"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
@@ -30,10 +32,11 @@ func TestUnaryServerLogging(t *testing.T) {
 	}
 	for name, testSet := range testSets {
 		t.Run(name, func(t *testing.T) {
-			logger, hook := testlog.NewNullLogger()
+			tmpWriteBuffer := bytes.NewBuffer(nil)
+			logger := logr.FromSlogHandler(slog.NewTextHandler(tmpWriteBuffer, nil))
 
 			opt := connect.WithInterceptors(
-				newLogInterceptor(logger.WithFields(nil), testSet.ignorableMethods))
+				newLogInterceptor(logger.WithValues(nil), testSet.ignorableMethods))
 			mux := http.NewServeMux()
 			mux.Handle(grpchealth.NewHandler(grpchealth.NewStaticChecker(), opt))
 			srv := httptest.NewServer(mux)
@@ -53,7 +56,7 @@ func TestUnaryServerLogging(t *testing.T) {
 			require.NoError(t, err)
 
 			if testSet.logExpected {
-				entry := hook.LastEntry()
+				entry := tmpWriteBuffer.String()
 				require.NotNil(t, entry)
 				for _, field := range []string{
 					"connect.service",
@@ -61,10 +64,10 @@ func TestUnaryServerLogging(t *testing.T) {
 					"connect.start_time",
 					"connect.duration",
 				} {
-					require.Contains(t, entry.Data, field)
+					require.Contains(t, entry, field)
 				}
 			} else {
-				require.Nil(t, hook.LastEntry())
+				require.Empty(t, tmpWriteBuffer.String())
 			}
 		})
 	}

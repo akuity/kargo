@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -499,12 +497,12 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"stage":     req.NamespacedName.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"namespace", req.NamespacedName.Namespace,
+		"stage", req.NamespacedName.Name,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	logger.Debug("reconciling Stage")
+	logger.V(1).Info("reconciling Stage")
 
 	// Find the Stage
 	stage, err := kargoapi.GetStage(ctx, r.kargoClient, req.NamespacedName)
@@ -521,7 +519,7 @@ func (r *reconciler) Reconcile(
 		// Ignore if stage does not belong to given shard
 		return ctrl.Result{}, err
 	}
-	logger.Debug("found Stage")
+	logger.V(1).Info("found Stage")
 
 	var newStatus kargoapi.StageStatus
 	if stage.DeletionTimestamp != nil {
@@ -545,7 +543,7 @@ func (r *reconciler) Reconcile(
 	}
 	if err != nil {
 		newStatus.Message = err.Error()
-		logger.Errorf("error syncing Stage: %s", stage.Status.Message)
+		logger.Error(err, "error syncing Stage", "message", stage.Status.Message)
 	} else {
 		// Be sure to blank this out in case there's an error in this field from
 		// the previous reconciliation
@@ -556,7 +554,7 @@ func (r *reconciler) Reconcile(
 		*status = newStatus
 	})
 	if updateErr != nil {
-		logger.Errorf("error updating Stage status: %s", updateErr)
+		logger.Error(updateErr, "error updating Stage status")
 	}
 	clearErr := kargoapi.ClearAnnotations(
 		ctx,
@@ -568,7 +566,7 @@ func (r *reconciler) Reconcile(
 		kargoapi.AnnotationKeyAbort,
 	)
 	if clearErr != nil {
-		logger.Errorf("error clearing Stage annotations: %s", clearErr)
+		logger.Error(clearErr, "error clearing Stage annotations")
 	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
@@ -577,7 +575,7 @@ func (r *reconciler) Reconcile(
 	if err == nil {
 		err = errors.Join(updateErr, clearErr)
 	}
-	logger.Debug("done reconciling Stage")
+	logger.V(1).Info("done reconciling Stage")
 
 	// If we do have an error at this point, return it so controller runtime
 	// retries with a progressive backoff.
@@ -713,7 +711,7 @@ func (r *reconciler) syncNormalStage(
 	); err != nil {
 		return status, err
 	} else if hasNonTerminalPromos {
-		logger.Debug(
+		logger.V(1).Info(
 			"Stage has one or more Promotions in a non-terminal phase; skipping " +
 				"this reconciliation loop",
 		)
@@ -726,11 +724,11 @@ func (r *reconciler) syncNormalStage(
 
 	if status.CurrentFreight == nil {
 		status.Phase = kargoapi.StagePhaseNotApplicable
-		logger.Debug(
+		logger.V(1).Info(
 			"Stage has no current Freight; no health checks or verification to perform",
 		)
 	} else {
-		freightLogger := logger.WithField("freight", status.CurrentFreight.Name)
+		freightLogger := logger.WithValues("freight", status.CurrentFreight.Name)
 		shouldRecordFreightVerificationEvent := false
 
 		// Push the latest state of the current Freight to the history at the
@@ -745,10 +743,10 @@ func (r *reconciler) syncNormalStage(
 			*status.CurrentFreight,
 			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		); status.Health != nil {
-			freightLogger.WithField("health", status.Health.Status).
+			freightLogger.WithValues("health", status.Health.Status).
 				Debug("Stage health assessed")
 		} else {
-			freightLogger.Debug("Stage health deemed not applicable")
+			freightLogger.V(1).Info("Stage health deemed not applicable")
 		}
 
 		// If the Stage is healthy and no verification process is defined, then the
@@ -774,7 +772,7 @@ func (r *reconciler) syncNormalStage(
 			info := status.CurrentFreight.VerificationInfo
 			if info != nil && info.ID != "" && info.Phase.IsTerminal() {
 				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; ok && v == info.ID {
-					logger.Debug("rerunning verification")
+					logger.V(1).Info("rerunning verification")
 					status.Phase = kargoapi.StagePhaseVerifying
 					status.CurrentFreight.VerificationInfo = nil
 				}
@@ -787,7 +785,7 @@ func (r *reconciler) syncNormalStage(
 			if status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable {
 				if !status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
 					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-						log.Debug("starting verification")
+						logger.V(1).Debug("starting verification")
 						var err error
 						if status.CurrentFreight.VerificationInfo, err = r.startVerificationFn(
 							ctx,
@@ -800,7 +798,7 @@ func (r *reconciler) syncNormalStage(
 						}
 					}
 				} else {
-					log.Debug("checking verification results")
+					logger.V(1).Debug("checking verification results")
 					var err error
 					if status.CurrentFreight.VerificationInfo, err = r.getVerificationInfoFn(
 						ctx,
@@ -817,23 +815,23 @@ func (r *reconciler) syncNormalStage(
 					newInfo := status.CurrentFreight.VerificationInfo
 					if newInfo.ID != "" && !newInfo.Phase.IsTerminal() {
 						if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyAbort]; ok && v == newInfo.ID {
-							log.Debug("aborting verification")
+							logger.V(1).Info("aborting verification")
 							status.CurrentFreight.VerificationInfo = r.abortVerificationFn(ctx, stage)
 						}
 					}
 				}
 
 				if status.CurrentFreight.VerificationInfo != nil {
-					log.Debugf(
-						"verification phase is %s",
-						status.CurrentFreight.VerificationInfo.Phase,
+					logger.V(1).Info(
+						"verification phase",
+						"phase", status.CurrentFreight.VerificationInfo.Phase,
 					)
 
 					if status.CurrentFreight.VerificationInfo.Phase.IsTerminal() {
 						// Verification is complete
 						shouldRecordFreightVerificationEvent = true
 						status.Phase = kargoapi.StagePhaseSteady
-						log.Debug("verification is complete")
+						logger.V(1).Info("verification is complete")
 					}
 
 					// Add latest verification info to history.
@@ -922,14 +920,14 @@ func (r *reconciler) syncNormalStage(
 	// Stop here if we have no chance of finding any Freight to promote.
 	if stage.Spec.Subscriptions == nil ||
 		(stage.Spec.Subscriptions.Warehouse == "" && len(stage.Spec.Subscriptions.UpstreamStages) == 0) {
-		logger.Warn(
+		logger.V(1).Info(
 			"Stage has no subscriptions. This may indicate an issue with resource" +
 				"validation logic.",
 		)
 		return status, nil
 	}
 
-	logger.Debug("checking if auto-promotion is permitted...")
+	logger.V(1).Info("checking if auto-promotion is permitted...")
 	if permitted, err :=
 		r.isAutoPromotionPermittedFn(ctx, stage.Namespace, stage.Name); err != nil {
 		return status, fmt.Errorf(
@@ -939,7 +937,7 @@ func (r *reconciler) syncNormalStage(
 			err,
 		)
 	} else if !permitted {
-		logger.Debug("auto-promotion is not permitted for the Stage")
+		logger.V(1).Info("auto-promotion is not permitted for the Stage")
 		return status, nil
 	}
 
@@ -958,16 +956,16 @@ func (r *reconciler) syncNormalStage(
 	}
 
 	if latestFreight == nil {
-		logger.Debug("no Freight found")
+		logger.V(1).Info("no Freight found")
 		return status, nil
 	}
 
-	logger = logger.WithField("freight", latestFreight.Name)
+	logger = logger.WithValues("freight", latestFreight.Name)
 
 	// Only proceed if nextFreight isn't the one we already have
 	if stage.Status.CurrentFreight != nil &&
 		stage.Status.CurrentFreight.Name == latestFreight.Name {
-		logger.Debug("Stage already has latest available Freight")
+		logger.V(1).Info("Stage already has latest available Freight")
 		return status, nil
 	}
 
@@ -996,11 +994,11 @@ func (r *reconciler) syncNormalStage(
 	}
 
 	if len(promos.Items) > 0 {
-		logger.Debug("Promotion already exists for Freight")
+		logger.V(1).Info("Promotion already exists for Freight")
 		return status, nil
 	}
 
-	logger.Debug("auto-promotion will proceed")
+	logger.V(1).Info("auto-promotion will proceed")
 
 	promo := kargo.NewPromotion(*stage, latestFreight.Name)
 	if err :=
@@ -1028,7 +1026,7 @@ func (r *reconciler) syncNormalStage(
 		promo.Spec.Stage,
 	)
 
-	logger.WithField("promotion", promo.Name).Debug("created Promotion resource")
+	logger.WithValues("promotion", promo.Name).V(1).Info("created Promotion resource")
 
 	return status, nil
 }
@@ -1213,7 +1211,7 @@ func (r *reconciler) verifyFreightInStage(
 	freightName string,
 	stageName string,
 ) (bool, error) {
-	logger := logging.LoggerFromContext(ctx).WithField("freight", freightName)
+	logger := logging.LoggerFromContext(ctx).WithValues("freight", freightName)
 
 	// Find the Freight
 	freight, err := r.getFreightFn(
@@ -1247,7 +1245,7 @@ func (r *reconciler) verifyFreightInStage(
 
 	// Only try to mark as verified in this Stage if not already the case.
 	if _, ok := newStatus.VerifiedIn[stageName]; ok {
-		logger.Debug("Freight already marked as verified in Stage")
+		logger.V(1).Info("Freight already marked as verified in Stage")
 		return false, nil
 	}
 
@@ -1256,7 +1254,7 @@ func (r *reconciler) verifyFreightInStage(
 		return false, err
 	}
 
-	logger.Debug("marked Freight as verified in Stage")
+	logger.V(1).Info("marked Freight as verified in Stage")
 	return true, nil
 }
 
@@ -1297,13 +1295,13 @@ func (r *reconciler) isAutoPromotionPermitted(
 		return false, fmt.Errorf("Project %q not found", namespace)
 	}
 	if project.Spec == nil || len(project.Spec.PromotionPolicies) == 0 {
-		logger.Debug("found no PromotionPolicy associated with the Stage")
+		logger.V(1).Info("found no PromotionPolicy associated with the Stage")
 		return false, nil
 	}
 	for _, policy := range project.Spec.PromotionPolicies {
 		if policy.Stage == stageName {
-			logger.WithField("autoPromotionEnabled", policy.AutoPromotionEnabled).
-				Debug("found PromotionPolicy associated with the Stage")
+			logger.WithValues("autoPromotionEnabled", policy.AutoPromotionEnabled).
+				V(1).Info("found PromotionPolicy associated with the Stage")
 			return policy.AutoPromotionEnabled, nil
 		}
 	}
@@ -1332,8 +1330,8 @@ func (r *reconciler) getLatestAvailableFreight(
 			)
 		}
 		if latestFreight == nil {
-			logger.WithField("warehouse", stage.Spec.Subscriptions.Warehouse).
-				Debug("no Freight found from Warehouse")
+			logger.WithValues("warehouse", stage.Spec.Subscriptions.Warehouse).
+				V(1).Info("no Freight found from Warehouse")
 		}
 		return latestFreight, nil
 	}
@@ -1352,7 +1350,7 @@ func (r *reconciler) getLatestAvailableFreight(
 		)
 	}
 	if latestVerifiedFreight == nil {
-		logger.Debug("no verified Freight found upstream from Stage")
+		logger.V(1).Info("no verified Freight found upstream from Stage")
 	}
 
 	latestApprovedFreight, err := r.getLatestApprovedFreightFn(
@@ -1369,7 +1367,7 @@ func (r *reconciler) getLatestAvailableFreight(
 		)
 	}
 	if latestVerifiedFreight == nil {
-		logger.Debug("no approved Freight found for Stage")
+		logger.V(1).Info("no approved Freight found for Stage")
 	}
 
 	if latestVerifiedFreight == nil && latestApprovedFreight == nil {

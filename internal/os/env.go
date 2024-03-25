@@ -29,3 +29,5 @@ func GetEnvInt(key string, defaultValue int) int {
 	}
 	return int(value)
 }
+
+var Stderr = os.Stderr

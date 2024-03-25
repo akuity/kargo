@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -68,20 +67,20 @@ func (pqs *promoQueues) initializeQueues(ctx context.Context, promos kargoapi.Pr
 			continue
 		}
 		pq.Push(&promo)
-		logger.WithFields(log.Fields{
-			"promotion": promo.Name,
-			"namespace": promo.Namespace,
-			"stage":     promo.Spec.Stage,
-			"phase":     promo.Status.Phase,
-		}).Debug("pushed Promotion onto Stage-specific Promotion queue")
+		logger.WithValues(
+			"promotion", promo.Name,
+			"namespace", promo.Namespace,
+			"stage", promo.Spec.Stage,
+			"phase", promo.Status.Phase,
+		).V(1).Info("pushed Promotion onto Stage-specific Promotion queue")
 	}
-	if logger.Logger.IsLevelEnabled(log.DebugLevel) {
+	if logger.V(1).Enabled() {
 		for stage, pq := range pqs.pendingPromoQueuesByStage {
-			logger.WithFields(log.Fields{
-				"stage":     stage.Name,
-				"namespace": stage.Namespace,
-				"depth":     pq.Depth(),
-			}).Debug("Stage-specific Promotion queue initialized")
+			logger.WithValues(
+				"stage", stage.Name,
+				"namespace", stage.Namespace,
+				"depth", pq.Depth(),
+			).V(1).Info("Stage-specific Promotion queue initialized")
 		}
 	}
 }
@@ -118,7 +117,7 @@ func (pqs *promoQueues) tryBegin(ctx context.Context, promo *kargoapi.Promotion)
 	// Push this promo to the queue in case it doesn't exist in the queue. Note that we
 	// deduplicate pushes on the same object, so this is safe to call repeatedly
 	if pq.Push(promo) {
-		logger.Debug("promo added to priority queue")
+		logger.V(1).Info("promo added to priority queue")
 	}
 	if activePromoName == "" {
 		// If we get here, the Stage does not have any active Promotions Running against it.
@@ -129,7 +128,7 @@ func (pqs *promoQueues) tryBegin(ctx context.Context, promo *kargoapi.Promotion)
 			// This promo is the first in the queue. Mark it as active and pop it off the pending queue.
 			popped := pq.Pop()
 			pqs.activePromoByStage[stageKey] = popped.GetName()
-			logger.Debug("begin promo")
+			logger.V(1).Info("begin promo")
 			return true
 		}
 	}
@@ -142,11 +141,11 @@ func (pqs *promoQueues) conclude(ctx context.Context, stageKey types.NamespacedN
 	pqs.promoQueuesByStageMu.RLock()
 	defer pqs.promoQueuesByStageMu.RUnlock()
 	if pqs.activePromoByStage[stageKey] == promoName {
-		logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-			"namespace": stageKey.Namespace,
-			"promotion": promoName,
-		})
+		logger := logging.LoggerFromContext(ctx).WithValues(
+			"namespace", stageKey.Namespace,
+			"promotion", promoName,
+		)
 		delete(pqs.activePromoByStage, stageKey)
-		logger.Debug("conclude promo")
+		logger.V(1).Info("conclude promo")
 	}
 }

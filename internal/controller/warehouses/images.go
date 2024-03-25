@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/git"
@@ -27,7 +25,7 @@ func (r *reconciler) selectImages(
 
 		sub := s.Image
 
-		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
 
 		creds, ok, err :=
 			r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
@@ -44,9 +42,9 @@ func (r *reconciler) selectImages(
 				Username: creds.Username,
 				Password: creds.Password,
 			}
-			logger.Debug("obtained credentials for image repo")
+			logger.V(1).Info("obtained credentials for image repo")
 		} else {
-			logger.Debug("found no credentials for image repo")
+			logger.V(1).Info("found no credentials for image repo")
 		}
 
 		tag, digest, err := r.getImageRefsFn(ctx, *sub, regCreds)
@@ -66,10 +64,10 @@ func (r *reconciler) selectImages(
 				Digest:     digest,
 			},
 		)
-		logger.WithFields(log.Fields{
-			"tag":    tag,
-			"digest": digest,
-		}).Debug("found latest suitable image")
+		logger.WithValues(
+			"tag", tag,
+			"digest", digest,
+		).V(1).Info("found latest suitable image")
 	}
 	return imgs, nil
 }

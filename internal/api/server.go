@@ -11,7 +11,6 @@ import (
 
 	"connectrpc.com/grpchealth"
 	"github.com/rs/cors"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -232,9 +231,9 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 		}
 	}()
 
-	log.WithFields(logrus.Fields{
-		"tls": s.cfg.TLSConfig != nil,
-	}).Infof("Server is listening on %q", l.Addr().String())
+	log.WithValues(
+		"tls", s.cfg.TLSConfig != nil,
+	).Info("Server is listening", "port", l.Addr().String())
 
 	select {
 	case <-ctx.Done():

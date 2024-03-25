@@ -54,7 +54,7 @@ func (c *compositeMechanism) Promote(
 	newFreight = *newFreight.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Debugf("executing %s", c.name)
+	logger.V(1).Info("executing", "name", c.name)
 
 	for _, childMechanism := range c.childMechanisms {
 		var err error
@@ -76,7 +76,7 @@ func (c *compositeMechanism) Promote(
 		}
 	}
 
-	logger.Debug("done executing promotion mechanisms. aggregated status: ", newStatus.Phase)
+	logger.V(1).Info("done executing promotion mechanisms", "aggregated status", newStatus.Phase)
 
 	return newStatus, newFreight, nil
 }

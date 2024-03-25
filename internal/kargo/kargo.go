@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/oklog/ulid/v2"
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -49,7 +49,7 @@ func NewPromotion(stage kargoapi.Stage, freight string) kargoapi.Promotion {
 	return promotion
 }
 
-func NewPromoWentTerminalPredicate(logger *log.Entry) PromoWentTerminal {
+func NewPromoWentTerminalPredicate(logger logr.Logger) PromoWentTerminal {
 	return PromoWentTerminal{
 		logger: logger,
 	}
@@ -60,7 +60,7 @@ func NewPromoWentTerminalPredicate(logger *log.Entry) PromoWentTerminal {
 // Also used by promo reconciler to enqueue the next highest priority promotion.
 type PromoWentTerminal struct {
 	predicate.Funcs
-	logger *log.Entry
+	logger logr.Logger
 }
 
 func (p PromoWentTerminal) Create(_ event.CreateEvent) bool {
@@ -83,21 +83,21 @@ func (p PromoWentTerminal) Generic(_ event.GenericEvent) bool {
 // Update implements default UpdateEvent filter for checking if a promotion went terminal
 func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil {
-		p.logger.Errorf("Update event has no old object to update: %v", e)
+		p.logger.Error(nil, "Update event has no old object to update", "event", e)
 		return false
 	}
 	if e.ObjectNew == nil {
-		p.logger.Errorf("Update event has no new object for update: %v", e)
+		p.logger.Error(nil, "Update event has no new object for update", "event", e)
 		return false
 	}
 	newPromo, ok := e.ObjectNew.(*kargoapi.Promotion)
 	if !ok {
-		p.logger.Errorf("Failed to convert new promo: %v", e.ObjectNew)
+		p.logger.Error(nil, "Failed to convert new promo", "object", e.ObjectNew)
 		return false
 	}
 	oldPromo, ok := e.ObjectOld.(*kargoapi.Promotion)
 	if !ok {
-		p.logger.Errorf("Failed to convert old promo: %v", e.ObjectOld)
+		p.logger.Error(nil, "Failed to convert old promo", "object", e.ObjectOld)
 		return false
 	}
 	if newPromo.Status.Phase.IsTerminal() && !oldPromo.Status.Phase.IsTerminal() {

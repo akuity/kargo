@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -190,7 +189,7 @@ func (r *reconciler) Reconcile(
 			err = fmt.Errorf("error listing promotions: %w", err)
 		} else {
 			r.pqs.initializeQueues(ctx, promos)
-			logger.Debug(
+			logger.V(1).Info(
 				"initialized Stage-specific Promotion queues from list of existing Promotions",
 			)
 		}
@@ -223,16 +222,16 @@ func (r *reconciler) Reconcile(
 		)
 	}
 
-	logger = logger.WithFields(log.Fields{
-		"namespace": req.NamespacedName.Namespace,
-		"promotion": req.NamespacedName.Name,
-		"stage":     promo.Spec.Stage,
-		"freight":   promo.Spec.Freight,
-	})
+	logger = logger.WithValues(
+		"namespace", req.NamespacedName.Namespace,
+		"promotion", req.NamespacedName.Name,
+		"stage", promo.Spec.Stage,
+		"freight", promo.Spec.Freight,
+	)
 
 	if promo.Status.Phase == kargoapi.PromotionPhaseRunning {
 		// anything we've already marked Running, we allow it to continue to reconcile
-		logger.Debug("continuing Promotion")
+		logger.V(1).Info("continuing Promotion")
 	} else {
 		// promo is Pending. Try to begin it.
 		if !r.pqs.tryBegin(ctx, promo) {
@@ -245,7 +244,7 @@ func (r *reconciler) Reconcile(
 			}
 			return ctrl.Result{}, nil
 		}
-		logger.Infof("began promotion")
+		logger.Info("began promotion")
 	}
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
@@ -268,7 +267,7 @@ func (r *reconciler) Reconcile(
 	func() {
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Errorf("Promotion panic: %v", err)
+				logger.Error(nil, "Promotion panic")
 				newStatus.Phase = kargoapi.PromotionPhaseErrored
 				newStatus.Message = fmt.Sprintf("%v", err)
 			}
@@ -281,21 +280,21 @@ func (r *reconciler) Reconcile(
 		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
 			newStatus.Message = promoteErr.Error()
-			logger.Errorf("error executing Promotion: %s", promoteErr)
+			logger.Error(promoteErr, "error executing Promotion")
 		} else {
 			newStatus = otherStatus
 		}
 	}()
 
 	if newStatus.Phase.IsTerminal() {
-		logger.Infof("promotion %s", newStatus.Phase)
+		logger.Info("reporting promotion phase", "phase", newStatus.Phase)
 	}
 
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
 	})
 	if err != nil {
-		logger.Errorf("error updating Promotion status: %s", err)
+		logger.Error(err, "error updating Promotion status")
 	}
 
 	// Record event after patching status if new phase is terminal
@@ -351,7 +350,7 @@ func (r *reconciler) Reconcile(
 		promo,
 		kargoapi.AnnotationKeyRefresh,
 	); clearRefreshErr != nil {
-		logger.Errorf("error clearing Promotion refresh annotation: %s", clearRefreshErr)
+		logger.Error(clearRefreshErr, "error clearing Promotion refresh annotation")
 	}
 
 	if err != nil {
@@ -393,7 +392,7 @@ func (r *reconciler) promote(
 	if stage == nil {
 		return nil, fmt.Errorf("could not find Stage %q in namespace %q", stageName, stageNamespace)
 	}
-	logger.Debug("found associated Stage")
+	logger.V(1).Info("found associated Stage")
 
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
@@ -437,7 +436,7 @@ func (r *reconciler) promote(
 		return nil, err
 	}
 
-	logger.Debugf("promotion %s", newStatus.Phase)
+	logger.V(1).Info("reporting promotion phase", "phase", newStatus.Phase)
 
 	if newStatus.Phase.IsTerminal() {
 		// The assumption is that controller does not process multiple promotions in one stage

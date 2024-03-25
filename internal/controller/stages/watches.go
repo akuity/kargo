@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -63,17 +62,17 @@ func (v *verifiedFreightEventHandler) Update(
 ) {
 	logger := logging.LoggerFromContext(ctx)
 	if evt.ObjectOld == nil || evt.ObjectNew == nil {
-		logger.Errorf("Update event has no old or new object to update: %v", evt)
+		logger.Error(nil, "Update event has no old or new object to update", "event", evt)
 		return
 	}
 	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
 	if !ok {
-		logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
+		logger.Error(nil, "Failed to convert old Freight", "object", evt.ObjectOld)
 		return
 	}
 	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
 	if !ok {
-		logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
+		logger.Error(nil, "Failed to convert new Freight", "object", evt.ObjectNew)
 		return
 	}
 	newlyVerifiedStages := getNewlyVerifiedStages(oldFreight, newFreight)
@@ -92,10 +91,11 @@ func (v *verifiedFreightEventHandler) Update(
 				LabelSelector: v.shardSelector,
 			},
 		); err != nil {
-			logger.Errorf(
-				"Failed list Stages downstream from Stage %v in namespace %q",
-				evt.ObjectOld,
-				newFreight.Namespace,
+			logger.Error(
+				nil,
+				"Failed list Stages downstream from Stage",
+				"stage", evt.ObjectOld,
+				"namespace", newFreight.Namespace,
 			)
 			return
 		}
@@ -112,10 +112,10 @@ func (v *verifiedFreightEventHandler) Update(
 				},
 			},
 		)
-		logger.WithFields(log.Fields{
-			"namespace": newFreight.Namespace,
-			"stage":     downStreamStage,
-		}).Debug("enqueued downstream Stage for reconciliation")
+		logger.WithValues(
+			"namespace", newFreight.Namespace,
+			"stage", downStreamStage,
+		).V(1).Info("enqueued downstream Stage for reconciliation")
 	}
 }
 
@@ -171,17 +171,17 @@ func (a *approvedFreightEventHandler) Update(
 ) {
 	logger := logging.LoggerFromContext(ctx)
 	if evt.ObjectOld == nil || evt.ObjectNew == nil {
-		logger.Errorf("Update event has no old or new object to update: %v", evt)
+		logger.Error(nil, "Update event has no old or new object to update", "event", evt)
 		return
 	}
 	oldFreight, ok := evt.ObjectOld.(*kargoapi.Freight)
 	if !ok {
-		logger.Errorf("Failed to convert old Freight: %v", evt.ObjectOld)
+		logger.Error(nil, "Failed to convert old Freight", "object", evt.ObjectOld)
 		return
 	}
 	newFreight, ok := evt.ObjectNew.(*kargoapi.Freight)
 	if !ok {
-		logger.Errorf("Failed to convert new Freight: %v", evt.ObjectNew)
+		logger.Error(nil, "Failed to convert new Freight", "object", evt.ObjectNew)
 		return
 	}
 	newlyApprovedStages := getNewlyApprovedStages(oldFreight, newFreight)
@@ -194,10 +194,10 @@ func (a *approvedFreightEventHandler) Update(
 				},
 			},
 		)
-		logger.WithFields(log.Fields{
-			"namespace": newFreight.Namespace,
-			"stage":     stage,
-		}).Debug("enqueued Stage for reconciliation")
+		logger.WithValues(
+			"namespace", newFreight.Namespace,
+			"stage", stage,
+		).V(1).Info("enqueued Stage for reconciliation")
 	}
 }
 
@@ -241,10 +241,11 @@ func (c *createdFreightEventHandler) Create(
 			LabelSelector: c.shardSelector,
 		},
 	); err != nil {
-		logger.Errorf(
-			"Failed list Stages subscribed to Warehouse %q in namespace %q",
-			freight.Warehouse,
-			freight.Namespace,
+		logger.Error(
+			nil,
+			"Failed list Stages subscribed to Warehouse",
+			"warehouse", freight.Warehouse,
+			"namespace", freight.Namespace,
 		)
 		return
 	}
@@ -257,10 +258,10 @@ func (c *createdFreightEventHandler) Create(
 				},
 			},
 		)
-		logger.WithFields(log.Fields{
-			"namespace": freight.Namespace,
-			"stage":     stage.Name,
-		}).Debug("enqueued Stage for reconciliation")
+		logger.WithValues(
+			"namespace", freight.Namespace,
+			"stage", stage.Name,
+		).V(1).Info("enqueued Stage for reconciliation")
 	}
 }
 
@@ -350,11 +351,11 @@ func (u *updatedArgoCDAppHandler) Update(
 				LabelSelector: u.shardSelector,
 			},
 		); err != nil {
-			logger.Errorf(
-				"error listing Stages for Application %q in namespace %q: %s",
-				e.ObjectNew.GetNamespace(),
-				e.ObjectNew.GetName(),
+			logger.Error(
 				err,
+				"error listing Stages for Application",
+				"namespace", e.ObjectNew.GetNamespace(),
+				"application", e.ObjectNew.GetName(),
 			)
 		}
 		for _, stage := range stages.Items {
@@ -366,11 +367,11 @@ func (u *updatedArgoCDAppHandler) Update(
 					},
 				},
 			)
-			logger.WithFields(log.Fields{
-				"namespace": stage.Namespace,
-				"stage":     stage.Name,
-				"app":       e.ObjectNew.GetName(),
-			}).Debug("enqueued Stage for reconciliation")
+			logger.WithValues(
+				"namespace", stage.Namespace,
+				"stage", stage.Name,
+				"app", e.ObjectNew.GetName(),
+			).V(1).Info("enqueued Stage for reconciliation")
 		}
 	}
 }
@@ -378,18 +379,18 @@ func (u *updatedArgoCDAppHandler) Update(
 func appHealthOrSyncStatusChanged(ctx context.Context, e event.UpdateEvent) bool {
 	logger := logging.LoggerFromContext(ctx)
 	if e.ObjectOld == nil {
-		logger.Errorf("Update event has no old object to update: %v", e)
+		logger.Error(nil, "Update event has no old object to update", "event", e)
 	}
 	if e.ObjectNew == nil {
-		logger.Errorf("Update event has no new object for update: %v", e)
+		logger.Error(nil, "Update event has no new object for update", "event", e)
 	}
 	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectNew)
 	if err != nil {
-		logger.Errorf("Failed to convert new app: %v", e.ObjectNew)
+		logger.Error(err, "Failed to convert new app", "object", e.ObjectNew)
 	}
 	oldUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectOld)
 	if err != nil {
-		logger.Errorf("Failed to convert old app: %v", e.ObjectOld)
+		logger.Error(err, "Failed to convert old app", "object", e.ObjectOld)
 	}
 	oldHealth, _, _ := unstructured.NestedString(oldUn, "status", "health", "status")
 	newHealth, _, _ := unstructured.NestedString(newUn, "status", "health", "status")
@@ -463,11 +464,11 @@ func (p *phaseChangedAnalysisRunHandler) Update(
 				LabelSelector: p.shardSelector,
 			},
 		); err != nil {
-			logger.Errorf(
-				"error listing Stages for AnalysisRun %q in namespace %q: %s",
-				e.ObjectNew.GetNamespace(),
-				e.ObjectNew.GetName(),
+			logger.Error(
 				err,
+				"error listing Stages for AnalysisRun",
+				"namespace", e.ObjectNew.GetNamespace(),
+				"analysisRun", e.ObjectNew.GetName(),
 			)
 		}
 		for _, stage := range stages.Items {
@@ -479,11 +480,11 @@ func (p *phaseChangedAnalysisRunHandler) Update(
 					},
 				},
 			)
-			logger.WithFields(log.Fields{
-				"namespace":   stage.Namespace,
-				"stage":       stage.Name,
-				"analysisRun": e.ObjectNew.GetName(),
-			}).Debug("enqueued Stage for reconciliation")
+			logger.WithValues(
+				"namespace", stage.Namespace,
+				"stage", stage.Name,
+				"analysisRun", e.ObjectNew.GetName(),
+			).V(1).Info("enqueued Stage for reconciliation")
 		}
 	}
 }
@@ -491,18 +492,18 @@ func (p *phaseChangedAnalysisRunHandler) Update(
 func analysisRunPhaseChanged(ctx context.Context, e event.UpdateEvent) bool {
 	logger := logging.LoggerFromContext(ctx)
 	if e.ObjectOld == nil {
-		logger.Errorf("Update event has no old object to update: %v", e)
+		logger.Error(nil, "Update event has no old object to update", "event", e)
 	}
 	if e.ObjectNew == nil {
-		logger.Errorf("Update event has no new object for update: %v", e)
+		logger.Error(nil, "Update event has no new object for update", "event", e)
 	}
 	newUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectNew)
 	if err != nil {
-		logger.Errorf("Failed to convert new AnalysisRun: %v", e.ObjectNew)
+		logger.Error(nil, "Failed to convert new AnalysisRun", "object", e.ObjectNew)
 	}
 	oldUn, err := runtime.DefaultUnstructuredConverter.ToUnstructured(e.ObjectOld)
 	if err != nil {
-		logger.Errorf("Failed to convert old AnalysisRun: %v", e.ObjectOld)
+		logger.Error(nil, "Failed to convert old AnalysisRun", "object", e.ObjectOld)
 	}
 	oldPhase, _, _ := unstructured.NestedString(oldUn, "status", "phase")
 	newPhase, _, _ := unstructured.NestedString(newUn, "status", "phase")

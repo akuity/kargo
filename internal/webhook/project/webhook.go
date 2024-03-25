@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -199,10 +198,10 @@ func (w *webhook) ensureNamespace(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project": project.Name,
-		"name":    project.Name,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+	)
 
 	ns := &corev1.Namespace{}
 	err := w.getNamespaceFn(
@@ -231,7 +230,7 @@ func (w *webhook) ensureNamespace(
 				),
 			)
 		}
-		logger.Debug("namespace exists but no conflict was found")
+		logger.V(1).Info("namespace exists but no conflict was found")
 		return nil
 	}
 	if !apierrors.IsNotFound(err) {
@@ -240,7 +239,7 @@ func (w *webhook) ensureNamespace(
 		)
 	}
 
-	logger.Debug("namespace does not exist; creating it")
+	logger.V(1).Info("namespace does not exist; creating it")
 
 	ns = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -268,7 +267,7 @@ func (w *webhook) ensureNamespace(
 			fmt.Errorf("error creating namespace %q: %w", project.Name, err),
 		)
 	}
-	logger.Debug("created namespace")
+	logger.V(1).Info("created namespace")
 
 	return nil
 }
@@ -279,12 +278,12 @@ func (w *webhook) ensureSecretPermissions(
 ) error {
 	const roleBindingName = "kargo-api-server-manage-project-secrets"
 
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"project":     project.Name,
-		"name":        project.Name,
-		"namespace":   project.Name,
-		"roleBinding": roleBindingName,
-	})
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"project", project.Name,
+		"name", project.Name,
+		"namespace", project.Name,
+		"roleBinding", roleBindingName,
+	)
 
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
@@ -311,7 +310,7 @@ func (w *webhook) ensureSecretPermissions(
 	}
 	if err := w.createRoleBindingFn(ctx, roleBinding); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			logger.Debug("role binding already exists in project namespace")
+			logger.V(1).Info("role binding already exists in project namespace")
 			return nil
 		}
 		return apierrors.NewInternalError(
@@ -323,7 +322,7 @@ func (w *webhook) ensureSecretPermissions(
 			),
 		)
 	}
-	logger.Debug("granted API server access to manage project secrets")
+	logger.V(1).Info("granted API server access to manage project secrets")
 
 	return nil
 }

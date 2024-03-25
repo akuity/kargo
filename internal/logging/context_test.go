@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 )
 
 func TestContextWithLogger(t *testing.T) {
-	testLogger := log.New().WithFields(nil)
+	testLogger := logr.New(nil)
 	ctx := ContextWithLogger(context.Background(), testLogger)
-	require.Same(t, testLogger, ctx.Value(loggerContextKey{}))
+	require.Equal(t, testLogger, ctx.Value(loggerContextKey{}))
 }
 
 func TestLoggerFromContext(t *testing.T) {
@@ -19,10 +19,11 @@ func TestLoggerFromContext(t *testing.T) {
 	// This should give us the global logger if one was never explicitly added to
 	// the context.
 	require.NotNil(t, logger)
-	require.IsType(t, &log.Entry{}, logger)
-	require.Equal(t, log.InfoLevel, logger.Logger.Level)
+	require.IsType(t, logr.Logger{}, logger)
+	require.Equal(t, true, logger.V(0).Enabled())  // INFO level enabled
+	require.Equal(t, false, logger.V(1).Enabled()) // DEBUG level disabled
 
-	testLogger := log.New().WithFields(nil)
+	testLogger := logr.New(nil)
 	ctx := context.WithValue(context.Background(), loggerContextKey{}, testLogger)
-	require.Same(t, testLogger, LoggerFromContext(ctx))
+	require.Equal(t, testLogger, LoggerFromContext(ctx))
 }

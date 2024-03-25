@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -17,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )

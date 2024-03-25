@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -52,13 +51,13 @@ func newSemVerSelector(
 
 // Select implements the Selector interface.
 func (s *semVerSelector) Select(ctx context.Context) (*Image, error) {
-	logger := logging.LoggerFromContext(ctx).WithFields(log.Fields{
-		"registry":            s.repoClient.registry.name,
-		"image":               s.repoClient.image,
-		"selectionStrategy":   SelectionStrategySemVer,
-		"platformConstrained": s.platform != nil,
-	})
-	logger.Trace("selecting image")
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"registry", s.repoClient.registry.name,
+		"image", s.repoClient.image,
+		"selectionStrategy", SelectionStrategySemVer,
+		"platformConstrained", s.platform != nil,
+	)
+	logger.V(2).Info("selecting image")
 
 	ctx = logging.ContextWithLogger(ctx, logger)
 
@@ -67,10 +66,10 @@ func (s *semVerSelector) Select(ctx context.Context) (*Image, error) {
 		return nil, fmt.Errorf("error listing tags: %w", err)
 	}
 	if len(tags) == 0 {
-		logger.Trace("found no tags")
+		logger.V(2).Info("found no tags")
 		return nil, nil
 	}
-	logger.Trace("got all tags")
+	logger.V(2).Info("got all tags")
 
 	images := make([]Image, 0, len(tags))
 	for _, tag := range tags {
@@ -92,12 +91,12 @@ func (s *semVerSelector) Select(ctx context.Context) (*Image, error) {
 		}
 	}
 	if len(images) == 0 {
-		logger.Trace("no tags matched criteria")
+		logger.V(2).Info("no tags matched criteria")
 		return nil, nil
 	}
-	logger.Tracef("%d tags matched criteria", len(images))
+	logger.V(2).Info("tags matched criteria", "numberOfTags", len(images))
 
-	logger.Trace("sorting images by semantic version")
+	logger.V(2).Info("sorting images by semantic version")
 	sortImagesBySemVer(images)
 
 	tag := images[0].Tag
@@ -106,17 +105,17 @@ func (s *semVerSelector) Select(ctx context.Context) (*Image, error) {
 		return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 	}
 	if image == nil {
-		logger.Tracef(
-			"image with tag %q was found, but did not match platform constraint",
-			tag,
+		logger.V(2).Info(
+			"image was found, but did not match platform constraint",
+			"tag", tag,
 		)
 		return nil, nil
 	}
 
-	logger.WithFields(log.Fields{
-		"tag":    image.Tag,
-		"digest": image.Digest.String(),
-	}).Trace("found image")
+	logger.WithValues(
+		"tag", image.Tag,
+		"digest", image.Digest.String(),
+	).V(2).Info("found image")
 	return image, nil
 }
 

@@ -91,7 +91,7 @@ func (a *argoCDMechanism) Promote(
 	}
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Debug("executing Argo CD-based promotion mechanisms")
+	logger.V(1).Info("executing Argo CD-based promotion mechanisms")
 
 	for _, update := range updates {
 		if err := a.doSingleUpdateFn(
@@ -104,7 +104,7 @@ func (a *argoCDMechanism) Promote(
 		}
 	}
 
-	logger.Debug("done executing Argo CD-based promotion mechanisms")
+	logger.V(1).Info("done executing Argo CD-based promotion mechanisms")
 
 	return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
 }
@@ -213,8 +213,8 @@ func (a *argoCDMechanism) doSingleUpdate(
 	); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
 	}
-	logging.LoggerFromContext(ctx).WithField("app", app.Name).
-		Debug("patched Argo CD Application")
+	logging.LoggerFromContext(ctx).WithValues("app", app.Name).
+		V(1).Info("patched Argo CD Application")
 	return nil
 }
 

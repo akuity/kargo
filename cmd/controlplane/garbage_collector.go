@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/garbage"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )

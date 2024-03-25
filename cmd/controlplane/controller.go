@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -26,6 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"

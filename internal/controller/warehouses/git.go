@@ -48,7 +48,7 @@ func (r *reconciler) selectCommits(
 			continue
 		}
 		sub := s.Git
-		logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
 		creds, ok, err :=
 			r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
 		if err != nil {
@@ -65,9 +65,9 @@ func (r *reconciler) selectCommits(
 				Password:      creds.Password,
 				SSHPrivateKey: creds.SSHPrivateKey,
 			}
-			logger.Debug("obtained credentials for git repo")
+			logger.V(1).Info("obtained credentials for git repo")
 		} else {
-			logger.Debug("found no credentials for git repo")
+			logger.V(1).Info("found no credentials for git repo")
 		}
 
 		baseCommit := repoCommitMappings[sub.RepoURL+"#"+sub.Branch]
@@ -80,8 +80,8 @@ func (r *reconciler) selectCommits(
 				err,
 			)
 		}
-		logger.WithField("commit", gm.Commit).
-			Debug("found latest commit from repo")
+		logger.WithValues("commit", gm.Commit).
+			V(1).Info("found latest commit from repo")
 		latestCommits = append(
 			latestCommits,
 			kargoapi.GitCommit{
@@ -105,7 +105,7 @@ func (r *reconciler) selectCommitMeta(
 	creds *git.RepoCredentials,
 	baseCommit string,
 ) (*gitMeta, error) {
-	logger := logging.LoggerFromContext(ctx).WithField("repo", sub.RepoURL)
+	logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
 	if creds == nil {
 		creds = &git.RepoCredentials{}
 	}
@@ -142,7 +142,7 @@ func (r *reconciler) selectCommitMeta(
 	msg, err := repo.CommitMessage(selectedCommit)
 	if err != nil {
 		// This is best effort, so just log the error
-		logger.Warnf("failed to get message from commit %q: %v", selectedCommit, err)
+		logger.Error(err, "failed to get message from commit", "commit", selectedCommit, err)
 	}
 	return &gitMeta{
 		Commit: selectedCommit,

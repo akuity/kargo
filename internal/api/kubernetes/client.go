@@ -578,7 +578,7 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 	// is empty, but will issue a warning that we can suppress by checking for
 	// that condition ourselves and calling rest.InClusterConfig() directly.
 	if path == "" {
-		logger.Debug("loading in-cluster REST config")
+		logger.V(1).Info("loading in-cluster REST config")
 		cfg, err := rest.InClusterConfig()
 		if err != nil {
 			return cfg, fmt.Errorf("error loading in-cluster REST config: %w", err)
@@ -586,7 +586,7 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 		return cfg, nil
 	}
 
-	logger.WithField("path", path).Debug("loading REST config from path")
+	logger.WithValues("path", path).V(1).Info("loading REST config from path")
 	cfg, err := clientcmd.BuildConfigFromFlags("", path)
 	if err != nil {
 		return cfg, fmt.Errorf("error loading REST config from %q: %w", path, err)
