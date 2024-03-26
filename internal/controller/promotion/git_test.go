@@ -478,7 +478,6 @@ func TestMoveRepoContents(t *testing.T) {
 	require.Len(t, dirEntries, subdirCount+fileCount+1)
 	// Create destination dir
 	destDir := t.TempDir()
-	require.NoError(t, err)
 	// Move
 	err = moveRepoContents(srcDir, destDir)
 	require.NoError(t, err)
@@ -502,7 +501,6 @@ func TestDeleteRepoContents(t *testing.T) {
 	const fileCount = 50
 	// Create dummy repo dir
 	dir, err := createDummyRepoDir(t, subdirCount, fileCount)
-	defer os.RemoveAll(dir)
 	require.NoError(t, err)
 	// Double-check the setup
 	dirEntries, err := os.ReadDir(dir)
@@ -583,7 +581,8 @@ func TestBuildCommitMessage(t *testing.T) {
 }
 
 func createDummyRepoDir(t *testing.T, dirCount, fileCount int) (string, error) {
-	// Create a directory
+	t.Helper()
+	// Create a temporary directory
 	dir := t.TempDir()
 	// Add a dummy .git/ subdir
 	if err := os.Mkdir(filepath.Join(dir, ".git"), 0755); err != nil {
