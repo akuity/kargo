@@ -15,7 +15,7 @@ func (s *server) GetAnalysisRun(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetAnalysisRunRequest],
 ) (*connect.Response[svcv1alpha1.GetAnalysisRunResponse], error) {
-	if s.rolloutsClient == nil {
+	if s.getAnalysisRunFn == nil {
 		return nil, connect.NewError(
 			connect.CodeUnimplemented,
 			errors.New("Argo Rollouts integration is not enabled"),
@@ -32,7 +32,7 @@ func (s *server) GetAnalysisRun(
 		return nil, err
 	}
 
-	ar, err := s.getAnalysisRunFn(ctx, s.rolloutsClient, types.NamespacedName{
+	ar, err := s.getAnalysisRunFn(ctx, s.client, types.NamespacedName{
 		Namespace: namespace,
 		Name:      name,
 	})

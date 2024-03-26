@@ -12,7 +12,6 @@ import (
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -87,13 +86,17 @@ func (o *apiOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
 	}
 
-	rolloutsClientCfg, rolloutsInternalClient, err := o.setupRolloutsClient(ctx)
-	if err != nil {
-		return fmt.Errorf("error setting up Argo Rollouts internal Kubernetes API client: %w", err)
-	}
-	rolloutsClient, err := newWrappedKubernetesClient(ctx, rolloutsClientCfg, rolloutsInternalClient, cfg)
-	if err != nil {
-		return fmt.Errorf("error creating Kubernetes client for Argo Rollouts API server: %w", err)
+	var rolloutsAvailable bool
+	switch {
+	case !o.RolloutsEnabled:
+		o.Logger.Info("Argo Rollouts integration is disabled")
+	case !argoRolloutsExists(ctx, clientCfg):
+		o.Logger.Warn(
+			"Argo Rollouts integration was enabled, but no Argo Rollouts " +
+				"CRDs were found. Proceeding without Argo Rollouts integration.",
+		)
+	default:
+		o.Logger.Info("Argo Rollouts integration is enabled")
 	}
 
 	if cfg.AdminConfig != nil {
@@ -107,7 +110,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		}).Info("SSO via OpenID Connect is enabled")
 	}
 
-	srv := api.NewServer(cfg, kubeClient, internalClient, rolloutsClient, rolloutsInternalClient)
+	srv := api.NewServer(cfg, kubeClient, internalClient, rolloutsAvailable)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
@@ -163,71 +166,6 @@ func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.C
 	go func() {
 		if err := mgr.Start(ctx); err != nil {
 			panic(fmt.Errorf("error starting Kargo API manager: %w", err))
-		}
-	}()
-
-	return restCfg, mgr.GetClient(), nil
-}
-
-func (o *apiOptions) setupRolloutsClient(ctx context.Context) (*rest.Config, client.Client, error) {
-	if !o.RolloutsEnabled {
-		o.Logger.Info("Argo Rollouts integration is disabled")
-	}
-
-	restCfg, err := kubernetes.GetRestConfig(ctx, o.RolloutsKubeConfig)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error loading REST config for Argo Rollouts API manager: %w", err)
-	}
-	restCfg.ContentType = runtime.ContentTypeJSON
-
-	if !argoRolloutsExists(ctx, restCfg) {
-		o.Logger.Warn(
-			"Argo Rollouts integration was enabled, but no Argo Rollouts " +
-				"CRDs were found. Proceeding without Argo Rollouts integration.",
-		)
-		return nil, nil, nil
-	}
-
-	o.Logger.Info("Argo Rollouts integration is enabled")
-
-	scheme := runtime.NewScheme()
-	if err = rollouts.AddToScheme(scheme); err != nil {
-		return nil, nil, fmt.Errorf(
-			"error adding Argo Rollouts API to Argo Rollouts AnalysisRun API manager scheme: %w",
-			err,
-		)
-	}
-
-	cacheOpts := cache.Options{} // Watches all namespaces by default
-	if o.AnalysisRunsNamespace != "" {
-		// TODO: When NOT sharded, Kargo can simply create AnalysisRun
-		// resources in the project namespaces. When sharded, AnalysisRun
-		// resources must be created IN the shard clusters (not the Kargo
-		// control plane cluster) and project namespaces do not exist in the
-		// shard clusters. We need a place to put them, so for now we allow
-		// the user to specify a namespace that that exists on each shard for
-		// this purpose. Note that the namespace does not need to be the same
-		// on every shard. This may be one of the weaker points in our tenancy
-		// model and can stand to be improved.
-		cacheOpts.DefaultNamespaces = map[string]cache.Config{
-			o.AnalysisRunsNamespace: {},
-		}
-	}
-
-	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
-		Scheme: scheme,
-		Metrics: server.Options{
-			BindAddress: "0",
-		},
-		Cache: cacheOpts,
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("error initializing Argo Rollouts AnalyisRun API manager: %w", err)
-	}
-
-	go func() {
-		if err := mgr.Start(ctx); err != nil {
-			panic(fmt.Errorf("start Argo Rollouts AnalyisRun API manager: %w", err))
 		}
 	}()
 
