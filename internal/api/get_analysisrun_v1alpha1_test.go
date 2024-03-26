@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -20,8 +21,43 @@ import (
 )
 
 func TestGetAnalysisRun(t *testing.T) {
+	// Simulate an admin user to prevent any authz issues with the authorizing
+	// client.
+	ctx := user.ContextWithInfo(
+		context.Background(),
+		user.Info{
+			IsAdmin: true,
+		},
+	)
+
+	c, err := kubernetes.NewClient(
+		ctx,
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			NewInternalClient: func(
+				_ context.Context,
+				_ *rest.Config,
+				scheme *runtime.Scheme,
+			) (client.Client, error) {
+				if err := rollouts.AddToScheme(scheme); err != nil {
+					return nil, err
+				}
+
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+						mustNewObject[rollouts.AnalysisRun]("testdata/analysisrun.yaml"),
+					).
+					Build(), nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
 	testCases := map[string]struct {
 		req              *svcv1alpha1.GetAnalysisRunRequest
+		rolloutsClient   kubernetes.Client
 		getAnalysisRunFn func(context.Context, client.Client, types.NamespacedName) (*rollouts.AnalysisRun, error)
 		errExpected      bool
 		expectedCode     connect.Code
@@ -31,24 +67,25 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "",
 				Name:      "",
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
-			errExpected:      true,
-			expectedCode:     connect.CodeInvalidArgument,
+			rolloutsClient: c,
+			errExpected:    true,
+			expectedCode:   connect.CodeInvalidArgument,
 		},
 		"empty name": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
 				Namespace: "kargo-demo",
 				Name:      "",
 			},
-			getAnalysisRunFn: rollouts.GetAnalysisRun,
-			errExpected:      true,
-			expectedCode:     connect.CodeInvalidArgument,
+			rolloutsClient: c,
+			errExpected:    true,
+			expectedCode:   connect.CodeInvalidArgument,
 		},
 		"existing AnalysisRun": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
 				Namespace: "kargo-demo",
 				Name:      "test",
 			},
+			rolloutsClient:   c,
 			getAnalysisRunFn: rollouts.GetAnalysisRun,
 		},
 		"non-existing namespace": {
@@ -56,6 +93,7 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "kargo-x",
 				Name:      "test",
 			},
+			rolloutsClient:   c,
 			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			errExpected:      true,
 			expectedCode:     connect.CodeNotFound,
@@ -65,15 +103,29 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "kargo-demo",
 				Name:      "non-existing",
 			},
+			rolloutsClient:   c,
 			getAnalysisRunFn: rollouts.GetAnalysisRun,
 			errExpected:      true,
 			expectedCode:     connect.CodeNotFound,
+		},
+		"error getting AnalysisRun": {
+			req: &svcv1alpha1.GetAnalysisRunRequest{
+				Namespace: "kargo-demo",
+				Name:      "test",
+			},
+			rolloutsClient: c,
+			getAnalysisRunFn: func(context.Context, client.Client, types.NamespacedName) (*rollouts.AnalysisRun, error) {
+				return nil, apierrors.NewServiceUnavailable("test")
+			},
+			errExpected:  true,
+			expectedCode: connect.CodeUnknown,
 		},
 		"Argo Rollouts integration is not enabled": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
 				Namespace: "kargo-demo",
 				Name:      "test",
 			},
+			rolloutsClient:   nil,
 			getAnalysisRunFn: nil,
 			errExpected:      true,
 			expectedCode:     connect.CodeUnimplemented,
@@ -84,42 +136,8 @@ func TestGetAnalysisRun(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Simulate an admin user to prevent any authz issues with the authorizing
-			// client.
-			ctx := user.ContextWithInfo(
-				context.Background(),
-				user.Info{
-					IsAdmin: true,
-				},
-			)
-
-			client, err := kubernetes.NewClient(
-				ctx,
-				&rest.Config{},
-				kubernetes.ClientOptions{
-					NewInternalClient: func(
-						_ context.Context,
-						_ *rest.Config,
-						scheme *runtime.Scheme,
-					) (client.Client, error) {
-						if err := rollouts.AddToScheme(scheme); err != nil {
-							return nil, err
-						}
-
-						return fake.NewClientBuilder().
-							WithScheme(scheme).
-							WithObjects(
-								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-								mustNewObject[rollouts.AnalysisRun]("testdata/analysisrun.yaml"),
-							).
-							Build(), nil
-					},
-				},
-			)
-			require.NoError(t, err)
-
 			svr := &server{
-				client:           client,
+				rolloutsClient:   testCase.rolloutsClient,
 				getAnalysisRunFn: testCase.getAnalysisRunFn,
 			}
 			res, err := (svr).GetAnalysisRun(ctx, connect.NewRequest(testCase.req))

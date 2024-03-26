@@ -30,34 +30,47 @@ func TestNewServer(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+	rolloutsClient, err := kubernetes.NewClient(
+		context.Background(),
+		&rest.Config{},
+		kubernetes.ClientOptions{
+			NewInternalClient: func(
+				context.Context,
+				*rest.Config,
+				*runtime.Scheme,
+			) (client.Client, error) {
+				return fake.NewClientBuilder().Build(), nil
+			},
+		},
+	)
+	require.NoError(t, err)
 
-	t.Run("Default", func(t *testing.T) {
-		s, ok := NewServer(testServerConfig, testClient, fake.NewClientBuilder().Build(), false).(*server)
-		require.True(t, ok)
-		require.NotNil(t, s)
-		require.Same(t, testClient, s.client)
-		require.Equal(t, testServerConfig, s.cfg)
-		require.NotNil(t, s.validateProjectExistsFn)
-		require.NotNil(t, s.externalValidateProjectFn)
-		require.NotNil(t, s.getStageFn)
-		require.NotNil(t, s.getFreightByNameOrAliasFn)
-		require.NotNil(t, s.isFreightAvailableFn)
-		require.NotNil(t, s.createPromotionFn)
-		require.NotNil(t, s.findStageSubscribersFn)
-		require.NotNil(t, s.listFreightFn)
-		require.NotNil(t, s.getAvailableFreightForStageFn)
-		require.NotNil(t, s.getFreightFromWarehouseFn)
-		require.NotNil(t, s.getVerifiedFreightFn)
-		require.NotNil(t, s.patchFreightAliasFn)
-		require.NotNil(t, s.patchFreightStatusFn)
-		require.NotNil(t, s.authorizeFn)
-		require.Nil(t, s.getAnalysisRunFn)
-	})
+	s, ok := NewServer(
+		testServerConfig,
+		testClient,
+		fake.NewClientBuilder().Build(),
+		rolloutsClient,
+		fake.NewClientBuilder().Build(),
+	).(*server)
 
-	t.Run("RolloutsEnabled", func(t *testing.T) {
-		s, ok := NewServer(testServerConfig, testClient, fake.NewClientBuilder().Build(), true).(*server)
-		require.True(t, ok)
-		require.NotNil(t, s)
-		require.NotNil(t, s.getAnalysisRunFn)
-	})
+	require.True(t, ok)
+	require.NotNil(t, s)
+	require.Same(t, testClient, s.client)
+	require.Same(t, rolloutsClient, s.rolloutsClient)
+	require.Equal(t, testServerConfig, s.cfg)
+	require.NotNil(t, s.validateProjectExistsFn)
+	require.NotNil(t, s.externalValidateProjectFn)
+	require.NotNil(t, s.getStageFn)
+	require.NotNil(t, s.getFreightByNameOrAliasFn)
+	require.NotNil(t, s.isFreightAvailableFn)
+	require.NotNil(t, s.createPromotionFn)
+	require.NotNil(t, s.findStageSubscribersFn)
+	require.NotNil(t, s.listFreightFn)
+	require.NotNil(t, s.getAvailableFreightForStageFn)
+	require.NotNil(t, s.getFreightFromWarehouseFn)
+	require.NotNil(t, s.getVerifiedFreightFn)
+	require.NotNil(t, s.patchFreightAliasFn)
+	require.NotNil(t, s.patchFreightStatusFn)
+	require.NotNil(t, s.authorizeFn)
+	require.NotNil(t, s.getAnalysisRunFn)
 }

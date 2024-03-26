@@ -35,9 +35,11 @@ var (
 )
 
 type server struct {
-	cfg            config.ServerConfig
-	client         kubernetes.Client
-	internalClient client.Client
+	cfg                    config.ServerConfig
+	client                 kubernetes.Client
+	internalClient         client.Client
+	rolloutsClient         kubernetes.Client
+	rolloutsInternalClient client.Client
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -144,12 +146,15 @@ func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	internalClient client.Client,
-	rolloutsEnabled bool,
+	rolloutsClient kubernetes.Client,
+	internalRolloutsClient client.Client,
 ) Server {
 	s := &server{
-		cfg:            cfg,
-		client:         kubeClient,
-		internalClient: internalClient,
+		cfg:                    cfg,
+		client:                 kubeClient,
+		internalClient:         internalClient,
+		rolloutsClient:         rolloutsClient,
+		rolloutsInternalClient: internalRolloutsClient,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists
@@ -166,10 +171,7 @@ func NewServer(
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
-
-	if rolloutsEnabled {
-		s.getAnalysisRunFn = rollouts.GetAnalysisRun
-	}
+	s.getAnalysisRunFn = rollouts.GetAnalysisRun
 
 	return s
 }
