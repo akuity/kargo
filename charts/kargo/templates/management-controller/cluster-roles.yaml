@@ -42,7 +42,27 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - freights
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
   - projects/status
+  - stages/status
   verbs:
   - patch
   - update
