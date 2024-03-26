@@ -73,6 +73,9 @@ service KargoService {
   rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
   rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
   rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
+
+  /* AnalysisRun APIs */
+  rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
 }
 
 message ComponentVersions {

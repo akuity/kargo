@@ -51,12 +51,15 @@ func newAPICommand() *cobra.Command {
 			if err = kubescheme.AddToScheme(scheme); err != nil {
 				return fmt.Errorf("add Kubernetes api to scheme: %w", err)
 			}
+
+			var rolloutsEnabled bool
 			if types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true")) {
 				if argoRolloutsExists(ctx, restCfg) {
 					log.Info("Argo Rollouts integration is enabled")
 					if err = rollouts.AddToScheme(scheme); err != nil {
 						return fmt.Errorf("add argo rollouts api to scheme: %w", err)
 					}
+					rolloutsEnabled = true
 				} else {
 					log.Warn(
 						"Argo Rollouts integration was enabled, but no Argo Rollouts " +
@@ -98,7 +101,7 @@ func newAPICommand() *cobra.Command {
 				}).Info("SSO via OpenID Connect is enabled")
 			}
 
-			srv := api.NewServer(cfg, kubeClient, internalClient)
+			srv := api.NewServer(cfg, kubeClient, internalClient, rolloutsEnabled)
 			l, err := net.Listen(
 				"tcp",
 				fmt.Sprintf(

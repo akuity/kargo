@@ -95,4 +95,23 @@ rules:
     - secrets
   verbs:
     - "*"
+{{- if .Values.api.rollouts.integrationEnabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-api-rollouts
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
 {{- end }}

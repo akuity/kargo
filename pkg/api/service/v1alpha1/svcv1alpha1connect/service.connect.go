@@ -143,6 +143,9 @@ const (
 	// KargoServiceUpdateCredentialsProcedure is the fully-qualified name of the KargoService's
 	// UpdateCredentials RPC.
 	KargoServiceUpdateCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateCredentials"
+	// KargoServiceGetAnalysisRunProcedure is the fully-qualified name of the KargoService's
+	// GetAnalysisRun RPC.
+	KargoServiceGetAnalysisRunProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisRun"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -187,6 +190,7 @@ var (
 	kargoServiceGetCredentialsMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetCredentials")
 	kargoServiceListCredentialsMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("ListCredentials")
 	kargoServiceUpdateCredentialsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("UpdateCredentials")
+	kargoServiceGetAnalysisRunMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
@@ -234,6 +238,8 @@ type KargoServiceClient interface {
 	GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error)
 	ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error)
 	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
+	// AnalysisRun APIs
+	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 }
 
 // NewKargoServiceClient constructs a client for the akuity.io.kargo.service.v1alpha1.KargoService
@@ -480,6 +486,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceUpdateCredentialsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getAnalysisRun: connect.NewClient[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse](
+			httpClient,
+			baseURL+KargoServiceGetAnalysisRunProcedure,
+			connect.WithSchema(kargoServiceGetAnalysisRunMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -524,6 +536,7 @@ type kargoServiceClient struct {
 	getCredentials            *connect.Client[v1alpha1.GetCredentialsRequest, v1alpha1.GetCredentialsResponse]
 	listCredentials           *connect.Client[v1alpha1.ListCredentialsRequest, v1alpha1.ListCredentialsResponse]
 	updateCredentials         *connect.Client[v1alpha1.UpdateCredentialsRequest, v1alpha1.UpdateCredentialsResponse]
+	getAnalysisRun            *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
 }
 
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
@@ -723,6 +736,11 @@ func (c *kargoServiceClient) UpdateCredentials(ctx context.Context, req *connect
 	return c.updateCredentials.CallUnary(ctx, req)
 }
 
+// GetAnalysisRun calls akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun.
+func (c *kargoServiceClient) GetAnalysisRun(ctx context.Context, req *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {
+	return c.getAnalysisRun.CallUnary(ctx, req)
+}
+
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
 // service.
 type KargoServiceHandler interface {
@@ -769,6 +787,8 @@ type KargoServiceHandler interface {
 	GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error)
 	ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error)
 	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
+	// AnalysisRun APIs
+	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 }
 
 // NewKargoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1011,6 +1031,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceUpdateCredentialsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceGetAnalysisRunHandler := connect.NewUnaryHandler(
+		KargoServiceGetAnalysisRunProcedure,
+		svc.GetAnalysisRun,
+		connect.WithSchema(kargoServiceGetAnalysisRunMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KargoServiceGetVersionInfoProcedure:
@@ -1091,6 +1117,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceListCredentialsHandler.ServeHTTP(w, r)
 		case KargoServiceUpdateCredentialsProcedure:
 			kargoServiceUpdateCredentialsHandler.ServeHTTP(w, r)
+		case KargoServiceGetAnalysisRunProcedure:
+			kargoServiceGetAnalysisRunHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1254,4 +1282,8 @@ func (UnimplementedKargoServiceHandler) ListCredentials(context.Context, *connec
 
 func (UnimplementedKargoServiceHandler) UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun is not implemented"))
 }
