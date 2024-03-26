@@ -30,6 +30,12 @@ type RepoCredentials struct {
 	Password string `json:"password,omitempty"`
 }
 
+// CommitOptions represents options for committing changes to a git repository.
+type CommitOptions struct {
+	// AllowEmpty indicates whether an empty commit should be allowed.
+	AllowEmpty bool
+}
+
 // Repo is an interface for interacting with a git repository.
 type Repo interface {
 	// AddAll stages pending changes for commit.
@@ -46,7 +52,7 @@ type Repo interface {
 	// Checkout checks out the specified branch.
 	Checkout(branch string) error
 	// Commit commits staged changes to the current branch.
-	Commit(message string) error
+	Commit(message string, opts *CommitOptions) error
 	// CreateChildBranch creates a new branch that is a child of the current
 	// branch.
 	CreateChildBranch(branch string) error
@@ -135,7 +141,7 @@ func Clone(
 	repoCreds RepoCredentials,
 	opts *CloneOptions,
 ) (Repo, error) {
-	homeDir, err := os.MkdirTemp("", "")
+	homeDir, err := os.MkdirTemp("", "repo-")
 	if err != nil {
 		return nil, fmt.Errorf("error creating home directory for repo %q: %w", repoURL, err)
 	}
@@ -162,7 +168,7 @@ func (r *repo) AddAllAndCommit(message string) error {
 	if err := r.AddAll(); err != nil {
 		return err
 	}
-	return r.Commit(message)
+	return r.Commit(message, nil)
 }
 
 func (r *repo) Clean() error {
@@ -226,8 +232,16 @@ func (r *repo) Checkout(branch string) error {
 	return nil
 }
 
-func (r *repo) Commit(message string) error {
-	if _, err := libExec.Exec(r.buildCommand("commit", "-m", message)); err != nil {
+func (r *repo) Commit(message string, opts *CommitOptions) error {
+	if opts == nil {
+		opts = &CommitOptions{}
+	}
+	cmdTokens := []string{"commit", "-m", message}
+	if opts.AllowEmpty {
+		cmdTokens = append(cmdTokens, "--allow-empty")
+	}
+
+	if _, err := libExec.Exec(r.buildCommand(cmdTokens...)); err != nil {
 		return fmt.Errorf("error committing changes to branch %q: %w", r.currentBranch, err)
 	}
 	return nil

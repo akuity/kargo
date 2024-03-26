@@ -168,6 +168,7 @@ func TestKustomizerApply(t *testing.T) {
 				},
 				"",
 				"",
+				"",
 			)
 			testCase.assertions(t, changes, err)
 		})

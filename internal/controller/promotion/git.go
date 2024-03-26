@@ -13,6 +13,8 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const tmpPrefix = "repo-scrap-"
+
 // gitMechanism is an implementation of the Mechanism interface that uses Git to
 // update configuration in a repository. It is easily configured to support
 // different types of configuration management tools.
@@ -45,6 +47,7 @@ type gitMechanism struct {
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		sourceCommit string,
 		homeDir string,
 		workingDir string,
 	) ([]string, error)
@@ -61,6 +64,7 @@ func newGitMechanism(
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
 		newFreight kargoapi.FreightReference,
+		sourceCommit string,
 		homeDir string,
 		workingDir string,
 	) ([]string, error),
@@ -294,11 +298,17 @@ func (g *gitMechanism) gitCommit(
 		}
 	}
 
+	sourceCommitID, err := repo.LastCommitID()
+	if err != nil {
+		return "", err // TODO: Wrap this
+	}
+
 	var changes []string
 	if g.applyConfigManagementFn != nil {
 		if changes, err = g.applyConfigManagementFn(
 			update,
 			newFreight,
+			sourceCommitID,
 			repo.HomeDir(),
 			repo.WorkingDir(),
 		); err != nil {
@@ -310,7 +320,7 @@ func (g *gitMechanism) gitCommit(
 	// Sometimes we don't write to the same branch we read from...
 	if readRef != writeBranch {
 		var tempDir string
-		tempDir, err = os.MkdirTemp("", "")
+		tempDir, err = os.MkdirTemp("", tmpPrefix)
 		if err != nil {
 			return "", fmt.Errorf("error creating temp directory for pending changes: %w", err)
 		}

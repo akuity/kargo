@@ -254,6 +254,7 @@ func TestHelmerApply(t *testing.T) {
 				kargoapi.FreightReference{}, // The way the tests are structured, this value doesn't matter
 				"",
 				"",
+				"",
 			)
 			testCase.assertions(t, changes, err)
 		})

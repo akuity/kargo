@@ -20,7 +20,27 @@ func pullRequestBranchName(project, stage string) string {
 // we like (i.e. not a descendant of base), recreate it.
 func preparePullRequestBranch(repo git.Repo, prBranch string, base string) error {
 	origBranch := repo.CurrentBranch()
-	if err := repo.Checkout(base); err != nil {
+	baseBranchExists, err := repo.RemoteBranchExists(base)
+	if err != nil {
+		return err
+	}
+	if !baseBranchExists {
+		// Base branch doesn't exist. Create it!
+		if err = repo.CreateOrphanedBranch(base); err != nil {
+			return err
+		}
+		if err = repo.Commit(
+			"Initial commit",
+			&git.CommitOptions{
+				AllowEmpty: true,
+			},
+		); err != nil {
+			return err
+		}
+		if err = repo.Push(false); err != nil {
+			return err
+		}
+	} else if err = repo.Checkout(base); err != nil {
 		return err
 	}
 	prBranchExists, err := repo.RemoteBranchExists(prBranch)
