@@ -7,6 +7,7 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
 import { Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
+import { AnalysisRun } from "../../rollouts/api/v1alpha1/generated_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -3615,6 +3616,86 @@ export class UpdateCredentialsResponse extends Message<UpdateCredentialsResponse
 
   static equals(a: UpdateCredentialsResponse | PlainMessage<UpdateCredentialsResponse> | undefined, b: UpdateCredentialsResponse | PlainMessage<UpdateCredentialsResponse> | undefined): boolean {
     return proto3.util.equals(UpdateCredentialsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
+ */
+export class GetAnalysisRunRequest extends Message<GetAnalysisRunRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetAnalysisRunRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisRunRequest {
+    return new GetAnalysisRunRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAnalysisRunRequest {
+    return new GetAnalysisRunRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAnalysisRunRequest {
+    return new GetAnalysisRunRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAnalysisRunRequest | PlainMessage<GetAnalysisRunRequest> | undefined, b: GetAnalysisRunRequest | PlainMessage<GetAnalysisRunRequest> | undefined): boolean {
+    return proto3.util.equals(GetAnalysisRunRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
+ */
+export class GetAnalysisRunResponse extends Message<GetAnalysisRunResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1;
+   */
+  analysisRun?: AnalysisRun;
+
+  constructor(data?: PartialMessage<GetAnalysisRunResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "analysis_run", kind: "message", T: AnalysisRun },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisRunResponse {
+    return new GetAnalysisRunResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAnalysisRunResponse {
+    return new GetAnalysisRunResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAnalysisRunResponse {
+    return new GetAnalysisRunResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAnalysisRunResponse | PlainMessage<GetAnalysisRunResponse> | undefined, b: GetAnalysisRunResponse | PlainMessage<GetAnalysisRunResponse> | undefined): boolean {
+    return proto3.util.equals(GetAnalysisRunResponse, a, b);
   }
 }
 
