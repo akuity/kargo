@@ -86,6 +86,8 @@ api:
   tolerations: []
   ## @param api.affinity Specifies pod affinity for api pods.
   affinity: {}
+  ## @param  api.annotations Annotations to add to the api pods.
+  annotations: {}
 
   probes:
     ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
@@ -241,6 +243,8 @@ api:
       tolerations: []
       ## @param api.oidc.dex.affinity Specifies pod affinity for the Dex server pods.
       affinity: {}
+      ## @param api.oidc.dex.annotations Annotations to add to the Dex server pods.
+      annotations: {}
 
   argocd:
     ## @param api.argocd.urls Mapping of Argo CD shards names to URLs to support deep links to Argo CD URLs. If sharding is not used, map the empty string to the single Argo CD URL.
@@ -304,6 +308,8 @@ controller:
   tolerations: []
   ## @param controller.affinity Specifies pod affinity for controller pods.
   affinity: {}
+  ## @param controller.annotations Annotations to add to the controller pods.
+  annotations: {}
 
 ## @section Management Controller
 ## All settings for the management controller component
@@ -328,6 +334,8 @@ managementController:
   tolerations: []
   ## @param managementController.affinity Specifies pod affinity for management controller pods.
   affinity: {}
+  ## @param managementController.annotations Annotations to add to the management controller pods.
+  annotations: {}
 
 ## @section Webhooks
 webhooks:
@@ -360,6 +368,8 @@ webhooksServer:
   tolerations: []
   ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods.
   affinity: {}
+  ## @param webhooksServer.annotations Annotations to add to the webhooks server pods.
+  annotations: {}
 
 ## @section Garbage Collector
 garbageCollector:
@@ -393,3 +403,5 @@ garbageCollector:
   tolerations: []
   ## @param garbageCollector.affinity Specifies pod affinity for the garbage collector pods.
   affinity: {}
+  ## @param garbageCollector.annotations Annotations to add to the garbage collector pods.
+  annotations: {}

@@ -7,6 +7,10 @@ metadata:
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+  {{- with .Values.webhooksServer.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.webhooksServer.replicas | default 1 }}
   strategy:
