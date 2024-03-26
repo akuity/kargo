@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Modal, Space, Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
@@ -8,37 +8,28 @@ import { z } from 'zod';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
-import {
-  listStages,
-  updateResource
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import schema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
+import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
-import { getStageYAMLExample } from '../project/project-details/utils/stage-yaml-example';
-
-import { prepareStageToEdit, prepareStageToSave } from './utils/edit-stage-utils';
+import { getWarehouseYAMLExample } from './utils/warehouse-yaml-example';
 
 type Props = ModalComponentProps & {
-  projectName: string;
-  stageName: string;
+  project: string;
 };
 
 const formSchema = z.object({
   value: zodValidators.requiredString
 });
 
-export const EditStageModal = ({ visible, hide, projectName, stageName }: Props) => {
-  const { data } = useQuery(listStages, { project: projectName });
-  const stage = data?.stages.find((item) => item.metadata?.name === stageName);
-
-  const { mutateAsync, isPending } = useMutation(updateResource, {
+export const CreateWarehouseModal = ({ visible, hide, project }: Props) => {
+  const { mutateAsync, isPending } = useMutation(createResource, {
     onSuccess: () => hide()
   });
 
   const { control, handleSubmit } = useForm({
-    values: {
-      value: prepareStageToEdit(stage)
+    defaultValues: {
+      value: getWarehouseYAMLExample(project)
     },
     resolver: zodResolver(formSchema)
   });
@@ -46,21 +37,20 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
   const onSubmit = handleSubmit(async (data) => {
     const textEncoder = new TextEncoder();
     await mutateAsync({
-      manifest: textEncoder.encode(prepareStageToSave(stage, data.value))
+      manifest: textEncoder.encode(data.value)
     });
   });
 
   return (
     <Modal
-      destroyOnClose
       open={visible}
-      title='Edit Stage'
+      title='Create Warehouse'
       closable={false}
       width={680}
       footer={
         <div className='flex items-center justify-between'>
           <Typography.Link
-            href='https://kargo.akuity.io/quickstart/#the-test-stage'
+            href='https://kargo.akuity.io/quickstart#hands-on-with-the-kargo-cli'
             target='_blank'
           >
             Documentation
@@ -68,7 +58,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
           <Space>
             <Button onClick={hide}>Cancel</Button>
             <Button type='primary' onClick={onSubmit} loading={isPending}>
-              Update
+              Create
             </Button>
           </Space>
         </div>
@@ -81,7 +71,7 @@ export const EditStageModal = ({ visible, hide, projectName, stageName }: Props)
             onChange={(e) => onChange(e || '')}
             height='500px'
             schema={schema as JSONSchema4}
-            placeholder={getStageYAMLExample(projectName)}
+            placeholder={getWarehouseYAMLExample(project)}
           />
         )}
       </FieldContainer>

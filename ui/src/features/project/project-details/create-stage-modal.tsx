@@ -43,7 +43,6 @@ export const CreateStageModal = ({ visible, hide, project }: Props) => {
 
   return (
     <Modal
-      destroyOnClose
       open={visible}
       title='Create Stage'
       closable={false}
