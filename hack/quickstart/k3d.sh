@@ -39,12 +39,13 @@ helm install argo-rollouts argo-rollouts \
   --namespace argo-rollouts \
   --wait
 
+# Password is 'admin'
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
   --namespace kargo \
   --create-namespace \
   --set api.service.type=NodePort \
   --set api.service.nodePort=31444 \
-  --set api.adminAccount.password=admin \
+  --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
   --wait
