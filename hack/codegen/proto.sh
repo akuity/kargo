@@ -2,7 +2,19 @@
 
 set -euxo pipefail
 
-readonly APIMACHINERY_PKGS=k8s.io/apimachinery/pkg/util/intstr,+k8s.io/apimachinery/pkg/api/resource,+k8s.io/apimachinery/pkg/runtime/schema,+k8s.io/apimachinery/pkg/runtime,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/api/core/v1,k8s.io/api/batch/v1
+readonly API_PKGS=(
+  "github.com/akuity/kargo/api/v1alpha1"
+  "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+)
+
+readonly APIMACHINERY_PKGS=(
+  "k8s.io/apimachinery/pkg/util/intstr"
+  "+k8s.io/apimachinery/pkg/api/resource"
+  "+k8s.io/apimachinery/pkg/runtime/schema"
+  "+k8s.io/apimachinery/pkg/runtime"
+  "k8s.io/apimachinery/pkg/apis/meta/v1"
+  "k8s.io/api/core/v1,k8s.io/api/batch/v1"
+)
 
 work_dir=$(dirname "${0}")
 work_dir=$(readlink -f "${work_dir}/../..")
@@ -23,12 +35,13 @@ function main() {
   echo "Generate protobuf code from Kubebuilder structs..."
   GOPATH=${GOPATH} go-to-protobuf \
     --go-header-file=./hack/boilerplate.go.txt \
-    --packages=github.com/akuity/kargo/api/v1alpha1 \
-    --apimachinery-packages="${APIMACHINERY_PKGS}" \
+    --packages="$(IFS=, ; echo "${API_PKGS[*]}")" \
+    --apimachinery-packages="$(IFS=, ; echo "${APIMACHINERY_PKGS[*]}")" \
     --proto-import "${work_dir}/vendor"
 
   echo "Copy generated code to the working directory..."
   cp -R "${GOPATH}/src/github.com/akuity/kargo/api" "${work_dir}"
+  cp -R "${GOPATH}/src/github.com/akuity/kargo/internal" "${work_dir}"
 
   echo "Generate protobuf code (Go)..."
   buf generate api

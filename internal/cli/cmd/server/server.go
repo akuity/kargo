@@ -99,6 +99,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		},
 		client,
 		client,
+		true,
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)

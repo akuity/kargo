@@ -24,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/api/validation"
+	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
@@ -118,6 +119,13 @@ type server struct {
 		newStatus kargoapi.FreightStatus,
 	) error
 
+	// Rollouts integration:
+	getAnalysisRunFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*rollouts.AnalysisRun, error)
+
 	// Special authorizations:
 	authorizeFn func(
 		ctx context.Context,
@@ -136,12 +144,14 @@ func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	internalClient client.Client,
+	rolloutsEnabled bool,
 ) Server {
 	s := &server{
 		cfg:            cfg,
 		client:         kubeClient,
 		internalClient: internalClient,
 	}
+
 	s.validateProjectExistsFn = s.validateProjectExists
 	s.externalValidateProjectFn = validation.ValidateProject
 	s.getStageFn = kargoapi.GetStage
@@ -152,11 +162,15 @@ func NewServer(
 	s.listFreightFn = kubeClient.List
 	s.getAvailableFreightForStageFn = s.getAvailableFreightForStage
 	s.getFreightFromWarehouseFn = s.getFreightFromWarehouse
-	s.getVerifiedFreightFn =
-		s.getVerifiedFreight
+	s.getVerifiedFreightFn = s.getVerifiedFreight
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
+
+	if rolloutsEnabled {
+		s.getAnalysisRunFn = rollouts.GetAnalysisRun
+	}
+
 	return s
 }
 

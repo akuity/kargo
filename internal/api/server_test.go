@@ -30,23 +30,47 @@ func TestNewServer(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	s, ok := NewServer(testServerConfig, testClient, fake.NewClientBuilder().Build()).(*server)
-	require.True(t, ok)
-	require.NotNil(t, s)
-	require.Same(t, testClient, s.client)
-	require.Equal(t, testServerConfig, s.cfg)
-	require.NotNil(t, s.validateProjectExistsFn)
-	require.NotNil(t, s.externalValidateProjectFn)
-	require.NotNil(t, s.getStageFn)
-	require.NotNil(t, s.getFreightByNameOrAliasFn)
-	require.NotNil(t, s.isFreightAvailableFn)
-	require.NotNil(t, s.createPromotionFn)
-	require.NotNil(t, s.findStageSubscribersFn)
-	require.NotNil(t, s.listFreightFn)
-	require.NotNil(t, s.getAvailableFreightForStageFn)
-	require.NotNil(t, s.getFreightFromWarehouseFn)
-	require.NotNil(t, s.getVerifiedFreightFn)
-	require.NotNil(t, s.patchFreightAliasFn)
-	require.NotNil(t, s.patchFreightStatusFn)
-	require.NotNil(t, s.authorizeFn)
+
+	t.Run("Default", func(t *testing.T) {
+		s, ok := NewServer(
+			testServerConfig,
+			testClient,
+			fake.NewClientBuilder().Build(),
+			false,
+		).(*server)
+
+		require.True(t, ok)
+		require.NotNil(t, s)
+		require.Same(t, testClient, s.client)
+		require.Equal(t, testServerConfig, s.cfg)
+		require.NotNil(t, s.validateProjectExistsFn)
+		require.NotNil(t, s.externalValidateProjectFn)
+		require.NotNil(t, s.getStageFn)
+		require.NotNil(t, s.getFreightByNameOrAliasFn)
+		require.NotNil(t, s.isFreightAvailableFn)
+		require.NotNil(t, s.createPromotionFn)
+		require.NotNil(t, s.findStageSubscribersFn)
+		require.NotNil(t, s.listFreightFn)
+		require.NotNil(t, s.getAvailableFreightForStageFn)
+		require.NotNil(t, s.getFreightFromWarehouseFn)
+		require.NotNil(t, s.getVerifiedFreightFn)
+		require.NotNil(t, s.patchFreightAliasFn)
+		require.NotNil(t, s.patchFreightStatusFn)
+		require.NotNil(t, s.authorizeFn)
+		require.Nil(t, s.getAnalysisRunFn)
+	})
+
+	t.Run("RolloutsEnabled", func(t *testing.T) {
+		s, ok := NewServer(
+			testServerConfig,
+			testClient,
+			fake.NewClientBuilder().Build(),
+			true,
+		).(*server)
+
+		require.True(t, ok)
+		require.NotNil(t, s)
+
+		require.NotNil(t, s.getAnalysisRunFn)
+	})
 }
