@@ -79,6 +79,8 @@ spec:
               name: config
               readOnly: true
 {{- end }}
+          securityContext:
+            {{- toYaml .Values.api.securityContext | nindent 12 }}
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled }}

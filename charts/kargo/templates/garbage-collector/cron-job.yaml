@@ -37,6 +37,8 @@ spec:
             envFrom:
             - configMapRef:
                 name: kargo-garbage-collector
+            securityContext:
+              {{- toYaml .Values.garbageCollector.securityContext | nindent 14 }}
             resources:
               {{- toYaml .Values.garbageCollector.resources | nindent 14 }}
           restartPolicy: Never
