@@ -2,7 +2,8 @@ import {
   ChartSubscription,
   GitSubscription,
   ImageSubscription,
-  Stage
+  Stage,
+  Warehouse
 } from '@ui/gen/v1alpha1/generated_pb';
 
 export enum NodeType {
@@ -46,3 +47,14 @@ export type NodesItemType =
       color: string;
     }
   | NodesRepoType;
+
+export const NewWarehouseNode = (warehouse: Warehouse, stageNames?: string[]): NodesRepoType => {
+  const name = warehouse?.metadata?.name || '';
+  return {
+    data: name,
+    stageNames: stageNames || [],
+    warehouseName: name,
+    refreshing: !!warehouse?.metadata?.annotations['kargo.akuity.io/refresh'],
+    type: NodeType.WAREHOUSE
+  };
+};

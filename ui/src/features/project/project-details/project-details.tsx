@@ -57,7 +57,7 @@ import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
-import { NodeType, NodesItemType, NodesRepoType } from './types';
+import { NewWarehouseNode, NodeType, NodesItemType, NodesRepoType } from './types';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
 const lineThickness = 2;
@@ -224,6 +224,10 @@ export const ProjectDetails = () => {
 
     const warehouseNodeMap = {} as { [key: string]: NodesRepoType };
 
+    (warehouseData?.warehouses || []).map((warehouse) => {
+      warehouseNodeMap[warehouse.metadata?.name || ''] = NewWarehouseNode(warehouse);
+    });
+
     const myNodes = data.stages
       .slice()
       .sort((a, b) => a.metadata?.name?.localeCompare(b.metadata?.name || '') || 0)
@@ -240,13 +244,7 @@ export const ProjectDetails = () => {
         if (warehouseName) {
           const cur = warehouseMap[warehouseName];
           if (!warehouseNodeMap[warehouseName] && cur) {
-            warehouseNodeMap[warehouseName] = {
-              data: cur?.metadata?.name || '',
-              stageNames: [stage.metadata?.name || ''],
-              warehouseName: cur?.metadata?.name || '',
-              refreshing: !!cur?.metadata?.annotations['kargo.akuity.io/refresh'],
-              type: NodeType.WAREHOUSE
-            };
+            warehouseNodeMap[warehouseName] = NewWarehouseNode(cur, [stage.metadata?.name || '']);
           } else {
             const stageNames = [
               ...(warehouseNodeMap[warehouseName]?.stageNames || []),
@@ -528,8 +526,14 @@ export const ProjectDetails = () => {
 
   if (isLoading || isLoadingFreight) return <LoadingState />;
 
-  if (!data || data.stages.length === 0) return <Empty />;
-  const stage = stageName && data.stages.find((item) => item.metadata?.name === stageName);
+  if (
+    (!data || data.stages.length === 0) &&
+    (!warehouseData || warehouseData.warehouses.length === 0)
+  ) {
+    return <Empty />;
+  }
+
+  const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
 
   const isFaded = (stage: Stage): boolean => {
     if (!promotingStage || !confirmingPromotion) {
