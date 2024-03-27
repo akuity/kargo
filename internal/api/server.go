@@ -120,6 +120,12 @@ type server struct {
 	) error
 
 	// Rollouts integration:
+	getAnalysisTemplateFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*rollouts.AnalysisTemplate, error)
+
 	getAnalysisRunFn func(
 		context.Context,
 		client.Client,
@@ -165,6 +171,7 @@ func NewServer(
 	s.patchFreightAliasFn = s.patchFreightAlias
 	s.patchFreightStatusFn = s.patchFreightStatus
 	s.authorizeFn = kubeClient.Authorize
+	s.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	s.getAnalysisRunFn = rollouts.GetAnalysisRun
 
 	return s

@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  metrics:
+    - name: test
+      provider:
+        job:
+          spec:
+            backoffLimit: 1
+            template:
+              spec:
+                containers:
+                  - name: test
+                    image: alpine:latest
+                    command: [sh, -c]
+                    args: ["sleep 180; exit 0"]
+                restartPolicy: Never
