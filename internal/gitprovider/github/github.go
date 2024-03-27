@@ -51,9 +51,9 @@ func NewGitHubProvider() (gitprovider.GitProviderService, error) {
 	}, nil
 }
 
-func (g *GitHubProvider) WithAuthToken(token string) gitprovider.GitProviderService {
+func (g *GitHubProvider) WithAuthToken(token string) (gitprovider.GitProviderService, error) {
 	g.client = g.client.WithAuthToken(token)
-	return g
+	return g, nil
 }
 
 func (g *GitHubProvider) CreatePullRequest(
