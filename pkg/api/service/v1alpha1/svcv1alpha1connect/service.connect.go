@@ -143,6 +143,9 @@ const (
 	// KargoServiceUpdateCredentialsProcedure is the fully-qualified name of the KargoService's
 	// UpdateCredentials RPC.
 	KargoServiceUpdateCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateCredentials"
+	// KargoServiceListAnalysisTemplatesProcedure is the fully-qualified name of the KargoService's
+	// ListAnalysisTemplates RPC.
+	KargoServiceListAnalysisTemplatesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListAnalysisTemplates"
 	// KargoServiceGetAnalysisTemplateProcedure is the fully-qualified name of the KargoService's
 	// GetAnalysisTemplate RPC.
 	KargoServiceGetAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisTemplate"
@@ -193,6 +196,7 @@ var (
 	kargoServiceGetCredentialsMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetCredentials")
 	kargoServiceListCredentialsMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("ListCredentials")
 	kargoServiceUpdateCredentialsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("UpdateCredentials")
+	kargoServiceListAnalysisTemplatesMethodDescriptor     = kargoServiceServiceDescriptor.Methods().ByName("ListAnalysisTemplates")
 	kargoServiceGetAnalysisTemplateMethodDescriptor       = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplate")
 	kargoServiceGetAnalysisRunMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
 )
@@ -240,6 +244,7 @@ type KargoServiceClient interface {
 	GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error)
 	ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error)
 	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
+	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 }
@@ -488,6 +493,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceUpdateCredentialsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		listAnalysisTemplates: connect.NewClient[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse](
+			httpClient,
+			baseURL+KargoServiceListAnalysisTemplatesProcedure,
+			connect.WithSchema(kargoServiceListAnalysisTemplatesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getAnalysisTemplate: connect.NewClient[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse](
 			httpClient,
 			baseURL+KargoServiceGetAnalysisTemplateProcedure,
@@ -544,6 +555,7 @@ type kargoServiceClient struct {
 	getCredentials            *connect.Client[v1alpha1.GetCredentialsRequest, v1alpha1.GetCredentialsResponse]
 	listCredentials           *connect.Client[v1alpha1.ListCredentialsRequest, v1alpha1.ListCredentialsResponse]
 	updateCredentials         *connect.Client[v1alpha1.UpdateCredentialsRequest, v1alpha1.UpdateCredentialsResponse]
+	listAnalysisTemplates     *connect.Client[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse]
 	getAnalysisTemplate       *connect.Client[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse]
 	getAnalysisRun            *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
 }
@@ -745,6 +757,11 @@ func (c *kargoServiceClient) UpdateCredentials(ctx context.Context, req *connect
 	return c.updateCredentials.CallUnary(ctx, req)
 }
 
+// ListAnalysisTemplates calls akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates.
+func (c *kargoServiceClient) ListAnalysisTemplates(ctx context.Context, req *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error) {
+	return c.listAnalysisTemplates.CallUnary(ctx, req)
+}
+
 // GetAnalysisTemplate calls akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate.
 func (c *kargoServiceClient) GetAnalysisTemplate(ctx context.Context, req *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error) {
 	return c.getAnalysisTemplate.CallUnary(ctx, req)
@@ -799,6 +816,7 @@ type KargoServiceHandler interface {
 	GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error)
 	ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error)
 	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
+	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 }
@@ -1043,6 +1061,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceUpdateCredentialsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceListAnalysisTemplatesHandler := connect.NewUnaryHandler(
+		KargoServiceListAnalysisTemplatesProcedure,
+		svc.ListAnalysisTemplates,
+		connect.WithSchema(kargoServiceListAnalysisTemplatesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceGetAnalysisTemplateHandler := connect.NewUnaryHandler(
 		KargoServiceGetAnalysisTemplateProcedure,
 		svc.GetAnalysisTemplate,
@@ -1135,6 +1159,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceListCredentialsHandler.ServeHTTP(w, r)
 		case KargoServiceUpdateCredentialsProcedure:
 			kargoServiceUpdateCredentialsHandler.ServeHTTP(w, r)
+		case KargoServiceListAnalysisTemplatesProcedure:
+			kargoServiceListAnalysisTemplatesHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisTemplateProcedure:
 			kargoServiceGetAnalysisTemplateHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisRunProcedure:
@@ -1302,6 +1328,10 @@ func (UnimplementedKargoServiceHandler) ListCredentials(context.Context, *connec
 
 func (UnimplementedKargoServiceHandler) UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error) {
