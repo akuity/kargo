@@ -2,6 +2,7 @@ import {
   IconDefinition,
   faBullseye,
   faCircleCheck,
+  faCircleNotch,
   faGear,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
@@ -81,6 +82,10 @@ export const StageNode = ({
                 title={`Freight ${stage.status?.currentPromotion.freight?.name} is being promoted`}
               >
                 <FontAwesomeIcon icon={faGear} spin={true} />
+              </Tooltip>
+            ) : stage.status?.phase === 'Verifying' ? (
+              <Tooltip title='Current Freigth is verifying'>
+                <FontAwesomeIcon icon={faCircleNotch} spin={true} />
               </Tooltip>
             ) : (
               stage.status?.health && (
