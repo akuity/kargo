@@ -3817,6 +3817,82 @@ export class GetAnalysisRunRequest extends Message<GetAnalysisRunRequest> {
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
+ */
+export class DeleteAnalysisTemplateRequest extends Message<DeleteAnalysisTemplateRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteAnalysisTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteAnalysisTemplateRequest {
+    return new DeleteAnalysisTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteAnalysisTemplateRequest {
+    return new DeleteAnalysisTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteAnalysisTemplateRequest {
+    return new DeleteAnalysisTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteAnalysisTemplateRequest | PlainMessage<DeleteAnalysisTemplateRequest> | undefined, b: DeleteAnalysisTemplateRequest | PlainMessage<DeleteAnalysisTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteAnalysisTemplateRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
+ */
+export class DeleteAnalysisTemplateResponse extends Message<DeleteAnalysisTemplateResponse> {
+  constructor(data?: PartialMessage<DeleteAnalysisTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteAnalysisTemplateResponse {
+    return new DeleteAnalysisTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteAnalysisTemplateResponse {
+    return new DeleteAnalysisTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteAnalysisTemplateResponse {
+    return new DeleteAnalysisTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteAnalysisTemplateResponse | PlainMessage<DeleteAnalysisTemplateResponse> | undefined, b: DeleteAnalysisTemplateResponse | PlainMessage<DeleteAnalysisTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteAnalysisTemplateResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
  */
 export class GetAnalysisRunResponse extends Message<GetAnalysisRunResponse> {

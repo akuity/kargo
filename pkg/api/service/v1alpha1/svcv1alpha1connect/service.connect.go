@@ -149,6 +149,9 @@ const (
 	// KargoServiceGetAnalysisTemplateProcedure is the fully-qualified name of the KargoService's
 	// GetAnalysisTemplate RPC.
 	KargoServiceGetAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisTemplate"
+	// KargoServiceDeleteAnalysisTemplateProcedure is the fully-qualified name of the KargoService's
+	// DeleteAnalysisTemplate RPC.
+	KargoServiceDeleteAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteAnalysisTemplate"
 	// KargoServiceGetAnalysisRunProcedure is the fully-qualified name of the KargoService's
 	// GetAnalysisRun RPC.
 	KargoServiceGetAnalysisRunProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisRun"
@@ -198,6 +201,7 @@ var (
 	kargoServiceUpdateCredentialsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("UpdateCredentials")
 	kargoServiceListAnalysisTemplatesMethodDescriptor     = kargoServiceServiceDescriptor.Methods().ByName("ListAnalysisTemplates")
 	kargoServiceGetAnalysisTemplateMethodDescriptor       = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplate")
+	kargoServiceDeleteAnalysisTemplateMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("DeleteAnalysisTemplate")
 	kargoServiceGetAnalysisRunMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
 )
 
@@ -246,6 +250,7 @@ type KargoServiceClient interface {
 	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
+	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 }
 
@@ -505,6 +510,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceGetAnalysisTemplateMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		deleteAnalysisTemplate: connect.NewClient[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteAnalysisTemplateProcedure,
+			connect.WithSchema(kargoServiceDeleteAnalysisTemplateMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getAnalysisRun: connect.NewClient[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse](
 			httpClient,
 			baseURL+KargoServiceGetAnalysisRunProcedure,
@@ -557,6 +568,7 @@ type kargoServiceClient struct {
 	updateCredentials         *connect.Client[v1alpha1.UpdateCredentialsRequest, v1alpha1.UpdateCredentialsResponse]
 	listAnalysisTemplates     *connect.Client[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse]
 	getAnalysisTemplate       *connect.Client[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse]
+	deleteAnalysisTemplate    *connect.Client[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse]
 	getAnalysisRun            *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
 }
 
@@ -767,6 +779,12 @@ func (c *kargoServiceClient) GetAnalysisTemplate(ctx context.Context, req *conne
 	return c.getAnalysisTemplate.CallUnary(ctx, req)
 }
 
+// DeleteAnalysisTemplate calls
+// akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate.
+func (c *kargoServiceClient) DeleteAnalysisTemplate(ctx context.Context, req *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error) {
+	return c.deleteAnalysisTemplate.CallUnary(ctx, req)
+}
+
 // GetAnalysisRun calls akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun.
 func (c *kargoServiceClient) GetAnalysisRun(ctx context.Context, req *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {
 	return c.getAnalysisRun.CallUnary(ctx, req)
@@ -818,6 +836,7 @@ type KargoServiceHandler interface {
 	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
+	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 }
 
@@ -1073,6 +1092,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceGetAnalysisTemplateMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceDeleteAnalysisTemplateHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteAnalysisTemplateProcedure,
+		svc.DeleteAnalysisTemplate,
+		connect.WithSchema(kargoServiceDeleteAnalysisTemplateMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceGetAnalysisRunHandler := connect.NewUnaryHandler(
 		KargoServiceGetAnalysisRunProcedure,
 		svc.GetAnalysisRun,
@@ -1163,6 +1188,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceListAnalysisTemplatesHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisTemplateProcedure:
 			kargoServiceGetAnalysisTemplateHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteAnalysisTemplateProcedure:
+			kargoServiceDeleteAnalysisTemplateHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisRunProcedure:
 			kargoServiceGetAnalysisRunHandler.ServeHTTP(w, r)
 		default:
@@ -1336,6 +1363,10 @@ func (UnimplementedKargoServiceHandler) ListAnalysisTemplates(context.Context, *
 
 func (UnimplementedKargoServiceHandler) GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {
