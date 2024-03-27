@@ -717,6 +717,12 @@ func (r *reconciler) syncNormalStage(
 	} else {
 		freightLogger := logger.WithField("freight", status.CurrentFreight.Name)
 
+		// Push the latest state of the current Freight to the history at the
+		// end of each reconciliation loop.
+		defer func() {
+			status.History.UpdateOrPush(*status.CurrentFreight)
+		}()
+
 		// Check health
 		status.Health = r.checkHealthFn(
 			ctx,

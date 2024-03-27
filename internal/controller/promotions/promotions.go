@@ -368,7 +368,7 @@ func (r *reconciler) promote(
 			// control-flow stages in the first place)
 			if stage.Spec.PromotionMechanisms != nil {
 				status.CurrentFreight = &nextFreight
-				status.History.Push(nextFreight)
+				status.History.UpdateOrPush(nextFreight)
 			}
 		})
 		if err != nil {

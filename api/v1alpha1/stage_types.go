@@ -544,46 +544,31 @@ type FreightReference struct {
 
 type FreightReferenceStack []FreightReference
 
-// Empty returns a bool indicating whether the FreightReferenceStack is
-// empty. Nil counts as empty.
-func (f FreightReferenceStack) Empty() bool {
-	return len(f) == 0
-}
-
-// Pop removes and returns the leading element from a FreightReferenceStack. If
-// the FreightReferenceStack is empty, the FreightReferenceStack is not modified
-// and an empty FreightReference is returned instead. A boolean is also returned
-// indicating whether the returned FreightReference came from the top of the
-// stack (true) or is a zero value for that type (false).
-func (f *FreightReferenceStack) Pop() (FreightReference, bool) {
-	item, ok := f.Top()
-	if ok {
-		*f = (*f)[1:]
+// UpdateOrPush updates the FreightReference with the same name as the provided
+// FreightReference or appends the provided FreightReference to the stack if no
+// such FreightReference is found.
+//
+// The order of existing items in the stack is preserved, and new items without
+// a matching name are appended to the top of the stack. If the stack grows
+// beyond 10 items, the bottom items are removed.
+func (f *FreightReferenceStack) UpdateOrPush(freight ...FreightReference) {
+	var newStack FreightReferenceStack
+	for _, i := range freight {
+		var found bool
+		for fi, item := range *f {
+			if i.Name == item.Name {
+				(*f)[fi] = i
+				found = true
+				break
+			}
+		}
+		if !found {
+			newStack = append(newStack, i)
+		}
 	}
-	return item, ok
-}
 
-// Top returns the leading element from a FreightReferenceStack without
-// modifying the FreightReferenceStack. If the FreightReferenceStack is empty,
-// an empty FreightReference is returned instead. A boolean is also returned
-// indicating whether the returned FreightReference came from the top of the
-// stack (true) or is a zero value for that type (false).
-func (f FreightReferenceStack) Top() (FreightReference, bool) {
-	if f.Empty() {
-		return FreightReference{}, false
-	}
-	item := *f[0].DeepCopy()
-	return item, true
-}
+	*f = append(newStack, *f...)
 
-// Push pushes one or more Freight onto the FreightReferenceStack. The order of
-// the new elements at the top of the stack will be equal to the order in which
-// they were passed to this function. i.e. The first new element passed will be
-// the element at the top of the stack. If resulting modification grow the depth
-// of the stack beyond 10 elements, the stack is truncated at the bottom. i.e.
-// Modified to contain only the top 10 elements.
-func (f *FreightReferenceStack) Push(freight ...FreightReference) {
-	*f = append(freight, *f...)
 	const maxSize = 10
 	if len(*f) > maxSize {
 		*f = (*f)[:maxSize]
