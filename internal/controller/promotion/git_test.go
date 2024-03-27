@@ -28,6 +28,7 @@ func TestNewGitMechanism(t *testing.T) {
 			kargoapi.GitRepoUpdate,
 			kargoapi.FreightReference,
 			string, string, string,
+			git.RepoCredentials,
 		) ([]string, error) {
 			return nil, nil
 		},
@@ -237,6 +238,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					string,
 					string,
 					git.Repo,
+					git.RepoCredentials,
 				) (string, error) {
 					return "", errors.New("something went wrong")
 				},
@@ -275,6 +277,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					string,
 					string,
 					git.Repo,
+					git.RepoCredentials,
 				) (string, error) {
 					return "fake-commit-id", nil
 				},

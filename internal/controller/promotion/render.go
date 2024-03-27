@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	render "github.com/akuity/kargo/internal/kargo-render"
 )
@@ -52,6 +53,7 @@ func (r *renderer) apply(
 	sourceCommit string,
 	_ string,
 	workingDir string,
+	repoCreds git.RepoCredentials,
 ) ([]string, error) {
 	images := make([]string, 0, len(newFreight.Images))
 	if len(update.Render.Images) == 0 {
@@ -97,6 +99,7 @@ func (r *renderer) apply(
 		Images:       images,
 		LocalInPath:  workingDir,
 		LocalOutPath: writeDir,
+		RepoCreds:    repoCreds,
 	}
 
 	if err = r.renderManifestsFn(req); err != nil {
