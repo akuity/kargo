@@ -351,6 +351,82 @@ func TestEnsureNamespace(t *testing.T) {
 		},
 		{
 			name: "namespace exists, is not owned by project, but is labeled " +
+				"as a project, and does not allow shared ownership; error updating namespace",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Phase: kargoapi.ProjectPhaseInitializing,
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Labels = map[string]string{
+						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+					}
+					ns.OwnerReferences = []metav1.OwnerReference{
+						*metav1.NewControllerRef(ns, schema.FromAPIVersionAndKind("v1", "Namespace")),
+					}
+					ns.OwnerReferences[0].UID = "f3936415-ab8c-4843-bfbd-da74504fd829"
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error adopting namespace")
+				require.Contains(t, err.Error(), "does not allow shared ownership")
+				// Phase wasn't changed
+				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
+			},
+		},
+		{
+			name: "namespace exists, is not owned by project, but is labeled " +
+				"as a project, and does allow shared ownership; success updating namespace",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Phase: kargoapi.ProjectPhaseInitializing,
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Labels = map[string]string{
+						kargoapi.ProjectLabelKey:              kargoapi.LabelTrueValue,
+						kargoapi.AllowSharedOwnershipLabelKey: kargoapi.LabelTrueValue,
+					}
+					ns.OwnerReferences = []metav1.OwnerReference{
+						*metav1.NewControllerRef(ns, schema.FromAPIVersionAndKind("v1", "Namespace")),
+					}
+					ns.OwnerReferences[0].UID = "f3936415-ab8c-4843-bfbd-da74504fd829"
+					return nil
+				},
+				updateNamespaceFn: func(
+					context.Context,
+					client.Object,
+					...client.UpdateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.NoError(t, err)
+				// Phase wasn't changed
+				require.Equal(t, kargoapi.ProjectPhaseInitializing, status.Phase)
+			},
+		},
+		{
+			name: "namespace exists, is not owned by project, but is labeled " +
 				"as a project; success updating namespace",
 			project: &kargoapi.Project{
 				Status: kargoapi.ProjectStatus{
