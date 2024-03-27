@@ -3,8 +3,10 @@ package render
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 
+	"github.com/akuity/kargo/internal/controller/git"
 	libExec "github.com/akuity/kargo/internal/exec"
 )
 
@@ -36,6 +38,9 @@ type Request struct {
 	// Images specifies images to incorporate into environment-specific
 	// manifests.
 	Images []string `json:"images,omitempty"`
+	// RepoCreds encapsulates read/write credentials for the remote GitOps
+	// repository referenced by the RepoURL field.
+	RepoCreds git.RepoCredentials `json:"repoCreds,omitempty"`
 }
 
 // Response encapsulates details of a successful rendering of some
@@ -57,6 +62,8 @@ func RenderManifests(req Request) error { // nolint: revive
 		req.LocalInPath,
 		"--local-out-path",
 		req.LocalOutPath,
+		"--repo-username",
+		req.RepoCreds.Username,
 		"--output",
 		"json",
 	}
@@ -64,6 +71,10 @@ func RenderManifests(req Request) error { // nolint: revive
 		cmdTokens = append(cmdTokens, "--image", image)
 	}
 	cmd := exec.Command(cmdTokens[0], cmdTokens[1:]...) // nolint: gosec
+	cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("KARGO_RENDER_REPO_PASSWORD=%s", req.RepoCreds.Password),
+	)
 
 	res := Response{}
 	resBytes, err := libExec.Exec(cmd)

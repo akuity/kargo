@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	render "github.com/akuity/kargo/internal/kargo-render"
 )
@@ -219,6 +220,7 @@ func TestKargoRenderApply(t *testing.T) {
 				testSourceCommitID,
 				"", // Home directory is not used by this implementation
 				testWorkDir,
+				git.RepoCredentials{},
 			)
 			testCase.assertions(t, changes, testWorkDir, err)
 		})

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/kustomize"
 )
@@ -50,6 +51,7 @@ func (k *kustomizer) apply(
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	_ string,
 	workingDir string,
+	_ git.RepoCredentials,
 ) ([]string, error) {
 	changeSummary := make([]string, 0, len(update.Kustomize.Images))
 	for _, imgUpdate := range update.Kustomize.Images {
