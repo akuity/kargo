@@ -33,6 +33,7 @@ service KargoService {
   rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
   /* Promotion APIs */
+
   rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
   rpc WatchPromotions(WatchPromotionsRequest) returns (stream WatchPromotionsResponse);
   rpc GetPromotion(GetPromotionRequest) returns (GetPromotionResponse);
@@ -68,6 +69,7 @@ service KargoService {
   rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 
   /* Credential APIs */
+
   rpc CreateCredentials(CreateCredentialsRequest) returns (CreateCredentialsResponse);
   rpc DeleteCredentials(DeleteCredentialsRequest) returns (DeleteCredentialsResponse);
   rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
@@ -75,6 +77,8 @@ service KargoService {
   rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
 
   /* AnalysisRun APIs */
+
+  rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
 }
 
@@ -496,6 +500,15 @@ message UpdateCredentialsRequest {
 
 message UpdateCredentialsResponse {
   k8s.io.api.core.v1.Secret credentials = 1;
+}
+
+message GetAnalysisTemplateRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message GetAnalysisTemplateResponse {
+  github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
 }
 
 message GetAnalysisRunRequest {
