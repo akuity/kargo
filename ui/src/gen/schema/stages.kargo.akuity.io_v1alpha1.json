@@ -343,7 +343,7 @@
           "type": "object"
         },
         "shard": {
-          "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync this field with the value of the\nkargo.akuity.io/shard label. When the shard label is not present or differs\nfrom the value of this field, the defaulting webhook will set the label to\nthe value of this field. If the shard label is present and this field is\nempty, the defaulting webhook will set the value of this field to the value\nof the shard label.",
+          "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
         },
         "subscriptions": {

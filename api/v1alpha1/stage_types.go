@@ -142,12 +142,9 @@ func (s *Stage) GetStatus() *StageStatus {
 type StageSpec struct {
 	// Shard is the name of the shard that this Stage belongs to. This is an
 	// optional field. If not specified, the Stage will belong to the default
-	// shard. A defaulting webhook will sync this field with the value of the
-	// kargo.akuity.io/shard label. When the shard label is not present or differs
-	// from the value of this field, the defaulting webhook will set the label to
-	// the value of this field. If the shard label is present and this field is
-	// empty, the defaulting webhook will set the value of this field to the value
-	// of the shard label.
+	// shard. A defaulting webhook will sync the value of the
+	// kargo.akuity.io/shard label with the value of this field. When this field
+	// is empty, the webhook will ensure that label is absent.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,4,opt,name=shard"`
 	// Subscriptions describes the Stage's sources of Freight. This is a required
 	// field.
