@@ -33,6 +33,7 @@ service KargoService {
   rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
   /* Promotion APIs */
+
   rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
   rpc WatchPromotions(WatchPromotionsRequest) returns (stream WatchPromotionsResponse);
   rpc GetPromotion(GetPromotionRequest) returns (GetPromotionResponse);
@@ -68,13 +69,18 @@ service KargoService {
   rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 
   /* Credential APIs */
+
   rpc CreateCredentials(CreateCredentialsRequest) returns (CreateCredentialsResponse);
   rpc DeleteCredentials(DeleteCredentialsRequest) returns (DeleteCredentialsResponse);
   rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
   rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
   rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
 
-  /* AnalysisRun APIs */
+  /* Analysis APIs */
+
+  rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
+  rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
+  rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
 }
 
@@ -498,9 +504,35 @@ message UpdateCredentialsResponse {
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
+message ListAnalysisTemplatesRequest {
+  string project = 1;
+}
+
+message ListAnalysisTemplatesResponse {
+  repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
+}
+
+message GetAnalysisTemplateRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message GetAnalysisTemplateResponse {
+  github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+}
+
 message GetAnalysisRunRequest {
   string namespace = 1;
   string name = 2;
+}
+
+message DeleteAnalysisTemplateRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteAnalysisTemplateResponse {
+  /* explicitly empty */
 }
 
 message GetAnalysisRunResponse {

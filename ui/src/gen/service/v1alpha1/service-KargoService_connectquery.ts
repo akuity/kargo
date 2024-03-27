@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import { MethodKind } from "@bufbuild/protobuf";
-import { AbortVerificationRequest, AbortVerificationResponse, AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetAnalysisRunRequest, GetAnalysisRunResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteToStageRequest, PromoteToStageResponse, PromoteToStageSubscribersRequest, PromoteToStageSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, ReverifyRequest, ReverifyResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse } from "./service_pb.js";
+import { AbortVerificationRequest, AbortVerificationResponse, AdminLoginRequest, AdminLoginResponse, ApproveFreightRequest, ApproveFreightResponse, CreateCredentialsRequest, CreateCredentialsResponse, CreateOrUpdateResourceRequest, CreateOrUpdateResourceResponse, CreateResourceRequest, CreateResourceResponse, DeleteAnalysisTemplateRequest, DeleteAnalysisTemplateResponse, DeleteCredentialsRequest, DeleteCredentialsResponse, DeleteFreightRequest, DeleteFreightResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteResourceRequest, DeleteResourceResponse, DeleteStageRequest, DeleteStageResponse, DeleteWarehouseRequest, DeleteWarehouseResponse, GetAnalysisRunRequest, GetAnalysisRunResponse, GetAnalysisTemplateRequest, GetAnalysisTemplateResponse, GetConfigRequest, GetConfigResponse, GetCredentialsRequest, GetCredentialsResponse, GetFreightRequest, GetFreightResponse, GetProjectRequest, GetProjectResponse, GetPromotionRequest, GetPromotionResponse, GetPublicConfigRequest, GetPublicConfigResponse, GetStageRequest, GetStageResponse, GetVersionInfoRequest, GetVersionInfoResponse, GetWarehouseRequest, GetWarehouseResponse, ListAnalysisTemplatesRequest, ListAnalysisTemplatesResponse, ListCredentialsRequest, ListCredentialsResponse, ListProjectsRequest, ListProjectsResponse, ListPromotionsRequest, ListPromotionsResponse, ListStagesRequest, ListStagesResponse, ListWarehousesRequest, ListWarehousesResponse, PromoteToStageRequest, PromoteToStageResponse, PromoteToStageSubscribersRequest, PromoteToStageSubscribersResponse, QueryFreightRequest, QueryFreightResponse, RefreshStageRequest, RefreshStageResponse, RefreshWarehouseRequest, RefreshWarehouseResponse, ReverifyRequest, ReverifyResponse, UpdateCredentialsRequest, UpdateCredentialsResponse, UpdateFreightAliasRequest, UpdateFreightAliasResponse, UpdateResourceRequest, UpdateResourceResponse } from "./service_pb.js";
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo
@@ -178,8 +178,6 @@ export const refreshStage = {
 } as const;
 
 /**
- * Promotion APIs 
- *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions
  */
 export const listPromotions = {
@@ -432,8 +430,6 @@ export const refreshWarehouse = {
 } as const;
 
 /**
- * Credential APIs 
- *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials
  */
 export const createCredentials = {
@@ -504,8 +500,48 @@ export const updateCredentials = {
 } as const;
 
 /**
- * AnalysisRun APIs 
- *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates
+ */
+export const listAnalysisTemplates = {
+  localName: "listAnalysisTemplates",
+  name: "ListAnalysisTemplates",
+  kind: MethodKind.Unary,
+  I: ListAnalysisTemplatesRequest,
+  O: ListAnalysisTemplatesResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate
+ */
+export const getAnalysisTemplate = {
+  localName: "getAnalysisTemplate",
+  name: "GetAnalysisTemplate",
+  kind: MethodKind.Unary,
+  I: GetAnalysisTemplateRequest,
+  O: GetAnalysisTemplateResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate
+ */
+export const deleteAnalysisTemplate = {
+  localName: "deleteAnalysisTemplate",
+  name: "DeleteAnalysisTemplate",
+  kind: MethodKind.Unary,
+  I: DeleteAnalysisTemplateRequest,
+  O: DeleteAnalysisTemplateResponse,
+  service: {
+    typeName: "akuity.io.kargo.service.v1alpha1.KargoService"
+  }
+} as const;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun
  */
 export const getAnalysisRun = {
