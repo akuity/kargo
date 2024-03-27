@@ -172,12 +172,14 @@ func getChartVersionsFromOCIRepo(
 // version will be returned. The empty string will be returned when the provided
 // list of versions is nil or empty.
 func getLatestVersion(versions []string, constraintStr string) (string, error) {
-	semvers := make([]*semver.Version, len(versions))
-	for i, version := range versions {
-		var err error
-		if semvers[i], err = semver.NewVersion(version); err != nil {
-			return "", fmt.Errorf("error parsing version %q: %w", version, err)
+	var semvers []*semver.Version
+	for _, version := range versions {
+		if semverVersion, err := semver.NewVersion(version); err == nil {
+			semvers = append(semvers, semverVersion)
 		}
+	}
+	if len(semvers) == 0 {
+		return "", nil
 	}
 	sort.Sort(semver.Collection(semvers))
 	if constraintStr == "" {
