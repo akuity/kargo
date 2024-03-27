@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/api/user"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -23,6 +24,7 @@ import (
 func TestGetAnalysisRun(t *testing.T) {
 	testCases := map[string]struct {
 		req              *svcv1alpha1.GetAnalysisRunRequest
+		rolloutsDisabled bool
 		getAnalysisRunFn func(context.Context, client.Client, types.NamespacedName) (*rollouts.AnalysisRun, error)
 		errExpected      bool
 		expectedCode     connect.Code
@@ -86,7 +88,7 @@ func TestGetAnalysisRun(t *testing.T) {
 				Namespace: "kargo-demo",
 				Name:      "test",
 			},
-			getAnalysisRunFn: nil,
+			rolloutsDisabled: true,
 			errExpected:      true,
 			expectedCode:     connect.CodeUnimplemented,
 		},
@@ -104,6 +106,11 @@ func TestGetAnalysisRun(t *testing.T) {
 					IsAdmin: true,
 				},
 			)
+
+			cfg := config.ServerConfigFromEnv()
+			if testCase.rolloutsDisabled {
+				cfg.RolloutsIntegrationEnabled = false
+			}
 
 			c, err := kubernetes.NewClient(
 				ctx,
@@ -131,6 +138,7 @@ func TestGetAnalysisRun(t *testing.T) {
 			require.NoError(t, err)
 
 			svr := &server{
+				cfg:              cfg,
 				client:           c,
 				getAnalysisRunFn: testCase.getAnalysisRunFn,
 			}

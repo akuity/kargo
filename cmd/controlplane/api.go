@@ -22,16 +22,11 @@ import (
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
 type apiOptions struct {
 	KubeConfig string
-
-	RolloutsEnabled       bool
-	RolloutsKubeConfig    string
-	AnalysisRunsNamespace string
 
 	Host string
 	Port string
@@ -60,10 +55,6 @@ func newAPICommand() *cobra.Command {
 func (o *apiOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 
-	o.RolloutsEnabled = types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true"))
-	o.RolloutsKubeConfig = os.GetEnv("ROLLOUTS_KUBECONFIG", "")
-	o.AnalysisRunsNamespace = os.GetEnv("ROLLOUTS_ANALYSIS_RUNS_NAMESPACE", "")
-
 	o.Host = os.GetEnv("HOST", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
 }
@@ -86,15 +77,15 @@ func (o *apiOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
 	}
 
-	var rolloutsAvailable bool
 	switch {
-	case !o.RolloutsEnabled:
+	case !cfg.RolloutsIntegrationEnabled:
 		o.Logger.Info("Argo Rollouts integration is disabled")
 	case !argoRolloutsExists(ctx, clientCfg):
 		o.Logger.Warn(
 			"Argo Rollouts integration was enabled, but no Argo Rollouts " +
 				"CRDs were found. Proceeding without Argo Rollouts integration.",
 		)
+		cfg.RolloutsIntegrationEnabled = false
 	default:
 		o.Logger.Info("Argo Rollouts integration is enabled")
 	}
@@ -110,7 +101,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		}).Info("SSO via OpenID Connect is enabled")
 	}
 
-	srv := api.NewServer(cfg, kubeClient, internalClient, rolloutsAvailable)
+	srv := api.NewServer(cfg, kubeClient, internalClient)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)

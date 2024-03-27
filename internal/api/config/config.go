@@ -27,6 +27,7 @@ type ServerConfig struct {
 	DexProxyConfig              *dex.ProxyConfig
 	ArgoCDConfig                ArgoCDConfig
 	PermissiveCORSPolicyEnabled bool
+	RolloutsIntegrationEnabled  bool
 }
 
 func ServerConfigFromEnv() ServerConfig {
@@ -51,6 +52,8 @@ func ServerConfigFromEnv() ServerConfig {
 	envconfig.MustProcess("", &cfg.ArgoCDConfig)
 	cfg.PermissiveCORSPolicyEnabled =
 		types.MustParseBool(os.GetEnv("PERMISSIVE_CORS_POLICY_ENABLED", "false"))
+	cfg.RolloutsIntegrationEnabled =
+		types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true"))
 	return cfg
 }
 
