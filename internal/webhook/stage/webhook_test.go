@@ -47,7 +47,7 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name:      "sync shard label to shard field",
+			name:      "sync shard label to non-empty shard field",
 			operation: admissionv1.Create,
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
@@ -56,12 +56,12 @@ func TestDefault(t *testing.T) {
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
 				require.Equal(t, testShardName, stage.Spec.Shard)
+				require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
 			},
 		},
 		{
-			name:      "sync shard field to shard label",
+			name:      "sync shard label to empty shard field",
 			operation: admissionv1.Create,
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -73,8 +73,9 @@ func TestDefault(t *testing.T) {
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
-				require.Equal(t, testShardName, stage.Spec.Shard)
+				require.Empty(t, stage.Spec.Shard)
+				_, ok := stage.Labels[kargoapi.ShardLabelKey]
+				require.False(t, ok)
 			},
 		},
 	}
