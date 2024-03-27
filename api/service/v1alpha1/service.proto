@@ -80,6 +80,7 @@ service KargoService {
 
   rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
   rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
+  rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
 }
 
@@ -523,6 +524,15 @@ message GetAnalysisTemplateResponse {
 message GetAnalysisRunRequest {
   string namespace = 1;
   string name = 2;
+}
+
+message DeleteAnalysisTemplateRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteAnalysisTemplateResponse {
+  /* explicitly empty */
 }
 
 message GetAnalysisRunResponse {
