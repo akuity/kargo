@@ -43,6 +43,7 @@ type gitMechanism struct {
 		readRef string,
 		writeBranch string,
 		repo git.Repo,
+		repoCreds git.RepoCredentials,
 	) (string, error)
 	applyConfigManagementFn func(
 		update kargoapi.GitRepoUpdate,
@@ -50,6 +51,7 @@ type gitMechanism struct {
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
+		repoCreds git.RepoCredentials,
 	) ([]string, error)
 }
 
@@ -67,6 +69,7 @@ func newGitMechanism(
 		sourceCommit string,
 		homeDir string,
 		workingDir string,
+		repoCreds git.RepoCredentials,
 	) ([]string, error),
 ) Mechanism {
 	g := &gitMechanism{
@@ -182,6 +185,7 @@ func (g *gitMechanism) doSingleUpdate(
 		readRef,
 		commitBranch,
 		repo,
+		*creds,
 	)
 	if err != nil {
 		return nil, newFreight, err
@@ -288,6 +292,7 @@ func (g *gitMechanism) gitCommit(
 	readRef string,
 	writeBranch string,
 	repo git.Repo,
+	repoCreds git.RepoCredentials,
 ) (string, error) {
 	var err error
 	// If readRef is non-empty, check out the specified commit or branch,
@@ -311,6 +316,7 @@ func (g *gitMechanism) gitCommit(
 			sourceCommitID,
 			repo.HomeDir(),
 			repo.WorkingDir(),
+			repoCreds,
 		); err != nil {
 			return "", err
 		}

@@ -9,6 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	libYAML "github.com/akuity/kargo/internal/yaml"
@@ -67,6 +68,7 @@ func (h *helmer) apply(
 	_ string, // TODO: sourceCommit would be a nice addition to the commit message
 	homeDir string,
 	workingDir string,
+	_ git.RepoCredentials,
 ) ([]string, error) {
 	// Image updates
 	changesByFile, imageChangeSummary :=
