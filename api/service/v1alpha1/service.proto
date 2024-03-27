@@ -78,6 +78,7 @@ service KargoService {
 
   /* AnalysisRun APIs */
 
+  rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
   rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
 }
@@ -500,6 +501,14 @@ message UpdateCredentialsRequest {
 
 message UpdateCredentialsResponse {
   k8s.io.api.core.v1.Secret credentials = 1;
+}
+
+message ListAnalysisTemplatesRequest {
+  string project = 1;
+}
+
+message ListAnalysisTemplatesResponse {
+  repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
 }
 
 message GetAnalysisTemplateRequest {
