@@ -137,7 +137,7 @@ field and label values, but this is expected to be a rare occurrence.
 
 ## Manual Approvals
 
-The [concepts doc](http://localhost:3000/concepts#verifications) describes the
+The [concepts doc](../concepts#verifications) describes the
 usual process by which `Freight` resources are _verified_ at each `Stage` in a
 pipeline before becoming available to the next `Stage` or `Stage`s. In brief, it
 typically requires the `Stage` to reach a healthy state _and_, if applicable,
