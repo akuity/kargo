@@ -19,13 +19,13 @@ export const Verifications = ({ stage }: Props) => {
   const verifications = React.useMemo(
     () => [
       ...(stage.status?.currentFreight?.verificationHistory || []).map((i) => ({
-        freigth: stage.status?.currentFreight?.name,
+        freight: stage.status?.currentFreight?.name,
         ...i
       })),
 
-      ...(stage.status?.history || []).flatMap((freigth) =>
-        freigth.verificationHistory.map((verification) => ({
-          freigth: freigth.name,
+      ...(stage.status?.history || []).flatMap((freight) =>
+        freight.verificationHistory.map((verification) => ({
+          freight: freight.name,
           ...verification
         }))
       )
@@ -97,8 +97,8 @@ export const Verifications = ({ stage }: Props) => {
       />
       <Table.Column title='ID' dataIndex='id' />
       <Table.Column
-        title='Freigth'
-        dataIndex='freigth'
+        title='Freight'
+        dataIndex='freight'
         render={(val) => val?.substring(0, 7)}
         width={120}
       />
