@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"k8s.io/apimachinery/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -36,19 +37,12 @@ func (s *server) DeleteAnalysisTemplate(
 		return nil, err
 	}
 
-	at, err := s.getAnalysisTemplateFn(ctx, s.client, types.NamespacedName{
-		Namespace: project,
-		Name:      name,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if at == nil {
-		err = fmt.Errorf("AnalysisTemplate %q not found in namespace %q", name, project)
-		return nil, connect.NewError(connect.CodeNotFound, err)
-	}
-
-	if err := s.client.Delete(ctx, at); err != nil {
+	if err := s.client.Delete(ctx, &v1alpha1.AnalysisTemplate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: project,
+			Name:      name,
+		},
+	}); err != nil {
 		return nil, fmt.Errorf("delete AnalysisTemplate: %w", err)
 	}
 

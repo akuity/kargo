@@ -7,7 +7,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -24,15 +23,10 @@ import (
 
 func TestDeleteAnalysisTemplate(t *testing.T) {
 	testCases := map[string]struct {
-		req                   *svcv1alpha1.DeleteAnalysisTemplateRequest
-		rolloutsDisabled      bool
-		getAnalysisTemplateFn func(
-			context.Context,
-			client.Client,
-			types.NamespacedName,
-		) (*rollouts.AnalysisTemplate, error)
-		errExpected  bool
-		expectedCode connect.Code
+		req              *svcv1alpha1.DeleteAnalysisTemplateRequest
+		rolloutsDisabled bool
+		errExpected      bool
+		expectedCode     connect.Code
 	}{
 		"empty project": {
 			req: &svcv1alpha1.DeleteAnalysisTemplateRequest{
@@ -63,31 +57,14 @@ func TestDeleteAnalysisTemplate(t *testing.T) {
 				Project: "kargo-demo",
 				Name:    "test",
 			},
-			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
 		},
 		"non-existing AnalysisTemplate": {
 			req: &svcv1alpha1.DeleteAnalysisTemplateRequest{
 				Project: "non-existing-project",
 				Name:    "test",
 			},
-			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
-			errExpected:           true,
-			expectedCode:          connect.CodeNotFound,
-		},
-		"error getting AnalysisTemplate": {
-			req: &svcv1alpha1.DeleteAnalysisTemplateRequest{
-				Project: "kargo-demo",
-				Name:    "test",
-			},
-			getAnalysisTemplateFn: func(
-				context.Context,
-				client.Client,
-				types.NamespacedName,
-			) (*rollouts.AnalysisTemplate, error) {
-				return nil, apierrors.NewServiceUnavailable("test")
-			},
 			errExpected:  true,
-			expectedCode: connect.CodeUnknown,
+			expectedCode: connect.CodeNotFound,
 		},
 		"Argo Rollouts integration is not enabled": {
 			req: &svcv1alpha1.DeleteAnalysisTemplateRequest{
@@ -147,7 +124,6 @@ func TestDeleteAnalysisTemplate(t *testing.T) {
 				client:                    client,
 				cfg:                       cfg,
 				externalValidateProjectFn: validation.ValidateProject,
-				getAnalysisTemplateFn:     testCase.getAnalysisTemplateFn,
 			}
 			_, err = (svr).DeleteAnalysisTemplate(ctx, connect.NewRequest(testCase.req))
 			if testCase.errExpected {
@@ -157,7 +133,7 @@ func TestDeleteAnalysisTemplate(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			at, err := testCase.getAnalysisTemplateFn(ctx, client, types.NamespacedName{
+			at, err := rollouts.GetAnalysisTemplate(ctx, client, types.NamespacedName{
 				Namespace: testCase.req.Project,
 				Name:      testCase.req.Name,
 			})
