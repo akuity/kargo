@@ -15,7 +15,7 @@ func (s *server) GetAnalysisRun(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetAnalysisRunRequest],
 ) (*connect.Response[svcv1alpha1.GetAnalysisRunResponse], error) {
-	if s.getAnalysisRunFn == nil {
+	if !s.cfg.RolloutsIntegrationEnabled {
 		return nil, connect.NewError(
 			connect.CodeUnimplemented,
 			errors.New("Argo Rollouts integration is not enabled"),
