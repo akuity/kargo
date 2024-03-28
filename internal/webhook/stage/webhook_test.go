@@ -62,7 +62,7 @@ func TestDefault(t *testing.T) {
 		},
 		{
 			name:      "sync shard label to empty shard field",
-			operation: admissionv1.Create,
+			operation: admissionv1.Update,
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{

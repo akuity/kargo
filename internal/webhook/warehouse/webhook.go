@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -62,16 +63,26 @@ func newWebhook(kubeClient client.Client) *webhook {
 	return w
 }
 
-func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
+func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	warehouse := obj.(*kargoapi.Warehouse) // nolint: forcetypeassert
 
 	// Sync the shard label to the convenience shard field
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return apierrors.NewInternalError(
+			fmt.Errorf("error getting admission request from context: %w", err),
+		)
+	}
 	if warehouse.Spec.Shard != "" {
 		if warehouse.Labels == nil {
 			warehouse.Labels = make(map[string]string, 1)
 		}
 		warehouse.Labels[kargoapi.ShardLabelKey] = warehouse.Spec.Shard
-	} else {
+	} else if req.Operation == admissionv1.Update {
+		// Note: We'll only do this on update because if this is a create of a
+		// v0.4-compatible Warehouse, we want this label preserved (if it exists) so
+		// the upgrade logic in the Warehouse reconciler can fill in the new Shard
+		// field for the first time.
 		delete(warehouse.Labels, kargoapi.ShardLabelKey)
 	}
 
