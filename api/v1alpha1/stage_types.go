@@ -719,8 +719,8 @@ type AnalysisRunArgument struct {
 type VerificationInfo struct {
 	// ID is the identifier of the Verification process.
 	ID string `json:"id,omitempty" protobuf:"bytes,4,opt,name=id"`
-	// Timestamp is the time at which the Verification process was initiated.
-	Timestamp *metav1.Time `json:"timestamp,omitempty" protobuf:"bytes,5,opt,name=timestamp"`
+	// StartTime is the time at which the Verification process was started.
+	StartTime *metav1.Time `json:"timestamp,omitempty" protobuf:"bytes,5,opt,name=timestamp"`
 	// Phase describes the current phase of the Verification process. Generally,
 	// this will be a reflection of the underlying AnalysisRun's phase, however,
 	// there are exceptions to this, such as in the case where an AnalysisRun

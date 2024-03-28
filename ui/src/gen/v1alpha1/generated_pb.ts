@@ -3442,7 +3442,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
   id?: string;
 
   /**
-   * Timestamp is the time at which the Verification process was initiated.
+   * StartTime is the time at which the Verification process was started.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time timestamp = 5;
    */

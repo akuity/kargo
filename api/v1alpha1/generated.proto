@@ -1032,7 +1032,7 @@ message VerificationInfo {
   // ID is the identifier of the Verification process.
   optional string id = 4;
 
-  // Timestamp is the time at which the Verification process was initiated.
+  // StartTime is the time at which the Verification process was started.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time timestamp = 5;
 
   // Phase describes the current phase of the Verification process. Generally,

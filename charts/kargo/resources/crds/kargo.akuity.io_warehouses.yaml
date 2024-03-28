@@ -428,8 +428,8 @@ spec:
                             cannot be launched successfully.
                           type: string
                         timestamp:
-                          description: Timestamp is the time at which the Verification
-                            process was initiated.
+                          description: StartTime is the time at which the Verification
+                            process was started.
                           format: date-time
                           type: string
                       type: object
@@ -475,8 +475,8 @@ spec:
                           cannot be launched successfully.
                         type: string
                       timestamp:
-                        description: Timestamp is the time at which the Verification
-                          process was initiated.
+                        description: StartTime is the time at which the Verification
+                          process was started.
                         format: date-time
                         type: string
                     type: object

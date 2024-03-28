@@ -670,11 +670,11 @@ func TestGetVerificationInfo(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
-				require.NotNil(t, vi.Timestamp)
+				require.NotNil(t, vi.StartTime)
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						Timestamp: vi.Timestamp,
+						StartTime: vi.StartTime,
 						Phase:     kargoapi.VerificationPhaseSuccessful,
 						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-run",
