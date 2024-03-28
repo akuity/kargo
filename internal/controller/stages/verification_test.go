@@ -45,7 +45,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -69,7 +72,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					_ context.Context,
 					objList client.ObjectList,
@@ -106,7 +112,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					_ context.Context,
 					objList client.ObjectList,
@@ -176,7 +185,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -213,7 +225,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -250,7 +265,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -294,7 +312,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -338,7 +359,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -388,7 +412,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -446,7 +473,10 @@ func TestStartVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -553,7 +583,10 @@ func TestGetVerificationInfo(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -583,7 +616,10 @@ func TestGetVerificationInfo(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -613,7 +649,10 @@ func TestGetVerificationInfo(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				getAnalysisRunFn: func(
 					context.Context,
 					client.Client,
@@ -704,7 +743,10 @@ func TestAbortVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				patchAnalysisRunFn: func(
 					context.Context,
 					client.Object,
@@ -737,7 +779,10 @@ func TestAbortVerification(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
-				rolloutsClient: fake.NewClientBuilder().Build(),
+				cfg: ReconcilerConfig{
+					RolloutsIntegrationEnabled: true,
+				},
+				kargoClient: fake.NewClientBuilder().Build(),
 				patchAnalysisRunFn: func(
 					context.Context,
 					client.Object,
@@ -1017,12 +1062,8 @@ func TestBuildAnalysisRun(t *testing.T) {
 			},
 		},
 		{
-			name: "Sets owner reference to Freight",
-			reconciler: &reconciler{
-				cfg: ReconcilerConfig{
-					AnalysisRunsNamespace: freight.Namespace,
-				},
-			},
+			name:       "Sets owner reference to Freight",
+			reconciler: &reconciler{},
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
 					Verification: &kargoapi.Verification{},
@@ -1051,35 +1092,6 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Controller:         ptr.To(true),
 					BlockOwnerDeletion: ptr.To(true),
 				}, ar.OwnerReferences[0])
-			},
-		},
-		{
-			name: "Does not set owner reference if Freight is in different namespace",
-			reconciler: &reconciler{
-				cfg: ReconcilerConfig{
-					AnalysisRunsNamespace: "different-namespace",
-				},
-			},
-			stage: &kargoapi.Stage{
-				Spec: &kargoapi.StageSpec{
-					Verification: &kargoapi.Verification{},
-				},
-				Status: kargoapi.StageStatus{
-					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
-				},
-			},
-			freight: freight,
-			assertions: func(
-				t *testing.T,
-				_ *kargoapi.Stage,
-				_ []*rollouts.AnalysisTemplate,
-				ar *rollouts.AnalysisRun,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.NotNil(t, ar)
-
-				require.Len(t, ar.OwnerReferences, 0)
 			},
 		},
 	}

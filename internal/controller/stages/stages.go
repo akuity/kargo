@@ -33,7 +33,7 @@ import (
 // ReconcilerConfig represents configuration for the stage reconciler.
 type ReconcilerConfig struct {
 	ShardName                    string `envconfig:"SHARD_NAME"`
-	AnalysisRunsNamespace        string `envconfig:"ROLLOUTS_ANALYSIS_RUNS_NAMESPACE"`
+	RolloutsIntegrationEnabled   bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
 	RolloutsControllerInstanceID string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
 }
 
@@ -45,9 +45,8 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Stage resources.
 type reconciler struct {
-	kargoClient    client.Client
-	argocdClient   client.Client
-	rolloutsClient client.Client
+	kargoClient  client.Client
+	argocdClient client.Client
 
 	cfg ReconcilerConfig
 
@@ -230,7 +229,6 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
-	rolloutsMgr manager.Manager,
 	cfg ReconcilerConfig,
 ) error {
 	// Index Promotions in non-terminal states by Stage
@@ -291,12 +289,9 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("error creating shard requirement: %w", err)
 	}
 	shardSelector := labels.NewSelector().Add(*shardRequirement)
-	var argocdClient, rolloutsClient client.Client
+	var argocdClient client.Client
 	if argocdMgr != nil {
 		argocdClient = argocdMgr.GetClient()
-	}
-	if rolloutsMgr != nil {
-		rolloutsClient = rolloutsMgr.GetClient()
 	}
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
@@ -330,7 +325,6 @@ func SetupReconcilerWithManager(
 			newReconciler(
 				kargoMgr.GetClient(),
 				argocdClient,
-				rolloutsClient,
 				cfg,
 				shardRequirement,
 			),
@@ -420,16 +414,15 @@ func SetupReconcilerWithManager(
 		}
 	}
 
-	// If Argo Rollouts integration is disabled, this manager will be nil and we
-	// won't care about this watch anyway.
-	if rolloutsMgr != nil {
+	// We only care about this if Rollouts integration is enabled.
+	if cfg.RolloutsIntegrationEnabled {
 		phaseChangedAnalysisRunHandler := &phaseChangedAnalysisRunHandler{
 			kargoClient:   kargoMgr.GetClient(),
 			shardSelector: shardSelector,
 		}
 		if err := c.Watch(
 			source.Kind(
-				rolloutsMgr.GetCache(),
+				kargoMgr.GetCache(),
 				&rollouts.AnalysisRun{},
 			),
 			phaseChangedAnalysisRunHandler,
@@ -444,14 +437,12 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kargoClient client.Client,
 	argocdClient client.Client,
-	rolloutsClient client.Client,
 	cfg ReconcilerConfig,
 	shardRequirement *labels.Requirement,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:      kargoClient,
 		argocdClient:     argocdClient,
-		rolloutsClient:   rolloutsClient,
 		cfg:              cfg,
 		shardRequirement: shardRequirement,
 	}
@@ -469,10 +460,8 @@ func newReconciler(
 	r.getAnalysisTemplateFn = rollouts.GetAnalysisTemplate
 	r.listAnalysisRunsFn = r.kargoClient.List
 	r.buildAnalysisRunFn = r.buildAnalysisRun
-	if rolloutsClient != nil {
-		r.createAnalysisRunFn = r.rolloutsClient.Create
-		r.patchAnalysisRunFn = r.rolloutsClient.Patch
-	}
+	r.createAnalysisRunFn = r.kargoClient.Create
+	r.patchAnalysisRunFn = r.kargoClient.Patch
 	r.getAnalysisRunFn = rollouts.GetAnalysisRun
 	r.getFreightFn = kargoapi.GetFreight
 	r.verifyFreightInStageFn = r.verifyFreightInStage
@@ -1057,15 +1046,13 @@ func (r *reconciler) clearAnalysisRuns(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) error {
-	if r.rolloutsClient == nil {
+	if !r.cfg.RolloutsIntegrationEnabled {
 		return nil
 	}
-
-	namespace := r.getAnalysisRunNamespace(stage)
-	if err := r.rolloutsClient.DeleteAllOf(
+	if err := r.kargoClient.DeleteAllOf(
 		ctx,
 		&rollouts.AnalysisRun{},
-		client.InNamespace(namespace),
+		client.InNamespace(stage.Namespace),
 		client.MatchingLabels(map[string]string{
 			kargoapi.StageLabelKey: stage.Name,
 		}),
@@ -1073,7 +1060,7 @@ func (r *reconciler) clearAnalysisRuns(
 		return fmt.Errorf(
 			"error deleting AnalysisRuns for Stage %q in namespace %q: %w",
 			stage.Name,
-			namespace,
+			stage.Namespace,
 			err,
 		)
 	}
