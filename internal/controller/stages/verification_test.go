@@ -670,10 +670,12 @@ func TestGetVerificationInfo(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
+				require.NotNil(t, vi.Timestamp)
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						Phase: kargoapi.VerificationPhaseSuccessful,
+						Timestamp: vi.Timestamp,
+						Phase:     kargoapi.VerificationPhaseSuccessful,
 						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-run",
 							Namespace: "fake-namespace",
