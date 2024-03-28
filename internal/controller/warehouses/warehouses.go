@@ -187,6 +187,11 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	if val, ok := warehouse.GetLabels()[kargoapi.V05CompatibilityLabelKey]; !ok || val != kargoapi.LabelTrueValue {
+		// Upgrade and requeue
+		return r.upgradeWarehouse(ctx, warehouse)
+	}
+
 	newStatus, err := r.syncWarehouse(ctx, warehouse)
 	if err != nil {
 		newStatus.Message = err.Error()
@@ -252,6 +257,13 @@ func (r *reconciler) syncWarehouse(
 		return status, nil
 	}
 	logger.Debug("got latest Freight from repositories")
+
+	// Mark the Freight as v0.5-compatible. This will spare the Freight upgrade
+	// reconciler in the management controller from trying to upgrade it.
+	if freight.Labels == nil {
+		freight.Labels = make(map[string]string, 1)
+	}
+	freight.Labels[kargoapi.V05CompatibilityLabelKey] = kargoapi.LabelTrueValue
 
 	if err = r.createFreightFn(ctx, freight); err != nil {
 		if apierrors.IsAlreadyExists(err) {

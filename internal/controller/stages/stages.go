@@ -522,6 +522,9 @@ func (r *reconciler) Reconcile(
 				err = fmt.Errorf("error removing finalizer: %w", err)
 			}
 		}
+	} else if val, ok := stage.GetLabels()[kargoapi.V05CompatibilityLabelKey]; !ok || val != kargoapi.LabelTrueValue {
+		// Upgrade and requeue
+		return r.upgradeStage(ctx, stage)
 	} else {
 		err = kargoapi.AddFinalizer(ctx, r.kargoClient, stage)
 		if err != nil {
