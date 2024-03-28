@@ -314,6 +314,11 @@
                   "phase": {
                     "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
                     "type": "string"
+                  },
+                  "timestamp": {
+                    "description": "StartTime is the time at which the Verification process was started.",
+                    "format": "date-time",
+                    "type": "string"
                   }
                 },
                 "type": "object"
@@ -356,6 +361,11 @@
                 },
                 "phase": {
                   "description": "Phase describes the current phase of the Verification process. Generally,\nthis will be a reflection of the underlying AnalysisRun's phase, however,\nthere are exceptions to this, such as in the case where an AnalysisRun\ncannot be launched successfully.",
+                  "type": "string"
+                },
+                "timestamp": {
+                  "description": "StartTime is the time at which the Verification process was started.",
+                  "format": "date-time",
                   "type": "string"
                 }
               },
