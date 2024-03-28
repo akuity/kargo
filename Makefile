@@ -144,7 +144,7 @@ codegen-controller:
 		crd \
 		webhook \
 		paths=./api/... \
-		output:crd:artifacts:config=charts/kargo/crds
+		output:crd:artifacts:config=charts/kargo/resources/crds
 	controller-gen \
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
