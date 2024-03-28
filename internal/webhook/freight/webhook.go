@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/technosophos/moniker"
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -86,20 +87,30 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	freight.Name = freight.GenerateID()
 
 	// Sync the convenience alias field with the alias label
+	req, err := admission.RequestFromContext(ctx)
+	if err != nil {
+		return apierrors.NewInternalError(
+			fmt.Errorf("error getting admission request from context: %w", err),
+		)
+	}
 	if freight.Labels == nil {
 		freight.Labels = make(map[string]string, 1)
 	}
 	if freight.Alias != "" {
+		// Alias field has a value, so just copy it to the label
 		freight.Labels[kargoapi.AliasLabelKey] = freight.Alias
-	} else if freight.Labels[kargoapi.AliasLabelKey] != "" {
-		freight.Alias = freight.Labels[kargoapi.AliasLabelKey]
-	} else {
-		alias, err := w.getAvailableFreightAliasFn(ctx)
-		if err != nil {
+	} else if req.Operation == admissionv1.Create {
+		// Alias field is empty and this is a create operation, so generate a new
+		// alias and assign it to both the alias field and the label
+		var err error
+		if freight.Alias, err = w.getAvailableFreightAliasFn(ctx); err != nil {
 			return fmt.Errorf("get available freight alias: %w", err)
 		}
-		freight.Alias = alias
-		freight.Labels[kargoapi.AliasLabelKey] = alias
+		freight.Labels[kargoapi.AliasLabelKey] = freight.Alias
+	} else {
+		// Alias field is empty and this is an update operation, so ensure the
+		// label does not exist
+		delete(freight.Labels, kargoapi.AliasLabelKey)
 	}
 
 	return nil
