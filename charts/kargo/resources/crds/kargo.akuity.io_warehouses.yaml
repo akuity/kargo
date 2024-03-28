@@ -427,6 +427,11 @@ spec:
                             there are exceptions to this, such as in the case where an AnalysisRun
                             cannot be launched successfully.
                           type: string
+                        timestamp:
+                          description: Timestamp is the time at which the Verification
+                            process was initiated.
+                          format: date-time
+                          type: string
                       type: object
                     type: array
                   verificationInfo:
@@ -468,6 +473,11 @@ spec:
                           this will be a reflection of the underlying AnalysisRun's phase, however,
                           there are exceptions to this, such as in the case where an AnalysisRun
                           cannot be launched successfully.
+                        type: string
+                      timestamp:
+                        description: Timestamp is the time at which the Verification
+                          process was initiated.
+                        format: date-time
                         type: string
                     type: object
                   warehouse:

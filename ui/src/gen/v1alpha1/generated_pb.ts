@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
-import { ListMeta, ObjectMeta } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -3442,6 +3442,13 @@ export class VerificationInfo extends Message<VerificationInfo> {
   id?: string;
 
   /**
+   * Timestamp is the time at which the Verification process was initiated.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time timestamp = 5;
+   */
+  timestamp?: Time;
+
+  /**
    * Phase describes the current phase of the Verification process. Generally,
    * this will be a reflection of the underlying AnalysisRun's phase, however,
    * there are exceptions to this, such as in the case where an AnalysisRun
@@ -3476,6 +3483,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.VerificationInfo";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "timestamp", kind: "message", T: Time, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "analysisRun", kind: "message", T: AnalysisRunReference, opt: true },
