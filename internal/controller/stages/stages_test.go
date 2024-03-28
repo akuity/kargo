@@ -19,14 +19,12 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{
-		AnalysisRunsNamespace:        "fake-namespace",
 		RolloutsControllerInstanceID: "fake-instance-id",
 	}
 	kubeClient := fake.NewClientBuilder().Build()
 	requirement, err := controller.GetShardRequirement(testCfg.ShardName)
 	require.NoError(t, err)
 	r := newReconciler(
-		kubeClient,
 		kubeClient,
 		kubeClient,
 		testCfg,

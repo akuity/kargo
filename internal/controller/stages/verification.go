@@ -22,7 +22,7 @@ func (r *reconciler) startVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) *kargoapi.VerificationInfo {
-	if r.rolloutsClient == nil {
+	if !r.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:    uuid.NewString(),
 			Phase: kargoapi.VerificationPhaseError,
@@ -33,8 +33,6 @@ func (r *reconciler) startVerification(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	namespace := r.getAnalysisRunNamespace(stage)
-
 	// If the stage does not have a reverification annotation, check if there is
 	// an existing AnalysisRun for the Stage and Freight. If there is, return
 	// the status of this AnalysisRun.
@@ -44,7 +42,7 @@ func (r *reconciler) startVerification(
 			ctx,
 			&analysisRuns,
 			&client.ListOptions{
-				Namespace: namespace,
+				Namespace: stage.Namespace,
 				LabelSelector: labels.SelectorFromSet(
 					map[string]string{
 						kargoapi.StageLabelKey:   stage.Name,
@@ -60,7 +58,7 @@ func (r *reconciler) startVerification(
 					"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
 					stage.Name,
 					stage.Status.CurrentFreight.Name,
-					namespace,
+					stage.Namespace,
 					err,
 				).Error(),
 			}
@@ -198,7 +196,7 @@ func (r *reconciler) getVerificationInfo(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) *kargoapi.VerificationInfo {
-	if r.rolloutsClient == nil {
+	if !r.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 			Phase: kargoapi.VerificationPhaseError,
@@ -207,13 +205,12 @@ func (r *reconciler) getVerificationInfo(
 		}
 	}
 
-	namespace := r.getAnalysisRunNamespace(stage)
 	analysisRunName := stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.Name
 	analysisRun, err := r.getAnalysisRunFn(
 		ctx,
-		r.rolloutsClient,
+		r.kargoClient,
 		types.NamespacedName{
-			Namespace: namespace,
+			Namespace: stage.Namespace,
 			Name:      analysisRunName,
 		},
 	)
@@ -224,7 +221,7 @@ func (r *reconciler) getVerificationInfo(
 			Message: fmt.Errorf(
 				"error getting AnalysisRun %q in namespace %q: %w",
 				analysisRunName,
-				namespace,
+				stage.Namespace,
 				err,
 			).Error(),
 		}
@@ -236,7 +233,7 @@ func (r *reconciler) getVerificationInfo(
 			Message: fmt.Errorf(
 				"AnalysisRun %q in namespace %q not found",
 				analysisRunName,
-				namespace,
+				stage.Namespace,
 			).Error(),
 		}
 	}
@@ -255,7 +252,7 @@ func (r *reconciler) abortVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) *kargoapi.VerificationInfo {
-	if r.rolloutsClient == nil {
+	if !r.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:    stage.Status.CurrentFreight.VerificationInfo.ID,
 			Phase: kargoapi.VerificationPhaseError,
@@ -303,15 +300,6 @@ func (r *reconciler) abortVerification(
 	}
 }
 
-// getAnalysisRunNamespace determines the namespace in which to create the
-// AnalysisRun resources.
-func (r *reconciler) getAnalysisRunNamespace(stage *kargoapi.Stage) string {
-	if r.cfg.AnalysisRunsNamespace == "" {
-		return stage.Namespace
-	}
-	return r.cfg.AnalysisRunsNamespace
-}
-
 func (r *reconciler) buildAnalysisRun(
 	stage *kargoapi.Stage,
 	freight *kargoapi.Freight,
@@ -332,7 +320,6 @@ func (r *reconciler) buildAnalysisRun(
 		shortStageName = shortStageName[0:maxStageNamePrefixLength]
 	}
 	analysisRunName := strings.ToLower(fmt.Sprintf("%s.%s.%s", shortStageName, ulid.Make(), shortHash))
-	analysisRunNamespace := r.getAnalysisRunNamespace(stage)
 
 	// Build the labels and annotations for the AnalysisRun
 	var numLabels int
@@ -381,7 +368,7 @@ func (r *reconciler) buildAnalysisRun(
 	ar := &rollouts.AnalysisRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        analysisRunName,
-			Namespace:   analysisRunNamespace,
+			Namespace:   stage.Namespace,
 			Labels:      lbls,
 			Annotations: annotations,
 		},
@@ -393,17 +380,12 @@ func (r *reconciler) buildAnalysisRun(
 		},
 	}
 
-	// Mark the Freight as the owner of the AnalysisRun, but ONLY if the
-	// AnalysisRun is being created in the same namespace as the Freight.
-	// This is to avoid creating a cross-namespace owner reference, which is
-	// not allowed by Kubernetes.
-	if analysisRunNamespace == freight.Namespace {
-		ownerRef := metav1.NewControllerRef(
-			freight,
-			kargoapi.GroupVersion.WithKind("Freight"),
-		)
-		ar.OwnerReferences = append(ar.OwnerReferences, *ownerRef)
-	}
+	// Mark the Freight as the owner of the AnalysisRun
+	ownerRef := metav1.NewControllerRef(
+		freight,
+		kargoapi.GroupVersion.WithKind("Freight"),
+	)
+	ar.OwnerReferences = append(ar.OwnerReferences, *ownerRef)
 
 	return ar, nil
 }

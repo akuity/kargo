@@ -54,8 +54,6 @@ kubeconfigSecrets: {}
   # kargo: ""
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
   # argocd: ""
-  ## @param kubeconfigSecrets.rollouts [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster that can execute Argo Rollouts AnalysisRuns. Used by Kargo controller(s) only.
-  # rollouts: ""
 
 ## @section Labels
 ## @param additionalLabels Additional labels to add to all resources.
@@ -291,8 +289,6 @@ controller:
   rollouts:
     ## @param controller.rollouts.integrationEnabled Specifies whether Argo Rollouts integration is enabled. When not enabled, the controller will not reconcile Argo Rollouts AnalysisRun resources and attempts to verify Stages via Analysis will fail. When enabled, the controller will perform a sanity check at startup. If Argo Rollouts CRDs are not found, the controller will proceed as if this integration had been explicitly disabled. Explicitly disabling is still preferable if this integration is not desired, as it will grant fewer permissions to the controller.
     integrationEnabled: true
-    ## @param controller.rollouts.analysisRunsNamespace Specifies a namespace in which Kargo will create AnalysisRuns (for verification of Stage/Freight). When left empty/unspecified Kargo creates these in project namespaces. In certain topologies, this can compensate for project namespaces not existing in the cluster where Argo Rollouts is running.
-    analysisRunsNamespace: ""
     ## @param controller.rollouts.controllerInstanceID Specifies a cluster on which Jobs corresponding to an AnalysisRun (used for Freight/Stage verification purposes) will be executed. This is useful in cases where the cluster hosting the Kargo control plane is not a suitable environment for executing user-defined logic. Kargo will use this as the value of the rgo-rollouts.argoproj.io/controller-instance-id label when creating AnalysisRuns. When this is left empty/undefined, no such label will be added to AnalysisRuns.
     controllerInstanceID: ""
 
