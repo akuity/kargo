@@ -23,7 +23,7 @@ api:
 controller:
   logLevel: DEBUG
 crds:
-  install: false
+  install: true
 managementController:
   logLevel: DEBUG
 webhooksServer:

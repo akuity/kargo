@@ -5,7 +5,7 @@
 import { openapiSchemaToJsonSchema } from '@openapi-contrib/openapi-schema-to-json-schema';
 import jsonStringify from 'json-stable-stringify';
 
-const crdDir = path.join(__dirname, '../../charts/kargo/crds');
+const crdDir = path.join(__dirname, '../../charts/kargo/resources/crds');
 const crdFiles = (await $`ls '${crdDir}'`.quiet()).stdout
   .split('\n')
   .filter((f) => f.endsWith('.yaml'));
