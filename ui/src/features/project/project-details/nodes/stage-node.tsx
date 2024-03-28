@@ -12,8 +12,9 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { FreightLabel } from '@ui/features/common/freight-label';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { PromotionType } from '@ui/features/freightline/freightline';
 import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+
+import { FreightlineAction } from '../types';
 
 import * as styles from './stage-node.module.less';
 
@@ -25,7 +26,7 @@ export const StageNode = ({
   onPromoteClick,
   projectName,
   hasNoSubscribers,
-  promoting,
+  action,
   currentFreight,
   onClick,
   approving,
@@ -38,8 +39,8 @@ export const StageNode = ({
   faded: boolean;
   projectName?: string;
   hasNoSubscribers?: boolean;
-  promoting?: PromotionType;
-  onPromoteClick: (type: PromotionType) => void;
+  action?: FreightlineAction;
+  onPromoteClick: (type: FreightlineAction) => void;
   currentFreight: Freight;
   onClick?: () => void;
   approving?: boolean;
@@ -112,14 +113,14 @@ export const StageNode = ({
             <Nodule
               begin={true}
               nodeHeight={height}
-              onClick={() => onPromoteClick('default')}
-              selected={promoting === 'default'}
+              onClick={() => onPromoteClick('promote')}
+              selected={action === 'promote'}
             />
             {!hasNoSubscribers && (
               <Nodule
                 nodeHeight={height}
-                onClick={() => onPromoteClick('subscribers')}
-                selected={promoting === 'subscribers'}
+                onClick={() => onPromoteClick('promoteSubscribers')}
+                selected={action === 'promoteSubscribers'}
               />
             )}
           </>

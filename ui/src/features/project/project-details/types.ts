@@ -58,3 +58,5 @@ export const NewWarehouseNode = (warehouse: Warehouse, stageNames?: string[]): N
     type: NodeType.WAREHOUSE
   };
 };
+
+export type FreightlineAction = 'promote' | 'promoteSubscribers' | 'manualApproval';
