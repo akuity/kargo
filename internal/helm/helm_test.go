@@ -114,11 +114,11 @@ func TestGetLatestVersion(t *testing.T) {
 		assertions func(t *testing.T, latest string, err error)
 	}{
 		{
-			name:     "error parsing versions",
-			unsorted: []string{"not-semantic"},
-			assertions: func(t *testing.T, _ string, err error) {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error parsing version")
+			name:     "success with invalid version ignored",
+			unsorted: []string{"not-semantic", "1.0.0"},
+			assertions: func(t *testing.T, latest string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "1.0.0", latest)
 			},
 		},
 		{
