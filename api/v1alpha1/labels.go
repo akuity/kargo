@@ -16,4 +16,6 @@ const (
 	LabelTrueValue = "true"
 
 	FinalizerName = "kargo.akuity.io/finalizer"
+
+	V05CompatibilityLabelKey = "kargo.akuity.com/v0.5-compatible"
 )
