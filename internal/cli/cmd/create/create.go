@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -104,7 +103,7 @@ func (o *createOptions) validate() error {
 
 // run performs the creation of the resource(s) using the options.
 func (o *createOptions) run(ctx context.Context) error {
-	manifest, err := yaml.Read(o.Filenames)
+	manifest, err := option.ReadManifests(o.Filenames...)
 	if err != nil {
 		return fmt.Errorf("read manifests: %w", err)
 	}

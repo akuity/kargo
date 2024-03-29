@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	"github.com/akuity/kargo/internal/yaml"
 	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -115,7 +114,7 @@ func (o *deleteOptions) validate() error {
 
 // run performs the delete operation using the options provided.
 func (o *deleteOptions) run(ctx context.Context) error {
-	manifest, err := yaml.Read(o.Filenames)
+	manifest, err := option.ReadManifests(o.Filenames...)
 	if err != nil {
 		return fmt.Errorf("read manifests: %w", err)
 	}
