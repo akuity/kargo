@@ -32,7 +32,6 @@ metadata:
     kargo.akuity.io/cred-type: <cred type>
 stringData:
   repoURL: <repo url>
-  repoURLPattern: <a regular expression that may match many similar repo urls>
   username: <username>
   password: <password>
 ```
@@ -57,11 +56,6 @@ field), MUST contain the following keys:
 
 * `repoURL`: The full URL of the repository the credentials are for.
 
-    OR
-
-    `repoURLPattern`: A regular expression that matches the URLs of multiple
-    repositories.
-
 * `username`: The username to use when authenticating to the repository.
 
 * `password`: A password or personal access token.
@@ -72,11 +66,17 @@ field), MUST contain the following keys:
     repository's documentation for more information.
     :::
 
+Optionally, the following keys may also be included:
+
+* `repoURLIsRegex`: Set this to `true` if the value of the `repoURL` key
+  is a regular expression. Any other value of this key or the absence of this
+  key is interpreted as `false`.
+
 :::note
 When Kargo searches for repository credentials in a project `Namespace`, it
 _first_ checks all appropriately labeled `Secret`s for a `repoURL` value
 matching the repository URL exactly. Only if no `Secret` is an exact match does
-it check all appropriately labeled `Secret`s for a `repoURLPattern` with a
+it check all appropriately labeled `Secret`s for a `repoURL` value containing a
 regular expression matching the repository URL.
 
 When searching for an exact match, and again when searching for a pattern match,
@@ -103,11 +103,11 @@ Any matching credentials (exact match _or_ pattern match) found in a project's
 own `Namespace` take precedence over those found in any global credentials
 `Namespace`.
 
-When Kargo searches for respository credentials in global credentials
+When Kargo searches for repository credentials in global credentials
 `Namespace`s, it _first_ checks all appropriately labeled `Secret`s for a
 `repoURL` value matching the repository URL exactly. Only if no `Secret` is an
 exact match does it check all appropriately labeled `Secret`s for a
-`repoURLPattern` with a regular expression matching the repository URL.
+`repoURL` value containing a regular expression matching the repository URL.
 
 When searching for an exact match, and again when searching for a pattern match,
 appropriately labeled `Secret`s are considered in lexical order by name.

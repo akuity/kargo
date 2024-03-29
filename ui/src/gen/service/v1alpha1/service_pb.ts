@@ -7,7 +7,7 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Freight, Project, Promotion, Stage, Warehouse } from "../../v1alpha1/generated_pb.js";
 import { Secret } from "../../k8s.io/api/core/v1/generated_pb.js";
-import { AnalysisRun } from "../../rollouts/api/v1alpha1/generated_pb.js";
+import { AnalysisRun, AnalysisTemplate } from "../../rollouts/api/v1alpha1/generated_pb.js";
 
 /**
  * @generated from message akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -3194,9 +3194,9 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
   repoUrl = "";
 
   /**
-   * @generated from field: string repo_url_pattern = 5 [json_name = "repoURLPattern"];
+   * @generated from field: bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
    */
-  repoUrlPattern = "";
+  repoUrlIsRegex = false;
 
   /**
    * @generated from field: string username = 6;
@@ -3220,7 +3220,7 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "repo_url_pattern", jsonName: "repoURLPattern", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
@@ -3534,9 +3534,9 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
   repoUrl = "";
 
   /**
-   * @generated from field: string repo_url_pattern = 5 [json_name = "repoURLPattern"];
+   * @generated from field: bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
    */
-  repoUrlPattern = "";
+  repoUrlIsRegex = false;
 
   /**
    * @generated from field: string username = 6;
@@ -3560,7 +3560,7 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "repo_url_pattern", jsonName: "repoURLPattern", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
@@ -3620,6 +3620,160 @@ export class UpdateCredentialsResponse extends Message<UpdateCredentialsResponse
 }
 
 /**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
+ */
+export class ListAnalysisTemplatesRequest extends Message<ListAnalysisTemplatesRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  constructor(data?: PartialMessage<ListAnalysisTemplatesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAnalysisTemplatesRequest {
+    return new ListAnalysisTemplatesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAnalysisTemplatesRequest {
+    return new ListAnalysisTemplatesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAnalysisTemplatesRequest {
+    return new ListAnalysisTemplatesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAnalysisTemplatesRequest | PlainMessage<ListAnalysisTemplatesRequest> | undefined, b: ListAnalysisTemplatesRequest | PlainMessage<ListAnalysisTemplatesRequest> | undefined): boolean {
+    return proto3.util.equals(ListAnalysisTemplatesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
+ */
+export class ListAnalysisTemplatesResponse extends Message<ListAnalysisTemplatesResponse> {
+  /**
+   * @generated from field: repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_templates = 1;
+   */
+  analysisTemplates: AnalysisTemplate[] = [];
+
+  constructor(data?: PartialMessage<ListAnalysisTemplatesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "analysis_templates", kind: "message", T: AnalysisTemplate, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListAnalysisTemplatesResponse {
+    return new ListAnalysisTemplatesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListAnalysisTemplatesResponse {
+    return new ListAnalysisTemplatesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListAnalysisTemplatesResponse {
+    return new ListAnalysisTemplatesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListAnalysisTemplatesResponse | PlainMessage<ListAnalysisTemplatesResponse> | undefined, b: ListAnalysisTemplatesResponse | PlainMessage<ListAnalysisTemplatesResponse> | undefined): boolean {
+    return proto3.util.equals(ListAnalysisTemplatesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
+ */
+export class GetAnalysisTemplateRequest extends Message<GetAnalysisTemplateRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetAnalysisTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisTemplateRequest {
+    return new GetAnalysisTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAnalysisTemplateRequest {
+    return new GetAnalysisTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAnalysisTemplateRequest {
+    return new GetAnalysisTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAnalysisTemplateRequest | PlainMessage<GetAnalysisTemplateRequest> | undefined, b: GetAnalysisTemplateRequest | PlainMessage<GetAnalysisTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(GetAnalysisTemplateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
+ */
+export class GetAnalysisTemplateResponse extends Message<GetAnalysisTemplateResponse> {
+  /**
+   * @generated from field: github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1;
+   */
+  analysisTemplate?: AnalysisTemplate;
+
+  constructor(data?: PartialMessage<GetAnalysisTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "analysis_template", kind: "message", T: AnalysisTemplate },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisTemplateResponse {
+    return new GetAnalysisTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetAnalysisTemplateResponse {
+    return new GetAnalysisTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetAnalysisTemplateResponse {
+    return new GetAnalysisTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetAnalysisTemplateResponse | PlainMessage<GetAnalysisTemplateResponse> | undefined, b: GetAnalysisTemplateResponse | PlainMessage<GetAnalysisTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(GetAnalysisTemplateResponse, a, b);
+  }
+}
+
+/**
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
  */
 export class GetAnalysisRunRequest extends Message<GetAnalysisRunRequest> {
@@ -3659,6 +3813,82 @@ export class GetAnalysisRunRequest extends Message<GetAnalysisRunRequest> {
 
   static equals(a: GetAnalysisRunRequest | PlainMessage<GetAnalysisRunRequest> | undefined, b: GetAnalysisRunRequest | PlainMessage<GetAnalysisRunRequest> | undefined): boolean {
     return proto3.util.equals(GetAnalysisRunRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
+ */
+export class DeleteAnalysisTemplateRequest extends Message<DeleteAnalysisTemplateRequest> {
+  /**
+   * @generated from field: string project = 1;
+   */
+  project = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<DeleteAnalysisTemplateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteAnalysisTemplateRequest {
+    return new DeleteAnalysisTemplateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteAnalysisTemplateRequest {
+    return new DeleteAnalysisTemplateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteAnalysisTemplateRequest {
+    return new DeleteAnalysisTemplateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteAnalysisTemplateRequest | PlainMessage<DeleteAnalysisTemplateRequest> | undefined, b: DeleteAnalysisTemplateRequest | PlainMessage<DeleteAnalysisTemplateRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteAnalysisTemplateRequest, a, b);
+  }
+}
+
+/**
+ * explicitly empty 
+ *
+ * @generated from message akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
+ */
+export class DeleteAnalysisTemplateResponse extends Message<DeleteAnalysisTemplateResponse> {
+  constructor(data?: PartialMessage<DeleteAnalysisTemplateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteAnalysisTemplateResponse {
+    return new DeleteAnalysisTemplateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteAnalysisTemplateResponse {
+    return new DeleteAnalysisTemplateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteAnalysisTemplateResponse {
+    return new DeleteAnalysisTemplateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteAnalysisTemplateResponse | PlainMessage<DeleteAnalysisTemplateResponse> | undefined, b: DeleteAnalysisTemplateResponse | PlainMessage<DeleteAnalysisTemplateResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteAnalysisTemplateResponse, a, b);
   }
 }
 

@@ -7,12 +7,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -31,12 +33,27 @@ func TestNewWebhook(t *testing.T) {
 func TestDefault(t *testing.T) {
 	testCases := []struct {
 		name       string
+		op         admissionv1.Operation
 		webhook    *webhook
 		freight    *kargoapi.Freight
 		assertions func(*testing.T, *kargoapi.Freight, error)
 	}{
 		{
-			name:    "sync alias label to alias field",
+			name:    "error getting request from context",
+			webhook: &webhook{},
+			freight: &kargoapi.Freight{},
+			assertions: func(t *testing.T, _ *kargoapi.Freight, err error) {
+				require.Error(t, err)
+				require.Contains(
+					t,
+					err.Error(),
+					"error getting admission request from context",
+				)
+			},
+		},
+		{
+			name:    "sync alias label to non-empty alias field",
+			op:      admissionv1.Create,
 			webhook: &webhook{},
 			freight: &kargoapi.Freight{
 				Alias: "fake-alias",
@@ -44,28 +61,13 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.NotEmpty(t, freight.Name)
-				require.NotEmpty(t, freight.Labels)
+				require.Equal(t, "fake-alias", freight.Alias)
 				require.Equal(t, "fake-alias", freight.Labels[kargoapi.AliasLabelKey])
 			},
 		},
 		{
-			name:    "sync alias field to alias label",
-			webhook: &webhook{},
-			freight: &kargoapi.Freight{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						kargoapi.AliasLabelKey: "fake-alias",
-					},
-				},
-			},
-			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
-				require.NoError(t, err)
-				require.NotEmpty(t, freight.Name)
-				require.Equal(t, "fake-alias", freight.Alias)
-			},
-		},
-		{
 			name: "error getting available alias",
+			op:   admissionv1.Create,
 			webhook: &webhook{
 				getAvailableFreightAliasFn: func(context.Context) (string, error) {
 					return "", errors.New("something went wrong")
@@ -80,6 +82,7 @@ func TestDefault(t *testing.T) {
 		},
 		{
 			name: "success getting available alias",
+			op:   admissionv1.Create,
 			webhook: &webhook{
 				getAvailableFreightAliasFn: func(context.Context) (string, error) {
 					return "fake-alias", nil
@@ -90,17 +93,43 @@ func TestDefault(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, freight.Name)
 				require.Equal(t, "fake-alias", freight.Alias)
-				require.NotEmpty(t, freight.Labels)
 				require.Equal(t, "fake-alias", freight.Labels[kargoapi.AliasLabelKey])
+			},
+		},
+		{
+			name:    "update with empty alias",
+			op:      admissionv1.Update,
+			webhook: &webhook{},
+			freight: &kargoapi.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.AliasLabelKey: "fake-alias",
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.NotEmpty(t, freight.Name)
+				require.Empty(t, freight.Alias)
+				_, ok := freight.Labels[kargoapi.AliasLabelKey]
+				require.False(t, ok)
 			},
 		},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			err := testCase.webhook.Default(
-				context.Background(),
-				testCase.freight,
+		ctx := context.Background()
+		if testCase.op != "" {
+			ctx = admission.NewContextWithRequest(
+				ctx,
+				admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Operation: testCase.op,
+					},
+				},
 			)
+		}
+		t.Run(testCase.name, func(t *testing.T) {
+			err := testCase.webhook.Default(ctx, testCase.freight)
 			testCase.assertions(t, testCase.freight, err)
 		})
 	}

@@ -40,7 +40,7 @@ func TestDefault(t *testing.T) {
 		require.Empty(t, warehouse.Spec.Shard)
 	})
 
-	t.Run("sync shard label to shard field", func(t *testing.T) {
+	t.Run("sync shard label to non-empty shard field", func(t *testing.T) {
 		warehouse := &kargoapi.Warehouse{
 			Spec: &kargoapi.WarehouseSpec{
 				Shard: testShardName,
@@ -48,25 +48,24 @@ func TestDefault(t *testing.T) {
 		}
 		err := w.Default(context.Background(), warehouse)
 		require.NoError(t, err)
-		require.Equal(t, testShardName, warehouse.Labels[kargoapi.ShardLabelKey])
 		require.Equal(t, testShardName, warehouse.Spec.Shard)
+		require.Equal(t, testShardName, warehouse.Labels[kargoapi.ShardLabelKey])
 	})
 
-	t.Run("sync shard field to shard label", func(t *testing.T) {
+	t.Run("sync shard label to empty shard field", func(t *testing.T) {
 		warehouse := &kargoapi.Warehouse{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
 					kargoapi.ShardLabelKey: testShardName,
 				},
 			},
-			Spec: &kargoapi.WarehouseSpec{
-				Shard: testShardName,
-			},
+			Spec: &kargoapi.WarehouseSpec{},
 		}
 		err := w.Default(context.Background(), warehouse)
 		require.NoError(t, err)
-		require.Equal(t, testShardName, warehouse.Labels[kargoapi.ShardLabelKey])
-		require.Equal(t, testShardName, warehouse.Spec.Shard)
+		require.Empty(t, warehouse.Spec.Shard)
+		_, ok := warehouse.Labels[kargoapi.ShardLabelKey]
+		require.False(t, ok)
 	})
 }
 

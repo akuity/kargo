@@ -53,6 +53,7 @@ func newControllerCommand() *cobra.Command {
 			}
 			startupLogEntry.Info("Starting Kargo Controller")
 
+			stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
 			var kargoMgr manager.Manager
 			{
 				// If the env var is undefined, this will resolve to kubeconfig for the
@@ -77,17 +78,27 @@ func newControllerCommand() *cobra.Command {
 						err,
 					)
 				}
-				if err = rollouts.AddToScheme(scheme); err != nil {
-					return fmt.Errorf(
-						"error adding Argo Rollouts API to Kargo controller manager scheme: %w",
-						err,
-					)
-				}
 				if err = kargoapi.AddToScheme(scheme); err != nil {
 					return fmt.Errorf(
 						"error adding Kargo API to Kargo controller manager scheme: %w",
 						err,
 					)
+				}
+				if stagesReconcilerCfg.RolloutsIntegrationEnabled {
+					if argoRolloutsExists(ctx, restCfg) {
+						log.Info("Argo Rollouts integration is enabled")
+						if err = rollouts.AddToScheme(scheme); err != nil {
+							return fmt.Errorf(
+								"error adding Argo Rollouts API to Kargo controller manager scheme: %w",
+								err,
+							)
+						}
+					} else {
+						log.Warn(
+							"Argo Rollouts integration was enabled, but no Argo Rollouts " +
+								"CRDs were found. Proceeding without Argo Rollouts integration.",
+						)
+					}
 				}
 
 				secretReq, err := controller.GetCredentialsRequirement()
@@ -186,73 +197,6 @@ func newControllerCommand() *cobra.Command {
 				log.Info("Argo CD integration is disabled")
 			}
 
-			var rolloutsMgr manager.Manager
-			if types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true")) {
-				// If the env var is undefined, this will resolve to kubeconfig for the
-				// cluster the controller is running in.
-				//
-				// It is typically defined if this controller is running somewhere other
-				// than a cluster suitable for executing Argo Rollouts AnalysesRuns and
-				// user-defined workloads. An example of this would be a a topology
-				// wherein the Kargo and Argo CD controllers both run in management
-				// clusters, that are a not suitable for for this purpose.
-				restCfg, err :=
-					kubernetes.GetRestConfig(ctx, os.GetEnv("ROLLOUTS_KUBECONFIG", ""))
-				if err != nil {
-					return fmt.Errorf("error loading REST config for Argo Rollouts controller manager: %w", err)
-				}
-				restCfg.ContentType = runtime.ContentTypeJSON
-
-				if argoRolloutsExists(ctx, restCfg) {
-					log.Info("Argo Rollouts integration is enabled")
-					scheme := runtime.NewScheme()
-					if err = rollouts.AddToScheme(scheme); err != nil {
-						return fmt.Errorf(
-							"error adding Argo Rollouts API to Argo Rollouts controller manager scheme: %w",
-							err,
-						)
-					}
-					cacheOpts := cache.Options{} // Watches all namespaces by default
-					analysisRunsNamespace := os.GetEnv("ROLLOUTS_ANALYSIS_RUNS_NAMESPACE", "")
-					if analysisRunsNamespace != "" {
-						// TODO: When NOT sharded, Kargo can simply create AnalysisRun
-						// resources in the project namespaces. When sharded, AnalysisRun
-						// resources must be created IN the shard clusters (not the Kargo
-						// control plane cluster) and project namespaces do not exist in the
-						// shard clusters. We need a place to put them, so for now we allow
-						// the user to specify a namespace that that exists on each shard for
-						// this purpose. Note that the namespace does not need to be the same
-						// on every shard. This may be one of the weaker points in our tenancy
-						// model and can stand to be improved.
-						cacheOpts.DefaultNamespaces = map[string]cache.Config{
-							analysisRunsNamespace: {},
-						}
-					}
-					if rolloutsMgr, err = ctrl.NewManager(
-						restCfg,
-						ctrl.Options{
-							Scheme: scheme,
-							Metrics: server.Options{
-								BindAddress: "0",
-							},
-							Cache: cacheOpts,
-						},
-					); err != nil {
-						return fmt.Errorf(
-							"error initializing Argo Rollouts AnalysisRun controller manager: %w",
-							err,
-						)
-					}
-				} else {
-					log.Warn(
-						"Argo Rollouts integration was enabled, but no Argo Rollouts " +
-							"CRDs were found. Proceeding without Argo Rollouts integration.",
-					)
-				}
-			} else {
-				log.Info("Argo Rollouts integration is disabled")
-			}
-
 			credentialsDB := credentials.NewKubernetesDatabase(
 				kargoMgr.GetClient(),
 				credentials.KubernetesDatabaseConfigFromEnv(),
@@ -272,8 +216,7 @@ func newControllerCommand() *cobra.Command {
 				ctx,
 				kargoMgr,
 				argocdMgr,
-				rolloutsMgr,
-				stages.ReconcilerConfigFromEnv(),
+				stagesReconcilerCfg,
 			); err != nil {
 				return fmt.Errorf("error setting up Stages reconciler: %w", err)
 			}
@@ -307,16 +250,6 @@ func newControllerCommand() *cobra.Command {
 					errChan <- fmt.Errorf("error starting kargo manager: %w", err)
 				}
 			}()
-
-			if rolloutsMgr != nil {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					if err := rolloutsMgr.Start(ctx); err != nil {
-						errChan <- fmt.Errorf("error starting rollouts manager: %w", err)
-					}
-				}()
-			}
 
 			// Adapt wg to a channel that can be used in a select
 			doneCh := make(chan struct{})

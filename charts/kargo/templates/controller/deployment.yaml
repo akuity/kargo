@@ -44,7 +44,7 @@ spec:
         envFrom:
         - configMapRef:
             name: kargo-controller
-        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.kubeconfigSecrets.rollouts }}
+        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         volumeMounts:
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
@@ -54,7 +54,7 @@ spec:
           {{- toYaml .Values.controller.securityContext | nindent 10 }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
-      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.kubeconfigSecrets.rollouts }}
+      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       volumes:
       - name: kubeconfigs
         projected:
@@ -73,14 +73,6 @@ spec:
               items:
               - key: kubeconfig.yaml
                 path: argocd-kubeconfig.yaml
-                mode: 0644
-          {{- end }}
-          {{- if .Values.kubeconfigSecrets.rollouts }}
-          - secret:
-              name: {{ .Values.kubeconfigSecrets.rollouts }}
-              items:
-              - key: kubeconfig.yaml
-                path: rollouts-kubeconfig.yaml
                 mode: 0644
           {{- end }}
       {{- end }}

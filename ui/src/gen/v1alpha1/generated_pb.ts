@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto2 } from "@bufbuild/protobuf";
-import { ListMeta, ObjectMeta } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
+import { ListMeta, ObjectMeta, Time } from "../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.js";
 
 /**
  * AnalysisRunArgument represents an argument to be added to an AnalysisRun.
@@ -3108,12 +3108,9 @@ export class StageSpec extends Message<StageSpec> {
   /**
    * Shard is the name of the shard that this Stage belongs to. This is an
    * optional field. If not specified, the Stage will belong to the default
-   * shard. A defaulting webhook will sync this field with the value of the
-   * kargo.akuity.io/shard label. When the shard label is not present or differs
-   * from the value of this field, the defaulting webhook will set the label to
-   * the value of this field. If the shard label is present and this field is
-   * empty, the defaulting webhook will set the value of this field to the value
-   * of the shard label.
+   * shard. A defaulting webhook will sync the value of the
+   * kargo.akuity.io/shard label with the value of this field. When this field
+   * is empty, the webhook will ensure that label is absent.
    *
    * @generated from field: optional string shard = 4;
    */
@@ -3445,6 +3442,13 @@ export class VerificationInfo extends Message<VerificationInfo> {
   id?: string;
 
   /**
+   * StartTime is the time at which the Verification process was started.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time timestamp = 5;
+   */
+  timestamp?: Time;
+
+  /**
    * Phase describes the current phase of the Verification process. Generally,
    * this will be a reflection of the underlying AnalysisRun's phase, however,
    * there are exceptions to this, such as in the case where an AnalysisRun
@@ -3479,6 +3483,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.VerificationInfo";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "timestamp", kind: "message", T: Time, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "analysisRun", kind: "message", T: AnalysisRunReference, opt: true },
