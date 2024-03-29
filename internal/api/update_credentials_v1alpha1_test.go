@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libCreds "github.com/akuity/kargo/internal/credentials"
 )
 
 func TestApplyCredentialsUpdateToSecret(t *testing.T) {
@@ -18,17 +19,15 @@ func TestApplyCredentialsUpdateToSecret(t *testing.T) {
 			},
 		},
 		Data: map[string][]byte{
-			"repoURL":        []byte("fake-url"),
-			"repoURLPattern": []byte("fake-pattern"),
-			"username":       []byte("fake-username"),
-			"password":       []byte("fake-password"),
+			libCreds.FieldRepoURL:  []byte("fake-url"),
+			libCreds.FieldUsername: []byte("fake-username"),
+			libCreds.FieldPassword: []byte("fake-password"),
 		},
 	}
 
 	t.Run("update repoURL", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
-		expectedSecret.Data["repoURL"] = []byte("new-fake-url")
-		delete(expectedSecret.Data, "repoURLPattern")
+		expectedSecret.Data[libCreds.FieldRepoURL] = []byte("new-fake-url")
 		secret := baseSecret.DeepCopy()
 		applyCredentialsUpdateToSecret(
 			secret,
@@ -39,15 +38,16 @@ func TestApplyCredentialsUpdateToSecret(t *testing.T) {
 		require.Equal(t, expectedSecret, secret)
 	})
 
-	t.Run("update repoURLPattern", func(t *testing.T) {
+	t.Run("update repoURL with pattern", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
-		expectedSecret.Data["repoURLPattern"] = []byte("new-fake-pattern")
-		delete(expectedSecret.Data, "repoURL")
+		expectedSecret.Data[libCreds.FieldRepoURL] = []byte("new-fake-url")
+		expectedSecret.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")
 		secret := baseSecret.DeepCopy()
 		applyCredentialsUpdateToSecret(
 			secret,
 			credentialsUpdate{
-				repoURLPattern: "new-fake-pattern",
+				repoURL:        "new-fake-url",
+				repoURLISRegex: true,
 			},
 		)
 		require.Equal(t, expectedSecret, secret)

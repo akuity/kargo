@@ -28,16 +28,16 @@ type createCredentialsOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project        string
-	Name           string
-	Git            bool
-	Helm           bool
-	Image          bool
-	Type           string
-	RepoURL        string
-	RepoURLPattern string
-	Username       string
-	Password       string
+	Project  string
+	Name     string
+	Git      bool
+	Helm     bool
+	Image    bool
+	Type     string
+	RepoURL  string
+	Regex    bool
+	Username string
+	Password string
 }
 
 func newCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -50,7 +50,7 @@ func newCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStre
 	cmd := &cobra.Command{
 		Use: `credentials [--project=project] NAME \
     (--git | --helm | --image) \
-    (--repo-url=repo-url | --repo-url-pattern=repo-url-pattern) \
+    --repo-url=repo-url [--regex] \
     -username=username \
     [--password=password]`,
 		Aliases: []string{"credential", "creds", "cred"},
@@ -125,9 +125,12 @@ func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
 	option.Image(cmd.Flags(), &o.Image, "Create credentials for a container image repository.")
 	option.Type(cmd.Flags(), &o.Type, "Type of repository the credentials are for.")
 	option.RepoURL(cmd.Flags(), &o.RepoURL, "URL of the repository the credentials are for.")
-	option.RepoURLPattern(
-		cmd.Flags(), &o.RepoURLPattern,
-		"Regular expression matching multiple repositories the credentials are for.",
+	option.Regex(
+		cmd.Flags(), &o.Regex,
+		fmt.Sprintf(
+			"Indicates that the value of --%s is a regular expression.",
+			option.RepoURLFlag,
+		),
 	)
 	option.Username(cmd.Flags(), &o.Username, "Username for the credentials.")
 	option.Password(cmd.Flags(), &o.Password, "Password for the credentials.")
@@ -135,11 +138,17 @@ func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsOneRequired(option.GitFlag, option.HelmFlag, option.ImageFlag, option.TypeFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.GitFlag, option.HelmFlag, option.ImageFlag, option.TypeFlag)
 
-	cmd.MarkFlagsOneRequired(option.RepoURLFlag, option.RepoURLPatternFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.RepoURLFlag, option.RepoURLPatternFlag)
+	if err := cmd.MarkFlagRequired(option.RepoURLFlag); err != nil {
+		panic(
+			fmt.Errorf(
+				"could not mark %s flag as required: %w",
+				option.RepoURLFlag,
+				err,
+			),
+		)
+	}
 
 	if err := cmd.MarkFlagRequired(option.UsernameFlag); err != nil {
-
 		panic(
 			fmt.Errorf(
 				"could not mark %s flag as required: %w",
@@ -164,11 +173,8 @@ func (o *createCredentialsOptions) validate() error {
 	if o.Project == "" {
 		errs = append(errs, errors.New("project is required"))
 	}
-	if o.RepoURL == "" && o.RepoURLPattern == "" {
-		errs = append(
-			errs,
-			errors.New("either repo-url or repo-url-pattern is required"),
-		)
+	if o.RepoURL == "" {
+		errs = append(errs, errors.New("repo-url is required"))
 	}
 	if o.Username == "" {
 		errs = append(errs, errors.New("username is required"))
@@ -211,7 +217,7 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 				Name:           o.Name,
 				Type:           o.Type,
 				RepoUrl:        o.RepoURL,
-				RepoUrlPattern: o.RepoURLPattern,
+				RepoUrlIsRegex: o.Regex,
 				Username:       o.Username,
 				Password:       o.Password,
 			},

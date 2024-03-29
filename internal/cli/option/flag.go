@@ -60,11 +60,11 @@ const (
 	// RecursiveShortFlag is the short flag name for the recursive flag.
 	RecursiveShortFlag = "R"
 
+	// Regex is the flag name for the regex flag.
+	RegexFlag = "regex"
+
 	// RepoURLFlag is the flag name for the repo-url flag.
 	RepoURLFlag = "repo-url"
-
-	// RepoURLPatternFlag is the flag name for the repo-url-pattern flag.
-	RepoURLPatternFlag = "repo-url-pattern"
 
 	// StageFlag is the flag name for the stage flag.
 	StageFlag = "stage"
@@ -176,9 +176,9 @@ func RepoURL(fs *pflag.FlagSet, repoURL *string, usage string) {
 	fs.StringVar(repoURL, RepoURLFlag, "", usage)
 }
 
-// RepoURLPattern adds the RepoURLPatternFlag to the provided flag set.
-func RepoURLPattern(fs *pflag.FlagSet, repoURLPattern *string, usage string) {
-	fs.StringVar(repoURLPattern, RepoURLPatternFlag, "", usage)
+// Regex adds the RegexFlag to the provided flag set.
+func Regex(fs *pflag.FlagSet, regex *bool, usage string) {
+	fs.BoolVar(regex, RegexFlag, false, usage)
 }
 
 // Stage adds the StageFlag to the provided flag set.

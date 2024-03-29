@@ -38,8 +38,6 @@ func TestGet(t *testing.T) {
 		// This deliberately omits the trailing .git to test normalization
 		testRepoURL     = "https://github.com/akuity/kargo"
 		insecureTestURL = "http://github.com/akuity/bogus.git"
-
-		testRepoURLPattern = "https://github\\.com/akuity/.*"
 	)
 
 	testLabels := map[string]string{
@@ -53,9 +51,9 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			"repoURL":  []byte(testRepoURL),
-			"username": []byte("project-exact"),
-			"password": []byte("fake-password"),
+			FieldRepoURL:  []byte(testRepoURL),
+			FieldUsername: []byte("project-exact"),
+			FieldPassword: []byte("fake-password"),
 		},
 	}
 
@@ -66,9 +64,10 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			"repoURLPattern": []byte(testRepoURLPattern),
-			"username":       []byte("project-pattern"),
-			"password":       []byte("fake-password"),
+			FieldRepoURL:        []byte(testRepoURL),
+			FieldRepoURLIsRegex: []byte("true"),
+			FieldUsername:       []byte("project-pattern"),
+			FieldPassword:       []byte("fake-password"),
 		},
 	}
 
@@ -83,9 +82,9 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			"repoURL":  []byte(insecureTestURL),
-			"username": []byte("project-insecure"),
-			"password": []byte("fake-password"),
+			FieldRepoURL:  []byte(insecureTestURL),
+			FieldUsername: []byte("project-insecure"),
+			FieldPassword: []byte("fake-password"),
 		},
 	}
 
@@ -96,9 +95,9 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			"repoURL":  []byte(testRepoURL),
-			"username": []byte("global-exact"),
-			"password": []byte("fake-password"),
+			FieldRepoURL:  []byte(testRepoURL),
+			FieldUsername: []byte("global-exact"),
+			FieldPassword: []byte("fake-password"),
 		},
 	}
 
@@ -109,9 +108,10 @@ func TestGet(t *testing.T) {
 			Labels:    testLabels,
 		},
 		Data: map[string][]byte{
-			"repoURLPattern": []byte(testRepoURLPattern),
-			"username":       []byte("global-pattern"),
-			"password":       []byte("fake-password"),
+			FieldRepoURL:        []byte(testRepoURL),
+			FieldRepoURLIsRegex: []byte("true"),
+			FieldUsername:       []byte("global-pattern"),
+			FieldPassword:       []byte("fake-password"),
 		},
 	}
 

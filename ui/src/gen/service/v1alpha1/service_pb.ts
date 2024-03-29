@@ -3194,9 +3194,9 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
   repoUrl = "";
 
   /**
-   * @generated from field: string repo_url_pattern = 5 [json_name = "repoURLPattern"];
+   * @generated from field: bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
    */
-  repoUrlPattern = "";
+  repoUrlIsRegex = false;
 
   /**
    * @generated from field: string username = 6;
@@ -3220,7 +3220,7 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "repo_url_pattern", jsonName: "repoURLPattern", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
@@ -3534,9 +3534,9 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
   repoUrl = "";
 
   /**
-   * @generated from field: string repo_url_pattern = 5 [json_name = "repoURLPattern"];
+   * @generated from field: bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
    */
-  repoUrlPattern = "";
+  repoUrlIsRegex = false;
 
   /**
    * @generated from field: string username = 6;
@@ -3560,7 +3560,7 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "repo_url_pattern", jsonName: "repoURLPattern", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 6, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "password", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);

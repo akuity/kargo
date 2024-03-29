@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	libCreds "github.com/akuity/kargo/internal/credentials"
 )
 
 func TestSanitizeCredentialSecret(t *testing.T) {
@@ -16,11 +18,10 @@ func TestSanitizeCredentialSecret(t *testing.T) {
 			},
 		},
 		Data: map[string][]byte{
-			"repoURL":        []byte("fake-url"),
-			"repoURLPattern": []byte("fake-pattern"),
-			"username":       []byte("fake-username"),
-			"password":       []byte("fake-password"),
-			"random-key":     []byte("random-value"),
+			libCreds.FieldRepoURL:  []byte("fake-url"),
+			libCreds.FieldUsername: []byte("fake-username"),
+			libCreds.FieldPassword: []byte("fake-password"),
+			"random-key":           []byte("random-value"),
 		},
 	}
 	sanitizedCreds := sanitizeCredentialSecret(creds)
@@ -34,11 +35,10 @@ func TestSanitizeCredentialSecret(t *testing.T) {
 	require.Equal(
 		t,
 		map[string]string{
-			"repoURL":        "fake-url",
-			"repoURLPattern": "fake-pattern",
-			"username":       "fake-username",
-			"password":       redacted,
-			"random-key":     redacted,
+			libCreds.FieldRepoURL:  "fake-url",
+			libCreds.FieldUsername: "fake-username",
+			libCreds.FieldPassword: redacted,
+			"random-key":           redacted,
 		},
 		sanitizedCreds.StringData,
 	)

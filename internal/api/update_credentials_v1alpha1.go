@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libCreds "github.com/akuity/kargo/internal/credentials"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -17,7 +18,7 @@ type credentialsUpdate struct {
 	name           string
 	credType       string
 	repoURL        string
-	repoURLPattern string
+	repoURLISRegex bool
 	username       string
 	password       string
 }
@@ -31,7 +32,7 @@ func (s *server) UpdateCredentials(
 		name:           req.Msg.GetName(),
 		credType:       req.Msg.GetType(),
 		repoURL:        req.Msg.GetRepoUrl(),
-		repoURLPattern: req.Msg.GetRepoUrlPattern(),
+		repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
 		username:       req.Msg.GetUsername(),
 		password:       req.Msg.GetPassword(),
 	}
@@ -93,12 +94,12 @@ func applyCredentialsUpdateToSecret(
 		secret.Labels[kargoapi.CredentialTypeLabelKey] = credsUpdate.credType
 	}
 	if credsUpdate.repoURL != "" {
-		secret.Data["repoURL"] = []byte(credsUpdate.repoURL)
-		delete(secret.Data, "repoURLPattern")
-	}
-	if credsUpdate.repoURLPattern != "" {
-		secret.Data["repoURLPattern"] = []byte(credsUpdate.repoURLPattern)
-		delete(secret.Data, "repoURL")
+		secret.Data[libCreds.FieldRepoURL] = []byte(credsUpdate.repoURL)
+		if credsUpdate.repoURLISRegex {
+			secret.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")
+		} else {
+			delete(secret.Data, libCreds.FieldRepoURLIsRegex)
+		}
 	}
 	if credsUpdate.username != "" {
 		secret.Data["username"] = []byte(credsUpdate.username)
