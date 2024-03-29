@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libCreds "github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -80,45 +81,8 @@ func (f *credentialsReconciler) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	credType, ok := secret.Labels[SecretTypeLabelKey]
-	if !ok {
-		// This should not really happen
-		logger.Warnf("skipping Secret without %q label", SecretTypeLabelKey)
-		return ctrl.Result{
-			Requeue: false,
-		}, nil
-	}
-
 	// Update the credentials to be v0.5-compatible
-
-	repoType := string(secret.Data["type"])
-	url := string(secret.Data["url"])
-	username := string(secret.Data["username"])
-	password := string(secret.Data["password"])
-
-	var urlKey string
-	switch credType {
-	case repoLabelValue:
-		urlKey = "repoURL"
-	case repoCredsLabelValue:
-		urlKey = "repoURLPattern"
-		url = fmt.Sprintf(`^%s(/.*)?$`, strings.TrimSuffix(url, "/"))
-	default:
-		// This should not really happen
-		logger.Warnf("skipping Secret with unknown %q label value: %q", SecretTypeLabelKey, credType)
-		return ctrl.Result{
-			Requeue: false,
-		}, nil
-	}
-
-	delete(secret.Labels, SecretTypeLabelKey)
-	secret.Labels[kargoapi.CredentialTypeLabelKey] = repoType
-	secret.StringData = map[string]string{
-		urlKey:     url,
-		"username": username,
-		"password": password,
-	}
-	secret.Data = nil
+	transformCredentialsSecret(secret)
 
 	if err := f.client.Update(ctx, secret); err != nil {
 		return ctrl.Result{}, err
@@ -127,4 +91,28 @@ func (f *credentialsReconciler) Reconcile(
 	return ctrl.Result{
 		Requeue: false,
 	}, nil
+}
+
+func transformCredentialsSecret(secret *corev1.Secret) {
+	// This label is guaranteed to exist because the reconciler uses a predicate
+	// that requires it.
+	credType := secret.Labels[SecretTypeLabelKey]
+	url := string(secret.Data["url"])
+	if credType == repoCredsLabelValue {
+		url = fmt.Sprintf(`^%s(/.*)?$`, strings.TrimSuffix(url, "/"))
+	}
+
+	secret.StringData = map[string]string{
+		libCreds.FieldRepoURL:  url,
+		libCreds.FieldUsername: string(secret.Data[libCreds.FieldUsername]),
+		libCreds.FieldPassword: string(secret.Data[libCreds.FieldPassword]),
+	}
+	if credType == repoCredsLabelValue {
+		secret.StringData[libCreds.FieldRepoURLIsRegex] = "true"
+	}
+
+	delete(secret.Labels, SecretTypeLabelKey)
+	secret.Labels[kargoapi.CredentialTypeLabelKey] = string(secret.Data["type"])
+
+	secret.Data = nil
 }
