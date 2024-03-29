@@ -19,7 +19,7 @@ type credentials struct {
 	name           string
 	credType       string
 	repoURL        string
-	repoURLISRegex bool
+	repoURLIsRegex bool
 	username       string
 	password       string
 }
@@ -33,7 +33,7 @@ func (s *server) CreateCredentials(
 		name:           req.Msg.GetName(),
 		credType:       req.Msg.GetType(),
 		repoURL:        req.Msg.GetRepoUrl(),
-		repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
+		repoURLIsRegex: req.Msg.GetRepoUrlIsRegex(),
 		username:       req.Msg.GetUsername(),
 		password:       req.Msg.GetPassword(),
 	}
@@ -101,7 +101,7 @@ func credentialsToSecret(creds credentials) *corev1.Secret {
 			libCreds.FieldPassword: []byte(creds.password),
 		},
 	}
-	if creds.repoURLISRegex {
+	if creds.repoURLIsRegex {
 		s.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")
 	}
 	return s
