@@ -455,7 +455,7 @@ message CreateCredentialsRequest {
   string name = 2;
   string type = 3;
   string repo_url = 4 [json_name = "repoURL"];
-  string repo_url_pattern = 5 [json_name = "repoURLPattern"];
+  bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
   string username = 6;
   string password = 7;
 }
@@ -495,7 +495,7 @@ message UpdateCredentialsRequest {
   string name = 2;
   string type = 3;
   string repo_url = 4 [json_name = "repoURL"];
-  string repo_url_pattern = 5 [json_name = "repoURLPattern"];
+  bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
   string username = 6;
   string password = 7;
 }
