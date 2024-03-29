@@ -14,6 +14,7 @@ import (
 func ReadManifests(filenames ...string) ([]byte, error) {
 	buildRes, err := cmdutil.NewFactory(&genericclioptions.ConfigFlags{}).
 		NewBuilder().
+		Local().
 		Unstructured().
 		FilenameParam(false, &resource.FilenameOptions{
 			Filenames: filenames,
