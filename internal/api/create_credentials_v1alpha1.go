@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libCreds "github.com/akuity/kargo/internal/credentials"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -18,7 +19,7 @@ type credentials struct {
 	name           string
 	credType       string
 	repoURL        string
-	repoURLPattern string
+	repoURLISRegex bool
 	username       string
 	password       string
 }
@@ -32,7 +33,7 @@ func (s *server) CreateCredentials(
 		name:           req.Msg.GetName(),
 		credType:       req.Msg.GetType(),
 		repoURL:        req.Msg.GetRepoUrl(),
-		repoURLPattern: req.Msg.GetRepoUrlPattern(),
+		repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
 		username:       req.Msg.GetUsername(),
 		password:       req.Msg.GetPassword(),
 	}
@@ -73,10 +74,10 @@ func (s *server) validateCredentials(creds credentials) error {
 			errors.New("type should be one of git, helm, or image"),
 		)
 	}
-	if creds.repoURL == "" && creds.repoURLPattern == "" {
+	if creds.repoURL == "" {
 		return connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.New("at least one of repoURL or repoURLPattern should not be empty"),
+			errors.New("repoURL should not be empty"),
 		)
 	}
 	if err := validateFieldNotEmpty("username", creds.username); err != nil {
@@ -86,7 +87,7 @@ func (s *server) validateCredentials(creds credentials) error {
 }
 
 func credentialsToSecret(creds credentials) *corev1.Secret {
-	return &corev1.Secret{
+	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: creds.project,
 			Name:      creds.name,
@@ -95,10 +96,13 @@ func credentialsToSecret(creds credentials) *corev1.Secret {
 			},
 		},
 		Data: map[string][]byte{
-			"repoURL":        []byte(creds.repoURL),
-			"repoURLPattern": []byte(creds.repoURLPattern),
-			"username":       []byte(creds.username),
-			"password":       []byte(creds.password),
+			libCreds.FieldRepoURL:  []byte(creds.repoURL),
+			libCreds.FieldUsername: []byte(creds.username),
+			libCreds.FieldPassword: []byte(creds.password),
 		},
 	}
+	if creds.repoURLISRegex {
+		s.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")
+	}
+	return s
 }

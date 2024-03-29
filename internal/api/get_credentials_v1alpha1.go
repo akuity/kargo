@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libCreds "github.com/akuity/kargo/internal/credentials"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -86,7 +87,7 @@ func sanitizeCredentialSecret(secret corev1.Secret) *corev1.Secret {
 	}
 	for k, v := range s.Data {
 		switch k {
-		case "repoURL", "repoURLPattern", "username":
+		case libCreds.FieldRepoURL, libCreds.FieldRepoURLIsRegex, libCreds.FieldUsername:
 			s.StringData[k] = string(v)
 		default:
 			s.StringData[k] = redacted
