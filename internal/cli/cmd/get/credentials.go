@@ -22,6 +22,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
+	libCreds "github.com/akuity/kargo/internal/credentials"
 	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -160,15 +161,12 @@ func newCredentialsTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		secret := item.Object.(*corev1.Secret) // nolint: forcetypeassert
-		repoURLOrPattern := secret.StringData["repoURL"]
-		if repoURLOrPattern == "" {
-			repoURLOrPattern = fmt.Sprintf("Pattern: %s", secret.StringData["repoURLPattern"])
-		}
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				secret.Name,
 				secret.ObjectMeta.Labels[kargoapi.CredentialTypeLabelKey],
-				repoURLOrPattern,
+				secret.StringData[libCreds.FieldRepoURLIsRegex],
+				secret.StringData[libCreds.FieldRepoURL],
 				duration.HumanDuration(time.Since(secret.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
@@ -178,6 +176,7 @@ func newCredentialsTable(list *metav1.List) *metav1.Table {
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string"},
 			{Name: "Type", Type: "string"},
+			{Name: "Regex", Type: "string"},
 			{Name: "Repo", Type: "string"},
 			{Name: "Age", Type: "string"},
 		},

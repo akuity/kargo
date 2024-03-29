@@ -35,7 +35,7 @@ type updateCredentialsOptions struct {
 	Image                       bool
 	Type                        string
 	RepoURL                     string
-	RepoURLPattern              string
+	Regex                       bool
 	Username                    string
 	Password                    string
 	ChangePasswordInteractively bool
@@ -51,7 +51,7 @@ func newUpdateCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.
 	cmd := &cobra.Command{
 		Use: `credentials [--project=project] NAME \
     [--git | --helm | --image] \
-    [--repo-url=repo-url | --repo-url-pattern=repo-url-pattern] \
+    [--repo-url=repo-url [--regex]] \
     [--username=username] \
     [--password=password | --interactive-password]`,
 		Aliases: []string{"credential", "creds", "cred"},
@@ -113,9 +113,12 @@ func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 	option.Image(cmd.Flags(), &o.Image, "Change the credentials to be for a container image repository.")
 	option.Type(cmd.Flags(), &o.Type, "Type of repository the credentials are for.")
 	option.RepoURL(cmd.Flags(), &o.RepoURL, "URL of the repository the credentials are for.")
-	option.RepoURLPattern(
-		cmd.Flags(), &o.RepoURLPattern,
-		"Regular expression matching multiple repositories the credentials are for.",
+	option.Regex(
+		cmd.Flags(), &o.Regex,
+		fmt.Sprintf(
+			"Indicates that the value of --%s is a regular expression.",
+			option.RepoURLFlag,
+		),
 	)
 	option.Username(cmd.Flags(), &o.Username, "Change the username in the credentials.")
 	option.Password(cmd.Flags(), &o.Password, "Change the password in the credentials.")
@@ -126,8 +129,6 @@ func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(option.GitFlag, option.HelmFlag, option.ImageFlag, option.TypeFlag)
-
-	cmd.MarkFlagsMutuallyExclusive(option.RepoURLFlag, option.RepoURLPatternFlag)
 
 	cmd.MarkFlagsMutuallyExclusive(option.PasswordFlag, option.InteractivePasswordFlag)
 }
@@ -145,6 +146,11 @@ func (o *updateCredentialsOptions) validate() error {
 	if o.Project == "" {
 		return errors.New("project is required")
 	}
+
+	if o.Regex && o.RepoURL == "" {
+		return errors.New("regex is only allows when repo-url is set")
+	}
+
 	return nil
 }
 
@@ -185,7 +191,7 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 				Name:           o.Name,
 				Type:           o.Type,
 				RepoUrl:        o.RepoURL,
-				RepoUrlPattern: o.RepoURLPattern,
+				RepoUrlIsRegex: o.Regex,
 				Username:       o.Username,
 				Password:       o.Password,
 			},
