@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/resource"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
 // ReadManifests reads Kubernetes manifests from local files or remote files
@@ -16,8 +15,7 @@ import (
 //
 // WARNING: This function should not be used with untrusted input!
 func ReadManifests(recursive bool, filenames ...string) ([]byte, error) {
-	buildRes, err := cmdutil.NewFactory(&genericclioptions.ConfigFlags{}).
-		NewBuilder().
+	buildRes, err := resource.NewBuilder(&genericclioptions.ConfigFlags{}).
 		Local().
 		Unstructured().
 		FilenameParam(false, &resource.FilenameOptions{
