@@ -18,6 +18,13 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const (
+	FieldRepoURL        = "repoURL"
+	FieldRepoURLIsRegex = "repoURLIsRegex"
+	FieldUsername       = "username"
+	FieldPassword       = "password"
+)
+
 // Type is a string type used to represent a type of Credentials.
 type Type string
 
@@ -180,7 +187,10 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 		if secret.Data == nil {
 			continue
 		}
-		urlBytes, ok := secret.Data["repoURL"]
+		if isRegexBytes := secret.Data[FieldRepoURLIsRegex]; string(isRegexBytes) == "true" {
+			continue
+		}
+		urlBytes, ok := secret.Data[FieldRepoURL]
 		if !ok {
 			continue
 		}
@@ -201,7 +211,10 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 		if secret.Data == nil {
 			continue
 		}
-		patternBytes, ok := secret.Data["repoURLPattern"]
+		if isRegexBytes := secret.Data[FieldRepoURLIsRegex]; string(isRegexBytes) != "true" {
+			continue
+		}
+		patternBytes, ok := secret.Data[FieldRepoURL]
 		if !ok {
 			continue
 		}
