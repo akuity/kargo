@@ -84,7 +84,7 @@ export const StageNode = ({
                 <FontAwesomeIcon icon={faGear} spin={true} />
               </Tooltip>
             ) : stage.status?.phase === 'Verifying' ? (
-              <Tooltip title='Current Freight is verifying'>
+              <Tooltip title='Verifying Current Freight'>
                 <FontAwesomeIcon icon={faCircleNotch} spin={true} />
               </Tooltip>
             ) : (

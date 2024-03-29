@@ -52,14 +52,14 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 },
                 {
                   key: '2',
-                  label: 'Live Manifest',
-                  className: 'h-full pb-2',
-                  children: <ManifestPreview stage={stage} />
+                  label: 'Verifications',
+                  children: <Verifications stage={stage} />
                 },
                 {
                   key: '3',
-                  label: 'Verifications',
-                  children: <Verifications stage={stage} />
+                  label: 'Live Manifest',
+                  className: 'h-full pb-2',
+                  children: <ManifestPreview stage={stage} />
                 }
               ]}
             />

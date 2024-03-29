@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Popover, Table, Tooltip, theme } from 'antd';
+import { format } from 'date-fns';
 import React from 'react';
 
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
@@ -17,19 +18,13 @@ type Props = {
 
 export const Verifications = ({ stage }: Props) => {
   const verifications = React.useMemo(
-    () => [
-      ...(stage.status?.currentFreight?.verificationHistory || []).map((i) => ({
-        freight: stage.status?.currentFreight?.name,
-        ...i
-      })),
-
-      ...(stage.status?.history || []).flatMap((freight) =>
+    () =>
+      (stage.status?.history || []).flatMap((freight) =>
         freight.verificationHistory.map((verification) => ({
           freight: freight.name,
           ...verification
         }))
-      )
-    ],
+      ),
     [stage]
   );
 
@@ -95,7 +90,19 @@ export const Verifications = ({ stage }: Props) => {
           }
         }}
       />
+      <Table.Column<(typeof verifications)[number]>
+        title='Date'
+        render={(_, verification) => {
+          const date = verification.timestamp?.toDate();
+          return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
+        }}
+      />
       <Table.Column title='ID' dataIndex='id' />
+      <Table.Column<(typeof verifications)[number]>
+        title='AnalysisRun'
+        dataIndex=''
+        render={(val, verification) => verification.analysisRun?.name}
+      />
       <Table.Column
         title='Freight'
         dataIndex='freight'
