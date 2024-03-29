@@ -55,6 +55,11 @@ const (
 	// ProjectShortFlag is the short flag name for the project flag.
 	ProjectShortFlag = "p"
 
+	// RecursiveFlag is the flag name for the recursive flag.
+	RecursiveFlag = "recursive"
+	// RecursiveShortFlag is the short flag name for the recursive flag.
+	RecursiveShortFlag = "R"
+
 	// Regex is the flag name for the regex flag.
 	RegexFlag = "regex"
 
@@ -155,6 +160,15 @@ func Password(fs *pflag.FlagSet, password *string, usage string) {
 // Project adds the ProjectFlag and ProjectShortFlag to the provided flag set.
 func Project(fs *pflag.FlagSet, project *string, defaultProject, usage string) {
 	fs.StringVarP(project, ProjectFlag, ProjectShortFlag, defaultProject, usage)
+}
+
+// Recursive adds the RecursiveFlag and RecursiveShortFlag to the provided flag
+// set.
+func Recursive(fs *pflag.FlagSet, recursive *bool) {
+	fs.BoolVarP(recursive, RecursiveFlag, RecursiveShortFlag, false,
+		"Process the directory used in -f, --filename recursively. Useful when "+
+			"you want to manage related manifests organized within the same directory.",
+	)
 }
 
 // RepoURL adds the RepoURLFlag to the provided flag set.
