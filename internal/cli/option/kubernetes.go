@@ -11,6 +11,10 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 )
 
+// ReadManifests reads Kubernetes manifests from local files or remote files
+// via HTTP/S.
+//
+// WARNING: This function should not be used with untrusted input!
 func ReadManifests(recursive bool, filenames ...string) ([]byte, error) {
 	buildRes, err := cmdutil.NewFactory(&genericclioptions.ConfigFlags{}).
 		NewBuilder().
