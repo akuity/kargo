@@ -1,36 +1,31 @@
-import { useQuery } from '@connectrpc/connect-query';
-import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faIdBadge, faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { faIdBadge, faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Table } from 'antd';
 import { useParams } from 'react-router-dom';
 
+import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { listCredentials } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import {
+  deleteCredentials,
+  listCredentials
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
-import { DeleteCredentialsModal } from './delete-credentials-modal';
-
-export type CredentialsType = 'git' | 'helm' | 'image';
-export const CredentialTypeLabelKey = 'kargo.akuity.io/cred-type';
-
-export const IconForCredentialsType = (type: CredentialsType) => {
-  switch (type) {
-    case 'git':
-      return faGit;
-    case 'helm':
-      return faAnchor;
-    case 'image':
-      return faDocker;
-  }
-};
+import { CredentialTypeLabelKey, CredentialsType } from './types';
+import { iconForCredentialsType } from './utils';
 
 export const CredentialsList = () => {
   const { name } = useParams();
   const { show: showCreate } = useModal();
-  const { show: showDelete } = useModal();
+  const confirm = useConfirmModal();
 
   const { data, refetch } = useQuery(listCredentials, { project: name });
+  const { mutate } = useMutation(deleteCredentials, {
+    onSuccess: () => {
+      refetch();
+    }
+  });
 
   return (
     <div className='p-4'>
@@ -65,7 +60,7 @@ export const CredentialsList = () => {
             render: (record) => (
               <div className='flex items-center font-semibold text-sm'>
                 <FontAwesomeIcon
-                  icon={IconForCredentialsType(
+                  icon={iconForCredentialsType(
                     record?.metadata?.labels[CredentialTypeLabelKey] as CredentialsType
                   )}
                   className='mr-3 text-blue-500'
@@ -111,14 +106,22 @@ export const CredentialsList = () => {
                   icon={<FontAwesomeIcon icon={faTrash} />}
                   danger
                   onClick={() => {
-                    showDelete((p) => (
-                      <DeleteCredentialsModal
-                        project={name || ''}
-                        name={record?.metadata?.name || ''}
-                        onSuccess={refetch}
-                        {...p}
-                      />
-                    ));
+                    confirm({
+                      title: (
+                        <div className='flex items-center'>
+                          <FontAwesomeIcon icon={faTrash} className='mr-2' />
+                          Delete Credentials
+                        </div>
+                      ),
+                      content: (
+                        <p>
+                          Are you sure you want to delete credentials <b>{name}</b>?
+                        </p>
+                      ),
+                      onOk: () => {
+                        mutate({ project: name || '', name: record?.metadata?.name || '' });
+                      }
+                    });
                   }}
                 >
                   Delete

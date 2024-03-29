@@ -15,11 +15,7 @@ import {
 import { Secret } from '@ui/gen/v1alpha1/types_pb';
 import { zodValidators } from '@ui/utils/validators';
 
-import {
-  CredentialTypeLabelKey,
-  CredentialsType,
-  IconForCredentialsType
-} from './credentials-list';
+import { constructDefaults, labelForKey, typeLabel } from './utils';
 
 const credentialsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
 
@@ -48,42 +44,6 @@ const placeholders = {
   repoUrlPattern: '(?:https?://)?(?:www.)?github.com/[w.-]+/[w.-]+(?:.git)?',
   username: 'admin',
   password: 'admin12345'
-};
-
-const typeLabel = (type: CredentialsType) => (
-  <span className='flex items-center font-semibold justify-center text-center p-4'>
-    <FontAwesomeIcon icon={IconForCredentialsType(type)} className='mr-2' />
-    {type.toUpperCase()}
-  </span>
-);
-
-const labelForKey = (s: string) =>
-  s
-    .split('')
-    .map((c, i) => (c === c.toUpperCase() ? (i !== 0 ? ' ' : '') + c : c))
-    .join('')
-    .replace(/^./, (str) => str.toUpperCase())
-    .replace('Url', 'URL');
-
-const constructDefaults = (init?: Secret) => {
-  if (!init) {
-    return {
-      name: '',
-      type: 'git',
-      repoUrl: '',
-      repoUrlPattern: '',
-      username: '',
-      password: ''
-    };
-  }
-  return {
-    name: init?.metadata?.name || '',
-    type: init?.metadata?.labels[CredentialTypeLabelKey] || 'git',
-    repoUrl: init?.stringData['repoURL'],
-    repoUrlPattern: init?.stringData['repoURLPattern'],
-    username: init?.stringData['username'],
-    password: ''
-  };
 };
 
 type Props = ModalComponentProps & {
