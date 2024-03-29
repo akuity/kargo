@@ -30,6 +30,7 @@ type applyOptions struct {
 	ClientOptions client.Options
 
 	Filenames []string
+	Recursive bool
 }
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -74,6 +75,7 @@ func (o *applyOptions) addFlags(cmd *cobra.Command) {
 	o.PrintFlags.AddFlags(cmd)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to apply the resource(s)")
+	option.Recursive(cmd.Flags(), &o.Recursive)
 
 	if err := cmd.MarkFlagRequired(option.FilenameFlag); err != nil {
 		panic(fmt.Errorf("could not mark filename flag as required: %w", err))
@@ -100,7 +102,7 @@ func (o *applyOptions) validate() error {
 
 // run performs the apply operation using the provided options.
 func (o *applyOptions) run(ctx context.Context) error {
-	manifest, err := option.ReadManifests(o.Filenames...)
+	manifest, err := option.ReadManifests(o.Recursive, o.Filenames...)
 	if err != nil {
 		return fmt.Errorf("read manifests: %w", err)
 	}
