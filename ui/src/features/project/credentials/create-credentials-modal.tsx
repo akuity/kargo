@@ -20,21 +20,22 @@ import { constructDefaults, labelForKey, typeLabel } from './utils';
 
 const credentialsNameRegex = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
 
-const formSchema = z
-  .object({
-    name: zodValidators.requiredString.regex(
-      credentialsNameRegex,
-      'Credentials name must be a valid DNS subdomain.'
-    ),
-    type: zodValidators.requiredString,
-    repoUrl: z.string(),
-    repoUrlIsRegex: z.boolean().optional(),
-    username: zodValidators.requiredString,
-    password: zodValidators.requiredString
-  })
-  .refine((data) => ['git', 'helm', 'image'].includes(data.type), {
-    message: "Type must be one of 'git', 'helm', or 'image'."
-  });
+const createFormSchema = (editing?: boolean) =>
+  z
+    .object({
+      name: zodValidators.requiredString.regex(
+        credentialsNameRegex,
+        'Credentials name must be a valid DNS subdomain.'
+      ),
+      type: zodValidators.requiredString,
+      repoUrl: zodValidators.requiredString,
+      repoUrlIsRegex: z.boolean().optional(),
+      username: zodValidators.requiredString,
+      password: editing ? z.string().optional() : zodValidators.requiredString
+    })
+    .refine((data) => ['git', 'helm', 'image'].includes(data.type), {
+      message: "Type must be one of 'git', 'helm', or 'image'."
+    });
 
 const placeholders = {
   name: 'My Credentials',
@@ -55,7 +56,7 @@ type Props = ModalComponentProps & {
 export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...props }: Props) => {
   const { control, handleSubmit, watch } = useForm({
     defaultValues: constructDefaults(init),
-    resolver: zodResolver(formSchema)
+    resolver: zodResolver(createFormSchema(editing))
   });
 
   const { mutate } = useMutation(createCredentials, {
