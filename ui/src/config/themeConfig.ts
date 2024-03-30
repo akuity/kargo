@@ -9,7 +9,8 @@ export const token: Partial<MapToken> = {
   fontSizeHeading4: 18,
   fontSizeHeading5: 14,
   colorText: '#454545',
-  borderRadius: 8
+  borderRadius: 8,
+  fontFamily: 'Poppins, sans-serif'
 };
 
 export const themeConfig: ThemeConfig = {
