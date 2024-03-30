@@ -2,8 +2,10 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +19,23 @@ func (r *reconciler) upgradeStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (ctrl.Result, error) {
+	var stageCRD extv1.CustomResourceDefinition
+	if err := r.kargoClient.Get(
+		ctx,
+		types.NamespacedName{
+			Name: "stages.kargo.akuity.io",
+		},
+		&stageCRD,
+	); err != nil {
+		return ctrl.Result{}, err
+	}
+	if _, hasShardField := stageCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.
+		Properties["spec"].
+		Properties["shard"]; !hasShardField {
+		return ctrl.Result{},
+			errors.New("stage CRD has no spec.shard field; waiting for update")
+	}
+
 	// If there is a shard label, patch the spec to fill in the new shard field.
 	if shard, ok := stage.Labels[kargoapi.ShardLabelKey]; stage.Spec.Shard == "" && ok {
 		if err := r.kargoClient.Patch(

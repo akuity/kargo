@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
@@ -60,6 +61,12 @@ func newManagementControllerCommand() *cobra.Command {
 				if err = rbacv1.AddToScheme(scheme); err != nil {
 					return fmt.Errorf(
 						"error adding Kubernetes RBAC API to Kargo controller manager scheme: %w",
+						err,
+					)
+				}
+				if err = extv1.AddToScheme(scheme); err != nil {
+					return fmt.Errorf(
+						"error adding Kubernetes API extensions API to Kargo controller manager scheme: %w",
 						err,
 					)
 				}

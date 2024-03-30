@@ -2,9 +2,11 @@ package upgrade
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -66,6 +68,22 @@ func (f *freightReconciler) Reconcile(
 		"freight":   req.NamespacedName.Name,
 	})
 	logger.Debug("reconciling Freight")
+
+	var freightCRD extv1.CustomResourceDefinition
+	if err := f.client.Get(
+		ctx,
+		types.NamespacedName{
+			Name: "freights.kargo.akuity.io",
+		},
+		&freightCRD,
+	); err != nil {
+		return ctrl.Result{}, err
+	}
+	if _, hasWarehouseField := freightCRD.Spec.Versions[0].Schema.OpenAPIV3Schema.
+		Properties["warehouse"]; !hasWarehouseField {
+		return ctrl.Result{},
+			errors.New("freight CRD has no warehouse field; waiting for update")
+	}
 
 	// Find the Freight
 	freight, err := kargoapi.GetFreight(ctx, f.client, req.NamespacedName)
