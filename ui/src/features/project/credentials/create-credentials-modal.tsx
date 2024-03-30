@@ -1,5 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { faIdBadge } from '@fortawesome/free-solid-svg-icons';
+import { faCode, faExternalLink, faIdBadge } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input, Modal, Segmented } from 'antd';
@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
+import { SegmentLabel } from '@ui/features/common/segment-label';
 import {
   createCredentials,
   updateCredentials
@@ -26,13 +27,10 @@ const formSchema = z
       'Credentials name must be a valid DNS subdomain.'
     ),
     type: zodValidators.requiredString,
-    repoUrl: z.string().optional(),
-    repoUrlPattern: z.string().optional(),
+    repoUrl: z.string(),
+    repoUrlIsRegex: z.boolean().optional(),
     username: zodValidators.requiredString,
     password: zodValidators.requiredString
-  })
-  .refine((data) => data.repoUrl || data.repoUrlPattern, {
-    message: "Either 'repoUrl' or 'repoUrlPattern' must be set."
   })
   .refine((data) => ['git', 'helm', 'image'].includes(data.type), {
     message: "Type must be one of 'git', 'helm', or 'image'."
@@ -41,10 +39,11 @@ const formSchema = z
 const placeholders = {
   name: 'My Credentials',
   repoUrl: 'https://github.com/myusername/myrepo.git',
-  repoUrlPattern: '(?:https?://)?(?:www.)?github.com/[w.-]+/[w.-]+(?:.git)?',
   username: 'admin',
   password: 'admin12345'
 };
+
+const repoUrlPatternPlaceholder = '(?:https?://)?(?:www.)?github.com/[w.-]+/[w.-]+(?:.git)?';
 
 type Props = ModalComponentProps & {
   project: string;
@@ -54,7 +53,7 @@ type Props = ModalComponentProps & {
 };
 
 export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...props }: Props) => {
-  const { control, handleSubmit } = useForm({
+  const { control, handleSubmit, watch } = useForm({
     defaultValues: constructDefaults(init),
     resolver: zodResolver(formSchema)
   });
@@ -72,6 +71,8 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
       onSuccess();
     }
   });
+
+  const repoUrlIsRegex = watch('repoUrlIsRegex');
 
   return (
     <Modal
@@ -113,21 +114,54 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
         />
       </div>
       {Object.keys(placeholders).map((key) => (
-        <FieldContainer
-          key={key}
-          label={labelForKey(key)}
-          name={key as 'name' | 'type' | 'repoUrl' | 'repoUrlPattern' | 'username' | 'password'}
-          control={control}
-        >
-          {({ field }) => (
-            <Input
-              {...field}
-              type={key === 'password' ? 'password' : 'text'}
-              placeholder={placeholders[key as keyof typeof placeholders]}
-              disabled={editing && key === 'name'}
-            />
+        <div key={key}>
+          {key === 'repoUrl' && (
+            <>
+              <label className='block mb-4'>Repo URL / Pattern</label>
+              <Controller
+                name='repoUrlIsRegex'
+                control={control}
+                render={({ field }) => (
+                  <Segmented
+                    className='w-full mb-4'
+                    block
+                    {...field}
+                    options={[
+                      {
+                        label: <SegmentLabel icon={faExternalLink}>URL</SegmentLabel>,
+                        value: 'url'
+                      },
+                      {
+                        label: <SegmentLabel icon={faCode}>Regex Pattern</SegmentLabel>,
+                        value: 'regex'
+                      }
+                    ]}
+                    onChange={(newValue) => field.onChange(newValue === 'regex')}
+                    value={field.value ? 'regex' : 'url'}
+                  />
+                )}
+              />
+            </>
           )}
-        </FieldContainer>
+          <FieldContainer
+            label={key !== 'repoUrl' ? labelForKey(key) : undefined}
+            name={key as 'name' | 'type' | 'repoUrl' | 'username' | 'password'}
+            control={control}
+          >
+            {({ field }) => (
+              <Input
+                {...field}
+                type={key === 'password' ? 'password' : 'text'}
+                placeholder={
+                  key === 'repoUrl' && repoUrlIsRegex
+                    ? repoUrlPatternPlaceholder
+                    : placeholders[key as keyof typeof placeholders]
+                }
+                disabled={editing && key === 'name'}
+              />
+            )}
+          </FieldContainer>
+        </div>
       ))}
     </Modal>
   );

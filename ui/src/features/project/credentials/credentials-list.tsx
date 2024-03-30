@@ -1,5 +1,12 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faIdBadge, faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCode,
+  faExternalLink,
+  faIdBadge,
+  faPencil,
+  faPlus,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Table } from 'antd';
 import { useParams } from 'react-router-dom';
@@ -12,7 +19,7 @@ import {
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
-import { CredentialTypeLabelKey, CredentialsType } from './types';
+import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';
 import { iconForCredentialsType } from './utils';
 
 export const CredentialsList = () => {
@@ -73,13 +80,23 @@ export const CredentialsList = () => {
             title: 'Repo URL / Pattern',
             key: 'createdAt',
             render: (record) => (
-              <div>{record?.stringData['repoURL'] || record?.stringData['repoURLPattern']}</div>
+              <div className='flex items-center'>
+                <FontAwesomeIcon
+                  icon={
+                    record.stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true'
+                      ? faCode
+                      : faExternalLink
+                  }
+                  className='mr-2'
+                />
+                {record?.stringData[CredentialsDataKey.RepoUrl]}
+              </div>
             )
           },
           {
             title: 'Username',
             key: 'username',
-            render: (record) => <div>{record?.stringData['username']}</div>
+            render: (record) => <div>{record?.stringData[CredentialsDataKey.Username]}</div>
           },
           {
             key: 'actions',

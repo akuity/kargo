@@ -1,16 +1,13 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
+import { SegmentLabel } from '@ui/features/common/segment-label';
 import { Secret } from '@ui/gen/v1alpha1/types_pb';
 
-import { CredentialTypeLabelKey, CredentialsType } from './types';
+import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';
 
 export const typeLabel = (type: CredentialsType) => (
-  <span className='flex items-center font-semibold justify-center text-center p-4'>
-    <FontAwesomeIcon icon={iconForCredentialsType(type)} className='mr-2' />
-    {type.toUpperCase()}
-  </span>
+  <SegmentLabel icon={iconForCredentialsType(type)}>{type.toUpperCase()}</SegmentLabel>
 );
 
 export const iconForCredentialsType = (type: CredentialsType) => {
@@ -40,7 +37,7 @@ export const constructDefaults = (init?: Secret) => {
       name: '',
       type: 'git',
       repoUrl: '',
-      repoUrlPattern: '',
+      repoUrlIsRegex: false,
       username: '',
       password: ''
     };
@@ -48,9 +45,9 @@ export const constructDefaults = (init?: Secret) => {
   return {
     name: init?.metadata?.name || '',
     type: init?.metadata?.labels[CredentialTypeLabelKey] || 'git',
-    repoUrl: init?.stringData['repoURL'],
-    repoUrlPattern: init?.stringData['repoURLPattern'],
-    username: init?.stringData['username'],
+    repoUrl: init?.stringData[CredentialsDataKey.RepoUrl],
+    repoUrlIsRegex: init?.stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true',
+    username: init?.stringData[CredentialsDataKey.Username],
     password: ''
   };
 };
