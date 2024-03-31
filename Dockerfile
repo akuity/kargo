@@ -50,7 +50,7 @@ RUN NODE_ENV='production' pnpm run build
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.6.0 as tools
+FROM curlimages/curl:8.7.1 as tools
 
 ARG TARGETOS
 ARG TARGETARCH
