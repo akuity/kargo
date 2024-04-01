@@ -41,7 +41,7 @@ const placeholders = {
   name: 'My Credentials',
   repoUrl: 'https://github.com/myusername/myrepo.git',
   username: 'admin',
-  password: 'admin12345'
+  password: '********'
 };
 
 const repoUrlPatternPlaceholder = '(?:https?://)?(?:www.)?github.com/[w.-]+/[w.-]+(?:.git)?';
