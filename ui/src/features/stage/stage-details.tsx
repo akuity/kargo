@@ -9,6 +9,7 @@ import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { ManifestPreview } from './manifest-preview';
 import { Promotions } from './promotions';
 import { StageActions } from './stage-actions';
+import { Verifications } from './verifications';
 
 export const StageDetails = ({ stage }: { stage: Stage }) => {
   const { name: projectName, stageName } = useParams();
@@ -51,6 +52,11 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 },
                 {
                   key: '2',
+                  label: 'Verifications',
+                  children: <Verifications stage={stage} />
+                },
+                {
+                  key: '3',
                   label: 'Live Manifest',
                   className: 'h-full pb-2',
                   children: <ManifestPreview stage={stage} />
