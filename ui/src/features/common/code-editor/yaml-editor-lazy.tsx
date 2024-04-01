@@ -101,7 +101,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
           </p>
         )}
       </div>
-      {!props.disabled && (
+      {!props.disabled && schema && (
         <div className='mt-1'>
           <Typography.Text type='secondary'>
             Press <strong>ctrl + space</strong> to show suggestions

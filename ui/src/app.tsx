@@ -30,9 +30,10 @@ export const App = () => (
                 <Route element={<MainLayout />}>
                   <Route path={paths.projects} element={<Projects />} />
                   <Route path={paths.project} element={<Project />} />
+                  <Route path={paths.projectCredentials} element={<Project tab='credentials' />} />
                   <Route
-                    path={paths.projectCredentials}
-                    element={<Project tab={'credentials'} />}
+                    path={paths.projectAnalysisTemplates}
+                    element={<Project tab='analysisTemplates' />}
                   />
                   <Route path={paths.stage} element={<Project />} />
                 </Route>
