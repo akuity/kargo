@@ -110,7 +110,7 @@ export const ProjectDetails = () => {
   const { show } = useModal();
 
   React.useEffect(() => {
-    if (!data || !isVisible) {
+    if (!data || !isVisible || !warehouseData) {
       return;
     }
 
