@@ -110,7 +110,7 @@ export const ProjectDetails = () => {
   const { show } = useModal();
 
   React.useEffect(() => {
-    if (!data || !isVisible || !warehouseData) {
+    if (!data || !isVisible) {
       return;
     }
 
@@ -120,7 +120,6 @@ export const ProjectDetails = () => {
       const promiseClient = createPromiseClient(KargoService, transportWithAuth);
       const stream = promiseClient.watchStages({ project: name }, { signal: cancel.signal });
       let stages = data.stages.slice();
-
       for await (const e of stream) {
         const index = stages.findIndex((item) => item.metadata?.name === e.stage?.metadata?.name);
         if (e.type === 'DELETED') {
@@ -215,7 +214,7 @@ export const ProjectDetails = () => {
   const [stageColorMap, setStageColorMap] = React.useState<{ [key: string]: string }>({});
 
   const [nodes, connectors, box, sortedStages] = React.useMemo(() => {
-    if (!data) {
+    if (!data || !warehouseData) {
       return [[], []];
     }
 
@@ -402,7 +401,7 @@ export const ProjectDetails = () => {
     setStageColorMap(scm);
     nodes.forEach((node) => {
       if (node.type === NodeType.STAGE) {
-        const color = stageColorMap[node.data?.metadata?.uid || ''];
+        const color = scm[node.data?.metadata?.uid || ''];
         if (color) {
           node.color = color;
         }
@@ -410,7 +409,7 @@ export const ProjectDetails = () => {
     });
 
     return [nodes, connectors, box, sortedStages];
-  }, [data, hideSubscriptions]);
+  }, [data, warehouseData, hideSubscriptions]);
 
   const [stagesPerFreight, setStagesPerFreight] = React.useState<{ [key: string]: Stage[] }>({});
   const [promotingStage, setPromotingStage] = React.useState<Stage | undefined>();
