@@ -22,7 +22,7 @@ export const EditAnalysisTemplateModal = ({ visible, hide, template }: Props) =>
 
   const { control, handleSubmit } = useForm({
     defaultValues: {
-      value: yaml.stringify(template)
+      value: yaml.stringify(template.spec)
     }
   });
 
@@ -34,7 +34,10 @@ export const EditAnalysisTemplateModal = ({ visible, hide, template }: Props) =>
         yaml.stringify({
           apiVersion: 'argoproj.io/v1alpha1',
           kind: 'AnalysisTemplate',
-          metadata: template.metadata,
+          metadata: {
+            name: template.metadata?.name,
+            namespace: template.metadata?.namespace
+          },
           spec: data
         })
       )
