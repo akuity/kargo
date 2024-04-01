@@ -1033,7 +1033,7 @@ message VerificationInfo {
   optional string id = 4;
 
   // StartTime is the time at which the Verification process was started.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time timestamp = 5;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
 
   // Phase describes the current phase of the Verification process. Generally,
   // this will be a reflection of the underlying AnalysisRun's phase, however,

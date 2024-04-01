@@ -706,7 +706,7 @@ spec:
                             there are exceptions to this, such as in the case where an AnalysisRun
                             cannot be launched successfully.
                           type: string
-                        timestamp:
+                        startTime:
                           description: StartTime is the time at which the Verification
                             process was started.
                           format: date-time
@@ -753,7 +753,7 @@ spec:
                           there are exceptions to this, such as in the case where an AnalysisRun
                           cannot be launched successfully.
                         type: string
-                      timestamp:
+                      startTime:
                         description: StartTime is the time at which the Verification
                           process was started.
                         format: date-time
@@ -917,7 +917,7 @@ spec:
                                 there are exceptions to this, such as in the case where an AnalysisRun
                                 cannot be launched successfully.
                               type: string
-                            timestamp:
+                            startTime:
                               description: StartTime is the time at which the Verification
                                 process was started.
                               format: date-time
@@ -965,7 +965,7 @@ spec:
                               there are exceptions to this, such as in the case where an AnalysisRun
                               cannot be launched successfully.
                             type: string
-                          timestamp:
+                          startTime:
                             description: StartTime is the time at which the Verification
                               process was started.
                             format: date-time
@@ -1195,7 +1195,7 @@ spec:
                               there are exceptions to this, such as in the case where an AnalysisRun
                               cannot be launched successfully.
                             type: string
-                          timestamp:
+                          startTime:
                             description: StartTime is the time at which the Verification
                               process was started.
                             format: date-time
@@ -1242,7 +1242,7 @@ spec:
                             there are exceptions to this, such as in the case where an AnalysisRun
                             cannot be launched successfully.
                           type: string
-                        timestamp:
+                        startTime:
                           description: StartTime is the time at which the Verification
                             process was started.
                           format: date-time

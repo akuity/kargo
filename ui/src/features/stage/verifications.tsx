@@ -93,7 +93,7 @@ export const Verifications = ({ stage }: Props) => {
       <Table.Column<(typeof verifications)[number]>
         title='Date'
         render={(_, verification) => {
-          const date = verification.timestamp?.toDate();
+          const date = verification.startTime?.toDate();
           return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
         }}
       />

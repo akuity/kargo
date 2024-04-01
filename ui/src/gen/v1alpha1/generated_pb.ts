@@ -3444,9 +3444,9 @@ export class VerificationInfo extends Message<VerificationInfo> {
   /**
    * StartTime is the time at which the Verification process was started.
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time timestamp = 5;
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
    */
-  timestamp?: Time;
+  startTime?: Time;
 
   /**
    * Phase describes the current phase of the Verification process. Generally,
@@ -3483,7 +3483,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.VerificationInfo";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "timestamp", kind: "message", T: Time, opt: true },
+    { no: 5, name: "startTime", kind: "message", T: Time, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "analysisRun", kind: "message", T: AnalysisRunReference, opt: true },
