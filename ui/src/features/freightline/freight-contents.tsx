@@ -1,5 +1,5 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { IconDefinition, faAnchor } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 
@@ -55,6 +55,15 @@ export const FreightContents = (props: {
           icon={faDocker}
         >
           <div>{i.tag}</div>
+        </FreightContentItem>
+      ))}
+      {(freight?.charts || []).map((c) => (
+        <FreightContentItem
+          key={`${c.repoURL}:${c.version}`}
+          title={`${c.repoURL}:${c.version}`}
+          icon={faAnchor}
+        >
+          <div>{c.version}</div>
         </FreightContentItem>
       ))}
     </div>
