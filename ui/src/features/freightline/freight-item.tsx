@@ -26,7 +26,7 @@ export const FreightItem = ({
 }) => {
   return (
     <div
-      className={classNames('relative h-full', styles.freightItem, {
+      className={classNames('relative h-full cursor-pointer', styles.freightItem, {
         ['w-32']: !empty && mode !== FreightMode.Confirming,
         ['border-gray-500']: mode === FreightMode.Default && !empty,
         [styles.promotable]: mode === FreightMode.Promotable,

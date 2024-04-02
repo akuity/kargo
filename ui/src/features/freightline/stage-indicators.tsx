@@ -37,7 +37,7 @@ export const StageIndicators = (props: { stages: Stage[]; faded?: boolean }) => 
       {(props.stages || []).map((s) => (
         <StageIndicator
           stage={s}
-          backgroundColor={stageColorMap[s?.metadata?.uid || '']}
+          backgroundColor={stageColorMap[s?.metadata?.name || '']}
           key={s?.metadata?.uid}
           faded={props.faded}
         />
