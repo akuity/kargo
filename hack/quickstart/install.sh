@@ -34,6 +34,7 @@ helm install argo-rollouts argo-rollouts \
 
 helm install kargo \
   oci://ghcr.io/akuity/kargo-charts/kargo \
+  --version 0.4.5 \
   --namespace kargo \
   --create-namespace \
   --set api.service.type=NodePort \
