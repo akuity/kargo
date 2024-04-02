@@ -22,13 +22,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Space, Tooltip, message } from 'antd';
 import { graphlib, layout } from 'dagre';
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { transportWithAuth } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import { getAlias } from '@ui/features/common/freight-label';
 import { useModal } from '@ui/features/common/modal/use-modal';
+import { FreightDetails } from '@ui/features/freight/freight-details';
 import { ConfirmPromotionDialogue } from '@ui/features/freightline/confirm-promotion-dialogue';
 import { FreightContents } from '@ui/features/freightline/freight-contents';
 import { FreightItem, FreightMode } from '@ui/features/freightline/freight-item';
@@ -79,7 +81,7 @@ const warehouseNodeHeight = 100;
 const getSeconds = (ts?: Time): number => Number(ts?.seconds) || 0;
 
 export const ProjectDetails = () => {
-  const { name, stageName } = useParams();
+  const { name, stageName, freightName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const {
     data: freightData,
@@ -90,6 +92,8 @@ export const ProjectDetails = () => {
   const { data: warehouseData, isLoading: isLoadingWarehouses } = useQuery(listWarehouses, {
     project: name
   });
+
+  const navigate = useNavigate();
 
   const client = useQueryClient();
 
@@ -416,7 +420,7 @@ export const ProjectDetails = () => {
     setStageColorMap(scm);
     nodes.forEach((node) => {
       if (node.type === NodeType.STAGE) {
-        const color = scm[node.data?.metadata?.uid || ''];
+        const color = scm[node.data?.metadata?.name || ''];
         if (color) {
           node.color = color;
         }
@@ -543,6 +547,9 @@ export const ProjectDetails = () => {
   if (isLoading || isLoadingFreight) return <LoadingState />;
 
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
+  const freight =
+    freightName &&
+    (freightData?.groups['']?.freight || []).find((item) => item.metadata?.name === freightName);
 
   const isFaded = (stage: Stage): boolean => {
     if (!promotingStage || !confirmingPromotion) {
@@ -605,6 +612,8 @@ export const ProjectDetails = () => {
                     onClick={() => {
                       if (promotingStage && promotionEligible[id]) {
                         setConfirmingPromotion(confirmingPromotion ? undefined : f?.metadata?.name);
+                      } else {
+                        navigate(generatePath(paths.freight, { name, freightName: id }));
                       }
                     }}
                     mode={freightModeFor(id)}
@@ -919,6 +928,7 @@ export const ProjectDetails = () => {
           </div>
         </div>
         {stage && <StageDetails stage={stage} />}
+        {freight && <FreightDetails freight={freight} />}
       </ColorContext.Provider>
     </div>
   );

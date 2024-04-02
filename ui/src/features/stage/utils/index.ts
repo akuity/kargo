@@ -57,7 +57,7 @@ export const getStageColors = (project: string, stages: Stage[]): ColorMap => {
       for (const stage of stages) {
         const color = parseColorAnnotation(stage);
         if (color) {
-          m[stage?.metadata?.uid || ''] = ColorMapHex[color];
+          m[stage?.metadata?.name || ''] = ColorMapHex[color];
         }
       }
       return m;
@@ -96,7 +96,7 @@ export const generateStageColors = (sortedStages: Stage[], prevMap?: ColorMap) =
     const color = parseColorAnnotation(stage);
     if (color) {
       delete curColors[color];
-      finalMap[stage?.metadata?.uid || ''] = ColorMapHex[color];
+      finalMap[stage?.metadata?.name || ''] = ColorMapHex[color];
     }
   }
   const colors = Object.values(curColors);
@@ -106,7 +106,7 @@ export const generateStageColors = (sortedStages: Stage[], prevMap?: ColorMap) =
   }
   let i = 0;
   for (const stage of sortedStages) {
-    const id = stage?.metadata?.uid;
+    const id = stage?.metadata?.name;
     if (!id || finalMap[id]) {
       continue;
     }
