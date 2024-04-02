@@ -1,0 +1,95 @@
+import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { faChartBar, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Button, Space, Table } from 'antd';
+import { format } from 'date-fns';
+import { useParams } from 'react-router-dom';
+
+import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
+import { useModal } from '@ui/features/common/modal/use-modal';
+import { AnalysisTemplate } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  deleteAnalysisTemplate,
+  listAnalysisTemplates
+} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+
+import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
+
+export const AnalysisTemplatesList = () => {
+  const { name } = useParams();
+  const confirm = useConfirmModal();
+
+  const { data, refetch } = useQuery(listAnalysisTemplates, { project: name });
+  const { show: showCreate } = useModal((p) => (
+    <CreateAnalysisTemplateModal {...p} namespace={name || ''} />
+  ));
+  const { mutate: deleteTemplate, isPending: isDeleting } = useMutation(deleteAnalysisTemplate, {
+    onSuccess: () => refetch()
+  });
+
+  return (
+    <div className='p-4'>
+      <h1 className='pl-2 text-lg font-semibold flex items-center mb-4'>
+        <FontAwesomeIcon icon={faChartBar} className='mr-2' />
+        Analysis Templates
+        <Button
+          type='primary'
+          className='ml-auto'
+          icon={<FontAwesomeIcon icon={faPlus} />}
+          onClick={() => showCreate()}
+        >
+          New
+        </Button>
+      </h1>
+
+      <Table<AnalysisTemplate>
+        dataSource={data?.analysisTemplates}
+        pagination={{ hideOnSinglePage: true }}
+        rowKey={(i) => i.metadata?.name || ''}
+      >
+        <Table.Column<AnalysisTemplate>
+          title='Creation Date'
+          width={200}
+          render={(_, template) => {
+            const date = template.metadata?.creationTimestamp?.toDate();
+            return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
+          }}
+        />
+        <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
+        <Table.Column<AnalysisTemplate>
+          width={100}
+          render={(_, template) => (
+            <Space>
+              <Button
+                icon={<FontAwesomeIcon icon={faTrash} />}
+                danger
+                loading={isDeleting}
+                onClick={() => {
+                  confirm({
+                    title: (
+                      <div className='flex items-center'>
+                        <FontAwesomeIcon icon={faTrash} className='mr-2' />
+                        Delete Analysis Template
+                      </div>
+                    ),
+                    content: (
+                      <p>
+                        Are you sure you want to delete AnalysisTemplate{' '}
+                        <b>{template?.metadata?.name}</b>?
+                      </p>
+                    ),
+                    onOk: () => {
+                      deleteTemplate({ project: name || '', name: template?.metadata?.name || '' });
+                    }
+                  });
+                }}
+              >
+                Delete
+              </Button>
+            </Space>
+          )}
+        />
+      </Table>
+    </div>
+  );
+};

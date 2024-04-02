@@ -132,7 +132,8 @@ export const CredentialsList = () => {
                       ),
                       content: (
                         <p>
-                          Are you sure you want to delete credentials <b>{name}</b>?
+                          Are you sure you want to delete credentials{' '}
+                          <b>{record?.metadata?.name}</b>?
                         </p>
                       ),
                       onOk: () => {
