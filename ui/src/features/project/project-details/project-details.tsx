@@ -27,11 +27,11 @@ import { useParams } from 'react-router-dom';
 import { transportWithAuth } from '@ui/config/transport';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
-import { getAlias } from '@ui/features/common/freight-label';
 import { useModal } from '@ui/features/common/modal/use-modal';
+import { getAlias } from '@ui/features/common/utils';
 import { ConfirmPromotionDialogue } from '@ui/features/freightline/confirm-promotion-dialogue';
 import { FreightContents } from '@ui/features/freightline/freight-contents';
-import { FreightItem, FreightMode } from '@ui/features/freightline/freight-item';
+import { FreightItem } from '@ui/features/freightline/freight-item';
 import { Freightline } from '@ui/features/freightline/freightline';
 import { FreightlineHeader } from '@ui/features/freightline/freightline-header';
 import { StageIndicators } from '@ui/features/freightline/stage-indicators';
@@ -61,6 +61,7 @@ import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
 import styles from './project-details.module.less';
 import {
+  FreightMode,
   FreightlineAction,
   NewWarehouseNode,
   NodeType,
@@ -73,8 +74,8 @@ const lineThickness = 2;
 const nodeWidth = 150;
 const nodeHeight = 118;
 
-const warehouseNodeWidth = 150;
-const warehouseNodeHeight = 100;
+const warehouseNodeWidth = 165;
+const warehouseNodeHeight = 110;
 
 const getSeconds = (ts?: Time): number => Number(ts?.seconds) || 0;
 
@@ -341,7 +342,7 @@ export const ProjectDetails = () => {
       }
     });
 
-    layout(g, { lablepos: 'c' });
+    layout(g, { labelpos: 'c' });
 
     const nodes = myNodes.map((node, index) => {
       const gNode = g.node(String(index));
@@ -854,8 +855,8 @@ export const ProjectDetails = () => {
                       </>
                     ) : (
                       <RepoNode nodeData={node}>
-                        <div className='flex w-full h-full'>
-                          {node.type === NodeType.WAREHOUSE && (
+                        {node.type === NodeType.WAREHOUSE && (
+                          <div className='flex w-full h-full'>
                             <Button
                               onClick={() =>
                                 refreshWarehouseAction({
@@ -869,8 +870,8 @@ export const ProjectDetails = () => {
                             >
                               Refresh
                             </Button>
-                          )}
-                        </div>
+                          </div>
+                        )}
                         {node.type === NodeType.WAREHOUSE && (
                           <Nodule
                             nodeHeight={warehouseNodeHeight}
