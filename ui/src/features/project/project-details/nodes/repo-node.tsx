@@ -1,5 +1,11 @@
 import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faBuilding, faCircleNotch } from '@fortawesome/free-solid-svg-icons';
+import {
+  faAnchor,
+  faBuilding,
+  faCircleNotch,
+  faExclamationCircle,
+  faExternalLinkAlt
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 
@@ -27,23 +33,35 @@ export const RepoNode = ({ nodeData, children }: Props) => {
     type === NodeType.REPO_CHART
       ? nodeData?.data?.repoURL || ''
       : type === NodeType.WAREHOUSE
-        ? nodeData?.data
+        ? nodeData?.data?.metadata?.name || ''
         : nodeData?.data?.repoURL || '';
   return (
     <div className={styles.node}>
       <h3 className='flex justify-between gap-2'>
-        <div className='text-ellipsis whitespace-nowrap overflow-x-hidden pb-1'>
-          {nodeData.type === NodeType.WAREHOUSE ? nodeData.data : 'Subscription'}
+        <div className='text-ellipsis whitespace-nowrap overflow-x-hidden py-1'>
+          {nodeData.type === NodeType.WAREHOUSE ? nodeData.data?.metadata?.name : 'Subscription'}
         </div>
         <div className='flex items-center'>
           {nodeData.refreshing && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
+          {nodeData.type === NodeType.WAREHOUSE && nodeData?.data?.status?.message && (
+            <Tooltip
+              title={
+                <div className='flex items-center'>
+                  <FontAwesomeIcon icon={faExclamationCircle} className='mr-2' />
+                  {nodeData?.data?.status?.message}
+                </div>
+              }
+            >
+              <FontAwesomeIcon icon={faExclamationCircle} className='mr-1 text-red-600' />
+            </Tooltip>
+          )}
           {type && <FontAwesomeIcon icon={ico[type]} />}
         </div>
       </h3>
       <div className={styles.body}>
         {nodeData.type !== NodeType.WAREHOUSE && (
-          <div className='mb-2'>
-            Repo URL
+          <div className='text-center'>
+            <div className={styles.repoLabel}>REPO URL</div>
             <Tooltip title={value}>
               <a
                 href={
@@ -55,12 +73,12 @@ export const RepoNode = ({ nodeData, children }: Props) => {
                 target='_blank'
                 rel='noreferrer'
               >
+                <FontAwesomeIcon icon={faExternalLinkAlt} size='sm' className='mr-2' />
                 {value}
               </a>
             </Tooltip>
           </div>
         )}
-
         {children}
       </div>
     </div>

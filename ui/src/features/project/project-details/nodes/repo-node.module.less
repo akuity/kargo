@@ -7,12 +7,19 @@
   height: 100%;
 
   h3 {
-    padding: 0.4em 0.5em;
+    padding: 0.5em;
     color: #333;
     font-size: 15px;
     font-weight: 600;
-    margin-left: 0.25em;
+    margin-left: 0.1em;
     margin-bottom: 0;
+  }
+
+  .repoLabel {
+    color: gray;
+    font-size: 10px;
+    margin-bottom: 0.75em;
+    font-weight: 600;
   }
 }
 
@@ -21,20 +28,23 @@
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
   padding: 8px;
-  font-size: 12px;
   flex: 1;
+  display: flex;
+  @apply items-center justify-center;
 }
 
 .value {
-  display: block;
+  display: flex;
   margin-top: 3px;
-  color: #777;
-  font-size: 11px;
   text-decoration: none;
   white-space: nowrap;
   overflow-x: hidden;
   padding-bottom: 0.25em;
   text-overflow: ellipsis;
+  color: black;
+  font-weight: 600;
+  font-size: 14px;
+  @apply font-mono items-center justify-center;
 
   &:hover {
     text-decoration: underline;
