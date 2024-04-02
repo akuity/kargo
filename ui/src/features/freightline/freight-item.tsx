@@ -3,16 +3,9 @@ import classNames from 'classnames';
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
 import { FreightLabel } from '../common/freight-label';
+import { FreightMode } from '../project/project-details/types';
 
 import styles from './freightline.module.less';
-
-export enum FreightMode {
-  Default = 'default', // not promoting, has stages
-  Promotable = 'promotable', // promoting, promotable
-  Disabled = 'disabled',
-  Selected = 'selected',
-  Confirming = 'confirming' // promoting, confirming
-}
 
 export const FreightItem = ({
   freight,

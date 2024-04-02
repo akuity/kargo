@@ -105,12 +105,10 @@ export const StageNode = ({
               APPROVE
             </div>
           ) : (
-            <>
-              <h3>Current Freight</h3>
-              <div className='font-mono text-sm font-semibold h-full flex items-center justify-center'>
-                <FreightLabel freight={currentFreight} />
-              </div>
-            </>
+            <div className='text-sm h-full flex flex-col items-center justify-center -mt-1'>
+              <div className={styles.freightLabel}>CURRENT FREIGHT</div>
+              <FreightLabel freight={currentFreight} />
+            </div>
           )}
         </div>
         {!approving && (
