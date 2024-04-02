@@ -1,8 +1,14 @@
 import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
-import { faChevronDown, faPen, faRefresh, faTrash } from '@fortawesome/free-solid-svg-icons';
+import {
+  faChevronDown,
+  faExternalLinkAlt,
+  faPen,
+  faRefresh,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Space } from 'antd';
+import { Button, Dropdown, Space, Tooltip } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
@@ -80,20 +86,24 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
   return (
     <Space size={16}>
       {argoCDAppsLinks.length === 1 && (
-        <Button
-          type='link'
-          onClick={() => window.open(argoCDAppsLinks[0]?.url, '_blank', 'noreferrer')}
-          size='small'
-        >
-          Argo CD
-        </Button>
+        <Tooltip title={argoCDAppsLinks[0]?.label}>
+          <Button
+            type='link'
+            onClick={() => window.open(argoCDAppsLinks[0]?.url, '_blank', 'noreferrer')}
+            size='small'
+            icon={<FontAwesomeIcon icon={faExternalLinkAlt} />}
+          >
+            Argo CD
+          </Button>
+        </Tooltip>
       )}
       {argoCDAppsLinks.length > 1 && (
         <Dropdown
           menu={{
             items: argoCDAppsLinks.map((item, i) => ({
               label: (
-                <a href={item?.url} target='_blank' rel='noreferrer'>
+                <a href={item?.url} target='_blank' rel='noreferrer' className='flex items-center'>
+                  <FontAwesomeIcon icon={faExternalLinkAlt} className='mr-2' />
                   {item?.label}
                 </a>
               ),
@@ -102,11 +112,8 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
           }}
           trigger={['click']}
         >
-          <Button type='link' size='small'>
-            <Space size={6}>
-              Argo CD
-              <FontAwesomeIcon icon={faChevronDown} />
-            </Space>
+          <Button type='link' size='small' icon={<FontAwesomeIcon icon={faChevronDown} />}>
+            Argo CD
           </Button>
         </Dropdown>
       )}
