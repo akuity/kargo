@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faChartBar, faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faChartBar, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Space, Table } from 'antd';
 import { format } from 'date-fns';
@@ -14,7 +14,6 @@ import {
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
-import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
 
 export const AnalysisTemplatesList = () => {
   const { name } = useParams();
@@ -24,7 +23,6 @@ export const AnalysisTemplatesList = () => {
   const { show: showCreate } = useModal((p) => (
     <CreateAnalysisTemplateModal {...p} namespace={name || ''} />
   ));
-  const { show: showEdit } = useModal();
   const { mutate: deleteTemplate, isPending: isDeleting } = useMutation(deleteAnalysisTemplate, {
     onSuccess: () => refetch()
   });
@@ -47,6 +45,7 @@ export const AnalysisTemplatesList = () => {
       <Table<AnalysisTemplate>
         dataSource={data?.analysisTemplates}
         pagination={{ hideOnSinglePage: true }}
+        rowKey={(i) => i.metadata?.name || ''}
       >
         <Table.Column<AnalysisTemplate>
           title='Creation Date'
@@ -58,17 +57,9 @@ export const AnalysisTemplatesList = () => {
         />
         <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
         <Table.Column<AnalysisTemplate>
-          width={200}
+          width={100}
           render={(_, template) => (
             <Space>
-              <Button
-                icon={<FontAwesomeIcon icon={faPencil} />}
-                onClick={() =>
-                  showEdit((p) => <EditAnalysisTemplateModal {...p} template={template} />)
-                }
-              >
-                Edit
-              </Button>
               <Button
                 icon={<FontAwesomeIcon icon={faTrash} />}
                 danger
