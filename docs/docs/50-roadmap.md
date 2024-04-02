@@ -42,32 +42,35 @@ __Status:__ Completed
 
 ## v0.5.0
 
+__Status:__ Completed
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| `Warehouse` Rules/Filters | feature | Introduced optional path-based constraints on Git repository subscriptions. |
+| Credential Storage | refactor | Simplified and streamlined format and storage of repository credentials. |
+| Credential Management | feature | Added credential management capabilities to the CLI and UI. |
+| CLI Improvements | refactor | Overhauled the CLI to make the tree of sub-commands more intuitive, with improved consistency in usage and documentation from command to command. |
+| UI Improvements | feature | Achieved near-parity with CLI features. |
+
+## v0.6.0
+
 __Status:__ In Progress
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| Project Management | feature | Add sensible `ServiceAccount`s, `Role`s, and `RoleBinding`s to boilerplate project setup. |
-| `Warehouse` Rules/Filters | feature | Introduce optional path-based constraints on Git repository subscriptions. |
-| UI Improvements | feature | <ul><li>Enabled credential management via UI.</li><li> UI features are lagging behind back end advancements. This release will have a strong focus on getting caught up. </li></ul> |
-| CLI Improvements | refactor | The CLI will receive a near-total overhaul to make the tree of sub-commands more intuitive, with greater consistency in documentation and usage from command to command. |
-| Promotion Mechanism Extensibility | design/proposal | User-defined promotion mechanisms. |
+| Multiple `Warehouse`s | feature | Improve UI support for multiple Freightlines rooted in different `Warehouse`s. |
+| Manual `Freight` Creation | feature | Add CLI and UI support for manual `Freight` creation. This will give users the flexibility to create novel combinations of artifacts that `Warehouse`s will not -- for instance, pairing the most recent version of a container image with an _older_ version of application manifests. |
+| Project Management | feature | <ul><li>Add sensible `ServiceAccount`s, `Role`s, and `RoleBinding`s to boilerplate project setup.</li><li>Add user / role / permission management capabilities to the CLI and UI.</li></ul> |
+| Production Readiness | chore | <ul><li>Prioritize stability of existing features.</li><li>Pay down technical debt.</li><li>**This is not a guarantee that v0.6.0 will be production-ready. It is a commitment to a large step in that direction.**</li></ul> |
 | [Patch Promotions](https://github.com/akuity/kargo/issues/1250) | poc | Support a generalized option to promote arbitrary configuration (e.g. strings, files, and directories) to other paths of the Git repository. |
-
-## v0.6.0
-
-__Status:__
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| Promotion Mechanism Extensibility | feature | User-defined promotion mechanisms. |
 
 ## v0.7.0 .. v0.n.0
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
+| Promotion Mechanism Extensibility | feature | User-defined promotion mechanisms. |
 | `Project` Improvements | feature | <ul><li>Permit promotion policies to "freeze" `Freight` production and/or promotions based on time or other constraints.</li><li>Aggregate useful project-level status and statistics in `ProjectStatus`.</li></ul> |
 | `Freight` Enrichment | feature | Enhance `Freight` metadata for improved insight into contents and the expected result of promoting a piece of `Freight` to a given `Stage`. |
-| Improved Microservice Support | feature | Filters for Freightlines (for example, filter by `Warehouse`). Add the ability to merge parallel pipelines at a "junction" `Stage`. |
 | `kargo init` | feature | Addition of an `init` sub-command to the Kargo CLI for streamlining project / pipeline creation. |
 | Standalone Image Writeback | feature | Write back image changes without having to subscribe to an image repository. |
 
