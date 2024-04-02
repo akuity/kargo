@@ -12,6 +12,7 @@ import (
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
+	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
 )
 
 func TestNewServer(t *testing.T) {
@@ -30,16 +31,19 @@ func TestNewServer(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+	testRecorder := fakekubeclient.NewEventRecorder(0)
 
 	s, ok := NewServer(
 		testServerConfig,
 		testClient,
 		fake.NewClientBuilder().Build(),
+		testRecorder,
 	).(*server)
 
 	require.True(t, ok)
 	require.NotNil(t, s)
 	require.Same(t, testClient, s.client)
+	require.Same(t, testRecorder, s.recorder)
 	require.Equal(t, testServerConfig, s.cfg)
 	require.NotNil(t, s.validateProjectExistsFn)
 	require.NotNil(t, s.externalValidateProjectFn)

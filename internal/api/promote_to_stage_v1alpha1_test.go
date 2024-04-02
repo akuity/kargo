@@ -7,11 +7,13 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -22,6 +24,7 @@ func TestPromoteToStage(t *testing.T) {
 		server     *server
 		assertions func(
 			*testing.T,
+			*fakekubeclient.EventRecorder,
 			*connect.Response[svcv1alpha1.PromoteToStageResponse],
 			error,
 		)
@@ -32,6 +35,7 @@ func TestPromoteToStage(t *testing.T) {
 			server: &server{},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -55,6 +59,7 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -83,6 +88,7 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -111,6 +117,7 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -160,6 +167,7 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -205,6 +213,7 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -257,6 +266,7 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -320,6 +330,7 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -384,6 +395,7 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
@@ -448,22 +460,29 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				er *fakekubeclient.EventRecorder,
 				res *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
 				require.NoError(t, err)
 				require.NotNil(t, res)
 				require.NotNil(t, res.Msg.GetPromotion())
+				require.Len(t, er.Events, 1)
+				event := <-er.Events
+				require.Equal(t, corev1.EventTypeNormal, event.EventType)
+				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			fr := fakekubeclient.NewEventRecorder(1)
+			testCase.server.recorder = fr
 			res, err := testCase.server.PromoteToStage(
 				context.Background(),
 				connect.NewRequest(testCase.req),
 			)
-			testCase.assertions(t, res, err)
+			testCase.assertions(t, fr, res, err)
 		})
 	}
 }

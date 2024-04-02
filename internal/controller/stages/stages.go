@@ -9,9 +9,11 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -47,6 +49,8 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type reconciler struct {
 	kargoClient  client.Client
 	argocdClient client.Client
+
+	recorder record.EventRecorder
 
 	cfg ReconcilerConfig
 
@@ -325,6 +329,7 @@ func SetupReconcilerWithManager(
 			newReconciler(
 				kargoMgr.GetClient(),
 				argocdClient,
+				kargoMgr.GetEventRecorderFor("stages-controller"),
 				cfg,
 				shardRequirement,
 			),
@@ -437,12 +442,14 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kargoClient client.Client,
 	argocdClient client.Client,
+	recorder record.EventRecorder,
 	cfg ReconcilerConfig,
 	shardRequirement *labels.Requirement,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:      kargoClient,
 		argocdClient:     argocdClient,
+		recorder:         recorder,
 		cfg:              cfg,
 		shardRequirement: shardRequirement,
 	}
@@ -1142,6 +1149,18 @@ func (r *reconciler) verifyFreightInStage(
 		return err
 	}
 
+	r.recorder.AnnotatedEventf(
+		freight,
+		map[string]string{
+			kargoapi.AnnotationKeyEventProject:     namespace,
+			kargoapi.AnnotationKeyEventFreightName: freightName,
+			kargoapi.AnnotationKeyEventStageName:   stageName,
+		},
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonFreightVerifiedInStage,
+		"Freight verified in Stage %q",
+		stageName,
+	)
 	logger.Debug("marked Freight as verified in Stage")
 	return nil
 }

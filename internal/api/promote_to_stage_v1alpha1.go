@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"connectrpc.com/connect"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/kargo"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -120,7 +123,26 @@ func (s *server) PromoteToStage(
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
 	}
+	s.recordPromotionCreatedEvent(ctx, &promotion)
 	return connect.NewResponse(&svcv1alpha1.PromoteToStageResponse{
 		Promotion: &promotion,
 	}), nil
+}
+
+func (s *server) recordPromotionCreatedEvent(ctx context.Context, p *kargoapi.Promotion) {
+	annotations := map[string]string{
+		kargoapi.AnnotationKeyEventProject:       p.Namespace,
+		kargoapi.AnnotationKeyEventPromotionName: p.Name,
+		kargoapi.AnnotationKeyEventFreightName:   p.Spec.Freight,
+		kargoapi.AnnotationKeyEventStageName:     p.Spec.Stage,
+	}
+	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
+	if u, ok := user.InfoFromContext(ctx); ok {
+		annotations[kargoapi.AnnotationKeyEventAdminUser] = strconv.FormatBool(u.IsAdmin)
+		if u.Subject != "" {
+			annotations[kargoapi.AnnotationKeyEventUserSubject] = u.Subject
+			msg += fmt.Sprintf(" by %q", u.Subject)
+		}
+	}
+	s.recorder.AnnotatedEventf(p, annotations, corev1.EventTypeNormal, kargoapi.EventReasonPromotionCreated, msg)
 }

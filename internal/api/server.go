@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -38,6 +39,7 @@ type server struct {
 	cfg            config.ServerConfig
 	client         kubernetes.Client
 	internalClient client.Client
+	recorder       record.EventRecorder
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -150,11 +152,13 @@ func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	internalClient client.Client,
+	recorder record.EventRecorder,
 ) Server {
 	s := &server{
 		cfg:            cfg,
 		client:         kubeClient,
 		internalClient: internalClient,
+		recorder:       recorder,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists

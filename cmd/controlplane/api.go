@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -68,7 +69,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 
 	cfg := config.ServerConfigFromEnv()
 
-	clientCfg, internalClient, err := o.setupAPIClient(ctx)
+	clientCfg, internalClient, recorder, err := o.setupAPIClient(ctx)
 	if err != nil {
 		return fmt.Errorf("error setting up internal Kubernetes API client: %w", err)
 	}
@@ -101,7 +102,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		}).Info("SSO via OpenID Connect is enabled")
 	}
 
-	srv := api.NewServer(cfg, kubeClient, internalClient)
+	srv := api.NewServer(cfg, kubeClient, internalClient, recorder)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
@@ -114,23 +115,23 @@ func (o *apiOptions) run(ctx context.Context) error {
 	return nil
 }
 
-func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.Client, error) {
+func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.Client, record.EventRecorder, error) {
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get REST config: %w", err)
+		return nil, nil, nil, fmt.Errorf("get REST config: %w", err)
 	}
 
 	scheme := runtime.NewScheme()
 	if err = kubescheme.AddToScheme(scheme); err != nil {
-		return nil, nil, fmt.Errorf("error adding Kubernetes API to Kargo API manager scheme: %w", err)
+		return nil, nil, nil, fmt.Errorf("error adding Kubernetes API to Kargo API manager scheme: %w", err)
 	}
 
 	if err = rollouts.AddToScheme(scheme); err != nil {
-		return nil, nil, fmt.Errorf("error adding Argo Rollouts API to Kargo API manager scheme: %w", err)
+		return nil, nil, nil, fmt.Errorf("error adding Argo Rollouts API to Kargo API manager scheme: %w", err)
 	}
 
 	if err = kargoapi.AddToScheme(scheme); err != nil {
-		return nil, nil, fmt.Errorf("error adding Kargo API to Kargo API manager scheme: %w", err)
+		return nil, nil, nil, fmt.Errorf("error adding Kargo API to Kargo API manager scheme: %w", err)
 	}
 
 	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
@@ -147,11 +148,11 @@ func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.C
 		},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error initializing Kargo API manager: %w", err)
+		return nil, nil, nil, fmt.Errorf("error initializing Kargo API manager: %w", err)
 	}
 
 	if err = registerKargoIndexers(ctx, mgr); err != nil {
-		return nil, nil, fmt.Errorf("failed to register Kargo indexers: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to register Kargo indexers: %w", err)
 	}
 
 	go func() {
@@ -160,7 +161,7 @@ func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.C
 		}
 	}()
 
-	return restCfg, mgr.GetClient(), nil
+	return restCfg, mgr.GetClient(), mgr.GetEventRecorderFor("api"), nil
 }
 
 func registerKargoIndexers(ctx context.Context, mgr ctrl.Manager) error {

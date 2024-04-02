@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"connectrpc.com/connect"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/kubeclient"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -112,6 +115,28 @@ func (s *server) ApproveFreight(
 		return nil, fmt.Errorf("patch status: %w", err)
 	}
 
+	eventAnnotations := map[string]string{
+		kargoapi.AnnotationKeyEventProject:     project,
+		kargoapi.AnnotationKeyEventFreightName: freight.Name,
+		kargoapi.AnnotationKeyEventStageName:   stageName,
+	}
+	eventMsg := fmt.Sprintf("Freight approved for Stage %q", stageName)
+	if u, ok := user.InfoFromContext(ctx); ok {
+		eventAnnotations[kargoapi.AnnotationKeyEventAdminUser] = strconv.FormatBool(u.IsAdmin)
+		if u.Subject != "" {
+			eventAnnotations[kargoapi.AnnotationKeyEventUserSubject] = u.Subject
+			eventMsg += fmt.Sprintf(" by %q", u.Subject)
+		}
+	}
+
+	s.recorder.AnnotatedEventf(
+		freight,
+		eventAnnotations,
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonFreightApproved,
+		eventMsg,
+		stageName,
+	)
 	return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
 }
 

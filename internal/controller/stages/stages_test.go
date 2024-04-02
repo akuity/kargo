@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,6 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -24,15 +26,18 @@ func TestNewReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	requirement, err := controller.GetShardRequirement(testCfg.ShardName)
 	require.NoError(t, err)
+	recorder := &fakekubeclient.EventRecorder{Events: nil}
 	r := newReconciler(
 		kubeClient,
 		kubeClient,
+		recorder,
 		testCfg,
 		requirement,
 	)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.argocdClient)
+	require.NotNil(t, r.recorder)
 	// Assert that all overridable behaviors were initialized to a default:
 	// Loop guard:
 	require.NotNil(t, r.hasNonTerminalPromotionsFn)
@@ -1634,7 +1639,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*testing.T, error)
+		assertions func(*testing.T, *fakekubeclient.EventRecorder, error)
 	}{
 		{
 			name: "error getting Freight",
@@ -1647,7 +1652,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error finding Freight")
@@ -1664,7 +1669,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "found no Freight")
 			},
@@ -1686,8 +1691,9 @@ func TestVerifyFreightInStage(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, er *fakekubeclient.EventRecorder, err error) {
 				require.NoError(t, err)
+				require.Empty(t, er.Events)
 			},
 		},
 		{
@@ -1708,7 +1714,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 			},
@@ -1731,15 +1737,22 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, er *fakekubeclient.EventRecorder, err error) {
 				require.NoError(t, err)
+				require.Len(t, er.Events, 1)
+				event := <-er.Events
+				require.Equal(t, corev1.EventTypeNormal, event.EventType)
+				require.Equal(t, kargoapi.EventReasonFreightVerifiedInStage, event.Reason)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			fr := fakekubeclient.NewEventRecorder(1)
+			testCase.reconciler.recorder = fr
 			testCase.assertions(
 				t,
+				fr,
 				testCase.reconciler.verifyFreightInStage(
 					context.Background(),
 					"fake-namespace",
