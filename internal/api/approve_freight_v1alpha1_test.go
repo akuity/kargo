@@ -22,7 +22,12 @@ func TestApproveFreight(t *testing.T) {
 		name       string
 		req        *svcv1alpha1.ApproveFreightRequest
 		server     *server
-		assertions func(*testing.T, *fakekubeclient.EventRecorder, *connect.Response[svcv1alpha1.ApproveFreightResponse], error)
+		assertions func(
+			*testing.T,
+			*fakekubeclient.EventRecorder,
+			*connect.Response[svcv1alpha1.ApproveFreightResponse],
+			error,
+		)
 	}{
 		{
 			name:   "input validation error",
