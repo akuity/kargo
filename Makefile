@@ -311,3 +311,7 @@ hack-uninstall-argocd:
 .PHONY: hack-uninstall-cert-manager
 hack-uninstall-cert-manager:
 	helm delete cert-manager --namespace cert-manager
+
+.PHONY: start-api-local
+start-api-local:
+	go run ./cmd/controlplane api
