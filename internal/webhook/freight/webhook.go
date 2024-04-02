@@ -198,7 +198,13 @@ func (w *webhook) ValidateUpdate(
 	// Freight is meant to be immutable. We only need to compare the Name to a
 	// newly generated ID because these are both fingerprints that are
 	// deterministically derived from the artifacts referenced by the Freight.
-	if newFreight.Name != newFreight.GenerateID() || oldFreight.Warehouse != newFreight.Warehouse {
+	//
+	// Note: Warehouse field is mutable just for v0.5.x. This allows the
+	// management controller to update the warehouse field of a Freight to match
+	// the ID of older Freight to match the Warehouse owner that it will remove.
+	//
+	// if newFreight.Name != newFreight.GenerateID() || oldFreight.Warehouse != newFreight.Warehouse {
+	if newFreight.Name != newFreight.GenerateID() {
 		return nil, apierrors.NewInvalid(
 			freightGroupKind,
 			oldFreight.Name,

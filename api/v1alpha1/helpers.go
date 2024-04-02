@@ -65,3 +65,18 @@ func patchAnnotation(ctx context.Context, c client.Client, obj client.Object, ke
 	}
 	return nil
 }
+
+func AddV05CompatibilityLabel(
+	ctx context.Context,
+	c client.Client,
+	obj client.Object,
+) error {
+	patchBytes := []byte(
+		fmt.Sprintf(
+			`{"metadata":{"labels":{"%s":"true"}}}`,
+			V05CompatibilityLabelKey,
+		),
+	)
+	patch := client.RawPatch(types.MergePatchType, patchBytes)
+	return c.Patch(ctx, obj, patch)
+}

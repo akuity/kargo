@@ -526,6 +526,8 @@ type FreightReference struct {
 	// the contents of the Freight. i.e. Two pieces of Freight can be compared for
 	// equality by comparing their Names.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	// ID is the same as Name. It will be removed in v0.6.0.
+	ID string `json:"id,omitempty" protobuf:"bytes,8,opt,name=id"`
 	// Warehouse is the name of the Warehouse that created this Freight.
 	Warehouse string `json:"warehouse,omitempty" protobuf:"bytes,6,opt,name=warehouse"`
 	// Commits describes specific Git repository commits.

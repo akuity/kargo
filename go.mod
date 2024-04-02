@@ -143,7 +143,7 @@ require (
 	gopkg.in/evanphx/json-patch.v5 v5.6.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/apiextensions-apiserver v0.29.0 // indirect
+	k8s.io/apiextensions-apiserver v0.29.0
 	k8s.io/component-base v0.29.3 // indirect
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect

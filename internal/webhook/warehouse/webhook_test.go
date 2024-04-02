@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -27,46 +28,74 @@ func TestNewWebhook(t *testing.T) {
 
 func TestDefault(t *testing.T) {
 	const testShardName = "fake-shard"
-
-	w := &webhook{}
-
-	t.Run("shard stays default when not specified at all", func(t *testing.T) {
-		warehouse := &kargoapi.Warehouse{
-			Spec: &kargoapi.WarehouseSpec{},
-		}
-		err := w.Default(context.Background(), warehouse)
-		require.NoError(t, err)
-		require.Empty(t, warehouse.Labels)
-		require.Empty(t, warehouse.Spec.Shard)
-	})
-
-	t.Run("sync shard label to non-empty shard field", func(t *testing.T) {
-		warehouse := &kargoapi.Warehouse{
-			Spec: &kargoapi.WarehouseSpec{
-				Shard: testShardName,
+	testCases := []struct {
+		name       string
+		operation  admissionv1.Operation
+		warehouse  *kargoapi.Warehouse
+		assertions func(*testing.T, *kargoapi.Warehouse, error)
+	}{
+		{
+			name:      "shard stays default when not specified at all",
+			operation: admissionv1.Create,
+			warehouse: &kargoapi.Warehouse{
+				Spec: &kargoapi.WarehouseSpec{},
 			},
-		}
-		err := w.Default(context.Background(), warehouse)
-		require.NoError(t, err)
-		require.Equal(t, testShardName, warehouse.Spec.Shard)
-		require.Equal(t, testShardName, warehouse.Labels[kargoapi.ShardLabelKey])
-	})
-
-	t.Run("sync shard label to empty shard field", func(t *testing.T) {
-		warehouse := &kargoapi.Warehouse{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{
-					kargoapi.ShardLabelKey: testShardName,
+			assertions: func(t *testing.T, warehouse *kargoapi.Warehouse, err error) {
+				require.NoError(t, err)
+				require.Empty(t, warehouse.Labels)
+				require.Empty(t, warehouse.Spec.Shard)
+			},
+		},
+		{
+			name:      "sync shard label to non-empty shard field",
+			operation: admissionv1.Create,
+			warehouse: &kargoapi.Warehouse{
+				Spec: &kargoapi.WarehouseSpec{
+					Shard: testShardName,
 				},
 			},
-			Spec: &kargoapi.WarehouseSpec{},
-		}
-		err := w.Default(context.Background(), warehouse)
-		require.NoError(t, err)
-		require.Empty(t, warehouse.Spec.Shard)
-		_, ok := warehouse.Labels[kargoapi.ShardLabelKey]
-		require.False(t, ok)
-	})
+			assertions: func(t *testing.T, warehouse *kargoapi.Warehouse, err error) {
+				require.NoError(t, err)
+				require.Equal(t, testShardName, warehouse.Spec.Shard)
+				require.Equal(t, testShardName, warehouse.Labels[kargoapi.ShardLabelKey])
+			},
+		},
+		{
+			name:      "sync shard label to empty shard field",
+			operation: admissionv1.Update,
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.ShardLabelKey: testShardName,
+					},
+				},
+				Spec: &kargoapi.WarehouseSpec{},
+			},
+			assertions: func(t *testing.T, warehouse *kargoapi.Warehouse, err error) {
+				require.NoError(t, err)
+				require.Empty(t, warehouse.Spec.Shard)
+				_, ok := warehouse.Labels[kargoapi.ShardLabelKey]
+				require.False(t, ok)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := admission.NewContextWithRequest(
+				context.Background(),
+				admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Operation: testCase.operation,
+					},
+				},
+			)
+			testCase.assertions(
+				t,
+				testCase.warehouse,
+				(&webhook{}).Default(ctx, testCase.warehouse),
+			)
+		})
+	}
 }
 
 func TestValidateCreate(t *testing.T) {

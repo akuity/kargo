@@ -1089,6 +1089,13 @@ export class FreightReference extends Message<FreightReference> {
   name?: string;
 
   /**
+   * ID is the same as Name. It will be removed in v0.6.0.
+   *
+   * @generated from field: optional string id = 8;
+   */
+  id?: string;
+
+  /**
    * Warehouse is the name of the Warehouse that created this Freight.
    *
    * @generated from field: optional string warehouse = 6;
@@ -1141,6 +1148,7 @@ export class FreightReference extends Message<FreightReference> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.FreightReference";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "warehouse", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "commits", kind: "message", T: GitCommit, repeated: true },
     { no: 3, name: "images", kind: "message", T: Image, repeated: true },

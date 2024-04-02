@@ -7,8 +7,13 @@ import (
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -16,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
+	"github.com/akuity/kargo/internal/controller/management/upgrade"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
@@ -58,9 +64,23 @@ func newManagementControllerCommand() *cobra.Command {
 						err,
 					)
 				}
+				if err = extv1.AddToScheme(scheme); err != nil {
+					return fmt.Errorf(
+						"error adding Kubernetes API extensions API to Kargo controller manager scheme: %w",
+						err,
+					)
+				}
 				if err = kargoapi.AddToScheme(scheme); err != nil {
 					return fmt.Errorf(
 						"error adding Kargo API to Kargo controller manager scheme: %w",
+						err,
+					)
+				}
+				secretReq, err :=
+					labels.NewRequirement(upgrade.SecretTypeLabelKey, selection.Exists, nil)
+				if err != nil {
+					return fmt.Errorf(
+						"error building label requirement for credentials Secrets: %w",
 						err,
 					)
 				}
@@ -70,6 +90,13 @@ func newManagementControllerCommand() *cobra.Command {
 						Scheme: scheme,
 						Metrics: server.Options{
 							BindAddress: "0",
+						},
+						Cache: cache.Options{
+							ByObject: map[client.Object]cache.ByObject{
+								&corev1.Secret{}: {
+									Label: labels.NewSelector().Add(*secretReq),
+								},
+							},
 						},
 					},
 				); err != nil {
@@ -86,6 +113,14 @@ func newManagementControllerCommand() *cobra.Command {
 				projects.ReconcilerConfigFromEnv(),
 			); err != nil {
 				return fmt.Errorf("error setting up Projects reconciler: %w", err)
+			}
+
+			// v0.5.0 upgrade controllers
+			if err := upgrade.SetupCredentialsReconcilerWithManager(kargoMgr); err != nil {
+				return fmt.Errorf("error setting up Credentials upgrade reconciler: %w", err)
+			}
+			if err := upgrade.SetupFreightReconcilerWithManager(kargoMgr); err != nil {
+				return fmt.Errorf("error setting up Freight upgrade reconciler: %w", err)
 			}
 
 			if err := kargoMgr.Start(ctx); err != nil {

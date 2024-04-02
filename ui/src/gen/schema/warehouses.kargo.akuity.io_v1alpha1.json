@@ -245,6 +245,10 @@
               },
               "type": "array"
             },
+            "id": {
+              "description": "ID is the same as Name. It will be removed in v0.6.0.",
+              "type": "string"
+            },
             "images": {
               "description": "Images describes specific versions of specific container images.",
               "items": {

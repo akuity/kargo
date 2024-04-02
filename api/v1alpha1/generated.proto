@@ -317,6 +317,9 @@ message FreightReference {
   // equality by comparing their Names.
   optional string name = 1;
 
+  // ID is the same as Name. It will be removed in v0.6.0.
+  optional string id = 8;
+
   // Warehouse is the name of the Warehouse that created this Freight.
   optional string warehouse = 6;
 
