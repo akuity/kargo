@@ -50,7 +50,7 @@ export const FreightlineHeader = ({
                 <div
                   className='px-2 py-1 rounded text-white ml-2 font-semibold'
                   style={{
-                    backgroundColor: stageColorMap[promotingStage?.metadata?.uid || '']
+                    backgroundColor: stageColorMap[promotingStage?.metadata?.name || '']
                   }}
                 >
                   {promotingStage?.metadata?.name?.toUpperCase()}

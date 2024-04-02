@@ -36,6 +36,7 @@ export const App = () => (
                     element={<Project tab='analysisTemplates' />}
                   />
                   <Route path={paths.stage} element={<Project />} />
+                  <Route path={paths.freight} element={<Project />} />
                 </Route>
               </Route>
               <Route path={paths.login} element={<Login />} />

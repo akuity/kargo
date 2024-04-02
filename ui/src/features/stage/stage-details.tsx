@@ -6,7 +6,8 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { Subscriptions } from '@ui/features/stage/subscriptions';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
-import { ManifestPreview } from './manifest-preview';
+import { ManifestPreview } from '../common/manifest-preview';
+
 import { Promotions } from './promotions';
 import { StageActions } from './stage-actions';
 import { Verifications } from './verifications';
@@ -59,7 +60,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   key: '3',
                   label: 'Live Manifest',
                   className: 'h-full pb-2',
-                  children: <ManifestPreview stage={stage} />
+                  children: <ManifestPreview object={stage} />
                 }
               ]}
             />
