@@ -2,6 +2,7 @@ import { createPromiseClient } from '@connectrpc/connect';
 import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import {
+  faChevronDown,
   faCircleCheck,
   faClipboard,
   faCopy,
@@ -9,12 +10,16 @@ import {
   faEllipsisV,
   faEye,
   faEyeSlash,
+  faMasksTheater,
+  faPalette,
   faPencil,
-  faRefresh
+  faRefresh,
+  faWandSparkles,
+  faWarehouse
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Empty, message } from 'antd';
+import { Button, Dropdown, Space, Tooltip, message } from 'antd';
 import { graphlib, layout } from 'dagre';
 import React from 'react';
 import { useParams } from 'react-router-dom';
@@ -32,6 +37,7 @@ import { FreightlineHeader } from '@ui/features/freightline/freightline-header';
 import { StageIndicators } from '@ui/features/freightline/stage-indicators';
 import { StageDetails } from '@ui/features/stage/stage-details';
 import { getStageColors } from '@ui/features/stage/utils';
+import { clearColors } from '@ui/features/stage/utils';
 import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import {
   approveFreight,
@@ -48,6 +54,8 @@ import { Freight, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
+import { CreateStageModal } from './create-stage-modal';
+import { CreateWarehouseModal } from './create-warehouse-modal';
 import { Images } from './images';
 import { RepoNode } from './nodes/repo-node';
 import { Nodule, StageNode } from './nodes/stage-node';
@@ -84,6 +92,13 @@ export const ProjectDetails = () => {
   });
 
   const client = useQueryClient();
+
+  const { show: showCreateStage } = useModal(
+    name ? (p) => <CreateStageModal {...p} project={name} /> : undefined
+  );
+  const { show: showCreateWarehouse } = useModal(
+    name ? (p) => <CreateWarehouseModal {...p} project={name} /> : undefined
+  );
 
   const isVisible = useDocumentEvent(
     'visibilitychange',
@@ -527,13 +542,6 @@ export const ProjectDetails = () => {
 
   if (isLoading || isLoadingFreight) return <LoadingState />;
 
-  if (
-    (!data || data.stages.length === 0) &&
-    (!warehouseData || warehouseData.warehouses.length === 0)
-  ) {
-    return <Empty />;
-  }
-
   const stage = stageName && (data?.stages || []).find((item) => item.metadata?.name === stageName);
 
   const isFaded = (stage: Stage): boolean => {
@@ -727,9 +735,60 @@ export const ProjectDetails = () => {
         </Freightline>
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
-            <div className='text-sm mb-4 font-semibold p-6'>
-              <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
-              PIPELINE
+            <div className='flex justify-between items-center p-4 mb-4'>
+              <div className='text-sm font-semibold pl-2'>
+                <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
+                PIPELINE
+              </div>
+              <div>
+                <Tooltip title='Reassign Stage Colors'>
+                  <Button
+                    type='default'
+                    className='mr-2'
+                    onClick={() => {
+                      clearColors(name || '');
+                      window.location.reload();
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faPalette} />
+                  </Button>
+                </Tooltip>{' '}
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: '1',
+                        label: (
+                          <>
+                            <FontAwesomeIcon icon={faMasksTheater} size='xs' className='mr-2' />{' '}
+                            Stage
+                          </>
+                        ),
+                        onClick: () => showCreateStage()
+                      },
+                      {
+                        key: '2',
+                        label: (
+                          <>
+                            <FontAwesomeIcon icon={faWarehouse} size='xs' className='mr-2' />{' '}
+                            Warehouse
+                          </>
+                        ),
+                        onClick: () => showCreateWarehouse()
+                      }
+                    ]
+                  }}
+                  placement='bottomRight'
+                  trigger={['click']}
+                >
+                  <Button type='primary' icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}>
+                    <Space>
+                      Create
+                      <FontAwesomeIcon icon={faChevronDown} size='xs' />
+                    </Space>
+                  </Button>
+                </Dropdown>
+              </div>
             </div>
             <div className='overflow-auto p-6 h-full'>
               <div
