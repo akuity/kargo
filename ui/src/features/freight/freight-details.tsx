@@ -8,8 +8,8 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { Freight } from '@ui/gen/v1alpha1/generated_pb';
 
-import { getAlias } from '../common/freight-label';
 import { ManifestPreview } from '../common/manifest-preview';
+import { getAlias } from '../common/utils';
 
 import { FreightStatusList } from './freight-status-list';
 

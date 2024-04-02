@@ -35,7 +35,7 @@ export type NodesRepoType = (
     }
   | {
       type: NodeType.WAREHOUSE;
-      data: string;
+      data: Warehouse;
     }
 ) &
   NodeBase;
@@ -51,7 +51,7 @@ export type NodesItemType =
 export const NewWarehouseNode = (warehouse: Warehouse, stageNames?: string[]): NodesRepoType => {
   const name = warehouse?.metadata?.name || '';
   return {
-    data: name,
+    data: warehouse,
     stageNames: stageNames || [],
     warehouseName: name,
     refreshing: !!warehouse?.metadata?.annotations['kargo.akuity.io/refresh'],
@@ -60,3 +60,11 @@ export const NewWarehouseNode = (warehouse: Warehouse, stageNames?: string[]): N
 };
 
 export type FreightlineAction = 'promote' | 'promoteSubscribers' | 'manualApproval';
+
+export enum FreightMode {
+  Default = 'default', // not promoting, has stages
+  Promotable = 'promotable', // promoting, promotable
+  Disabled = 'disabled',
+  Selected = 'selected',
+  Confirming = 'confirming' // promoting, confirming
+}
