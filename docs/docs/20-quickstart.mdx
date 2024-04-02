@@ -418,8 +418,8 @@ the previous section.
     Sample output:
 
     ```shell
-    NAME         AGE
-    kargo-demo   13s
+    NAME         SHARD   AGE
+    kargo-demo           13s
     ```
 
 1. Use the CLI to view our three `Stage` resources:
@@ -431,10 +431,10 @@ the previous section.
     Sample output:
 
     ```shell
-    NAME   CURRENT FREIGHT   HEALTH   PHASE           AGE
-    prod                              NotApplicable   20s
-    test                              NotApplicable   20s
-    uat                               NotApplicable   20s
+    NAME   SHARD   CURRENT FREIGHT   HEALTH   PHASE           AGE
+    prod                                      NotApplicable   20s
+    test                                      NotApplicable   20s
+    uat                                       NotApplicable   20s
     ```
 
 1. Our `Warehouse`, which subscribes to the `nginx` image repository, also
@@ -468,13 +468,13 @@ the previous section.
    variable:
 
     ```shell
-    export FREIGHT_ID=$(kargo get freight --project kargo-demo --output jsonpath={.id})
+    export FREIGHT_ALIAS=$(kargo get freight --project kargo-demo --output jsonpath={.alias})
     ```
 
 1. Now, let's _promote_ the `Freight` into the `test` `Stage`:
 
     ```shell
-    kargo promote --project kargo-demo --freight $FREIGHT_ID --stage test
+    kargo promote --project kargo-demo --freight-alias $FREIGHT_ALIAS --stage test
     ```
 
     Sample output:
@@ -572,7 +572,7 @@ the previous section.
     :::
 
     ```shell
-    kargo get freight $FREIGHT_ID --project kargo-demo --output jsonpath-as-json={.status}
+    kargo get freight --alias $FREIGHT_ALIAS --project kargo-demo --output jsonpath-as-json={.status}
     ```
 
     Sample output:
