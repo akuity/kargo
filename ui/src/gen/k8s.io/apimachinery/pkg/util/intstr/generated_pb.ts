@@ -113,3 +113,4 @@ export class IntOrString extends Message<IntOrString> {
       value <= IntOrString.MAX_INT32;
   }
 }
+
