@@ -628,7 +628,7 @@ export const ProjectDetails = () => {
                     }, false)}
                   >
                     <Dropdown
-                      className='absolute top-2 right-2'
+                      className='absolute top-2 right-2 pl-2'
                       trigger={['click']}
                       menu={{
                         items: [
@@ -696,6 +696,7 @@ export const ProjectDetails = () => {
                       }}
                     >
                       <FontAwesomeIcon
+                        onClick={(e) => e.stopPropagation()}
                         icon={faEllipsisV}
                         className='cursor-pointer text-gray-500 hover:text-white'
                       />
