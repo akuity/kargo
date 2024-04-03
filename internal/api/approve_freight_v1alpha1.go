@@ -132,7 +132,6 @@ func (s *server) ApproveFreight(
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonFreightApproved,
 		eventMsg,
-		stageName,
 	)
 	return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
 }
