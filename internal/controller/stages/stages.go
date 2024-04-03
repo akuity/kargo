@@ -39,6 +39,14 @@ type ReconcilerConfig struct {
 	RolloutsControllerInstanceID string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
 }
 
+func (c ReconcilerConfig) Name() string {
+	name := "stage-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
 func ReconcilerConfigFromEnv() ReconcilerConfig {
 	cfg := ReconcilerConfig{}
 	envconfig.MustProcess("", &cfg)
@@ -329,7 +337,7 @@ func SetupReconcilerWithManager(
 			newReconciler(
 				kargoMgr.GetClient(),
 				argocdClient,
-				kargoMgr.GetEventRecorderFor("stages-controller"),
+				kargoMgr.GetEventRecorderFor(cfg.Name()),
 				cfg,
 				shardRequirement,
 			),
@@ -1152,6 +1160,7 @@ func (r *reconciler) verifyFreightInStage(
 	r.recorder.AnnotatedEventf(
 		freight,
 		map[string]string{
+			kargoapi.AnnotationKeyEventActor:       kargoapi.FormatEventControllerActor(r.cfg.Name()),
 			kargoapi.AnnotationKeyEventProject:     namespace,
 			kargoapi.AnnotationKeyEventFreightName: freightName,
 			kargoapi.AnnotationKeyEventStageName:   stageName,

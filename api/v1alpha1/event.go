@@ -11,11 +11,16 @@ const (
 )
 
 const (
-	EventActorAdmin         = "admin"
-	EventActorEmailPrefix   = "email:"
-	EventActorSubjectPrefix = "subject:"
-	EventActorUnknown       = "unknown actor"
+	EventActorAdmin            = "admin"
+	EventActorControllerPrefix = "controller:"
+	EventActorEmailPrefix      = "email:"
+	EventActorSubjectPrefix    = "subject:"
+	EventActorUnknown          = "unknown actor"
 )
+
+func FormatEventControllerActor(name string) string {
+	return EventActorControllerPrefix + name
+}
 
 // FormatEventUserActor returns a string representation of the user acting in an event
 // that can be used as a value of AnnotationKeyEventActor.
