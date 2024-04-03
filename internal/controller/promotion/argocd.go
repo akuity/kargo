@@ -18,13 +18,22 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-const authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
+const (
+	authorizedStageAnnotationKey = "kargo.akuity.io/authorized-stage"
+
+	applicationOperationInitiator = "kargo-controller"
+)
 
 // argoCDMechanism is an implementation of the Mechanism interface that updates
 // Argo CD Application resources.
 type argoCDMechanism struct {
 	argocdClient client.Client
 	// These behaviors are overridable for testing purposes:
+	mustPerformUpdateFn func(
+		ctx context.Context,
+		update kargoapi.ArgoCDAppUpdate,
+		newFreight kargoapi.FreightReference,
+	) (argocd.OperationPhase, bool, error)
 	doSingleUpdateFn func(
 		ctx context.Context,
 		stageMeta metav1.ObjectMeta,
@@ -55,6 +64,7 @@ func newArgoCDMechanism(argocdClient client.Client) Mechanism {
 	a := &argoCDMechanism{
 		argocdClient: argocdClient,
 	}
+	a.mustPerformUpdateFn = a.mustPerformUpdate
 	a.doSingleUpdateFn = a.doSingleUpdate
 	a.getArgoCDAppFn = getApplicationFn(argocdClient)
 	a.applyArgoCDSourceUpdateFn = applyArgoCDSourceUpdate
@@ -93,7 +103,25 @@ func (a *argoCDMechanism) Promote(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
+	var pendingUpdates []kargoapi.ArgoCDAppUpdate
 	for _, update := range updates {
+		// Confirm we need to perform the update.
+		phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, update, newFreight)
+		if !mustUpdate {
+			if err != nil {
+				// If we receive an error which can't be resolved by performing
+				// an update, return the error.
+				return nil, newFreight, err
+			}
+			if !phase.Completed() {
+				// If the operation is still running, we should wait for it to
+				// complete.
+				pendingUpdates = append(pendingUpdates, update)
+			}
+			continue
+		}
+
+		// If we get here, we need to perform the update.
 		if err := a.doSingleUpdateFn(
 			ctx,
 			stage.ObjectMeta,
@@ -102,11 +130,94 @@ func (a *argoCDMechanism) Promote(
 		); err != nil {
 			return nil, newFreight, err
 		}
+		pendingUpdates = append(pendingUpdates, update)
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
 
-	return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+	if len(pendingUpdates) == 0 {
+		// All updates have been completed.
+		// TODO(hidde): We should return an aggregated status here.
+		return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+	}
+	return promo.Status.WithPhase(kargoapi.PromotionPhaseRunning), newFreight, nil
+}
+
+func (a *argoCDMechanism) mustPerformUpdate(
+	ctx context.Context,
+	update kargoapi.ArgoCDAppUpdate,
+	newFreight kargoapi.FreightReference,
+) (phase argocd.OperationPhase, mustUpdate bool, err error) {
+	namespace := update.AppNamespace
+	if namespace == "" {
+		namespace = libargocd.Namespace()
+	}
+	app, err := a.getArgoCDAppFn(ctx, namespace, update.AppName)
+	if err != nil {
+		return "", false, fmt.Errorf(
+			"error finding Argo CD Application %q in namespace %q: %w",
+			update.AppName,
+			namespace,
+			err,
+		)
+	}
+	if app == nil {
+		return "", false, fmt.Errorf(
+			"unable to find Argo CD Application %q in namespace %q: %w",
+			update.AppName,
+			namespace,
+			err,
+		)
+	}
+
+	status := app.Status.OperationState
+	if status == nil {
+		// The application has no operation.
+		return "", true, nil
+	}
+
+	if status.Operation.InitiatedBy.Username != applicationOperationInitiator {
+		// The operation was not initiated by the expected user.
+		if !status.Phase.Completed() {
+			// We should wait for the operation to complete before attempting to
+			// apply an update ourselves.
+			return "", false, fmt.Errorf(
+				"current operation was not initiated by %q but by %q: waiting for operation to complete",
+				applicationOperationInitiator, status.Operation.InitiatedBy.Username,
+			)
+		}
+		// Initiate our own operation.
+		return "", true, nil
+	}
+
+	if !status.Phase.Completed() {
+		// The operation is still running.
+		return status.Phase, false, nil
+	}
+
+	// The operation has completed. Check if the desired revision was applied.
+	desiredRevision := getDesiredRevisionForArgoCDApp(app, newFreight)
+	if desiredRevision == "" {
+		// We cannot determine the desired revision. Performing an update in this
+		// case wouldn't change anything. Instead, we should error out.
+		return "", false, errors.New("unable to determine desired revision")
+	}
+	if status.SyncResult == nil {
+		// We do not have a sync result, so we cannot determine if the operation
+		// was successful. The best recourse is to retry the operation.
+		return "", true, errors.New("operation completed without a sync result")
+	}
+	if status.SyncResult.Revision != desiredRevision {
+		// The operation did not result in the desired revision being applied.
+		// We should attempt to retry the operation.
+		return "", true, fmt.Errorf(
+			"operation result revision %q does not match desired revision %q",
+			status.SyncResult.Revision, desiredRevision,
+		)
+	}
+
+	// The operation has completed.
+	return status.Phase, false, nil
 }
 
 func (a *argoCDMechanism) doSingleUpdate(
@@ -178,7 +289,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 		string(argocd.RefreshTypeHard)
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
-			Username:  "kargo-controller",
+			Username:  applicationOperationInitiator,
 			Automated: true,
 		},
 		Info: []*argocd.Info{
@@ -459,4 +570,40 @@ func buildHelmParamChangesForArgoCDAppSource(
 		}
 	}
 	return changes
+}
+
+// getDesiredRevisionForArgoCDApp returns the desired revision for the
+// v1alpha1.Application based on the given v1alpha1.FreightReference.
+// If no desired revision is found, an empty string is returned.
+func getDesiredRevisionForArgoCDApp(app *argocd.Application, freight kargoapi.FreightReference) string {
+	switch {
+	case app == nil || app.Spec.Source == nil:
+		// Without an Application, we can't determine the desired revision.
+		return ""
+	case app.Spec.Source.Chart != "":
+		// This source points to a Helm chart.
+		// NB: This has to go first, as the repository URL can also point to
+		//     a Helm repository.
+		sourceChart := path.Join(app.Spec.Source.RepoURL, app.Spec.Source.Chart)
+		for _, chart := range freight.Charts {
+			// Join accounts for the possibility that chart.Name is empty.
+			if path.Join(chart.RepoURL, chart.Name) == sourceChart {
+				return chart.Version
+			}
+		}
+	case app.Spec.Source.RepoURL != "":
+		// This source points to a Git repository.
+		sourceGitRepoURL := git.NormalizeGitURL(app.Spec.Source.RepoURL)
+		for _, commit := range freight.Commits {
+			if git.NormalizeGitURL(commit.RepoURL) != sourceGitRepoURL {
+				continue
+			}
+			if commit.HealthCheckCommit != "" {
+				return commit.HealthCheckCommit
+			}
+			return commit.ID
+		}
+	}
+	// If we end up here, no desired revision was found.
+	return ""
 }
