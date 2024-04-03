@@ -196,7 +196,7 @@ func (a *argoCDMechanism) mustPerformUpdate(
 	}
 
 	// The operation has completed. Check if the desired revision was applied.
-	desiredRevision := getDesiredRevisionForArgoCDApp(app, newFreight)
+	desiredRevision := libargocd.GetDesiredRevision(app, newFreight)
 	if desiredRevision == "" {
 		// We cannot determine the desired revision. Performing an update in this
 		// case wouldn't change anything. Instead, we should error out.
@@ -570,40 +570,4 @@ func buildHelmParamChangesForArgoCDAppSource(
 		}
 	}
 	return changes
-}
-
-// getDesiredRevisionForArgoCDApp returns the desired revision for the
-// v1alpha1.Application based on the given v1alpha1.FreightReference.
-// If no desired revision is found, an empty string is returned.
-func getDesiredRevisionForArgoCDApp(app *argocd.Application, freight kargoapi.FreightReference) string {
-	switch {
-	case app == nil || app.Spec.Source == nil:
-		// Without an Application, we can't determine the desired revision.
-		return ""
-	case app.Spec.Source.Chart != "":
-		// This source points to a Helm chart.
-		// NB: This has to go first, as the repository URL can also point to
-		//     a Helm repository.
-		sourceChart := path.Join(app.Spec.Source.RepoURL, app.Spec.Source.Chart)
-		for _, chart := range freight.Charts {
-			// Join accounts for the possibility that chart.Name is empty.
-			if path.Join(chart.RepoURL, chart.Name) == sourceChart {
-				return chart.Version
-			}
-		}
-	case app.Spec.Source.RepoURL != "":
-		// This source points to a Git repository.
-		sourceGitRepoURL := git.NormalizeGitURL(app.Spec.Source.RepoURL)
-		for _, commit := range freight.Commits {
-			if git.NormalizeGitURL(commit.RepoURL) != sourceGitRepoURL {
-				continue
-			}
-			if commit.HealthCheckCommit != "" {
-				return commit.HealthCheckCommit
-			}
-			return commit.ID
-		}
-	}
-	// If we end up here, no desired revision was found.
-	return ""
 }
