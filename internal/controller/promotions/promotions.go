@@ -362,6 +362,7 @@ func (r *reconciler) promote(
 		// So we only modify history for normal Stages.
 		// (Technically, we should prevent creating promotion jobs on
 		// control-flow stages in the first place)
+		status.LastPromotion = status.CurrentPromotion
 
 		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
 			// Only push promotion to Stage status history if the promotion succeeded
@@ -373,11 +374,6 @@ func (r *reconciler) promote(
 			}
 		}
 
-		status.LastPromotion = &kargoapi.PromotionInfo{
-			Name:    promo.Name,
-			Freight: nextFreight,
-			Status:  newStatus,
-		}
 	})
 	if err != nil {
 		return nil, fmt.Errorf(
