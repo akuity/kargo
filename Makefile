@@ -314,4 +314,10 @@ hack-uninstall-cert-manager:
 
 .PHONY: start-api-local
 start-api-local:
-	go run ./cmd/controlplane api
+	./hack/start-api.sh
+
+.PHONY: start-controller-local
+start-controller-local:
+	KUBECONFIG=~/.kube/config \
+	ARGOCD_KUBECONFIG=~/.kube/config \
+    	go run ./cmd/controlplane controller
