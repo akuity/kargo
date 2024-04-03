@@ -630,6 +630,9 @@ export const ProjectDetails = () => {
                     <Dropdown
                       className='absolute top-2 right-2 pl-2'
                       trigger={['click']}
+                      dropdownRender={(menu) => {
+                        return <div onClick={(e) => e.stopPropagation()}>{menu}</div>;
+                      }}
                       menu={{
                         items: [
                           {
