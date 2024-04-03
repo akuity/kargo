@@ -10,3 +10,21 @@ const (
 	HealthStatusDegraded    HealthStatusCode = "Degraded"
 	HealthStatusMissing     HealthStatusCode = "Missing"
 )
+
+type OperationPhase string
+
+const (
+	OperationRunning     OperationPhase = "Running"
+	OperationTerminating OperationPhase = "Terminating"
+	OperationFailed      OperationPhase = "Failed"
+	OperationError       OperationPhase = "Error"
+	OperationSucceeded   OperationPhase = "Succeeded"
+)
+
+func (os OperationPhase) Completed() bool {
+	switch os {
+	case OperationFailed, OperationError, OperationSucceeded:
+		return true
+	}
+	return false
+}
