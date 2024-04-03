@@ -518,7 +518,7 @@ type StageStatus struct {
 	// CurrentPromotion is a reference to the currently Running promotion.
 	CurrentPromotion *PromotionInfo `json:"currentPromotion,omitempty" protobuf:"bytes,7,opt,name=currentPromotion"`
 	// LastPromotion is a reference to the last completed promotion.
-	LastPromotion *LastPromotionInfo `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
+	LastPromotion *PromotionInfo `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
 }
 
 // FreightReference is a simplified representation of a piece of Freight -- not
@@ -670,15 +670,8 @@ type PromotionInfo struct {
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Freight is the freight being promoted
 	Freight FreightReference `json:"freight" protobuf:"bytes,2,opt,name=freight"`
-}
-
-type LastPromotionInfo struct {
-	// Name is the name of the Promotion
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Freight is the freight being promoted
-	Freight FreightReference `json:"freight" protobuf:"bytes,2,opt,name=freight"`
-	// Status is the status of the promotion
-	Status PromotionStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
+	// Status is the (optional) status of the promotion
+	Status *PromotionStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
 }
 
 // Verification describes how to verify that a Promotion has been successful

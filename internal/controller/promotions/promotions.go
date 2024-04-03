@@ -373,10 +373,10 @@ func (r *reconciler) promote(
 			}
 		}
 
-		status.LastPromotion = &kargoapi.LastPromotionInfo{
+		status.LastPromotion = &kargoapi.PromotionInfo{
 			Name:    promo.Name,
 			Freight: nextFreight,
-			Status:  *newStatus,
+			Status:  newStatus,
 		}
 	})
 	if err != nil {
