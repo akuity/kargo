@@ -245,6 +245,59 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 		},
 		{
+			name: "failed and pending update",
+			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewClientBuilder().Build(),
+				mustPerformUpdateFn: func() func(
+					context.Context,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+				) (argocd.OperationPhase, bool, error) {
+					var count uint
+					return func(
+						context.Context,
+						kargoapi.ArgoCDAppUpdate,
+						kargoapi.FreightReference,
+					) (argocd.OperationPhase, bool, error) {
+						count++
+						if count > 1 {
+							return argocd.OperationFailed, false, nil
+						}
+						return "", true, nil
+					}
+				}(),
+				doSingleUpdateFn: func(
+					context.Context,
+					metav1.ObjectMeta,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+				) error {
+					return nil
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{},
+							{},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseFailed, status.Phase)
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
 			name: "completed",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),

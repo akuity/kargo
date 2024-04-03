@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/gobwas/glob"
@@ -103,7 +104,8 @@ func (a *argoCDMechanism) Promote(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
-	var pendingUpdates []kargoapi.ArgoCDAppUpdate
+	var updateResults []argocd.OperationPhase
+	var pendingUpdates uint
 	for _, update := range updates {
 		// Confirm we need to perform the update.
 		phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, update, newFreight)
@@ -116,8 +118,9 @@ func (a *argoCDMechanism) Promote(
 			if !phase.Completed() {
 				// If the operation is still running, we should wait for it to
 				// complete.
-				pendingUpdates = append(pendingUpdates, update)
+				pendingUpdates++
 			}
+			updateResults = append(updateResults, phase)
 			continue
 		}
 
@@ -130,17 +133,22 @@ func (a *argoCDMechanism) Promote(
 		); err != nil {
 			return nil, newFreight, err
 		}
-		pendingUpdates = append(pendingUpdates, update)
+		pendingUpdates++
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
 
-	if len(pendingUpdates) == 0 {
-		// All updates have been completed.
-		// TODO(hidde): We should return an aggregated status here.
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+	sort.Sort(libargocd.ByOperationPhase(updateResults))
+	if len(updateResults) > 0 && updateResults[0].Failed() {
+		// If we have any failed updates, the promotion has failed.
+		return promo.Status.WithPhase(kargoapi.PromotionPhaseFailed), newFreight, nil
 	}
-	return promo.Status.WithPhase(kargoapi.PromotionPhaseRunning), newFreight, nil
+	if pendingUpdates > 0 {
+		// If we have any pending updates, the promotion is still running.
+		return promo.Status.WithPhase(kargoapi.PromotionPhaseRunning), newFreight, nil
+	}
+	// If we get here, all updates have completed successfully.
+	return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
 }
 
 func (a *argoCDMechanism) mustPerformUpdate(

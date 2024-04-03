@@ -28,3 +28,11 @@ func (os OperationPhase) Completed() bool {
 	}
 	return false
 }
+
+func (os OperationPhase) Failed() bool {
+	switch os {
+	case OperationFailed, OperationError:
+		return true
+	}
+	return false
+}
