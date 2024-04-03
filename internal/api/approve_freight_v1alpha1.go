@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
@@ -122,11 +121,9 @@ func (s *server) ApproveFreight(
 	}
 	eventMsg := fmt.Sprintf("Freight approved for Stage %q", stageName)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		eventAnnotations[kargoapi.AnnotationKeyEventAdminUser] = strconv.FormatBool(u.IsAdmin)
-		if u.Subject != "" {
-			eventAnnotations[kargoapi.AnnotationKeyEventUserSubject] = u.Subject
-			eventMsg += fmt.Sprintf(" by %q", u.Subject)
-		}
+		actor := kargoapi.FormatEventUserActor(u)
+		eventAnnotations[kargoapi.AnnotationKeyEventActor] = actor
+		eventMsg += fmt.Sprintf(" by %q", actor)
 	}
 
 	s.recorder.AnnotatedEventf(

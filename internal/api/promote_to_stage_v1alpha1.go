@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
@@ -138,11 +137,9 @@ func (s *server) recordPromotionCreatedEvent(ctx context.Context, p *kargoapi.Pr
 	}
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		annotations[kargoapi.AnnotationKeyEventAdminUser] = strconv.FormatBool(u.IsAdmin)
-		if u.Subject != "" {
-			annotations[kargoapi.AnnotationKeyEventUserSubject] = u.Subject
-			msg += fmt.Sprintf(" by %q", u.Subject)
-		}
+		actor := kargoapi.FormatEventUserActor(u)
+		annotations[kargoapi.AnnotationKeyEventActor] = actor
+		msg += fmt.Sprintf(" by %q", actor)
 	}
 	s.recorder.AnnotatedEventf(p, annotations, corev1.EventTypeNormal, kargoapi.EventReasonPromotionCreated, msg)
 }

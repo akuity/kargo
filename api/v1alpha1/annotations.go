@@ -10,8 +10,7 @@ const (
 	AnnotationKeyOIDCGroups   = "rbac.kargo.akuity.io/groups"
 	AnnotationKeyOIDCSubjects = "rbac.kargo.akuity.io/sub"
 
-	AnnotationKeyEventAdminUser     = "event.kargo.akuity.io/admin-user"
-	AnnotationKeyEventUserSubject   = "event.kargo.akuity.io/user-subject"
+	AnnotationKeyEventActor         = "event.kargo.akuity.io/actor"
 	AnnotationKeyEventProject       = "event.kargo.akuity.io/project"
 	AnnotationKeyEventPromotionName = "event.kargo.akuity.io/promotion-name"
 	AnnotationKeyEventFreightName   = "event.kargo.akuity.io/freight-name"
