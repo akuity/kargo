@@ -10,6 +10,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,6 +21,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
+	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/controller/runtime"
 	"github.com/akuity/kargo/internal/credentials"
@@ -80,11 +82,20 @@ func SetupReconcilerWithManager(
 	credentialsDB credentials.Database,
 	cfg ReconcilerConfig,
 ) error {
+	// Index running Promotions by Argo CD Applications
+	if err := kubeclient.IndexRunningPromotionsByArgoCDApplications(ctx, kargoMgr, cfg.ShardName); err != nil {
+		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
+	}
 
 	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
 	if err != nil {
 		return fmt.Errorf("error creating shard selector predicate: %w", err)
 	}
+	shardRequirement, err := controller.GetShardRequirement(cfg.ShardName)
+	if err != nil {
+		return fmt.Errorf("error creating shard requirement: %w", err)
+	}
+	shardSelector := labels.NewSelector().Add(*shardRequirement)
 
 	var argocdClient client.Client
 	if argocdMgr != nil {
@@ -113,6 +124,27 @@ func SetupReconcilerWithManager(
 	}
 
 	logger := logging.LoggerFromContext(ctx)
+
+	// If Argo CD integration is disabled, this manager will be nil and we won't
+	// care about this watch anyway.
+	if argocdMgr != nil {
+		if err := c.Watch(
+			source.Kind(
+				argocdMgr.GetCache(),
+				&argocd.Application{},
+			),
+			&UpdatedArgoCDAppHandler{
+				kargoClient:   kargoMgr.GetClient(),
+				shardSelector: shardSelector,
+			},
+			ArgoCDAppOperationCompleted{
+				logger: logger,
+			},
+		); err != nil {
+			return fmt.Errorf("unable to watch Applications: %w", err)
+		}
+	}
+
 	// Watch Promotions that complete and enqueue the next highest promotion key
 	priorityQueueHandler := &EnqueueHighestPriorityPromotionHandler{
 		ctx:         ctx,
