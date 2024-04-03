@@ -2318,6 +2318,61 @@ export class KustomizePromotionMechanism extends Message<KustomizePromotionMecha
 }
 
 /**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.LastPromotionInfo
+ */
+export class LastPromotionInfo extends Message<LastPromotionInfo> {
+  /**
+   * Name is the name of the Promotion
+   *
+   * @generated from field: optional string name = 1;
+   */
+  name?: string;
+
+  /**
+   * Freight is the freight being promoted
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 2;
+   */
+  freight?: FreightReference;
+
+  /**
+   * Status is the status of the promotion
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
+   */
+  status?: PromotionStatus;
+
+  constructor(data?: PartialMessage<LastPromotionInfo>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.LastPromotionInfo";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 2, name: "freight", kind: "message", T: FreightReference, opt: true },
+    { no: 3, name: "status", kind: "message", T: PromotionStatus, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LastPromotionInfo {
+    return new LastPromotionInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LastPromotionInfo {
+    return new LastPromotionInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LastPromotionInfo {
+    return new LastPromotionInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LastPromotionInfo | PlainMessage<LastPromotionInfo> | undefined, b: LastPromotionInfo | PlainMessage<LastPromotionInfo> | undefined): boolean {
+    return proto2.util.equals(LastPromotionInfo, a, b);
+  }
+}
+
+/**
  * Project is a resource type that reconciles to a specially labeled namespace
  * and other TODO: TBD project-level resources.
  *
@@ -3237,6 +3292,13 @@ export class StageStatus extends Message<StageStatus> {
    */
   currentPromotion?: PromotionInfo;
 
+  /**
+   * LastPromotion is a reference to the last completed promotion.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.LastPromotionInfo lastPromotion = 10;
+   */
+  lastPromotion?: LastPromotionInfo;
+
   constructor(data?: PartialMessage<StageStatus>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3252,6 +3314,7 @@ export class StageStatus extends Message<StageStatus> {
     { no: 9, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 7, name: "currentPromotion", kind: "message", T: PromotionInfo, opt: true },
+    { no: 10, name: "lastPromotion", kind: "message", T: LastPromotionInfo, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageStatus {

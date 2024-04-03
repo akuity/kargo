@@ -756,6 +756,17 @@ message KustomizePromotionMechanism {
   repeated KustomizeImageUpdate images = 1;
 }
 
+message LastPromotionInfo {
+  // Name is the name of the Promotion
+  optional string name = 1;
+
+  // Freight is the freight being promoted
+  optional FreightReference freight = 2;
+
+  // Status is the status of the promotion
+  optional PromotionStatus status = 3;
+}
+
 // Project is a resource type that reconciles to a specially labeled namespace
 // and other TODO: TBD project-level resources.
 message Project {
@@ -988,6 +999,9 @@ message StageStatus {
 
   // CurrentPromotion is a reference to the currently Running promotion.
   optional PromotionInfo currentPromotion = 7;
+
+  // LastPromotion is a reference to the last completed promotion.
+  optional LastPromotionInfo lastPromotion = 10;
 }
 
 // StageSubscription defines a subscription to Freight from another Stage.
