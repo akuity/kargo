@@ -13,7 +13,7 @@ const (
 const (
 	EventActorAdmin         = "admin"
 	EventActorEmailPrefix   = "email:"
-	EventActorSubjectPrefix = "email:"
+	EventActorSubjectPrefix = "subject:"
 	EventActorUnknown       = "unknown actor"
 )
 
