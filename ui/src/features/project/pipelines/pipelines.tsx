@@ -6,7 +6,6 @@ import {
   faCircleCheck,
   faClipboard,
   faCopy,
-  faDiagramProject,
   faEllipsisV,
   faEye,
   faEyeSlash,
@@ -81,7 +80,7 @@ const warehouseNodeHeight = 110;
 
 const getSeconds = (ts?: Time): number => Number(ts?.seconds) || 0;
 
-export const ProjectDetails = () => {
+export const Pipelines = () => {
   const { name, stageName, freightName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const {
@@ -749,11 +748,7 @@ export const ProjectDetails = () => {
         </Freightline>
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
-            <div className='flex justify-between items-center p-4 mb-4'>
-              <div className='text-sm font-semibold pl-2'>
-                <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
-                PIPELINE
-              </div>
+            <div className='flex justify-end items-center p-4 mb-4'>
               <div>
                 <Tooltip title='Reassign Stage Colors'>
                   <Button
