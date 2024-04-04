@@ -104,28 +104,38 @@ func (a *argoCDMechanism) Promote(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
-	var updateResults []argocd.OperationPhase
+	var updateResults = make([]argocd.OperationPhase, 0, len(updates))
 	for _, update := range updates {
-		// Confirm we need to perform the update.
+		// Check if the update needs to be performed and retrieve its phase.
 		phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, update, newFreight)
+
+		// If we have a phase, append it to the results.
 		if phase != "" {
 			updateResults = append(updateResults, phase)
 		}
+
+		// If we don't need to perform an update, further processing depends on
+		// the phase and whether an error occurred.
 		if !mustUpdate {
 			if err != nil {
-				// If we receive an error which can't be resolved by performing
-				// an update, return the error.
-				return nil, newFreight, err
+				if phase == "" {
+					// If we do not have a phase, we cannot continue processing
+					// this update by waiting.
+					return nil, newFreight, err
+				}
+				// Log the error as a warning, but continue to the next update.
+				logger.Warn(err)
 			}
 			if phase.Failed() {
-				// If the update failed, we can short-circuit.
+				// If the update failed, we can short-circuit. This is
+				// effectively "fail fast" behavior.
 				break
 			}
-			// If we don't need to perform the update, continue to the next one.
+			// If we get here, we can continue to the next update.
 			continue
 		}
 
-		// If we get here, we need to perform the update.
+		// Perform the update.
 		if err := a.doSingleUpdateFn(
 			ctx,
 			stage.ObjectMeta,
@@ -134,12 +144,16 @@ func (a *argoCDMechanism) Promote(
 		); err != nil {
 			return nil, newFreight, err
 		}
+		// As we have initiated an update, we should wait for it to complete.
 		updateResults = append(updateResults, argocd.OperationRunning)
 	}
 
 	aggregatedPhase := operationPhaseToPromotionPhase(updateResults...)
 	if aggregatedPhase == "" {
-		return nil, newFreight, errors.New("could not determine Promotion phase")
+		return nil, newFreight, fmt.Errorf(
+			"could not determine promotion phase from operation phases: %v",
+			updateResults,
+		)
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
@@ -184,8 +198,10 @@ func (a *argoCDMechanism) mustPerformUpdate(
 		if !status.Phase.Completed() {
 			// We should wait for the operation to complete before attempting to
 			// apply an update ourselves.
-			return "", false, fmt.Errorf(
-				"current operation was not initiated by %q but by %q: waiting for operation to complete",
+			// NB: We return the current phase here because we want the caller
+			//     to know that an operation is still running.
+			return status.Phase, false, fmt.Errorf(
+				"current operation was not initiated by %q and not by %q: waiting for operation to complete",
 				applicationOperationInitiator, status.Operation.InitiatedBy.Username,
 			)
 		}

@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestNewArgoCDMechanism(t *testing.T) {
@@ -200,6 +203,39 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 		},
 		{
+			name: "must wait for operation from different user to complete",
+			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewClientBuilder().Build(),
+				mustPerformUpdateFn: func(
+					context.Context,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+				) (argocd.OperationPhase, bool, error) {
+					return argocd.OperationRunning, false, fmt.Errorf("waiting for operation to complete")
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseRunning, status.Phase)
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
 			name: "error applying update",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
@@ -298,6 +334,38 @@ func TestArgoCDPromote(t *testing.T) {
 			},
 		},
 		{
+			name: "operation phase aggregation error",
+			promoMech: &argoCDMechanism{
+				argocdClient: fake.NewClientBuilder().Build(),
+				mustPerformUpdateFn: func(
+					context.Context,
+					kargoapi.ArgoCDAppUpdate,
+					kargoapi.FreightReference,
+				) (argocd.OperationPhase, bool, error) {
+					return "Unknown", false, nil
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{
+						ArgoCDAppUpdates: []kargoapi.ArgoCDAppUpdate{
+							{},
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
+				err error,
+			) {
+				require.ErrorContains(t, err, "could not determine promotion phase from operation phases")
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
 			name: "completed",
 			promoMech: &argoCDMechanism{
 				argocdClient: fake.NewClientBuilder().Build(),
@@ -333,8 +401,11 @@ func TestArgoCDPromote(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			logger := logrus.New()
+			logger.Out = io.Discard
+
 			newStatus, newFreightOut, err := testCase.promoMech.Promote(
-				context.Background(),
+				logging.ContextWithLogger(context.TODO(), logger.WithFields(nil)),
 				testCase.stage,
 				&kargoapi.Promotion{},
 				testCase.newFreight,
@@ -389,6 +460,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			name: "pending operation initiated by different user",
 			modifyApplication: func(app *argocd.Application) {
 				app.Status.OperationState = &argocd.OperationState{
+					Phase: argocd.OperationRunning,
 					Operation: argocd.Operation{
 						InitiatedBy: argocd.OperationInitiator{
 							Username: "someone-else",
@@ -399,7 +471,7 @@ func TestArgoCDMustPerformUpdate(t *testing.T) {
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
 				require.ErrorContains(t, err, "current operation was not initiated by")
 				require.ErrorContains(t, err, "waiting for operation to complete")
-				require.Empty(t, phase)
+				require.Equal(t, argocd.OperationRunning, phase)
 				require.False(t, mustUpdate)
 			},
 		},
