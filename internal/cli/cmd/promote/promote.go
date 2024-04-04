@@ -180,7 +180,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		_ = printer.PrintObj(res.Msg.GetPromotion(), o.IOStreams.Out)
 		return nil
 	case o.SubscribersOf != "":
-		res, promoteErr := kargoSvcCli.PromoteToStageSubscribers(
+		res, err := kargoSvcCli.PromoteToStageSubscribers(
 			ctx,
 			connect.NewRequest(
 				&v1alpha1.PromoteToStageSubscribersRequest{
@@ -191,11 +191,13 @@ func (o *promotionOptions) run(ctx context.Context) error {
 				},
 			),
 		)
-
+		if err != nil {
+			return fmt.Errorf("promote stage subscribers: %w", err)
+		}
 		for _, p := range res.Msg.GetPromotions() {
 			_ = printer.PrintObj(p, o.IOStreams.Out)
 		}
-		return promoteErr
+		return nil
 	}
 	return nil
 }
