@@ -29,17 +29,6 @@ export const AnalysisTemplatesList = () => {
 
   return (
     <div className='p-4'>
-      <h1 className='pl-2 text-lg font-semibold flex items-center mb-4'>
-        <Button
-          type='primary'
-          className='ml-auto'
-          icon={<FontAwesomeIcon icon={faPlus} />}
-          onClick={() => showCreate()}
-        >
-          New
-        </Button>
-      </h1>
-
       <Table<AnalysisTemplate>
         dataSource={data?.analysisTemplates}
         pagination={{ hideOnSinglePage: true }}
@@ -56,6 +45,18 @@ export const AnalysisTemplatesList = () => {
         <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
         <Table.Column<AnalysisTemplate>
           width={100}
+          title={
+            <div className='w-full'>
+              <Button
+                type='primary'
+                className='ml-auto text-xs font-semibold'
+                icon={<FontAwesomeIcon icon={faPlus} />}
+                onClick={() => showCreate()}
+              >
+                ADD TEMPLATE
+              </Button>
+            </div>
+          }
           render={(_, template) => (
             <Space>
               <Button

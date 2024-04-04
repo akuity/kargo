@@ -749,7 +749,6 @@ export const Pipelines = () => {
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
             <div className='flex justify-end items-center p-4 mb-4'>
-              
               <div>
                 <Tooltip title='Reassign Stage Colors'>
                   <Button
