@@ -13,6 +13,7 @@ const (
 	AnnotationKeyEventActor         = "event.kargo.akuity.io/actor"
 	AnnotationKeyEventProject       = "event.kargo.akuity.io/project"
 	AnnotationKeyEventPromotionName = "event.kargo.akuity.io/promotion-name"
+	AnnotationKeyEventFreightAlias  = "event.kargo.akuity.io/freight-alias"
 	AnnotationKeyEventFreightName   = "event.kargo.akuity.io/freight-name"
 	AnnotationKeyEventStageName     = "event.kargo.akuity.io/stage-name"
 )

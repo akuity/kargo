@@ -1160,10 +1160,11 @@ func (r *reconciler) verifyFreightInStage(
 	r.recorder.AnnotatedEventf(
 		freight,
 		map[string]string{
-			kargoapi.AnnotationKeyEventActor:       kargoapi.FormatEventControllerActor(r.cfg.Name()),
-			kargoapi.AnnotationKeyEventProject:     namespace,
-			kargoapi.AnnotationKeyEventFreightName: freightName,
-			kargoapi.AnnotationKeyEventStageName:   stageName,
+			kargoapi.AnnotationKeyEventActor:        kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			kargoapi.AnnotationKeyEventProject:      namespace,
+			kargoapi.AnnotationKeyEventFreightAlias: freight.Alias,
+			kargoapi.AnnotationKeyEventFreightName:  freightName,
+			kargoapi.AnnotationKeyEventStageName:    stageName,
 		},
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonFreightVerifiedInStage,

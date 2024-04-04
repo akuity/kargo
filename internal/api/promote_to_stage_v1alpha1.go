@@ -122,17 +122,22 @@ func (s *server) PromoteToStage(
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
 	}
-	s.recordPromotionCreatedEvent(ctx, &promotion)
+	s.recordPromotionCreatedEvent(ctx, &promotion, freight)
 	return connect.NewResponse(&svcv1alpha1.PromoteToStageResponse{
 		Promotion: &promotion,
 	}), nil
 }
 
-func (s *server) recordPromotionCreatedEvent(ctx context.Context, p *kargoapi.Promotion) {
+func (s *server) recordPromotionCreatedEvent(
+	ctx context.Context,
+	p *kargoapi.Promotion,
+	f *kargoapi.Freight,
+) {
 	annotations := map[string]string{
 		kargoapi.AnnotationKeyEventProject:       p.Namespace,
 		kargoapi.AnnotationKeyEventPromotionName: p.Name,
-		kargoapi.AnnotationKeyEventFreightName:   p.Spec.Freight,
+		kargoapi.AnnotationKeyEventFreightAlias:  f.Alias,
+		kargoapi.AnnotationKeyEventFreightName:   f.Name,
 		kargoapi.AnnotationKeyEventStageName:     p.Spec.Stage,
 	}
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)

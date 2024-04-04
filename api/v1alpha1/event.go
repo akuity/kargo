@@ -6,6 +6,9 @@ import (
 
 const (
 	EventReasonPromotionCreated       = "PromotionCreated"
+	EventReasonPromotionSucceeded     = "PromotionSucceeded"
+	EventReasonPromotionFailed        = "PromotionFailed"
+	EventReasonPromotionErrored       = "PromotionErrored"
 	EventReasonFreightApproved        = "FreightApproved"
 	EventReasonFreightVerifiedInStage = "FreightVerifiedInStage"
 )

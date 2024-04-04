@@ -6,8 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -26,8 +29,12 @@ import (
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
+	name string
+
 	kargoClient     client.Client
 	promoMechanisms promotion.Mechanism
+
+	recorder record.EventRecorder
 
 	pqs            *promoQueues
 	initializeOnce sync.Once
@@ -57,9 +64,15 @@ func SetupReconcilerWithManager(
 		argocdClient = argocdMgr.GetClient()
 	}
 
+	reconcilerName := "promotion-controller"
+	if shardName != "" {
+		reconcilerName += "-" + shardName
+	}
 	reconciler := newReconciler(
+		reconcilerName,
 		kargoMgr.GetClient(),
 		argocdClient,
+		kargoMgr.GetEventRecorderFor(reconcilerName),
 		credentialsDB,
 	)
 
@@ -106,8 +119,10 @@ func SetupReconcilerWithManager(
 }
 
 func newReconciler(
+	name string,
 	kargoClient client.Client,
 	argocdClient client.Client,
+	recorder record.EventRecorder,
 	credentialsDB credentials.Database,
 ) *reconciler {
 	pqs := promoQueues{
@@ -115,7 +130,9 @@ func newReconciler(
 		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
 	r := &reconciler{
+		name:        name,
 		kargoClient: kargoClient,
+		recorder:    recorder,
 		pqs:         &pqs,
 		promoMechanisms: promotion.NewMechanisms(
 			argocdClient,
@@ -164,6 +181,18 @@ func (r *reconciler) Reconcile(
 		// Ignore if not found or already finished. Promo might be nil if the
 		// Promotion was deleted after the current reconciliation request was issued.
 		return ctrl.Result{}, nil
+	}
+	// Find the Freight
+	freight, err := kargoapi.GetFreight(ctx, r.kargoClient, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	})
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "get freight")
+	}
+	var freightAlias string
+	if freight != nil {
+		freightAlias = freight.Alias
 	}
 
 	logger = logger.WithFields(log.Fields{
@@ -239,6 +268,37 @@ func (r *reconciler) Reconcile(
 	if err != nil {
 		logger.Errorf("error updating Promotion status: %s", err)
 	}
+
+	// Record event after patching status if new phase is terminal
+	if newStatus.Phase.IsTerminal() {
+		var reason string
+		switch newStatus.Phase {
+		case kargoapi.PromotionPhaseSucceeded:
+			reason = kargoapi.EventReasonPromotionSucceeded
+		case kargoapi.PromotionPhaseFailed:
+			reason = kargoapi.EventReasonPromotionFailed
+		case kargoapi.PromotionPhaseErrored:
+			reason = kargoapi.EventReasonPromotionErrored
+		}
+
+		msg := fmt.Sprintf("Promotion %s", newStatus.Phase)
+		if newStatus.Message != "" {
+			msg += fmt.Sprintf(": %s", newStatus.Message)
+		}
+
+		eventAnnotations := map[string]string{
+			kargoapi.AnnotationKeyEventActor:         kargoapi.FormatEventControllerActor(r.name),
+			kargoapi.AnnotationKeyEventProject:       promo.GetNamespace(),
+			kargoapi.AnnotationKeyEventPromotionName: promo.GetName(),
+			kargoapi.AnnotationKeyEventFreightName:   promo.Spec.Freight,
+			kargoapi.AnnotationKeyEventStageName:     promo.Spec.Stage,
+		}
+		if freightAlias != "" {
+			eventAnnotations[kargoapi.AnnotationKeyEventFreightAlias] = freightAlias
+		}
+		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
+	}
+
 	if clearRefreshErr := kargoapi.ClearAnnotations(
 		ctx,
 		r.kargoClient,

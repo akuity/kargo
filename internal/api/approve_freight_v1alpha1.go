@@ -115,9 +115,10 @@ func (s *server) ApproveFreight(
 	}
 
 	eventAnnotations := map[string]string{
-		kargoapi.AnnotationKeyEventProject:     project,
-		kargoapi.AnnotationKeyEventFreightName: freight.Name,
-		kargoapi.AnnotationKeyEventStageName:   stageName,
+		kargoapi.AnnotationKeyEventProject:      project,
+		kargoapi.AnnotationKeyEventFreightAlias: freight.Alias,
+		kargoapi.AnnotationKeyEventFreightName:  freight.Name,
+		kargoapi.AnnotationKeyEventStageName:    stageName,
 	}
 	eventMsg := fmt.Sprintf("Freight approved for Stage %q", stageName)
 	if u, ok := user.InfoFromContext(ctx); ok {
