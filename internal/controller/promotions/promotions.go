@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -188,7 +187,7 @@ func (r *reconciler) Reconcile(
 		Name:      promo.Spec.Freight,
 	})
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "get freight")
+		return ctrl.Result{}, fmt.Errorf("get freight: %w", err)
 	}
 	var freightAlias string
 	if freight != nil {
