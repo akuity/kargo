@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Space, Table } from 'antd';
+import { Button, Table } from 'antd';
 import { format } from 'date-fns';
 import { useParams } from 'react-router-dom';
 
@@ -58,9 +58,10 @@ export const AnalysisTemplatesList = () => {
             </div>
           }
           render={(_, template) => (
-            <Space>
+            <div className='w-full flex'>
               <Button
                 icon={<FontAwesomeIcon icon={faTrash} />}
+                className='ml-auto'
                 danger
                 loading={isDeleting}
                 onClick={() => {
@@ -85,7 +86,7 @@ export const AnalysisTemplatesList = () => {
               >
                 Delete
               </Button>
-            </Space>
+            </div>
           )}
         />
       </Table>
