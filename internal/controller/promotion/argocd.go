@@ -105,22 +105,23 @@ func (a *argoCDMechanism) Promote(
 	logger.Debug("executing Argo CD-based promotion mechanisms")
 
 	var updateResults []argocd.OperationPhase
-	var pendingUpdates uint
 	for _, update := range updates {
 		// Confirm we need to perform the update.
 		phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, update, newFreight)
+		if phase != "" {
+			updateResults = append(updateResults, phase)
+		}
 		if !mustUpdate {
 			if err != nil {
 				// If we receive an error which can't be resolved by performing
 				// an update, return the error.
 				return nil, newFreight, err
 			}
-			if !phase.Completed() {
-				// If the operation is still running, we should wait for it to
-				// complete.
-				pendingUpdates++
+			if phase.Failed() {
+				// If the update failed, we can short-circuit.
+				break
 			}
-			updateResults = append(updateResults, phase)
+			// If we don't need to perform the update, continue to the next one.
 			continue
 		}
 
@@ -133,22 +134,16 @@ func (a *argoCDMechanism) Promote(
 		); err != nil {
 			return nil, newFreight, err
 		}
-		pendingUpdates++
+		updateResults = append(updateResults, argocd.OperationRunning)
+	}
+
+	aggregatedPhase := operationPhaseToPromotionPhase(updateResults...)
+	if aggregatedPhase == "" {
+		return nil, newFreight, errors.New("could not determine Promotion phase")
 	}
 
 	logger.Debug("done executing Argo CD-based promotion mechanisms")
-
-	sort.Sort(libargocd.ByOperationPhase(updateResults))
-	if len(updateResults) > 0 && updateResults[0].Failed() {
-		// If we have any failed updates, the promotion has failed.
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseFailed), newFreight, nil
-	}
-	if pendingUpdates > 0 {
-		// If we have any pending updates, the promotion is still running.
-		return promo.Status.WithPhase(kargoapi.PromotionPhaseRunning), newFreight, nil
-	}
-	// If we get here, all updates have completed successfully.
-	return promo.Status.WithPhase(kargoapi.PromotionPhaseSucceeded), newFreight, nil
+	return promo.Status.WithPhase(aggregatedPhase), newFreight, nil
 }
 
 func (a *argoCDMechanism) mustPerformUpdate(
@@ -578,4 +573,23 @@ func buildHelmParamChangesForArgoCDAppSource(
 		}
 	}
 	return changes
+}
+
+func operationPhaseToPromotionPhase(phases ...argocd.OperationPhase) kargoapi.PromotionPhase {
+	if len(phases) == 0 {
+		return ""
+	}
+
+	sort.Sort(libargocd.ByOperationPhase(phases))
+
+	switch phases[0] {
+	case argocd.OperationRunning, argocd.OperationTerminating:
+		return kargoapi.PromotionPhaseRunning
+	case argocd.OperationFailed, argocd.OperationError:
+		return kargoapi.PromotionPhaseFailed
+	case argocd.OperationSucceeded:
+		return kargoapi.PromotionPhaseSucceeded
+	default:
+		return ""
+	}
 }
