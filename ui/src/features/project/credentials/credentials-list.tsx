@@ -2,7 +2,6 @@ import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   faCode,
   faExternalLink,
-  faIdBadge,
   faPencil,
   faPlus,
   faTrash
@@ -36,22 +35,6 @@ export const CredentialsList = () => {
 
   return (
     <div className='p-4'>
-      <h1 className='pl-2 text-lg font-semibold flex items-center mb-4'>
-        <FontAwesomeIcon icon={faIdBadge} className='mr-2' />
-        Credentials
-        <Button
-          type='primary'
-          className='ml-auto'
-          icon={<FontAwesomeIcon icon={faPlus} />}
-          onClick={() => {
-            showCreate((p) => (
-              <CreateCredentialsModal project={name || ''} onSuccess={refetch} {...p} />
-            ));
-          }}
-        >
-          New
-        </Button>
-      </h1>
       <Table
         dataSource={data?.credentials || []}
         rowKey={(record) => record?.metadata?.name || ''}
@@ -100,6 +83,22 @@ export const CredentialsList = () => {
           },
           {
             key: 'actions',
+            title: (
+              <div className='w-full flex'>
+                <Button
+                  type='primary'
+                  className='ml-auto text-xs font-semibold'
+                  icon={<FontAwesomeIcon icon={faPlus} />}
+                  onClick={() => {
+                    showCreate((p) => (
+                      <CreateCredentialsModal project={name || ''} onSuccess={refetch} {...p} />
+                    ));
+                  }}
+                >
+                  ADD CREDENTIALS
+                </Button>
+              </div>
+            ),
             render: (record) => (
               <div className='flex items-center w-full'>
                 <Button

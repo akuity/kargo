@@ -6,7 +6,6 @@ import {
   faCircleCheck,
   faClipboard,
   faCopy,
-  faDiagramProject,
   faEllipsisV,
   faEye,
   faEyeSlash,
@@ -81,7 +80,7 @@ const warehouseNodeHeight = 110;
 
 const getSeconds = (ts?: Time): number => Number(ts?.seconds) || 0;
 
-export const ProjectDetails = () => {
+export const Pipelines = () => {
   const { name, stageName, freightName } = useParams();
   const { data, isLoading } = useQuery(listStages, { project: name });
   const {
@@ -628,8 +627,11 @@ export const ProjectDetails = () => {
                     }, false)}
                   >
                     <Dropdown
-                      className='absolute top-2 right-2'
+                      className='absolute top-2 right-2 pl-2'
                       trigger={['click']}
+                      dropdownRender={(menu) => {
+                        return <div onClick={(e) => e.stopPropagation()}>{menu}</div>;
+                      }}
                       menu={{
                         items: [
                           {
@@ -696,6 +698,7 @@ export const ProjectDetails = () => {
                       }}
                     >
                       <FontAwesomeIcon
+                        onClick={(e) => e.stopPropagation()}
                         icon={faEllipsisV}
                         className='cursor-pointer text-gray-500 hover:text-white'
                       />
@@ -745,11 +748,7 @@ export const ProjectDetails = () => {
         </Freightline>
         <div className='flex flex-grow w-full'>
           <div className={`overflow-hidden flex-grow w-full h-full ${styles.dag}`}>
-            <div className='flex justify-between items-center p-4 mb-4'>
-              <div className='text-sm font-semibold pl-2'>
-                <FontAwesomeIcon icon={faDiagramProject} className='mr-2' />
-                PIPELINE
-              </div>
+            <div className='flex justify-end items-center p-4 mb-4'>
               <div>
                 <Tooltip title='Reassign Stage Colors'>
                   <Button

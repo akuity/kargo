@@ -15,7 +15,7 @@ import {
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
-import { getStageYAMLExample } from '../project/project-details/utils/stage-yaml-example';
+import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
 
 import { prepareStageToEdit, prepareStageToSave } from './utils/edit-stage-utils';
 
