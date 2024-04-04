@@ -3,6 +3,36 @@
  */
 import { Project } from 'ts-morph';
 
+const formatCodeSettings = { indentSize: 2, convertTabsToSpaces: true };
+
+function overrideFromJson(classDecl, bodyText) {
+  classDecl.getInstanceMethod('fromJson')?.remove();
+  classDecl
+    .addMethod({
+      hasOverrideKeyword: true,
+      name: 'fromJson',
+      parameters: [
+        { name: 'json', type: 'JsonValue' },
+        { name: 'options?', type: 'Partial<JsonReadOptions>' }
+      ],
+      returnType: 'this'
+    })
+    .setBodyText(bodyText);
+}
+
+
+function overrideToJson(classDecl, bodyText) {
+  classDecl.getInstanceMethod('toJson')?.remove();
+  classDecl
+    .addMethod({
+      hasOverrideKeyword: true,
+      name: 'toJson',
+      parameters: [{ name: 'options?', type: 'Partial<JsonWriteOptions>' }],
+      returnType: 'JsonValue'
+    })
+    .setBodyText(bodyText);
+}
+
 /**
  * Extends metav1.Time class to compatible with generic `Timestamp` message.
  * Extended methods sources are from `bufbuild/protobuf-es`.
@@ -25,17 +55,9 @@ function extendTime(src) {
 
   // Extend Time class
   const time = src.getClassOrThrow('Time');
+
   // Override fromJson()
-  time.getInstanceMethod('fromJson')?.remove();
-  time.addMethod({
-    hasOverrideKeyword: true,
-    name: 'fromJson',
-    parameters: [
-      { name: 'json', type: 'JsonValue' },
-      { name: 'options?', type: 'Partial<JsonReadOptions>' }
-    ],
-    returnType: 'this'
-  }).setBodyText(`if (typeof json !== "string") {
+  overrideFromJson(time, `if (typeof json !== "string") {
     throw new Error(\`cannot decode google.protobuf.Timestamp from JSON: \${proto.json.debug(json)}\`);
   }
   const matches = json.match(/^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(?:Z|\\.([0-9]{3,9})Z|([+-][0-9][0-9]:[0-9][0-9]))$/);
@@ -58,13 +80,7 @@ function extendTime(src) {
 `);
 
   // Override toJson()
-  time.getInstanceMethod('toJson')?.remove();
-  time.addMethod({
-    hasOverrideKeyword: true,
-    name: 'toJson',
-    parameters: [{ name: 'options?', type: 'Partial<JsonWriteOptions>' }],
-    returnType: 'JsonValue'
-  }).setBodyText(`const ms = Number(this.seconds) * 1000;
+  overrideToJson(time, `const ms = Number(this.seconds) * 1000;
   if (ms < Date.parse("0001-01-01T00:00:00Z") || ms > Date.parse("9999-12-31T23:59:59Z")) {
     throw new Error(\`cannot encode google.protobuf.Timestamp to JSON: must be from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive\`);
   }
@@ -101,12 +117,14 @@ function extendTime(src) {
 
   // fromDate()
   time.getStaticMethod('fromDate')?.remove();
-  time.addMethod({
-    isStatic: true,
-    name: 'fromDate',
-    parameters: [{ name: 'date', type: 'Date' }],
-    returnType: 'Time'
-  }).setBodyText(`const ms = date.getTime();
+  time
+    .addMethod({
+      isStatic: true,
+      name: 'fromDate',
+      parameters: [{ name: 'date', type: 'Date' }],
+      returnType: 'Time'
+    })
+    .setBodyText(`const ms = date.getTime();
   return new Time({
     seconds: protoInt64.parse(Math.floor(ms / 1000)),
     nanos: (ms % 1000) * 1000000,
@@ -124,6 +142,96 @@ function extendTime(src) {
     .setBodyText(`return Time.fromDate(new Date())`);
 }
 
+/**
+ * Extends intstr.IntOrString class to compatible with Golang implementation.
+ *
+ * @param {SourceFile} src Generated source file.
+ */
+function extendIntOrString(src) {
+  // Extend IntOrString class
+  const intOrString = src.getClassOrThrow('IntOrString');
+
+  // Define constants
+  const classConstants = [
+    {
+      name: 'TYPE_INT',
+      isStatic: true,
+      isReadonly: true,
+      initializer: 'BigInt(0)'
+    },
+    {
+      name: 'TYPE_STRING',
+      isStatic: true,
+      isReadonly: true,
+      initializer: 'BigInt(1)'
+    },
+    {
+      name: 'MAX_INT32',
+      isStatic: true,
+      isReadonly: true,
+      initializer: '2147483647'
+    },
+    {
+      name: 'MIN_INT32',
+      isStatic: true,
+      isReadonly: true,
+      initializer: '-2147483648'
+    },
+  ];
+  classConstants
+    .forEach((c) => {
+      intOrString.getStaticProperty(c.name)?.remove();
+      intOrString.addProperty(c);
+    });
+
+  // Override fromJson()
+  overrideFromJson(intOrString, `if (json === null) {
+  return this;
+}
+switch (typeof json) {
+  case "string":
+    this.type = IntOrString.TYPE_STRING;
+    this.strVal = json;
+    return this;
+  case "number":
+    if (!this.isInt32(json)) {
+      throw new Error(\`value is not an Int32: \${proto.json.debug(json)}\`);
+    }
+    this.type = IntOrString.TYPE_INT;
+    this.intVal = json;
+    return this;
+  default:
+    throw new Error(\`cannot decode \${IntOrString.typeName} from JSON: \${proto.json.debug(json)}\`);
+}`);
+
+  // Override toJson()
+  overrideToJson(intOrString, `if (this.type === IntOrString.TYPE_STRING) {
+  return this.strVal;
+}
+if (this.type === IntOrString.TYPE_INT) {
+  if (!this.intVal) {
+    return null;
+  } else if (!this.isInt32(this.intVal)) {
+    throw new Error(\`value is not an Int32: \${this.intVal}\`);
+  }
+  return this.intVal;
+}
+return null;`);
+
+  // Add helper methods
+  // isInt32()
+  intOrString.getInstanceMethod('isInt32')?.remove();
+  intOrString
+    .addMethod({
+      name: 'isInt32',
+      parameters: [{ name: 'value', type: 'number' }],
+      returnType: 'boolean'
+    })
+    .setBodyText(`return Number.isInteger(value) &&
+  IntOrString.MIN_INT32 <= value &&
+  value <= IntOrString.MAX_INT32;`);
+}
+
 async function main() {
   const project = new Project({
     tsConfigFilePath: 'tsconfig.json'
@@ -133,8 +241,14 @@ async function main() {
     './src/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb.ts'
   );
   extendTime(metaV1);
+  metaV1.formatText(formatCodeSettings);
 
-  metaV1.formatText({ indentSize: 2, convertTabsToSpaces: true });
+  const intstr = project.getSourceFileOrThrow(
+    './src/gen/k8s.io/apimachinery/pkg/util/intstr/generated_pb.ts'
+  )
+  extendIntOrString(intstr);
+  intstr.formatText(formatCodeSettings)
+
   await project.save();
 }
 
