@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faChartBar, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Space, Table } from 'antd';
 import { format } from 'date-fns';
@@ -30,8 +30,6 @@ export const AnalysisTemplatesList = () => {
   return (
     <div className='p-4'>
       <h1 className='pl-2 text-lg font-semibold flex items-center mb-4'>
-        <FontAwesomeIcon icon={faChartBar} className='mr-2' />
-        Analysis Templates
         <Button
           type='primary'
           className='ml-auto'

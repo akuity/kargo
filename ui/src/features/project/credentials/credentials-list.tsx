@@ -2,7 +2,6 @@ import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   faCode,
   faExternalLink,
-  faIdBadge,
   faPencil,
   faPlus,
   faTrash
@@ -37,8 +36,6 @@ export const CredentialsList = () => {
   return (
     <div className='p-4'>
       <h1 className='pl-2 text-lg font-semibold flex items-center mb-4'>
-        <FontAwesomeIcon icon={faIdBadge} className='mr-2' />
-        Credentials
         <Button
           type='primary'
           className='ml-auto'
