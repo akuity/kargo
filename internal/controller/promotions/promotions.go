@@ -287,11 +287,12 @@ func (r *reconciler) Reconcile(
 		}
 
 		eventAnnotations := map[string]string{
-			kargoapi.AnnotationKeyEventActor:         kargoapi.FormatEventControllerActor(r.name),
-			kargoapi.AnnotationKeyEventProject:       promo.GetNamespace(),
-			kargoapi.AnnotationKeyEventPromotionName: promo.GetName(),
-			kargoapi.AnnotationKeyEventFreightName:   promo.Spec.Freight,
-			kargoapi.AnnotationKeyEventStageName:     promo.Spec.Stage,
+			kargoapi.AnnotationKeyEventActor:               kargoapi.FormatEventControllerActor(r.name),
+			kargoapi.AnnotationKeyEventProject:             promo.GetNamespace(),
+			kargoapi.AnnotationKeyEventPromotionName:       promo.GetName(),
+			kargoapi.AnnotationKeyEventPromotionCreateTime: promo.GetCreationTimestamp().Format(time.RFC3339),
+			kargoapi.AnnotationKeyEventFreightName:         promo.Spec.Freight,
+			kargoapi.AnnotationKeyEventStageName:           promo.Spec.Stage,
 		}
 		if freightAlias != "" {
 			eventAnnotations[kargoapi.AnnotationKeyEventFreightAlias] = freightAlias
