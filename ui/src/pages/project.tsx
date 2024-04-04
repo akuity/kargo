@@ -1,4 +1,4 @@
-import { faChartBar, faCircleNodes, faIdBadge } from '@fortawesome/free-solid-svg-icons';
+import { faChartBar, faDiagramProject, faIdBadge } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tabs } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -6,13 +6,13 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { AnalysisTemplatesList } from '@ui/features/project/analysis-templates/analysis-templates-list';
 import { CredentialsList } from '@ui/features/project/credentials/credentials-list';
-import { ProjectDetails } from '@ui/features/project/project-details/project-details';
+import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 
 const tabs = {
-  details: {
+  pipelines: {
     path: paths.project,
-    label: 'Details',
-    icon: faCircleNodes
+    label: 'Pipelines',
+    icon: faDiagramProject
   },
   credentials: {
     path: paths.projectCredentials,
@@ -28,21 +28,21 @@ const tabs = {
 
 export type ProjectTab = keyof typeof tabs;
 
-export const Project = ({ tab = 'details' }: { tab?: ProjectTab }) => {
+export const Project = ({ tab = 'pipelines' }: { tab?: ProjectTab }) => {
   const { name } = useParams();
   const navigate = useNavigate();
 
   // we must render the tab contents outside of the Antd tabs component to prevent layout issues in the ProjectDetails component
   const renderTab = (key: ProjectTab) => {
     switch (key) {
-      case 'details':
-        return <ProjectDetails />;
+      case 'pipelines':
+        return <Pipelines />;
       case 'credentials':
         return <CredentialsList />;
       case 'analysisTemplates':
         return <AnalysisTemplatesList />;
       default:
-        return <ProjectDetails />;
+        return <Pipelines />;
     }
   };
 
