@@ -28,16 +28,17 @@ type createCredentialsOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project  string
-	Name     string
-	Git      bool
-	Helm     bool
-	Image    bool
-	Type     string
-	RepoURL  string
-	Regex    bool
-	Username string
-	Password string
+	Project     string
+	Name        string
+	Description string
+	Git         bool
+	Helm        bool
+	Image       bool
+	Type        string
+	RepoURL     string
+	Regex       bool
+	Username    string
+	Password    string
 }
 
 func newCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -50,6 +51,7 @@ func newCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStre
 	cmd := &cobra.Command{
 		Use: `credentials [--project=project] NAME \
     (--git | --helm | --image) \
+    [--description=description] \
     --repo-url=repo-url [--regex] \
     -username=username \
     [--password=password]`,
@@ -120,6 +122,7 @@ func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to create credentials. If not set, the default project will be used.",
 	)
+	option.Description(cmd.Flags(), &o.Description, "Description of the credential.")
 	option.Git(cmd.Flags(), &o.Git, "Create credentials for a Git repository.")
 	option.Helm(cmd.Flags(), &o.Helm, "Create credentials for a Helm chart repository.")
 	option.Image(cmd.Flags(), &o.Image, "Create credentials for a container image repository.")
@@ -215,6 +218,7 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 			&v1alpha1.CreateCredentialsRequest{
 				Project:        o.Project,
 				Name:           o.Name,
+				Description:    o.Description,
 				Type:           o.Type,
 				RepoUrl:        o.RepoURL,
 				RepoUrlIsRegex: o.Regex,
