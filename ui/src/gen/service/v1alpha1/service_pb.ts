@@ -3184,6 +3184,11 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
   name = "";
 
   /**
+   * @generated from field: string description = 8;
+   */
+  description = "";
+
+  /**
    * @generated from field: string type = 3;
    */
   type = "";
@@ -3218,6 +3223,7 @@ export class CreateCredentialsRequest extends Message<CreateCredentialsRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
@@ -3524,6 +3530,11 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
   name = "";
 
   /**
+   * @generated from field: string description = 8;
+   */
+  description = "";
+
+  /**
    * @generated from field: string type = 3;
    */
   type = "";
@@ -3558,6 +3569,7 @@ export class UpdateCredentialsRequest extends Message<UpdateCredentialsRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "repo_url", jsonName: "repoURL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "repo_url_is_regex", jsonName: "repoURLIsRegex", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
