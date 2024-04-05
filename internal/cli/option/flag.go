@@ -147,6 +147,11 @@ func NewAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, NewAliasFlag, "", usage)
 }
 
+// NoHeaders adds the NoHeadersFlag to the provided flag set.
+func NoHeaders(fs *pflag.FlagSet, noHeaders *bool) {
+	fs.BoolVar(noHeaders, "no-headers", false, "Don't print headers when printing resource tables")
+}
+
 // OldAlias adds the OldAliasFlag to the provided flag set.
 func OldAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, OldAliasFlag, "", usage)

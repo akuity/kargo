@@ -30,6 +30,8 @@ type getCredentialsOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
+	getOptions
+
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
@@ -85,6 +87,8 @@ kargo get credentials my-credentials`),
 // addFlags adds the flags for the get credentials options to the provided
 // command.
 func (o *getCredentialsOptions) addFlags(cmd *cobra.Command) {
+	o.getOptions.addFlags(cmd)
+
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
@@ -129,7 +133,7 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list credentials: %w", err)
 		}
-		return printObjects(resp.Msg.GetCredentials(), o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetCredentials(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*corev1.Secret, 0, len(o.Names))
@@ -151,7 +155,7 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetCredentials())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print stages: %w", err)
 	}
 	return errors.Join(errs...)

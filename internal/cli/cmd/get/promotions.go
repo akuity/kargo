@@ -28,6 +28,8 @@ type getPromotionsOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
+	getOptions
+
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
@@ -94,6 +96,8 @@ kargo get promotion abc1234
 
 // addFlags adds the flags for the get promotions options to the provided command.
 func (o *getPromotionsOptions) addFlags(cmd *cobra.Command) {
+	o.getOptions.addFlags(cmd)
+
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 
@@ -141,7 +145,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list promotions: %w", err)
 		}
-		return printObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Promotion, 0, len(o.Names))
@@ -163,7 +167,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetPromotion())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print promotions: %w", err)
 	}
 	return errors.Join(errs...)
