@@ -7,16 +7,23 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Popover, Table, Tooltip, theme } from 'antd';
+import Link from 'antd/es/typography/Link';
 import { format } from 'date-fns';
 import React from 'react';
 
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+
+import { useModal } from '../common/modal/use-modal';
+
+import { AnalysisRunModal } from './analysis-run-modal';
 
 type Props = {
   stage: Stage;
 };
 
 export const Verifications = ({ stage }: Props) => {
+  const { show } = useModal();
+
   const verifications = React.useMemo(
     () =>
       (stage.status?.history || []).flatMap((freight) =>
@@ -101,7 +108,15 @@ export const Verifications = ({ stage }: Props) => {
       <Table.Column<(typeof verifications)[number]>
         title='AnalysisRun'
         dataIndex=''
-        render={(val, verification) => verification.analysisRun?.name}
+        render={(val, verification) => (
+          <Link
+            onClick={() =>
+              show((p) => <AnalysisRunModal {...p} name={verification.analysisRun?.name || ''} />)
+            }
+          >
+            {verification.analysisRun?.name}
+          </Link>
+        )}
       />
       <Table.Column
         title='Freight'
