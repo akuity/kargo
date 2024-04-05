@@ -48,7 +48,7 @@ func newGetProjectsCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "projects [NAME ...]",
+		Use:     "projects [NAME ...] [--no-headers]",
 		Aliases: []string{"project"},
 		Short:   "Display one or many projects",
 		Example: templates.Example(`

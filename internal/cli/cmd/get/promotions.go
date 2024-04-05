@@ -51,7 +51,7 @@ func newGetPromotionsCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "promotions [--project=project] [--stage=stage] [NAME ...]",
+		Use:     "promotions [--project=project] [--stage=stage] [NAME ...] [--no-headers]",
 		Aliases: []string{"promotion", "promos", "promo"},
 		Short:   "Display one or many promotions",
 		Example: templates.Example(`
