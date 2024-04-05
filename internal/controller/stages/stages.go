@@ -66,6 +66,12 @@ type reconciler struct {
 		...client.ListOption,
 	) error
 
+	getPromoFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.Promotion, error)
+
 	// Health checks:
 
 	checkHealthFn func(
@@ -450,6 +456,7 @@ func newReconciler(
 	// Loop guard:
 	r.hasNonTerminalPromotionsFn = r.hasNonTerminalPromotions
 	r.listPromosFn = r.kargoClient.List
+	r.getPromoFn = kargoapi.GetPromotion
 	// Health checks:
 	r.checkHealthFn = r.checkHealth
 	r.getArgoCDAppFn = argocd.GetApplication
@@ -696,6 +703,36 @@ func (r *reconciler) syncNormalStage(
 
 	status.ObservedGeneration = stage.Generation
 	status.Health = nil // Reset health
+
+	if status.CurrentPromotion != nil {
+		promo, err := r.getPromoFn(ctx, r.kargoClient, types.NamespacedName{
+			Namespace: stage.Namespace,
+			Name:      status.CurrentPromotion.Name,
+		})
+		if err != nil {
+			return status, err
+		}
+
+		freight, err := r.getFreightFn(ctx, r.kargoClient, types.NamespacedName{
+			Namespace: stage.Namespace,
+			Name:      promo.Spec.Freight,
+		})
+		if err != nil {
+			return status, err
+		}
+
+		status.LastPromotion = &kargoapi.PromotionInfo{
+			Name: promo.Name,
+			Freight: kargoapi.FreightReference{
+				Name:    freight.Name,
+				Commits: freight.Commits,
+				Images:  freight.Images,
+				Charts:  freight.Charts,
+			},
+			Status: &promo.Status,
+		}
+	}
+
 	status.CurrentPromotion = nil
 
 	if status.CurrentFreight == nil {
