@@ -94,7 +94,7 @@ func applyCredentialsUpdateToSecret(
 ) {
 	if credsUpdate.description != "" {
 		if secret.Annotations == nil {
-			secret.Annotations = make(map[string]string)
+			secret.Annotations = make(map[string]string, 1)
 		}
 		secret.Annotations[kargoapi.AnnotationKeyDescription] = credsUpdate.description
 	} else {
