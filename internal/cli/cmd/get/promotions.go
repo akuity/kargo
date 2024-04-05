@@ -28,7 +28,7 @@ type getPromotionsOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
-	getOptions
+	*getOptions
 
 	Config        config.CLIConfig
 	ClientOptions client.Options
@@ -41,7 +41,7 @@ type getPromotionsOptions struct {
 func newGetPromotionsCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
-	getOptions getOptions,
+	getOptions *getOptions,
 ) *cobra.Command {
 	cmdOpts := &getPromotionsOptions{
 		Config:     cfg,

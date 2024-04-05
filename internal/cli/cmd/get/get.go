@@ -38,7 +38,7 @@ kargo get promotions --project=my-project --stage=my-stage
 `),
 	}
 
-	cmdOpts := getOptions{}
+	cmdOpts := &getOptions{}
 
 	cmdOpts.addFlags(cmd)
 

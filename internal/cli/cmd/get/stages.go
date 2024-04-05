@@ -28,7 +28,7 @@ type getStagesOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
-	getOptions
+	*getOptions
 
 	Config        config.CLIConfig
 	ClientOptions client.Options
@@ -40,7 +40,7 @@ type getStagesOptions struct {
 func newGetStagesCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
-	getOptions getOptions,
+	getOptions *getOptions,
 ) *cobra.Command {
 	cmdOpts := &getStagesOptions{
 		Config:     cfg,

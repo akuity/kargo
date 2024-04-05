@@ -30,7 +30,7 @@ type getCredentialsOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
-	getOptions
+	*getOptions
 
 	Config        config.CLIConfig
 	ClientOptions client.Options
@@ -42,7 +42,7 @@ type getCredentialsOptions struct {
 func newGetCredentialsCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
-	getOptions getOptions,
+	getOptions *getOptions,
 ) *cobra.Command {
 	cmdOpts := &getCredentialsOptions{
 		Config:     cfg,

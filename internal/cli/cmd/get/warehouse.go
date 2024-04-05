@@ -28,7 +28,7 @@ type getWarehousesOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
-	getOptions
+	*getOptions
 
 	Config        config.CLIConfig
 	ClientOptions client.Options
@@ -40,7 +40,7 @@ type getWarehousesOptions struct {
 func newGetWarehousesCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
-	getOptions getOptions,
+	getOptions *getOptions,
 ) *cobra.Command {
 	cmdOpts := &getWarehousesOptions{
 		Config:     cfg,
