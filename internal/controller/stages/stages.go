@@ -678,6 +678,14 @@ func (r *reconciler) syncControlFlowStage(
 					err,
 				)
 			}
+
+			r.recordFreightVerificationEvent(
+				stage,
+				&af,
+				&kargoapi.VerificationInfo{
+					Phase: kargoapi.VerificationPhaseSuccessful,
+				},
+			)
 		}
 	}
 	return status, nil
@@ -836,6 +844,33 @@ func (r *reconciler) syncNormalStage(
 				)
 			}
 		}
+
+		// Record an event if the verification process has completed.
+		if stage.Spec.Verification == nil ||
+			(status.CurrentFreight.VerificationInfo != nil &&
+				status.CurrentFreight.VerificationInfo.Phase.IsTerminal()) {
+			vi := status.CurrentFreight.VerificationInfo
+			if stage.Spec.Verification == nil {
+				vi = &kargoapi.VerificationInfo{
+					Phase: kargoapi.VerificationPhaseSuccessful,
+				}
+			}
+
+			fr, err := r.getFreightFn(
+				ctx,
+				r.kargoClient,
+				types.NamespacedName{
+					Namespace: stage.Namespace,
+					Name:      status.CurrentFreight.Name,
+				},
+			)
+			if err != nil {
+				return status, fmt.Errorf("get freight: %w", err)
+			}
+			if fr != nil {
+				r.recordFreightVerificationEvent(stage, fr, vi)
+			}
+		}
 	}
 
 	// Stop here if we have no chance of finding any Freight to promote.
@@ -932,6 +967,23 @@ func (r *reconciler) syncNormalStage(
 			err,
 		)
 	}
+
+	r.recorder.AnnotatedEventf(
+		&promo,
+		map[string]string{
+			kargoapi.AnnotationKeyEventActor:         kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			kargoapi.AnnotationKeyEventProject:       promo.Namespace,
+			kargoapi.AnnotationKeyEventPromotionName: promo.Name,
+			kargoapi.AnnotationKeyEventFreightAlias:  latestFreight.Alias,
+			kargoapi.AnnotationKeyEventFreightName:   latestFreight.Name,
+			kargoapi.AnnotationKeyEventStageName:     promo.Spec.Stage,
+		},
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonPromotionCreated,
+		"Automatically promote for Stage %q",
+		promo.Spec.Stage,
+	)
+
 	logger.WithField("promotion", promo.Name).Debug("created Promotion resource")
 
 	return status, nil
@@ -1157,20 +1209,6 @@ func (r *reconciler) verifyFreightInStage(
 		return err
 	}
 
-	r.recorder.AnnotatedEventf(
-		freight,
-		map[string]string{
-			kargoapi.AnnotationKeyEventActor:        kargoapi.FormatEventControllerActor(r.cfg.Name()),
-			kargoapi.AnnotationKeyEventProject:      namespace,
-			kargoapi.AnnotationKeyEventFreightAlias: freight.Alias,
-			kargoapi.AnnotationKeyEventFreightName:  freightName,
-			kargoapi.AnnotationKeyEventStageName:    stageName,
-		},
-		corev1.EventTypeNormal,
-		kargoapi.EventReasonFreightVerifiedInStage,
-		"Freight verified in Stage %q",
-		stageName,
-	)
 	logger.Debug("marked Freight as verified in Stage")
 	return nil
 }
@@ -1437,4 +1475,40 @@ func (r *reconciler) getLatestApprovedFreight(
 			Before(&freight.Items[i].CreationTimestamp)
 	})
 	return &freight.Items[0], nil
+}
+
+func (r *reconciler) recordFreightVerificationEvent(
+	s *kargoapi.Stage,
+	fr *kargoapi.Freight,
+	vi *kargoapi.VerificationInfo,
+) {
+	annotations := map[string]string{
+		kargoapi.AnnotationKeyEventActor:        kargoapi.FormatEventControllerActor(r.cfg.Name()),
+		kargoapi.AnnotationKeyEventProject:      s.Namespace,
+		kargoapi.AnnotationKeyEventStageName:    s.Namespace,
+		kargoapi.AnnotationKeyEventFreightAlias: fr.Alias,
+		kargoapi.AnnotationKeyEventFreightName:  fr.Name,
+	}
+	if vi.AnalysisRun != nil {
+		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = vi.AnalysisRun.Name
+	}
+
+	reason := kargoapi.EventReasonFreightVerificationUnknown
+	message := vi.Message
+
+	switch vi.Phase {
+	case kargoapi.VerificationPhaseSuccessful:
+		reason = kargoapi.EventReasonFreightVerificationSucceeded
+		message = "Freight verification succeeded"
+	case kargoapi.VerificationPhaseFailed:
+		reason = kargoapi.EventReasonFreightVerificationFailed
+	case kargoapi.VerificationPhaseError:
+		reason = kargoapi.EventReasonFreightVerificationErrored
+	case kargoapi.VerificationPhaseAborted:
+		reason = kargoapi.EventReasonFreightVerificationAborted
+	case kargoapi.VerificationPhaseInconclusive:
+		reason = kargoapi.EventReasonFreightVerificationInconclusive
+	}
+
+	r.recorder.AnnotatedEventf(fr, annotations, corev1.EventTypeNormal, reason, message)
 }

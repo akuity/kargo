@@ -17,4 +17,5 @@ const (
 	AnnotationKeyEventFreightAlias        = "event.kargo.akuity.io/freight-alias"
 	AnnotationKeyEventFreightName         = "event.kargo.akuity.io/freight-name"
 	AnnotationKeyEventStageName           = "event.kargo.akuity.io/stage-name"
+	AnnotationKeyEventAnalysisRunName     = "event.kargo.akuity.io/analysis-run-name"
 )

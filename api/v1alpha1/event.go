@@ -5,12 +5,17 @@ import (
 )
 
 const (
-	EventReasonPromotionCreated       = "PromotionCreated"
-	EventReasonPromotionSucceeded     = "PromotionSucceeded"
-	EventReasonPromotionFailed        = "PromotionFailed"
-	EventReasonPromotionErrored       = "PromotionErrored"
-	EventReasonFreightApproved        = "FreightApproved"
-	EventReasonFreightVerifiedInStage = "FreightVerifiedInStage"
+	EventReasonPromotionCreated                = "PromotionCreated"
+	EventReasonPromotionSucceeded              = "PromotionSucceeded"
+	EventReasonPromotionFailed                 = "PromotionFailed"
+	EventReasonPromotionErrored                = "PromotionErrored"
+	EventReasonFreightApproved                 = "FreightApproved"
+	EventReasonFreightVerificationSucceeded    = "FreightVerificationSucceeded"
+	EventReasonFreightVerificationFailed       = "FreightVerificationFailed"
+	EventReasonFreightVerificationErrored      = "FreightVerificationErrored"
+	EventReasonFreightVerificationAborted      = "FreightVerificationAborted"
+	EventReasonFreightVerificationInconclusive = "FreightVerificationInconclusive"
+	EventReasonFreightVerificationUnknown      = "FreightVerificationUnknown"
 )
 
 const (
