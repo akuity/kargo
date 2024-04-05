@@ -51,7 +51,7 @@ func newGetFreightCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:   "freight [--project=project] [--name=name | --alias=alias]",
+		Use:   "freight [--project=project] [--name=name | --alias=alias] [--no-headers]",
 		Short: "Display one or many pieces of freight",
 		Args:  option.NoArgs,
 		Example: templates.Example(`

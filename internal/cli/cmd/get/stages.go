@@ -50,7 +50,7 @@ func newGetStagesCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "stages [--project=project] [NAME ...]",
+		Use:     "stages [--project=project] [NAME ...] [--no-headers]",
 		Aliases: []string{"stage"},
 		Short:   "Display one or many stages",
 		Example: templates.Example(`

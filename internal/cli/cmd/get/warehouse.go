@@ -50,7 +50,7 @@ func newGetWarehousesCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "warehouses [--project=project] [NAME ...]",
+		Use:     "warehouses [--project=project] [NAME ...] [--no-headers]",
 		Aliases: []string{"warehouse"},
 		Short:   "Display one or many warehouses",
 		Example: templates.Example(`

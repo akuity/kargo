@@ -52,7 +52,7 @@ func newGetCredentialsCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "credentials [--project=project] [NAME ...]",
+		Use:     "credentials [--project=project] [NAME ...] [--no-headers]",
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Display one or many credentials",
 		Example: templates.Example(`
