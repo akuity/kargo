@@ -681,7 +681,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			},
 		},
 		{
-			name:         "success with a matching filters configuration",
+			name:         "success with a matching regexp filters configuration",
 			includePaths: []string{regexpPrefix + "values\\.ya?ml$"},
 			excludePaths: []string{regexPrefix + "nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
@@ -691,9 +691,29 @@ func TestMatchesPathsFilters(t *testing.T) {
 			},
 		},
 		{
-			name:         "success with unmatching filters configuration",
+			name:         "success with unmatching regexp filters configuration",
 			includePaths: []string{regexpPrefix + "values\\.ya?ml$"},
 			excludePaths: []string{regexPrefix + "nonexistent", regexpPrefix + ".*val.*"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, false, matchFound)
+			},
+		},
+		{
+			name:         "success with matching glob filters configuration",
+			includePaths: []string{"path2/*.tpl"},
+			excludePaths: []string{"nonexistent"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, true, matchFound)
+			},
+		},
+		{
+			name:         "success with unmatching glob filters configuration",
+			includePaths: []string{"path2/*.tpl"},
+			excludePaths: []string{regexPrefix + "nonexistent", "*/?helpers.tpl"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(t *testing.T, matchFound bool, err error) {
 				require.NoError(t, err)
@@ -712,21 +732,12 @@ func TestMatchesPathsFilters(t *testing.T) {
 			},
 		},
 		{
-			name:         "error without prefix in includePaths configuration",
-			includePaths: []string{"values\\.ya?ml$"},
+			name:         "error with invalid glob syntax",
+			includePaths: []string{"path2/*.tpl["},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.Error(t, err)
-				require.ErrorContains(t, err, "string must start with")
-			},
-		},
-		{
-			name:         "error without prefix in excludePaths configuration",
-			excludePaths: []string{"values\\.ya?ml$"},
-			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, _ bool, err error) {
-				require.Error(t, err)
-				require.ErrorContains(t, err, "string must start with")
+				require.ErrorContains(t, err, "syntax error in include glob patterns: syntax error in pattern: path2/*.tpl[")
 			},
 		},
 	}

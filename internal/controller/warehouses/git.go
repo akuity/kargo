@@ -2,7 +2,9 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -303,11 +305,11 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
-// pathsFilterPositive returns true when IncludePaths and/or ExcludePaths
+// matchesPathsFilters returns true when IncludePaths and/or ExcludePaths
 // filters match one or more commit diffs and new Freight is
 // to be produced. It returns false otherwise.
 func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
-	includePathsRegexps, err := compileRegexps(includePaths)
+	includePathsRegexps, includePathsGlobs, err := sortGlobsAndRegexps(includePaths)
 	if err != nil {
 		return false, fmt.Errorf(
 			"error compiling includePaths regexps: %w",
@@ -315,7 +317,7 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 		)
 	}
 
-	excludePathsRegexps, err := compileRegexps(excludePaths)
+	excludePathsRegexps, excludePathsGlobs, err := sortGlobsAndRegexps(excludePaths)
 	if err != nil {
 		return false, fmt.Errorf(
 			"error compiling excludePaths regexps: %w",
@@ -325,11 +327,30 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 
 	filteredDiffs := make([]string, 0, len(diffs))
 	for _, diffPath := range diffs {
+		matchesIncludeGlobs, err := matchesGlobList(diffPath, includePathsGlobs)
+		if err != nil {
+			return false, fmt.Errorf(
+				"syntax error in include glob patterns: %w",
+				err,
+			)
+		}
+		matchesExcludeGlobs, err := matchesGlobList(diffPath, excludePathsGlobs)
+		if err != nil {
+			return false, fmt.Errorf(
+				"syntax error in exclude glob patterns: %w",
+				err,
+			)
+		}
 		// matchesIncludePaths case is a bit different from matchesExcludePaths
 		// in the way that if includePaths string array is empty - it matches
 		// ANY change so we need to have a check for that
-		matchesIncludePaths := len(includePaths) == 0 || matchesRegexpList(diffPath, includePathsRegexps)
-		matchesExcludePaths := matchesRegexpList(diffPath, excludePathsRegexps)
+		matchesIncludePaths := len(includePaths) == 0 || matchesRegexpList(
+			diffPath,
+			includePathsRegexps,
+		) || matchesIncludeGlobs
+		matchesExcludePaths := matchesRegexpList(diffPath,
+			excludePathsRegexps,
+		) || matchesExcludeGlobs
 		// combined filter decision, positive for matching includePaths and
 		// unmatching excludePaths
 		if matchesIncludePaths && !matchesExcludePaths {
@@ -342,12 +363,12 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 	return false, nil
 }
 
-// compileRegexps is a general purpose function taking a slice of strings
-// as argument and compiling them into a slice of *regexp.Regexp. It
-// returns the compiled regexps in case of success and if it fails to compile
-// a string - nil and error is returned
-func compileRegexps(regexpStrings []string) (regexps []*regexp.Regexp, err error) {
+// sortGlobsAndRegexps handles sorting of a slice of strings to globs
+// and regexps based on prefix, regexps are compiled into a slice of
+// *regexp.Regexp additionally
+func sortGlobsAndRegexps(regexpStrings []string) (regexps []*regexp.Regexp, globs []string, err error) {
 	regexpsSlice := make([]*regexp.Regexp, 0, len(regexpStrings))
+	globsSlice := make([]string, 0, len(regexpStrings))
 	for _, regexpString := range regexpStrings {
 		switch {
 		case strings.HasPrefix(regexpString, regexpPrefix):
@@ -355,15 +376,13 @@ func compileRegexps(regexpStrings []string) (regexps []*regexp.Regexp, err error
 		case strings.HasPrefix(regexpString, regexPrefix):
 			regexpString = strings.TrimPrefix(regexpString, regexPrefix)
 		default:
-			return nil, fmt.Errorf(
-				"error compiling %q into a regular expression: string must start with %q or %q",
-				regexpString, regexpPrefix, regexPrefix,
-			)
+			globsSlice = append(globsSlice, regexpString)
+			continue
 		}
 
 		regex, err := regexp.Compile(regexpString)
 		if err != nil {
-			return nil, fmt.Errorf(
+			return nil, nil, fmt.Errorf(
 				"error compiling string %q into a regular expression: %w",
 				regexpString,
 				err,
@@ -371,7 +390,7 @@ func compileRegexps(regexpStrings []string) (regexps []*regexp.Regexp, err error
 		}
 		regexpsSlice = append(regexpsSlice, regex)
 	}
-	return regexpsSlice, nil
+	return regexpsSlice, globsSlice, nil
 }
 
 // matchesRegexpList is a general purpose function iterating given slice of
@@ -387,6 +406,24 @@ func matchesRegexpList(stringToMatch string, regexpList []*regexp.Regexp) bool {
 		}
 	}
 	return foundMatch
+}
+
+// matchesGlobList is a general purpose function iterating given slice of
+// strings (globList) to check if any of globs match stringToMatch string,
+// if match is found it returns true and nil, if match is not found it
+// returns false and nil and if it finds a malformed glob pattern - false
+// and ErrBadPattern is returned.
+func matchesGlobList(stringToMatch string, globList []string) (bool, error) {
+	for _, glob := range globList {
+		match, err := filepath.Match(glob, stringToMatch)
+		if err != nil {
+			return false, errors.New("syntax error in pattern: " + glob)
+		}
+		if match {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // selectLexicallyLastTag sorts the provided tag name in reverse lexicographic
