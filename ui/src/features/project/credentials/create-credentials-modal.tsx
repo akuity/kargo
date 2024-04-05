@@ -27,6 +27,7 @@ const createFormSchema = (editing?: boolean) =>
         credentialsNameRegex,
         'Credentials name must be a valid DNS subdomain.'
       ),
+      description: z.string().optional(),
       type: zodValidators.requiredString,
       repoUrl: zodValidators.requiredString,
       repoUrlIsRegex: z.boolean().optional(),
@@ -39,6 +40,7 @@ const createFormSchema = (editing?: boolean) =>
 
 const placeholders = {
   name: 'My Credentials',
+  description: 'An optional description',
   repoUrl: 'https://github.com/myusername/myrepo.git',
   username: 'admin',
   password: '********'
