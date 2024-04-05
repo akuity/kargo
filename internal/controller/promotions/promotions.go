@@ -354,31 +354,34 @@ func (r *reconciler) promote(
 
 	logger.Debugf("promotion %s", newStatus.Phase)
 
-	if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
-		// Only update Stage status if the promotion succeeded
-		// The assumption is that controller does not process multiple promotions in one stage
-		// so we are safe from race conditions and can just update the status
-		// TODO: remove all patching of Stage status out of promo reconciler
-		err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
+	// The assumption is that controller does not process multiple promotions in one stage
+	// so we are safe from race conditions and can just update the status
+	// TODO: remove all patching of Stage status out of promo reconciler
+	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
+		// control-flow Stage history is maintained in Stage controller.
+		// So we only modify history for normal Stages.
+		// (Technically, we should prevent creating promotion jobs on
+		// control-flow stages in the first place)
+		status.LastPromotion = status.CurrentPromotion
+
+		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+			// Only push promotion to Stage status history if the promotion succeeded
 			status.Phase = kargoapi.StagePhaseVerifying
 			status.CurrentPromotion = nil
-			// control-flow Stage history is maintained in Stage controller.
-			// So we only modify history for normal Stages.
-			// (Technically, we should prevent creating promotion jobs on
-			// control-flow stages in the first place)
 			if stage.Spec.PromotionMechanisms != nil {
 				status.CurrentFreight = &nextFreight
 				status.History.UpdateOrPush(nextFreight)
 			}
-		})
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error updating status of Stage %q in namespace %q: %w",
-				stageName,
-				stageNamespace,
-				err,
-			)
 		}
+
+	})
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error updating status of Stage %q in namespace %q: %w",
+			stageName,
+			stageNamespace,
+			err,
+		)
 	}
 
 	return newStatus, nil
