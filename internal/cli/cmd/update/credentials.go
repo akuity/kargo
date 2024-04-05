@@ -110,7 +110,7 @@ func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to update credentials. If not set, the default project will be used.",
 	)
-	option.Description(cmd.Flags(), &o.Description, "Change the description of the credential.")
+	option.Description(cmd.Flags(), &o.Description, "Change the description of the credentials.")
 	option.Git(cmd.Flags(), &o.Git, "Change the credentials to be for a Git repository.")
 	option.Helm(cmd.Flags(), &o.Helm, "Change the credentials to be for a Helm chart repository.")
 	option.Image(cmd.Flags(), &o.Image, "Change the credentials to be for a container image repository.")
