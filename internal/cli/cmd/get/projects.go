@@ -35,10 +35,15 @@ type getProjectsOptions struct {
 	Names []string
 }
 
-func newGetProjectsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetProjectsCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions getOptions,
+) *cobra.Command {
 	cmdOpts := &getProjectsOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
@@ -74,8 +79,6 @@ kargo get project my-project
 
 // addFlags adds the flags for the get projects options to the provided command.
 func (o *getProjectsOptions) addFlags(cmd *cobra.Command) {
-	o.getOptions.addFlags(cmd)
-
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 }

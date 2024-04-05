@@ -37,10 +37,15 @@ type getStagesOptions struct {
 	Names   []string
 }
 
-func newGetStagesCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetStagesCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions getOptions,
+) *cobra.Command {
 	cmdOpts := &getStagesOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
@@ -88,8 +93,6 @@ kargo get stage qa
 
 // addFlags adds the flags for the get stages options to the provided command.
 func (o *getStagesOptions) addFlags(cmd *cobra.Command) {
-	o.getOptions.addFlags(cmd)
-
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 

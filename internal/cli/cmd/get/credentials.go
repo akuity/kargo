@@ -39,10 +39,15 @@ type getCredentialsOptions struct {
 	Names   []string
 }
 
-func newGetCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetCredentialsCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions getOptions,
+) *cobra.Command {
 	cmdOpts := &getCredentialsOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
@@ -87,8 +92,6 @@ kargo get credentials my-credentials`),
 // addFlags adds the flags for the get credentials options to the provided
 // command.
 func (o *getCredentialsOptions) addFlags(cmd *cobra.Command) {
-	o.getOptions.addFlags(cmd)
-
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 

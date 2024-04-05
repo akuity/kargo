@@ -40,10 +40,12 @@ type getWarehousesOptions struct {
 func newGetWarehousesCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
+	getOptions getOptions,
 ) *cobra.Command {
 	cmdOpts := &getWarehousesOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 

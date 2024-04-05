@@ -38,10 +38,15 @@ type getPromotionsOptions struct {
 	Names   []string
 }
 
-func newGetPromotionsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetPromotionsCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions getOptions,
+) *cobra.Command {
 	cmdOpts := &getPromotionsOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
@@ -96,8 +101,6 @@ kargo get promotion abc1234
 
 // addFlags adds the flags for the get promotions options to the provided command.
 func (o *getPromotionsOptions) addFlags(cmd *cobra.Command) {
-	o.getOptions.addFlags(cmd)
-
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 

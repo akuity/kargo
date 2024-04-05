@@ -37,10 +37,15 @@ type getFreightOptions struct {
 	Aliases []string
 }
 
-func newGetFreightCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetFreightCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions getOptions,
+) *cobra.Command {
 	cmdOpts := &getFreightOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
@@ -93,8 +98,6 @@ kargo get freight --alias=wonky-wombat
 
 // addFlags adds the flags for the get freight options to the provided command.
 func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
-	o.getOptions.addFlags(cmd)
-
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
 

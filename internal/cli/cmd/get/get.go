@@ -38,17 +38,17 @@ kargo get promotions --project=my-project --stage=my-stage
 `),
 	}
 
-	cmdOpts := &getOptions{}
-
-	// Register subcommands.
-	cmd.AddCommand(newGetCredentialsCommand(cfg, streams))
-	cmd.AddCommand(newGetFreightCommand(cfg, streams))
-	cmd.AddCommand(newGetProjectsCommand(cfg, streams))
-	cmd.AddCommand(newGetPromotionsCommand(cfg, streams))
-	cmd.AddCommand(newGetStagesCommand(cfg, streams))
-	cmd.AddCommand(newGetWarehousesCommand(cfg, streams))
+	cmdOpts := getOptions{}
 
 	cmdOpts.addFlags(cmd)
+
+	// Register subcommands.
+	cmd.AddCommand(newGetCredentialsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetFreightCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetProjectsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetPromotionsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetStagesCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetWarehousesCommand(cfg, streams, cmdOpts))
 
 	return cmd
 }
