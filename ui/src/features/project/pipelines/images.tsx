@@ -114,7 +114,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
         }
         stages[stage.metadata?.name as string] = {
           opacity: 1,
-          backgroundColor: colors[stage.metadata?.uid as string]
+          backgroundColor: colors[stage.metadata?.name as string]
         };
       });
     });

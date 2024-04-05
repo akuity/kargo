@@ -65,5 +65,52 @@ export class IntOrString extends Message<IntOrString> {
   static equals(a: IntOrString | PlainMessage<IntOrString> | undefined, b: IntOrString | PlainMessage<IntOrString> | undefined): boolean {
     return proto2.util.equals(IntOrString, a, b);
   }
+
+  static readonly TYPE_INT = BigInt(0);
+  static readonly TYPE_STRING = BigInt(1);
+  static readonly MAX_INT32 = 2147483647;
+  static readonly MIN_INT32 = -2147483648;
+
+  override fromJson(json: JsonValue, options?: Partial<JsonReadOptions>): this {
+    if (json === null) {
+      return this;
+    }
+    switch (typeof json) {
+      case "string":
+        this.type = IntOrString.TYPE_STRING;
+        this.strVal = json;
+        return this;
+      case "number":
+        if (!this.isInt32(json)) {
+          throw new Error(`value is not an Int32: ${proto.json.debug(json)}`);
+        }
+        this.type = IntOrString.TYPE_INT;
+        this.intVal = json;
+        return this;
+      default:
+        throw new Error(`cannot decode ${IntOrString.typeName} from JSON: ${proto.json.debug(json)}`);
+    }
+  }
+
+  override toJson(options?: Partial<JsonWriteOptions>): JsonValue {
+    if (this.type === IntOrString.TYPE_STRING) {
+      return this.strVal;
+    }
+    if (this.type === IntOrString.TYPE_INT) {
+      if (!this.intVal) {
+        return null;
+      } else if (!this.isInt32(this.intVal)) {
+        throw new Error(`value is not an Int32: ${this.intVal}`);
+      }
+      return this.intVal;
+    }
+    return null;
+  }
+
+  isInt32(value: number): boolean {
+    return Number.isInteger(value) &&
+      IntOrString.MIN_INT32 <= value &&
+      value <= IntOrString.MAX_INT32;
+  }
 }
 

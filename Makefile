@@ -311,3 +311,13 @@ hack-uninstall-argocd:
 .PHONY: hack-uninstall-cert-manager
 hack-uninstall-cert-manager:
 	helm delete cert-manager --namespace cert-manager
+
+.PHONY: start-api-local
+start-api-local:
+	./hack/start-api.sh
+
+.PHONY: start-controller-local
+start-controller-local:
+	KUBECONFIG=~/.kube/config \
+	ARGOCD_KUBECONFIG=~/.kube/config \
+    	go run ./cmd/controlplane controller

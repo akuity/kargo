@@ -12,7 +12,7 @@ import { useContext } from 'react';
 import { ColorContext } from '@ui/context/colors';
 import { Stage } from '@ui/gen/v1alpha1/generated_pb';
 
-import { FreightlineAction } from '../project/project-details/types';
+import { FreightlineAction } from '../project/pipelines/types';
 
 export const FreightlineHeader = ({
   promotingStage,
