@@ -671,7 +671,7 @@ type PromotionInfo struct {
 	// Freight is the freight being promoted
 	Freight FreightReference `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 	// Status is the (optional) status of the promotion
-	Status *PromotionStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
+	Status *PromotionStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // Verification describes how to verify that a Promotion has been successful

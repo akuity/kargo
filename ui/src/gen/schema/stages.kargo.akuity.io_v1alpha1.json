@@ -871,8 +871,7 @@
           },
           "required": [
             "freight",
-            "name",
-            "status"
+            "name"
           ],
           "type": "object"
         },
@@ -1378,8 +1377,7 @@
           },
           "required": [
             "freight",
-            "name",
-            "status"
+            "name"
           ],
           "type": "object"
         },
