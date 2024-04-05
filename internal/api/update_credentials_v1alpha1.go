@@ -16,6 +16,7 @@ import (
 type credentialsUpdate struct {
 	project        string
 	name           string
+	description    string
 	credType       string
 	repoURL        string
 	repoURLISRegex bool
@@ -30,6 +31,7 @@ func (s *server) UpdateCredentials(
 	credsUpdate := credentialsUpdate{
 		project:        req.Msg.GetProject(),
 		name:           req.Msg.GetName(),
+		description:    req.Msg.GetDescription(),
 		credType:       req.Msg.GetType(),
 		repoURL:        req.Msg.GetRepoUrl(),
 		repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
@@ -90,6 +92,15 @@ func applyCredentialsUpdateToSecret(
 	secret *corev1.Secret,
 	credsUpdate credentialsUpdate,
 ) {
+	if credsUpdate.description != "" {
+		if secret.Annotations == nil {
+			secret.Annotations = make(map[string]string)
+		}
+		secret.Annotations[kargoapi.AnnotationKeyDescription] = credsUpdate.description
+	} else {
+		delete(secret.Annotations, kargoapi.AnnotationKeyDescription)
+	}
+
 	if credsUpdate.credType != "" {
 		secret.Labels[kargoapi.CredentialTypeLabelKey] = credsUpdate.credType
 	}

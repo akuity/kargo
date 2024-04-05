@@ -1,6 +1,8 @@
 package v1alpha1
 
 const (
+	AnnotationKeyDescription = "kargo.akuity.io/description"
+
 	AnnotationKeyRefresh = "kargo.akuity.io/refresh"
 
 	AnnotationKeyReverify = "kargo.akuity.io/reverify"
