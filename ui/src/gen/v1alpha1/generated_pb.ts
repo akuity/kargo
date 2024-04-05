@@ -2589,6 +2589,13 @@ export class PromotionInfo extends Message<PromotionInfo> {
    */
   freight?: FreightReference;
 
+  /**
+   * Status is the (optional) status of the promotion
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionStatus status = 3;
+   */
+  status?: PromotionStatus;
+
   constructor(data?: PartialMessage<PromotionInfo>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2599,6 +2606,7 @@ export class PromotionInfo extends Message<PromotionInfo> {
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "freight", kind: "message", T: FreightReference, opt: true },
+    { no: 3, name: "status", kind: "message", T: PromotionStatus, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionInfo {
@@ -3237,6 +3245,13 @@ export class StageStatus extends Message<StageStatus> {
    */
   currentPromotion?: PromotionInfo;
 
+  /**
+   * LastPromotion is a reference to the last completed promotion.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.PromotionInfo lastPromotion = 10;
+   */
+  lastPromotion?: PromotionInfo;
+
   constructor(data?: PartialMessage<StageStatus>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3252,6 +3267,7 @@ export class StageStatus extends Message<StageStatus> {
     { no: 9, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 7, name: "currentPromotion", kind: "message", T: PromotionInfo, opt: true },
+    { no: 10, name: "lastPromotion", kind: "message", T: PromotionInfo, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StageStatus {
