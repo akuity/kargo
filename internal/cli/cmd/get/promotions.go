@@ -28,6 +28,8 @@ type getPromotionsOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
+	*getOptions
+
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
@@ -36,10 +38,15 @@ type getPromotionsOptions struct {
 	Names   []string
 }
 
-func newGetPromotionsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetPromotionsCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions *getOptions,
+) *cobra.Command {
 	cmdOpts := &getPromotionsOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
@@ -141,7 +148,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list promotions: %w", err)
 		}
-		return printObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Promotion, 0, len(o.Names))
@@ -163,7 +170,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetPromotion())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print promotions: %w", err)
 	}
 	return errors.Join(errs...)

@@ -27,16 +27,23 @@ type getProjectsOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
+	*getOptions
+
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
 	Names []string
 }
 
-func newGetProjectsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetProjectsCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions *getOptions,
+) *cobra.Command {
 	cmdOpts := &getProjectsOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
@@ -96,7 +103,7 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list projects: %w", err)
 		}
-		return printObjects(resp.Msg.GetProjects(), o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetProjects(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Project, 0, len(o.Names))
@@ -117,7 +124,7 @@ func (o *getProjectsOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetProject())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print projects: %w", err)
 	}
 	return errors.Join(errs...)
