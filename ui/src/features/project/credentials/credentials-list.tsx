@@ -37,24 +37,15 @@ export const CredentialsList = () => {
   return (
     <div className='p-4'>
       <Table
+        key={data?.credentials?.length}
         dataSource={data?.credentials || []}
         rowKey={(record) => record?.metadata?.name || ''}
         columns={[
           {
-            title: 'Name / Description',
+            title: 'Name',
             key: 'name',
-            width: 200,
             render: (record) => {
-              const description = record?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY];
-
-              return (
-                <div>
-                  {record?.metadata?.name}
-                  {description ? (
-                    <div className='mt-2 font-light text-xs text-gray-500'>{description}</div>
-                  ) : null}
-                </div>
-              );
+              return <div>{record?.metadata?.name}</div>;
             }
           },
           {
@@ -160,6 +151,18 @@ export const CredentialsList = () => {
             )
           }
         ]}
+        expandable={{
+          defaultExpandAllRows: true,
+          expandIcon: () => null,
+          rowExpandable: (record) => {
+            return !!record?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY];
+          },
+          expandedRowRender: (record) => {
+            const description = record?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY];
+
+            return <div className='font-light text-xs text-gray-500'>{description}</div>;
+          }
+        }}
       />
     </div>
   );
