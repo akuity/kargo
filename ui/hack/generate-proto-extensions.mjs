@@ -82,7 +82,11 @@ function extendTime(src) {
       z = "." + nanosStr + "Z";
     }
   }
-  return new Date(ms).toISOString().replace(".000Z", z);
+  try {
+    return new Date(ms).toISOString().replace(".000Z", z);
+  } catch {
+    return undefined;
+  }
 `);
 
   // Add helper methods
