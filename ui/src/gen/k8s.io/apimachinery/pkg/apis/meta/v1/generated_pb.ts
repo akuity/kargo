@@ -2938,7 +2938,11 @@ export class Time extends Message<Time> {
         z = "." + nanosStr + "Z";
       }
     }
-    return new Date(ms).toISOString().replace(".000Z", z);
+    try {
+      return new Date(ms).toISOString().replace(".000Z", z);
+    } catch {
+      return undefined;
+    }
   }
 
   toDate(): Date {
