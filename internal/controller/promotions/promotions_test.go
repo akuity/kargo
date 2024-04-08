@@ -32,7 +32,11 @@ func TestNewPromotionReconciler(t *testing.T) {
 	require.NotNil(t, r.promoteFn)
 }
 
-func newFakeReconciler(t *testing.T, er *fakekubeclient.EventRecorder, objects ...client.Object) *reconciler {
+func newFakeReconciler(
+	t *testing.T,
+	recorder *fakekubeclient.EventRecorder,
+	objects ...client.Object,
+) *reconciler {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 	kargoClient := fake.NewClientBuilder().WithScheme(scheme).
@@ -42,7 +46,7 @@ func newFakeReconciler(t *testing.T, er *fakekubeclient.EventRecorder, objects .
 		"fake-promotion-controller",
 		kargoClient,
 		kubeClient,
-		er,
+		recorder,
 		&credentials.FakeDB{},
 	)
 }
@@ -145,8 +149,8 @@ func TestReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.TODO()
-			er := fakekubeclient.NewEventRecorder(1)
-			r := newFakeReconciler(t, er, tc.promos...)
+			recorder := fakekubeclient.NewEventRecorder(1)
+			r := newFakeReconciler(t, recorder, tc.promos...)
 			promoteWasCalled := false
 			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
@@ -176,8 +180,8 @@ func TestReconcile(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedPhase, updatedPromo.Status.Phase)
 				if tc.expectedEventRecorded {
-					require.Len(t, er.Events, 1)
-					event := <-er.Events
+					require.Len(t, recorder.Events, 1)
+					event := <-recorder.Events
 					require.Equal(t, tc.expectedEventReason, event.Reason)
 				}
 			}
@@ -192,8 +196,8 @@ func TestReconcileInitializeQueues(t *testing.T) {
 		newPromo("fake-namespace", "fake-promo1", "fake-stage", kargoapi.PromotionPhasePending, before),
 		newPromo("fake-namespace", "fake-promo2", "fake-stage", kargoapi.PromotionPhasePending, now),
 	}
-	er := &fakekubeclient.EventRecorder{}
-	r := newFakeReconciler(t, er, promos...)
+	recorder := &fakekubeclient.EventRecorder{}
+	r := newFakeReconciler(t, recorder, promos...)
 
 	// reconcile a non-existent promo to trigger initializeQueues
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "does-not-exist", Name: "does-not-exist"}}

@@ -460,15 +460,15 @@ func TestPromoteToStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				er *fakekubeclient.EventRecorder,
+				recorder *fakekubeclient.EventRecorder,
 				res *connect.Response[svcv1alpha1.PromoteToStageResponse],
 				err error,
 			) {
 				require.NoError(t, err)
 				require.NotNil(t, res)
 				require.NotNil(t, res.Msg.GetPromotion())
-				require.Len(t, er.Events, 1)
-				event := <-er.Events
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
 				require.Equal(t, corev1.EventTypeNormal, event.EventType)
 				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
 			},
@@ -476,13 +476,13 @@ func TestPromoteToStage(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			fr := fakekubeclient.NewEventRecorder(1)
-			testCase.server.recorder = fr
+			recorder := fakekubeclient.NewEventRecorder(1)
+			testCase.server.recorder = recorder
 			res, err := testCase.server.PromoteToStage(
 				context.Background(),
 				connect.NewRequest(testCase.req),
 			)
-			testCase.assertions(t, fr, res, err)
+			testCase.assertions(t, recorder, res, err)
 		})
 	}
 }

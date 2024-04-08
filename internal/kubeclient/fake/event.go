@@ -45,19 +45,19 @@ func NewEventRecorder(bufferSize int) *EventRecorder {
 	}
 }
 
-func (f *EventRecorder) Event(object runtime.Object, eventtype, reason, message string) {
-	if f.Events != nil {
-		f.Events <- NewEvent(nil, eventtype, reason, message, object)
+func (r *EventRecorder) Event(object runtime.Object, eventtype, reason, message string) {
+	if r.Events != nil {
+		r.Events <- NewEvent(nil, eventtype, reason, message, object)
 	}
 }
 
-func (f *EventRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...any) {
-	if f.Events != nil {
-		f.Events <- NewEvent(nil, eventtype, reason, fmt.Sprintf(messageFmt, args...), object)
+func (r *EventRecorder) Eventf(object runtime.Object, eventtype, reason, messageFmt string, args ...any) {
+	if r.Events != nil {
+		r.Events <- NewEvent(nil, eventtype, reason, fmt.Sprintf(messageFmt, args...), object)
 	}
 }
 
-func (f *EventRecorder) AnnotatedEventf(
+func (r *EventRecorder) AnnotatedEventf(
 	object runtime.Object,
 	annotations map[string]string,
 	eventtype,
@@ -65,7 +65,7 @@ func (f *EventRecorder) AnnotatedEventf(
 	messageFmt string,
 	args ...any,
 ) {
-	if f.Events != nil {
-		f.Events <- NewEvent(annotations, eventtype, reason, fmt.Sprintf(messageFmt, args...), object)
+	if r.Events != nil {
+		r.Events <- NewEvent(annotations, eventtype, reason, fmt.Sprintf(messageFmt, args...), object)
 	}
 }

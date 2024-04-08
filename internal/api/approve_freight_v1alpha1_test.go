@@ -360,13 +360,13 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				er *fakekubeclient.EventRecorder,
+				recorder *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Len(t, er.Events, 1)
-				event := <-er.Events
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
 				require.Equal(t, corev1.EventTypeNormal, event.EventType)
 				require.Equal(t, kargoapi.EventReasonFreightApproved, event.Reason)
 			},
@@ -374,13 +374,13 @@ func TestApproveFreight(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			er := fakekubeclient.NewEventRecorder(1)
-			testCase.server.recorder = er
+			recorder := fakekubeclient.NewEventRecorder(1)
+			testCase.server.recorder = recorder
 			resp, err := testCase.server.ApproveFreight(
 				context.Background(),
 				connect.NewRequest(testCase.req),
 			)
-			testCase.assertions(t, er, resp, err)
+			testCase.assertions(t, recorder, resp, err)
 		})
 	}
 }
