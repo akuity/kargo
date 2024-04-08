@@ -46,9 +46,19 @@ export const RepoNode = ({ nodeData, children }: Props) => {
           {nodeData.type === NodeType.WAREHOUSE && nodeData?.data?.status?.message && (
             <Tooltip
               title={
-                <div className='flex items-center'>
-                  <FontAwesomeIcon icon={faExclamationCircle} className='mr-2' />
-                  {nodeData?.data?.status?.message}
+                <div className='flex overflow-y-scroll text-wrap max-h-48'>
+                  <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-2' />
+                  <div
+                    className='cursor-pointer min-w-0'
+                    onClick={() => {
+                      const msg = nodeData?.data?.status?.message;
+                      if (msg) {
+                        navigator.clipboard.writeText(msg);
+                      }
+                    }}
+                  >
+                    {nodeData?.data?.status?.message}
+                  </div>
                 </div>
               }
             >
