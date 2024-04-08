@@ -46,9 +46,19 @@ export const RepoNode = ({ nodeData, children }: Props) => {
           {nodeData.type === NodeType.WAREHOUSE && nodeData?.data?.status?.message && (
             <Tooltip
               title={
-                <div className='flex items-center'>
-                  <FontAwesomeIcon icon={faExclamationCircle} className='mr-2' />
-                  {nodeData?.data?.status?.message}
+                <div className='flex overflow-y-scroll text-wrap max-h-48'>
+                  <FontAwesomeIcon icon={faExclamationCircle} className='mr-2 mt-1 pl-1' />
+                  <div
+                    className='cursor-pointer min-w-0'
+                    onClick={() => {
+                      const msg = nodeData?.data?.status?.message;
+                      if (msg) {
+                        navigator.clipboard.writeText(msg);
+                      }
+                    }}
+                  >
+                    {nodeData?.data?.status?.message}
+                  </div>
                 </div>
               }
             >
@@ -60,7 +70,7 @@ export const RepoNode = ({ nodeData, children }: Props) => {
       </h3>
       <div className={styles.body}>
         {nodeData.type !== NodeType.WAREHOUSE && (
-          <div className='text-center'>
+          <div className={styles.valueContainer}>
             <div className={styles.repoLabel}>REPO URL</div>
             <Tooltip title={value}>
               <a

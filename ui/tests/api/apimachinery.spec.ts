@@ -17,18 +17,18 @@ describe('metav1.Time', () => {
     expect(time.nanos).toBe(0);
   });
   test('toJson', () => {
-    const time = new Time({seconds: BigInt(1685404800), nanos: 0});
+    const time = new Time({ seconds: BigInt(1685404800), nanos: 0 });
     expect(time.toJson()).toBe('2023-05-30T00:00:00Z');
   });
   // Make sure that the generated code behaves identically to metav1.Time implementation in Go.
   test('toJson with empty value', () => {
     const time = new Time({});
-    expect(time.toDate()).toStrictEqual(new Date(0))
+    expect(time.toDate()).toStrictEqual(new Date(0));
     expect(time.toJson()).toBeNull();
   });
   test('toDate', () => {
     const date = new Date('2023-05-30T00:00:00Z');
-    const time = new Time({seconds: BigInt(1685404800), nanos: 0});
+    const time = new Time({ seconds: BigInt(1685404800), nanos: 0 });
     expect(time.toDate().getTime()).toBe(date.getTime());
   });
 });
