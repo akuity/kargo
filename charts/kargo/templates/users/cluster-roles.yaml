@@ -64,6 +64,14 @@ rules:
   - analysistemplates
   verbs:
   - "*"
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  verbs:
+  - get
+  - list
+  - watch
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -106,6 +114,14 @@ rules:
   - argoproj.io
   resources:
   - analysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
   verbs:
   - get
   - list
