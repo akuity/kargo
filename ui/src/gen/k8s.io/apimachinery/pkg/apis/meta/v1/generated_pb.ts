@@ -2856,7 +2856,7 @@ export class Time extends Message<Time> {
    *
    * @generated from field: optional int64 seconds = 1;
    */
-  seconds?: bigint;
+  seconds?: bigint = protoInt64.zero;
 
   /**
    * Non-negative fractions of a second at nanosecond resolution. Negative
@@ -2866,7 +2866,7 @@ export class Time extends Message<Time> {
    *
    * @generated from field: optional int32 nanos = 2;
    */
-  nanos?: number;
+  nanos?: number = 0;
 
   constructor(data?: PartialMessage<Time>) {
     super();
@@ -2920,6 +2920,11 @@ export class Time extends Message<Time> {
   }
 
   override toJson(options?: Partial<JsonWriteOptions>): JsonValue {
+    // Return null if the value of both `seconds` and `nanos` 
+    // are zero to behave identically with metav1.Time implementation in Go.
+    if ((!this.seconds || this.seconds === 0) && (!this.nanos || this.nanos === 0)) {
+      return null;
+    }
     const ms = Number(this.seconds) * 1000;
     if (ms < Date.parse("0001-01-01T00:00:00Z") || ms > Date.parse("9999-12-31T23:59:59Z")) {
       throw new Error(`cannot encode google.protobuf.Timestamp to JSON: must be from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive`);
@@ -2938,11 +2943,7 @@ export class Time extends Message<Time> {
         z = "." + nanosStr + "Z";
       }
     }
-    try {
-      return new Date(ms).toISOString().replace(".000Z", z);
-    } catch {
-      return undefined;
-    }
+    return new Date(ms).toISOString().replace(".000Z", z);
   }
 
   toDate(): Date {
