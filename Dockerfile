@@ -38,6 +38,7 @@ FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.0 AS ui-builder
 RUN npm install --global pnpm
 WORKDIR /ui
 COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+ARG VERSION
 
 RUN pnpm install
 
