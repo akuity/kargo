@@ -43,7 +43,7 @@ RUN pnpm install
 
 COPY ["ui/", "."]
 
-RUN NODE_ENV='production' pnpm run build
+RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 
 ####################################################################################################
 # tools
