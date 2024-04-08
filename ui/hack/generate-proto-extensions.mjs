@@ -56,6 +56,18 @@ function extendTime(src) {
   // Extend Time class
   const time = src.getClassOrThrow('Time');
 
+  // Set default value as zero for scalar fields.
+  // From https://protobuf.dev/programming-guides/proto2/#optional:
+  // For numeric types, the default value is zero.
+  time
+    .getPropertyOrThrow('seconds')
+    .setType('bigint')
+    .setInitializer('protoInt64.zero')
+  time
+    .getPropertyOrThrow('nanos')
+    .setType('number')
+    .setInitializer('0');
+
   // Override fromJson()
   overrideFromJson(time, `if (typeof json !== "string") {
     throw new Error(\`cannot decode google.protobuf.Timestamp from JSON: \${proto.json.debug(json)}\`);
@@ -80,7 +92,12 @@ function extendTime(src) {
 `);
 
   // Override toJson()
-  overrideToJson(time, `const ms = Number(this.seconds) * 1000;
+  overrideToJson(time, `// Return null if the value of both \`seconds\` and \`nanos\` 
+  // are zero to behave identically with metav1.Time implementation in Go.
+  if ((!this.seconds || this.seconds === 0) && (!this.nanos || this.nanos === 0)) {
+    return null;
+  }
+  const ms = Number(this.seconds) * 1000;
   if (ms < Date.parse("0001-01-01T00:00:00Z") || ms > Date.parse("9999-12-31T23:59:59Z")) {
     throw new Error(\`cannot encode google.protobuf.Timestamp to JSON: must be from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive\`);
   }
@@ -98,11 +115,7 @@ function extendTime(src) {
       z = "." + nanosStr + "Z";
     }
   }
-  try {
-    return new Date(ms).toISOString().replace(".000Z", z);
-  } catch {
-    return undefined;
-  }
+  return new Date(ms).toISOString().replace(".000Z", z);
 `);
 
   // Add helper methods
