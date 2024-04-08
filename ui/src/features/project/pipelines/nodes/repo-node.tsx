@@ -60,7 +60,7 @@ export const RepoNode = ({ nodeData, children }: Props) => {
       </h3>
       <div className={styles.body}>
         {nodeData.type !== NodeType.WAREHOUSE && (
-          <div className='text-center'>
+          <div className={styles.valueContainer}>
             <div className={styles.repoLabel}>REPO URL</div>
             <Tooltip title={value}>
               <a
