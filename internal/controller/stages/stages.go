@@ -980,7 +980,7 @@ func (r *reconciler) syncNormalStage(
 		},
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
-		"Automatically promote for Stage %q",
+		"Automatically promoted Freight for Stage %q",
 		promo.Spec.Stage,
 	)
 
