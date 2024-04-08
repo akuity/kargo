@@ -53,6 +53,7 @@ func newControllerCommand() *cobra.Command {
 			}
 			startupLogEntry.Info("Starting Kargo Controller")
 
+			promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
 			stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
 			var kargoMgr manager.Manager
 			{
@@ -207,7 +208,7 @@ func newControllerCommand() *cobra.Command {
 				kargoMgr,
 				argocdMgr,
 				credentialsDB,
-				shardName,
+				promotionsReconcilerCfg,
 			); err != nil {
 				return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 			}

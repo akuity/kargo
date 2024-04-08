@@ -21,11 +21,11 @@ import (
 func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
-		"fake-promotion-controller",
 		kubeClient,
 		kubeClient,
 		&fakekubeclient.EventRecorder{},
 		&credentials.FakeDB{},
+		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.pqs.pendingPromoQueuesByStage)
@@ -43,11 +43,11 @@ func newFakeReconciler(
 		WithObjects(objects...).WithStatusSubresource(objects...).Build()
 	kubeClient := fake.NewClientBuilder().Build()
 	return newReconciler(
-		"fake-promotion-controller",
 		kargoClient,
 		kubeClient,
 		recorder,
 		&credentials.FakeDB{},
+		ReconcilerConfig{},
 	)
 }
 

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,12 +27,31 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+// ReconcilerConfig represents configuration for the promotion reconciler.
+type ReconcilerConfig struct {
+	ShardName string `envconfig:"SHARD_NAME"`
+}
+
+func (c ReconcilerConfig) Name() string {
+	name := "promotion-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	var cfg ReconcilerConfig
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // reconciler reconciles Promotion resources.
 type reconciler struct {
-	name string
-
 	kargoClient     client.Client
 	promoMechanisms promotion.Mechanism
+
+	cfg ReconcilerConfig
 
 	recorder record.EventRecorder
 
@@ -50,10 +70,10 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
-	shardName string,
+	cfg ReconcilerConfig,
 ) error {
 
-	shardPredicate, err := controller.GetShardPredicate(shardName)
+	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
 	if err != nil {
 		return fmt.Errorf("error creating shard selector predicate: %w", err)
 	}
@@ -63,16 +83,12 @@ func SetupReconcilerWithManager(
 		argocdClient = argocdMgr.GetClient()
 	}
 
-	reconcilerName := "promotion-controller"
-	if shardName != "" {
-		reconcilerName += "-" + shardName
-	}
 	reconciler := newReconciler(
-		reconcilerName,
 		kargoMgr.GetClient(),
 		argocdClient,
-		kargoMgr.GetEventRecorderFor(reconcilerName),
+		kargoMgr.GetEventRecorderFor(cfg.Name()),
 		credentialsDB,
+		cfg,
 	)
 
 	changePredicate := predicate.Or(
@@ -118,20 +134,20 @@ func SetupReconcilerWithManager(
 }
 
 func newReconciler(
-	name string,
 	kargoClient client.Client,
 	argocdClient client.Client,
 	recorder record.EventRecorder,
 	credentialsDB credentials.Database,
+	cfg ReconcilerConfig,
 ) *reconciler {
 	pqs := promoQueues{
 		activePromoByStage:        map[types.NamespacedName]string{},
 		pendingPromoQueuesByStage: map[types.NamespacedName]runtime.PriorityQueue{},
 	}
 	r := &reconciler{
-		name:        name,
 		kargoClient: kargoClient,
 		recorder:    recorder,
+		cfg:         cfg,
 		pqs:         &pqs,
 		promoMechanisms: promotion.NewMechanisms(
 			argocdClient,
@@ -286,7 +302,7 @@ func (r *reconciler) Reconcile(
 		}
 
 		eventAnnotations := map[string]string{
-			kargoapi.AnnotationKeyEventActor:               kargoapi.FormatEventControllerActor(r.name),
+			kargoapi.AnnotationKeyEventActor:               kargoapi.FormatEventControllerActor(r.cfg.Name()),
 			kargoapi.AnnotationKeyEventProject:             promo.GetNamespace(),
 			kargoapi.AnnotationKeyEventPromotionName:       promo.GetName(),
 			kargoapi.AnnotationKeyEventPromotionCreateTime: promo.GetCreationTimestamp().Format(time.RFC3339),
