@@ -37,6 +37,7 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
     >
       {alias || id ? (
         <Tooltip
+          placement='right'
           title={
             <>
               <div className='uppercase text-xs w-full text-center font-semibold text-gray-400'>
