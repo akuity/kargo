@@ -17,6 +17,9 @@ export const API_URL = process.env.API_URL || 'http://localhost:30081';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    __UI_VERSION__: JSON.stringify(UI_VERSION)
+  },
   build: {
     outDir: 'build',
     sourcemap: false
