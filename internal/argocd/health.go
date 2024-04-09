@@ -162,7 +162,7 @@ func (h *applicationHealth) GetApplicationHealth(
 
 	// Check for any error conditions. If these are found, the application is
 	// considered unhealthy as they may indicate a problem which can result in
-	// e.g. the health status reporting a false positive.
+	// e.g. the health status result to become unreliable.
 	if errConditions := filterAppConditions(app, healthErrorConditions...); len(errConditions) > 0 {
 		issues := make([]error, len(errConditions))
 		for _, condition := range errConditions {
