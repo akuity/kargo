@@ -160,7 +160,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.1-bookworm
+      image: golang:1.22.2-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -209,7 +209,7 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.1-bookworm
+      image: golang:1.22.2-bookworm
     steps:
     - name: Install awscli
       run: |
