@@ -1,22 +1,19 @@
 package webhook
 
 import (
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"regexp"
+
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 type IsRequestFromKargoControlplaneFn func(admission.Request) bool
 
-func IsRequestFromKargoControlplane(
-	knownServiceAccounts map[types.NamespacedName]struct{},
-) IsRequestFromKargoControlplaneFn {
+func IsRequestFromKargoControlplane(regex *regexp.Regexp) IsRequestFromKargoControlplaneFn {
 	return func(req admission.Request) bool {
-		for account := range knownServiceAccounts {
-			if serviceaccount.MatchesUsername(account.Namespace, account.Name, req.UserInfo.Username) {
-				return true
-			}
+		// Always return false if regex is not provided
+		if regex == nil {
+			return false
 		}
-		return false
+		return regex.Match([]byte(req.UserInfo.Username))
 	}
 }

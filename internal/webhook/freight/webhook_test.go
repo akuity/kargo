@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -22,13 +22,12 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
-	"github.com/akuity/kargo/internal/webhook/config"
 )
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	w := newWebhook(
-		config.WebhookConfig{},
+		libWebhook.Config{},
 		kubeClient,
 		&fakekubeclient.EventRecorder{},
 	)
@@ -483,9 +482,7 @@ func TestValidateUpdate(t *testing.T) {
 				},
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
-					map[types.NamespacedName]struct{}{
-						/* explicitly empty */
-					},
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
 				),
 			},
 			userInfo: &authnv1.UserInfo{
@@ -530,9 +527,7 @@ func TestValidateUpdate(t *testing.T) {
 				},
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
-					map[types.NamespacedName]struct{}{
-						/* explicitly empty */
-					},
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
 				),
 			},
 			userInfo: &authnv1.UserInfo{
@@ -578,9 +573,7 @@ func TestValidateUpdate(t *testing.T) {
 				},
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
-					map[types.NamespacedName]struct{}{
-						{Namespace: "kargo", Name: "kargo-api"}: {},
-					},
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
 				),
 			},
 			userInfo: &authnv1.UserInfo{

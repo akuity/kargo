@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
-	"github.com/akuity/kargo/internal/webhook/config"
+	libWebhook "github.com/akuity/kargo/internal/webhook"
 	"github.com/akuity/kargo/internal/webhook/freight"
 	"github.com/akuity/kargo/internal/webhook/project"
 	"github.com/akuity/kargo/internal/webhook/promotion"
@@ -41,7 +41,7 @@ func newWebhooksServerCommand() *cobra.Command {
 				"commit":  version.GitCommit,
 			}).Info("Starting Kargo Webhooks Server")
 
-			cfg := config.WebhookConfigFromEnv()
+			cfg := libWebhook.ConfigFromEnv()
 
 			restCfg, err := kubernetes.GetRestConfig(ctx, os.GetEnv("KUBECONFIG", ""))
 			if err != nil {

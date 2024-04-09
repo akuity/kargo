@@ -3,6 +3,7 @@ package promotion
 import (
 	"context"
 	"errors"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,13 +20,12 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
-	"github.com/akuity/kargo/internal/webhook/config"
 )
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	w := newWebhook(
-		config.WebhookConfig{},
+		libWebhook.Config{},
 		kubeClient,
 		&fakekubeclient.EventRecorder{},
 	)
@@ -179,9 +179,7 @@ func TestValidateCreate(t *testing.T) {
 					return nil, nil
 				},
 				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
-					map[types.NamespacedName]struct{}{
-						/* explicitly empty */
-					},
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
 				),
 			},
 			userInfo: &authnv1.UserInfo{
@@ -210,9 +208,7 @@ func TestValidateCreate(t *testing.T) {
 				},
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
-					map[types.NamespacedName]struct{}{
-						{Namespace: "kargo", Name: "kargo-api"}: {},
-					},
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
 				),
 			},
 			userInfo: &authnv1.UserInfo{

@@ -354,6 +354,8 @@ webhooksServer:
   replicas: 1
   ## @param webhooksServer.logLevel The log level for the webhooks server.
   logLevel: INFO
+  ## @param webhooksServer.controlplaneUserRegex Regular expression for matching controlplane users.
+  controlplaneUserRegex: "" # ^system:serviceaccount:kargo:[a-z0-9]([-a-z0-9]*[a-z0-9])?$
 
   tls:
     ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.

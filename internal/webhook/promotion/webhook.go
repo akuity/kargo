@@ -20,7 +20,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
-	"github.com/akuity/kargo/internal/webhook/config"
 )
 
 var (
@@ -78,7 +77,7 @@ type webhook struct {
 }
 
 func SetupWebhookWithManager(
-	cfg config.WebhookConfig,
+	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 ) error {
 	w := newWebhook(
@@ -94,7 +93,7 @@ func SetupWebhookWithManager(
 }
 
 func newWebhook(
-	cfg config.WebhookConfig,
+	cfg libWebhook.Config,
 	kubeClient client.Client,
 	recorder record.EventRecorder,
 ) *webhook {
@@ -109,7 +108,7 @@ func newWebhook(
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.createSubjectAccessReviewFn = w.client.Create
 	w.isRequestFromKargoControlplaneFn =
-		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneServiceAccounts)
+		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
 	return w
 }
 

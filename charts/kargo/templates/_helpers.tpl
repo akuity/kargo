@@ -23,17 +23,19 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{/*
-Define well-known controlplane service accounts
+Create default controlplane user regular expression with well-known service accounts
 */}}
-{{- define "kargo.controlplane.serviceAccounts" -}}
+{{- define "kargo.controlplane.defaultUserRegex" -}}
 {{- $list := list }}
 {{- if .Values.api.enabled }}
-{{- $list = append $list (printf "%s/kargo-api" .Release.Namespace) }}
+{{- $list = append $list "kargo-api" }}
 {{- end }}
 {{- if .Values.controller.enabled }}
-{{- $list = append $list (printf "%s/kargo-controller" .Release.Namespace) }}
+{{- $list = append $list "kargo-controller" }}
 {{- end }}
-{{- join "," $list }}
+{{- if $list }}
+{{- printf "^system:serviceaccount:%s:(%s)$" .Release.Namespace (join "|" $list) }}
+{{- end }}
 {{- end }}
 
 {{/*
