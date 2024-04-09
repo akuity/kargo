@@ -55,8 +55,9 @@ type ApplicationSourceKustomize struct {
 }
 
 type ApplicationStatus struct {
-	Health HealthStatus `json:"health,omitempty"`
-	Sync   SyncStatus   `json:"sync,omitempty"`
+	Health     HealthStatus           `json:"health,omitempty"`
+	Sync       SyncStatus             `json:"sync,omitempty"`
+	Conditions []ApplicationCondition `json:"conditions,omitempty"`
 }
 
 type OperationInitiator struct {
@@ -122,4 +123,17 @@ type SyncStatus struct {
 type HealthStatus struct {
 	Status  HealthStatusCode `json:"status,omitempty"`
 	Message string           `json:"message,omitempty"`
+}
+
+type ApplicationConditionType string
+
+var (
+	ApplicationConditionInvalidSpecError ApplicationConditionType = "InvalidSpecError"
+	ApplicationConditionComparisonError ApplicationConditionType = "ComparisonError"
+)
+
+type ApplicationCondition struct {
+	Type               ApplicationConditionType `json:"type"`
+	Message            string                   `json:"message"`
+	LastTransitionTime *metav1.Time             `json:"lastTransitionTime,omitempty"`
 }

@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -736,11 +737,8 @@ func (r *reconciler) syncNormalStage(
 		}()
 
 		// Check health
-		status.Health = r.checkHealthFn(
-			ctx,
-			*status.CurrentFreight,
-			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
-		)
+		checker := libargocd.ApplicationHealth{Client: r.argocdClient}
+		status.Health = checker.EvaluateHealth(ctx, *status.CurrentFreight, stage.Spec.PromotionMechanisms.ArgoCDAppUpdates)
 		if status.Health != nil {
 			freightLogger.WithField("health", status.Health.Status).
 				Debug("Stage health assessed")
