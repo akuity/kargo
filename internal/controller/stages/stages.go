@@ -54,6 +54,10 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 	return cfg
 }
 
+type appHealthEvaluator interface {
+	EvaluateHealth(context.Context, kargoapi.FreightReference, []kargoapi.ArgoCDAppUpdate) *kargoapi.Health
+}
+
 // reconciler reconciles Stage resources.
 type reconciler struct {
 	kargoClient  client.Client
@@ -81,18 +85,7 @@ type reconciler struct {
 
 	// Health checks:
 
-	checkHealthFn func(
-		context.Context,
-		kargoapi.FreightReference,
-		[]kargoapi.ArgoCDAppUpdate,
-	) *kargoapi.Health
-
-	getArgoCDAppFn func(
-		ctx context.Context,
-		client client.Client,
-		namespace string,
-		name string,
-	) (*argocd.Application, error)
+	appHealth appHealthEvaluator
 
 	// Freight verification:
 
@@ -460,15 +453,13 @@ func newReconciler(
 		argocdClient:     argocdClient,
 		recorder:         recorder,
 		cfg:              cfg,
+		appHealth:        &libargocd.ApplicationHealth{Client: argocdClient},
 		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
 	// Loop guard:
 	r.hasNonTerminalPromotionsFn = r.hasNonTerminalPromotions
 	r.listPromosFn = r.kargoClient.List
-	// Health checks:
-	r.checkHealthFn = r.checkHealth
-	r.getArgoCDAppFn = argocd.GetApplication
 	// Freight verification:
 	r.startVerificationFn = r.startVerification
 	r.abortVerificationFn = r.abortVerification
@@ -737,9 +728,11 @@ func (r *reconciler) syncNormalStage(
 		}()
 
 		// Check health
-		checker := libargocd.ApplicationHealth{Client: r.argocdClient}
-		status.Health = checker.EvaluateHealth(ctx, *status.CurrentFreight, stage.Spec.PromotionMechanisms.ArgoCDAppUpdates)
-		if status.Health != nil {
+		if status.Health = r.appHealth.EvaluateHealth(
+			ctx,
+			*status.CurrentFreight,
+			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
+		); status.Health != nil {
 			freightLogger.WithField("health", status.Health.Status).
 				Debug("Stage health assessed")
 		} else {
