@@ -39,7 +39,7 @@ func newAPICommand() *cobra.Command {
 		Logger: log.StandardLogger(),
 	}
 
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:               "api",
 		DisableAutoGenTag: true,
 		SilenceErrors:     true,
@@ -50,6 +50,8 @@ func newAPICommand() *cobra.Command {
 			return cmdOpts.run(cmd.Context())
 		},
 	}
+
+	return cmd
 }
 
 func (o *apiOptions) complete() {
@@ -72,11 +74,11 @@ func (o *apiOptions) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error setting up internal Kubernetes API client: %w", err)
 	}
+
 	kubeClient, err := newWrappedKubernetesClient(ctx, clientCfg, internalClient, cfg)
 	if err != nil {
 		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
 	}
-
 	switch {
 	case !cfg.RolloutsIntegrationEnabled:
 		o.Logger.Info("Argo Rollouts integration is disabled")
@@ -91,10 +93,10 @@ func (o *apiOptions) run(ctx context.Context) error {
 	}
 
 	if cfg.AdminConfig != nil {
-		log.Info("admin account is enabled")
+		o.Logger.Info("admin account is enabled")
 	}
 	if cfg.OIDCConfig != nil {
-		log.WithFields(log.Fields{
+		o.Logger.WithFields(log.Fields{
 			"issuerURL":   cfg.OIDCConfig.IssuerURL,
 			"clientID":    cfg.OIDCConfig.ClientID,
 			"cliClientID": cfg.OIDCConfig.CLIClientID,
