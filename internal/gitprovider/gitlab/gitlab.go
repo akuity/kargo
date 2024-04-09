@@ -38,12 +38,27 @@ func init() {
 }
 
 type MergeRequestClient interface {
-	CreateMergeRequest(pid interface{}, opt *gitlab.CreateMergeRequestOptions, options ...gitlab.RequestOptionFunc) (*gitlab.MergeRequest, *gitlab.Response, error)
-	ListProjectMergeRequests(pid interface{}, opt *gitlab.ListProjectMergeRequestsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.MergeRequest, *gitlab.Response, error)
-	GetMergeRequest(pid interface{}, mergeRequest int, opt *gitlab.GetMergeRequestsOptions, options ...gitlab.RequestOptionFunc) (*gitlab.MergeRequest, *gitlab.Response, error)
+	CreateMergeRequest(
+		pid any,
+		opt *gitlab.CreateMergeRequestOptions,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeRequest, *gitlab.Response, error)
+
+	ListProjectMergeRequests(
+		pid any,
+		opt *gitlab.ListProjectMergeRequestsOptions,
+		options ...gitlab.RequestOptionFunc,
+	) ([]*gitlab.MergeRequest, *gitlab.Response, error)
+
+	GetMergeRequest(
+		pid any,
+		mergeRequest int,
+		opt *gitlab.GetMergeRequestsOptions,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
 
-type GitLabClient struct {
+type GitLabClient struct { // nolint: revive
 	MergeRequests MergeRequestClient
 }
 
@@ -71,7 +86,7 @@ func (g *GitLabProvider) WithAuthToken(token string) (gitprovider.GitProviderSer
 }
 
 func (g *GitLabProvider) CreatePullRequest(
-	ctx context.Context,
+	_ context.Context,
 	repoURL string,
 	opts gitprovider.CreatePullRequestOpts,
 ) (*gitprovider.PullRequest, error) {
@@ -94,7 +109,7 @@ func (g *GitLabProvider) CreatePullRequest(
 }
 
 func (g *GitLabProvider) GetPullRequest(
-	ctx context.Context,
+	_ context.Context,
 	repoURL string,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
@@ -106,7 +121,7 @@ func (g *GitLabProvider) GetPullRequest(
 }
 
 func (g *GitLabProvider) ListPullRequests(
-	ctx context.Context,
+	_ context.Context,
 	repoURL string,
 	opts gitprovider.ListPullRequestOpts,
 ) ([]*gitprovider.PullRequest, error) {
@@ -131,7 +146,7 @@ func (g *GitLabProvider) ListPullRequests(
 	return prs, nil
 }
 
-func (g *GitLabProvider) IsPullRequestMerged(ctx context.Context, repoURL string, id int64) (bool, error) {
+func (g *GitLabProvider) IsPullRequestMerged(_ context.Context, repoURL string, id int64) (bool, error) {
 	glMR, err := g.getMergeRequest(repoURL, id)
 	if err != nil {
 		return false, err

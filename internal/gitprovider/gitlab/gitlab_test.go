@@ -14,22 +14,35 @@ type MockGitLabClient struct {
 	mr         *gitlab.MergeRequest
 	createOpts *gitlab.CreateMergeRequestOptions
 	listOpts   *gitlab.ListProjectMergeRequestsOptions
-	pid        interface{}
+	pid        any
 }
 
-func (m *MockGitLabClient) CreateMergeRequest(pid interface{}, opt *gitlab.CreateMergeRequestOptions, options ...gitlab.RequestOptionFunc) (*gitlab.MergeRequest, *gitlab.Response, error) {
+func (m *MockGitLabClient) CreateMergeRequest(
+	pid any,
+	opt *gitlab.CreateMergeRequestOptions,
+	_ ...gitlab.RequestOptionFunc,
+) (*gitlab.MergeRequest, *gitlab.Response, error) {
 	m.pid = pid
 	m.createOpts = opt
 	return m.mr, nil, nil
 }
 
-func (m *MockGitLabClient) ListProjectMergeRequests(pid interface{}, opt *gitlab.ListProjectMergeRequestsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.MergeRequest, *gitlab.Response, error) {
+func (m *MockGitLabClient) ListProjectMergeRequests(
+	pid any,
+	opt *gitlab.ListProjectMergeRequestsOptions,
+	_ ...gitlab.RequestOptionFunc,
+) ([]*gitlab.MergeRequest, *gitlab.Response, error) {
 	m.pid = pid
 	m.listOpts = opt
 	return []*gitlab.MergeRequest{m.mr}, nil, nil
 }
 
-func (m *MockGitLabClient) GetMergeRequest(pid interface{}, mergeRequest int, opt *gitlab.GetMergeRequestsOptions, options ...gitlab.RequestOptionFunc) (*gitlab.MergeRequest, *gitlab.Response, error) {
+func (m *MockGitLabClient) GetMergeRequest(
+	pid any,
+	_ int,
+	_ *gitlab.GetMergeRequestsOptions,
+	_ ...gitlab.RequestOptionFunc,
+) (*gitlab.MergeRequest, *gitlab.Response, error) {
 	m.pid = pid
 	return m.mr, nil, nil
 }
