@@ -970,14 +970,11 @@ func (r *reconciler) syncNormalStage(
 
 	r.recorder.AnnotatedEventf(
 		&promo,
-		map[string]string{
-			kargoapi.AnnotationKeyEventActor:         kargoapi.FormatEventControllerActor(r.cfg.Name()),
-			kargoapi.AnnotationKeyEventProject:       promo.Namespace,
-			kargoapi.AnnotationKeyEventPromotionName: promo.Name,
-			kargoapi.AnnotationKeyEventFreightAlias:  latestFreight.Alias,
-			kargoapi.AnnotationKeyEventFreightName:   latestFreight.Name,
-			kargoapi.AnnotationKeyEventStageName:     promo.Spec.Stage,
-		},
+		kargoapi.NewPromotionCreatedEventAnnotations(
+			kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			&promo,
+			latestFreight,
+		),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		"Automatically promoted Freight for Stage %q",

@@ -133,18 +133,17 @@ func (s *server) recordPromotionCreatedEvent(
 	p *kargoapi.Promotion,
 	f *kargoapi.Freight,
 ) {
-	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventProject:       p.Namespace,
-		kargoapi.AnnotationKeyEventPromotionName: p.Name,
-		kargoapi.AnnotationKeyEventFreightAlias:  f.Alias,
-		kargoapi.AnnotationKeyEventFreightName:   f.Name,
-		kargoapi.AnnotationKeyEventStageName:     p.Spec.Stage,
-	}
+	var actor string
 	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		actor := kargoapi.FormatEventUserActor(u)
-		annotations[kargoapi.AnnotationKeyEventActor] = actor
+		actor = kargoapi.FormatEventUserActor(u)
 		msg += fmt.Sprintf(" by %q", actor)
 	}
-	s.recorder.AnnotatedEventf(p, annotations, corev1.EventTypeNormal, kargoapi.EventReasonPromotionCreated, msg)
+	s.recorder.AnnotatedEventf(
+		p,
+		kargoapi.NewPromotionCreatedEventAnnotations(actor, p, f),
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonPromotionCreated,
+		msg,
+	)
 }

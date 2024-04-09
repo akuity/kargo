@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	authnv1 "k8s.io/api/authentication/v1"
+
 	"github.com/akuity/kargo/internal/api/user"
 )
 
@@ -19,11 +21,12 @@ const (
 )
 
 const (
-	EventActorAdmin            = "admin"
-	EventActorControllerPrefix = "controller:"
-	EventActorEmailPrefix      = "email:"
-	EventActorSubjectPrefix    = "subject:"
-	EventActorUnknown          = "unknown actor"
+	EventActorAdmin                = "admin"
+	EventActorControllerPrefix     = "controller:"
+	EventActorEmailPrefix          = "email:"
+	EventActorSubjectPrefix        = "subject:"
+	EventActorKubernetesUserPrefix = "kubernetes:"
+	EventActorUnknown              = "unknown actor"
 )
 
 func FormatEventControllerActor(name string) string {
@@ -48,4 +51,38 @@ func FormatEventUserActor(u user.Info) string {
 	default:
 		return EventActorUnknown
 	}
+}
+
+func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
+	return EventActorKubernetesUserPrefix + u.Username
+}
+
+func NewFreightApprovedEventAnnotations(actor string, f *Freight, stageName string) map[string]string {
+	annotations := map[string]string{
+		AnnotationKeyEventProject:      f.Namespace,
+		AnnotationKeyEventFreightAlias: f.Alias,
+		AnnotationKeyEventFreightName:  f.Name,
+		AnnotationKeyEventStageName:    stageName,
+	}
+	if actor != "" {
+		annotations[AnnotationKeyEventActor] = actor
+	}
+	return annotations
+}
+
+func NewPromotionCreatedEventAnnotations(actor string, p *Promotion, f *Freight) map[string]string {
+	annotations := map[string]string{
+		AnnotationKeyEventActor:         actor,
+		AnnotationKeyEventProject:       p.Namespace,
+		AnnotationKeyEventPromotionName: p.Name,
+		AnnotationKeyEventFreightName:   p.Spec.Freight,
+		AnnotationKeyEventStageName:     p.Spec.Stage,
+	}
+	if actor != "" {
+		annotations[AnnotationKeyEventActor] = actor
+	}
+	if f != nil {
+		annotations[AnnotationKeyEventFreightAlias] = f.Alias
+	}
+	return annotations
 }

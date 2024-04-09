@@ -13,4 +13,5 @@ data:
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
+  CONTROLPLANE_SERVICE_ACCOUNTS: {{ include "kargo.controlplane.serviceAccounts" . }}
 {{- end }}

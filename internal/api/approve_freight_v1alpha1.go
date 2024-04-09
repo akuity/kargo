@@ -114,22 +114,16 @@ func (s *server) ApproveFreight(
 		return nil, fmt.Errorf("patch status: %w", err)
 	}
 
-	eventAnnotations := map[string]string{
-		kargoapi.AnnotationKeyEventProject:      project,
-		kargoapi.AnnotationKeyEventFreightAlias: freight.Alias,
-		kargoapi.AnnotationKeyEventFreightName:  freight.Name,
-		kargoapi.AnnotationKeyEventStageName:    stageName,
-	}
+	var actor string
 	eventMsg := fmt.Sprintf("Freight approved for Stage %q", stageName)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		actor := kargoapi.FormatEventUserActor(u)
-		eventAnnotations[kargoapi.AnnotationKeyEventActor] = actor
+		actor = kargoapi.FormatEventUserActor(u)
 		eventMsg += fmt.Sprintf(" by %q", actor)
 	}
 
 	s.recorder.AnnotatedEventf(
 		freight,
-		eventAnnotations,
+		kargoapi.NewFreightApprovedEventAnnotations(actor, freight, stageName),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonFreightApproved,
 		eventMsg,

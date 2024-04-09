@@ -23,6 +23,20 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{/*
+Define well-known controlplane service accounts
+*/}}
+{{- define "kargo.controlplane.serviceAccounts" -}}
+{{- $list := list }}
+{{- if .Values.api.enabled }}
+{{- $list = append $list (printf "%s/kargo-api" .Release.Namespace) }}
+{{- end }}
+{{- if .Values.controller.enabled }}
+{{- $list = append $list (printf "%s/kargo-controller" .Release.Namespace) }}
+{{- end }}
+{{- join "," $list }}
+{{- end }}
+
+{{/*
 Common labels
 */}}
 {{- define "kargo.labels" -}}
