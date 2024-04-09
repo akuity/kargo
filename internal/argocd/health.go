@@ -29,13 +29,24 @@ type compositeError interface {
 	Unwrap() []error
 }
 
-// ApplicationHealth is a health evaluator for Argo CD Applications.
-type ApplicationHealth struct {
+// ApplicationHealthEvaluator is an interface for evaluating the health of
+// Argo CD Applications.
+type ApplicationHealthEvaluator interface {
+	EvaluateHealth(context.Context, kargoapi.FreightReference, []kargoapi.ArgoCDAppUpdate) *kargoapi.Health
+}
+
+// applicationHealth is an ApplicationHealthEvaluator implementation.
+type applicationHealth struct {
 	Client client.Client
 }
 
+// NewApplicationHealthEvaluator returns a new ApplicationHealthEvaluator.
+func NewApplicationHealthEvaluator(c client.Client) ApplicationHealthEvaluator {
+	return &applicationHealth{Client: c}
+}
+
 // EvaluateHealth assesses the health of a set of Argo CD Applications.
-func (h *ApplicationHealth) EvaluateHealth(
+func (h *applicationHealth) EvaluateHealth(
 	ctx context.Context,
 	freight kargoapi.FreightReference,
 	updates []kargoapi.ArgoCDAppUpdate,
@@ -98,7 +109,7 @@ func (h *ApplicationHealth) EvaluateHealth(
 // an overall health state, the Argo CD Application's health status, and its sync
 // status. If it can not (fully) assess the health of the Argo CD Application, it
 // returns an error with a message explaining why.
-func (h *ApplicationHealth) GetApplicationHealth(
+func (h *applicationHealth) GetApplicationHealth(
 	ctx context.Context,
 	key types.NamespacedName,
 	freight kargoapi.FreightReference,

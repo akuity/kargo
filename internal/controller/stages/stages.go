@@ -54,10 +54,6 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 	return cfg
 }
 
-type appHealthEvaluator interface {
-	EvaluateHealth(context.Context, kargoapi.FreightReference, []kargoapi.ArgoCDAppUpdate) *kargoapi.Health
-}
-
 // reconciler reconciles Stage resources.
 type reconciler struct {
 	kargoClient  client.Client
@@ -85,7 +81,7 @@ type reconciler struct {
 
 	// Health checks:
 
-	appHealth appHealthEvaluator
+	appHealth libargocd.ApplicationHealthEvaluator
 
 	// Freight verification:
 
@@ -453,7 +449,7 @@ func newReconciler(
 		argocdClient:     argocdClient,
 		recorder:         recorder,
 		cfg:              cfg,
-		appHealth:        &libargocd.ApplicationHealth{Client: argocdClient},
+		appHealth:        libargocd.NewApplicationHealthEvaluator(argocdClient),
 		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:

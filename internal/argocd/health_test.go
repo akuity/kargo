@@ -241,7 +241,7 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 				c.WithObjects(testCase.applications...)
 			}
 
-			h := &ApplicationHealth{
+			h := &applicationHealth{
 				Client: c.Build(),
 			}
 			testCase.assertions(t, h.EvaluateHealth(context.TODO(), testCase.freight, testCase.updates))
@@ -249,7 +249,7 @@ func TestApplicationHealth_EvaluateHealth(t *testing.T) {
 	}
 
 	t.Run("Argo CD integration disabled", func(t *testing.T) {
-		h := &ApplicationHealth{}
+		h := &applicationHealth{}
 		health := h.EvaluateHealth(context.TODO(), kargoapi.FreightReference{}, []kargoapi.ArgoCDAppUpdate{{}})
 		require.NotNil(t, health)
 		require.Equal(t, kargoapi.HealthStateUnknown, health.Status)
@@ -572,7 +572,7 @@ func TestApplicationHealth_GetApplicationHealth(t *testing.T) {
 				c.WithObjects(testCase.application)
 			}
 
-			h := &ApplicationHealth{
+			h := &applicationHealth{
 				Client: c.Build(),
 			}
 			state, healthStatus, syncStatus, err := h.GetApplicationHealth(
