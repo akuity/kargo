@@ -6,6 +6,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestVerificationInfo_HasAnalysisRun(t *testing.T) {
+	testCases := []struct {
+		name           string
+		info           *VerificationInfo
+		expectedResult bool
+	}{
+		{
+			name:           "VerificationInfo is nil",
+			info:           nil,
+			expectedResult: false,
+		},
+		{
+			name:           "AnalysisRun is nil",
+			info:           &VerificationInfo{},
+			expectedResult: false,
+		},
+		{
+			name: "AnalysisRun is not nil",
+			info: &VerificationInfo{
+				AnalysisRun: &AnalysisRunReference{},
+			},
+			expectedResult: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.info.HasAnalysisRun())
+		})
+	}
+}
+
 func TestFreightReferenceStackUpdateOrPush(t *testing.T) {
 	testCases := []struct {
 		name          string

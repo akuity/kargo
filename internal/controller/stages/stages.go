@@ -86,7 +86,7 @@ type reconciler struct {
 	startVerificationFn func(
 		context.Context,
 		*kargoapi.Stage,
-	) *kargoapi.VerificationInfo
+	) (*kargoapi.VerificationInfo, error)
 
 	abortVerificationFn func(
 		context.Context,
@@ -96,7 +96,7 @@ type reconciler struct {
 	getVerificationInfoFn func(
 		context.Context,
 		*kargoapi.Stage,
-	) *kargoapi.VerificationInfo
+	) (*kargoapi.VerificationInfo, error)
 
 	getAnalysisTemplateFn func(
 		context.Context,
@@ -759,14 +759,32 @@ func (r *reconciler) syncNormalStage(
 			//       check if verification step is necessary and if yes execute
 			//       step irrespective of phase
 			if status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable {
-				if status.CurrentFreight.VerificationInfo == nil {
+				if !status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
 					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
 						log.Debug("starting verification")
-						status.CurrentFreight.VerificationInfo = r.startVerificationFn(ctx, stage)
+						var err error
+						if status.CurrentFreight.VerificationInfo, err = r.startVerificationFn(
+							ctx,
+							stage,
+						); err != nil && !status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
+							status.CurrentFreight.VerificationHistory.UpdateOrPush(
+								*status.CurrentFreight.VerificationInfo,
+							)
+							return status, fmt.Errorf("error starting verification: %w", err)
+						}
 					}
 				} else {
 					log.Debug("checking verification results")
-					status.CurrentFreight.VerificationInfo = r.getVerificationInfoFn(ctx, stage)
+					var err error
+					if status.CurrentFreight.VerificationInfo, err = r.getVerificationInfoFn(
+						ctx,
+						stage,
+					); err != nil && status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
+						status.CurrentFreight.VerificationHistory.UpdateOrPush(
+							*status.CurrentFreight.VerificationInfo,
+						)
+						return status, fmt.Errorf("error getting verification info: %w", err)
+					}
 
 					// Abort the verification if it's still running and the Stage has
 					// been marked to do so.
