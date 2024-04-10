@@ -33,6 +33,12 @@ Create default controlplane user regular expression with well-known service acco
 {{- if .Values.controller.enabled }}
 {{- $list = append $list "kargo-controller" }}
 {{- end }}
+{{- if .Values.garbageCollector.enabled }}
+{{- $list = append $list "kargo-garbage-collector" }}
+{{- end }}
+{{- if .Values.managementController.enabled }}
+{{- $list = append $list "kargo-management-controller" }}
+{{- end }}
 {{- if $list }}
 {{- printf "^system:serviceaccount:%s:(%s)$" .Release.Namespace (join "|" $list) }}
 {{- end }}
