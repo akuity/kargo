@@ -7,10 +7,12 @@ import (
 
 	"github.com/technosophos/moniker"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -35,7 +37,11 @@ type webhook struct {
 	client                client.Client
 	freightAliasGenerator moniker.Namer
 
+	recorder record.EventRecorder
+
 	// The following behaviors are overridable for testing purposes:
+
+	admissionRequestFromContextFn func(context.Context) (admission.Request, error)
 
 	getAvailableFreightAliasFn func(context.Context) (string, error)
 
@@ -57,10 +63,19 @@ type webhook struct {
 		client.ObjectList,
 		...client.ListOption,
 	) error
+
+	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
 
-func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := newWebhook(mgr.GetClient())
+func SetupWebhookWithManager(
+	cfg libWebhook.Config,
+	mgr ctrl.Manager,
+) error {
+	w := newWebhook(
+		cfg,
+		mgr.GetClient(),
+		mgr.GetEventRecorderFor("freight-webhook"),
+	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Freight{}).
 		WithValidator(w).
@@ -68,15 +83,23 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-func newWebhook(kubeClient client.Client) *webhook {
+func newWebhook(
+	cfg libWebhook.Config,
+	kubeClient client.Client,
+	recorder record.EventRecorder,
+) *webhook {
 	w := &webhook{
 		client:                kubeClient,
 		freightAliasGenerator: moniker.New(),
+		recorder:              recorder,
 	}
+	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.getAvailableFreightAliasFn = w.getAvailableFreightAlias
 	w.validateProjectFn = libWebhook.ValidateProject
 	w.listFreightFn = kubeClient.List
 	w.listStagesFn = kubeClient.List
+	w.isRequestFromKargoControlplaneFn =
+		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
 	return w
 }
 
@@ -211,6 +234,19 @@ func (w *webhook) ValidateUpdate(
 			},
 		)
 	}
+
+	req, err := w.admissionRequestFromContextFn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get admission request from context: %w", err)
+	}
+	// Record Freight approved events if the request doesn't come from Kargo controlplane.
+	if !w.isRequestFromKargoControlplaneFn(req) {
+		for approvedStage := range newFreight.Status.ApprovedFor {
+			if _, ok := oldFreight.Status.ApprovedFor[approvedStage]; !ok {
+				w.recordFreightApprovedEvent(req, newFreight, approvedStage)
+			}
+		}
+	}
 	return nil, nil
 }
 
@@ -244,4 +280,21 @@ func (w *webhook) ValidateDelete(
 		return nil, apierrors.NewForbidden(freightGroupResource, freight.Name, err)
 	}
 	return nil, nil
+}
+
+func (w *webhook) recordFreightApprovedEvent(
+	req admission.Request,
+	f *kargoapi.Freight,
+	stageName string,
+) {
+	actor := kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+	w.recorder.AnnotatedEventf(
+		f,
+		kargoapi.NewFreightApprovedEventAnnotations(actor, f, stageName),
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonFreightApproved,
+		"Freight approved for Stage %q by %q",
+		stageName,
+		actor,
+	)
 }

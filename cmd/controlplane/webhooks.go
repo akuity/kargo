@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
+	libWebhook "github.com/akuity/kargo/internal/webhook"
 	"github.com/akuity/kargo/internal/webhook/freight"
 	"github.com/akuity/kargo/internal/webhook/project"
 	"github.com/akuity/kargo/internal/webhook/promotion"
@@ -63,6 +64,8 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		"commit":  version.GitCommit,
 	}).Info("Starting Kargo Webhooks Server")
 
+	webhookCfg := libWebhook.ConfigFromEnv()
+
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error getting REST config: %w", err)
@@ -105,7 +108,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("index Stages by Freight: %w", err)
 	}
 
-	if err = freight.SetupWebhookWithManager(mgr); err != nil {
+	if err = freight.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Freight webhook: %w", err)
 	}
 	if err = project.SetupWebhookWithManager(
@@ -114,7 +117,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 	); err != nil {
 		return fmt.Errorf("setup Project webhook: %w", err)
 	}
-	if err = promotion.SetupWebhookWithManager(mgr); err != nil {
+	if err = promotion.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
 	}
 	if err = stage.SetupWebhookWithManager(mgr); err != nil {

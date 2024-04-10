@@ -15,6 +15,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -24,15 +25,18 @@ func TestNewReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	requirement, err := controller.GetShardRequirement(testCfg.ShardName)
 	require.NoError(t, err)
+	recorder := &fakekubeclient.EventRecorder{Events: nil}
 	r := newReconciler(
 		kubeClient,
 		kubeClient,
+		recorder,
 		testCfg,
 		requirement,
 	)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.argocdClient)
+	require.NotNil(t, r.recorder)
 	// Assert that all overridable behaviors were initialized to a default:
 	// Loop guard:
 	require.NotNil(t, r.hasNonTerminalPromotionsFn)
@@ -75,6 +79,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 		reconciler *reconciler
 		assertions func(
 			t *testing.T,
+			recorder *fakekubeclient.EventRecorder,
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
 			err error,
@@ -103,6 +108,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -112,6 +118,9 @@ func TestSyncControlFlowStage(t *testing.T) {
 				require.Contains(t, err.Error(), "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should be recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 		{
@@ -139,6 +148,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -152,6 +162,9 @@ func TestSyncControlFlowStage(t *testing.T) {
 				require.Contains(t, err.Error(), "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should be recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 		{
@@ -187,6 +200,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -196,6 +210,9 @@ func TestSyncControlFlowStage(t *testing.T) {
 				require.Contains(t, err.Error(), "something went wrong")
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should be recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 		{
@@ -236,6 +253,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -244,16 +262,22 @@ func TestSyncControlFlowStage(t *testing.T) {
 				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
 				require.Nil(t, newStatus.CurrentFreight)                  // Cleared
 				require.Nil(t, newStatus.Health)                          // Cleared
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			recorder := fakekubeclient.NewEventRecorder(1)
+			testCase.reconciler.recorder = recorder
 			newStatus, err := testCase.reconciler.syncControlFlowStage(
 				context.Background(),
 				testCase.stage,
 			)
-			testCase.assertions(t, testCase.stage.Status, newStatus, err)
+			testCase.assertions(t, recorder, testCase.stage.Status, newStatus, err)
 		})
 	}
 }
@@ -273,6 +297,7 @@ func TestSyncNormalStage(t *testing.T) {
 		reconciler *reconciler
 		assertions func(
 			t *testing.T,
+			recorder *fakekubeclient.EventRecorder,
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
 			err error,
@@ -292,6 +317,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -300,6 +326,9 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(t, "something went wrong", err.Error())
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should be recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -317,6 +346,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -324,6 +354,9 @@ func TestSyncNormalStage(t *testing.T) {
 				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should be recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -377,6 +410,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -396,6 +430,9 @@ func TestSyncNormalStage(t *testing.T) {
 					},
 					newStatus.CurrentFreight.VerificationInfo,
 				)
+
+				// No events should be recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -440,9 +477,17 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.Health {
 					return nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -450,6 +495,10 @@ func TestSyncNormalStage(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, newStatus.CurrentFreight)
 				require.Equal(t, initialStatus, newStatus)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationFailed, event.Reason)
 			},
 		},
 
@@ -483,9 +532,17 @@ func TestSyncNormalStage(t *testing.T) {
 						Message: "something went wrong",
 					}, nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -514,6 +571,10 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus.CurrentFreight.VerificationHistory = nil
 				newStatus.Phase = initialStatus.Phase
 				require.Equal(t, initialStatus, newStatus)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
 			},
 		},
 
@@ -550,6 +611,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -611,6 +673,13 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.Health {
 					return nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
@@ -620,6 +689,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -640,6 +710,10 @@ func TestSyncNormalStage(t *testing.T) {
 				newStatus.Phase = initialStatus.Phase
 				newStatus.CurrentFreight = initialStatus.CurrentFreight
 				require.Equal(t, initialStatus, newStatus)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
 			},
 		},
 
@@ -685,6 +759,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -748,6 +823,13 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.Health {
 					return nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 				getVerificationInfoFn: func(
 					_ context.Context,
 					s *kargoapi.Stage,
@@ -766,6 +848,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -783,6 +866,10 @@ func TestSyncNormalStage(t *testing.T) {
 
 				// Phase should be changed to Steady
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationAborted, event.Reason)
 			},
 		},
 
@@ -820,6 +907,13 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.Health {
 					return nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 				getVerificationInfoFn: func(
 					_ context.Context,
 					s *kargoapi.Stage,
@@ -841,6 +935,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -848,6 +943,10 @@ func TestSyncNormalStage(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, newStatus.CurrentFreight)
 				require.Equal(t, kargoapi.VerificationPhaseError, newStatus.CurrentFreight.VerificationInfo.Phase)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
 			},
 		},
 
@@ -877,6 +976,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -890,6 +990,9 @@ func TestSyncNormalStage(t *testing.T) {
 				// Status should be otherwise unchanged
 				newStatus.Phase = initialStatus.Phase
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should be recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -925,13 +1028,26 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return false, errors.New("something went wrong")
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
+				// Verification should be done before auto-promotion
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -976,13 +1092,26 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return false, nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
+				// Verification should be done before auto-promotion
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+
 				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
@@ -1021,6 +1150,13 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return true, nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 				getLatestAvailableFreightFn: func(
 					context.Context,
 					string,
@@ -1031,10 +1167,16 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
+				// Verification should be done before auto-promotion
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(
@@ -1069,6 +1211,13 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.Health {
 					return nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
 				},
@@ -1089,6 +1238,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1096,6 +1246,9 @@ func TestSyncNormalStage(t *testing.T) {
 				require.NoError(t, err)
 				// Status should be returned unchanged
 				require.Equal(t, initialStatus, newStatus)
+
+				// No events should be recorded
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -1133,6 +1286,13 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return true, nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
 				getLatestAvailableFreightFn: func(
 					context.Context,
 					string,
@@ -1147,6 +1307,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1189,6 +1350,17 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return true, nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+					}, nil
+				},
 				getLatestAvailableFreightFn: func(
 					context.Context,
 					string,
@@ -1213,6 +1385,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1255,6 +1428,17 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return true, nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+					}, nil
+				},
 				getLatestAvailableFreightFn: func(
 					context.Context,
 					string,
@@ -1283,10 +1467,16 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
 			) {
+				// Verification should be done before promotion
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error creating Promotion of Stage")
@@ -1358,6 +1548,17 @@ func TestSyncNormalStage(t *testing.T) {
 				) (bool, error) {
 					return true, nil
 				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+					}, nil
+				},
 				getLatestAvailableFreightFn: func(
 					context.Context,
 					string,
@@ -1386,6 +1587,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1408,13 +1610,22 @@ func TestSyncNormalStage(t *testing.T) {
 					},
 					newStatus.CurrentFreight.VerificationInfo,
 				)
+
+				require.Len(t, recorder.Events, 2)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				// The second event should be the promotion creation event (auto-promotion)
+				event = <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			recorder := fakekubeclient.NewEventRecorder(2)
+			testCase.reconciler.recorder = recorder
 			newStatus, err := testCase.reconciler.syncNormalStage(context.Background(), testCase.stage)
-			testCase.assertions(t, testCase.stage.Status, newStatus, err)
+			testCase.assertions(t, recorder, testCase.stage.Status, newStatus, err)
 		})
 	}
 }

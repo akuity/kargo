@@ -4,30 +4,41 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	authnv1 "k8s.io/api/authentication/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
+	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
-	w := newWebhook(kubeClient)
+	w := newWebhook(
+		libWebhook.Config{},
+		kubeClient,
+		&fakekubeclient.EventRecorder{},
+	)
 	require.NotNil(t, w.freightAliasGenerator)
 	// Assert that all overridable behaviors were initialized to a default:
+	require.NotNil(t, w.admissionRequestFromContextFn)
 	require.NotNil(t, w.getAvailableFreightAliasFn)
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.listFreightFn)
 	require.NotNil(t, w.listStagesFn)
+	require.NotNil(t, w.isRequestFromKargoControlplaneFn)
 }
 
 func TestDefault(t *testing.T) {
@@ -298,8 +309,9 @@ func TestValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
+		userInfo   *authnv1.UserInfo
 		setup      func() (*kargoapi.Freight, *kargoapi.Freight)
-		assertions func(*testing.T, error)
+		assertions func(*testing.T, *fakekubeclient.EventRecorder, error)
 	}{
 		{
 			name: "error listing freight",
@@ -329,7 +341,7 @@ func TestValidateUpdate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
 				statusErr, ok := err.(*apierrors.StatusError)
 				require.True(t, ok)
 				require.Equal(
@@ -370,7 +382,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
 				statusErr, ok := err.(*apierrors.StatusError)
 				require.True(t, ok)
 				require.Equal(t, int32(http.StatusConflict), statusErr.Status().Code)
@@ -405,7 +417,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "is invalid")
 				require.Contains(t, err.Error(), "freight is immutable")
@@ -435,13 +447,12 @@ func TestValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "is invalid")
 				require.Contains(t, err.Error(), "freight is immutable")
 			},
 		},
-
 		{
 			name: "update without mutation",
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
@@ -469,21 +480,130 @@ func TestValidateUpdate(t *testing.T) {
 				) error {
 					return nil
 				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
+				),
 			},
-			assertions: func(t *testing.T, err error) {
+			userInfo: &authnv1.UserInfo{
+				Username: "fake-user",
+			},
+			assertions: func(t *testing.T, r *fakekubeclient.EventRecorder, err error) {
 				require.NoError(t, err)
+				// Recorder should not record non-freight approval events
+				require.Empty(t, r.Events)
+			},
+		},
+		{
+			name: "record approval event from non-controlplane",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				oldFreight := &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-name",
+						Namespace: "fake-namespace",
+					},
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "fake-repo-url",
+							ID:      "fake-commit-id",
+						},
+					},
+					Status: kargoapi.FreightStatus{},
+				}
+				oldFreight.Name = oldFreight.GenerateID()
+				newFreight := oldFreight.DeepCopy()
+				newFreight.Status.ApprovedFor = map[string]kargoapi.ApprovedStage{
+					"fake-stage": {},
+				}
+				return oldFreight, newFreight
+			},
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
+				),
+			},
+			userInfo: &authnv1.UserInfo{
+				Username: "fake-user",
+			},
+			assertions: func(t *testing.T, r *fakekubeclient.EventRecorder, err error) {
+				require.NoError(t, err)
+				require.Len(t, r.Events, 1)
+				event := <-r.Events
+				require.Equal(t, kargoapi.EventReasonFreightApproved, event.Reason)
+			},
+		},
+		{
+			name: "skip recording approval event from controlplane",
+			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
+				oldFreight := &kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-name",
+						Namespace: "fake-namespace",
+					},
+					Commits: []kargoapi.GitCommit{
+						{
+							RepoURL: "fake-repo-url",
+							ID:      "fake-commit-id",
+						},
+					},
+					Status: kargoapi.FreightStatus{},
+				}
+				oldFreight.Name = oldFreight.GenerateID()
+				newFreight := oldFreight.DeepCopy()
+				newFreight.Status.ApprovedFor = map[string]kargoapi.ApprovedStage{
+					"fake-stage": {},
+				}
+				return oldFreight, newFreight
+			},
+			webhook: &webhook{
+				listFreightFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
+				),
+			},
+			userInfo: &authnv1.UserInfo{
+				Username: serviceaccount.ServiceAccountUsernamePrefix + "kargo:kargo-api",
+			},
+			assertions: func(t *testing.T, r *fakekubeclient.EventRecorder, err error) {
+				require.NoError(t, err)
+				require.Empty(t, r.Events)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			oldFreight, newFreight := testCase.setup()
+
+			recorder := fakekubeclient.NewEventRecorder(1)
+			testCase.webhook.recorder = recorder
+
+			var req admission.Request
+			if testCase.userInfo != nil {
+				req.UserInfo = *testCase.userInfo
+			}
+			ctx := admission.NewContextWithRequest(context.Background(), req)
+
 			_, err := testCase.webhook.ValidateUpdate(
-				context.Background(),
+				ctx,
 				oldFreight,
 				newFreight,
 			)
-			testCase.assertions(t, err)
+			testCase.assertions(t, recorder, err)
 		})
 	}
 }

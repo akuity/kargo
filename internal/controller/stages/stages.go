@@ -9,9 +9,11 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,6 +39,14 @@ type ReconcilerConfig struct {
 	RolloutsControllerInstanceID string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
 }
 
+func (c ReconcilerConfig) Name() string {
+	name := "stage-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
 func ReconcilerConfigFromEnv() ReconcilerConfig {
 	cfg := ReconcilerConfig{}
 	envconfig.MustProcess("", &cfg)
@@ -47,6 +57,8 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type reconciler struct {
 	kargoClient  client.Client
 	argocdClient client.Client
+
+	recorder record.EventRecorder
 
 	cfg ReconcilerConfig
 
@@ -325,6 +337,7 @@ func SetupReconcilerWithManager(
 			newReconciler(
 				kargoMgr.GetClient(),
 				argocdClient,
+				kargoMgr.GetEventRecorderFor(cfg.Name()),
 				cfg,
 				shardRequirement,
 			),
@@ -437,12 +450,14 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kargoClient client.Client,
 	argocdClient client.Client,
+	recorder record.EventRecorder,
 	cfg ReconcilerConfig,
 	shardRequirement *labels.Requirement,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient:      kargoClient,
 		argocdClient:     argocdClient,
+		recorder:         recorder,
 		cfg:              cfg,
 		shardRequirement: shardRequirement,
 	}
@@ -663,6 +678,14 @@ func (r *reconciler) syncControlFlowStage(
 					err,
 				)
 			}
+
+			r.recordFreightVerificationEvent(
+				stage,
+				&af,
+				&kargoapi.VerificationInfo{
+					Phase: kargoapi.VerificationPhaseSuccessful,
+				},
+			)
 		}
 	}
 	return status, nil
@@ -839,6 +862,33 @@ func (r *reconciler) syncNormalStage(
 				)
 			}
 		}
+
+		// Record an event if the verification process has completed.
+		if stage.Spec.Verification == nil ||
+			(status.CurrentFreight.VerificationInfo != nil &&
+				status.CurrentFreight.VerificationInfo.Phase.IsTerminal()) {
+			vi := status.CurrentFreight.VerificationInfo
+			if stage.Spec.Verification == nil {
+				vi = &kargoapi.VerificationInfo{
+					Phase: kargoapi.VerificationPhaseSuccessful,
+				}
+			}
+
+			fr, err := r.getFreightFn(
+				ctx,
+				r.kargoClient,
+				types.NamespacedName{
+					Namespace: stage.Namespace,
+					Name:      status.CurrentFreight.Name,
+				},
+			)
+			if err != nil {
+				return status, fmt.Errorf("get freight: %w", err)
+			}
+			if fr != nil {
+				r.recordFreightVerificationEvent(stage, fr, vi)
+			}
+		}
 	}
 
 	// Stop here if we have no chance of finding any Freight to promote.
@@ -935,6 +985,20 @@ func (r *reconciler) syncNormalStage(
 			err,
 		)
 	}
+
+	r.recorder.AnnotatedEventf(
+		&promo,
+		kargoapi.NewPromotionCreatedEventAnnotations(
+			kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			&promo,
+			latestFreight,
+		),
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonPromotionCreated,
+		"Automatically promoted Freight for Stage %q",
+		promo.Spec.Stage,
+	)
+
 	logger.WithField("promotion", promo.Name).Debug("created Promotion resource")
 
 	return status, nil
@@ -1426,4 +1490,40 @@ func (r *reconciler) getLatestApprovedFreight(
 			Before(&freight.Items[i].CreationTimestamp)
 	})
 	return &freight.Items[0], nil
+}
+
+func (r *reconciler) recordFreightVerificationEvent(
+	s *kargoapi.Stage,
+	fr *kargoapi.Freight,
+	vi *kargoapi.VerificationInfo,
+) {
+	annotations := map[string]string{
+		kargoapi.AnnotationKeyEventActor:        kargoapi.FormatEventControllerActor(r.cfg.Name()),
+		kargoapi.AnnotationKeyEventProject:      s.Namespace,
+		kargoapi.AnnotationKeyEventStageName:    s.Namespace,
+		kargoapi.AnnotationKeyEventFreightAlias: fr.Alias,
+		kargoapi.AnnotationKeyEventFreightName:  fr.Name,
+	}
+	if vi.AnalysisRun != nil {
+		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = vi.AnalysisRun.Name
+	}
+
+	reason := kargoapi.EventReasonFreightVerificationUnknown
+	message := vi.Message
+
+	switch vi.Phase {
+	case kargoapi.VerificationPhaseSuccessful:
+		reason = kargoapi.EventReasonFreightVerificationSucceeded
+		message = "Freight verification succeeded"
+	case kargoapi.VerificationPhaseFailed:
+		reason = kargoapi.EventReasonFreightVerificationFailed
+	case kargoapi.VerificationPhaseError:
+		reason = kargoapi.EventReasonFreightVerificationErrored
+	case kargoapi.VerificationPhaseAborted:
+		reason = kargoapi.EventReasonFreightVerificationAborted
+	case kargoapi.VerificationPhaseInconclusive:
+		reason = kargoapi.EventReasonFreightVerificationInconclusive
+	}
+
+	r.recorder.AnnotatedEventf(fr, annotations, corev1.EventTypeNormal, reason, message)
 }

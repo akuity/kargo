@@ -6,10 +6,12 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/kargo"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -120,7 +122,28 @@ func (s *server) PromoteToStage(
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
 	}
+	s.recordPromotionCreatedEvent(ctx, &promotion, freight)
 	return connect.NewResponse(&svcv1alpha1.PromoteToStageResponse{
 		Promotion: &promotion,
 	}), nil
+}
+
+func (s *server) recordPromotionCreatedEvent(
+	ctx context.Context,
+	p *kargoapi.Promotion,
+	f *kargoapi.Freight,
+) {
+	var actor string
+	msg := fmt.Sprintf("Promotion created for Stage %q", p.Spec.Stage)
+	if u, ok := user.InfoFromContext(ctx); ok {
+		actor = kargoapi.FormatEventUserActor(u)
+		msg += fmt.Sprintf(" by %q", actor)
+	}
+	s.recorder.AnnotatedEventf(
+		p,
+		kargoapi.NewPromotionCreatedEventAnnotations(actor, p, f),
+		corev1.EventTypeNormal,
+		kargoapi.EventReasonPromotionCreated,
+		msg,
+	)
 }

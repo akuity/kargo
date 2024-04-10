@@ -7,11 +7,13 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -20,7 +22,12 @@ func TestApproveFreight(t *testing.T) {
 		name       string
 		req        *svcv1alpha1.ApproveFreightRequest
 		server     *server
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.ApproveFreightResponse], error)
+		assertions func(
+			*testing.T,
+			*fakekubeclient.EventRecorder,
+			*connect.Response[svcv1alpha1.ApproveFreightResponse],
+			error,
+		)
 	}{
 		{
 			name:   "input validation error",
@@ -28,6 +35,7 @@ func TestApproveFreight(t *testing.T) {
 			server: &server{},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -51,6 +59,7 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -81,6 +90,7 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -111,6 +121,7 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -152,6 +163,7 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -189,6 +201,7 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -239,6 +252,7 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -292,6 +306,7 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
@@ -345,20 +360,27 @@ func TestApproveFreight(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
 				_ *connect.Response[svcv1alpha1.ApproveFreightResponse],
 				err error,
 			) {
 				require.NoError(t, err)
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, corev1.EventTypeNormal, event.EventType)
+				require.Equal(t, kargoapi.EventReasonFreightApproved, event.Reason)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			recorder := fakekubeclient.NewEventRecorder(1)
+			testCase.server.recorder = recorder
 			resp, err := testCase.server.ApproveFreight(
 				context.Background(),
 				connect.NewRequest(testCase.req),
 			)
-			testCase.assertions(t, resp, err)
+			testCase.assertions(t, recorder, resp, err)
 		})
 	}
 }

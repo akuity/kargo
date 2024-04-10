@@ -138,6 +138,7 @@ func (s *server) PromoteToStageSubscribers(
 			promoteErrs = append(promoteErrs, err)
 			continue
 		}
+		s.recordPromotionCreatedEvent(ctx, &newPromo, freight)
 		createdPromos = append(createdPromos, &newPromo)
 	}
 

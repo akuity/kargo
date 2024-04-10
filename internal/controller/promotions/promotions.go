@@ -6,8 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -24,10 +27,33 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+// ReconcilerConfig represents configuration for the promotion reconciler.
+type ReconcilerConfig struct {
+	ShardName string `envconfig:"SHARD_NAME"`
+}
+
+func (c ReconcilerConfig) Name() string {
+	name := "promotion-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	var cfg ReconcilerConfig
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // reconciler reconciles Promotion resources.
 type reconciler struct {
 	kargoClient     client.Client
 	promoMechanisms promotion.Mechanism
+
+	cfg ReconcilerConfig
+
+	recorder record.EventRecorder
 
 	pqs            *promoQueues
 	initializeOnce sync.Once
@@ -44,10 +70,10 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
-	shardName string,
+	cfg ReconcilerConfig,
 ) error {
 
-	shardPredicate, err := controller.GetShardPredicate(shardName)
+	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
 	if err != nil {
 		return fmt.Errorf("error creating shard selector predicate: %w", err)
 	}
@@ -60,7 +86,9 @@ func SetupReconcilerWithManager(
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		argocdClient,
+		kargoMgr.GetEventRecorderFor(cfg.Name()),
 		credentialsDB,
+		cfg,
 	)
 
 	changePredicate := predicate.Or(
@@ -108,7 +136,9 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kargoClient client.Client,
 	argocdClient client.Client,
+	recorder record.EventRecorder,
 	credentialsDB credentials.Database,
+	cfg ReconcilerConfig,
 ) *reconciler {
 	pqs := promoQueues{
 		activePromoByStage:        map[types.NamespacedName]string{},
@@ -116,6 +146,8 @@ func newReconciler(
 	}
 	r := &reconciler{
 		kargoClient: kargoClient,
+		recorder:    recorder,
+		cfg:         cfg,
 		pqs:         &pqs,
 		promoMechanisms: promotion.NewMechanisms(
 			argocdClient,
@@ -164,6 +196,18 @@ func (r *reconciler) Reconcile(
 		// Ignore if not found or already finished. Promo might be nil if the
 		// Promotion was deleted after the current reconciliation request was issued.
 		return ctrl.Result{}, nil
+	}
+	// Find the Freight
+	freight, err := kargoapi.GetFreight(ctx, r.kargoClient, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	})
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("get freight: %w", err)
+	}
+	var freightAlias string
+	if freight != nil {
+		freightAlias = freight.Alias
 	}
 
 	logger = logger.WithFields(log.Fields{
@@ -239,6 +283,38 @@ func (r *reconciler) Reconcile(
 	if err != nil {
 		logger.Errorf("error updating Promotion status: %s", err)
 	}
+
+	// Record event after patching status if new phase is terminal
+	if newStatus.Phase.IsTerminal() {
+		var reason string
+		switch newStatus.Phase {
+		case kargoapi.PromotionPhaseSucceeded:
+			reason = kargoapi.EventReasonPromotionSucceeded
+		case kargoapi.PromotionPhaseFailed:
+			reason = kargoapi.EventReasonPromotionFailed
+		case kargoapi.PromotionPhaseErrored:
+			reason = kargoapi.EventReasonPromotionErrored
+		}
+
+		msg := fmt.Sprintf("Promotion %s", newStatus.Phase)
+		if newStatus.Message != "" {
+			msg += fmt.Sprintf(": %s", newStatus.Message)
+		}
+
+		eventAnnotations := map[string]string{
+			kargoapi.AnnotationKeyEventActor:               kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			kargoapi.AnnotationKeyEventProject:             promo.GetNamespace(),
+			kargoapi.AnnotationKeyEventPromotionName:       promo.GetName(),
+			kargoapi.AnnotationKeyEventPromotionCreateTime: promo.GetCreationTimestamp().Format(time.RFC3339),
+			kargoapi.AnnotationKeyEventFreightName:         promo.Spec.Freight,
+			kargoapi.AnnotationKeyEventStageName:           promo.Spec.Stage,
+		}
+		if freightAlias != "" {
+			eventAnnotations[kargoapi.AnnotationKeyEventFreightAlias] = freightAlias
+		}
+		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
+	}
+
 	if clearRefreshErr := kargoapi.ClearAnnotations(
 		ctx,
 		r.kargoClient,

@@ -84,6 +84,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 	startupLogEntry.Info("Starting Kargo Controller")
 
+	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
 	stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
 
 	kargoMgr, err := o.setupKargoManager(ctx, stagesReconcilerCfg)
@@ -101,7 +102,14 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		credentials.KubernetesDatabaseConfigFromEnv(),
 	)
 
-	if err := o.setupReconcilers(ctx, kargoMgr, argocdMgr, credentialsDB, stagesReconcilerCfg); err != nil {
+	if err := o.setupReconcilers(
+		ctx,
+		kargoMgr,
+		argocdMgr,
+		credentialsDB,
+		promotionsReconcilerCfg,
+		stagesReconcilerCfg,
+	); err != nil {
 		return fmt.Errorf("error setting up reconcilers: %w", err)
 	}
 
@@ -254,6 +262,7 @@ func (o *controllerOptions) setupReconcilers(
 	ctx context.Context,
 	kargoMgr, argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
+	promotionsReconcilerCfg promotions.ReconcilerConfig,
 	stagesReconcilerCfg stages.ReconcilerConfig,
 ) error {
 	if err := promotions.SetupReconcilerWithManager(
@@ -261,7 +270,7 @@ func (o *controllerOptions) setupReconcilers(
 		kargoMgr,
 		argocdMgr,
 		credentialsDB,
-		o.ShardName,
+		promotionsReconcilerCfg,
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
