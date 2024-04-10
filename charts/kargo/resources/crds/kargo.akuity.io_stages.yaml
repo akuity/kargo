@@ -1050,8 +1050,8 @@ spec:
                           is in its lifecycle.
                         type: string
                       promotedFreight:
-                        description: PromotedFreight is the detail of the piece of
-                          freight that was referenced by this promotion.
+                        description: Freight is the detail of the piece of freight
+                          that was referenced by this promotion.
                         properties:
                           charts:
                             description: Charts describes specific versions of specific
@@ -1845,8 +1845,8 @@ spec:
                           is in its lifecycle.
                         type: string
                       promotedFreight:
-                        description: PromotedFreight is the detail of the piece of
-                          freight that was referenced by this promotion.
+                        description: Freight is the detail of the piece of freight
+                          that was referenced by this promotion.
                         properties:
                           charts:
                             description: Charts describes specific versions of specific

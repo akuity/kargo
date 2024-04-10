@@ -2930,11 +2930,11 @@ export class PromotionStatus extends Message<PromotionStatus> {
   metadata: { [key: string]: string } = {};
 
   /**
-   * PromotedFreight is the detail of the piece of freight that was referenced by this promotion.
+   * Freight is the detail of the piece of freight that was referenced by this promotion.
    *
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference promotedFreight = 5;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightReference freight = 5;
    */
-  promotedFreight?: FreightReference;
+  freight?: FreightReference;
 
   constructor(data?: PartialMessage<PromotionStatus>) {
     super();
@@ -2948,7 +2948,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
-    { no: 5, name: "promotedFreight", kind: "message", T: FreightReference, opt: true },
+    { no: 5, name: "freight", kind: "message", T: FreightReference, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PromotionStatus {

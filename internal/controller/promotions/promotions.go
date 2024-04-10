@@ -418,7 +418,7 @@ func (r *reconciler) promote(
 	logger.Debug("found associated Stage")
 
 	if targetFreight == nil {
-		return nil, fmt.Errorf("freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
+		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
 	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
 	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
@@ -454,10 +454,10 @@ func (r *reconciler) promote(
 	}
 	// record the freight reference to the promotion's status
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, &promo, func(status *kargoapi.PromotionStatus) {
-		status.PromotedFreight = &targetFreightRef
+		status.Freight = &targetFreightRef
 	})
 	if err != nil {
-		return nil, err
+		logger.Errorf("Promotion status patch failed: %v", err)
 	}
 
 	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)

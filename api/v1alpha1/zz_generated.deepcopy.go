@@ -1005,8 +1005,8 @@ func (in *PromotionStatus) DeepCopyInto(out *PromotionStatus) {
 			(*out)[key] = val
 		}
 	}
-	if in.PromotedFreight != nil {
-		in, out := &in.PromotedFreight, &out.PromotedFreight
+	if in.Freight != nil {
+		in, out := &in.Freight, &out.Freight
 		*out = new(FreightReference)
 		(*in).DeepCopyInto(*out)
 	}
