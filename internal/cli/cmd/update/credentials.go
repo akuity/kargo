@@ -30,6 +30,7 @@ type updateCredentialsOptions struct {
 
 	Project                     string
 	Name                        string
+	Description                 string
 	Git                         bool
 	Helm                        bool
 	Image                       bool
@@ -51,6 +52,7 @@ func newUpdateCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.
 	cmd := &cobra.Command{
 		Use: `credentials [--project=project] NAME \
     [--git | --helm | --image] \
+    [--description=description] \
     [--repo-url=repo-url [--regex]] \
     [--username=username] \
     [--password=password | --interactive-password]`,
@@ -108,6 +110,7 @@ func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to update credentials. If not set, the default project will be used.",
 	)
+	option.Description(cmd.Flags(), &o.Description, "Change the description of the credentials.")
 	option.Git(cmd.Flags(), &o.Git, "Change the credentials to be for a Git repository.")
 	option.Helm(cmd.Flags(), &o.Helm, "Change the credentials to be for a Helm chart repository.")
 	option.Image(cmd.Flags(), &o.Image, "Change the credentials to be for a container image repository.")
@@ -189,6 +192,7 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 			&v1alpha1.UpdateCredentialsRequest{
 				Project:        o.Project,
 				Name:           o.Name,
+				Description:    o.Description,
 				Type:           o.Type,
 				RepoUrl:        o.RepoURL,
 				RepoUrlIsRegex: o.Regex,

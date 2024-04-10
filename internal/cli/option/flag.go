@@ -41,6 +41,9 @@ const (
 	// NameFlag is the flag name for the name flag.
 	NameFlag = "name"
 
+	// DescriptionFlag is the flag name for the description flag.
+	DescriptionFlag = "description"
+
 	// NewAliasFlag is the flag name for the new-alias flag.
 	NewAliasFlag = "new-alias"
 
@@ -143,6 +146,11 @@ func Name(fs *pflag.FlagSet, stage *string, usage string) {
 // Names adds a multi-value NameFlag to the provided flag set.
 func Names(fs *pflag.FlagSet, stage *[]string, usage string) {
 	fs.StringArrayVar(stage, NameFlag, nil, usage)
+}
+
+// Description adds the DescriptionFlag to the provided flag set.
+func Description(fs *pflag.FlagSet, stage *string, usage string) {
+	fs.StringVar(stage, DescriptionFlag, "", usage)
 }
 
 // NewAlias adds the NewAliasFlag to the provided flag set.

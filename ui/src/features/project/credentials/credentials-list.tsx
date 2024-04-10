@@ -12,6 +12,7 @@ import { useParams } from 'react-router-dom';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
+import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
 import {
   deleteCredentials,
   listCredentials
@@ -36,13 +37,16 @@ export const CredentialsList = () => {
   return (
     <div className='p-4'>
       <Table
+        key={data?.credentials?.length}
         dataSource={data?.credentials || []}
         rowKey={(record) => record?.metadata?.name || ''}
         columns={[
           {
             title: 'Name',
             key: 'name',
-            render: (record) => <div>{record?.metadata?.name}</div>
+            render: (record) => {
+              return <div>{record?.metadata?.name}</div>;
+            }
           },
           {
             title: 'Type',
@@ -147,6 +151,18 @@ export const CredentialsList = () => {
             )
           }
         ]}
+        expandable={{
+          defaultExpandAllRows: true,
+          expandIcon: () => null,
+          rowExpandable: (record) => {
+            return !!record?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY];
+          },
+          expandedRowRender: (record) => {
+            const description = record?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY];
+
+            return <div className='font-light text-xs text-gray-500'>{description}</div>;
+          }
+        }}
       />
     </div>
   );

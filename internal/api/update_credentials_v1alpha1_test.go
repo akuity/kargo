@@ -78,4 +78,19 @@ func TestApplyCredentialsUpdateToSecret(t *testing.T) {
 		)
 		require.Equal(t, expectedSecret, secret)
 	})
+
+	t.Run("update description", func(t *testing.T) {
+		expectedSecret := baseSecret.DeepCopy()
+		expectedSecret.Annotations = map[string]string{
+			kargoapi.AnnotationKeyDescription: "new description",
+		}
+		secret := baseSecret.DeepCopy()
+		applyCredentialsUpdateToSecret(
+			secret,
+			credentialsUpdate{
+				description: "new description",
+			},
+		)
+		require.Equal(t, expectedSecret, secret)
+	})
 }

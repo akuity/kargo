@@ -82,8 +82,13 @@ func (s *server) GetCredentials(
 func sanitizeCredentialSecret(secret corev1.Secret) *corev1.Secret {
 	s := secret.DeepCopy()
 	s.StringData = make(map[string]string, len(s.Data))
-	for k := range s.Annotations {
-		s.Annotations[k] = redacted
+	for k, v := range s.Annotations {
+		switch k {
+		case kargoapi.AnnotationKeyDescription:
+			s.Annotations[k] = v
+		default:
+			s.Annotations[k] = redacted
+		}
 	}
 	for k, v := range s.Data {
 		switch k {
