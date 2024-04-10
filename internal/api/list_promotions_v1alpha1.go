@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,17 +33,21 @@ func (s *server) ListPromotions(
 		client.InNamespace(project),
 	}
 	if stage != "" {
-		opts = append(opts,
-			client.MatchingFields{kubeclient.PromotionsByStageIndexField: stage},
-		)
+		opts = append(opts, client.MatchingFields{kubeclient.PromotionsByStageIndexField: stage})
 	}
 	if err := s.client.List(ctx, &list, opts...); err != nil {
 		return nil, fmt.Errorf("list promotions: %w", err)
 	}
+
+	sort.Slice(list.Items, func(i, j int) bool {
+		return list.Items[i].CreationTimestamp.After(list.Items[j].CreationTimestamp.Time)
+	})
+
 	promotions := make([]*kargoapi.Promotion, len(list.Items))
 	for idx := range list.Items {
 		promotions[idx] = &list.Items[idx]
 	}
+
 	return connect.NewResponse(&svcv1alpha1.ListPromotionsResponse{
 		Promotions: promotions,
 	}), nil
