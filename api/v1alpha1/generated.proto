@@ -916,6 +916,9 @@ message PromotionStatus {
   // Metadata holds arbitrary metadata set by promotion mechanisms
   // (e.g. for display purposes, or internal bookkeeping)
   map<string, string> metadata = 3;
+
+  // PromotedFreight is the detail of the piece of freight that was referenced by this promotion.
+  optional FreightReference promotedFreight = 5;
 }
 
 // PullRequestPromotionMechanism describes how to generate a pull request against the write branch during promotion

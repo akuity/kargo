@@ -271,7 +271,7 @@ func (r *reconciler) Reconcile(
 			}
 			return ctrl.Result{}, nil
 		}
-		logger.Infof("began promotion")
+		logger.Info("began promotion")
 	}
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
@@ -418,7 +418,7 @@ func (r *reconciler) promote(
 	logger.Debug("found associated Stage")
 
 	if targetFreight == nil {
-		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
+		return nil, fmt.Errorf("freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
 	upstreamStages := make([]string, len(stage.Spec.Subscriptions.UpstreamStages))
 	for i, upstreamStage := range stage.Spec.Subscriptions.UpstreamStages {
@@ -442,13 +442,19 @@ func (r *reconciler) promote(
 		Charts:    targetFreight.Charts,
 		Warehouse: targetFreight.Warehouse,
 	}
-
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
 		status.Phase = kargoapi.StagePhasePromoting
 		status.CurrentPromotion = &kargoapi.PromotionInfo{
 			Name:    promo.Name,
 			Freight: targetFreightRef,
 		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	// record the freight reference to the promotion's status
+	err = kubeclient.PatchStatus(ctx, r.kargoClient, &promo, func(status *kargoapi.PromotionStatus) {
+		status.PromotedFreight = &targetFreightRef
 	})
 	if err != nil {
 		return nil, err
