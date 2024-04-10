@@ -1,9 +1,14 @@
 package v1alpha1
 
 import (
+	"context"
+	"encoding/json"
+	"time"
+
 	authnv1 "k8s.io/api/authentication/v1"
 
 	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -59,10 +64,11 @@ func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
 
 func NewFreightApprovedEventAnnotations(actor string, f *Freight, stageName string) map[string]string {
 	annotations := map[string]string{
-		AnnotationKeyEventProject:      f.Namespace,
-		AnnotationKeyEventFreightAlias: f.Alias,
-		AnnotationKeyEventFreightName:  f.Name,
-		AnnotationKeyEventStageName:    stageName,
+		AnnotationKeyEventProject:           f.Namespace,
+		AnnotationKeyEventFreightCreateTime: f.CreationTimestamp.Format(time.RFC3339),
+		AnnotationKeyEventFreightAlias:      f.Alias,
+		AnnotationKeyEventFreightName:       f.Name,
+		AnnotationKeyEventStageName:         stageName,
 	}
 	if actor != "" {
 		annotations[AnnotationKeyEventActor] = actor
@@ -70,7 +76,16 @@ func NewFreightApprovedEventAnnotations(actor string, f *Freight, stageName stri
 	return annotations
 }
 
-func NewPromotionCreatedEventAnnotations(actor string, p *Promotion, f *Freight) map[string]string {
+// NewPromotionCreatedEventAnnotations returns annotations for a PromotionCreated event.
+// It may skip some fields when error occurred during serialization, to record event with best-effort.
+func NewPromotionCreatedEventAnnotations(
+	ctx context.Context,
+	actor string,
+	p *Promotion,
+	f *Freight,
+) map[string]string {
+	log := logging.LoggerFromContext(ctx)
+
 	annotations := map[string]string{
 		AnnotationKeyEventActor:         actor,
 		AnnotationKeyEventProject:       p.Namespace,
@@ -83,6 +98,30 @@ func NewPromotionCreatedEventAnnotations(actor string, p *Promotion, f *Freight)
 	}
 	if f != nil {
 		annotations[AnnotationKeyEventFreightAlias] = f.Alias
+		if len(f.Commits) > 0 {
+			data, err := json.Marshal(f.Commits)
+			if err != nil {
+				log.WithError(err).Error("marshal freight commits in JSON")
+			} else {
+				annotations[AnnotationKeyEventFreightCommits] = string(data)
+			}
+		}
+		if len(f.Images) > 0 {
+			data, err := json.Marshal(f.Images)
+			if err != nil {
+				log.WithError(err).Error("marshal freight images in JSON")
+			} else {
+				annotations[AnnotationKeyEventFreightImages] = string(data)
+			}
+		}
+		if len(f.Charts) > 0 {
+			data, err := json.Marshal(f.Charts)
+			if err != nil {
+				log.WithError(err).Error("marshal freight charts in JSON")
+			} else {
+				annotations[AnnotationKeyEventFreightCharts] = string(data)
+			}
+		}
 	}
 	return annotations
 }

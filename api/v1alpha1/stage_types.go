@@ -163,6 +163,13 @@ type StageSpec struct {
 	Verification *Verification `json:"verification,omitempty" protobuf:"bytes,3,opt,name=verification"`
 }
 
+func (s *StageSpec) HasVerification() bool {
+	if s.Verification != nil && len(s.Verification.AnalysisTemplates) > 0 {
+		return true
+	}
+	return false
+}
+
 // Subscriptions describes a Stage's sources of Freight.
 type Subscriptions struct {
 	// Warehouse is a subscription to a Warehouse. This field is mutually
@@ -741,6 +748,8 @@ type VerificationInfo struct {
 	// AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
 	// the Verification process.
 	AnalysisRun *AnalysisRunReference `json:"analysisRun,omitempty" protobuf:"bytes,3,opt,name=analysisRun"`
+	// CompleteTime is the time at which the Verification process was completed.
+	CompleteTime *metav1.Time `json:"completeTime,omitempty" protobuf:"bytes,6,opt,name=completeTime"`
 }
 
 // HasAnalysisRun returns a bool indicating whether the VerificationInfo has an

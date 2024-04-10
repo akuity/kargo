@@ -610,6 +610,7 @@ func TestStartVerification(t *testing.T) {
 			info, err := testCase.reconciler.startVerification(
 				context.Background(),
 				testCase.stage,
+				fakeNow,
 			)
 			testCase.assertions(
 				t,
@@ -896,6 +897,7 @@ func TestAbortVerification(t *testing.T) {
 				testCase.reconciler.abortVerification(
 					context.Background(),
 					testCase.stage,
+					fakeNow,
 				),
 			)
 		})

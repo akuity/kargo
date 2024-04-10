@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -16,6 +17,10 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
+)
+
+var (
+	fakeTime = time.Date(2024, time.April, 10, 0, 0, 0, 0, time.UTC)
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -39,6 +44,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.recorder)
 	// Assert that all overridable behaviors were initialized to a default:
 	// Loop guard:
+	require.NotNil(t, r.nowFn)
 	require.NotNil(t, r.hasNonTerminalPromotionsFn)
 	require.NotNil(t, r.listPromosFn)
 	// Health checks:
@@ -266,16 +272,22 @@ func TestSyncControlFlowStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			recorder := fakekubeclient.NewEventRecorder(1)
+			testCase.reconciler.nowFn = fakeNow
 			testCase.reconciler.recorder = recorder
 			newStatus, err := testCase.reconciler.syncControlFlowStage(
 				context.Background(),
 				testCase.stage,
+				testCase.reconciler.nowFn,
 			)
 			testCase.assertions(t, recorder, testCase.stage.Status, newStatus, err)
 		})
@@ -397,6 +409,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					func() time.Time,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						ID:      "new-fake-id",
@@ -524,12 +537,16 @@ func TestSyncNormalStage(t *testing.T) {
 					return nil
 				},
 				startVerificationFn: func(
-					context.Context,
-					*kargoapi.Stage,
+					_ context.Context,
+					_ *kargoapi.Stage,
+					nowFn func() time.Time,
 				) (*kargoapi.VerificationInfo, error) {
+					now := nowFn()
 					return &kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseError,
-						Message: "something went wrong",
+						Phase:        kargoapi.VerificationPhaseError,
+						Message:      "something went wrong",
+						StartTime:    ptr.To(metav1.NewTime(now)),
+						CompleteTime: ptr.To(metav1.NewTime(now)),
 					}, nil
 				},
 				getFreightFn: func(
@@ -552,8 +569,10 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
 
 				expectInfo := kargoapi.VerificationInfo{
-					Phase:   kargoapi.VerificationPhaseError,
-					Message: "something went wrong",
+					StartTime:    ptr.To(metav1.NewTime(fakeTime)),
+					CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
+					Phase:        kargoapi.VerificationPhaseError,
+					Message:      "something went wrong",
 				}
 
 				require.Equal(
@@ -575,6 +594,14 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
 			},
 		},
 
@@ -602,6 +629,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					func() time.Time,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
@@ -682,8 +710,10 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseError,
-						Message: "something went wrong",
+						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
+						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:        kargoapi.VerificationPhaseError,
+						Message:      "something went wrong",
 					}, nil
 				},
 			},
@@ -699,8 +729,10 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseError,
-						Message: "something went wrong",
+						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
+						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:        kargoapi.VerificationPhaseError,
+						Message:      "something went wrong",
 					},
 					newStatus.CurrentFreight.VerificationInfo,
 				)
@@ -714,6 +746,14 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
 			},
 		},
 
@@ -837,12 +877,16 @@ func TestSyncNormalStage(t *testing.T) {
 					return s.Status.CurrentFreight.VerificationInfo, nil
 				},
 				abortVerificationFn: func(
-					context.Context,
-					*kargoapi.Stage,
+					_ context.Context,
+					_ *kargoapi.Stage,
+					nowFn func() time.Time,
 				) *kargoapi.VerificationInfo {
+					now := nowFn()
 					return &kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseAborted,
-						Message: "aborted",
+						StartTime:    ptr.To(metav1.NewTime(now)),
+						CompleteTime: ptr.To(metav1.NewTime(now)),
+						Phase:        kargoapi.VerificationPhaseAborted,
+						Message:      "aborted",
 					}
 				},
 			},
@@ -858,8 +902,10 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseAborted,
-						Message: "aborted",
+						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
+						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:        kargoapi.VerificationPhaseAborted,
+						Message:      "aborted",
 					},
 					newStatus.CurrentFreight.VerificationInfo,
 				)
@@ -870,6 +916,14 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationAborted, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
 			},
 		},
 
@@ -889,8 +943,9 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase: kargoapi.StagePhaseVerifying,
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
-							ID:    "fake-id",
-							Phase: kargoapi.VerificationPhasePending,
+							ID:        "fake-id",
+							StartTime: ptr.To(metav1.NewTime(fakeTime)),
+							Phase:     kargoapi.VerificationPhasePending,
 							AnalysisRun: &kargoapi.AnalysisRunReference{
 								Name: "fake-analysis-run",
 							},
@@ -919,17 +974,20 @@ func TestSyncNormalStage(t *testing.T) {
 					s *kargoapi.Stage,
 				) (*kargoapi.VerificationInfo, error) {
 					i := s.Status.CurrentFreight.VerificationInfo.DeepCopy()
+					i.CompleteTime = ptr.To(metav1.NewTime(fakeTime))
 					i.Phase = kargoapi.VerificationPhaseError
 					return i, nil
 				},
 				abortVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
+					func() time.Time,
 				) *kargoapi.VerificationInfo {
 					// Should not be called
 					return &kargoapi.VerificationInfo{
-						Phase:   kargoapi.VerificationPhaseAborted,
-						Message: "aborted",
+						Phase:        kargoapi.VerificationPhaseAborted,
+						CompleteTime: ptr.To(metav1.NewTime(time.Now())),
+						Message:      "aborted",
 					}
 				},
 			},
@@ -947,6 +1005,14 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
 			},
 		},
 
@@ -1047,6 +1113,14 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
 
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1111,6 +1185,14 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
 
 				require.NoError(t, err)
 				// Status should be returned unchanged
@@ -1176,6 +1258,14 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
 
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1476,6 +1566,14 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
 
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
@@ -1530,7 +1628,9 @@ func TestSyncNormalStage(t *testing.T) {
 					*kargoapi.Stage,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
-						Phase: kargoapi.VerificationPhaseSuccessful,
+						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
+						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:        kargoapi.VerificationPhaseSuccessful,
 						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-analysis-run",
 							Namespace: "fake-namespace",
@@ -1601,7 +1701,9 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						Phase: kargoapi.VerificationPhaseSuccessful,
+						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
+						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:        kargoapi.VerificationPhaseSuccessful,
 						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-analysis-run",
 							Namespace: "fake-namespace",
@@ -1614,6 +1716,15 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 2)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationStartTime],
+				)
+				require.Equal(t,
+					fakeTime.Format(time.RFC3339),
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+				)
+
 				// The second event should be the promotion creation event (auto-promotion)
 				event = <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
@@ -1623,8 +1734,13 @@ func TestSyncNormalStage(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			recorder := fakekubeclient.NewEventRecorder(2)
+			testCase.reconciler.nowFn = fakeNow
 			testCase.reconciler.recorder = recorder
-			newStatus, err := testCase.reconciler.syncNormalStage(context.Background(), testCase.stage)
+			newStatus, err := testCase.reconciler.syncNormalStage(
+				context.Background(),
+				testCase.stage,
+				testCase.reconciler.nowFn,
+			)
 			testCase.assertions(t, recorder, testCase.stage.Status, newStatus, err)
 		})
 	}
@@ -2784,4 +2900,8 @@ func TestGetLatestVerifiedFreight(t *testing.T) {
 			testCase.assertions(t, freight, err)
 		})
 	}
+}
+
+func fakeNow() time.Time {
+	return fakeTime
 }

@@ -303,6 +303,11 @@
                     ],
                     "type": "object"
                   },
+                  "completeTime": {
+                    "description": "CompleteTime is the time at which the Verification process was completed.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
                   "id": {
                     "description": "ID is the identifier of the Verification process.",
                     "type": "string"
@@ -350,6 +355,11 @@
                     "phase"
                   ],
                   "type": "object"
+                },
+                "completeTime": {
+                  "description": "CompleteTime is the time at which the Verification process was completed.",
+                  "format": "date-time",
+                  "type": "string"
                 },
                 "id": {
                   "description": "ID is the identifier of the Verification process.",

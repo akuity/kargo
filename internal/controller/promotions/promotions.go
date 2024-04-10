@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -59,6 +60,12 @@ type reconciler struct {
 	initializeOnce sync.Once
 
 	// The following behaviors are overridable for testing purposes:
+
+	getStageFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.Stage, error)
 
 	promoteFn func(context.Context, kargoapi.Promotion) (*kargoapi.PromotionStatus, error)
 }
@@ -154,6 +161,7 @@ func newReconciler(
 			credentialsDB,
 		),
 	}
+	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
 	return r
 }
@@ -286,6 +294,25 @@ func (r *reconciler) Reconcile(
 
 	// Record event after patching status if new phase is terminal
 	if newStatus.Phase.IsTerminal() {
+		stage, getStageErr := r.getStageFn(
+			ctx,
+			r.kargoClient,
+			types.NamespacedName{
+				Namespace: promo.Namespace,
+				Name:      promo.Spec.Stage,
+			},
+		)
+		if getStageErr != nil {
+			return ctrl.Result{}, fmt.Errorf("get stage: %w", err)
+		}
+		if stage == nil {
+			return ctrl.Result{}, fmt.Errorf(
+				"stage %q not found in namespace %q",
+				promo.Spec.Stage,
+				promo.Namespace,
+			)
+		}
+
 		var reason string
 		switch newStatus.Phase {
 		case kargoapi.PromotionPhaseSucceeded:
@@ -311,6 +338,10 @@ func (r *reconciler) Reconcile(
 		}
 		if freightAlias != "" {
 			eventAnnotations[kargoapi.AnnotationKeyEventFreightAlias] = freightAlias
+		}
+		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+			eventAnnotations[kargoapi.AnnotationKeyEventVerificationPending] =
+				strconv.FormatBool(stage.Spec.HasVerification())
 		}
 		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
 	}
@@ -349,7 +380,7 @@ func (r *reconciler) promote(
 	stageNamespace := promo.Namespace
 	freightName := promo.Spec.Freight
 
-	stage, err := kargoapi.GetStage(
+	stage, err := r.getStageFn(
 		ctx,
 		r.kargoClient,
 		types.NamespacedName{
