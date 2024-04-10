@@ -97,7 +97,7 @@ func newGitProvider(
 	var err error
 	if pullRequest.GitHub != nil {
 		gpClient, err = gitprovider.NewGitProviderServiceFromName(github.GitProviderServiceName)
-	} else if pullRequest.Gitlab != nil {
+	} else if pullRequest.GitLab != nil {
 		gpClient, err = gitprovider.NewGitProviderServiceFromName(gitlab.GitProviderServiceName)
 	} else {
 		gpClient, err = gitprovider.NewGitProviderServiceFromURL(url)
