@@ -281,6 +281,10 @@
                       "github": {
                         "description": "GitHub indicates git provider is GitHub",
                         "type": "object"
+                      },
+                      "gitlab": {
+                        "description": "GitLab indicates git provider is GitLab",
+                        "type": "object"
                       }
                     },
                     "type": "object"

@@ -386,6 +386,9 @@ message GitCommit {
 message GitHubPullRequest {
 }
 
+message GitLabPullRequest {
+}
+
 // GitRepoUpdate describes updates that should be applied to a Git repository
 // (using various configuration management tools) to incorporate Freight into a
 // Stage.
@@ -899,6 +902,9 @@ message PromotionStatus {
 message PullRequestPromotionMechanism {
   // GitHub indicates git provider is GitHub
   optional GitHubPullRequest github = 1;
+
+  // GitLab indicates git provider is GitLab
+  optional GitLabPullRequest gitlab = 2;
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
