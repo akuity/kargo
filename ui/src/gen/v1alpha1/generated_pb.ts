@@ -1348,6 +1348,37 @@ export class GitHubPullRequest extends Message<GitHubPullRequest> {
 }
 
 /**
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.GitLabPullRequest
+ */
+export class GitLabPullRequest extends Message<GitLabPullRequest> {
+  constructor(data?: PartialMessage<GitLabPullRequest>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.GitLabPullRequest";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GitLabPullRequest {
+    return new GitLabPullRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GitLabPullRequest {
+    return new GitLabPullRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GitLabPullRequest {
+    return new GitLabPullRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GitLabPullRequest | PlainMessage<GitLabPullRequest> | undefined, b: GitLabPullRequest | PlainMessage<GitLabPullRequest> | undefined): boolean {
+    return proto2.util.equals(GitLabPullRequest, a, b);
+  }
+}
+
+/**
  * GitRepoUpdate describes updates that should be applied to a Git repository
  * (using various configuration management tools) to incorporate Freight into a
  * Stage.
@@ -2917,6 +2948,13 @@ export class PullRequestPromotionMechanism extends Message<PullRequestPromotionM
    */
   github?: GitHubPullRequest;
 
+  /**
+   * GitLab indicates git provider is GitLab
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.GitLabPullRequest gitlab = 2;
+   */
+  gitlab?: GitLabPullRequest;
+
   constructor(data?: PartialMessage<PullRequestPromotionMechanism>) {
     super();
     proto2.util.initPartial(data, this);
@@ -2926,6 +2964,7 @@ export class PullRequestPromotionMechanism extends Message<PullRequestPromotionM
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PullRequestPromotionMechanism";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 1, name: "github", kind: "message", T: GitHubPullRequest, opt: true },
+    { no: 2, name: "gitlab", kind: "message", T: GitLabPullRequest, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PullRequestPromotionMechanism {
