@@ -95,11 +95,12 @@ func newGitProvider(
 ) (gitprovider.GitProviderService, error) {
 	var gpClient gitprovider.GitProviderService
 	var err error
-	if pullRequest.GitHub != nil {
+	switch {
+	case pullRequest.GitHub != nil:
 		gpClient, err = gitprovider.NewGitProviderServiceFromName(github.GitProviderServiceName)
-	} else if pullRequest.GitLab != nil {
+	case pullRequest.GitLab != nil:
 		gpClient, err = gitprovider.NewGitProviderServiceFromName(gitlab.GitProviderServiceName)
-	} else {
+	default:
 		gpClient, err = gitprovider.NewGitProviderServiceFromURL(url)
 	}
 	if err == nil && creds != nil {
