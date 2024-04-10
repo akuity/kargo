@@ -1,8 +1,8 @@
 module github.com/akuity/kargo
 
-go 1.21
+go 1.22
 
-toolchain go1.21.3
+toolchain go1.22.2
 
 require (
 	connectrpc.com/connect v1.16.0
