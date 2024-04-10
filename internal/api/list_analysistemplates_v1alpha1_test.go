@@ -23,36 +23,93 @@ import (
 func TestListAnalysisTemplates(t *testing.T) {
 	testCases := map[string]struct {
 		req              *svcv1alpha1.ListAnalysisTemplatesRequest
+		objects          []client.Object
 		rolloutsDisabled bool
-		errExpected      bool
-		expectedCode     connect.Code
+		assertions       func(*testing.T, *connect.Response[svcv1alpha1.ListAnalysisTemplatesResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.ListAnalysisTemplatesRequest{
 				Project: "",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeInvalidArgument,
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListAnalysisTemplatesResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Nil(t, r)
+			},
 		},
 		"existing project": {
 			req: &svcv1alpha1.ListAnalysisTemplatesRequest{
 				Project: "kargo-demo",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+				mustNewObject[rollouts.AnalysisTemplate]("testdata/analysistemplate.yaml"),
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListAnalysisTemplatesResponse], err error) {
+				require.NoError(t, err)
+				require.NotNil(t, r)
+				require.Len(t, r.Msg.GetAnalysisTemplates(), 1)
 			},
 		},
 		"non-existing project": {
 			req: &svcv1alpha1.ListAnalysisTemplatesRequest{
 				Project: "non-existing-project",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeNotFound,
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListAnalysisTemplatesResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, r)
+			},
 		},
 		"Argo Rollouts integration is not enabled": {
 			req: &svcv1alpha1.ListAnalysisTemplatesRequest{
 				Project: "kargo-demo",
 			},
 			rolloutsDisabled: true,
-			errExpected:      true,
-			expectedCode:     connect.CodeUnimplemented,
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListAnalysisTemplatesResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnimplemented, connect.CodeOf(err))
+				require.Nil(t, r)
+			},
+		},
+		"orders by name": {
+			req: &svcv1alpha1.ListAnalysisTemplatesRequest{
+				Project: "kargo-demo",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+				func() client.Object {
+					obj := mustNewObject[rollouts.AnalysisTemplate]("testdata/analysistemplate.yaml")
+					obj.SetName("z-analysistemplate")
+					return obj
+				}(),
+				func() client.Object {
+					obj := mustNewObject[rollouts.AnalysisTemplate]("testdata/analysistemplate.yaml")
+					obj.SetName("a-analysistemplate")
+					return obj
+				}(),
+				func() client.Object {
+					obj := mustNewObject[rollouts.AnalysisTemplate]("testdata/analysistemplate.yaml")
+					obj.SetName("m-analysistemplate")
+					return obj
+				}(),
+				func() client.Object {
+					obj := mustNewObject[rollouts.AnalysisTemplate]("testdata/analysistemplate.yaml")
+					obj.SetName("0-analysistemplate")
+					return obj
+				}(),
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListAnalysisTemplatesResponse], err error) {
+				require.NoError(t, err)
+				require.NotNil(t, r)
+				require.Len(t, r.Msg.GetAnalysisTemplates(), 4)
+
+				// Check that the analysis templates are ordered by name.
+				require.Equal(t, "0-analysistemplate", r.Msg.GetAnalysisTemplates()[0].GetName())
+				require.Equal(t, "a-analysistemplate", r.Msg.GetAnalysisTemplates()[1].GetName())
+				require.Equal(t, "m-analysistemplate", r.Msg.GetAnalysisTemplates()[2].GetName())
+				require.Equal(t, "z-analysistemplate", r.Msg.GetAnalysisTemplates()[3].GetName())
+			},
 		},
 	}
 	for name, testCase := range testCases {
@@ -87,17 +144,11 @@ func TestListAnalysisTemplates(t *testing.T) {
 							return nil, err
 						}
 
-						return fake.NewClientBuilder().
-							WithScheme(scheme).
-							WithObjects(
-								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-							).
-							WithLists(&rollouts.AnalysisTemplateList{
-								Items: []rollouts.AnalysisTemplate{
-									*mustNewObject[rollouts.AnalysisTemplate]("testdata/analysistemplate.yaml"),
-								},
-							}).
-							Build(), nil
+						c := fake.NewClientBuilder().WithScheme(scheme)
+						if len(testCase.objects) > 0 {
+							c.WithObjects(testCase.objects...)
+						}
+						return c.Build(), nil
 					},
 				},
 			)
@@ -109,12 +160,7 @@ func TestListAnalysisTemplates(t *testing.T) {
 				externalValidateProjectFn: validation.ValidateProject,
 			}
 			res, err := (svr).ListAnalysisTemplates(ctx, connect.NewRequest(testCase.req))
-			if testCase.errExpected {
-				require.Error(t, err)
-				require.Equal(t, testCase.expectedCode, connect.CodeOf(err))
-				return
-			}
-			require.Len(t, res.Msg.GetAnalysisTemplates(), 1)
+			testCase.assertions(t, res, err)
 		})
 	}
 }
