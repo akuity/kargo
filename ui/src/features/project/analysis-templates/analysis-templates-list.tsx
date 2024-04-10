@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faChartBar, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Space, Table } from 'antd';
+import { Button, Table } from 'antd';
 import { format } from 'date-fns';
 import { useParams } from 'react-router-dom';
 
@@ -14,12 +14,14 @@ import {
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
+import { PreviewAnalysisTemplateModal } from './preview-analysis-template-modal';
 
 export const AnalysisTemplatesList = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
 
   const { data, refetch } = useQuery(listAnalysisTemplates, { project: name });
+  const { show: showPreview } = useModal();
   const { show: showCreate } = useModal((p) => (
     <CreateAnalysisTemplateModal {...p} namespace={name || ''} />
   ));
@@ -29,19 +31,6 @@ export const AnalysisTemplatesList = () => {
 
   return (
     <div className='p-4'>
-      <h1 className='pl-2 text-lg font-semibold flex items-center mb-4'>
-        <FontAwesomeIcon icon={faChartBar} className='mr-2' />
-        Analysis Templates
-        <Button
-          type='primary'
-          className='ml-auto'
-          icon={<FontAwesomeIcon icon={faPlus} />}
-          onClick={() => showCreate()}
-        >
-          New
-        </Button>
-      </h1>
-
       <Table<AnalysisTemplate>
         dataSource={data?.analysisTemplates}
         pagination={{ hideOnSinglePage: true }}
@@ -57,9 +46,29 @@ export const AnalysisTemplatesList = () => {
         />
         <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
         <Table.Column<AnalysisTemplate>
-          width={100}
+          width={260}
+          title={
+            <div className='text-right'>
+              <Button
+                type='primary'
+                className='ml-auto text-xs font-semibold'
+                icon={<FontAwesomeIcon icon={faPlus} />}
+                onClick={() => showCreate()}
+              >
+                ADD TEMPLATE
+              </Button>
+            </div>
+          }
           render={(_, template) => (
-            <Space>
+            <div className='flex gap-2 justify-end'>
+              <Button
+                icon={<FontAwesomeIcon icon={faEye} />}
+                onClick={() => {
+                  showPreview((p) => <PreviewAnalysisTemplateModal {...p} template={template} />);
+                }}
+              >
+                Preview
+              </Button>
               <Button
                 icon={<FontAwesomeIcon icon={faTrash} />}
                 danger
@@ -86,7 +95,7 @@ export const AnalysisTemplatesList = () => {
               >
                 Delete
               </Button>
-            </Space>
+            </div>
           )}
         />
       </Table>

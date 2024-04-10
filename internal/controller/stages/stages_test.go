@@ -397,7 +397,7 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-				) *kargoapi.VerificationInfo {
+				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						ID:      "new-fake-id",
 						Phase:   kargoapi.VerificationPhasePending,
@@ -405,7 +405,7 @@ func TestSyncNormalStage(t *testing.T) {
 						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name: "new-fake-analysis-run",
 						},
-					}
+					}, nil
 				},
 			},
 			assertions: func(
@@ -526,11 +526,11 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-				) *kargoapi.VerificationInfo {
+				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
 						Message: "something went wrong",
-					}
+					}, nil
 				},
 				getFreightFn: func(
 					context.Context,
@@ -579,6 +579,72 @@ func TestSyncNormalStage(t *testing.T) {
 		},
 
 		{
+			name: "retryable error starting verification",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase:          kargoapi.StagePhaseVerifying,
+					CurrentFreight: &kargoapi.FreightReference{},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.FreightReference,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				startVerificationFn: func(
+					context.Context,
+					*kargoapi.Stage,
+				) (*kargoapi.VerificationInfo, error) {
+					return &kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseError,
+						Message: "something went wrong",
+					}, errors.New("retryable error")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.ErrorContains(t, err, "retryable error")
+				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(t, kargoapi.StagePhaseVerifying, newStatus.Phase)
+
+				expectInfo := kargoapi.VerificationInfo{
+					Phase:   kargoapi.VerificationPhaseError,
+					Message: "something went wrong",
+				}
+
+				require.Equal(
+					t,
+					&expectInfo,
+					newStatus.CurrentFreight.VerificationInfo,
+				)
+				require.Equal(
+					t,
+					kargoapi.VerificationInfoStack{expectInfo},
+					newStatus.CurrentFreight.VerificationHistory,
+				)
+
+				// Everything else should be returned unchanged
+				newStatus.CurrentFreight.VerificationInfo = nil
+				newStatus.CurrentFreight.VerificationHistory = nil
+				newStatus.Phase = initialStatus.Phase
+				require.Equal(t, initialStatus, newStatus)
+			},
+		},
+
+		{
 			name: "error checking verification result",
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
@@ -588,7 +654,13 @@ func TestSyncNormalStage(t *testing.T) {
 				Status: kargoapi.StageStatus{
 					Phase: kargoapi.StagePhaseVerifying,
 					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{},
+						VerificationInfo: &kargoapi.VerificationInfo{
+							Phase: kargoapi.VerificationPhasePending,
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name:      "fake-analysis-run",
+								Namespace: "fake-namespace",
+							},
+						},
 					},
 				},
 			},
@@ -608,11 +680,11 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) *kargoapi.VerificationInfo {
+				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
 						Message: "something went wrong",
-					}
+					}, nil
 				},
 			},
 			assertions: func(
@@ -642,6 +714,78 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, kargoapi.EventReasonFreightVerificationErrored, event.Reason)
+			},
+		},
+
+		{
+			name: "retryable error checking verification result",
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase: kargoapi.StagePhaseVerifying,
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							Phase: kargoapi.VerificationPhasePending,
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name:      "fake-analysis-run",
+								Namespace: "fake-namespace",
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				checkHealthFn: func(
+					context.Context,
+					kargoapi.FreightReference,
+					[]kargoapi.ArgoCDAppUpdate,
+				) *kargoapi.Health {
+					return nil
+				},
+				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
+					return &kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseError,
+						Message: "something went wrong",
+						AnalysisRun: &kargoapi.AnalysisRunReference{
+							Name:      "fake-analysis-run",
+							Namespace: "fake-namespace",
+						},
+					}, errors.New("retryable error")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakekubeclient.EventRecorder,
+				initialStatus kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.ErrorContains(t, err, "retryable error")
+				require.NotNil(t, newStatus.CurrentFreight)
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						Phase:   kargoapi.VerificationPhaseError,
+						Message: "something went wrong",
+						AnalysisRun: &kargoapi.AnalysisRunReference{
+							Name:      "fake-analysis-run",
+							Namespace: "fake-namespace",
+						},
+					},
+					newStatus.CurrentFreight.VerificationInfo,
+				)
+				require.Len(t, newStatus.CurrentFreight.VerificationHistory, 1)
+
+				// Phase should not be changed to Steady
+				require.Equal(t, kargoapi.StagePhaseVerifying, newStatus.Phase)
+				// Everything else should be unchanged
+				newStatus.Phase = initialStatus.Phase
+				newStatus.CurrentFreight = initialStatus.CurrentFreight
+				require.Equal(t, initialStatus, newStatus)
 			},
 		},
 
@@ -689,8 +833,8 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					_ context.Context,
 					s *kargoapi.Stage,
-				) *kargoapi.VerificationInfo {
-					return s.Status.CurrentFreight.VerificationInfo
+				) (*kargoapi.VerificationInfo, error) {
+					return s.Status.CurrentFreight.VerificationInfo, nil
 				},
 				abortVerificationFn: func(
 					context.Context,
@@ -773,10 +917,10 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					_ context.Context,
 					s *kargoapi.Stage,
-				) *kargoapi.VerificationInfo {
+				) (*kargoapi.VerificationInfo, error) {
 					i := s.Status.CurrentFreight.VerificationInfo.DeepCopy()
 					i.Phase = kargoapi.VerificationPhaseError
-					return i
+					return i, nil
 				},
 				abortVerificationFn: func(
 					context.Context,
@@ -1360,7 +1504,13 @@ func TestSyncNormalStage(t *testing.T) {
 					Phase:            kargoapi.StagePhaseVerifying,
 					CurrentPromotion: &kargoapi.PromotionInfo{},
 					CurrentFreight: &kargoapi.FreightReference{
-						VerificationInfo: &kargoapi.VerificationInfo{},
+						VerificationInfo: &kargoapi.VerificationInfo{
+							Phase: kargoapi.VerificationPhasePending,
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name:      "fake-analysis-run",
+								Namespace: "fake-namespace",
+							},
+						},
 					},
 				},
 			},
@@ -1378,7 +1528,7 @@ func TestSyncNormalStage(t *testing.T) {
 				getVerificationInfoFn: func(
 					context.Context,
 					*kargoapi.Stage,
-				) *kargoapi.VerificationInfo {
+				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase: kargoapi.VerificationPhaseSuccessful,
 						AnalysisRun: &kargoapi.AnalysisRunReference{
@@ -1386,7 +1536,7 @@ func TestSyncNormalStage(t *testing.T) {
 							Namespace: "fake-namespace",
 							Phase:     string(rollouts.AnalysisPhaseSuccessful),
 						},
-					}
+					}, nil
 				},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil

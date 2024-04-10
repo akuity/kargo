@@ -28,6 +28,8 @@ type getWarehousesOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
+	*getOptions
+
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
@@ -38,15 +40,17 @@ type getWarehousesOptions struct {
 func newGetWarehousesCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
+	getOptions *getOptions,
 ) *cobra.Command {
 	cmdOpts := &getWarehousesOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
-		Use:     "warehouses [--project=project] [NAME ...]",
+		Use:     "warehouses [--project=project] [NAME ...] [--no-headers]",
 		Aliases: []string{"warehouse"},
 		Short:   "Display one or many warehouses",
 		Example: templates.Example(`
@@ -132,7 +136,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list warehouses: %w", err)
 		}
-		return printObjects(resp.Msg.GetWarehouses(), o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetWarehouses(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Warehouse, 0, len(o.Names))
@@ -154,7 +158,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetWarehouse())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print warehouses: %w", err)
 	}
 	return errors.Join(errs...)

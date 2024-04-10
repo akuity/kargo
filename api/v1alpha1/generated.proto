@@ -815,6 +815,9 @@ message PromotionInfo {
 
   // Freight is the freight being promoted
   optional FreightReference freight = 2;
+
+  // Status is the (optional) status of the promotion
+  optional PromotionStatus status = 3;
 }
 
 // PromotionList contains a list of Promotion
@@ -988,6 +991,9 @@ message StageStatus {
 
   // CurrentPromotion is a reference to the currently Running promotion.
   optional PromotionInfo currentPromotion = 7;
+
+  // LastPromotion is a reference to the last completed promotion.
+  optional PromotionInfo lastPromotion = 10;
 }
 
 // StageSubscription defines a subscription to Freight from another Stage.

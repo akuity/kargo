@@ -13,7 +13,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.1-bookworm
+      image: golang:1.22.2-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
   lint-go:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.1-bookworm
+      image: golang:1.22.2-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.1-bookworm
+      image: golang:1.22.2-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
   lint-proto:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.1-bookworm
+      image: golang:1.22.2-bookworm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -89,7 +89,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.1-bookworm
+      image: golang:1.22.2-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
-        node-version: "20.11.0"
+        node-version: "20.12.1"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Install nodejs dependencies
@@ -151,7 +151,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22.1-bookworm
+      image: golang:1.22.2-bookworm
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

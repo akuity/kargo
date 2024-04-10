@@ -1,6 +1,6 @@
 import { faArrowRightFromBracket, faBook, faBoxes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -19,6 +19,9 @@ export const MainLayout = () => {
           <img src='/kargo-icon.png' alt='Kargo Icon' className={styles.icon} />
           kargo
         </div>
+        <Tooltip className={styles.version} title={__UI_VERSION__} placement='right'>
+          {__UI_VERSION__ === 'development' ? 'dev' : __UI_VERSION__}
+        </Tooltip>
         <nav className={styles.nav}>
           <NavItem icon={faBoxes} path={paths.projects}>
             Projects

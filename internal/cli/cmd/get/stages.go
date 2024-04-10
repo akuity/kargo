@@ -28,6 +28,8 @@ type getStagesOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
+	*getOptions
+
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
@@ -35,15 +37,20 @@ type getStagesOptions struct {
 	Names   []string
 }
 
-func newGetStagesCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetStagesCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions *getOptions,
+) *cobra.Command {
 	cmdOpts := &getStagesOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
-		Use:     "stages [--project=project] [NAME ...]",
+		Use:     "stages [--project=project] [NAME ...] [--no-headers]",
 		Aliases: []string{"stage"},
 		Short:   "Display one or many stages",
 		Example: templates.Example(`
@@ -128,7 +135,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list stages: %w", err)
 		}
-		return printObjects(resp.Msg.GetStages(), o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetStages(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Stage, 0, len(o.Names))
@@ -150,7 +157,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetStage())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print stages: %w", err)
 	}
 	return errors.Join(errs...)

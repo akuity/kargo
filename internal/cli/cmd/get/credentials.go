@@ -30,6 +30,8 @@ type getCredentialsOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
+	*getOptions
+
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
@@ -37,15 +39,20 @@ type getCredentialsOptions struct {
 	Names   []string
 }
 
-func newGetCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
+func newGetCredentialsCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+	getOptions *getOptions,
+) *cobra.Command {
 	cmdOpts := &getCredentialsOptions{
 		Config:     cfg,
 		IOStreams:  streams,
+		getOptions: getOptions,
 		PrintFlags: genericclioptions.NewPrintFlags("").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
-		Use:     "credentials [--project=project] [NAME ...]",
+		Use:     "credentials [--project=project] [NAME ...] [--no-headers]",
 		Aliases: []string{"credential", "creds", "cred"},
 		Short:   "Display one or many credentials",
 		Example: templates.Example(`
@@ -129,7 +136,7 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list credentials: %w", err)
 		}
-		return printObjects(resp.Msg.GetCredentials(), o.PrintFlags, o.IOStreams)
+		return printObjects(resp.Msg.GetCredentials(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*corev1.Secret, 0, len(o.Names))
@@ -151,7 +158,7 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetCredentials())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams); err != nil {
+	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print stages: %w", err)
 	}
 	return errors.Join(errs...)

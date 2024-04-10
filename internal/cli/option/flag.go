@@ -44,6 +44,9 @@ const (
 	// NewAliasFlag is the flag name for the new-alias flag.
 	NewAliasFlag = "new-alias"
 
+	// NoHeadersFlag is the flag name for the no-headers flag.
+	NoHeadersFlag = "no-headers"
+
 	// OldAliasFlag is the flag name for the old-alias flag.
 	OldAliasFlag = "old-alias"
 
@@ -145,6 +148,16 @@ func Names(fs *pflag.FlagSet, stage *[]string, usage string) {
 // NewAlias adds the NewAliasFlag to the provided flag set.
 func NewAlias(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, NewAliasFlag, "", usage)
+}
+
+// NoHeaders adds the NoHeadersFlag to the provided flag set.
+func NoHeaders(fs *pflag.FlagSet, noHeaders *bool) {
+	fs.BoolVar(
+		noHeaders,
+		NoHeadersFlag,
+		false,
+		"When using the default output format, don't print headers (default print headers).",
+	)
 }
 
 // OldAlias adds the OldAliasFlag to the provided flag set.

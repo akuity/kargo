@@ -17,6 +17,10 @@ import (
 	"github.com/akuity/kargo/internal/cli/templates"
 )
 
+type getOptions struct {
+	NoHeaders bool
+}
+
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get TYPE [NAME ...]",
@@ -34,20 +38,30 @@ kargo get promotions --project=my-project --stage=my-stage
 `),
 	}
 
+	cmdOpts := &getOptions{}
+
+	cmdOpts.addFlags(cmd)
+
 	// Register subcommands.
-	cmd.AddCommand(newGetCredentialsCommand(cfg, streams))
-	cmd.AddCommand(newGetFreightCommand(cfg, streams))
-	cmd.AddCommand(newGetProjectsCommand(cfg, streams))
-	cmd.AddCommand(newGetPromotionsCommand(cfg, streams))
-	cmd.AddCommand(newGetStagesCommand(cfg, streams))
-	cmd.AddCommand(newGetWarehousesCommand(cfg, streams))
+	cmd.AddCommand(newGetCredentialsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetFreightCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetProjectsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetPromotionsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetStagesCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetWarehousesCommand(cfg, streams, cmdOpts))
+
 	return cmd
+}
+
+func (o *getOptions) addFlags(cmd *cobra.Command) {
+	option.NoHeaders(cmd.PersistentFlags(), &o.NoHeaders)
 }
 
 func printObjects[T runtime.Object](
 	objects []T,
 	flags *genericclioptions.PrintFlags,
 	streams genericiooptions.IOStreams,
+	noHeaders bool,
 ) error {
 	items := make([]runtime.RawExtension, len(objects))
 	for i, obj := range objects {
@@ -90,5 +104,11 @@ func printObjects[T runtime.Object](
 	default:
 		printObj = list
 	}
-	return printers.NewTablePrinter(printers.PrintOptions{}).PrintObj(printObj, streams.Out)
+	return printers.
+		NewTablePrinter(
+			printers.PrintOptions{
+				NoHeaders: noHeaders,
+			},
+		).
+		PrintObj(printObj, streams.Out)
 }
