@@ -185,8 +185,6 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("error initializing Promotion queues: %w", err)
 	}
 
-	ctx = logging.ContextWithLogger(ctx, logger)
-
 	// Find the Promotion
 	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
