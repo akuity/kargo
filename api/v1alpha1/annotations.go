@@ -13,6 +13,7 @@ const (
 	AnnotationKeyOIDCSubjects = "rbac.kargo.akuity.io/sub"
 
 	AnnotationKeyEventActor               = "event.kargo.akuity.io/actor"
+	AnnotationKeyEventReverifyActor       = "event.kargo.akuity.io/reverify-actor"
 	AnnotationKeyEventProject             = "event.kargo.akuity.io/project"
 	AnnotationKeyEventPromotionName       = "event.kargo.akuity.io/promotion-name"
 	AnnotationKeyEventPromotionCreateTime = "event.kargo.akuity.io/promotion-create-time"

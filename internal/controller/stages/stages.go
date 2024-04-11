@@ -319,6 +319,7 @@ func SetupReconcilerWithManager(
 			Annotations: []string{
 				kargoapi.AnnotationKeyRefresh,
 				kargoapi.AnnotationKeyReverify,
+				kargoapi.AnnotationKeyEventReverifyActor,
 				kargoapi.AnnotationKeyAbort,
 			},
 		}).
@@ -558,6 +559,7 @@ func (r *reconciler) Reconcile(
 		stage,
 		kargoapi.AnnotationKeyRefresh,
 		kargoapi.AnnotationKeyReverify,
+		kargoapi.AnnotationKeyEventReverifyActor,
 		kargoapi.AnnotationKeyAbort,
 	)
 	if clearErr != nil {
@@ -1499,6 +1501,11 @@ func (r *reconciler) recordFreightVerificationEvent(
 		kargoapi.AnnotationKeyEventStageName:    s.Namespace,
 		kargoapi.AnnotationKeyEventFreightAlias: fr.Alias,
 		kargoapi.AnnotationKeyEventFreightName:  fr.Name,
+	}
+	if _, ok := s.Annotations[kargoapi.AnnotationKeyReverify]; ok {
+		if actor, ok := s.Annotations[kargoapi.AnnotationKeyEventReverifyActor]; ok {
+			annotations[kargoapi.AnnotationKeyEventReverifyActor] = actor
+		}
 	}
 	if vi.AnalysisRun != nil {
 		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = vi.AnalysisRun.Name

@@ -15,15 +15,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
-	w := newWebhook(kubeClient)
+	w := newWebhook(
+		libWebhook.Config{},
+		kubeClient,
+	)
 	// Assert that all overridable behaviors were initialized to a default:
+	require.NotNil(t, w.admissionRequestFromContextFn)
+	require.NotNil(t, w.getStageFn)
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.validateCreateOrUpdateFn)
 	require.NotNil(t, w.validateSpecFn)
+	require.NotNil(t, w.isRequestFromKargoControlplaneFn)
 }
 
 func TestDefault(t *testing.T) {
