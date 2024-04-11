@@ -164,7 +164,13 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx)
+	logger := logging.LoggerFromContext(ctx).
+		WithFields(log.Fields{
+			"namespace": req.NamespacedName.Namespace,
+			"promotion": req.NamespacedName.Name,
+		})
+	ctx = logging.ContextWithLogger(ctx, logger)
+	logger.Debug("reconciling Promotion")
 
 	// Note that initialization occurs here because we basically know that the
 	// controller runtime client's cache is ready at this point. We cannot attempt
