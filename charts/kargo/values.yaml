@@ -281,6 +281,12 @@ controller:
     ## @param controller.globalCredentials.namespaces List of namespaces to look for shared credentials.
     namespaces: []
 
+  committer:
+    ## @param controller.committer.name Specifies the name of the Kargo controller committer.
+    name: "Kargo Render"
+    ## @param controller.committer.email Specifies the email of the Kargo controller committer.
+    email: "kargo-render@akuity.io"
+
   ## @param controller.securityContext Security context for controller pods.
   securityContext: {}
 
