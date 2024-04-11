@@ -556,12 +556,8 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 
 func (r *repo) buildCommand(arg ...string) *exec.Cmd {
 	cmd := exec.Command("git", arg...)
-	homeEnvVar := fmt.Sprintf("HOME=%s", r.homeDir)
-	if cmd.Env == nil {
-		cmd.Env = []string{homeEnvVar}
-	} else {
-		cmd.Env = append(cmd.Env, homeEnvVar)
-	}
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", r.homeDir))
 	if r.insecureSkipTLSVerify {
 		cmd.Env = append(cmd.Env, "GIT_SSL_NO_VERIFY=true")
 	}

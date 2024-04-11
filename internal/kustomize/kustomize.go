@@ -1,6 +1,7 @@
 package kustomize
 
 import (
+	"os"
 	"os/exec"
 
 	libExec "github.com/akuity/kargo/internal/exec"
@@ -22,6 +23,7 @@ func buildSetImageCmd(dir, fqImageRef string) *exec.Cmd {
 		"image",
 		fqImageRef,
 	)
+	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Dir = dir
 	return cmd
 }
