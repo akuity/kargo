@@ -37,13 +37,11 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.argocdClient)
 	require.NotNil(t, r.recorder)
+	require.NotNil(t, r.appHealth)
 	// Assert that all overridable behaviors were initialized to a default:
 	// Loop guard:
 	require.NotNil(t, r.hasNonTerminalPromotionsFn)
 	require.NotNil(t, r.listPromosFn)
-	// Health checks:
-	require.NotNil(t, r.checkHealthFn)
-	require.NotNil(t, r.getArgoCDAppFn)
 	// Freight verification:
 	require.NotNil(t, r.startVerificationFn)
 	require.NotNil(t, r.getVerificationInfoFn)
@@ -387,13 +385,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -470,13 +462,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -516,13 +502,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -592,13 +572,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
@@ -666,13 +640,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -739,13 +707,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
@@ -816,13 +778,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -900,13 +856,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -963,13 +913,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return errors.New("something went wrong")
 				},
@@ -1011,13 +955,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
 				},
@@ -1075,13 +1013,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
 				},
@@ -1133,13 +1065,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
 				},
@@ -1204,13 +1130,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -1269,13 +1189,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
 				},
@@ -1333,13 +1247,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
 				},
@@ -1411,13 +1319,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return nil
-				},
+				appHealth:                  &mockAppHealthEvaluator{},
 				verifyFreightInStageFn: func(context.Context, string, string, string) error {
 					return nil
 				},
@@ -1516,14 +1418,10 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
-				checkHealthFn: func(
-					context.Context,
-					kargoapi.FreightReference,
-					[]kargoapi.ArgoCDAppUpdate,
-				) *kargoapi.Health {
-					return &kargoapi.Health{
+				appHealth: &mockAppHealthEvaluator{
+					Health: &kargoapi.Health{
 						Status: kargoapi.HealthStateHealthy,
-					}
+					},
 				},
 				getVerificationInfoFn: func(
 					context.Context,

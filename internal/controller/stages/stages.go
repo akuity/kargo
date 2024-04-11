@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -80,18 +81,7 @@ type reconciler struct {
 
 	// Health checks:
 
-	checkHealthFn func(
-		context.Context,
-		kargoapi.FreightReference,
-		[]kargoapi.ArgoCDAppUpdate,
-	) *kargoapi.Health
-
-	getArgoCDAppFn func(
-		ctx context.Context,
-		client client.Client,
-		namespace string,
-		name string,
-	) (*argocd.Application, error)
+	appHealth libargocd.ApplicationHealthEvaluator
 
 	// Freight verification:
 
@@ -459,15 +449,13 @@ func newReconciler(
 		argocdClient:     argocdClient,
 		recorder:         recorder,
 		cfg:              cfg,
+		appHealth:        libargocd.NewApplicationHealthEvaluator(argocdClient),
 		shardRequirement: shardRequirement,
 	}
 	// The following default behaviors are overridable for testing purposes:
 	// Loop guard:
 	r.hasNonTerminalPromotionsFn = r.hasNonTerminalPromotions
 	r.listPromosFn = r.kargoClient.List
-	// Health checks:
-	r.checkHealthFn = r.checkHealth
-	r.getArgoCDAppFn = argocd.GetApplication
 	// Freight verification:
 	r.startVerificationFn = r.startVerification
 	r.abortVerificationFn = r.abortVerification
@@ -736,12 +724,11 @@ func (r *reconciler) syncNormalStage(
 		}()
 
 		// Check health
-		status.Health = r.checkHealthFn(
+		if status.Health = r.appHealth.EvaluateHealth(
 			ctx,
 			*status.CurrentFreight,
 			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
-		)
-		if status.Health != nil {
+		); status.Health != nil {
 			freightLogger.WithField("health", status.Health.Status).
 				Debug("Stage health assessed")
 		} else {
