@@ -482,9 +482,7 @@ func TestSyncNormalStage(t *testing.T) {
 				require.NotNil(t, newStatus.CurrentFreight)
 				require.Equal(t, initialStatus, newStatus)
 
-				require.Len(t, recorder.Events, 1)
-				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonFreightVerificationFailed, event.Reason)
+				require.Empty(t, recorder.Events)
 			},
 		},
 
@@ -914,8 +912,8 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return errors.New("something went wrong")
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return false, errors.New("something went wrong")
 				},
 			},
 			assertions: func(
@@ -956,8 +954,8 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return true, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1014,8 +1012,8 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return true, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1066,8 +1064,8 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return true, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1138,8 +1136,8 @@ func TestSyncNormalStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return nil, nil
 				},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return true, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1190,8 +1188,8 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return true, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1248,8 +1246,8 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return true, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1320,8 +1318,8 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return true, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1388,6 +1386,137 @@ func TestSyncNormalStage(t *testing.T) {
 		},
 
 		{
+			name: "skip event recording if no verification performed",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 42,
+					Name:       "fake-stage",
+				},
+				Spec: &kargoapi.StageSpec{
+					Subscriptions: &kargoapi.Subscriptions{
+						Warehouse: "fake-warehouse",
+					},
+					PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+					Verification:        &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					Phase:            kargoapi.StagePhaseSteady,
+					CurrentPromotion: &kargoapi.PromotionInfo{},
+					CurrentFreight: &kargoapi.FreightReference{
+						VerificationInfo: &kargoapi.VerificationInfo{
+							Phase: kargoapi.VerificationPhaseSuccessful,
+							AnalysisRun: &kargoapi.AnalysisRunReference{
+								Name:      "fake-analysis-run",
+								Namespace: "fake-namespace",
+								Phase:     string(rollouts.AnalysisPhaseSuccessful),
+							},
+						},
+					},
+				},
+			},
+			reconciler: &reconciler{
+				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
+				appHealth: &mockAppHealthEvaluator{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateHealthy,
+					},
+				},
+				getVerificationInfoFn: func(
+					context.Context,
+					*kargoapi.Stage,
+				) (*kargoapi.VerificationInfo, error) {
+					return &kargoapi.VerificationInfo{
+						Phase: kargoapi.VerificationPhaseSuccessful,
+						AnalysisRun: &kargoapi.AnalysisRunReference{
+							Name:      "fake-analysis-run",
+							Namespace: "fake-namespace",
+							Phase:     string(rollouts.AnalysisPhaseSuccessful),
+						},
+					}, nil
+				},
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					// No updates are performed
+					return false, nil
+				},
+				isAutoPromotionPermittedFn: func(
+					context.Context,
+					string,
+					string,
+				) (bool, error) {
+					return false, nil
+				},
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+						Status: kargoapi.FreightStatus{
+							VerifiedIn: map[string]kargoapi.VerifiedStage{
+								"fake-stage": {},
+							},
+						},
+					}, nil
+				},
+				getLatestAvailableFreightFn: func(
+					context.Context,
+					string,
+					*kargoapi.Stage,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-freight-id",
+						},
+					}, nil
+				},
+				listPromosFn: func(
+					context.Context,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return nil
+				},
+				createPromotionFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				recorder *fakekubeclient.EventRecorder,
+				_ kargoapi.StageStatus,
+				newStatus kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, int64(42), newStatus.ObservedGeneration) // Set
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				require.NotNil(t, newStatus.Health)        // Set
+				require.Nil(t, newStatus.CurrentPromotion) // Cleared
+				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
+				require.Equal(
+					t,
+					&kargoapi.VerificationInfo{
+						Phase: kargoapi.VerificationPhaseSuccessful,
+						AnalysisRun: &kargoapi.AnalysisRunReference{
+							Name:      "fake-analysis-run",
+							Namespace: "fake-namespace",
+							Phase:     string(rollouts.AnalysisPhaseSuccessful),
+						},
+					},
+					newStatus.CurrentFreight.VerificationInfo,
+				)
+				require.Empty(t, recorder.Events)
+			},
+		},
+
+		{
 			name: "success",
 			// Note: In this final case, we will also assert than anything that should
 			// have been cleared or modified in the Stage's status was.
@@ -1436,8 +1565,8 @@ func TestSyncNormalStage(t *testing.T) {
 						},
 					}, nil
 				},
-				verifyFreightInStageFn: func(context.Context, string, string, string) error {
-					return nil
+				verifyFreightInStageFn: func(context.Context, string, string, string) (bool, error) {
+					return true, nil
 				},
 				isAutoPromotionPermittedFn: func(
 					context.Context,
@@ -1891,7 +2020,7 @@ func TestVerifyFreightInStage(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*testing.T, error)
+		assertions func(*testing.T, bool, error)
 	}{
 		{
 			name: "error getting Freight",
@@ -1904,8 +2033,9 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, updated bool, err error) {
 				require.Error(t, err)
+				require.False(t, updated)
 				require.Contains(t, err.Error(), "something went wrong")
 				require.Contains(t, err.Error(), "error finding Freight")
 			},
@@ -1921,8 +2051,9 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil, nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, updated bool, err error) {
 				require.Error(t, err)
+				require.False(t, updated)
 				require.Contains(t, err.Error(), "found no Freight")
 			},
 		},
@@ -1943,8 +2074,9 @@ func TestVerifyFreightInStage(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, updated bool, err error) {
 				require.NoError(t, err)
+				require.False(t, updated)
 			},
 		},
 		{
@@ -1965,9 +2097,10 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, updated bool, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "something went wrong")
+				require.False(t, updated)
 			},
 		},
 		{
@@ -1988,22 +2121,21 @@ func TestVerifyFreightInStage(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, updated bool, err error) {
 				require.NoError(t, err)
+				require.True(t, updated)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.reconciler.verifyFreightInStage(
-					context.Background(),
-					"fake-namespace",
-					"fake-freight",
-					"fake-stage",
-				),
+			updated, err := testCase.reconciler.verifyFreightInStage(
+				context.Background(),
+				"fake-namespace",
+				"fake-freight",
+				"fake-stage",
 			)
+			testCase.assertions(t, updated, err)
 		})
 	}
 }
