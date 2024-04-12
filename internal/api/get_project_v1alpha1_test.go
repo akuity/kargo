@@ -2,17 +2,16 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -82,6 +81,10 @@ func TestGetProject(t *testing.T) {
 			},
 			objects: []client.Object{
 				&kargoapi.Project{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Project",
+						APIVersion: kargoapi.GroupVersion.String(),
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "kargo-demo",
 					},
@@ -94,9 +97,18 @@ func TestGetProject(t *testing.T) {
 				require.Nil(t, c.Msg.GetProject())
 				require.NotNil(t, c.Msg.GetRaw())
 
-				obj := &kargoapi.Project{}
-				require.NoError(t, json.Unmarshal(c.Msg.GetRaw(), obj))
-				require.Equal(t, "kargo-demo", obj.Name)
+				scheme := runtime.NewScheme()
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*kargoapi.Project)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Name)
 			},
 		},
 		"raw format YAML": {
@@ -106,6 +118,10 @@ func TestGetProject(t *testing.T) {
 			},
 			objects: []client.Object{
 				&kargoapi.Project{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Project",
+						APIVersion: kargoapi.GroupVersion.String(),
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "kargo-demo",
 					},
@@ -118,9 +134,18 @@ func TestGetProject(t *testing.T) {
 				require.Nil(t, c.Msg.GetProject())
 				require.NotNil(t, c.Msg.GetRaw())
 
-				obj := &kargoapi.Project{}
-				require.NoError(t, yaml.Unmarshal(c.Msg.GetRaw(), obj))
-				require.Equal(t, "kargo-demo", obj.Name)
+				scheme := runtime.NewScheme()
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*kargoapi.Project)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Name)
 			},
 		},
 	}

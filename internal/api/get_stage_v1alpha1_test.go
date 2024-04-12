@@ -2,17 +2,16 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -99,10 +98,19 @@ func TestGetStage(t *testing.T) {
 				require.Nil(t, c.Msg.GetStage())
 				require.NotNil(t, c.Msg.GetRaw())
 
-				obj := &kargoapi.Stage{}
-				require.NoError(t, json.Unmarshal(c.Msg.GetRaw(), obj))
-				require.Equal(t, "kargo-demo", obj.Namespace)
-				require.Equal(t, "test", obj.Name)
+				scheme := runtime.NewScheme()
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*kargoapi.Stage)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
 			},
 		},
 		"raw format YAML": {
@@ -118,10 +126,19 @@ func TestGetStage(t *testing.T) {
 				require.Nil(t, c.Msg.GetStage())
 				require.NotNil(t, c.Msg.GetRaw())
 
-				obj := &kargoapi.Stage{}
-				require.NoError(t, yaml.Unmarshal(c.Msg.GetRaw(), obj))
-				require.Equal(t, "kargo-demo", obj.Namespace)
-				require.Equal(t, "test", obj.Name)
+				scheme := runtime.NewScheme()
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*kargoapi.Stage)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
 			},
 		},
 	}

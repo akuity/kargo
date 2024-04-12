@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -10,11 +9,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -135,10 +134,19 @@ func TestGetAnalysisRun(t *testing.T) {
 				require.Nil(t, c.Msg.GetAnalysisRun())
 				require.NotNil(t, c.Msg.GetRaw())
 
-				obj := &rollouts.AnalysisRun{}
-				require.NoError(t, json.Unmarshal(c.Msg.GetRaw(), obj))
-				require.Equal(t, "kargo-demo", obj.Namespace)
-				require.Equal(t, "test", obj.Name)
+				scheme := runtime.NewScheme()
+				require.NoError(t, rollouts.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*rollouts.AnalysisRun)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
 			},
 		},
 		"raw format YAML": {
@@ -155,10 +163,19 @@ func TestGetAnalysisRun(t *testing.T) {
 				require.Nil(t, c.Msg.GetAnalysisRun())
 				require.NotNil(t, c.Msg.GetRaw())
 
-				obj := &rollouts.AnalysisRun{}
-				require.NoError(t, yaml.Unmarshal(c.Msg.GetRaw(), obj))
-				require.Equal(t, "kargo-demo", obj.Namespace)
-				require.Equal(t, "test", obj.Name)
+				scheme := runtime.NewScheme()
+				require.NoError(t, rollouts.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*rollouts.AnalysisRun)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
 			},
 		},
 	}

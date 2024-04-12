@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -11,10 +10,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -212,6 +211,10 @@ func TestGetFreight(t *testing.T) {
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.Freight{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Freight",
+						APIVersion: kargoapi.GroupVersion.String(),
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "kargo-demo",
 						Name:      "test",
@@ -225,10 +228,19 @@ func TestGetFreight(t *testing.T) {
 				require.Nil(t, c.Msg.GetFreight())
 				require.NotNil(t, c.Msg.GetRaw())
 
-				obj := &kargoapi.Freight{}
-				require.NoError(t, json.Unmarshal(c.Msg.GetRaw(), obj))
-				require.Equal(t, "kargo-demo", obj.Namespace)
-				require.Equal(t, "test", obj.Name)
+				scheme := runtime.NewScheme()
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*kargoapi.Freight)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
 			},
 		},
 		"raw format YAML": {
@@ -241,6 +253,10 @@ func TestGetFreight(t *testing.T) {
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.Freight{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "Freight",
+						APIVersion: kargoapi.GroupVersion.String(),
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "kargo-demo",
 						Name:      "test",
@@ -254,10 +270,19 @@ func TestGetFreight(t *testing.T) {
 				require.Nil(t, c.Msg.GetFreight())
 				require.NotNil(t, c.Msg.GetRaw())
 
-				obj := &kargoapi.Freight{}
-				require.NoError(t, yaml.Unmarshal(c.Msg.GetRaw(), obj))
-				require.Equal(t, "kargo-demo", obj.Namespace)
-				require.Equal(t, "test", obj.Name)
+				scheme := runtime.NewScheme()
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*kargoapi.Freight)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
 			},
 		},
 	}
