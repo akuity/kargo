@@ -1,4 +1,20 @@
 ####################################################################################################
+# ui-builder
+####################################################################################################
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.1 AS ui-builder
+
+RUN npm install --global pnpm
+WORKDIR /ui
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+ARG VERSION
+
+RUN pnpm install
+
+COPY ["ui/", "."]
+
+RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
+
+####################################################################################################
 # back-end-builder
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM golang:1.22.2-bookworm as back-end-builder
@@ -17,6 +33,7 @@ COPY api/ api/
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
+COPY --from=ui-builder /ui/build internal/api/ui/
 
 ARG VERSION
 ARG GIT_COMMIT
@@ -29,22 +46,6 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     && bin/kargo version
 
 WORKDIR /kargo/bin
-
-####################################################################################################
-# ui-builder
-####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.1 AS ui-builder
-
-RUN npm install --global pnpm
-WORKDIR /ui
-COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
-ARG VERSION
-
-RUN pnpm install
-
-COPY ["ui/", "."]
-
-RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 
 ####################################################################################################
 # tools
@@ -110,7 +111,6 @@ USER root
 
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=tools /tools/ /usr/local/bin/
-COPY --from=ui-builder /ui/build /ui/build
 
 USER 1000:0
 

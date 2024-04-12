@@ -181,6 +181,26 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 8
+        run_install: false
+    - name: Install nodejs
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20.12.1"
+        cache: "pnpm"
+        cache-dependency-path: "**/pnpm-lock.yaml"
+    - name: Build UI
+      env:
+        VERSION: ${{ github.ref_name }}
+      working-directory: ./ui
+      run: |
+        pnpm install
+        NODE_ENV=production pnpm run build
+        rm -rf ../internal/api/ui
+        mv build ../internal/api/ui
     - name: Build CLI
       env:
         GOFLAGS: -buildvcs=false
