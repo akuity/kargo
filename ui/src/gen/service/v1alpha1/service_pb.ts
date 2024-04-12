@@ -2167,6 +2167,11 @@ export class GetFreightRequest extends Message<GetFreightRequest> {
    */
   alias = "";
 
+  /**
+   * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 4;
+   */
+  format = RawFormat.UNSPECIFIED;
+
   constructor(data?: PartialMessage<GetFreightRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2178,6 +2183,7 @@ export class GetFreightRequest extends Message<GetFreightRequest> {
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "alias", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "format", kind: "enum", T: proto3.getEnumType(RawFormat) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFreightRequest {
@@ -2202,9 +2208,14 @@ export class GetFreightRequest extends Message<GetFreightRequest> {
  */
 export class GetFreightResponse extends Message<GetFreightResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
    */
   freight?: Freight;
+
+  /**
+   * @generated from field: optional bytes raw = 2;
+   */
+  raw?: Uint8Array;
 
   constructor(data?: PartialMessage<GetFreightResponse>) {
     super();
@@ -2214,7 +2225,8 @@ export class GetFreightResponse extends Message<GetFreightResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetFreightResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "freight", kind: "message", T: Freight },
+    { no: 1, name: "freight", kind: "message", T: Freight, opt: true },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFreightResponse {

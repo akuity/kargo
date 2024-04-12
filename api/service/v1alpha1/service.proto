@@ -337,10 +337,12 @@ message GetFreightRequest {
   string project = 1;
   string name = 2;
   string alias = 3;
+  RawFormat format = 4;
 }
 
 message GetFreightResponse {
-  github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+  optional github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+  optional bytes raw = 2;
 }
 
 message PromoteToStageRequest {
