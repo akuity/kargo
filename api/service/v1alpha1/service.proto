@@ -298,10 +298,12 @@ message DeleteProjectResponse {
 
 message GetProjectRequest {
   string name = 1;
+  RawFormat format = 2;
 }
 
 message GetProjectResponse {
-  github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+  optional github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+  optional bytes raw = 2;
 }
 
 message ListProjectsRequest {

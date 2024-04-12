@@ -30,9 +30,14 @@ func (s *server) GetProject(
 		return nil, fmt.Errorf("get project: %w", err)
 	}
 
+	obj, raw, err := objectOrRaw(&project, req.Msg.GetFormat())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
 	return connect.NewResponse(
 		&svcv1alpha1.GetProjectResponse{
-			Project: &project,
+			Project: obj,
+			Raw:     raw,
 		},
 	), nil
 }

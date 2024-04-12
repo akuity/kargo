@@ -1843,6 +1843,11 @@ export class GetProjectRequest extends Message<GetProjectRequest> {
    */
   name = "";
 
+  /**
+   * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 2;
+   */
+  format = RawFormat.UNSPECIFIED;
+
   constructor(data?: PartialMessage<GetProjectRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1852,6 +1857,7 @@ export class GetProjectRequest extends Message<GetProjectRequest> {
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetProjectRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "format", kind: "enum", T: proto3.getEnumType(RawFormat) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProjectRequest {
@@ -1876,9 +1882,14 @@ export class GetProjectRequest extends Message<GetProjectRequest> {
  */
 export class GetProjectResponse extends Message<GetProjectResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Project project = 1;
    */
   project?: Project;
+
+  /**
+   * @generated from field: optional bytes raw = 2;
+   */
+  raw?: Uint8Array;
 
   constructor(data?: PartialMessage<GetProjectResponse>) {
     super();
@@ -1888,7 +1899,8 @@ export class GetProjectResponse extends Message<GetProjectResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetProjectResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "message", T: Project },
+    { no: 1, name: "project", kind: "message", T: Project, opt: true },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProjectResponse {
