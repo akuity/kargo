@@ -945,6 +945,12 @@ func TestBuildAnalysisRun(t *testing.T) {
 					CurrentFreight: &kargoapi.FreightReference{
 						Name: "fake-id",
 					},
+					LastPromotion: &kargoapi.PromotionInfo{
+						Name: "fake-id",
+						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
+						},
+					},
 				},
 			},
 			freight: freight,
@@ -991,10 +997,11 @@ func TestBuildAnalysisRun(t *testing.T) {
 				require.Equal(t, ar.Namespace, stage.Namespace)
 
 				require.Equal(t, map[string]string{
-					kargoapi.StageLabelKey:   stage.Name,
-					kargoapi.FreightLabelKey: stage.Status.CurrentFreight.Name,
-					"custom":                 "label",
-					"another":                "label",
+					kargoapi.StageLabelKey:     stage.Name,
+					kargoapi.FreightLabelKey:   stage.Status.CurrentFreight.Name,
+					kargoapi.PromotionLabelKey: stage.Status.LastPromotion.Name,
+					"custom":                   "label",
+					"another":                  "label",
 				}, ar.Labels)
 				require.Equal(t, stage.Spec.Verification.AnalysisRunMetadata.Annotations, ar.Annotations)
 
@@ -1177,6 +1184,41 @@ func TestBuildAnalysisRun(t *testing.T) {
 					Controller:         ptr.To(true),
 					BlockOwnerDeletion: ptr.To(true),
 				}, ar.OwnerReferences[0])
+			},
+		},
+		{
+			name:       "Set promotion name only if AnalysisRun is a part of the promotion",
+			reconciler: &reconciler{},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: "fake-id",
+					},
+				},
+				Spec: &kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
+					LastPromotion: &kargoapi.PromotionInfo{
+						Name: "fake-id",
+						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
+						},
+					},
+				},
+			},
+			freight: freight,
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.Stage,
+				_ []*rollouts.AnalysisTemplate,
+				ar *rollouts.AnalysisRun,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, ar)
+				require.NotContains(t, ar.Labels, kargoapi.PromotionLabelKey)
 			},
 		},
 	}
