@@ -48,7 +48,12 @@ func (s *server) GetAnalysisTemplate(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
+	obj, raw, err := objectOrRaw(at, req.Msg.GetFormat())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
 	return connect.NewResponse(&svcv1alpha1.GetAnalysisTemplateResponse{
-		AnalysisTemplate: at,
+		AnalysisTemplate: obj,
+		Raw:              raw,
 	}), nil
 }

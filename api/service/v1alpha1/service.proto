@@ -523,10 +523,12 @@ message ListAnalysisTemplatesResponse {
 message GetAnalysisTemplateRequest {
   string project = 1;
   string name = 2;
+  RawFormat format = 3;
 }
 
 message GetAnalysisTemplateResponse {
-  github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+  optional github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+  optional bytes raw = 2;
 }
 
 message GetAnalysisRunRequest {

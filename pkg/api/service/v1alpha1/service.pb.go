@@ -4832,8 +4832,9 @@ type GetAnalysisTemplateRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Format  RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetAnalysisTemplateRequest) Reset() {
@@ -4882,12 +4883,20 @@ func (x *GetAnalysisTemplateRequest) GetName() string {
 	return ""
 }
 
+func (x *GetAnalysisTemplateRequest) GetFormat() RawFormat {
+	if x != nil {
+		return x.Format
+	}
+	return RawFormat_RAW_FORMAT_UNSPECIFIED
+}
+
 type GetAnalysisTemplateResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	AnalysisTemplate *v1alpha11.AnalysisTemplate `protobuf:"bytes,1,opt,name=analysis_template,json=analysisTemplate,proto3" json:"analysis_template,omitempty"`
+	AnalysisTemplate *v1alpha11.AnalysisTemplate `protobuf:"bytes,1,opt,name=analysis_template,json=analysisTemplate,proto3,oneof" json:"analysis_template,omitempty"`
+	Raw              []byte                      `protobuf:"bytes,2,opt,name=raw,proto3,oneof" json:"raw,omitempty"`
 }
 
 func (x *GetAnalysisTemplateResponse) Reset() {
@@ -4925,6 +4934,13 @@ func (*GetAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
 func (x *GetAnalysisTemplateResponse) GetAnalysisTemplate() *v1alpha11.AnalysisTemplate {
 	if x != nil {
 		return x.AnalysisTemplate
+	}
+	return nil
+}
+
+func (x *GetAnalysisTemplateResponse) GetRaw() []byte {
+	if x != nil {
+		return x.Raw
 	}
 	return nil
 }
@@ -5673,21 +5689,29 @@ var file_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x6e,
 	0x61, 0x6c, 0x79, 0x73, 0x69, 0x73, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x52, 0x11,
 	0x61, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65,
-	0x73, 0x22, 0x4a, 0x0a, 0x1a, 0x47, 0x65, 0x74, 0x41, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73,
-	0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
-	0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d,
-	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0xa0, 0x01,
-	0x0a, 0x1b, 0x47, 0x65, 0x74, 0x41, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73, 0x54, 0x65, 0x6d,
-	0x70, 0x6c, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x80, 0x01,
-	0x0a, 0x11, 0x61, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73, 0x5f, 0x74, 0x65, 0x6d, 0x70, 0x6c,
-	0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x53, 0x2e, 0x67, 0x69, 0x74, 0x68,
-	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2e, 0x63, 0x6f, 0x6e,
-	0x74, 0x72, 0x6f, 0x6c, 0x6c, 0x65, 0x72, 0x2e, 0x72, 0x6f, 0x6c, 0x6c, 0x6f, 0x75, 0x74, 0x73,
-	0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x6e,
-	0x61, 0x6c, 0x79, 0x73, 0x69, 0x73, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x52, 0x10,
-	0x61, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65,
+	0x73, 0x22, 0x8f, 0x01, 0x0a, 0x1a, 0x47, 0x65, 0x74, 0x41, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69,
+	0x73, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61,
+	0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x43,
+	0x0a, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2b,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x52, 0x61, 0x77, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x52, 0x06, 0x66, 0x6f, 0x72,
+	0x6d, 0x61, 0x74, 0x22, 0xda, 0x01, 0x0a, 0x1b, 0x47, 0x65, 0x74, 0x41, 0x6e, 0x61, 0x6c, 0x79,
+	0x73, 0x69, 0x73, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x85, 0x01, 0x0a, 0x11, 0x61, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73,
+	0x5f, 0x74, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x53, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e,
+	0x61, 0x6c, 0x2e, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x6c, 0x65, 0x72, 0x2e, 0x72, 0x6f,
+	0x6c, 0x6c, 0x6f, 0x75, 0x74, 0x73, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2e, 0x41, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73, 0x54, 0x65, 0x6d, 0x70,
+	0x6c, 0x61, 0x74, 0x65, 0x48, 0x00, 0x52, 0x10, 0x61, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73,
+	0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x88, 0x01, 0x01, 0x12, 0x15, 0x0a, 0x03, 0x72,
+	0x61, 0x77, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x48, 0x01, 0x52, 0x03, 0x72, 0x61, 0x77, 0x88,
+	0x01, 0x01, 0x42, 0x14, 0x0a, 0x12, 0x5f, 0x61, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73, 0x5f,
+	0x74, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x42, 0x06, 0x0a, 0x04, 0x5f, 0x72, 0x61, 0x77,
 	0x22, 0x8e, 0x01, 0x0a, 0x15, 0x47, 0x65, 0x74, 0x41, 0x6e, 0x61, 0x6c, 0x79, 0x73, 0x69, 0x73,
 	0x52, 0x75, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x6e, 0x61,
 	0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6e,
@@ -6263,102 +6287,103 @@ var file_service_v1alpha1_service_proto_depIdxs = []int32{
 	104, // 31: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
 	104, // 32: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
 	105, // 33: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse.analysis_templates:type_name -> github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate
-	105, // 34: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse.analysis_template:type_name -> github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate
-	0,   // 35: akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	106, // 36: akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse.analysis_run:type_name -> github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun
-	6,   // 37: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ArgoCDShard
-	61,  // 38: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.FreightList
-	3,   // 39: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
-	5,   // 40: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetConfigRequest
-	8,   // 41: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
-	11,  // 42: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:input_type -> akuity.io.kargo.service.v1alpha1.AdminLoginRequest
-	13,  // 43: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateResourceRequest
-	16,  // 44: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceRequest
-	19,  // 45: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceRequest
-	22,  // 46: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:input_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceRequest
-	25,  // 47: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:input_type -> akuity.io.kargo.service.v1alpha1.ListStagesRequest
-	27,  // 48: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:input_type -> akuity.io.kargo.service.v1alpha1.GetStageRequest
-	29,  // 49: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:input_type -> akuity.io.kargo.service.v1alpha1.WatchStagesRequest
-	31,  // 50: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:input_type -> akuity.io.kargo.service.v1alpha1.DeleteStageRequest
-	33,  // 51: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:input_type -> akuity.io.kargo.service.v1alpha1.RefreshStageRequest
-	35,  // 52: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
-	37,  // 53: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsRequest
-	39,  // 54: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionRequest
-	41,  // 55: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionRequest
-	43,  // 56: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
-	45,  // 57: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectRequest
-	47,  // 58: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectsRequest
-	49,  // 59: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:input_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
-	51,  // 60: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:input_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
-	53,  // 61: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:input_type -> akuity.io.kargo.service.v1alpha1.GetFreightRequest
-	55,  // 62: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageRequest
-	57,  // 63: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStageSubscribers:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersRequest
-	59,  // 64: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:input_type -> akuity.io.kargo.service.v1alpha1.QueryFreightRequest
-	62,  // 65: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:input_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
-	64,  // 66: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:input_type -> akuity.io.kargo.service.v1alpha1.ReverifyRequest
-	66,  // 67: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:input_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
-	68,  // 68: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
-	70,  // 69: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
-	72,  // 70: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
-	74,  // 71: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
-	76,  // 72: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
-	78,  // 73: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
-	80,  // 74: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:input_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
-	82,  // 75: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:input_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
-	84,  // 76: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:input_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
-	86,  // 77: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
-	88,  // 78: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
-	90,  // 79: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
-	94,  // 80: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
-	92,  // 81: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
-	4,   // 82: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
-	7,   // 83: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigResponse
-	9,   // 84: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
-	12,  // 85: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
-	15,  // 86: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateResourceResponse
-	18,  // 87: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse
-	21,  // 88: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
-	24,  // 89: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:output_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
-	26,  // 90: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
-	28,  // 91: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
-	30,  // 92: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:output_type -> akuity.io.kargo.service.v1alpha1.WatchStagesResponse
-	32,  // 93: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
-	34,  // 94: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:output_type -> akuity.io.kargo.service.v1alpha1.RefreshStageResponse
-	36,  // 95: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
-	38,  // 96: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
-	40,  // 97: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionResponse
-	42,  // 98: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
-	44,  // 99: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
-	46,  // 100: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectResponse
-	48,  // 101: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
-	50,  // 102: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:output_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
-	52,  // 103: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:output_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
-	54,  // 104: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:output_type -> akuity.io.kargo.service.v1alpha1.GetFreightResponse
-	56,  // 105: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
-	58,  // 106: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStageSubscribers:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersResponse
-	60,  // 107: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:output_type -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse
-	63,  // 108: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:output_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
-	65,  // 109: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:output_type -> akuity.io.kargo.service.v1alpha1.ReverifyResponse
-	67,  // 110: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:output_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
-	69,  // 111: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
-	71,  // 112: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
-	73,  // 113: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
-	75,  // 114: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
-	77,  // 115: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
-	79,  // 116: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
-	81,  // 117: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:output_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
-	83,  // 118: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:output_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
-	85,  // 119: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:output_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
-	87,  // 120: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
-	89,  // 121: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
-	91,  // 122: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
-	95,  // 123: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
-	93,  // 124: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
-	82,  // [82:125] is the sub-list for method output_type
-	39,  // [39:82] is the sub-list for method input_type
-	39,  // [39:39] is the sub-list for extension type_name
-	39,  // [39:39] is the sub-list for extension extendee
-	0,   // [0:39] is the sub-list for field type_name
+	0,   // 34: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	105, // 35: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse.analysis_template:type_name -> github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate
+	0,   // 36: akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	106, // 37: akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse.analysis_run:type_name -> github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun
+	6,   // 38: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ArgoCDShard
+	61,  // 39: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.FreightList
+	3,   // 40: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
+	5,   // 41: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetConfigRequest
+	8,   // 42: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
+	11,  // 43: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:input_type -> akuity.io.kargo.service.v1alpha1.AdminLoginRequest
+	13,  // 44: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateResourceRequest
+	16,  // 45: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceRequest
+	19,  // 46: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceRequest
+	22,  // 47: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:input_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceRequest
+	25,  // 48: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:input_type -> akuity.io.kargo.service.v1alpha1.ListStagesRequest
+	27,  // 49: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:input_type -> akuity.io.kargo.service.v1alpha1.GetStageRequest
+	29,  // 50: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:input_type -> akuity.io.kargo.service.v1alpha1.WatchStagesRequest
+	31,  // 51: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:input_type -> akuity.io.kargo.service.v1alpha1.DeleteStageRequest
+	33,  // 52: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:input_type -> akuity.io.kargo.service.v1alpha1.RefreshStageRequest
+	35,  // 53: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
+	37,  // 54: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsRequest
+	39,  // 55: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionRequest
+	41,  // 56: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionRequest
+	43,  // 57: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
+	45,  // 58: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectRequest
+	47,  // 59: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectsRequest
+	49,  // 60: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:input_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
+	51,  // 61: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:input_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
+	53,  // 62: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:input_type -> akuity.io.kargo.service.v1alpha1.GetFreightRequest
+	55,  // 63: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageRequest
+	57,  // 64: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStageSubscribers:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersRequest
+	59,  // 65: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:input_type -> akuity.io.kargo.service.v1alpha1.QueryFreightRequest
+	62,  // 66: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:input_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
+	64,  // 67: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:input_type -> akuity.io.kargo.service.v1alpha1.ReverifyRequest
+	66,  // 68: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:input_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
+	68,  // 69: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
+	70,  // 70: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
+	72,  // 71: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
+	74,  // 72: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
+	76,  // 73: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
+	78,  // 74: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
+	80,  // 75: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:input_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
+	82,  // 76: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:input_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
+	84,  // 77: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:input_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
+	86,  // 78: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
+	88,  // 79: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
+	90,  // 80: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
+	94,  // 81: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
+	92,  // 82: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
+	4,   // 83: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
+	7,   // 84: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigResponse
+	9,   // 85: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
+	12,  // 86: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
+	15,  // 87: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateResourceResponse
+	18,  // 88: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse
+	21,  // 89: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
+	24,  // 90: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:output_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
+	26,  // 91: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
+	28,  // 92: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
+	30,  // 93: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:output_type -> akuity.io.kargo.service.v1alpha1.WatchStagesResponse
+	32,  // 94: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
+	34,  // 95: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:output_type -> akuity.io.kargo.service.v1alpha1.RefreshStageResponse
+	36,  // 96: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
+	38,  // 97: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
+	40,  // 98: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionResponse
+	42,  // 99: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
+	44,  // 100: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
+	46,  // 101: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectResponse
+	48,  // 102: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
+	50,  // 103: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:output_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
+	52,  // 104: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:output_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
+	54,  // 105: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:output_type -> akuity.io.kargo.service.v1alpha1.GetFreightResponse
+	56,  // 106: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
+	58,  // 107: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStageSubscribers:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageSubscribersResponse
+	60,  // 108: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:output_type -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse
+	63,  // 109: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:output_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
+	65,  // 110: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:output_type -> akuity.io.kargo.service.v1alpha1.ReverifyResponse
+	67,  // 111: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:output_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
+	69,  // 112: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
+	71,  // 113: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
+	73,  // 114: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
+	75,  // 115: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
+	77,  // 116: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
+	79,  // 117: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
+	81,  // 118: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:output_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
+	83,  // 119: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:output_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
+	85,  // 120: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:output_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
+	87,  // 121: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
+	89,  // 122: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
+	91,  // 123: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
+	95,  // 124: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
+	93,  // 125: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
+	83,  // [83:126] is the sub-list for method output_type
+	40,  // [40:83] is the sub-list for method input_type
+	40,  // [40:40] is the sub-list for extension type_name
+	40,  // [40:40] is the sub-list for extension extendee
+	0,   // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_service_v1alpha1_service_proto_init() }
@@ -7528,6 +7553,7 @@ func file_service_v1alpha1_service_proto_init() {
 	}
 	file_service_v1alpha1_service_proto_msgTypes[34].OneofWrappers = []interface{}{}
 	file_service_v1alpha1_service_proto_msgTypes[36].OneofWrappers = []interface{}{}
+	file_service_v1alpha1_service_proto_msgTypes[90].OneofWrappers = []interface{}{}
 	file_service_v1alpha1_service_proto_msgTypes[92].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
