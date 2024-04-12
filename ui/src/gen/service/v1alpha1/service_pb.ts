@@ -1124,6 +1124,11 @@ export class GetStageRequest extends Message<GetStageRequest> {
    */
   name = "";
 
+  /**
+   * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
+   */
+  format = RawFormat.UNSPECIFIED;
+
   constructor(data?: PartialMessage<GetStageRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1134,6 +1139,7 @@ export class GetStageRequest extends Message<GetStageRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "project", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "format", kind: "enum", T: proto3.getEnumType(RawFormat) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetStageRequest {
@@ -1158,9 +1164,14 @@ export class GetStageRequest extends Message<GetStageRequest> {
  */
 export class GetStageResponse extends Message<GetStageResponse> {
   /**
-   * @generated from field: github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
    */
   stage?: Stage;
+
+  /**
+   * @generated from field: optional bytes raw = 2;
+   */
+  raw?: Uint8Array;
 
   constructor(data?: PartialMessage<GetStageResponse>) {
     super();
@@ -1170,7 +1181,8 @@ export class GetStageResponse extends Message<GetStageResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetStageResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "stage", kind: "message", T: Stage },
+    { no: 1, name: "stage", kind: "message", T: Stage, opt: true },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetStageResponse {
