@@ -2,14 +2,18 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	sigyaml "sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 // splitYAML splits YAML bytes into unstructured objects. It separates Project
@@ -44,4 +48,25 @@ func splitYAML(
 		}
 	}
 	return projects, otherResources, nil
+}
+
+// objectOrRaw returns either the object or the raw representation of the object
+// based on the format.
+func objectOrRaw[T client.Object](obj T, format svcv1alpha1.RawFormat) (T, []byte, error) {
+	switch format {
+	case svcv1alpha1.RawFormat_RAW_FORMAT_JSON:
+		raw, err := json.Marshal(obj)
+		if err != nil {
+			return *new(T), nil, fmt.Errorf("object could not be marshaled to raw JSON: %w", err)
+		}
+		return *new(T), raw, nil
+	case svcv1alpha1.RawFormat_RAW_FORMAT_YAML:
+		raw, err := sigyaml.Marshal(obj)
+		if err != nil {
+			return *new(T), nil, fmt.Errorf("object could not be marshaled to raw YAML: %w", err)
+		}
+		return *new(T), raw, nil
+	default:
+		return obj, nil, nil
+	}
 }

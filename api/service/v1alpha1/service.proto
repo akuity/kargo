@@ -9,6 +9,12 @@ import "rollouts/api/v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
 
+enum RawFormat {
+  RAW_FORMAT_UNSPECIFIED = 0;
+  RAW_FORMAT_JSON = 1;
+  RAW_FORMAT_YAML = 2;
+}
+
 service KargoService {
   rpc GetVersionInfo(GetVersionInfoRequest) returns (GetVersionInfoResponse);
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
@@ -526,7 +532,14 @@ message GetAnalysisTemplateResponse {
 message GetAnalysisRunRequest {
   string namespace = 1;
   string name = 2;
+  RawFormat format = 3;
 }
+
+message GetAnalysisRunResponse {
+  optional github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
+  optional bytes raw = 2;
+}
+
 
 message DeleteAnalysisTemplateRequest {
   string project = 1;
@@ -535,8 +548,4 @@ message DeleteAnalysisTemplateRequest {
 
 message DeleteAnalysisTemplateResponse {
   /* explicitly empty */
-}
-
-message GetAnalysisRunResponse {
-  github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
 }

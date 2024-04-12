@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -13,6 +14,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
@@ -26,8 +28,7 @@ func TestGetAnalysisRun(t *testing.T) {
 		req              *svcv1alpha1.GetAnalysisRunRequest
 		rolloutsDisabled bool
 		getAnalysisRunFn func(context.Context, client.Client, types.NamespacedName) (*rollouts.AnalysisRun, error)
-		errExpected      bool
-		expectedCode     connect.Code
+		assertions       func(*testing.T, *connect.Response[svcv1alpha1.GetAnalysisRunResponse], error)
 	}{
 		"empty namespace": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
@@ -35,8 +36,11 @@ func TestGetAnalysisRun(t *testing.T) {
 				Name:      "",
 			},
 			getAnalysisRunFn: rollouts.GetAnalysisRun,
-			errExpected:      true,
-			expectedCode:     connect.CodeInvalidArgument,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"empty name": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
@@ -44,8 +48,11 @@ func TestGetAnalysisRun(t *testing.T) {
 				Name:      "",
 			},
 			getAnalysisRunFn: rollouts.GetAnalysisRun,
-			errExpected:      true,
-			expectedCode:     connect.CodeInvalidArgument,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"existing AnalysisRun": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
@@ -53,6 +60,16 @@ func TestGetAnalysisRun(t *testing.T) {
 				Name:      "test",
 			},
 			getAnalysisRunFn: rollouts.GetAnalysisRun,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetRaw())
+
+				require.NotNil(t, c.Msg.GetAnalysisRun())
+				require.Equal(t, "kargo-demo", c.Msg.GetAnalysisRun().Namespace)
+				require.Equal(t, "test", c.Msg.GetAnalysisRun().Name)
+			},
 		},
 		"non-existing namespace": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
@@ -60,8 +77,11 @@ func TestGetAnalysisRun(t *testing.T) {
 				Name:      "test",
 			},
 			getAnalysisRunFn: rollouts.GetAnalysisRun,
-			errExpected:      true,
-			expectedCode:     connect.CodeNotFound,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"non-existing AnalysisRun": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
@@ -69,8 +89,11 @@ func TestGetAnalysisRun(t *testing.T) {
 				Name:      "non-existing",
 			},
 			getAnalysisRunFn: rollouts.GetAnalysisRun,
-			errExpected:      true,
-			expectedCode:     connect.CodeNotFound,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"error getting AnalysisRun": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
@@ -80,8 +103,11 @@ func TestGetAnalysisRun(t *testing.T) {
 			getAnalysisRunFn: func(context.Context, client.Client, types.NamespacedName) (*rollouts.AnalysisRun, error) {
 				return nil, apierrors.NewServiceUnavailable("test")
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeUnknown,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnknown, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"Argo Rollouts integration is not enabled": {
 			req: &svcv1alpha1.GetAnalysisRunRequest{
@@ -89,8 +115,51 @@ func TestGetAnalysisRun(t *testing.T) {
 				Name:      "test",
 			},
 			rolloutsDisabled: true,
-			errExpected:      true,
-			expectedCode:     connect.CodeUnimplemented,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnimplemented, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
+		},
+		"raw format JSON": {
+			req: &svcv1alpha1.GetAnalysisRunRequest{
+				Namespace: "kargo-demo",
+				Name:      "test",
+				Format:    svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
+			},
+			getAnalysisRunFn: rollouts.GetAnalysisRun,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetAnalysisRun())
+				require.NotNil(t, c.Msg.GetRaw())
+
+				obj := &rollouts.AnalysisRun{}
+				require.NoError(t, json.Unmarshal(c.Msg.GetRaw(), obj))
+				require.Equal(t, "kargo-demo", obj.Namespace)
+				require.Equal(t, "test", obj.Name)
+			},
+		},
+		"raw format YAML": {
+			req: &svcv1alpha1.GetAnalysisRunRequest{
+				Namespace: "kargo-demo",
+				Name:      "test",
+				Format:    svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
+			},
+			getAnalysisRunFn: rollouts.GetAnalysisRun,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisRunResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetAnalysisRun())
+				require.NotNil(t, c.Msg.GetRaw())
+
+				obj := &rollouts.AnalysisRun{}
+				require.NoError(t, yaml.Unmarshal(c.Msg.GetRaw(), obj))
+				require.Equal(t, "kargo-demo", obj.Namespace)
+				require.Equal(t, "test", obj.Name)
+			},
 		},
 	}
 	for name, testCase := range testCases {
@@ -143,14 +212,7 @@ func TestGetAnalysisRun(t *testing.T) {
 				getAnalysisRunFn: testCase.getAnalysisRunFn,
 			}
 			res, err := (svr).GetAnalysisRun(ctx, connect.NewRequest(testCase.req))
-			if testCase.errExpected {
-				require.Error(t, err)
-				require.Equal(t, testCase.expectedCode, connect.CodeOf(err))
-				return
-			}
-			require.NotNil(t, res.Msg.GetAnalysisRun())
-			require.Equal(t, testCase.req.GetNamespace(), res.Msg.GetAnalysisRun().Namespace)
-			require.Equal(t, testCase.req.GetName(), res.Msg.GetAnalysisRun().Name)
+			testCase.assertions(t, res, err)
 		})
 	}
 }

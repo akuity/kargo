@@ -44,7 +44,12 @@ func (s *server) GetAnalysisRun(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
+	obj, raw, err := objectOrRaw(ar, req.Msg.GetFormat())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
 	return connect.NewResponse(&svcv1alpha1.GetAnalysisRunResponse{
-		AnalysisRun: ar,
+		AnalysisRun: obj,
+		Raw:         raw,
 	}), nil
 }
