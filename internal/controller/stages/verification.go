@@ -365,7 +365,7 @@ func (r *reconciler) buildAnalysisRun(
 		numAnnotations = len(stage.Spec.Verification.AnalysisRunMetadata.Annotations)
 	}
 	// Kargo will add up to three labels of its own, so size the map accordingly
-	lbls := make(map[string]string, numLabels+3)
+	lbls := make(map[string]string, numLabels+4)
 	annotations := make(map[string]string, numAnnotations)
 	if stage.Spec.Verification.AnalysisRunMetadata != nil {
 		for k, v := range stage.Spec.Verification.AnalysisRunMetadata.Labels {
@@ -377,6 +377,13 @@ func (r *reconciler) buildAnalysisRun(
 	}
 	lbls[kargoapi.StageLabelKey] = stage.Name
 	lbls[kargoapi.FreightLabelKey] = stage.Status.CurrentFreight.Name
+	// Add Promotion name if the AnalysisRun is triggered by Promotion.
+	// We can determine it by checking existence of Reverify key in annotations.
+	if _, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; !ok {
+		if stage.Status.LastPromotion != nil {
+			lbls[kargoapi.PromotionLabelKey] = stage.Status.LastPromotion.Name
+		}
+	}
 	if r.cfg.RolloutsControllerInstanceID != "" {
 		lbls["argo-rollouts.argoproj.io/controller-instance-id"] = r.cfg.RolloutsControllerInstanceID
 	}
