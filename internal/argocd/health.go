@@ -197,8 +197,6 @@ func stageHealthForAppSync(app *argocd.Application, revision string) (kargoapi.H
 	switch {
 	case revision == "":
 		return kargoapi.HealthStateHealthy, nil
-	// TODO(hidde): When https://github.com/akuity/kargo/pull/1753 is merged,
-	//  this can rely on the operation state from the Status.
 	case app.Operation != nil && app.Operation.Sync != nil:
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is being synced",
