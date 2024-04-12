@@ -170,9 +170,13 @@ codegen-ui:
 # that is pre-loaded with required tools.                                      #
 ################################################################################
 
+# Prevents issues with vcs stamping within docker containers. 
+GOFLAGS="-buildvcs=false"
+
 DOCKER_CMD := $(CONTAINER_RUNTIME) run \
 	-it \
 	--rm \
+	-e GOFLAGS=$(GOFLAGS) \
 	-v gomodcache:/home/user/gocache \
 	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
 	-v /workspaces/kargo/ui/node_modules \
