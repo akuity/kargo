@@ -272,10 +272,12 @@ message WatchPromotionsResponse {
 message GetPromotionRequest {
   string project = 1;
   string name = 2;
+  RawFormat format = 3;
 }
 
 message GetPromotionResponse {
-  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+  optional github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+  optional bytes raw = 2;
 }
 
 message WatchPromotionRequest {
