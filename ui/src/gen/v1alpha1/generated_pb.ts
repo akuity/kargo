@@ -1592,12 +1592,16 @@ export class GitSubscription extends Message<GitSubscription> {
   insecureSkipTLSVerify?: boolean;
 
   /**
-   * IncludePaths is a list of regular expressions that can optionally be used to
+   * IncludePaths is a list of filter strings that can optionally be used to
    * limit file paths in repository, changes in which will result in creation of
    * new freight. When not specified - changes in any path will produce new
-   * freight, it is equivalent to having a IncludePaths with an entry of ".*"
+   * freight, it is equivalent to having a IncludePaths with an entry of "regex:.*"
    * When both IncludePaths and ExcludePaths are specified and match same path/paths,
    * ExcludePaths will prevail over IncludePaths.
+   * Filter strings can be specified as prefix/exact match strings, globs or regular
+   * expressions, default being prefix/exact match, for example "helm/charts/", for
+   * regular expressions strings need to be prepended by either "regex:" or "regexp:"
+   * as in "regexp:^.*values\.yaml$", for globs with "glob:" as in "glob:helm/*\/*\/values.*ml"
    * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string includePaths = 8;
@@ -1605,10 +1609,14 @@ export class GitSubscription extends Message<GitSubscription> {
   includePaths: string[] = [];
 
   /**
-   * ExcludePaths is an optional list of regular expressions used to specify paths
+   * ExcludePaths is an optional list of filter strings used to specify paths
    * in git repository, changes in which should never produce new freight. When used
    * in conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes
    * precedence over IncludePaths.
+   * Filter strings can be specified as prefix/exact match strings, globs or regular
+   * expressions, default being prefix/exact match, for example "helm/charts/", for
+   * regular expressions strings need to be prepended by either "regex:" or "regexp:"
+   * as in "regexp:^.*values\.yaml$", for globs with "glob:" as in "glob:helm/*\/*\/values.*ml"
    * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string excludePaths = 9;

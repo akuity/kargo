@@ -73,7 +73,7 @@
                     "type": "string"
                   },
                   "excludePaths": {
-                    "description": "ExcludePaths is an optional list of regular expressions used to specify paths\nin git repository, changes in which should never produce new freight. When used\nin conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes\nprecedence over IncludePaths.",
+                    "description": "ExcludePaths is an optional list of filter strings used to specify paths\nin git repository, changes in which should never produce new freight. When used\nin conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes\nprecedence over IncludePaths.\nFilter strings can be specified as prefix/exact match strings, globs or regular\nexpressions, default being prefix/exact match, for example \"helm/charts/\", for\nregular expressions strings need to be prepended by either \"regex:\" or \"regexp:\"\nas in \"regexp:^.*values\\.yaml$\", for globs with \"glob:\" as in \"glob:helm/*/*/values.*ml\"",
                     "items": {
                       "type": "string"
                     },
@@ -87,7 +87,7 @@
                     "type": "array"
                   },
                   "includePaths": {
-                    "description": "IncludePaths is a list of regular expressions that can optionally be used to\nlimit file paths in repository, changes in which will result in creation of\nnew freight. When not specified - changes in any path will produce new\nfreight, it is equivalent to having a IncludePaths with an entry of \".*\"\nWhen both IncludePaths and ExcludePaths are specified and match same path/paths,\nExcludePaths will prevail over IncludePaths.",
+                    "description": "IncludePaths is a list of filter strings that can optionally be used to\nlimit file paths in repository, changes in which will result in creation of\nnew freight. When not specified - changes in any path will produce new\nfreight, it is equivalent to having a IncludePaths with an entry of \"regex:.*\"\nWhen both IncludePaths and ExcludePaths are specified and match same path/paths,\nExcludePaths will prevail over IncludePaths.\nFilter strings can be specified as prefix/exact match strings, globs or regular\nexpressions, default being prefix/exact match, for example \"helm/charts/\", for\nregular expressions strings need to be prepended by either \"regex:\" or \"regexp:\"\nas in \"regexp:^.*values\\.yaml$\", for globs with \"glob:\" as in \"glob:helm/*/*/values.*ml\"",
                     "items": {
                       "type": "string"
                     },
