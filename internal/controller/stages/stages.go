@@ -1496,7 +1496,7 @@ func (r *reconciler) recordFreightVerificationEvent(
 	annotations := map[string]string{
 		kargoapi.AnnotationKeyEventActor:        kargoapi.FormatEventControllerActor(r.cfg.Name()),
 		kargoapi.AnnotationKeyEventProject:      s.Namespace,
-		kargoapi.AnnotationKeyEventStageName:    s.Namespace,
+		kargoapi.AnnotationKeyEventStageName:    s.Name,
 		kargoapi.AnnotationKeyEventFreightAlias: fr.Alias,
 		kargoapi.AnnotationKeyEventFreightName:  fr.Name,
 	}
