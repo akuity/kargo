@@ -196,6 +196,19 @@ api:
       #       name: github-dex
       #       key: dex.github.clientSecret
 
+      ## @param api.oidc.dex.volumes Add additional volumes to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference to mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      volumes: []
+      # - name: google-json
+      #   secret:
+      #     defaultMode: 420
+      #     secretName: kargo-google-groups-json
+
+      ## @param api.oidc.dex.volumeMounts Add additional volume mounts to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference to mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      volumeMounts:
+      # - mountPath: /tmp/oidc
+      #   name: google-json
+      #   readOnly: true
+
       probes:
         ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
         enabled: true

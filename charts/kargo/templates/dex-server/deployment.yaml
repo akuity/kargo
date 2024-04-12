@@ -48,6 +48,9 @@ spec:
         - mountPath: /etc/dex
           name: config
           readOnly: true
+        {{- if .Values.api.oidc.dex.volumeMounts }}
+          {{- toYaml .Values.api.oidc.dex.volumeMounts | nindent 8 }}
+        {{- end }}
         securityContext:
           {{- toYaml .Values.api.oidc.dex.securityContext | nindent 10 }}
         resources:
@@ -88,6 +91,9 @@ spec:
               items:
               - key: config.yaml
                 path: config.yaml
+      {{- if .Values.api.oidc.dex.volumes }}
+        {{- toYaml .Values.api.oidc.dex.volumes | nindent 8 }}
+      {{- end }}
       {{- with .Values.api.oidc.dex.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
