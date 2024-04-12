@@ -20,6 +20,7 @@ import (
 const (
 	regexpPrefix = "regexp:"
 	regexPrefix  = "regex:"
+	globPrefix   = "glob:"
 )
 
 type gitMeta struct {
@@ -309,7 +310,7 @@ func ignores(tagName string, ignore []string) bool {
 // filters match one or more commit diffs and new Freight is
 // to be produced. It returns false otherwise.
 func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
-	includePathsRegexps, includePathsGlobs, err := sortGlobsAndRegexps(includePaths)
+	includePathsRegexps, includePathsGlobs, includePathsPrefixes, err := sortFilters(includePaths)
 	if err != nil {
 		return false, fmt.Errorf(
 			"error compiling includePaths regexps: %w",
@@ -317,7 +318,7 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 		)
 	}
 
-	excludePathsRegexps, excludePathsGlobs, err := sortGlobsAndRegexps(excludePaths)
+	excludePathsRegexps, excludePathsGlobs, excludePathsPrefixes, err := sortFilters(excludePaths)
 	if err != nil {
 		return false, fmt.Errorf(
 			"error compiling excludePaths regexps: %w",
@@ -341,16 +342,18 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 				err,
 			)
 		}
+		matchesIncludePrefixes := matchesPrefixList(diffPath, includePathsPrefixes)
+		matchesExcludePrefixes := matchesPrefixList(diffPath, excludePathsPrefixes)
 		// matchesIncludePaths case is a bit different from matchesExcludePaths
 		// in the way that if includePaths string array is empty - it matches
 		// ANY change so we need to have a check for that
 		matchesIncludePaths := len(includePaths) == 0 || matchesRegexpList(
 			diffPath,
 			includePathsRegexps,
-		) || matchesIncludeGlobs
+		) || matchesIncludeGlobs || matchesIncludePrefixes
 		matchesExcludePaths := matchesRegexpList(diffPath,
 			excludePathsRegexps,
-		) || matchesExcludeGlobs
+		) || matchesExcludeGlobs || matchesExcludePrefixes
 		// combined filter decision, positive for matching includePaths and
 		// unmatching excludePaths
 		if matchesIncludePaths && !matchesExcludePaths {
@@ -363,26 +366,31 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 	return false, nil
 }
 
-// sortGlobsAndRegexps handles sorting of a slice of strings to globs
-// and regexps based on prefix, regexps are compiled into a slice of
+// sortFilters handles sorting of a slice of strings to regexps,
+// globs and prefixes, regexps are compiled into a slice of
 // *regexp.Regexp additionally
-func sortGlobsAndRegexps(regexpStrings []string) (regexps []*regexp.Regexp, globs []string, err error) {
+func sortFilters(regexpStrings []string) (regexps []*regexp.Regexp, globs []string, prefixes []string, err error) {
 	regexpsSlice := make([]*regexp.Regexp, 0, len(regexpStrings))
 	globsSlice := make([]string, 0, len(regexpStrings))
+	prefixesSlice := make([]string, 0, len(regexpStrings))
 	for _, regexpString := range regexpStrings {
 		switch {
 		case strings.HasPrefix(regexpString, regexpPrefix):
 			regexpString = strings.TrimPrefix(regexpString, regexpPrefix)
 		case strings.HasPrefix(regexpString, regexPrefix):
 			regexpString = strings.TrimPrefix(regexpString, regexPrefix)
-		default:
+		case strings.HasPrefix(regexpString, globPrefix):
+			regexpString = strings.TrimPrefix(regexpString, globPrefix)
 			globsSlice = append(globsSlice, regexpString)
+			continue
+		default:
+			prefixesSlice = append(prefixesSlice, regexpString)
 			continue
 		}
 
 		regex, err := regexp.Compile(regexpString)
 		if err != nil {
-			return nil, nil, fmt.Errorf(
+			return nil, nil, nil, fmt.Errorf(
 				"error compiling string %q into a regular expression: %w",
 				regexpString,
 				err,
@@ -390,7 +398,7 @@ func sortGlobsAndRegexps(regexpStrings []string) (regexps []*regexp.Regexp, glob
 		}
 		regexpsSlice = append(regexpsSlice, regex)
 	}
-	return regexpsSlice, globsSlice, nil
+	return regexpsSlice, globsSlice, prefixesSlice, nil
 }
 
 // matchesRegexpList is a general purpose function iterating given slice of
@@ -424,6 +432,19 @@ func matchesGlobList(stringToMatch string, globList []string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// matchesPrefixList is a general purpose function iterating given slice of
+// strings (prefixList) to check if any of prefixes match stringToMatch string,
+// if match is found it returns true, if match is not found it
+// returns false
+func matchesPrefixList(stringToMatch string, prefixList []string) bool {
+	for _, prefix := range prefixList {
+		if strings.HasPrefix(stringToMatch, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 // selectLexicallyLastTag sorts the provided tag name in reverse lexicographic

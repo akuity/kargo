@@ -702,7 +702,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 		},
 		{
 			name:         "success with matching glob filters configuration",
-			includePaths: []string{"path2/*.tpl"},
+			includePaths: []string{"glob:path2/*.tpl"},
 			excludePaths: []string{"nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(t *testing.T, matchFound bool, err error) {
@@ -713,6 +713,26 @@ func TestMatchesPathsFilters(t *testing.T) {
 		{
 			name:         "success with unmatching glob filters configuration",
 			includePaths: []string{"path2/*.tpl"},
+			excludePaths: []string{regexPrefix + "nonexistent", "*/?helpers.tpl"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, false, matchFound)
+			},
+		},
+		{
+			name:         "success with matching prefix filters configuration",
+			includePaths: []string{"path1/"},
+			excludePaths: []string{"nonexistent"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, true, matchFound)
+			},
+		},
+		{
+			name:         "success with unmatching prefix filters configuration",
+			includePaths: []string{"path3/"},
 			excludePaths: []string{regexPrefix + "nonexistent", "*/?helpers.tpl"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(t *testing.T, matchFound bool, err error) {
@@ -733,7 +753,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 		},
 		{
 			name:         "error with invalid glob syntax",
-			includePaths: []string{"path2/*.tpl["},
+			includePaths: []string{"glob:path2/*.tpl["},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.Error(t, err)
