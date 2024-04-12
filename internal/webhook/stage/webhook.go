@@ -115,9 +115,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			}
 		} else {
 			// Ensure actor annotation is not set when not reverifying
-			if _, ok := stage.Annotations[kargoapi.AnnotationKeyEventReverifyActor]; ok {
-				delete(stage.Annotations, kargoapi.AnnotationKeyEventReverifyActor)
-			}
+			delete(stage.Annotations, kargoapi.AnnotationKeyEventReverifyActor)
 		}
 	}
 	return nil
