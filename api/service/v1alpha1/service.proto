@@ -430,10 +430,12 @@ message ListWarehousesResponse {
 message GetWarehouseRequest {
   string project = 1;
   string name = 2;
+  RawFormat format = 3;
 }
 
 message GetWarehouseResponse {
-  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+  optional github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+  optional bytes raw = 2;
 }
 
 message WatchWarehousesRequest {
