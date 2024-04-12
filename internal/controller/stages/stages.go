@@ -1503,8 +1503,9 @@ func (r *reconciler) recordFreightVerificationEvent(
 		kargoapi.AnnotationKeyEventFreightName:  fr.Name,
 	}
 	if _, ok := s.Annotations[kargoapi.AnnotationKeyReverify]; ok {
+		// Set Actor as a reverify actor if present
 		if actor, ok := s.Annotations[kargoapi.AnnotationKeyEventReverifyActor]; ok {
-			annotations[kargoapi.AnnotationKeyEventReverifyActor] = actor
+			annotations[kargoapi.AnnotationKeyEventActor] = actor
 		}
 	}
 	if vi.AnalysisRun != nil {
