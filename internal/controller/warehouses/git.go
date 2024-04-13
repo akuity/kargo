@@ -326,7 +326,6 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 		)
 	}
 
-	filteredDiffs := make([]string, 0, len(diffs))
 	for _, diffPath := range diffs {
 		matchesIncludeGlobs, err := matchesGlobList(diffPath, includePathsGlobs)
 		if err != nil {
@@ -351,16 +350,15 @@ func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []s
 			diffPath,
 			includePathsRegexps,
 		) || matchesIncludeGlobs || matchesIncludePrefixes
+		if !matchesIncludePaths {
+			continue
+		}
 		matchesExcludePaths := matchesRegexpList(diffPath,
 			excludePathsRegexps,
 		) || matchesExcludeGlobs || matchesExcludePrefixes
-		// combined filter decision, positive for matching includePaths and
-		// unmatching excludePaths
-		if matchesIncludePaths && !matchesExcludePaths {
-			filteredDiffs = append(filteredDiffs, diffPath)
+		if matchesExcludePaths {
+			continue
 		}
-	}
-	if len(filteredDiffs) > 0 {
 		return true, nil
 	}
 	return false, nil
