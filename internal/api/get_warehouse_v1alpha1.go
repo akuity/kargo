@@ -41,8 +41,16 @@ func (s *server) GetWarehouse(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	if raw != nil {
+		return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
+			Result: &svcv1alpha1.GetWarehouseResponse_Raw{
+				Raw: raw,
+			},
+		}), nil
+	}
 	return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
-		Warehouse: obj,
-		Raw:       raw,
+		Result: &svcv1alpha1.GetWarehouseResponse_Warehouse{
+			Warehouse: obj,
+		},
 	}), nil
 }

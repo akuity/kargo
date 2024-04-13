@@ -220,8 +220,10 @@ message GetStageRequest {
 }
 
 message GetStageResponse {
-  optional github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
-  optional bytes raw = 2;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+    bytes raw = 2;
+  }
 }
 
 message WatchStagesRequest {
@@ -278,8 +280,10 @@ message GetPromotionRequest {
 }
 
 message GetPromotionResponse {
-  optional github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
-  optional bytes raw = 2;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+    bytes raw = 2;
+  }
 }
 
 message WatchPromotionRequest {
@@ -306,8 +310,10 @@ message GetProjectRequest {
 }
 
 message GetProjectResponse {
-  optional github.com.akuity.kargo.api.v1alpha1.Project project = 1;
-  optional bytes raw = 2;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+    bytes raw = 2;
+  }
 }
 
 message ListProjectsRequest {
@@ -347,8 +353,10 @@ message GetFreightRequest {
 }
 
 message GetFreightResponse {
-  optional github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
-  optional bytes raw = 2;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+    bytes raw = 2;
+  }
 }
 
 message PromoteToStageRequest {
@@ -434,8 +442,10 @@ message GetWarehouseRequest {
 }
 
 message GetWarehouseResponse {
-  optional github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
-  optional bytes raw = 2;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+    bytes raw = 2;
+  }
 }
 
 message WatchWarehousesRequest {
@@ -497,8 +507,10 @@ message GetCredentialsRequest {
 }
 
 message GetCredentialsResponse {
-  optional k8s.io.api.core.v1.Secret credentials = 1;
-  optional bytes raw = 2;
+  oneof result {
+    k8s.io.api.core.v1.Secret credentials = 1;
+    bytes raw = 2;
+  }
 }
 
 message ListCredentialsRequest {
@@ -539,8 +551,10 @@ message GetAnalysisTemplateRequest {
 }
 
 message GetAnalysisTemplateResponse {
-  optional github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
-  optional bytes raw = 2;
+  oneof result {
+    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    bytes raw = 2;
+  }
 }
 
 message GetAnalysisRunRequest {
@@ -550,8 +564,10 @@ message GetAnalysisRunRequest {
 }
 
 message GetAnalysisRunResponse {
-  optional github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
-  optional bytes raw = 2;
+  oneof result {
+    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
+    bytes raw = 2;
+  }
 }
 
 

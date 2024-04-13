@@ -41,8 +41,16 @@ func (s *server) GetPromotion(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	if raw != nil {
+		return connect.NewResponse(&svcv1alpha1.GetPromotionResponse{
+			Result: &svcv1alpha1.GetPromotionResponse_Raw{
+				Raw: raw,
+			},
+		}), nil
+	}
 	return connect.NewResponse(&svcv1alpha1.GetPromotionResponse{
-		Promotion: obj,
-		Raw:       raw,
+		Result: &svcv1alpha1.GetPromotionResponse_Promotion{
+			Promotion: obj,
+		},
 	}), nil
 }

@@ -34,10 +34,16 @@ func (s *server) GetProject(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	return connect.NewResponse(
-		&svcv1alpha1.GetProjectResponse{
+	if raw != nil {
+		return connect.NewResponse(&svcv1alpha1.GetProjectResponse{
+			Result: &svcv1alpha1.GetProjectResponse_Raw{
+				Raw: raw,
+			},
+		}), nil
+	}
+	return connect.NewResponse(&svcv1alpha1.GetProjectResponse{
+		Result: &svcv1alpha1.GetProjectResponse_Project{
 			Project: obj,
-			Raw:     raw,
 		},
-	), nil
+	}), nil
 }

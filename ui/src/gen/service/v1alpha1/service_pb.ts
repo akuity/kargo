@@ -1164,14 +1164,21 @@ export class GetStageRequest extends Message<GetStageRequest> {
  */
 export class GetStageResponse extends Message<GetStageResponse> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetStageResponse.result
    */
-  stage?: Stage;
-
-  /**
-   * @generated from field: optional bytes raw = 2;
-   */
-  raw?: Uint8Array;
+  result: {
+    /**
+     * @generated from field: github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+     */
+    value: Stage;
+    case: "stage";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetStageResponse>) {
     super();
@@ -1181,8 +1188,8 @@ export class GetStageResponse extends Message<GetStageResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetStageResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "stage", kind: "message", T: Stage, opt: true },
-    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 1, name: "stage", kind: "message", T: Stage, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetStageResponse {
@@ -1664,14 +1671,21 @@ export class GetPromotionRequest extends Message<GetPromotionRequest> {
  */
 export class GetPromotionResponse extends Message<GetPromotionResponse> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetPromotionResponse.result
    */
-  promotion?: Promotion;
-
-  /**
-   * @generated from field: optional bytes raw = 2;
-   */
-  raw?: Uint8Array;
+  result: {
+    /**
+     * @generated from field: github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+     */
+    value: Promotion;
+    case: "promotion";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetPromotionResponse>) {
     super();
@@ -1681,8 +1695,8 @@ export class GetPromotionResponse extends Message<GetPromotionResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetPromotionResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "promotion", kind: "message", T: Promotion, opt: true },
-    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 1, name: "promotion", kind: "message", T: Promotion, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetPromotionResponse {
@@ -1906,14 +1920,21 @@ export class GetProjectRequest extends Message<GetProjectRequest> {
  */
 export class GetProjectResponse extends Message<GetProjectResponse> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetProjectResponse.result
    */
-  project?: Project;
-
-  /**
-   * @generated from field: optional bytes raw = 2;
-   */
-  raw?: Uint8Array;
+  result: {
+    /**
+     * @generated from field: github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+     */
+    value: Project;
+    case: "project";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetProjectResponse>) {
     super();
@@ -1923,8 +1944,8 @@ export class GetProjectResponse extends Message<GetProjectResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetProjectResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project", kind: "message", T: Project, opt: true },
-    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 1, name: "project", kind: "message", T: Project, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProjectResponse {
@@ -2244,14 +2265,21 @@ export class GetFreightRequest extends Message<GetFreightRequest> {
  */
 export class GetFreightResponse extends Message<GetFreightResponse> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetFreightResponse.result
    */
-  freight?: Freight;
-
-  /**
-   * @generated from field: optional bytes raw = 2;
-   */
-  raw?: Uint8Array;
+  result: {
+    /**
+     * @generated from field: github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+     */
+    value: Freight;
+    case: "freight";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetFreightResponse>) {
     super();
@@ -2261,8 +2289,8 @@ export class GetFreightResponse extends Message<GetFreightResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetFreightResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "freight", kind: "message", T: Freight, opt: true },
-    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 1, name: "freight", kind: "message", T: Freight, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFreightResponse {
@@ -2975,14 +3003,21 @@ export class GetWarehouseRequest extends Message<GetWarehouseRequest> {
  */
 export class GetWarehouseResponse extends Message<GetWarehouseResponse> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetWarehouseResponse.result
    */
-  warehouse?: Warehouse;
-
-  /**
-   * @generated from field: optional bytes raw = 2;
-   */
-  raw?: Uint8Array;
+  result: {
+    /**
+     * @generated from field: github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+     */
+    value: Warehouse;
+    case: "warehouse";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetWarehouseResponse>) {
     super();
@@ -2992,8 +3027,8 @@ export class GetWarehouseResponse extends Message<GetWarehouseResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetWarehouseResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "warehouse", kind: "message", T: Warehouse, opt: true },
-    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 1, name: "warehouse", kind: "message", T: Warehouse, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWarehouseResponse {
@@ -3501,14 +3536,21 @@ export class GetCredentialsRequest extends Message<GetCredentialsRequest> {
  */
 export class GetCredentialsResponse extends Message<GetCredentialsResponse> {
   /**
-   * @generated from field: optional k8s.io.api.core.v1.Secret credentials = 1;
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetCredentialsResponse.result
    */
-  credentials?: Secret;
-
-  /**
-   * @generated from field: optional bytes raw = 2;
-   */
-  raw?: Uint8Array;
+  result: {
+    /**
+     * @generated from field: k8s.io.api.core.v1.Secret credentials = 1;
+     */
+    value: Secret;
+    case: "credentials";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetCredentialsResponse>) {
     super();
@@ -3518,8 +3560,8 @@ export class GetCredentialsResponse extends Message<GetCredentialsResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetCredentialsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "credentials", kind: "message", T: Secret, opt: true },
-    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 1, name: "credentials", kind: "message", T: Secret, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCredentialsResponse {
@@ -3857,14 +3899,21 @@ export class GetAnalysisTemplateRequest extends Message<GetAnalysisTemplateReque
  */
 export class GetAnalysisTemplateResponse extends Message<GetAnalysisTemplateResponse> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1;
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse.result
    */
-  analysisTemplate?: AnalysisTemplate;
-
-  /**
-   * @generated from field: optional bytes raw = 2;
-   */
-  raw?: Uint8Array;
+  result: {
+    /**
+     * @generated from field: github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1;
+     */
+    value: AnalysisTemplate;
+    case: "analysisTemplate";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetAnalysisTemplateResponse>) {
     super();
@@ -3874,8 +3923,8 @@ export class GetAnalysisTemplateResponse extends Message<GetAnalysisTemplateResp
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "analysis_template", kind: "message", T: AnalysisTemplate, opt: true },
-    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 1, name: "analysis_template", kind: "message", T: AnalysisTemplate, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisTemplateResponse {
@@ -3949,14 +3998,21 @@ export class GetAnalysisRunRequest extends Message<GetAnalysisRunRequest> {
  */
 export class GetAnalysisRunResponse extends Message<GetAnalysisRunResponse> {
   /**
-   * @generated from field: optional github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1;
+   * @generated from oneof akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse.result
    */
-  analysisRun?: AnalysisRun;
-
-  /**
-   * @generated from field: optional bytes raw = 2;
-   */
-  raw?: Uint8Array;
+  result: {
+    /**
+     * @generated from field: github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1;
+     */
+    value: AnalysisRun;
+    case: "analysisRun";
+  } | {
+    /**
+     * @generated from field: bytes raw = 2;
+     */
+    value: Uint8Array;
+    case: "raw";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetAnalysisRunResponse>) {
     super();
@@ -3966,8 +4022,8 @@ export class GetAnalysisRunResponse extends Message<GetAnalysisRunResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "analysis_run", kind: "message", T: AnalysisRun, opt: true },
-    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 1, name: "analysis_run", kind: "message", T: AnalysisRun, oneof: "result" },
+    { no: 2, name: "raw", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "result" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAnalysisRunResponse {
