@@ -333,7 +333,11 @@ func applyArgoCDSourceUpdate(
 		// Now find the commit in the new freight that corresponds to this source.
 		for _, commit := range newFreight.Commits {
 			if git.NormalizeGitURL(commit.RepoURL) == sourceRepoURL {
-				source.TargetRevision = commit.ID
+				if commit.Tag != "" {
+					source.TargetRevision = commit.Tag
+				} else {
+					source.TargetRevision = commit.ID
+				}
 				break
 			}
 		}
