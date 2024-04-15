@@ -396,13 +396,12 @@ func (r *reconciler) buildAnalysisRun(
 	lbls[kargoapi.StageLabelKey] = stage.Name
 	lbls[kargoapi.FreightLabelKey] = stage.Status.CurrentFreight.Name
 
-	// Check if the AnalysisRun is triggered manually (e.g. reverification).
-	// We can determine it by checking existence of Reverify key in annotations.
-	if _, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; ok {
-		// Add Actor who triggered the reverification to the annotations (if exists).
-		if actor, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverifyActor]; ok {
-			annotations[kargoapi.AnnotationKeyReverifyActor] = actor
-		}
+	// Check if the AnalysisRun is triggered manually.
+	// When the promotion controller requests re-verification for the re-promotion,
+	// there should be no Reverify Actor key in annotations. However, if the re-verification
+	// is requested by the user, the Reverify Actor key should be added to annotations.
+	if actor, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverifyActor]; ok {
+		annotations[kargoapi.AnnotationKeyReverifyActor] = actor
 	} else {
 		// Add Promotion name if the AnalysisRun is triggered by Promotion.
 		if stage.Status.LastPromotion != nil {
