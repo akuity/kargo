@@ -412,9 +412,9 @@ spec:
                           - namespace
                           - phase
                           type: object
-                        completeTime:
-                          description: CompleteTime is the time at which the Verification
-                            process was completed.
+                        finishTime:
+                          description: FinishTime is the time at which the Verification
+                            process finished.
                           format: date-time
                           type: string
                         id:
@@ -464,9 +464,9 @@ spec:
                         - namespace
                         - phase
                         type: object
-                      completeTime:
-                        description: CompleteTime is the time at which the Verification
-                          process was completed.
+                      finishTime:
+                        description: FinishTime is the time at which the Verification
+                          process finished.
                         format: date-time
                         type: string
                       id:

@@ -3530,11 +3530,11 @@ export class VerificationInfo extends Message<VerificationInfo> {
   analysisRun?: AnalysisRunReference;
 
   /**
-   * CompleteTime is the time at which the Verification process was completed.
+   * FinishTime is the time at which the Verification process finished.
    *
-   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completeTime = 6;
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishTime = 6;
    */
-  completeTime?: Time;
+  finishTime?: Time;
 
   constructor(data?: PartialMessage<VerificationInfo>) {
     super();
@@ -3549,7 +3549,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "analysisRun", kind: "message", T: AnalysisRunReference, opt: true },
-    { no: 6, name: "completeTime", kind: "message", T: Time, opt: true },
+    { no: 6, name: "finishTime", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerificationInfo {

@@ -741,8 +741,8 @@ type VerificationInfo struct {
 	// AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
 	// the Verification process.
 	AnalysisRun *AnalysisRunReference `json:"analysisRun,omitempty" protobuf:"bytes,3,opt,name=analysisRun"`
-	// CompleteTime is the time at which the Verification process was completed.
-	CompleteTime *metav1.Time `json:"completeTime,omitempty" protobuf:"bytes,6,opt,name=completeTime"`
+	// FinishTime is the time at which the Verification process finished.
+	FinishTime *metav1.Time `json:"finishTime,omitempty" protobuf:"bytes,6,opt,name=finishTime"`
 }
 
 // HasAnalysisRun returns a bool indicating whether the VerificationInfo has an

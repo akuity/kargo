@@ -1061,8 +1061,8 @@ message VerificationInfo {
   // the Verification process.
   optional AnalysisRunReference analysisRun = 3;
 
-  // CompleteTime is the time at which the Verification process was completed.
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time completeTime = 6;
+  // FinishTime is the time at which the Verification process finished.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishTime = 6;
 }
 
 // VerifiedStage describes a Stage in which Freight has been verified.

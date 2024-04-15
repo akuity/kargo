@@ -680,9 +680,9 @@ func (r *reconciler) syncControlFlowStage(
 				stage,
 				&af,
 				&kargoapi.VerificationInfo{
-					StartTime:    ptr.To(metav1.NewTime(startTime)),
-					CompleteTime: ptr.To(metav1.NewTime(completeTime)),
-					Phase:        kargoapi.VerificationPhaseSuccessful,
+					StartTime:  ptr.To(metav1.NewTime(startTime)),
+					FinishTime: ptr.To(metav1.NewTime(completeTime)),
+					Phase:      kargoapi.VerificationPhaseSuccessful,
 				},
 			)
 		}
@@ -877,9 +877,9 @@ func (r *reconciler) syncNormalStage(
 			vi := status.CurrentFreight.VerificationInfo
 			if stage.Spec.Verification == nil {
 				vi = &kargoapi.VerificationInfo{
-					StartTime:    ptr.To(metav1.NewTime(startTime)),
-					CompleteTime: ptr.To(metav1.NewTime(completeTime)),
-					Phase:        kargoapi.VerificationPhaseSuccessful,
+					StartTime:  ptr.To(metav1.NewTime(startTime)),
+					FinishTime: ptr.To(metav1.NewTime(completeTime)),
+					Phase:      kargoapi.VerificationPhaseSuccessful,
 				}
 			}
 
@@ -1520,8 +1520,8 @@ func (r *reconciler) recordFreightVerificationEvent(
 	if vi.StartTime != nil {
 		annotations[kargoapi.AnnotationKeyEventVerificationStartTime] = vi.StartTime.Format(time.RFC3339)
 	}
-	if vi.CompleteTime != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime] = vi.CompleteTime.Format(time.RFC3339)
+	if vi.FinishTime != nil {
+		annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime] = vi.FinishTime.Format(time.RFC3339)
 	}
 	if vi.HasAnalysisRun() {
 		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = vi.AnalysisRun.Name

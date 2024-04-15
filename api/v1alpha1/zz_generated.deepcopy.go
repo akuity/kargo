@@ -1288,8 +1288,8 @@ func (in *VerificationInfo) DeepCopyInto(out *VerificationInfo) {
 		*out = new(AnalysisRunReference)
 		**out = **in
 	}
-	if in.CompleteTime != nil {
-		in, out := &in.CompleteTime, &out.CompleteTime
+	if in.FinishTime != nil {
+		in, out := &in.FinishTime, &out.FinishTime
 		*out = (*in).DeepCopy()
 	}
 }

@@ -517,10 +517,10 @@ func TestSyncNormalStage(t *testing.T) {
 					_ *kargoapi.Stage,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
-						Phase:        kargoapi.VerificationPhaseError,
-						Message:      "something went wrong",
-						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
-						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:      kargoapi.VerificationPhaseError,
+						Message:    "something went wrong",
+						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
 					}, nil
 				},
 				getFreightFn: func(
@@ -543,10 +543,10 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(t, kargoapi.StagePhaseSteady, newStatus.Phase)
 
 				expectInfo := kargoapi.VerificationInfo{
-					StartTime:    ptr.To(metav1.NewTime(fakeTime)),
-					CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
-					Phase:        kargoapi.VerificationPhaseError,
-					Message:      "something went wrong",
+					StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+					FinishTime: ptr.To(metav1.NewTime(fakeTime)),
+					Phase:      kargoapi.VerificationPhaseError,
+					Message:    "something went wrong",
 				}
 
 				require.Equal(
@@ -671,10 +671,10 @@ func TestSyncNormalStage(t *testing.T) {
 				},
 				getVerificationInfoFn: func(_ context.Context, _ *kargoapi.Stage) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
-						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
-						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
-						Phase:        kargoapi.VerificationPhaseError,
-						Message:      "something went wrong",
+						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:      kargoapi.VerificationPhaseError,
+						Message:    "something went wrong",
 					}, nil
 				},
 			},
@@ -690,10 +690,10 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
-						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
-						Phase:        kargoapi.VerificationPhaseError,
-						Message:      "something went wrong",
+						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:      kargoapi.VerificationPhaseError,
+						Message:    "something went wrong",
 					},
 					newStatus.CurrentFreight.VerificationInfo,
 				)
@@ -830,10 +830,10 @@ func TestSyncNormalStage(t *testing.T) {
 					_ *kargoapi.Stage,
 				) *kargoapi.VerificationInfo {
 					return &kargoapi.VerificationInfo{
-						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
-						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
-						Phase:        kargoapi.VerificationPhaseAborted,
-						Message:      "aborted",
+						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:      kargoapi.VerificationPhaseAborted,
+						Message:    "aborted",
 					}
 				},
 			},
@@ -849,10 +849,10 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
-						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
-						Phase:        kargoapi.VerificationPhaseAborted,
-						Message:      "aborted",
+						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:      kargoapi.VerificationPhaseAborted,
+						Message:    "aborted",
 					},
 					newStatus.CurrentFreight.VerificationInfo,
 				)
@@ -915,7 +915,7 @@ func TestSyncNormalStage(t *testing.T) {
 					s *kargoapi.Stage,
 				) (*kargoapi.VerificationInfo, error) {
 					i := s.Status.CurrentFreight.VerificationInfo.DeepCopy()
-					i.CompleteTime = ptr.To(metav1.NewTime(fakeTime))
+					i.FinishTime = ptr.To(metav1.NewTime(fakeTime))
 					i.Phase = kargoapi.VerificationPhaseError
 					return i, nil
 				},
@@ -925,9 +925,9 @@ func TestSyncNormalStage(t *testing.T) {
 				) *kargoapi.VerificationInfo {
 					// Should not be called
 					return &kargoapi.VerificationInfo{
-						Phase:        kargoapi.VerificationPhaseAborted,
-						CompleteTime: ptr.To(metav1.NewTime(time.Now())),
-						Message:      "aborted",
+						Phase:      kargoapi.VerificationPhaseAborted,
+						FinishTime: ptr.To(metav1.NewTime(time.Now())),
+						Message:    "aborted",
 					}
 				},
 			},
@@ -1647,9 +1647,9 @@ func TestSyncNormalStage(t *testing.T) {
 					*kargoapi.Stage,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
-						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
-						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
-						Phase:        kargoapi.VerificationPhaseSuccessful,
+						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:      kargoapi.VerificationPhaseSuccessful,
 						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-analysis-run",
 							Namespace: "fake-namespace",
@@ -1720,9 +1720,9 @@ func TestSyncNormalStage(t *testing.T) {
 				require.Equal(
 					t,
 					&kargoapi.VerificationInfo{
-						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
-						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
-						Phase:        kargoapi.VerificationPhaseSuccessful,
+						StartTime:  ptr.To(metav1.NewTime(fakeTime)),
+						FinishTime: ptr.To(metav1.NewTime(fakeTime)),
+						Phase:      kargoapi.VerificationPhaseSuccessful,
 						AnalysisRun: &kargoapi.AnalysisRunReference{
 							Name:      "fake-analysis-run",
 							Namespace: "fake-namespace",
