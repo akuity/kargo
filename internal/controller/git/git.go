@@ -36,6 +36,9 @@ type CommitUser struct {
 	Name string
 	// Email is the email of the user making a commit.
 	Email string
+	// SigningKeyPath is an optional path referencing a signing key for making
+	// a commit.
+	SigningKeyPath string
 }
 
 // CommitOptions represents options for committing changes to a git repository.
@@ -110,7 +113,9 @@ type Repo interface {
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who has cloned this repo.
 	HomeDir() string
-	// SetAuthor sets the default commit author.
+	// SetAuthor sets the default commit author. Optionally, the author can
+	// have an associated signing key, and the name and email must match the
+	// signing key identity.
 	SetAuthor(author CommitUser) error
 }
 
@@ -509,6 +514,20 @@ func (r *repo) SetAuthor(author CommitUser) error {
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git user email: %w", err)
+	}
+
+	if author.SigningKeyPath != "" {
+		cmd = r.buildGitCommand("config", "--global", "commit.gpgsign", "true")
+		cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error configuring commit gpg signing: %w", err)
+		}
+
+		cmd = r.buildCommand("gpg", "--import", author.SigningKeyPath)
+		cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+		}
 	}
 
 	return nil

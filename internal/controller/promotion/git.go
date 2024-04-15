@@ -18,8 +18,9 @@ import (
 const tmpPrefix = "repo-scrap-"
 
 type GitConfig struct {
-	Name  string `envconfig:"COMMITTER_NAME"`
-	Email string `envconfig:"COMMITTER_EMAIL"`
+	Name           string `envconfig:"COMMITTER_NAME"`
+	Email          string `envconfig:"COMMITTER_EMAIL"`
+	SigningKeyPath string `envconfig:"COMMITTER_SIGNING_KEY_PATH"`
 }
 
 func GitConfigFromEnv() GitConfig {
@@ -310,10 +311,23 @@ func getRepoCredentialsFn(
 }
 
 func (g *gitMechanism) getAuthor() (*git.CommitUser, error) {
-	return &git.CommitUser{
+	author := git.CommitUser{
 		Name:  g.cfg.Name,
 		Email: g.cfg.Email,
-	}, nil
+	}
+
+	if g.cfg.SigningKeyPath != "" {
+		if _, err := os.Stat(g.cfg.SigningKeyPath); err != nil {
+			return nil, fmt.Errorf(
+				"error locating the commit author signing key path %q: %w",
+				g.cfg.SigningKeyPath,
+				err,
+			)
+		}
+		author.SigningKeyPath = g.cfg.SigningKeyPath
+	}
+
+	return &author, nil
 }
 
 // gitCommit checks out the specified readRef (if non-empty), applies
