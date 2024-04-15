@@ -163,13 +163,6 @@ type StageSpec struct {
 	Verification *Verification `json:"verification,omitempty" protobuf:"bytes,3,opt,name=verification"`
 }
 
-func (s *StageSpec) HasVerification() bool {
-	if s.Verification != nil && len(s.Verification.AnalysisTemplates) > 0 {
-		return true
-	}
-	return false
-}
-
 // Subscriptions describes a Stage's sources of Freight.
 type Subscriptions struct {
 	// Warehouse is a subscription to a Warehouse. This field is mutually

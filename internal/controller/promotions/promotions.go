@@ -341,7 +341,7 @@ func (r *reconciler) Reconcile(
 		}
 		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
 			eventAnnotations[kargoapi.AnnotationKeyEventVerificationPending] =
-				strconv.FormatBool(stage.Spec.HasVerification())
+				strconv.FormatBool(stage.Spec.Verification != nil)
 		}
 		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
 	}
