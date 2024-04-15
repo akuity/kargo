@@ -658,7 +658,7 @@ func (r *reconciler) syncControlFlowStage(
 		}
 	}
 
-	completeTime := r.nowFn()
+	finishTime := r.nowFn()
 	for _, available := range availableFreight {
 		af := available // Avoid implicit memory aliasing
 		// Only bother to mark as verified in this Stage if not already the case.
@@ -683,7 +683,7 @@ func (r *reconciler) syncControlFlowStage(
 				&af,
 				&kargoapi.VerificationInfo{
 					StartTime:  ptr.To(metav1.NewTime(startTime)),
-					FinishTime: ptr.To(metav1.NewTime(completeTime)),
+					FinishTime: ptr.To(metav1.NewTime(finishTime)),
 					Phase:      kargoapi.VerificationPhaseSuccessful,
 				},
 				nil, // Explicitly pass `nil` here since there is no associated AnalysisRun
@@ -873,7 +873,7 @@ func (r *reconciler) syncNormalStage(
 			}
 		}
 
-		completeTime := r.nowFn()
+		finishTime := r.nowFn()
 
 		// Record freight verification event only if the freight is newly verified
 		if shouldRecordFreightVerificationEvent {
@@ -881,7 +881,7 @@ func (r *reconciler) syncNormalStage(
 			if stage.Spec.Verification == nil {
 				vi = &kargoapi.VerificationInfo{
 					StartTime:  ptr.To(metav1.NewTime(startTime)),
-					FinishTime: ptr.To(metav1.NewTime(completeTime)),
+					FinishTime: ptr.To(metav1.NewTime(finishTime)),
 					Phase:      kargoapi.VerificationPhaseSuccessful,
 				}
 			}
