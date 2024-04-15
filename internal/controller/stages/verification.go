@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
@@ -33,14 +32,13 @@ import (
 func (r *reconciler) startVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	nowFn func() time.Time,
 ) (*kargoapi.VerificationInfo, error) {
-	startTime := nowFn()
+	startTime := r.nowFn()
 	if !r.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:           uuid.NewString(),
 			StartTime:    ptr.To(metav1.NewTime(startTime)),
-			CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+			CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 			Phase:        kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; " +
 				"cannot start verification",
@@ -70,7 +68,7 @@ func (r *reconciler) startVerification(
 			return &kargoapi.VerificationInfo{
 				ID:           uuid.NewString(),
 				StartTime:    ptr.To(metav1.NewTime(startTime)),
-				CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+				CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 				Phase:        kargoapi.VerificationPhaseError,
 				Message: fmt.Errorf(
 					"error listing AnalysisRuns for Stage %q and Freight %q in namespace %q: %w",
@@ -120,7 +118,7 @@ func (r *reconciler) startVerification(
 			return &kargoapi.VerificationInfo{
 				ID:           uuid.NewString(),
 				StartTime:    ptr.To(metav1.NewTime(startTime)),
-				CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+				CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 				Phase:        kargoapi.VerificationPhaseError,
 				Message: fmt.Errorf(
 					"error getting AnalysisTemplate %q in namespace %q: %w",
@@ -134,7 +132,7 @@ func (r *reconciler) startVerification(
 			return &kargoapi.VerificationInfo{
 				ID:           uuid.NewString(),
 				StartTime:    ptr.To(metav1.NewTime(startTime)),
-				CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+				CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 				Phase:        kargoapi.VerificationPhaseError,
 				Message: fmt.Errorf(
 					"AnalysisTemplate %q in namespace %q not found",
@@ -158,7 +156,7 @@ func (r *reconciler) startVerification(
 		return &kargoapi.VerificationInfo{
 			ID:           uuid.NewString(),
 			StartTime:    ptr.To(metav1.NewTime(startTime)),
-			CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+			CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 			Phase:        kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error getting Freight %q in namespace %q: %w",
@@ -172,7 +170,7 @@ func (r *reconciler) startVerification(
 		return &kargoapi.VerificationInfo{
 			ID:           uuid.NewString(),
 			StartTime:    ptr.To(metav1.NewTime(startTime)),
-			CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+			CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 			Phase:        kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"Freight %q in namespace %q not found",
@@ -187,7 +185,7 @@ func (r *reconciler) startVerification(
 		return &kargoapi.VerificationInfo{
 			ID:           uuid.NewString(),
 			StartTime:    ptr.To(metav1.NewTime(startTime)),
-			CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+			CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 			Phase:        kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error building AnalysisRun for Stage %q and Freight %q in namespace %q: %w",
@@ -203,7 +201,7 @@ func (r *reconciler) startVerification(
 		return &kargoapi.VerificationInfo{
 			ID:           uuid.NewString(),
 			StartTime:    ptr.To(metav1.NewTime(startTime)),
-			CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+			CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 			Phase:        kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error creating AnalysisRun %q in namespace %q: %w",
@@ -303,13 +301,12 @@ func (r *reconciler) getVerificationInfo(
 func (r *reconciler) abortVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
-	nowFn func() time.Time,
 ) *kargoapi.VerificationInfo {
 	if !r.cfg.RolloutsIntegrationEnabled {
 		return &kargoapi.VerificationInfo{
 			ID:           stage.Status.CurrentFreight.VerificationInfo.ID,
 			StartTime:    stage.Status.CurrentFreight.VerificationInfo.StartTime,
-			CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+			CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 			Phase:        kargoapi.VerificationPhaseError,
 			Message: "Rollouts integration is disabled on this controller; cannot " +
 				"abort verification",
@@ -330,7 +327,7 @@ func (r *reconciler) abortVerification(
 		return &kargoapi.VerificationInfo{
 			ID:           stage.Status.CurrentFreight.VerificationInfo.ID,
 			StartTime:    stage.Status.CurrentFreight.VerificationInfo.StartTime,
-			CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+			CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 			Phase:        kargoapi.VerificationPhaseError,
 			Message: fmt.Errorf(
 				"error terminating AnalysisRun %q in namespace %q: %w",
@@ -350,7 +347,7 @@ func (r *reconciler) abortVerification(
 	return &kargoapi.VerificationInfo{
 		ID:           stage.Status.CurrentFreight.VerificationInfo.ID,
 		StartTime:    ptr.To(ar.CreationTimestamp),
-		CompleteTime: ptr.To(metav1.NewTime(nowFn())),
+		CompleteTime: ptr.To(metav1.NewTime(r.nowFn())),
 		Phase:        kargoapi.VerificationPhaseAborted,
 		Message:      "Verification aborted by user",
 		AnalysisRun:  stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.DeepCopy(),

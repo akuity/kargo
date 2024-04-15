@@ -285,7 +285,6 @@ func TestSyncControlFlowStage(t *testing.T) {
 			newStatus, err := testCase.reconciler.syncControlFlowStage(
 				context.Background(),
 				testCase.stage,
-				testCase.reconciler.nowFn,
 			)
 			testCase.assertions(t, recorder, testCase.stage.Status, newStatus, err)
 		})
@@ -401,7 +400,6 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-					func() time.Time,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						ID:      "new-fake-id",
@@ -517,14 +515,12 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					_ context.Context,
 					_ *kargoapi.Stage,
-					nowFn func() time.Time,
 				) (*kargoapi.VerificationInfo, error) {
-					now := nowFn()
 					return &kargoapi.VerificationInfo{
 						Phase:        kargoapi.VerificationPhaseError,
 						Message:      "something went wrong",
-						StartTime:    ptr.To(metav1.NewTime(now)),
-						CompleteTime: ptr.To(metav1.NewTime(now)),
+						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
+						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
 					}, nil
 				},
 				getFreightFn: func(
@@ -601,7 +597,6 @@ func TestSyncNormalStage(t *testing.T) {
 				startVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-					func() time.Time,
 				) (*kargoapi.VerificationInfo, error) {
 					return &kargoapi.VerificationInfo{
 						Phase:   kargoapi.VerificationPhaseError,
@@ -833,12 +828,10 @@ func TestSyncNormalStage(t *testing.T) {
 				abortVerificationFn: func(
 					_ context.Context,
 					_ *kargoapi.Stage,
-					nowFn func() time.Time,
 				) *kargoapi.VerificationInfo {
-					now := nowFn()
 					return &kargoapi.VerificationInfo{
-						StartTime:    ptr.To(metav1.NewTime(now)),
-						CompleteTime: ptr.To(metav1.NewTime(now)),
+						StartTime:    ptr.To(metav1.NewTime(fakeTime)),
+						CompleteTime: ptr.To(metav1.NewTime(fakeTime)),
 						Phase:        kargoapi.VerificationPhaseAborted,
 						Message:      "aborted",
 					}
@@ -929,7 +922,6 @@ func TestSyncNormalStage(t *testing.T) {
 				abortVerificationFn: func(
 					context.Context,
 					*kargoapi.Stage,
-					func() time.Time,
 				) *kargoapi.VerificationInfo {
 					// Should not be called
 					return &kargoapi.VerificationInfo{
@@ -1766,7 +1758,6 @@ func TestSyncNormalStage(t *testing.T) {
 			newStatus, err := testCase.reconciler.syncNormalStage(
 				context.Background(),
 				testCase.stage,
-				testCase.reconciler.nowFn,
 			)
 			testCase.assertions(t, recorder, testCase.stage.Status, newStatus, err)
 		})
