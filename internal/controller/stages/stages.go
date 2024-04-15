@@ -1545,6 +1545,9 @@ func (r *reconciler) recordFreightVerificationEvent(
 	}
 	if ar != nil {
 		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = ar.Name
+		if promoName, ok := ar.Labels[kargoapi.PromotionLabelKey]; ok {
+			annotations[kargoapi.AnnotationKeyEventPromotionName] = promoName
+		}
 	}
 
 	// If the verification is manually triggered (e.g. reverify),
