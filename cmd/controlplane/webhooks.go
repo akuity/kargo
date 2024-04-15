@@ -120,7 +120,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 	if err = promotion.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
 	}
-	if err = stage.SetupWebhookWithManager(mgr); err != nil {
+	if err = stage.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Stage webhook: %w", err)
 	}
 	if err = warehouse.SetupWebhookWithManager(mgr); err != nil {

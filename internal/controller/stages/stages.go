@@ -319,6 +319,7 @@ func SetupReconcilerWithManager(
 			Annotations: []string{
 				kargoapi.AnnotationKeyRefresh,
 				kargoapi.AnnotationKeyReverify,
+				kargoapi.AnnotationKeyReverifyActor,
 				kargoapi.AnnotationKeyAbort,
 			},
 		}).
@@ -558,6 +559,7 @@ func (r *reconciler) Reconcile(
 		stage,
 		kargoapi.AnnotationKeyRefresh,
 		kargoapi.AnnotationKeyReverify,
+		kargoapi.AnnotationKeyReverifyActor,
 		kargoapi.AnnotationKeyAbort,
 	)
 	if clearErr != nil {
@@ -673,6 +675,7 @@ func (r *reconciler) syncControlFlowStage(
 				&kargoapi.VerificationInfo{
 					Phase: kargoapi.VerificationPhaseSuccessful,
 				},
+				nil, // Explicitly pass `nil` here since there is no associated AnalysisRun
 			)
 		}
 	}
@@ -867,6 +870,22 @@ func (r *reconciler) syncNormalStage(
 				}
 			}
 
+			var ar *rollouts.AnalysisRun
+			if vi.HasAnalysisRun() {
+				var err error
+				ar, err = r.getAnalysisRunFn(
+					ctx,
+					r.kargoClient,
+					types.NamespacedName{
+						Namespace: vi.AnalysisRun.Namespace,
+						Name:      vi.AnalysisRun.Name,
+					},
+				)
+				if err != nil {
+					return status, fmt.Errorf("get analysisRun: %w", err)
+				}
+			}
+
 			fr, err := r.getFreightFn(
 				ctx,
 				r.kargoClient,
@@ -879,7 +898,7 @@ func (r *reconciler) syncNormalStage(
 				return status, fmt.Errorf("get freight: %w", err)
 			}
 			if fr != nil {
-				r.recordFreightVerificationEvent(stage, fr, vi)
+				r.recordFreightVerificationEvent(stage, fr, vi, ar)
 			}
 		}
 	}
@@ -1492,6 +1511,7 @@ func (r *reconciler) recordFreightVerificationEvent(
 	s *kargoapi.Stage,
 	fr *kargoapi.Freight,
 	vi *kargoapi.VerificationInfo,
+	ar *rollouts.AnalysisRun,
 ) {
 	annotations := map[string]string{
 		kargoapi.AnnotationKeyEventActor:        kargoapi.FormatEventControllerActor(r.cfg.Name()),
@@ -1500,8 +1520,24 @@ func (r *reconciler) recordFreightVerificationEvent(
 		kargoapi.AnnotationKeyEventFreightAlias: fr.Alias,
 		kargoapi.AnnotationKeyEventFreightName:  fr.Name,
 	}
-	if vi.AnalysisRun != nil {
-		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = vi.AnalysisRun.Name
+	if ar != nil {
+		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = ar.Name
+	}
+
+	// If the verification is manually triggered (e.g. reverify),
+	// override the actor if the Stage or AnalysisRun knows about them.
+	{
+		// Check if the stage has reverify actor annotation
+		if actor, ok := s.Annotations[kargoapi.AnnotationKeyReverifyActor]; ok {
+			annotations[kargoapi.AnnotationKeyEventActor] = actor
+		}
+
+		// Or if the analysis run has it, then set it as the actor
+		if ar != nil {
+			if actor, ok := ar.Annotations[kargoapi.AnnotationKeyReverifyActor]; ok {
+				annotations[kargoapi.AnnotationKeyEventActor] = actor
+			}
+		}
 	}
 
 	reason := kargoapi.EventReasonFreightVerificationUnknown
