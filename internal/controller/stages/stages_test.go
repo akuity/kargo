@@ -574,7 +574,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 			},
 		},
@@ -713,7 +713,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 			},
 		},
@@ -876,7 +876,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 			},
 		},
@@ -969,7 +969,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 			},
 		},
@@ -1065,7 +1065,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
 				require.Error(t, err)
@@ -1131,7 +1131,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
 				require.NoError(t, err)
@@ -1198,7 +1198,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
 				require.Error(t, err)
@@ -1482,7 +1482,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
 				require.Error(t, err)
@@ -1771,7 +1771,7 @@ func TestSyncNormalStage(t *testing.T) {
 				)
 				require.Equal(t,
 					fakeTime.Format(time.RFC3339),
-					event.Annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime],
+					event.Annotations[kargoapi.AnnotationKeyEventVerificationFinishTime],
 				)
 
 				// The second event should be the promotion creation event (auto-promotion)

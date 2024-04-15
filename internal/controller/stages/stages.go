@@ -1541,7 +1541,7 @@ func (r *reconciler) recordFreightVerificationEvent(
 		annotations[kargoapi.AnnotationKeyEventVerificationStartTime] = vi.StartTime.Format(time.RFC3339)
 	}
 	if vi.FinishTime != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationCompleteTime] = vi.FinishTime.Format(time.RFC3339)
+		annotations[kargoapi.AnnotationKeyEventVerificationFinishTime] = vi.FinishTime.Format(time.RFC3339)
 	}
 	if ar != nil {
 		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = ar.Name
