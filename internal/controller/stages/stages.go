@@ -1543,8 +1543,14 @@ func (r *reconciler) recordFreightVerificationEvent(
 	if vi.FinishTime != nil {
 		annotations[kargoapi.AnnotationKeyEventVerificationFinishTime] = vi.FinishTime.Format(time.RFC3339)
 	}
+
+	// Extract metadata from the AnalysisRun if available
 	if ar != nil {
 		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = ar.Name
+		// AnalysisRun that triggered by a Promotion contains the Promotion name
+		if promoName, ok := ar.Labels[kargoapi.PromotionLabelKey]; ok {
+			annotations[kargoapi.AnnotationKeyEventPromotionName] = promoName
+		}
 	}
 
 	// If the verification is manually triggered (e.g. reverify),
