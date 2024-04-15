@@ -61,8 +61,21 @@ func (s *server) GetCredentials(
 		)
 	}
 
+	obj, raw, err := objectOrRaw(sanitizeCredentialSecret(secret), req.Msg.GetFormat())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if raw != nil {
+		return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
+			Result: &svcv1alpha1.GetCredentialsResponse_Raw{
+				Raw: raw,
+			},
+		}), nil
+	}
 	return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
-		Credentials: sanitizeCredentialSecret(secret),
+		Result: &svcv1alpha1.GetCredentialsResponse_Credentials{
+			Credentials: obj,
+		},
 	}), nil
 }
 

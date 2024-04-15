@@ -36,7 +36,21 @@ func (s *server) GetWarehouse(
 	}, &warehouse); err != nil {
 		return nil, fmt.Errorf("get warehouse: %w", err)
 	}
+
+	obj, raw, err := objectOrRaw(&warehouse, req.Msg.GetFormat())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if raw != nil {
+		return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
+			Result: &svcv1alpha1.GetWarehouseResponse_Raw{
+				Raw: raw,
+			},
+		}), nil
+	}
 	return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
-		Warehouse: &warehouse,
+		Result: &svcv1alpha1.GetWarehouseResponse_Warehouse{
+			Warehouse: obj,
+		},
 	}), nil
 }
