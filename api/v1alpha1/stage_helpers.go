@@ -92,7 +92,7 @@ func ReverifyStageFreight(
 	}
 	// Put actor information to track on the controller side
 	if u, ok := user.InfoFromContext(ctx); ok {
-		kvs[AnnotationKeyEventReverifyActor] = ptr.To(FormatEventUserActor(u))
+		kvs[AnnotationKeyReverifyActor] = ptr.To(FormatEventUserActor(u))
 	}
 	return patchAnnotations(ctx, c, stage, kvs)
 }

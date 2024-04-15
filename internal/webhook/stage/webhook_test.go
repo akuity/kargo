@@ -7,7 +7,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	authnv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,7 +28,6 @@ func TestNewWebhook(t *testing.T) {
 	)
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.admissionRequestFromContextFn)
-	require.NotNil(t, w.getStageFn)
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.validateCreateOrUpdateFn)
 	require.NotNil(t, w.validateSpecFn)
@@ -37,13 +38,24 @@ func TestDefault(t *testing.T) {
 	const testShardName = "fake-shard"
 	testCases := []struct {
 		name       string
-		operation  admissionv1.Operation
+		webhook    *webhook
+		req        admission.Request
 		stage      *kargoapi.Stage
 		assertions func(*testing.T, *kargoapi.Stage, error)
 	}{
 		{
-			name:      "shard stays default when not specified at all",
-			operation: admissionv1.Create,
+			name: "shard stays default when not specified at all",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{},
 			},
@@ -54,8 +66,18 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name:      "sync shard label to non-empty shard field",
-			operation: admissionv1.Create,
+			name: "sync shard label to non-empty shard field",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
 			stage: &kargoapi.Stage{
 				Spec: &kargoapi.StageSpec{
 					Shard: testShardName,
@@ -68,8 +90,18 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name:      "sync shard label to empty shard field",
-			operation: admissionv1.Create,
+			name: "sync shard label to empty shard field",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Create,
+				},
+			},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
@@ -85,21 +117,133 @@ func TestDefault(t *testing.T) {
 				require.False(t, ok)
 			},
 		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			ctx := admission.NewContextWithRequest(
-				context.Background(),
-				admission.Request{
-					AdmissionRequest: admissionv1.AdmissionRequest{
-						Operation: testCase.operation,
+		{
+			name: "set reverify actor when request doesn't come from kargo controlplane",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
 					},
 				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: "fake-id",
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
+				require.Equal(t, "fake-id", stage.Annotations[kargoapi.AnnotationKeyReverify])
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverifyActor)
+				require.Equal(
+					t,
+					kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+						Username: "real-user",
+					}),
+					stage.Annotations[kargoapi.AnnotationKeyReverifyActor],
+				)
+			},
+		},
+		{
+			name: "overwrite with admission request user info if reverify actor annotation exists",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify:      "fake-id",
+						kargoapi.AnnotationKeyReverifyActor: "fake-user",
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
+				require.Equal(t, "fake-id", stage.Annotations[kargoapi.AnnotationKeyReverify])
+				require.Equal(
+					t,
+					kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+						Username: "real-user",
+					}),
+					stage.Annotations[kargoapi.AnnotationKeyReverifyActor],
+				)
+			},
+		},
+		{
+			name: "always clear reverify actor annotation when reverify annotation removed",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyReverify:      "fake-id",
+									kargoapi.AnnotationKeyReverifyActor: "real-user",
+								},
+							},
+						},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
+				require.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyReverifyActor)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := admission.NewContextWithRequest(
+				context.Background(),
+				tc.req,
 			)
-			testCase.assertions(
+			tc.assertions(
 				t,
-				testCase.stage,
-				(&webhook{}).Default(ctx, testCase.stage),
+				tc.stage,
+				tc.webhook.Default(ctx, tc.stage),
 			)
 		})
 	}

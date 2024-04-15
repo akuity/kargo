@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,12 +30,6 @@ type webhook struct {
 	// The following behaviors are overridable for testing purposes:
 
 	admissionRequestFromContextFn func(context.Context) (admission.Request, error)
-
-	getStageFn func(
-		context.Context,
-		client.Client,
-		types.NamespacedName,
-	) (*kargoapi.Stage, error)
 
 	validateProjectFn func(
 		context.Context,
@@ -71,7 +65,6 @@ func newWebhook(
 		client: kubeClient,
 	}
 	w.admissionRequestFromContextFn = admission.RequestFromContext
-	w.getStageFn = kargoapi.GetStage
 	w.validateProjectFn = libWebhook.ValidateProject
 	w.validateCreateOrUpdateFn = w.validateCreateOrUpdate
 	w.validateSpecFn = w.validateSpec
@@ -97,25 +90,26 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	if err != nil {
 		return fmt.Errorf("get admission request from context: %w", err)
 	}
-	if !w.isRequestFromKargoControlplaneFn(req) {
-		// Set actor information to annotation when reverification is requested
-		// to allow controllers to track who triggered it.
+
+	var oldStage *kargoapi.Stage
+	if req.OldObject.Object != nil {
+		oldStage = req.OldObject.Object.(*kargoapi.Stage) // nolint: forcetypeassert
+	}
+
+	if req.Operation == admissionv1.Create ||
+		req.Operation == admissionv1.Update {
 		if id, ok := stage.Annotations[kargoapi.AnnotationKeyReverify]; ok {
-			oldStage, err := kargoapi.GetStage(ctx, w.client, types.NamespacedName{
-				Namespace: stage.Namespace,
-				Name:      stage.Name,
-			})
-			if err != nil {
-				return fmt.Errorf("get old stage: %w", err)
-			}
-			if oldStage == nil ||
-				(oldStage != nil && oldStage.Annotations[kargoapi.AnnotationKeyReverify] != id) {
-				stage.Annotations[kargoapi.AnnotationKeyEventReverifyActor] =
+			// Set actor as an admission request's user info when reverification is requested
+			// to allow controllers to track who triggered it.
+			if !w.isRequestFromKargoControlplaneFn(req) &&
+				(oldStage == nil ||
+					(oldStage != nil && oldStage.Annotations[kargoapi.AnnotationKeyReverify] != id)) {
+				stage.Annotations[kargoapi.AnnotationKeyReverifyActor] =
 					kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 			}
 		} else {
 			// Ensure actor annotation is not set when not reverifying
-			delete(stage.Annotations, kargoapi.AnnotationKeyEventReverifyActor)
+			delete(stage.Annotations, kargoapi.AnnotationKeyReverifyActor)
 		}
 	}
 	return nil

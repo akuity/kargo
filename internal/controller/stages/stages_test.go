@@ -777,6 +777,13 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
+				getAnalysisRunFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*rollouts.AnalysisRun, error) {
+					return &rollouts.AnalysisRun{}, nil
+				},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -855,6 +862,17 @@ func TestSyncNormalStage(t *testing.T) {
 			reconciler: &reconciler{
 				hasNonTerminalPromotionsFn: noNonTerminalPromotionsFn,
 				appHealth:                  &mockAppHealthEvaluator{},
+				getAnalysisRunFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*rollouts.AnalysisRun, error) {
+					return &rollouts.AnalysisRun{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "fake-analysis-run",
+						},
+					}, nil
+				},
 				getFreightFn: func(
 					context.Context,
 					client.Client,
@@ -1551,6 +1569,18 @@ func TestSyncNormalStage(t *testing.T) {
 					Health: &kargoapi.Health{
 						Status: kargoapi.HealthStateHealthy,
 					},
+				},
+				getAnalysisRunFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*rollouts.AnalysisRun, error) {
+					return &rollouts.AnalysisRun{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "fake-namespace",
+							Name:      "fake-analysis-run",
+						},
+					}, nil
 				},
 				getVerificationInfoFn: func(
 					context.Context,
