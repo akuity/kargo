@@ -18,6 +18,9 @@ data:
   GLOBAL_CREDENTIALS_NAMESPACES: {{ quote (join "," .Values.controller.globalCredentials.namespaces) }}
   COMMITTER_NAME: {{ quote .Values.controller.committer.name }}
   COMMITTER_EMAIL: {{ quote .Values.controller.committer.email }}
+  {{- if .Values.controller.committer.signingKeySecret.name }}
+  COMMITTER_SIGNING_KEY_PATH: /etc/kargo/committer/signingKey
+  {{- end }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.kubeconfigSecrets.argocd }}

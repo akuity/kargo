@@ -287,6 +287,10 @@ controller:
     ## @param controller.committer.email Specifies the email of the Kargo controller committer.
     email: "kargo-render@akuity.io"
 
+    signingKeySecret:
+    ## @param controller.committer.signingKeySecret.name Specifies the name of an existing `Secret` which contains the committer's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo.
+      name: ""
+
   ## @param controller.securityContext Security context for controller pods.
   securityContext: {}
 
