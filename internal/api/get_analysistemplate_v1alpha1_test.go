@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,32 +32,40 @@ func TestGetAnalysisTemplate(t *testing.T) {
 			client.Client,
 			types.NamespacedName,
 		) (*rollouts.AnalysisTemplate, error)
-		errExpected  bool
-		expectedCode connect.Code
+		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.GetAnalysisTemplateRequest{
 				Project: "",
 				Name:    "",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeInvalidArgument,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"empty name": {
 			req: &svcv1alpha1.GetAnalysisTemplateRequest{
 				Project: "kargo-demo",
 				Name:    "",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeInvalidArgument,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"non-existing project": {
 			req: &svcv1alpha1.GetAnalysisTemplateRequest{
 				Project: "kargo-x",
 				Name:    "test",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeNotFound,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"existing AnalysisTemplate": {
 			req: &svcv1alpha1.GetAnalysisTemplateRequest{
@@ -64,6 +73,16 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				Name:    "test",
 			},
 			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetRaw())
+
+				require.NotNil(t, c.Msg.GetAnalysisTemplate())
+				require.Equal(t, "kargo-demo", c.Msg.GetAnalysisTemplate().Namespace)
+				require.Equal(t, "test", c.Msg.GetAnalysisTemplate().Name)
+			},
 		},
 		"non-existing AnalysisTemplate": {
 			req: &svcv1alpha1.GetAnalysisTemplateRequest{
@@ -71,8 +90,11 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				Name:    "test",
 			},
 			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
-			errExpected:           true,
-			expectedCode:          connect.CodeNotFound,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"error getting AnalysisTemplate": {
 			req: &svcv1alpha1.GetAnalysisTemplateRequest{
@@ -86,8 +108,11 @@ func TestGetAnalysisTemplate(t *testing.T) {
 			) (*rollouts.AnalysisTemplate, error) {
 				return nil, apierrors.NewServiceUnavailable("test")
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeUnknown,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnknown, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"Argo Rollouts integration is not enabled": {
 			req: &svcv1alpha1.GetAnalysisTemplateRequest{
@@ -95,8 +120,69 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				Name:    "test",
 			},
 			rolloutsDisabled: true,
-			errExpected:      true,
-			expectedCode:     connect.CodeUnimplemented,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnimplemented, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
+		},
+		"raw format JSON": {
+			req: &svcv1alpha1.GetAnalysisTemplateRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
+			},
+			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetAnalysisTemplate())
+				require.NotNil(t, c.Msg.GetRaw())
+
+				scheme := runtime.NewScheme()
+				require.NoError(t, rollouts.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*rollouts.AnalysisTemplate)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
+			},
+		},
+		"raw format YAML": {
+			req: &svcv1alpha1.GetAnalysisTemplateRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
+			},
+			getAnalysisTemplateFn: rollouts.GetAnalysisTemplate,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetAnalysisTemplateResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetAnalysisTemplate())
+				require.NotNil(t, c.Msg.GetRaw())
+
+				scheme := runtime.NewScheme()
+				require.NoError(t, rollouts.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*rollouts.AnalysisTemplate)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
+			},
 		},
 	}
 	for name, testCase := range testCases {
@@ -150,14 +236,7 @@ func TestGetAnalysisTemplate(t *testing.T) {
 				getAnalysisTemplateFn:     testCase.getAnalysisTemplateFn,
 			}
 			res, err := (svr).GetAnalysisTemplate(ctx, connect.NewRequest(testCase.req))
-			if testCase.errExpected {
-				require.Error(t, err)
-				require.Equal(t, testCase.expectedCode, connect.CodeOf(err))
-				return
-			}
-			require.NotNil(t, res.Msg.GetAnalysisTemplate())
-			require.Equal(t, testCase.req.GetProject(), res.Msg.GetAnalysisTemplate().Namespace)
-			require.Equal(t, testCase.req.GetName(), res.Msg.GetAnalysisTemplate().Name)
+			testCase.assertions(t, res, err)
 		})
 	}
 }

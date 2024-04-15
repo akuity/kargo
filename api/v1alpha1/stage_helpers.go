@@ -8,7 +8,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/internal/api/user"
 )
 
 // GetStage returns a pointer to the Stage resource specified by the
@@ -84,7 +87,14 @@ func ReverifyStageFreight(
 		return fmt.Errorf("stage verification info has no ID")
 	}
 
-	return patchAnnotation(ctx, c, stage, AnnotationKeyReverify, curFreight.VerificationInfo.ID)
+	kvs := map[string]*string{
+		AnnotationKeyReverify: ptr.To(curFreight.VerificationInfo.ID),
+	}
+	// Put actor information to track on the controller side
+	if u, ok := user.InfoFromContext(ctx); ok {
+		kvs[AnnotationKeyReverifyActor] = ptr.To(FormatEventUserActor(u))
+	}
+	return patchAnnotations(ctx, c, stage, kvs)
 }
 
 // AbortStageFreightVerification forces aborting the verification of the
