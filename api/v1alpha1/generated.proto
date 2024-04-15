@@ -1060,6 +1060,9 @@ message VerificationInfo {
   // AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
   // the Verification process.
   optional AnalysisRunReference analysisRun = 3;
+
+  // FinishTime is the time at which the Verification process finished.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishTime = 6;
 }
 
 // VerifiedStage describes a Stage in which Freight has been verified.

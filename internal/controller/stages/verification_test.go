@@ -27,8 +27,10 @@ func TestStartVerification(t *testing.T) {
 		assertions func(*testing.T, *kargoapi.VerificationInfo, error)
 	}{
 		{
-			name:       "rollouts integration not enabled",
-			reconciler: &reconciler{},
+			name: "rollouts integration not enabled",
+			reconciler: &reconciler{
+				nowFn: fakeNow,
+			},
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo, err error) {
 				require.NoError(t, err)
 				require.Contains(
@@ -52,6 +54,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -80,6 +83,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					_ context.Context,
 					objList client.ObjectList,
@@ -121,6 +125,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					_ context.Context,
 					objList client.ObjectList,
@@ -195,6 +200,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -236,6 +242,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -277,6 +284,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -325,6 +333,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -373,6 +382,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -427,6 +437,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -488,6 +499,7 @@ func TestStartVerification(t *testing.T) {
 				cfg: ReconcilerConfig{
 					RolloutsIntegrationEnabled: true,
 				},
+				nowFn: fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -552,6 +564,7 @@ func TestStartVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				listAnalysisRunsFn: func(
 					context.Context,
 					client.ObjectList,
@@ -791,8 +804,10 @@ func TestAbortVerification(t *testing.T) {
 		assertions func(*testing.T, *kargoapi.VerificationInfo)
 	}{
 		{
-			name:       "rollouts integration not enabled",
-			reconciler: &reconciler{},
+			name: "rollouts integration not enabled",
+			reconciler: &reconciler{
+				nowFn: fakeNow,
+			},
 			stage: &kargoapi.Stage{
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
@@ -832,6 +847,7 @@ func TestAbortVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				patchAnalysisRunFn: func(
 					context.Context,
 					client.Object,
@@ -868,6 +884,7 @@ func TestAbortVerification(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 				},
 				kargoClient: fake.NewClientBuilder().Build(),
+				nowFn:       fakeNow,
 				patchAnalysisRunFn: func(
 					context.Context,
 					client.Object,

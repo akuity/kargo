@@ -3529,6 +3529,13 @@ export class VerificationInfo extends Message<VerificationInfo> {
    */
   analysisRun?: AnalysisRunReference;
 
+  /**
+   * FinishTime is the time at which the Verification process finished.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishTime = 6;
+   */
+  finishTime?: Time;
+
   constructor(data?: PartialMessage<VerificationInfo>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3542,6 +3549,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "analysisRun", kind: "message", T: AnalysisRunReference, opt: true },
+    { no: 6, name: "finishTime", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerificationInfo {

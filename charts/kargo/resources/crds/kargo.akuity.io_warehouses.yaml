@@ -412,6 +412,11 @@ spec:
                           - namespace
                           - phase
                           type: object
+                        finishTime:
+                          description: FinishTime is the time at which the Verification
+                            process finished.
+                          format: date-time
+                          type: string
                         id:
                           description: ID is the identifier of the Verification process.
                           type: string
@@ -459,6 +464,11 @@ spec:
                         - namespace
                         - phase
                         type: object
+                      finishTime:
+                        description: FinishTime is the time at which the Verification
+                          process finished.
+                        format: date-time
+                        type: string
                       id:
                         description: ID is the identifier of the Verification process.
                         type: string

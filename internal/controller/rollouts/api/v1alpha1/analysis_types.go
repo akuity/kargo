@@ -236,6 +236,28 @@ type AnalysisRunStatus struct {
 	DryRunSummary *RunSummary    `json:"dryRunSummary,omitempty" protobuf:"bytes,6,opt,name=dryRunSummary"`
 }
 
+func (s *AnalysisRunStatus) CompletedAt() *metav1.Time {
+	if !s.Phase.Completed() {
+		return nil
+	}
+
+	// FIXME: Use `CompletedAt` (which will be introduced in rollouts v1.7.0) as a default value
+	var completedAt *metav1.Time
+
+	// TODO: Remove after we bump up minimum rollouts version to v1.7.0
+	for _, mr := range s.MetricResults {
+		for _, m := range mr.Measurements {
+			if m.FinishedAt == nil {
+				continue
+			}
+			if completedAt == nil || m.FinishedAt.After(completedAt.Time) {
+				completedAt = m.FinishedAt.DeepCopy()
+			}
+		}
+	}
+	return completedAt
+}
+
 type RunSummary struct {
 	Count        int32 `json:"count,omitempty" protobuf:"varint,1,opt,name=count"`
 	Successful   int32 `json:"successful,omitempty" protobuf:"varint,2,opt,name=successful"`

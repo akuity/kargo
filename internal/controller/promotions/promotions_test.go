@@ -29,6 +29,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.pqs.pendingPromoQueuesByStage)
+	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
 }
 
@@ -152,6 +153,11 @@ func TestReconcile(t *testing.T) {
 			recorder := fakekubeclient.NewEventRecorder(1)
 			r := newFakeReconciler(t, recorder, tc.promos...)
 			promoteWasCalled := false
+			r.getStageFn = func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Stage, error) {
+				return &kargoapi.Stage{
+					Spec: &kargoapi.StageSpec{},
+				}, nil
+			}
 			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
 				if tc.promoteFn != nil {

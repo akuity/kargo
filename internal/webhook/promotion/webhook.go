@@ -182,7 +182,7 @@ func (w *webhook) ValidateCreate(
 		if err != nil {
 			return nil, fmt.Errorf("get freight: %w", err)
 		}
-		w.recordPromotionCreatedEvent(req, promo, freight)
+		w.recordPromotionCreatedEvent(ctx, req, promo, freight)
 	}
 	return nil, nil
 }
@@ -285,6 +285,7 @@ func (w *webhook) authorize(
 }
 
 func (w *webhook) recordPromotionCreatedEvent(
+	ctx context.Context,
 	req admission.Request,
 	p *kargoapi.Promotion,
 	f *kargoapi.Freight,
@@ -292,7 +293,7 @@ func (w *webhook) recordPromotionCreatedEvent(
 	actor := kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 	w.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionCreatedEventAnnotations(actor, p, f),
+		kargoapi.NewPromotionCreatedEventAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		"Promotion created for Stage %q by %q",
