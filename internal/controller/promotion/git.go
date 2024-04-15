@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/kelseyhightower/envconfig"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
@@ -15,11 +17,23 @@ import (
 
 const tmpPrefix = "repo-scrap-"
 
+type GitConfig struct {
+	Name  string `envconfig:"COMMITTER_NAME"`
+	Email string `envconfig:"COMMITTER_EMAIL"`
+}
+
+func GitConfigFromEnv() GitConfig {
+	var cfg GitConfig
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // gitMechanism is an implementation of the Mechanism interface that uses Git to
 // update configuration in a repository. It is easily configured to support
 // different types of configuration management tools.
 type gitMechanism struct {
 	name string
+	cfg  GitConfig
 	// Overridable behaviors:
 	selectUpdatesFn  func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate
 	doSingleUpdateFn func(
@@ -32,6 +46,7 @@ type gitMechanism struct {
 		update kargoapi.GitRepoUpdate,
 		commits []kargoapi.GitCommit,
 	) (string, int, error)
+	getAuthorFn      func() (*git.CommitUser, error)
 	getCredentialsFn func(
 		ctx context.Context,
 		namespace string,
@@ -75,10 +90,12 @@ func newGitMechanism(
 	g := &gitMechanism{
 		name: name,
 	}
+	g.cfg = GitConfigFromEnv()
 	g.selectUpdatesFn = selectUpdatesFn
 	g.doSingleUpdateFn = g.doSingleUpdate
 	g.getReadRefFn = getReadRef
 	g.getCredentialsFn = getRepoCredentialsFn(credentialsDB)
+	g.getAuthorFn = g.getAuthor
 	g.gitCommitFn = g.gitCommit
 	g.applyConfigManagementFn = applyConfigManagementFn
 	return g
@@ -164,6 +181,17 @@ func (g *gitMechanism) doSingleUpdate(
 		return nil, newFreight, fmt.Errorf("error cloning git repo %q: %w", update.RepoURL, err)
 	}
 	defer repo.Close()
+
+	author, err := g.getAuthorFn()
+	if err != nil {
+		return nil, newFreight, err
+	}
+	if author == nil {
+		author = &git.CommitUser{}
+	}
+	if err = repo.SetAuthor(*author); err != nil {
+		return nil, newFreight, fmt.Errorf("error setting default commit author: %w", err)
+	}
 
 	commitBranch := update.WriteBranch
 	if update.PullRequest != nil {
@@ -279,6 +307,13 @@ func getRepoCredentialsFn(
 			SSHPrivateKey: creds.SSHPrivateKey,
 		}, nil
 	}
+}
+
+func (g *gitMechanism) getAuthor() (*git.CommitUser, error) {
+	return &git.CommitUser{
+		Name:  g.cfg.Name,
+		Email: g.cfg.Email,
+	}, nil
 }
 
 // gitCommit checks out the specified readRef (if non-empty), applies

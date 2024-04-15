@@ -30,6 +30,14 @@ type RepoCredentials struct {
 	Password string `json:"password,omitempty"`
 }
 
+// CommitUser represents the user for committing changes to a git repository.
+type CommitUser struct {
+	// Name is the name of the user making a commit.
+	Name string
+	// Email is the email of the user making a commit.
+	Email string
+}
+
 // CommitOptions represents options for committing changes to a git repository.
 type CommitOptions struct {
 	// AllowEmpty indicates whether an empty commit should be allowed.
@@ -102,6 +110,8 @@ type Repo interface {
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who has cloned this repo.
 	HomeDir() string
+	// SetAuthor sets the default commit author.
+	SetAuthor(author CommitUser) error
 }
 
 // repo is an implementation of the Repo interface for interacting with a git
@@ -478,6 +488,30 @@ func (r *repo) HomeDir() string {
 
 func (r *repo) WorkingDir() string {
 	return r.dir
+}
+
+func (r *repo) SetAuthor(author CommitUser) error {
+	if author.Name == "" {
+		author.Name = "Kargo Render"
+	}
+
+	cmd := r.buildGitCommand("config", "--global", "user.name", author.Name)
+	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error configuring git user name: %w", err)
+	}
+
+	if author.Email == "" {
+		author.Email = "kargo-render@akuity.io"
+	}
+
+	cmd = r.buildGitCommand("config", "--global", "user.email", author.Email)
+	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error configuring git user email: %w", err)
+	}
+
+	return nil
 }
 
 // SetupAuth configures the git CLI for authentication using either SSH or the
