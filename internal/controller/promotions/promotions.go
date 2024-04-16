@@ -215,7 +215,12 @@ func (r *reconciler) Reconcile(
 		Name:      promo.Spec.Freight,
 	})
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("get freight: %w", err)
+		return ctrl.Result{}, fmt.Errorf(
+			"error finding Freight %q in namespace %q: %w",
+			promo.Spec.Freight,
+			promo.Namespace,
+			err,
+		)
 	}
 
 	logger = logger.WithFields(log.Fields{
@@ -401,14 +406,6 @@ func (r *reconciler) promote(
 	}
 	logger.Debug("found associated Stage")
 
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error finding Freight %q in namespace %q: %w",
-			promo.Spec.Freight,
-			promo.Namespace,
-			err,
-		)
-	}
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
