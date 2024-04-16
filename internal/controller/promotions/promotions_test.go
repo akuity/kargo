@@ -54,9 +54,10 @@ func newFakeReconciler(
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name                  string
-		promos                []client.Object
-		promoteFn             func(context.Context, v1alpha1.Promotion) (*kargoapi.PromotionStatus, error)
+		name      string
+		promos    []client.Object
+		promoteFn func(context.Context, v1alpha1.Promotion,
+			*v1alpha1.Freight) (*kargoapi.PromotionStatus, error)
 		promoToReconcile      *types.NamespacedName // if nil, uses the first of the promos
 		expectPromoteFnCalled bool
 		expectedPhase         kargoapi.PromotionPhase
@@ -129,7 +130,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
 				panic("expected panic")
 			},
 		},
@@ -142,7 +143,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
 				return nil, errors.New("expected error")
 			},
 		},
@@ -158,10 +159,11 @@ func TestReconcile(t *testing.T) {
 					Spec: &kargoapi.StageSpec{},
 				}, nil
 			}
-			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion, f *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
+			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion,
+				f *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
 				if tc.promoteFn != nil {
-					return tc.promoteFn(ctx, p)
+					return tc.promoteFn(ctx, p, f)
 				}
 				return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, nil
 			}
