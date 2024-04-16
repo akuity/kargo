@@ -504,7 +504,11 @@ type ArgoCDHelmImageUpdate struct {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 type StageStatus struct {
-	RefreshStatus `json:",inline"`
+	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+	// annotation that was handled by the controller. This field can be used to
+	// determine whether the request to refresh the resource has been handled.
+	// +optional
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,11,opt,name=lastHandledRefresh"`
 	// Phase describes where the Stage currently is in its lifecycle.
 	Phase StagePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// CurrentFreight is a simplified representation of the Stage's current

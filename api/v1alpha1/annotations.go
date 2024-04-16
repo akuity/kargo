@@ -41,18 +41,3 @@ func RefreshAnnotationValue(annotations map[string]string) (string, bool) {
 	requested, ok := annotations[AnnotationKeyRefresh]
 	return requested, ok
 }
-
-// RefreshStatus is a struct to embed in a status type, to ensure all types
-// supporting this mechanism have the same field. It should be used like this:
-//
-//	type FooStatus struct {
-//		RefreshStatus `json:",inline"`
-//		...
-//	}
-type RefreshStatus struct {
-	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
-	// annotation that was handled by the controller. This field can be used to
-	// determine whether the request to refresh the resource has been handled.
-	// +optional
-	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,1,opt,name=lastHandledRefresh"`
-}

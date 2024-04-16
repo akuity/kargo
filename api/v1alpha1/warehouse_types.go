@@ -247,7 +247,11 @@ type ChartSubscription struct {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 type WarehouseStatus struct {
-	RefreshStatus `json:",inline"`
+	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+	// annotation that was handled by the controller. This field can be used to
+	// determine whether the request to refresh the resource has been handled.
+	// +optional
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,6,opt,name=lastHandledRefresh"`
 	// Message describes any errors that are preventing the Warehouse controller
 	// from polling repositories to discover new Freight.
 	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`

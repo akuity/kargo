@@ -59,7 +59,7 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
   // Once the Refresh process is done, refetch Freight list
   React.useEffect(() => {
     const refreshRequest = stage?.metadata?.annotations['kargo.akuity.io/refresh'];
-    const refreshStatus = stage?.status?.refreshStatus?.lastHandledRefresh;
+    const refreshStatus = stage?.status?.lastHandledRefresh;
     if (refreshRequest !== undefined && refreshRequest !== refreshStatus) {
       setShouldRefetchFreights(true);
     }
@@ -130,7 +130,7 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
         type='default'
         icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
         onClick={onRefresh}
-        loading={isRefreshLoading || (!!stage?.metadata?.annotations['kargo.akuity.io/refresh'] && stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] !== stage?.status?.refreshStatus?.lastHandledRefresh)}
+        loading={isRefreshLoading || (!!stage?.metadata?.annotations['kargo.akuity.io/refresh'] && stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] !== stage?.status?.lastHandledRefresh)}
       >
         Refresh
       </Button>

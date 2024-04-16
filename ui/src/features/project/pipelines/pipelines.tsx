@@ -197,7 +197,7 @@ export const Pipelines = () => {
         }
 
         const refreshRequest = e.warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
-        const refreshStatus = e.warehouse?.status?.refreshStatus?.lastHandledRefresh;
+        const refreshStatus = e.warehouse?.status?.lastHandledRefresh;
         const refreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
         if (refreshing) {
           refresh[e.warehouse?.metadata?.name || ''] = true;

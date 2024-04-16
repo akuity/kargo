@@ -230,7 +230,7 @@ func (r *reconciler) syncWarehouse(
 
 	// Record the current refresh token as having been handled.
 	if token, ok := kargoapi.RefreshAnnotationValue(warehouse.GetAnnotations()); ok {
-		status.RefreshStatus.LastHandledRefresh = token
+		status.LastHandledRefresh = token
 	}
 
 	logger := logging.LoggerFromContext(ctx)

@@ -891,7 +891,11 @@ message PromotionSpec {
 // PromotionStatus describes the current state of the transition represented by
 // a Promotion.
 message PromotionStatus {
-  optional RefreshStatus refreshStatus = 4;
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
 
   // Phase describes where the Promotion currently is in its lifecycle.
   optional string phase = 1;
@@ -915,21 +919,6 @@ message PullRequestPromotionMechanism {
 
   // GitLab indicates git provider is GitLab
   optional GitLabPullRequest gitlab = 2;
-}
-
-// RefreshStatus is a struct to embed in a status type, to ensure all types
-// supporting this mechanism have the same field. It should be used like this:
-//
-// 	type FooStatus struct {
-// 		RefreshStatus `json:",inline"`
-// 		...
-// 	}
-message RefreshStatus {
-  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
-  // annotation that was handled by the controller. This field can be used to
-  // determine whether the request to refresh the resource has been handled.
-  // +optional
-  optional string lastHandledRefresh = 1;
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
@@ -998,7 +987,11 @@ message StageSpec {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 message StageStatus {
-  optional RefreshStatus refreshStatus = 11;
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 11;
 
   // Phase describes where the Stage currently is in its lifecycle.
   optional string phase = 1;
@@ -1138,7 +1131,11 @@ message WarehouseSpec {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 message WarehouseStatus {
-  optional RefreshStatus refreshStatus = 6;
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 6;
 
   // Message describes any errors that are preventing the Warehouse controller
   // from polling repositories to discover new Freight.

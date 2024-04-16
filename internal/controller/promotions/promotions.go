@@ -287,7 +287,7 @@ func (r *reconciler) Reconcile(
 
 	// Record the current refresh token as having been handled.
 	if token, ok := kargoapi.RefreshAnnotationValue(promo.GetAnnotations()); ok {
-		newStatus.RefreshStatus.LastHandledRefresh = token
+		newStatus.LastHandledRefresh = token
 	}
 
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
