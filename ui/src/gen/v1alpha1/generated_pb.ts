@@ -2993,6 +2993,56 @@ export class PullRequestPromotionMechanism extends Message<PullRequestPromotionM
 }
 
 /**
+ * RefreshStatus is a struct to embed in a status type, to ensure all types
+ * supporting this mechanism have the same field. It should be used like this:
+ *
+ * 	type FooStatus struct {
+ * 		RefreshStatus `json:",inline"`
+ * 		...
+ * 	}
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.RefreshStatus
+ */
+export class RefreshStatus extends Message<RefreshStatus> {
+  /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   *
+   * @generated from field: optional string lastHandledRefresh = 1;
+   */
+  lastHandledRefresh?: string;
+
+  constructor(data?: PartialMessage<RefreshStatus>) {
+    super();
+    proto2.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto2 = proto2;
+  static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.RefreshStatus";
+  static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 1, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RefreshStatus {
+    return new RefreshStatus().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RefreshStatus {
+    return new RefreshStatus().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RefreshStatus {
+    return new RefreshStatus().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RefreshStatus | PlainMessage<RefreshStatus> | undefined, b: RefreshStatus | PlainMessage<RefreshStatus> | undefined): boolean {
+    return proto2.util.equals(RefreshStatus, a, b);
+  }
+}
+
+/**
  * RepoSubscription describes a subscription to ONE OF a Git repository, a
  * container image repository, or a Helm chart repository.
  *

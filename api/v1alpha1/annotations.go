@@ -3,6 +3,10 @@ package v1alpha1
 const (
 	AnnotationKeyDescription = "kargo.akuity.io/description"
 
+	// AnnotationKeyRefresh is an annotation key that can be set on a resource
+	// to trigger a refresh of the resource by the controller. The value of the
+	// annotation is interpreted as a token, and any change in value should
+	// trigger a reconciliation of the resource.
 	AnnotationKeyRefresh = "kargo.akuity.io/refresh"
 
 	AnnotationKeyReverify      = "kargo.akuity.io/reverify"
@@ -29,3 +33,26 @@ const (
 	AnnotationKeyEventVerificationStartTime  = "event.kargo.akuity.io/verification-start-time"
 	AnnotationKeyEventVerificationFinishTime = "event.kargo.akuity.io/verification-finish-time"
 )
+
+// RefreshAnnotationValue returns the value of the AnnotationKeyRefresh
+// annotation which can be used to detect changes, and a boolean indicating
+// whether the annotation was present.
+func RefreshAnnotationValue(annotations map[string]string) (string, bool) {
+	requested, ok := annotations[AnnotationKeyRefresh]
+	return requested, ok
+}
+
+// RefreshStatus is a struct to embed in a status type, to ensure all types
+// supporting this mechanism have the same field. It should be used like this:
+//
+//	type FooStatus struct {
+//		RefreshStatus `json:",inline"`
+//		...
+//	}
+type RefreshStatus struct {
+	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+	// annotation that was handled by the controller. This field can be used to
+	// determine whether the request to refresh the resource has been handled.
+	// +optional
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,1,opt,name=lastHandledRefresh"`
+}

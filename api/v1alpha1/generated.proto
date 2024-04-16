@@ -915,6 +915,21 @@ message PullRequestPromotionMechanism {
   optional GitLabPullRequest gitlab = 2;
 }
 
+// RefreshStatus is a struct to embed in a status type, to ensure all types
+// supporting this mechanism have the same field. It should be used like this:
+//
+// 	type FooStatus struct {
+// 		RefreshStatus `json:",inline"`
+// 		...
+// 	}
+message RefreshStatus {
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 1;
+}
+
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, or a Helm chart repository.
 message RepoSubscription {
