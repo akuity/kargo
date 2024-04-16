@@ -317,12 +317,12 @@ func SetupReconcilerWithManager(
 			predicate.Or(
 				predicate.GenerationChangedPredicate{},
 				predicate.AnnotationChangedPredicate{},
+				kargo.RefreshRequested{},
 			),
 		).
 		WithEventFilter(shardPredicate).
 		WithEventFilter(kargo.IgnoreAnnotationRemoval{
 			Annotations: []string{
-				kargoapi.AnnotationKeyRefresh,
 				kargoapi.AnnotationKeyReverify,
 				kargoapi.AnnotationKeyReverifyActor,
 				kargoapi.AnnotationKeyAbort,
@@ -553,6 +553,11 @@ func (r *reconciler) Reconcile(
 		newStatus.Message = ""
 	}
 
+	// Record the current refresh token as having been handled.
+	if token, ok := kargoapi.RefreshAnnotationValue(stage.GetAnnotations()); ok {
+		newStatus.RefreshStatus.LastHandledRefresh = token
+	}
+
 	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
 		*status = newStatus
 	})
@@ -563,7 +568,6 @@ func (r *reconciler) Reconcile(
 		ctx,
 		r.kargoClient,
 		stage,
-		kargoapi.AnnotationKeyRefresh,
 		kargoapi.AnnotationKeyReverify,
 		kargoapi.AnnotationKeyReverifyActor,
 		kargoapi.AnnotationKeyAbort,
