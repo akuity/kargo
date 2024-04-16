@@ -1204,7 +1204,44 @@ func TestBuildAnalysisRun(t *testing.T) {
 			},
 		},
 		{
-			name:       "Set promotion name only if AnalysisRun is a part of the promotion",
+			name:       "Set actor annotation only if the user triggers re-verification",
+			reconciler: &reconciler{},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify:      "fake-id",
+						kargoapi.AnnotationKeyReverifyActor: "fake-user",
+					},
+				},
+				Spec: &kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					CurrentFreight: &kargoapi.FreightReference{Name: "fake-id"},
+					LastPromotion: &kargoapi.PromotionInfo{
+						Name: "fake-id",
+						Status: &kargoapi.PromotionStatus{
+							Phase: kargoapi.PromotionPhaseSucceeded,
+						},
+					},
+				},
+			},
+			freight: freight,
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.Stage,
+				_ []*rollouts.AnalysisTemplate,
+				ar *rollouts.AnalysisRun,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, ar)
+				require.NotContains(t, ar.Labels, kargoapi.PromotionLabelKey)
+				require.Equal(t, "fake-user", ar.Annotations[kargoapi.AnnotationKeyReverifyActor])
+			},
+		},
+		{
+			name:       "Set promotion name only if the controlplane components trigger re-verification",
 			reconciler: &reconciler{},
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1235,7 +1272,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 			) {
 				require.NoError(t, err)
 				require.NotNil(t, ar)
-				require.NotContains(t, ar.Labels, kargoapi.PromotionLabelKey)
+				require.Contains(t, ar.Labels, kargoapi.PromotionLabelKey)
 			},
 		},
 	}
