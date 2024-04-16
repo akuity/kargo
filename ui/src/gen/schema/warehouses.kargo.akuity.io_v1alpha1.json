@@ -388,6 +388,10 @@
           },
           "type": "object"
         },
+        "lastHandledRefresh": {
+          "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+          "type": "string"
+        },
         "message": {
           "description": "Message describes any errors that are preventing the Warehouse controller\nfrom polling repositories to discover new Freight.",
           "type": "string"

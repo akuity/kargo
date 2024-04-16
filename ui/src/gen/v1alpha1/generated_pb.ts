@@ -3829,6 +3829,11 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
  */
 export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.RefreshStatus refreshStatus = 6;
+   */
+  refreshStatus?: RefreshStatus;
+
+  /**
    * Message describes any errors that are preventing the Warehouse controller
    * from polling repositories to discover new Freight.
    *
@@ -3859,6 +3864,7 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 6, name: "refreshStatus", kind: "message", T: RefreshStatus, opt: true },
     { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 5, name: "lastFreight", kind: "message", T: FreightReference, opt: true },

@@ -247,6 +247,7 @@ type ChartSubscription struct {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 type WarehouseStatus struct {
+	RefreshStatus `json:",inline"`
 	// Message describes any errors that are preventing the Warehouse controller
 	// from polling repositories to discover new Freight.
 	Message string `json:"message,omitempty" protobuf:"bytes,3,opt,name=message"`

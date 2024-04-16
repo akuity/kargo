@@ -503,6 +503,12 @@ spec:
                       this Freight.
                     type: string
                 type: object
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                  annotation that was handled by the controller. This field can be used to
+                  determine whether the request to refresh the resource has been handled.
+                type: string
               message:
                 description: |-
                   Message describes any errors that are preventing the Warehouse controller
