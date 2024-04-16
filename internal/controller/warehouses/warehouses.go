@@ -119,15 +119,10 @@ func SetupReconcilerWithManager(
 		WithEventFilter(
 			predicate.Or(
 				predicate.GenerationChangedPredicate{},
-				predicate.AnnotationChangedPredicate{},
+				kargo.RefreshRequested{},
 			),
 		).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreAnnotationRemoval{
-			Annotations: []string{
-				kargoapi.AnnotationKeyRefresh,
-			},
-		}).
 		WithOptions(controller.CommonOptions()).
 		Complete(newReconciler(mgr.GetClient(), credentialsDB)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
@@ -204,14 +199,6 @@ func (r *reconciler) Reconcile(
 	if updateErr != nil {
 		logger.Errorf("error updating Warehouse status: %s", updateErr)
 	}
-	if clearRefreshErr := kargoapi.ClearAnnotations(
-		ctx,
-		r.client,
-		warehouse,
-		kargoapi.AnnotationKeyRefresh,
-	); clearRefreshErr != nil {
-		logger.Errorf("error clearing Warehouse refresh annotation: %s", clearRefreshErr)
-	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
 	// do it this way so that a failure to update is never counted as THE failure
@@ -240,6 +227,11 @@ func (r *reconciler) syncWarehouse(
 	status := *warehouse.Status.DeepCopy()
 	status.ObservedGeneration = warehouse.Generation
 	status.Message = "" // Clear any previous error
+
+	// Record the current refresh token as having been handled.
+	if token, ok := kargoapi.RefreshAnnotationValue(warehouse.GetAnnotations()); ok {
+		status.RefreshStatus.LastHandledRefresh = token
+	}
 
 	logger := logging.LoggerFromContext(ctx)
 
