@@ -137,3 +137,26 @@ func (i IgnoreAnnotationRemoval) Update(e event.UpdateEvent) bool {
 	}
 	return true
 }
+
+// RefreshRequested is a predicate that returns true if the refresh annotation
+// has been set on a resource, or the value of the annotation has changed
+// compared to the previous state.
+type RefreshRequested struct {
+	predicate.Funcs
+}
+
+// Update returns true if the refresh annotation has been set on the new object,
+// or if the value of the annotation has changed compared to the old object.
+func (p RefreshRequested) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	if newVal, newOk := kargoapi.RefreshAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := kargoapi.RefreshAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+			return newVal != oldVal
+		}
+		return true
+	}
+	return false
+}
