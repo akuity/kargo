@@ -20,6 +20,7 @@ func NormalizeGitURL(repo string) string {
 			repo = ensurePrefix(repo, "ssh://")
 		}
 	}
+	repo = removeSuffix(repo, "/")
 	repo = removeSuffix(repo, ".git")
 	repoURL, err := url.Parse(repo)
 	if err != nil {
