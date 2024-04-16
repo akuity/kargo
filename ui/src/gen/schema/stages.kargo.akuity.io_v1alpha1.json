@@ -874,6 +874,10 @@
             "status": {
               "description": "Status is the (optional) status of the promotion",
               "properties": {
+                "lastHandledRefresh": {
+                  "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+                  "type": "string"
+                },
                 "message": {
                   "description": "Message is a display message about the promotion, including any errors\npreventing the Promotion controller from executing this Promotion.\ni.e. If the Phase field has a value of Failed, this field can be expected\nto explain why.",
                   "type": "string"
@@ -1400,6 +1404,10 @@
             "status": {
               "description": "Status is the (optional) status of the promotion",
               "properties": {
+                "lastHandledRefresh": {
+                  "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+                  "type": "string"
+                },
                 "message": {
                   "description": "Message is a display message about the promotion, including any errors\npreventing the Promotion controller from executing this Promotion.\ni.e. If the Phase field has a value of Failed, this field can be expected\nto explain why.",
                   "type": "string"

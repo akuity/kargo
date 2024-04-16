@@ -2888,6 +2888,11 @@ export class PromotionSpec extends Message<PromotionSpec> {
  */
 export class PromotionStatus extends Message<PromotionStatus> {
   /**
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.RefreshStatus refreshStatus = 4;
+   */
+  refreshStatus?: RefreshStatus;
+
+  /**
    * Phase describes where the Promotion currently is in its lifecycle.
    *
    * @generated from field: optional string phase = 1;
@@ -2920,6 +2925,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 4, name: "refreshStatus", kind: "message", T: RefreshStatus, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },

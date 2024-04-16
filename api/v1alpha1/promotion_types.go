@@ -86,6 +86,7 @@ type PromotionSpec struct {
 // PromotionStatus describes the current state of the transition represented by
 // a Promotion.
 type PromotionStatus struct {
+	RefreshStatus `json:",inline"`
 	// Phase describes where the Promotion currently is in its lifecycle.
 	Phase PromotionPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// Message is a display message about the promotion, including any errors

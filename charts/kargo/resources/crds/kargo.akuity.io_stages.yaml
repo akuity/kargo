@@ -1005,6 +1005,12 @@ spec:
                   status:
                     description: Status is the (optional) status of the promotion
                     properties:
+                      lastHandledRefresh:
+                        description: |-
+                          LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                          annotation that was handled by the controller. This field can be used to
+                          determine whether the request to refresh the resource has been handled.
+                        type: string
                       message:
                         description: |-
                           Message is a display message about the promotion, including any errors
@@ -1536,6 +1542,12 @@ spec:
                   status:
                     description: Status is the (optional) status of the promotion
                     properties:
+                      lastHandledRefresh:
+                        description: |-
+                          LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                          annotation that was handled by the controller. This field can be used to
+                          determine whether the request to refresh the resource has been handled.
+                        type: string
                       message:
                         description: |-
                           Message is a display message about the promotion, including any errors

@@ -891,6 +891,8 @@ message PromotionSpec {
 // PromotionStatus describes the current state of the transition represented by
 // a Promotion.
 message PromotionStatus {
+  optional RefreshStatus refreshStatus = 4;
+
   // Phase describes where the Promotion currently is in its lifecycle.
   optional string phase = 1;
 
