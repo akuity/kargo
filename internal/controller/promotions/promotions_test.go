@@ -158,7 +158,7 @@ func TestReconcile(t *testing.T) {
 					Spec: &kargoapi.StageSpec{},
 				}, nil
 			}
-			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion, f *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
 				if tc.promoteFn != nil {
 					return tc.promoteFn(ctx, p)

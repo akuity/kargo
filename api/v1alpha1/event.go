@@ -97,6 +97,7 @@ func NewPromotionCreatedEventAnnotations(
 		annotations[AnnotationKeyEventActor] = actor
 	}
 	if f != nil {
+		annotations[AnnotationKeyEventFreightCreateTime] = f.CreationTimestamp.Format(time.RFC3339)
 		annotations[AnnotationKeyEventFreightAlias] = f.Alias
 		if len(f.Commits) > 0 {
 			data, err := json.Marshal(f.Commits)
