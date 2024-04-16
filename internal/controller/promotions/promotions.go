@@ -67,7 +67,7 @@ type reconciler struct {
 		types.NamespacedName,
 	) (*kargoapi.Stage, error)
 
-	promoteFn func(context.Context, kargoapi.Promotion) (*kargoapi.PromotionStatus, error)
+	promoteFn func(context.Context, kargoapi.Promotion, *kargoapi.Freight) (*kargoapi.PromotionStatus, error)
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -215,11 +215,12 @@ func (r *reconciler) Reconcile(
 		Name:      promo.Spec.Freight,
 	})
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("get freight: %w", err)
-	}
-	var freightAlias string
-	if freight != nil {
-		freightAlias = freight.Alias
+		return ctrl.Result{}, fmt.Errorf(
+			"error finding Freight %q in namespace %q: %w",
+			promo.Spec.Freight,
+			promo.Namespace,
+			err,
+		)
 	}
 
 	logger = logger.WithFields(log.Fields{
@@ -275,6 +276,7 @@ func (r *reconciler) Reconcile(
 		otherStatus, promoteErr := r.promoteFn(
 			promoCtx,
 			*promo,
+			freight,
 		)
 		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
@@ -340,9 +342,13 @@ func (r *reconciler) Reconcile(
 			kargoapi.AnnotationKeyEventFreightName:         promo.Spec.Freight,
 			kargoapi.AnnotationKeyEventStageName:           promo.Spec.Stage,
 		}
-		if freightAlias != "" {
-			eventAnnotations[kargoapi.AnnotationKeyEventFreightAlias] = freightAlias
+		if freight != nil {
+			if freight.Alias != "" {
+				eventAnnotations[kargoapi.AnnotationKeyEventFreightAlias] = freight.Alias
+			}
+			eventAnnotations[kargoapi.AnnotationKeyEventFreightCreateTime] = freight.CreationTimestamp.Format(time.RFC3339)
 		}
+
 		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
 			eventAnnotations[kargoapi.AnnotationKeyEventVerificationPending] =
 				strconv.FormatBool(stage.Spec.Verification != nil)
@@ -378,6 +384,7 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) promote(
 	ctx context.Context,
 	promo kargoapi.Promotion,
+	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 	stageName := promo.Spec.Stage
@@ -399,22 +406,6 @@ func (r *reconciler) promote(
 	}
 	logger.Debug("found associated Stage")
 
-	targetFreight, err := kargoapi.GetFreight(
-		ctx,
-		r.kargoClient,
-		types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      promo.Spec.Freight,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error finding Freight %q in namespace %q: %w",
-			promo.Spec.Freight,
-			promo.Namespace,
-			err,
-		)
-	}
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}

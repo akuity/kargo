@@ -1531,11 +1531,12 @@ func (r *reconciler) recordFreightVerificationEvent(
 	ar *rollouts.AnalysisRun,
 ) {
 	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventActor:        kargoapi.FormatEventControllerActor(r.cfg.Name()),
-		kargoapi.AnnotationKeyEventProject:      s.Namespace,
-		kargoapi.AnnotationKeyEventStageName:    s.Name,
-		kargoapi.AnnotationKeyEventFreightAlias: fr.Alias,
-		kargoapi.AnnotationKeyEventFreightName:  fr.Name,
+		kargoapi.AnnotationKeyEventActor:             kargoapi.FormatEventControllerActor(r.cfg.Name()),
+		kargoapi.AnnotationKeyEventProject:           s.Namespace,
+		kargoapi.AnnotationKeyEventStageName:         s.Name,
+		kargoapi.AnnotationKeyEventFreightAlias:      fr.Alias,
+		kargoapi.AnnotationKeyEventFreightName:       fr.Name,
+		kargoapi.AnnotationKeyEventFreightCreateTime: fr.CreationTimestamp.Format(time.RFC3339),
 	}
 	if vi.StartTime != nil {
 		annotations[kargoapi.AnnotationKeyEventVerificationStartTime] = vi.StartTime.Format(time.RFC3339)
