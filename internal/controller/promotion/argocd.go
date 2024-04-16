@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/gobwas/glob"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -47,6 +49,7 @@ type argoCDMechanism struct {
 		patch client.Patch,
 		opts ...client.PatchOption,
 	) error
+	logAppEventFn func(ctx context.Context, app *argocd.Application, reason, message string)
 }
 
 // newArgoCDMechanism returns an implementation of the Mechanism interface that
@@ -60,6 +63,7 @@ func newArgoCDMechanism(argocdClient client.Client) Mechanism {
 	a.applyArgoCDSourceUpdateFn = applyArgoCDSourceUpdate
 	if argocdClient != nil {
 		a.argoCDAppPatchFn = argocdClient.Patch
+		a.logAppEventFn = a.logAppEvent
 	}
 	return a
 }
@@ -215,7 +219,44 @@ func (a *argoCDMechanism) doSingleUpdate(
 	}
 	logging.LoggerFromContext(ctx).WithField("app", app.Name).
 		Debug("patched Argo CD Application")
+
+	a.logAppEventFn(ctx, app, "Promotion", "Promotion triggered a sync of this Application resource.")
+
 	return nil
+}
+
+func (a *argoCDMechanism) logAppEvent(ctx context.Context, app *argocd.Application, reason, message string) {
+	logger := logging.LoggerFromContext(ctx)
+
+	t := metav1.Time{Time: time.Now()}
+	event := corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("%v.%x", app.Name, t.UnixNano()),
+		},
+		Source: corev1.EventSource{
+			Component: "kargo-controller",
+		},
+		InvolvedObject: corev1.ObjectReference{
+			APIVersion:      argocd.GroupVersion.String(),
+			Kind:            app.TypeMeta.Kind,
+			Namespace:       app.ObjectMeta.Namespace,
+			Name:            app.ObjectMeta.Name,
+			UID:             app.ObjectMeta.UID,
+			ResourceVersion: app.ObjectMeta.ResourceVersion,
+		},
+		FirstTimestamp: t,
+		LastTimestamp:  t,
+		Count:          1,
+		Message:        message,
+		Type:           corev1.EventTypeNormal,
+		Reason:         reason,
+	}
+	if err := a.argocdClient.Create(context.Background(), &event); err != nil {
+		logger.Errorf(
+			"unable to create %q event for Argo CD Application %q in namespace %q: %v",
+			reason, app.Name, app.Namespace, err,
+		)
+	}
 }
 
 func getApplicationFn(
