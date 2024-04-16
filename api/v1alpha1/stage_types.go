@@ -504,6 +504,7 @@ type ArgoCDHelmImageUpdate struct {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 type StageStatus struct {
+	RefreshStatus `json:",inline"`
 	// Phase describes where the Stage currently is in its lifecycle.
 	Phase StagePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// CurrentFreight is a simplified representation of the Stage's current

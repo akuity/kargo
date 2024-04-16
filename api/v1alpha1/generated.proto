@@ -998,6 +998,8 @@ message StageSpec {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 message StageStatus {
+  optional RefreshStatus refreshStatus = 11;
+
   // Phase describes where the Stage currently is in its lifecycle.
   optional string phase = 1;
 

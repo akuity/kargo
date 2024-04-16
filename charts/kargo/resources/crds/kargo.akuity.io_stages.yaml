@@ -1315,6 +1315,12 @@ spec:
                       type: string
                   type: object
                 type: array
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                  annotation that was handled by the controller. This field can be used to
+                  determine whether the request to refresh the resource has been handled.
+                type: string
               lastPromotion:
                 description: LastPromotion is a reference to the last completed promotion.
                 properties:

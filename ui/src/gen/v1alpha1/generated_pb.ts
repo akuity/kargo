@@ -3296,6 +3296,11 @@ export class StageSpec extends Message<StageSpec> {
  */
 export class StageStatus extends Message<StageStatus> {
   /**
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.RefreshStatus refreshStatus = 11;
+   */
+  refreshStatus?: RefreshStatus;
+
+  /**
    * Phase describes where the Stage currently is in its lifecycle.
    *
    * @generated from field: optional string phase = 1;
@@ -3363,6 +3368,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 11, name: "refreshStatus", kind: "message", T: RefreshStatus, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
