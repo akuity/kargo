@@ -55,10 +55,24 @@ func (f *Freight) GenerateID() string {
 	size := len(f.Commits) + len(f.Images) + len(f.Charts)
 	artifacts := make([]string, 0, size)
 	for _, commit := range f.Commits {
-		artifacts = append(
-			artifacts,
-			fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
-		)
+		if commit.Tag != "" {
+			// If we have a tag, incorporate it into the canonical representation of a
+			// commit used when calculating Freight ID. This is necessary because one
+			// commit could have multiple tags. Suppose we have already detected a
+			// commit with a tag v1.0.0-rc.1 and produced the corresponding Freight.
+			// Later, that same commit is tagged as v1.0.0. If we don't incorporate
+			// the tag into the ID, we will never produce a new/distinct piece of
+			// Freight for the new tag.
+			artifacts = append(
+				artifacts,
+				fmt.Sprintf("%s:%s:%s", commit.RepoURL, commit.Tag, commit.ID),
+			)
+		} else {
+			artifacts = append(
+				artifacts,
+				fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
+			)
+		}
 	}
 	for _, image := range f.Images {
 		artifacts = append(
