@@ -76,9 +76,9 @@ func NewFreightApprovedEventAnnotations(actor string, f *Freight, stageName stri
 	return annotations
 }
 
-// NewPromotionCreatedEventAnnotations returns annotations for a PromotionCreated event.
+// NewPromotionEventAnnotations returns annotations for a Promotion related event.
 // It may skip some fields when error occurred during serialization, to record event with best-effort.
-func NewPromotionCreatedEventAnnotations(
+func NewPromotionEventAnnotations(
 	ctx context.Context,
 	actor string,
 	p *Promotion,
@@ -87,11 +87,11 @@ func NewPromotionCreatedEventAnnotations(
 	log := logging.LoggerFromContext(ctx)
 
 	annotations := map[string]string{
-		AnnotationKeyEventActor:         actor,
-		AnnotationKeyEventProject:       p.Namespace,
-		AnnotationKeyEventPromotionName: p.Name,
-		AnnotationKeyEventFreightName:   p.Spec.Freight,
-		AnnotationKeyEventStageName:     p.Spec.Stage,
+		AnnotationKeyEventProject:             p.GetNamespace(),
+		AnnotationKeyEventPromotionName:       p.GetName(),
+		AnnotationKeyEventFreightName:         p.Spec.Freight,
+		AnnotationKeyEventStageName:           p.Spec.Stage,
+		AnnotationKeyEventPromotionCreateTime: p.GetCreationTimestamp().Format(time.RFC3339),
 	}
 	if actor != "" {
 		annotations[AnnotationKeyEventActor] = actor
