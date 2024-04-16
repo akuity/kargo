@@ -1,7 +1,7 @@
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.1 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.2 AS ui-builder
 
 RUN npm install --global pnpm
 WORKDIR /ui
@@ -88,7 +88,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.1 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.2 AS ui-dev
 
 RUN npm install --global pnpm
 WORKDIR /ui
