@@ -160,3 +160,26 @@ func (p RefreshRequested) Update(e event.UpdateEvent) bool {
 	}
 	return false
 }
+
+// AbortRequested is a predicate that returns true if the abort annotation has
+// been set on a resource, or the ID of the request has changed compared to the
+// previous state.
+type AbortRequested struct {
+	predicate.Funcs
+}
+
+// Update returns true if the abort annotation has been set on the new object,
+// or if the ID of the request has changed compared to the old object.
+func (p AbortRequested) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	if newVal, newOk := kargoapi.AbortAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := kargoapi.AbortAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+			return newVal != oldVal
+		}
+		return true
+	}
+	return false
+}

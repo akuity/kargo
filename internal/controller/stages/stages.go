@@ -318,6 +318,7 @@ func SetupReconcilerWithManager(
 				predicate.GenerationChangedPredicate{},
 				predicate.AnnotationChangedPredicate{},
 				kargo.RefreshRequested{},
+				kargo.AbortRequested{},
 			),
 		).
 		WithEventFilter(shardPredicate).
@@ -325,7 +326,6 @@ func SetupReconcilerWithManager(
 			Annotations: []string{
 				kargoapi.AnnotationKeyReverify,
 				kargoapi.AnnotationKeyReverifyActor,
-				kargoapi.AnnotationKeyAbort,
 			},
 		}).
 		WithOptions(controller.CommonOptions()).
@@ -570,7 +570,6 @@ func (r *reconciler) Reconcile(
 		stage,
 		kargoapi.AnnotationKeyReverify,
 		kargoapi.AnnotationKeyReverifyActor,
-		kargoapi.AnnotationKeyAbort,
 	)
 	if clearErr != nil {
 		logger.Errorf("error clearing Stage annotations: %s", clearErr)
@@ -821,7 +820,7 @@ func (r *reconciler) syncNormalStage(
 					// been marked to do so.
 					newInfo := status.CurrentFreight.VerificationInfo
 					if newInfo.ID != "" && !newInfo.Phase.IsTerminal() {
-						if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyAbort]; ok && v == newInfo.ID {
+						if id, ok := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); ok && id == newInfo.ID {
 							log.Debug("aborting verification")
 							status.CurrentFreight.VerificationInfo = r.abortVerificationFn(ctx, stage)
 						}

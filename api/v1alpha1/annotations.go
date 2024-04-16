@@ -11,7 +11,12 @@ const (
 
 	AnnotationKeyReverify      = "kargo.akuity.io/reverify"
 	AnnotationKeyReverifyActor = "kargo.akuity.io/reverify-actor"
-	AnnotationKeyAbort         = "kargo.akuity.io/abort"
+
+	// AnnotationKeyAbort is an annotation key that can be set on a Stage
+	// resource to abort the verification of its Freight. The value of the
+	// annotation must be set to the identifier of the verification to be
+	// aborted.
+	AnnotationKeyAbort = "kargo.akuity.io/abort"
 
 	AnnotationKeyOIDCEmails   = "rbac.kargo.akuity.io/email"
 	AnnotationKeyOIDCGroups   = "rbac.kargo.akuity.io/groups"
@@ -39,5 +44,13 @@ const (
 // whether the annotation was present.
 func RefreshAnnotationValue(annotations map[string]string) (string, bool) {
 	requested, ok := annotations[AnnotationKeyRefresh]
+	return requested, ok
+}
+
+// AbortAnnotationValue returns the value of the AnnotationKeyAbort annotation
+// which can be used to abort the verification of a Freight, and a boolean
+// indicating whether the annotation was present.
+func AbortAnnotationValue(annotations map[string]string) (string, bool) {
+	requested, ok := annotations[AnnotationKeyAbort]
 	return requested, ok
 }
