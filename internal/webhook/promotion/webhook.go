@@ -293,7 +293,7 @@ func (w *webhook) recordPromotionCreatedEvent(
 	actor := kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 	w.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionCreatedEventAnnotations(ctx, actor, p, f),
+		kargoapi.NewPromotionEventAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		"Promotion created for Stage %q by %q",
