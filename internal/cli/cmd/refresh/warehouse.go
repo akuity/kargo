@@ -81,8 +81,11 @@ func waitForWarehouse(
 		if msg == nil || msg.Warehouse == nil {
 			return errors.New("unexpected response")
 		}
-		if msg.Warehouse.GetAnnotations() == nil ||
-			msg.Warehouse.GetAnnotations()[kargoapi.AnnotationKeyRefresh] == "" {
+		token, ok := kargoapi.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
+		if !ok {
+			return fmt.Errorf("Warehouse %q in Project %q has no refresh annotation", name, project)
+		}
+		if msg.Warehouse.Status.LastHandledRefresh == token {
 			return nil
 		}
 	}

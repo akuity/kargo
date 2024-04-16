@@ -81,8 +81,11 @@ func waitForStage(
 		if msg == nil || msg.Stage == nil {
 			return errors.New("unexpected response")
 		}
-		if msg.Stage.GetAnnotations() == nil ||
-			msg.Stage.GetAnnotations()[kargoapi.AnnotationKeyRefresh] == "" {
+		token, ok := kargoapi.RefreshAnnotationValue(msg.Stage.GetAnnotations())
+		if !ok {
+			return fmt.Errorf("Stage %q in Project %q has no refresh annotation", name, project)
+		}
+		if msg.Stage.Status.LastHandledRefresh == token {
 			return nil
 		}
 	}
