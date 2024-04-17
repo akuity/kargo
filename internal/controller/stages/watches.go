@@ -92,7 +92,7 @@ func (v *verifiedFreightEventHandler) Update(
 			},
 		); err != nil {
 			logger.Error(
-				nil,
+				err,
 				"Failed list Stages downstream from Stage",
 				"stage", evt.ObjectOld,
 				"namespace", newFreight.Namespace,
