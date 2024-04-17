@@ -1,18 +1,54 @@
 package v1alpha1
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/api/user"
 )
+
+// ReverificationRequest is a request payload with an optional actor field which
+// can be used to annotate a Stage using the AnnotationKeyReverify annotation.
+// The actor field is used to track the user who initiated the re-verification.
+//
+// +protobuf=false
+// +k8s:deepcopy-gen=false
+// +k8s:openapi-gen=false
+type ReverificationRequest struct {
+	// ID is the identifier of the VerificationInfo to be re-verified.
+	ID string `json:"id,omitempty"`
+	// Actor is the user who initiated the re-verification.
+	Actor string `json:"actor,omitempty"`
+	// ControlPlane is a flag to indicate if the re-verification has been
+	// initiated by a control plane.
+	ControlPlane bool `json:"controlPlane,omitempty"`
+}
+
+// ForID returns true if the ReverificationRequest has the specified ID.
+func (r *ReverificationRequest) ForID(id string) bool {
+	return r != nil && r.ID == id
+}
+
+// String returns the JSON string representation of the ReverificationRequest,
+// or an empty string if the ReverificationRequest is nil or empty.
+func (r *ReverificationRequest) String() string {
+	if r == nil {
+		return ""
+	}
+	b, _ := json.Marshal(r)
+	if b == nil || bytes.Equal(b, []byte("{}")) {
+		return ""
+	}
+	return string(b)
+}
 
 // GetStage returns a pointer to the Stage resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
@@ -87,14 +123,14 @@ func ReverifyStageFreight(
 		return fmt.Errorf("stage verification info has no ID")
 	}
 
-	kvs := map[string]*string{
-		AnnotationKeyReverify: ptr.To(curFreight.VerificationInfo.ID),
+	rr := ReverificationRequest{
+		ID: curFreight.VerificationInfo.ID,
 	}
 	// Put actor information to track on the controller side
 	if u, ok := user.InfoFromContext(ctx); ok {
-		kvs[AnnotationKeyReverifyActor] = ptr.To(FormatEventUserActor(u))
+		rr.Actor = FormatEventUserActor(u)
 	}
-	return patchAnnotations(ctx, c, stage, kvs)
+	return patchAnnotation(ctx, c, stage, AnnotationKeyReverify, rr.String())
 }
 
 // AbortStageFreightVerification forces aborting the verification of the

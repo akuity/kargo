@@ -12,6 +12,42 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+func TestReverificationRequest_ForID(t *testing.T) {
+	t.Run("reverification request is nil", func(t *testing.T) {
+		var r *ReverificationRequest
+		require.False(t, r.ForID("foo"))
+	})
+
+	t.Run("reverification request has ID", func(t *testing.T) {
+		r := &ReverificationRequest{
+			ID: "foo",
+		}
+		require.True(t, r.ForID("foo"))
+		require.False(t, r.ForID("bar"))
+	})
+}
+
+func TestReverificationRequest_String(t *testing.T) {
+	t.Run("reverification request is nil", func(t *testing.T) {
+		var r *ReverificationRequest
+		require.Empty(t, r.String())
+	})
+
+	t.Run("reverification request is empty", func(t *testing.T) {
+		r := &ReverificationRequest{}
+		require.Empty(t, r.String())
+	})
+
+	t.Run("reverification request has data", func(t *testing.T) {
+		r := &ReverificationRequest{
+			ID:           "foo",
+			Actor:        "fake-actor",
+			ControlPlane: true,
+		}
+		require.Equal(t, `{"id":"foo","actor":"fake-actor","controlPlane":true}`, r.String())
+	})
+}
+
 func TestGetStage(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
@@ -164,7 +200,9 @@ func TestReverifyStageFreight(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		require.Equal(t, "fake-id", stage.Annotations[AnnotationKeyReverify])
+		require.Equal(t, (&ReverificationRequest{
+			ID: "fake-id",
+		}).String(), stage.Annotations[AnnotationKeyReverify])
 	})
 }
 

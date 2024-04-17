@@ -53,3 +53,27 @@ func TestAbortAnnotationValue(t *testing.T) {
 		require.Empty(t, result)
 	})
 }
+
+func TestReverifyAnnotationValue(t *testing.T) {
+	t.Run("has reverify annotation with valid JSON", func(t *testing.T) {
+		result, ok := ReverifyAnnotationValue(map[string]string{
+			AnnotationKeyReverify: `{"id":"foo"}`,
+		})
+		require.True(t, ok)
+		require.Equal(t, "foo", result.ID)
+	})
+
+	t.Run("has reverify annotation with ID string", func(t *testing.T) {
+		result, ok := ReverifyAnnotationValue(map[string]string{
+			AnnotationKeyReverify: "foo",
+		})
+		require.True(t, ok)
+		require.Equal(t, "foo", result.ID)
+	})
+
+	t.Run("does not have reverify annotation", func(t *testing.T) {
+		result, ok := ReverifyAnnotationValue(nil)
+		require.False(t, ok)
+		require.Nil(t, result)
+	})
+}

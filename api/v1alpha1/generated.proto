@@ -1064,6 +1064,9 @@ message VerificationInfo {
   // ID is the identifier of the Verification process.
   optional string id = 4;
 
+  // Actor is the name of the entity that initiated the Verification process.
+  optional string actor = 7;
+
   // StartTime is the time at which the Verification process was started.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
 

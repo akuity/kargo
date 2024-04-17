@@ -280,6 +280,10 @@
               "items": {
                 "description": "VerificationInfo contains information about the currently running\nVerification process.",
                 "properties": {
+                  "actor": {
+                    "description": "Actor is the name of the entity that initiated the Verification process.",
+                    "type": "string"
+                  },
                   "analysisRun": {
                     "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                     "properties": {
@@ -333,6 +337,10 @@
             "verificationInfo": {
               "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
               "properties": {
+                "actor": {
+                  "description": "Actor is the name of the entity that initiated the Verification process.",
+                  "type": "string"
+                },
                 "analysisRun": {
                   "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                   "properties": {

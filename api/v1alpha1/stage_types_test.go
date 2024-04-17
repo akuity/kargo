@@ -86,6 +86,87 @@ func TestFreightReferenceStackUpdateOrPush(t *testing.T) {
 	}
 }
 
+func TestVerificationInfoStack_Current(t *testing.T) {
+	testCases := []struct {
+		name           string
+		stack          VerificationInfoStack
+		expectedResult *VerificationInfo
+	}{
+		{
+			name:           "stack is nil",
+			stack:          nil,
+			expectedResult: nil,
+		},
+		{
+			name:           "stack is empty",
+			stack:          VerificationInfoStack{},
+			expectedResult: nil,
+		},
+		{
+			name: "stack has one element",
+			stack: VerificationInfoStack{
+				{ID: "foo"},
+			},
+			expectedResult: &VerificationInfo{ID: "foo"},
+		},
+		{
+			name: "stack has multiple elements",
+			stack: VerificationInfoStack{
+				{ID: "foo"},
+				{ID: "bar"},
+				{ID: "baz"},
+			},
+			expectedResult: &VerificationInfo{ID: "foo"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.stack.Current())
+		})
+	}
+}
+
+func TestVerificationInfoStack_Previous(t *testing.T) {
+	testCases := []struct {
+		name           string
+		stack          VerificationInfoStack
+		expectedResult *VerificationInfo
+	}{
+		{
+			name:           "stack is nil",
+			stack:          nil,
+			expectedResult: nil,
+		},
+		{
+			name:           "stack is empty",
+			stack:          VerificationInfoStack{},
+			expectedResult: nil,
+		},
+		{
+			name: "stack has one element",
+			stack: VerificationInfoStack{
+				{ID: "foo"},
+			},
+			expectedResult: nil,
+		},
+		{
+			name: "stack has multiple elements",
+			stack: VerificationInfoStack{
+				{ID: "foo"},
+				{ID: "bar"},
+				{ID: "baz"},
+				{ID: "zab"},
+			},
+			expectedResult: &VerificationInfo{ID: "bar"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.stack.Previous())
+		})
+	}
+}
+
 func TestVerificationInfoStack_UpdateOrPush(t *testing.T) {
 	testCases := []struct {
 		name          string

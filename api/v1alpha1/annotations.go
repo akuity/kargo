@@ -1,22 +1,27 @@
 package v1alpha1
 
-const (
-	AnnotationKeyDescription = "kargo.akuity.io/description"
+import "encoding/json"
 
+const (
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
 	// to trigger a refresh of the resource by the controller. The value of the
 	// annotation is interpreted as a token, and any change in value should
 	// trigger a reconciliation of the resource.
 	AnnotationKeyRefresh = "kargo.akuity.io/refresh"
 
-	AnnotationKeyReverify      = "kargo.akuity.io/reverify"
-	AnnotationKeyReverifyActor = "kargo.akuity.io/reverify-actor"
+	// AnnotationKeyReverify is an annotation key that can be set on a Stage
+	// resource to trigger the re-verification of its Freight. The value of the
+	// annotation should either be the ID of the verification to be reverified,
+	// or a JSON object with the structure of the ReverificationRequest.
+	AnnotationKeyReverify = "kargo.akuity.io/reverify"
 
 	// AnnotationKeyAbort is an annotation key that can be set on a Stage
 	// resource to abort the verification of its Freight. The value of the
 	// annotation must be set to the identifier of the verification to be
 	// aborted.
 	AnnotationKeyAbort = "kargo.akuity.io/abort"
+
+	AnnotationKeyDescription = "kargo.akuity.io/description"
 
 	AnnotationKeyOIDCEmails   = "rbac.kargo.akuity.io/email"
 	AnnotationKeyOIDCGroups   = "rbac.kargo.akuity.io/groups"
@@ -45,6 +50,30 @@ const (
 func RefreshAnnotationValue(annotations map[string]string) (string, bool) {
 	requested, ok := annotations[AnnotationKeyRefresh]
 	return requested, ok
+}
+
+// ReverifyAnnotationValue returns the value of the AnnotationKeyReverify
+// annotation, which can be used to determine whether the verification of a
+// Freight should be rerun, and a boolean indicating whether the annotation was
+// present.
+//
+// If the value of the annotation is a valid JSON object, it is unmarshalled
+// into a ReverificationRequest struct. Otherwise, the value is treated as the
+// ID of the verification to be reverified.
+func ReverifyAnnotationValue(annotations map[string]string) (*ReverificationRequest, bool) {
+	requested, ok := annotations[AnnotationKeyReverify]
+	if !ok {
+		return nil, ok
+	}
+	var rr ReverificationRequest
+	if b := []byte(requested); json.Valid(b) {
+		if err := json.Unmarshal(b, &rr); err != nil {
+			return nil, false
+		}
+	} else {
+		rr.ID = requested
+	}
+	return &rr, ok
 }
 
 // AbortAnnotationValue returns the value of the AnnotationKeyAbort annotation

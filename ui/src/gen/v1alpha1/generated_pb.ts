@@ -3527,6 +3527,13 @@ export class VerificationInfo extends Message<VerificationInfo> {
   id?: string;
 
   /**
+   * Actor is the name of the entity that initiated the Verification process.
+   *
+   * @generated from field: optional string actor = 7;
+   */
+  actor?: string;
+
+  /**
    * StartTime is the time at which the Verification process was started.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
@@ -3575,6 +3582,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.VerificationInfo";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "actor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "startTime", kind: "message", T: Time, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },

@@ -2,7 +2,6 @@ package stages
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -316,18 +315,12 @@ func SetupReconcilerWithManager(
 		WithEventFilter(
 			predicate.Or(
 				predicate.GenerationChangedPredicate{},
-				predicate.AnnotationChangedPredicate{},
 				kargo.RefreshRequested{},
+				kargo.ReverifyRequested{},
 				kargo.AbortRequested{},
 			),
 		).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreAnnotationRemoval{
-			Annotations: []string{
-				kargoapi.AnnotationKeyReverify,
-				kargoapi.AnnotationKeyReverifyActor,
-			},
-		}).
 		WithOptions(controller.CommonOptions()).
 		Build(
 			newReconciler(
@@ -564,22 +557,12 @@ func (r *reconciler) Reconcile(
 	if updateErr != nil {
 		logger.Errorf("error updating Stage status: %s", updateErr)
 	}
-	clearErr := kargoapi.ClearAnnotations(
-		ctx,
-		r.kargoClient,
-		stage,
-		kargoapi.AnnotationKeyReverify,
-		kargoapi.AnnotationKeyReverifyActor,
-	)
-	if clearErr != nil {
-		logger.Errorf("error clearing Stage annotations: %s", clearErr)
-	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
 	// do it this way so that a failure to update is never counted as THE failure
 	// when something else more serious occurred first.
 	if err == nil {
-		err = errors.Join(updateErr, clearErr)
+		err = updateErr
 	}
 	logger.Debug("done reconciling Stage")
 
@@ -777,7 +760,7 @@ func (r *reconciler) syncNormalStage(
 			// verification info to start the verification process again.
 			info := status.CurrentFreight.VerificationInfo
 			if info != nil && info.ID != "" && info.Phase.IsTerminal() {
-				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; ok && v == info.ID {
+				if rr, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); rr.ForID(info.ID) {
 					logger.Debug("rerunning verification")
 					status.Phase = kargoapi.StagePhaseVerifying
 					status.CurrentFreight.VerificationInfo = nil
@@ -1559,19 +1542,9 @@ func (r *reconciler) recordFreightVerificationEvent(
 	}
 
 	// If the verification is manually triggered (e.g. reverify),
-	// override the actor if the Stage or AnalysisRun knows about them.
-	{
-		// Check if the stage has reverify actor annotation
-		if actor, ok := s.Annotations[kargoapi.AnnotationKeyReverifyActor]; ok {
-			annotations[kargoapi.AnnotationKeyEventActor] = actor
-		}
-
-		// Or if the analysis run has it, then set it as the actor
-		if ar != nil {
-			if actor, ok := ar.Annotations[kargoapi.AnnotationKeyReverifyActor]; ok {
-				annotations[kargoapi.AnnotationKeyEventActor] = actor
-			}
-		}
+	// override the actor with the one who triggered the verification.
+	if vi.Actor != "" {
+		annotations[kargoapi.AnnotationKeyEventActor] = vi.Actor
 	}
 
 	reason := kargoapi.EventReasonFreightVerificationUnknown

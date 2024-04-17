@@ -400,6 +400,10 @@ spec:
                         VerificationInfo contains information about the currently running
                         Verification process.
                       properties:
+                        actor:
+                          description: Actor is the name of the entity that initiated
+                            the Verification process.
+                          type: string
                         analysisRun:
                           description: |-
                             AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -452,6 +456,10 @@ spec:
                       VerificationInfo is information about any verification process that was
                       associated with this Freight for this Stage.
                     properties:
+                      actor:
+                        description: Actor is the name of the entity that initiated
+                          the Verification process.
+                        type: string
                       analysisRun:
                         description: |-
                           AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements

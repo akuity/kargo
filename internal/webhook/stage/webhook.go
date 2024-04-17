@@ -96,20 +96,25 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		oldStage = req.OldObject.Object.(*kargoapi.Stage) // nolint: forcetypeassert
 	}
 
-	if req.Operation == admissionv1.Create ||
-		req.Operation == admissionv1.Update {
-		if id, ok := stage.Annotations[kargoapi.AnnotationKeyReverify]; ok {
-			// Set actor as an admission request's user info when reverification is requested
-			// to allow controllers to track who triggered it.
-			if !w.isRequestFromKargoControlplaneFn(req) &&
-				(oldStage == nil ||
-					(oldStage != nil && oldStage.Annotations[kargoapi.AnnotationKeyReverify] != id)) {
-				stage.Annotations[kargoapi.AnnotationKeyReverifyActor] =
-					kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
+		if rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations); ok {
+			// Enrich the annotation with the actor and control plane information
+			// if this is a new re-verification request.
+			var oldRr *kargoapi.ReverificationRequest
+			var oldOk bool
+			if oldStage != nil {
+				oldRr, oldOk = kargoapi.ReverifyAnnotationValue(oldStage.Annotations)
 			}
-		} else {
-			// Ensure actor annotation is not set when not reverifying
-			delete(stage.Annotations, kargoapi.AnnotationKeyReverifyActor)
+			if oldStage == nil || !oldOk || !rr.ForID(oldRr.ID) {
+				rr.ControlPlane = w.isRequestFromKargoControlplaneFn(req)
+				if !rr.ControlPlane {
+					// If the re-verification request is not from the control plane, then
+					// it's from a specific Kubernetes user. Without this check we would
+					// overwrite the actor field set by the control plane.
+					rr.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+				}
+				stage.Annotations[kargoapi.AnnotationKeyReverify] = rr.String()
+			}
 		}
 	}
 	return nil

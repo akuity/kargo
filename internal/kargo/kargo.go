@@ -161,6 +161,29 @@ func (p RefreshRequested) Update(e event.UpdateEvent) bool {
 	return false
 }
 
+// ReverifyRequested is a predicate that returns true if the reverify annotation
+// has been set on a resource, or the ID of the request has changed compared to
+// the previous state.
+type ReverifyRequested struct {
+	predicate.Funcs
+}
+
+// Update returns true if the reverify annotation has been set on the new object,
+// or if the ID of the request has changed compared to the old object.
+func (r ReverifyRequested) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	if newVal, newOk := kargoapi.ReverifyAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := kargoapi.ReverifyAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+			return !newVal.ForID(oldVal.ID)
+		}
+		return true
+	}
+	return false
+}
+
 // AbortRequested is a predicate that returns true if the abort annotation has
 // been set on a resource, or the ID of the request has changed compared to the
 // previous state.
