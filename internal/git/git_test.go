@@ -19,18 +19,18 @@ func TestNormalizeGitURL(t *testing.T) {
 		"git@github.com:example/repo/":               "git@github.com:example/repo",     // 0001
 		"git@github.com:example/repo.git":            "git@github.com:example/repo",     // 0010
 		"git@github.com:example/repo.git/":           "git@github.com:example/repo",     // 0011
-		"git@localhost:8443:example/repo":            "git@localhost:8443:example/repo", // 0100
-		"git@localhost:8443:example/repo/":           "git@localhost:8443:example/repo", // 0101
-		"git@localhost:8443:example/repo.git":        "git@localhost:8443:example/repo", // 0110
-		"git@localhost:8443:example/repo.git/":       "git@localhost:8443:example/repo", // 0111
+		"git@localhost:2222:example/repo":            "git@localhost:2222:example/repo", // 0100
+		"git@localhost:2222:example/repo/":           "git@localhost:2222:example/repo", // 0101
+		"git@localhost:2222:example/repo.git":        "git@localhost:2222:example/repo", // 0110
+		"git@localhost:2222:example/repo.git/":       "git@localhost:2222:example/repo", // 0111
 		"ssh://git@github.com:example/repo":          "git@github.com:example/repo",     // 1000
 		"ssh://git@github.com:example/repo/":         "git@github.com:example/repo",     // 1001
 		"ssh://git@github.com:example/repo.git":      "git@github.com:example/repo",     // 1010
 		"ssh://git@github.com:example/repo.git/":     "git@github.com:example/repo",     // 1011
-		"ssh://git@localhost:8443:example/repo":      "git@localhost:8443:example/repo", // 1100
-		"ssh://git@localhost:8443:example/repo/":     "git@localhost:8443:example/repo", // 1101
-		"ssh://git@localhost:8443:example/repo.git":  "git@localhost:8443:example/repo", // 1110
-		"ssh://git@localhost:8443:example/repo.git/": "git@localhost:8443:example/repo", // 1111
+		"ssh://git@localhost:2222:example/repo":      "git@localhost:2222:example/repo", // 1100
+		"ssh://git@localhost:2222:example/repo/":     "git@localhost:2222:example/repo", // 1101
+		"ssh://git@localhost:2222:example/repo.git":  "git@localhost:2222:example/repo", // 1110
+		"ssh://git@localhost:2222:example/repo.git/": "git@localhost:2222:example/repo", // 1111
 		"https://github.com":                         "https://github.com",              // No path
 		// Variable features of each URL:
 		//   10000. Outbound proxy or not
