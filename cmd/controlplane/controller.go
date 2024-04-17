@@ -76,14 +76,11 @@ func (o *controllerOptions) complete() {
 func (o *controllerOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
 
-	startupLogEntry := o.Logger.WithValues(
-		"version", version.Version,
-		"commit", version.GitCommit,
-	)
+	keyVals := []any{"version", version.Version, "commit", version.GitCommit}
 	if o.ShardName != "" {
-		startupLogEntry = startupLogEntry.WithValues("shard", o.ShardName)
+		keyVals = append(keyVals, "shard", o.ShardName)
 	}
-	startupLogEntry.Info("Starting Kargo Controller")
+	o.Logger.Info("Starting Kargo Controller")
 
 	promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv()
 	stagesReconcilerCfg := stages.ReconcilerConfigFromEnv()
