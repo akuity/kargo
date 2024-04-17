@@ -2,7 +2,6 @@ package option
 
 import (
 	"context"
-	"log/slog"
 	"path"
 	"time"
 

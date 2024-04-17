@@ -172,12 +172,12 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).
-		WithFields(log.Fields{
-			"namespace": req.NamespacedName.Namespace,
-			"promotion": req.NamespacedName.Name,
-		})
+		WithValues(
+			"namespace", req.NamespacedName.Namespace,
+			"promotion", req.NamespacedName.Name,
+		)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	logger.Debug("reconciling Promotion")
+	logger.V(1).Info("reconciling Promotion")
 
 	// Note that initialization occurs here because we basically know that the
 	// controller runtime client's cache is ready at this point. We cannot attempt
@@ -410,7 +410,7 @@ func (r *reconciler) promote(
 		)
 	}
 
-	logger = logger.WithField("targetFreight", targetFreight.Name)
+	logger = logger.WithValues("targetFreight", targetFreight.Name)
 
 	targetFreightRef := kargoapi.FreightReference{
 		Name:      targetFreight.Name,
@@ -462,7 +462,7 @@ func (r *reconciler) promote(
 					); err != nil {
 						// Log the error, but don't let failure to initiate re-verification
 						// prevent the promotion from succeeding.
-						logger.Errorf("error triggering re-verification: %s", err)
+						logger.Error(err, "error triggering re-verification")
 					}
 				} else if stage.Spec.PromotionMechanisms != nil {
 					status.CurrentFreight = &nextFreight

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -743,7 +744,7 @@ func (r *reconciler) syncNormalStage(
 			*status.CurrentFreight,
 			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		); status.Health != nil {
-			freightLoggerV(1).Info(
+			freightLogger.V(1).Info(
 				"Stage health assessed",
 				"health", status.Health.Status,
 			)
@@ -787,7 +788,7 @@ func (r *reconciler) syncNormalStage(
 			if status.Phase == kargoapi.StagePhaseVerifying || status.Phase == kargoapi.StagePhaseNotApplicable {
 				if !status.CurrentFreight.VerificationInfo.HasAnalysisRun() {
 					if status.Health == nil || status.Health.Status == kargoapi.HealthStateHealthy {
-						logger.V(1).Debug("starting verification")
+						logger.V(1).Info("starting verification")
 						var err error
 						if status.CurrentFreight.VerificationInfo, err = r.startVerificationFn(
 							ctx,
@@ -800,7 +801,7 @@ func (r *reconciler) syncNormalStage(
 						}
 					}
 				} else {
-					logger.V(1).Debug("checking verification results")
+					logger.V(1).Info("checking verification results")
 					var err error
 					if status.CurrentFreight.VerificationInfo, err = r.getVerificationInfoFn(
 						ctx,
