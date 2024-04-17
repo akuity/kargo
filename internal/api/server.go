@@ -233,7 +233,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 
 	log.WithValues(
 		"tls", s.cfg.TLSConfig != nil,
-	).Info("Server is listening", "port", l.Addr().String())
+	).Info("Server is listening", "bindAddress", l.Addr().String())
 
 	select {
 	case <-ctx.Done():
