@@ -109,8 +109,11 @@ func (k *kubernetesDatabase) Get(
 	// If we are dealing with an insecure HTTP endpoint (of any type),
 	// refuse to return any credentials
 	if strings.HasPrefix(repoURL, "http://") {
-		logger := logging.LoggerFromContext(ctx).WithValues("repoURL", repoURL)
-		logger.Info("refused to get credentials for insecure HTTP endpoint")
+		logger := logging.LoggerFromContext(ctx)
+		logger.Info(
+			"refused to get credentials for insecure HTTP endpoint",
+			"repoURL", repoURL,
+		)
 		return creds, false, nil
 	}
 
@@ -219,10 +222,11 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 		}
 		regex, err := regexp.Compile(string(patternBytes))
 		if err != nil {
-			logger.WithValues(
+			logger.Info(
+				"failed to compile regex for credential secret",
 				"namespace", namespace,
 				"secret", secret.Name,
-			).Info("failed to compile regex for credential secret")
+			)
 			continue
 		}
 		if regex.MatchString(repoURL) {

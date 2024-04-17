@@ -80,8 +80,7 @@ func (r *reconciler) selectCommits(
 				err,
 			)
 		}
-		logger.WithValues("commit", gm.Commit).
-			V(1).Info("found latest commit from repo")
+		logger.V(1).Info("found latest commit from repo", "commit", gm.Commit)
 		latestCommits = append(
 			latestCommits,
 			kargoapi.GitCommit{

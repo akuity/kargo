@@ -87,10 +87,11 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 
 	if n.platform == nil {
 		image := images[0]
-		logger.WithValues(
+		logger.V(2).Info(
+			"found image",
 			"tag", image.Tag,
 			"digest", image.Digest.String(),
-		).V(2).Info("found image")
+		)
 		return &image, nil
 	}
 
@@ -109,10 +110,11 @@ func (n *newestBuildSelector) Select(ctx context.Context) (*Image, error) {
 	}
 	image.Tag = tag
 
-	logger.WithValues(
+	logger.V(2).Info(
+		"found image",
 		"tag", image.Tag,
 		"digest", image.Digest.String(),
-	).V(2).Info("found image")
+	)
 	return image, nil
 }
 

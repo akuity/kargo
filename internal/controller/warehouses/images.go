@@ -64,10 +64,11 @@ func (r *reconciler) selectImages(
 				Digest:     digest,
 			},
 		)
-		logger.WithValues(
+		logger.V(1).Info(
+			"found latest suitable image",
 			"tag", tag,
 			"digest", digest,
-		).V(1).Info("found latest suitable image")
+		)
 	}
 	return imgs, nil
 }

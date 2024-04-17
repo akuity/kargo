@@ -743,8 +743,10 @@ func (r *reconciler) syncNormalStage(
 			*status.CurrentFreight,
 			stage.Spec.PromotionMechanisms.ArgoCDAppUpdates,
 		); status.Health != nil {
-			freightLogger.WithValues("health", status.Health.Status).
-				Debug("Stage health assessed")
+			freightLoggerV(1).Info(
+				"Stage health assessed",
+				"health", status.Health.Status,
+			)
 		} else {
 			freightLogger.V(1).Info("Stage health deemed not applicable")
 		}
@@ -1026,7 +1028,7 @@ func (r *reconciler) syncNormalStage(
 		promo.Spec.Stage,
 	)
 
-	logger.WithValues("promotion", promo.Name).V(1).Info("created Promotion resource")
+	logger.V(1).Info("created Promotion resource", "promotion", promo.Name)
 
 	return status, nil
 }
@@ -1300,8 +1302,11 @@ func (r *reconciler) isAutoPromotionPermitted(
 	}
 	for _, policy := range project.Spec.PromotionPolicies {
 		if policy.Stage == stageName {
-			logger.WithValues("autoPromotionEnabled", policy.AutoPromotionEnabled).
-				V(1).Info("found PromotionPolicy associated with the Stage")
+			logger.V(1).Info(
+				"found PromotionPolicy associated with the Stage",
+				"autoPromotionEnabled", policy.AutoPromotionEnabled,
+			)
+
 			return policy.AutoPromotionEnabled, nil
 		}
 	}
@@ -1330,8 +1335,10 @@ func (r *reconciler) getLatestAvailableFreight(
 			)
 		}
 		if latestFreight == nil {
-			logger.WithValues("warehouse", stage.Spec.Subscriptions.Warehouse).
-				V(1).Info("no Freight found from Warehouse")
+			logger.V(1).Info(
+				"no Freight found from Warehouse",
+				"warehouse", stage.Spec.Subscriptions.Warehouse,
+			)
 		}
 		return latestFreight, nil
 	}

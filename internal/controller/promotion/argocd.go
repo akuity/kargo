@@ -213,8 +213,7 @@ func (a *argoCDMechanism) doSingleUpdate(
 	); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
 	}
-	logging.LoggerFromContext(ctx).WithValues("app", app.Name).
-		V(1).Info("patched Argo CD Application")
+	logging.LoggerFromContext(ctx).V(1).Info("patched Argo CD Application", "app", app.Name)
 	return nil
 }
 

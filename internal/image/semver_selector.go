@@ -112,10 +112,11 @@ func (s *semVerSelector) Select(ctx context.Context) (*Image, error) {
 		return nil, nil
 	}
 
-	logger.WithValues(
+	logger.V(2).Info(
+		"found image",
 		"tag", image.Tag,
 		"digest", image.Digest.String(),
-	).V(2).Info("found image")
+	)
 	return image, nil
 }
 

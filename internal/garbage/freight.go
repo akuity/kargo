@@ -102,7 +102,7 @@ func (c *collector) cleanWarehouseFreight(
 				kubeclient.StagesByFreightIndexField: f.Name,
 			},
 		); err != nil {
-			logger.WithValues("freight", f).Error(err, "error listing Stages using Freight")
+			logger.Error(err, "error listing Stages using Freight", "freight", f)
 			return fmt.Errorf(
 				"error listing Stages in Project %q using Freight %q: %w",
 				project,

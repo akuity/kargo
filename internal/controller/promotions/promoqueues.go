@@ -67,20 +67,22 @@ func (pqs *promoQueues) initializeQueues(ctx context.Context, promos kargoapi.Pr
 			continue
 		}
 		pq.Push(&promo)
-		logger.WithValues(
+		logger.V(1).Info(
+			"pushed Promotion onto Stage-specific Promotion queue",
 			"promotion", promo.Name,
 			"namespace", promo.Namespace,
 			"stage", promo.Spec.Stage,
 			"phase", promo.Status.Phase,
-		).V(1).Info("pushed Promotion onto Stage-specific Promotion queue")
+		)
 	}
 	if logger.V(1).Enabled() {
 		for stage, pq := range pqs.pendingPromoQueuesByStage {
-			logger.WithValues(
+			logger.V(1).Info(
+				"Stage-specific Promotion queue initialized",
 				"stage", stage.Name,
 				"namespace", stage.Namespace,
 				"depth", pq.Depth(),
-			).V(1).Info("Stage-specific Promotion queue initialized")
+			)
 		}
 	}
 }
@@ -141,11 +143,13 @@ func (pqs *promoQueues) conclude(ctx context.Context, stageKey types.NamespacedN
 	pqs.promoQueuesByStageMu.RLock()
 	defer pqs.promoQueuesByStageMu.RUnlock()
 	if pqs.activePromoByStage[stageKey] == promoName {
-		logger := logging.LoggerFromContext(ctx).WithValues(
+		logger := logging.LoggerFromContext(ctx)
+
+		delete(pqs.activePromoByStage, stageKey)
+		logger.V(1).Info(
+			"conclude promo",
 			"namespace", stageKey.Namespace,
 			"promotion", promoName,
 		)
-		delete(pqs.activePromoByStage, stageKey)
-		logger.V(1).Info("conclude promo")
 	}
 }

@@ -65,10 +65,11 @@ func (o *apiOptions) complete() {
 
 func (o *apiOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
-	o.Logger.WithValues(
+	o.Logger.Info(
+		"Starting Kargo API Server",
 		"version", version.Version,
 		"commit", version.GitCommit,
-	).Info("Starting Kargo API Server")
+	)
 
 	cfg := config.ServerConfigFromEnv()
 
@@ -98,11 +99,12 @@ func (o *apiOptions) run(ctx context.Context) error {
 		o.Logger.Info("admin account is enabled")
 	}
 	if cfg.OIDCConfig != nil {
-		o.Logger.WithValues(
+		o.Logger.Info(
+			"SSO via OpenID Connect is enabled",
 			"issuerURL", cfg.OIDCConfig.IssuerURL,
 			"clientID", cfg.OIDCConfig.ClientID,
 			"cliClientID", cfg.OIDCConfig.CLIClientID,
-		).Info("SSO via OpenID Connect is enabled")
+		)
 	}
 
 	srv := api.NewServer(cfg, kubeClient, internalClient, recorder)

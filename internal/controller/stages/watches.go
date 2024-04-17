@@ -112,10 +112,11 @@ func (v *verifiedFreightEventHandler) Update(
 				},
 			},
 		)
-		logger.WithValues(
+		logger.V(1).Info(
+			"enqueued downstream Stage for reconciliation",
 			"namespace", newFreight.Namespace,
 			"stage", downStreamStage,
-		).V(1).Info("enqueued downstream Stage for reconciliation")
+		)
 	}
 }
 
@@ -194,10 +195,11 @@ func (a *approvedFreightEventHandler) Update(
 				},
 			},
 		)
-		logger.WithValues(
+		logger.V(1).Info(
+			"enqueued Stage for reconciliation",
 			"namespace", newFreight.Namespace,
 			"stage", stage,
-		).V(1).Info("enqueued Stage for reconciliation")
+		)
 	}
 }
 
@@ -258,10 +260,11 @@ func (c *createdFreightEventHandler) Create(
 				},
 			},
 		)
-		logger.WithValues(
+		logger.V(1).Info(
+			"enqueued Stage for reconciliation",
 			"namespace", freight.Namespace,
 			"stage", stage.Name,
-		).V(1).Info("enqueued Stage for reconciliation")
+		)
 	}
 }
 
@@ -367,11 +370,12 @@ func (u *updatedArgoCDAppHandler) Update(
 					},
 				},
 			)
-			logger.WithValues(
+			logger.V(1).Info(
+				"enqueued Stage for reconciliation",
 				"namespace", stage.Namespace,
 				"stage", stage.Name,
 				"app", e.ObjectNew.GetName(),
-			).V(1).Info("enqueued Stage for reconciliation")
+			)
 		}
 	}
 }
@@ -480,11 +484,12 @@ func (p *phaseChangedAnalysisRunHandler) Update(
 					},
 				},
 			)
-			logger.WithValues(
+			logger.V(1).Info(
+				"enqueued Stage for reconciliation",
 				"namespace", stage.Namespace,
 				"stage", stage.Name,
 				"analysisRun", e.ObjectNew.GetName(),
-			).V(1).Info("enqueued Stage for reconciliation")
+			)
 		}
 	}
 }

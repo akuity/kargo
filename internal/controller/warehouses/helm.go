@@ -87,8 +87,10 @@ func (r *reconciler) selectCharts(
 				sub.RepoURL,
 			)
 		}
-		logger.WithValues("version", vers).
-			V(1).Info("found latest suitable chart version")
+		logger.V(1).Info(
+			"found latest suitable chart version",
+			"version", vers,
+		)
 
 		charts = append(
 			charts,

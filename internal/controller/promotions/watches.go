@@ -133,11 +133,12 @@ func (e *EnqueueHighestPriorityPromotionHandler) enqueueNext(
 				},
 			},
 		)
-		e.logger.WithValues(
+		e.logger.V(1).Info(
+			"enqueued promo",
 			"promotion", promo.Name,
 			"namespace", promo.Namespace,
 			"stage", promo.Spec.Stage,
-		).V(1).Info("enqueued promo")
+		)
 		return
 	}
 }
