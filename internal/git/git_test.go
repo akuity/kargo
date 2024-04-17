@@ -7,26 +7,13 @@ import (
 )
 
 func TestNormalizeGitURL(t *testing.T) {
-	panicCases := map[string]string{
-		"https://not a url":                      "error normalizing HTTP/S URL",
-		"http://github.com/example/repo?foo=bar": "query parameters are not permitted",
-		"ssh://not a url":                        "error normalizing SSH URL",
-		"ssh://github.com/example/repo?foo=bar":  "query parameters are not permitted",
-		"not even remotely a url":                "does not appear to be a valid HTTP/S, SSH, or SCP-style URL",
-	}
-	for url, errText := range panicCases {
-		t.Run(url, func(t *testing.T) {
-			defer func() {
-				r := recover()
-				require.NotNil(t, r)
-				err, ok := r.(error)
-				require.True(t, ok)
-				require.Contains(t, err.Error(), errText)
-			}()
-			NormalizeGitURL(url)
-		})
-	}
-	validCases := map[string]string{
+	testCases := map[string]string{
+		// Anything we can't normalize should be returned as-is
+		"https://not a url":                      "https://not a url",
+		"http://github.com/example/repo?foo=bar": "http://github.com/example/repo?foo=bar",
+		"ssh://not a url":                        "ssh://not a url",
+		"ssh://github.com/example/repo?foo=bar":  "ssh://github.com/example/repo?foo=bar",
+		"not even remotely a url":                "not even remotely a url",
 		// URLs of the form http[s]://[proxy-user@proxy-pass:]host.xz[:port][/path/to/repo[.git][/]]
 		"https://github.com":          "https://github.com",
 		"https://github.com/":         "https://github.com",
@@ -95,7 +82,7 @@ func TestNormalizeGitURL(t *testing.T) {
 		"git@github.com:example/repo.git":  "ssh://git@github.com/example/repo", // 110
 		"git@github.com:example/repo.git/": "ssh://git@github.com/example/repo", // 111
 	}
-	for in, out := range validCases {
+	for in, out := range testCases {
 		t.Run(in, func(t *testing.T) {
 			require.Equal(t, out, NormalizeGitURL(in))
 		})

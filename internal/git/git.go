@@ -9,7 +9,15 @@ import (
 
 var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
 
-// NormalizeGitURL normalizes a Git URL for purposes of comparison.
+// NormalizeGitURL normalizes Git URLs of the following forms:
+//
+//   - http[s]://[proxy-user@proxy-pass:]host.xz[:port][/path/to/repo[.git][/]]
+//   - ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
+//   - [user@]host.xz[:path/to/repo[.git][/]]
+//
+// This is useful for the purposes of comparison and also in cases where a
+// canonical representation of a Git URL is needed. Any URL that cannot be
+// normalized will be returned as-is.
 func NormalizeGitURL(repo string) string {
 	origRepo := repo
 	repo = strings.ToLower(repo)
@@ -18,13 +26,11 @@ func NormalizeGitURL(repo string) string {
 	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
 		repoURL, err := url.Parse(repo)
 		if err != nil {
-			panic(fmt.Errorf("error normalizing HTTP/S URL %s: %w", origRepo, err))
+			return origRepo
 		}
 		if len(repoURL.Query()) > 0 {
-			panic(fmt.Errorf(
-				"error normalizing HTTP/S URL %s: query parameters are not permitted",
-				origRepo,
-			))
+			// Query parameters are not permitted
+			return origRepo
 		}
 		repoURL.User = nil // Remove user info if there is any
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
@@ -37,13 +43,11 @@ func NormalizeGitURL(repo string) string {
 		// repo = strings.TrimPrefix(repo, "ssh://")
 		repoURL, err := url.Parse(repo)
 		if err != nil {
-			panic(fmt.Errorf("error normalizing SSH URL %s: %w", origRepo, err))
+			return origRepo
 		}
 		if len(repoURL.Query()) > 0 {
-			panic(fmt.Errorf(
-				"error SSH URL %s: query parameters are not permitted",
-				origRepo,
-			))
+			// Query parameters are not permitted
+			return origRepo
 		}
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
@@ -53,10 +57,8 @@ func NormalizeGitURL(repo string) string {
 	// URLS of the form [user@]host.xz[:path/to/repo[.git][/]]
 	matches := scpSyntaxRegex.FindStringSubmatch(repo)
 	if len(matches) != 2 && len(matches) != 3 {
-		panic(fmt.Errorf(
-			"error normalizing URL: %s does not appear to be a valid HTTP/S, SSH, or SCP-style URL",
-			origRepo,
-		))
+		// This URL doesn't appear to be in a format we recognize
+		return origRepo
 	}
 	userHost := matches[1]
 	var path string
@@ -65,7 +67,7 @@ func NormalizeGitURL(repo string) string {
 	}
 	pathURL, err := url.Parse(path)
 	if err != nil {
-		panic(fmt.Errorf("error normalizing SCP-style URL %s: %w", origRepo, err))
+		return origRepo
 	}
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
