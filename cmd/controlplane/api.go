@@ -163,7 +163,7 @@ func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.C
 		}
 	}()
 
-	return restCfg, mgr.GetClient(), mgr.GetEventRecorderFor("api"), nil
+	return restCfg, mgr.GetClient(), kubeclient.NewEventRecorder(ctx, scheme, mgr.GetClient(), "api"), nil
 }
 
 func registerKargoIndexers(ctx context.Context, mgr ctrl.Manager) error {

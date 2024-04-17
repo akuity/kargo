@@ -332,7 +332,7 @@ func SetupReconcilerWithManager(
 			newReconciler(
 				kargoMgr.GetClient(),
 				argocdClient,
-				kargoMgr.GetEventRecorderFor(cfg.Name()),
+				kubeclient.NewEventRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 				cfg,
 				shardRequirement,
 			),

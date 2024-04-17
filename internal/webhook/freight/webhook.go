@@ -68,13 +68,14 @@ type webhook struct {
 }
 
 func SetupWebhookWithManager(
+	ctx context.Context,
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
-		mgr.GetEventRecorderFor("freight-webhook"),
+		kubeclient.NewEventRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook"),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Freight{}).

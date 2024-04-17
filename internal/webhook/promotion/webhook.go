@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
@@ -77,13 +78,14 @@ type webhook struct {
 }
 
 func SetupWebhookWithManager(
+	ctx context.Context,
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
-		mgr.GetEventRecorderFor("promotion-webhook"),
+		kubeclient.NewEventRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook"),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Promotion{}).
