@@ -10,7 +10,7 @@ import (
 // https://regex101.com/r/bJCECT/1
 var sshURLRegex = regexp.MustCompile(`^(?:ssh://)?((?:[\w-]+@)[\w-]+(?:\.[\w-]+)*(?::\d+)?)(?::(.*))?`)
 
-// NormalizeGitURL normalizes a git URL for purposes of comparison.
+// NormalizeGitURL normalizes a Git URL for purposes of comparison.
 func NormalizeGitURL(repo string) string {
 	origRepo := repo
 	repo = strings.ToLower(repo)
@@ -23,7 +23,7 @@ func NormalizeGitURL(repo string) string {
 		}
 		pathURL, err := url.Parse(path)
 		if err != nil {
-			panic(fmt.Errorf("error normalizing ssh URL %s: %w", origRepo, err))
+			panic(fmt.Errorf("error normalizing SSH URL %s: %w", origRepo, err))
 		}
 		pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
 		pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
@@ -34,7 +34,7 @@ func NormalizeGitURL(repo string) string {
 	}
 	repoURL, err := url.Parse(repo)
 	if err != nil {
-		panic(fmt.Errorf("error normalizing http/s URL %s: %w", origRepo, err))
+		panic(fmt.Errorf("error normalizing HTTP/S URL %s: %w", origRepo, err))
 	}
 	repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
 	repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
