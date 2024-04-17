@@ -1,58 +1,42 @@
 package git
 
 import (
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
 )
 
-// NormalizeGitURL normalizes a git URL for purposes of comparison, as well as preventing redundant
-// local clones (by normalizing various forms of a URL to a consistent location).
-// Prefer using SameURL() over this function when possible. This algorithm may change over time
-// and should not be considered stable from release to release
+// https://regex101.com/r/bJCECT/1
+var sshURLRegex = regexp.MustCompile(`^(?:ssh://)?((?:[\w-]+@)[\w-]+(?:\.[\w-]+)*(?::\d+)?)(?::(.*))?`)
+
+// NormalizeGitURL normalizes a git URL for purposes of comparison.
 func NormalizeGitURL(repo string) string {
-	repo = strings.ToLower(strings.TrimSpace(repo))
-	if yes, _ := IsSSHURL(repo); yes {
-		if !strings.HasPrefix(repo, "ssh://") {
-			// We need to replace the first colon in git@server... style SSH URLs with a slash, otherwise
-			// net/url.Parse will interpret it incorrectly as the port.
-			repo = strings.Replace(repo, ":", "/", 1)
-			repo = ensurePrefix(repo, "ssh://")
+	origRepo := repo
+	repo = strings.ToLower(repo)
+	matches := sshURLRegex.FindStringSubmatch(repo)
+	if len(matches) > 2 { // An ssh URL
+		userHost := strings.TrimPrefix(matches[1], "ssh://")
+		var path string
+		if len(matches) == 3 {
+			path = matches[2]
 		}
+		pathURL, err := url.Parse(path)
+		if err != nil {
+			panic(fmt.Errorf("error normalizing ssh URL %s: %w", origRepo, err))
+		}
+		pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
+		pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
+		if pathURL.Path == "" {
+			return userHost
+		}
+		return fmt.Sprintf("%s:%s", userHost, pathURL.String())
 	}
-	repo = removeSuffix(repo, "/")
-	repo = removeSuffix(repo, ".git")
 	repoURL, err := url.Parse(repo)
 	if err != nil {
-		return ""
+		panic(fmt.Errorf("error normalizing http/s URL %s: %w", origRepo, err))
 	}
-	normalized := repoURL.String()
-	return strings.TrimPrefix(normalized, "ssh://")
-}
-
-var sshURLRegex = regexp.MustCompile("^(ssh://)?([^/:]*?)@[^@]+$")
-
-// IsSSHURL returns true if supplied URL is SSH URL
-func IsSSHURL(sshUrl string) (bool, string) {
-	matches := sshURLRegex.FindStringSubmatch(sshUrl)
-	if len(matches) > 2 {
-		return true, matches[2]
-	}
-	return false, ""
-}
-
-// removeSuffix idempotently removes a given suffix
-func removeSuffix(s, suffix string) string {
-	if strings.HasSuffix(s, suffix) {
-		return s[0 : len(s)-len(suffix)]
-	}
-	return s
-}
-
-// EnsurePrefix idempotently ensures that a base string has a given prefix.
-func ensurePrefix(s, prefix string) string {
-	if !strings.HasPrefix(s, prefix) {
-		s = prefix + s
-	}
-	return s
+	repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
+	repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
+	return repoURL.String()
 }
