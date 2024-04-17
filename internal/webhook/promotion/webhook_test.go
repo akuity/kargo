@@ -78,6 +78,24 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
+			name: "stage without promotion mechanisms",
+			webhook: &webhook{
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: &kargoapi.StageSpec{},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "has no PromotionMechanisms")
+			},
+		},
+		{
 			name: "success",
 			webhook: &webhook{
 				getStageFn: func(
@@ -87,7 +105,8 @@ func TestDefault(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: &kargoapi.StageSpec{
-							Shard: "fake-shard",
+							PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+							Shard:               "fake-shard",
 						},
 					}, nil
 				},

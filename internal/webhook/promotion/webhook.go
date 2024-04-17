@@ -137,6 +137,13 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
+	if stage.Spec.PromotionMechanisms == nil {
+		return fmt.Errorf(
+			"Stage %q in namespace %q has no PromotionMechanisms",
+			promo.Spec.Stage,
+			promo.Namespace,
+		)
+	}
 
 	// Make sure the Promotion has the same shard as the Stage
 	if stage.Spec.Shard != "" {
