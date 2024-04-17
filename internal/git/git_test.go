@@ -84,7 +84,7 @@ func TestNormalizeGitURL(t *testing.T) {
 	}
 	for in, out := range testCases {
 		t.Run(in, func(t *testing.T) {
-			require.Equal(t, out, NormalizeGitURL(in))
+			require.Equal(t, out, NormalizeURL(in))
 		})
 	}
 }

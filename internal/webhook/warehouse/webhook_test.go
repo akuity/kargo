@@ -462,7 +462,7 @@ func TestValidateSub(t *testing.T) {
 			seen: uniqueSubSet{
 				subscriptionKey{
 					kind: "git",
-					id:   git.NormalizeGitURL("bogus"),
+					id:   git.NormalizeURL("bogus"),
 				}: field.NewPath("spec.subscriptions[0].git"),
 			},
 			assertions: func(t *testing.T, sub kargoapi.RepoSubscription, errs field.ErrorList) {
@@ -541,7 +541,7 @@ func TestValidateGitSub(t *testing.T) {
 			seen: uniqueSubSet{
 				subscriptionKey{
 					kind: "git",
-					id:   git.NormalizeGitURL("bogus"),
+					id:   git.NormalizeURL("bogus"),
 				}: field.NewPath("spec.subscriptions[0].git"),
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
