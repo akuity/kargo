@@ -499,7 +499,13 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 					context.Context,
 					*kargoapi.Stage,
 				) ([]kargoapi.Stage, error) {
-					return []kargoapi.Stage{{}}, nil
+					return []kargoapi.Stage{
+						{
+							Spec: &kargoapi.StageSpec{
+								PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+							},
+						},
+					}, nil
 				},
 				authorizeFn: func(
 					context.Context,
@@ -573,7 +579,13 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 					context.Context,
 					*kargoapi.Stage,
 				) ([]kargoapi.Stage, error) {
-					return []kargoapi.Stage{{}}, nil
+					return []kargoapi.Stage{
+						{
+							Spec: &kargoapi.StageSpec{
+								PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+							},
+						},
+					}, nil
 				},
 				authorizeFn: func(
 					context.Context,
