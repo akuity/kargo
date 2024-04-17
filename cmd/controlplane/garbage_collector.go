@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,12 +25,12 @@ import (
 type garbageCollectorOptions struct {
 	KubeConfig string
 
-	Logger *log.Logger
+	Logger logr.Logger
 }
 
 func newGarbageCollectorCommand() *cobra.Command {
 	cmdOpts := &garbageCollectorOptions{
-		Logger: log.StandardLogger(),
+		Logger: logging.DefaultLogger(),
 	}
 
 	cmd := &cobra.Command{
@@ -54,10 +55,11 @@ func (o *garbageCollectorOptions) complete() {
 func (o *garbageCollectorOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
 
-	o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	}).Info("Starting Kargo Garbage Collector")
+	o.Logger.Info(
+		"Starting Kargo Garbage Collector",
+		"version", version.Version,
+		"commit", version.GitCommit,
+	)
 
 	mgr, err := o.setupManager(ctx)
 	if err != nil {

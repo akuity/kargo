@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -41,12 +42,12 @@ type controllerOptions struct {
 	ArgoCDKubeConfig    string
 	ArgoCDNamespaceOnly bool
 
-	Logger *log.Logger
+	Logger logr.Logger
 }
 
 func newControllerCommand() *cobra.Command {
 	cmdOpts := &controllerOptions{
-		Logger: log.StandardLogger(),
+		Logger: logging.DefaultLogger(),
 	}
 
 	cmd := &cobra.Command{
@@ -75,12 +76,12 @@ func (o *controllerOptions) complete() {
 func (o *controllerOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
 
-	startupLogEntry := o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	})
+	startupLogEntry := o.Logger.WithValues(
+		"version", version.Version,
+		"commit", version.GitCommit,
+	)
 	if o.ShardName != "" {
-		startupLogEntry = startupLogEntry.WithField("shard", o.ShardName)
+		startupLogEntry = startupLogEntry.WithValues("shard", o.ShardName)
 	}
 	startupLogEntry.Info("Starting Kargo Controller")
 
@@ -149,7 +150,7 @@ func (o *controllerOptions) setupKargoManager(
 	}
 	if stagesReconcilerCfg.RolloutsIntegrationEnabled {
 		if argoRolloutsExists(ctx, restCfg) {
-			log.Info("Argo Rollouts integration is enabled")
+			o.Logger.Info("Argo Rollouts integration is enabled")
 			if err = rollouts.AddToScheme(scheme); err != nil {
 				return nil, fmt.Errorf(
 					"error adding Argo Rollouts API to Kargo controller manager scheme: %w",
@@ -157,7 +158,7 @@ func (o *controllerOptions) setupKargoManager(
 				)
 			}
 		} else {
-			log.Warn(
+			o.Logger.Info(
 				"Argo Rollouts integration was enabled, but no Argo Rollouts " +
 					"CRDs were found. Proceeding without Argo Rollouts integration.",
 			)
@@ -217,7 +218,7 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 	// Application resources in a single namespace, so we will use that
 	// namespace when attempting to determine if Argo CD CRDs are installed.
 	if !argoCDExists(ctx, restCfg, argocdNamespace) {
-		o.Logger.Warn(
+		o.Logger.Info(
 			"Argo CD integration was enabled, but no Argo CD CRDs were found. " +
 				"Proceeding without Argo CD integration.",
 		)

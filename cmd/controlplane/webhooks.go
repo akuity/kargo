@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	authzv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -30,12 +31,12 @@ import (
 type webhooksServerOptions struct {
 	KubeConfig string
 
-	Logger *log.Logger
+	Logger logr.Logger
 }
 
 func newWebhooksServerCommand() *cobra.Command {
 	cmdOpts := &webhooksServerOptions{
-		Logger: log.StandardLogger(),
+		Logger: logging.DefaultLogger(),
 	}
 
 	cmd := &cobra.Command{
@@ -59,10 +60,11 @@ func (o *webhooksServerOptions) complete() {
 
 func (o *webhooksServerOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
-	o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	}).Info("Starting Kargo Webhooks Server")
+	o.Logger.Info(
+		"Starting Kargo Webhooks Server",
+		"version", version.Version,
+		"commit", version.GitCommit,
+	)
 
 	webhookCfg := libWebhook.ConfigFromEnv()
 

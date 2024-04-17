@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -24,12 +25,12 @@ import (
 type managementControllerOptions struct {
 	KubeConfig string
 
-	Logger *log.Logger
+	Logger logr.Logger
 }
 
 func newManagementControllerCommand() *cobra.Command {
 	cmdOpts := &managementControllerOptions{
-		Logger: log.StandardLogger(),
+		Logger: logging.DefaultLogger(),
 	}
 
 	cmd := &cobra.Command{
@@ -54,10 +55,11 @@ func (o *managementControllerOptions) complete() {
 func (o *managementControllerOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
 
-	o.Logger.WithFields(log.Fields{
-		"version": version.Version,
-		"commit":  version.GitCommit,
-	}).Info("Starting Kargo Management Controller")
+	o.Logger.Info(
+		"Starting Kargo Management Controller",
+		"version", version.Version,
+		"commit", version.GitCommit,
+	)
 
 	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {
