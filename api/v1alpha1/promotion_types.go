@@ -102,7 +102,7 @@ type PromotionStatus struct {
 	// (e.g. for display purposes, or internal bookkeeping)
 	Metadata map[string]string `json:"metadata,omitempty" protobuf:"bytes,3,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Freight is the detail of the piece of freight that was referenced by this promotion.
-	Freight *FreightReference `json:"promotedFreight,omitempty" protobuf:"bytes,5,opt,name=freight"`
+	Freight *FreightReference `json:"freight,omitempty" protobuf:"bytes,5,opt,name=freight"`
 }
 
 // WithPhase returns a copy of PromotionStatus with the given phase
