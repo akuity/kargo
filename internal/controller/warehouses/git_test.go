@@ -269,12 +269,12 @@ func TestSelectCommitID(t *testing.T) {
 				require.Contains(
 					t,
 					err.Error(),
-					"error checking includePaths/excludePaths match for commit \"fake-commit\"",
+					"error checking includePaths/excludePaths match for commit",
 				)
 				require.Contains(
 					t,
 					err.Error(),
-					"error compiling includePaths regexps: error compiling string \"[\" into a regular expression",
+					"error parsing regexp: missing closing ]",
 				)
 				require.Contains(t, err.Error(), "error parsing regexp: missing closing ]")
 			},
@@ -747,8 +747,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "error compiling excludePaths regexps:")
-				require.Contains(t, err.Error(), "error compiling string \"[\" into a regular expression")
+				require.Contains(t, err.Error(), "error parsing regexp: missing closing ]: `[`")
 			},
 		},
 		{
@@ -757,7 +756,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.Error(t, err)
-				require.ErrorContains(t, err, "syntax error in include glob patterns: syntax error in pattern: path2/*.tpl[")
+				require.ErrorContains(t, err, "syntax error in pattern")
 			},
 		},
 	}

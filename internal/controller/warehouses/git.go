@@ -2,7 +2,6 @@ package warehouses
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -29,6 +28,8 @@ type gitMeta struct {
 	Message string
 	Author  string
 }
+
+type pathSelector func(path string) (bool, error)
 
 func (r *reconciler) selectCommits(
 	ctx context.Context,
@@ -306,143 +307,89 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
-// matchesPathsFilters returns true when IncludePaths and/or ExcludePaths
-// filters match one or more commit diffs and new Freight is
-// to be produced. It returns false otherwise.
+func getPathSelectors(selectorStrs []string) ([]pathSelector, error) {
+	selectors := make([]pathSelector, len(selectorStrs))
+	for i, selectorStr := range selectorStrs {
+		switch {
+		case strings.HasPrefix(selectorStr, regexpPrefix):
+			regex, err := regexp.Compile(strings.TrimPrefix(selectorStr, regexpPrefix))
+			if err != nil {
+				return nil, err
+			}
+			selectors[i] = func(path string) (bool, error) {
+				return regex.MatchString(path), nil
+			}
+		case strings.HasPrefix(selectorStr, regexPrefix):
+			regex, err := regexp.Compile(strings.TrimPrefix(selectorStr, regexPrefix))
+			if err != nil {
+				return nil, err
+			}
+			selectors[i] = func(path string) (bool, error) {
+				return regex.MatchString(path), nil
+			}
+		case strings.HasPrefix(selectorStr, globPrefix):
+			pattern := strings.TrimPrefix(selectorStr, globPrefix)
+			selectors[i] = func(path string) (bool, error) {
+				return filepath.Match(pattern, path)
+			}
+		default:
+			basePath := selectorStr
+			selectors[i] = func(path string) (bool, error) {
+				relPath, err := filepath.Rel(basePath, path)
+				if err != nil {
+					return false, err
+				}
+				return !strings.Contains(relPath, ".."), nil
+			}
+		}
+	}
+	return selectors, nil
+}
+
 func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
-	includePathsRegexps, includePathsGlobs, includePathsPrefixes, err := sortFilters(includePaths)
+	includeSelectors, err := getPathSelectors(includePaths)
 	if err != nil {
-		return false, fmt.Errorf(
-			"error compiling includePaths regexps: %w",
-			err,
-		)
+		return false, err
 	}
-
-	excludePathsRegexps, excludePathsGlobs, excludePathsPrefixes, err := sortFilters(excludePaths)
+	excludeSelectors, err := getPathSelectors(excludePaths)
 	if err != nil {
-		return false, fmt.Errorf(
-			"error compiling excludePaths regexps: %w",
-			err,
-		)
+		return false, err
 	}
-
-	for _, diffPath := range diffs {
-		matchesIncludeGlobs, err := matchesGlobList(diffPath, includePathsGlobs)
-		if err != nil {
-			return false, fmt.Errorf(
-				"syntax error in include glob patterns: %w",
-				err,
-			)
+pathLoop:
+	for _, path := range diffs {
+		if len(includeSelectors) > 0 {
+			var selected bool
+			for _, selector := range includeSelectors {
+				if selected, err = selector(path); err != nil {
+					return false, err
+				}
+				if selected {
+					// Path was explicitly included, so we can move on to checking if
+					// it should be excluded
+					break
+				}
+			}
+			if !selected {
+				// Path was not explicitly included, so we can move on to the next path
+				continue pathLoop
+			}
 		}
-		matchesExcludeGlobs, err := matchesGlobList(diffPath, excludePathsGlobs)
-		if err != nil {
-			return false, fmt.Errorf(
-				"syntax error in exclude glob patterns: %w",
-				err,
-			)
+		// If we reach this point, the path was either implicitly or explicitly
+		// included. Now check if it should be excluded.
+		for _, selector := range excludeSelectors {
+			selected, err := selector(path)
+			if err != nil {
+				return false, err
+			}
+			if selected {
+				// Path was explicitly excluded, so we can move on to the next path
+				continue pathLoop
+			}
 		}
-		matchesIncludePrefixes := matchesPrefixList(diffPath, includePathsPrefixes)
-		matchesExcludePrefixes := matchesPrefixList(diffPath, excludePathsPrefixes)
-		// matchesIncludePaths case is a bit different from matchesExcludePaths
-		// in the way that if includePaths string array is empty - it matches
-		// ANY change so we need to have a check for that
-		matchesIncludePaths := len(includePaths) == 0 || matchesRegexpList(
-			diffPath,
-			includePathsRegexps,
-		) || matchesIncludeGlobs || matchesIncludePrefixes
-		if !matchesIncludePaths {
-			continue
-		}
-		matchesExcludePaths := matchesRegexpList(diffPath,
-			excludePathsRegexps,
-		) || matchesExcludeGlobs || matchesExcludePrefixes
-		if matchesExcludePaths {
-			continue
-		}
+		// If we reach this point, the path was not explicitly excluded
 		return true, nil
 	}
 	return false, nil
-}
-
-// sortFilters handles sorting of a slice of strings to regexps,
-// globs and prefixes, regexps are compiled into a slice of
-// *regexp.Regexp additionally
-func sortFilters(regexpStrings []string) (regexps []*regexp.Regexp, globs []string, prefixes []string, err error) {
-	regexpsSlice := make([]*regexp.Regexp, 0, len(regexpStrings))
-	globsSlice := make([]string, 0, len(regexpStrings))
-	prefixesSlice := make([]string, 0, len(regexpStrings))
-	for _, regexpString := range regexpStrings {
-		switch {
-		case strings.HasPrefix(regexpString, regexpPrefix):
-			regexpString = strings.TrimPrefix(regexpString, regexpPrefix)
-		case strings.HasPrefix(regexpString, regexPrefix):
-			regexpString = strings.TrimPrefix(regexpString, regexPrefix)
-		case strings.HasPrefix(regexpString, globPrefix):
-			regexpString = strings.TrimPrefix(regexpString, globPrefix)
-			globsSlice = append(globsSlice, regexpString)
-			continue
-		default:
-			prefixesSlice = append(prefixesSlice, regexpString)
-			continue
-		}
-
-		regex, err := regexp.Compile(regexpString)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf(
-				"error compiling string %q into a regular expression: %w",
-				regexpString,
-				err,
-			)
-		}
-		regexpsSlice = append(regexpsSlice, regex)
-	}
-	return regexpsSlice, globsSlice, prefixesSlice, nil
-}
-
-// matchesRegexpList is a general purpose function iterating given slice of
-// *regexp.Regexp (regexpList) to check if any of regexps match
-// stringToMatch string, if match is found it returns true and if match
-// is not found it returns false.
-func matchesRegexpList(stringToMatch string, regexpList []*regexp.Regexp) bool {
-	foundMatch := false
-	for _, regex := range regexpList {
-		if regex == nil || regex.MatchString(stringToMatch) {
-			foundMatch = true
-			break
-		}
-	}
-	return foundMatch
-}
-
-// matchesGlobList is a general purpose function iterating given slice of
-// strings (globList) to check if any of globs match stringToMatch string,
-// if match is found it returns true and nil, if match is not found it
-// returns false and nil and if it finds a malformed glob pattern - false
-// and ErrBadPattern is returned.
-func matchesGlobList(stringToMatch string, globList []string) (bool, error) {
-	for _, glob := range globList {
-		match, err := filepath.Match(glob, stringToMatch)
-		if err != nil {
-			return false, errors.New("syntax error in pattern: " + glob)
-		}
-		if match {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// matchesPrefixList is a general purpose function iterating given slice of
-// strings (prefixList) to check if any of prefixes match stringToMatch string,
-// if match is found it returns true, if match is not found it
-// returns false
-func matchesPrefixList(stringToMatch string, prefixList []string) bool {
-	for _, prefix := range prefixList {
-		if strings.HasPrefix(stringToMatch, prefix) {
-			return true
-		}
-	}
-	return false
 }
 
 // selectLexicallyLastTag sorts the provided tag name in reverse lexicographic
