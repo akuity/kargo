@@ -53,15 +53,18 @@ func (i *logInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		fields := map[string]any{
 			"connect.duration": time.Since(start).String(),
 		}
-		level := slog.LevelInfo
 		if err != nil {
-			level = slog.LevelError
 			fields["connect.code"] = connect.CodeOf(err).String()
+			logging.
+				LoggerFromContext(ctx).
+				WithValues(fields).
+				Error(err, "finished unary call")
+			return res, err
 		}
 		logging.
 			LoggerFromContext(ctx).
 			WithValues(fields).
-			V(int(level)).Info("finished unary call")
+			Info("finished unary call")
 		return res, err
 	}
 }
@@ -85,15 +88,18 @@ func (i *logInterceptor) WrapStreamingHandler(
 		fields := map[string]any{
 			"connect.duration": time.Since(start),
 		}
-		level := slog.LevelInfo
 		if err != nil {
-			level = slog.LevelInfo
 			fields["connect.code"] = connect.CodeOf(err).String()
+			logging.
+				LoggerFromContext(ctx).
+				WithValues(fields).
+				Error(err, "finished streaming call")
+			return err
 		}
+
 		logging.
 			LoggerFromContext(ctx).
 			WithValues(fields).
-			V(int(level)).
 			Info("finished streaming call")
 		return err
 	}
