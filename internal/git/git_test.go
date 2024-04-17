@@ -7,71 +7,95 @@ import (
 )
 
 func TestNormalizeGitURL(t *testing.T) {
-	// nolint: lll
-	testCases := map[string]string{
-		"git@github.com": "git@github.com", // No path
-		// Variable features of each URL:
-		//   1000. ssh:// prefix or not
+	panicCases := map[string]string{
+		"https://not a url":                      "error normalizing HTTP/S URL",
+		"http://github.com/example/repo?foo=bar": "query parameters are not permitted",
+		"ssh://not a url":                        "error normalizing SSH URL",
+		"ssh://github.com/example/repo?foo=bar":  "query parameters are not permitted",
+		"not even remotely a url":                "does not appear to be a valid HTTP/S, SSH, or SCP-style URL",
+	}
+	for url, errText := range panicCases {
+		t.Run(url, func(t *testing.T) {
+			defer func() {
+				r := recover()
+				require.NotNil(t, r)
+				err, ok := r.(error)
+				require.True(t, ok)
+				require.Contains(t, err.Error(), errText)
+			}()
+			NormalizeGitURL(url)
+		})
+	}
+	validCases := map[string]string{
+		// URLs of the form http[s]://[proxy-user@proxy-pass:]host.xz[:port][/path/to/repo[.git][/]]
+		"https://github.com":          "https://github.com",
+		"https://github.com/":         "https://github.com",
+		"https://foo:bar@github.com":  "https://github.com",
+		"https://foo:bar@github.com/": "https://github.com",
+		// Variable features of the following URLs:
+		//   1000. Outbound proxy or not
 		//   0100. Port number or not
 		//   0010. .git suffix or not
 		//   0001. Trailing slash or not
-		"git@github.com:example/repo":                "git@github.com:example/repo",     // 0000
-		"git@github.com:example/repo/":               "git@github.com:example/repo",     // 0001
-		"git@github.com:example/repo.git":            "git@github.com:example/repo",     // 0010
-		"git@github.com:example/repo.git/":           "git@github.com:example/repo",     // 0011
-		"git@localhost:2222:example/repo":            "git@localhost:2222:example/repo", // 0100
-		"git@localhost:2222:example/repo/":           "git@localhost:2222:example/repo", // 0101
-		"git@localhost:2222:example/repo.git":        "git@localhost:2222:example/repo", // 0110
-		"git@localhost:2222:example/repo.git/":       "git@localhost:2222:example/repo", // 0111
-		"ssh://git@github.com:example/repo":          "git@github.com:example/repo",     // 1000
-		"ssh://git@github.com:example/repo/":         "git@github.com:example/repo",     // 1001
-		"ssh://git@github.com:example/repo.git":      "git@github.com:example/repo",     // 1010
-		"ssh://git@github.com:example/repo.git/":     "git@github.com:example/repo",     // 1011
-		"ssh://git@localhost:2222:example/repo":      "git@localhost:2222:example/repo", // 1100
-		"ssh://git@localhost:2222:example/repo/":     "git@localhost:2222:example/repo", // 1101
-		"ssh://git@localhost:2222:example/repo.git":  "git@localhost:2222:example/repo", // 1110
-		"ssh://git@localhost:2222:example/repo.git/": "git@localhost:2222:example/repo", // 1111
-		"https://github.com":                         "https://github.com",              // No path
-		// Variable features of each URL:
-		//   10000. Outbound proxy or not
-		//   01000. Port number or not
-		//   00100. .git suffix or not
-		//   00010. Trailing slash or not
-		//   00001. Query parameters or not
-		"https://github.com/example/repo":                          "https://github.com/example/repo",                     // 00000
-		"https://github.com/example/repo?foo=bar":                  "https://github.com/example/repo?foo=bar",             // 00001
-		"https://github.com/example/repo/":                         "https://github.com/example/repo",                     // 00010
-		"https://github.com/example/repo/?foo=bar":                 "https://github.com/example/repo?foo=bar",             // 00011
-		"https://github.com/example/repo.git":                      "https://github.com/example/repo",                     // 00100
-		"https://github.com/example/repo.git?foo=bar":              "https://github.com/example/repo?foo=bar",             // 00101
-		"https://github.com/example/repo.git/":                     "https://github.com/example/repo",                     // 00110
-		"https://github.com/example/repo.git/?foo=bar":             "https://github.com/example/repo?foo=bar",             // 00111
-		"https://localhost:8443/example/repo":                      "https://localhost:8443/example/repo",                 // 01000
-		"https://localhost:8443/example/repo?foo=bar":              "https://localhost:8443/example/repo?foo=bar",         // 01001
-		"https://localhost:8443/example/repo/":                     "https://localhost:8443/example/repo",                 // 01010
-		"https://localhost:8443/example/repo/?foo=bar":             "https://localhost:8443/example/repo?foo=bar",         // 01011
-		"https://localhost:8443/example/repo.git":                  "https://localhost:8443/example/repo",                 // 01100
-		"https://localhost:8443/example/repo.git?foo=bar":          "https://localhost:8443/example/repo?foo=bar",         // 01101
-		"https://localhost:8443/example/repo.git/":                 "https://localhost:8443/example/repo",                 // 01110
-		"https://localhost:8443/example/repo.git/?foo=bar":         "https://localhost:8443/example/repo?foo=bar",         // 01111
-		"https://foo:bar@github.com/example/repo":                  "https://foo:bar@github.com/example/repo",             // 10000
-		"https://foo:bar@github.com/example/repo?foo=bar":          "https://foo:bar@github.com/example/repo?foo=bar",     // 10001
-		"https://foo:bar@github.com/example/repo/":                 "https://foo:bar@github.com/example/repo",             // 10010
-		"https://foo:bar@github.com/example/repo/?foo=bar":         "https://foo:bar@github.com/example/repo?foo=bar",     // 10011
-		"https://foo:bar@github.com/example/repo.git":              "https://foo:bar@github.com/example/repo",             // 10100
-		"https://foo:bar@github.com/example/repo.git?foo=bar":      "https://foo:bar@github.com/example/repo?foo=bar",     // 10101
-		"https://foo:bar@github.com/example/repo.git/":             "https://foo:bar@github.com/example/repo",             // 10110
-		"https://foo:bar@github.com/example/repo.git/?foo=bar":     "https://foo:bar@github.com/example/repo?foo=bar",     // 10111
-		"https://foo:bar@localhost:8443/example/repo":              "https://foo:bar@localhost:8443/example/repo",         // 11000
-		"https://foo:bar@localhost:8443/example/repo?foo=bar":      "https://foo:bar@localhost:8443/example/repo?foo=bar", // 11001
-		"https://foo:bar@localhost:8443/example/repo/":             "https://foo:bar@localhost:8443/example/repo",         // 11010
-		"https://foo:bar@localhost:8443/example/repo/?foo=bar":     "https://foo:bar@localhost:8443/example/repo?foo=bar", // 11011
-		"https://foo:bar@localhost:8443/example/repo.git":          "https://foo:bar@localhost:8443/example/repo",         // 11100
-		"https://foo:bar@localhost:8443/example/repo.git?foo=bar":  "https://foo:bar@localhost:8443/example/repo?foo=bar", // 11101
-		"https://foo:bar@localhost:8443/example/repo.git/":         "https://foo:bar@localhost:8443/example/repo",         // 11110
-		"https://foo:bar@localhost:8443/example/repo.git/?foo=bar": "https://foo:bar@localhost:8443/example/repo?foo=bar", // 11111
+		"https://github.com/example/repo":                  "https://github.com/example/repo",     // 0000
+		"https://github.com/example/repo/":                 "https://github.com/example/repo",     // 0001
+		"https://github.com/example/repo.git":              "https://github.com/example/repo",     // 0010
+		"https://github.com/example/repo.git/":             "https://github.com/example/repo",     // 0011
+		"https://localhost:8443/example/repo":              "https://localhost:8443/example/repo", // 0100
+		"https://localhost:8443/example/repo/":             "https://localhost:8443/example/repo", // 0101
+		"https://localhost:8443/example/repo.git":          "https://localhost:8443/example/repo", // 0110
+		"https://localhost:8443/example/repo.git/":         "https://localhost:8443/example/repo", // 0111
+		"https://foo:bar@github.com/example/repo":          "https://github.com/example/repo",     // 1000
+		"https://foo:bar@github.com/example/repo/":         "https://github.com/example/repo",     // 1001
+		"https://foo:bar@github.com/example/repo.git":      "https://github.com/example/repo",     // 1010
+		"https://foo:bar@github.com/example/repo.git/":     "https://github.com/example/repo",     // 1011
+		"https://foo:bar@localhost:8443/example/repo":      "https://localhost:8443/example/repo", // 1100
+		"https://foo:bar@localhost:8443/example/repo/":     "https://localhost:8443/example/repo", // 1101
+		"https://foo:bar@localhost:8443/example/repo.git":  "https://localhost:8443/example/repo", // 1110
+		"https://foo:bar@localhost:8443/example/repo.git/": "https://localhost:8443/example/repo", // 1111
+		// URLS of the form ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
+		"ssh://git.example.com":      "ssh://git.example.com",
+		"ssh://git.example.com/":     "ssh://git.example.com",
+		"ssh://git@git.example.com":  "ssh://git@git.example.com",
+		"ssh://git@git.example.com/": "ssh://git@git.example.com",
+		// Variable features of the following URLs:
+		//   1000. Username or not
+		//   0100. Port number or not
+		//   0010. .git suffix or not
+		//   0001. Trailing slash or not
+		"ssh://github.com/example/repo":              "ssh://github.com/example/repo",         // 0000
+		"ssh://github.com/example/repo/":             "ssh://github.com/example/repo",         // 0001
+		"ssh://github.com/example/repo.git":          "ssh://github.com/example/repo",         // 0010
+		"ssh://github.com/example/repo.git/":         "ssh://github.com/example/repo",         // 0011
+		"ssh://localhost:2222/example/repo":          "ssh://localhost:2222/example/repo",     // 0100
+		"ssh://localhost:2222/example/repo/":         "ssh://localhost:2222/example/repo",     // 0101
+		"ssh://localhost:2222/example/repo.git":      "ssh://localhost:2222/example/repo",     // 0110
+		"ssh://localhost:2222/example/repo.git/":     "ssh://localhost:2222/example/repo",     // 0111
+		"ssh://git@github.com/example/repo":          "ssh://git@github.com/example/repo",     // 1000
+		"ssh://git@github.com/example/repo/":         "ssh://git@github.com/example/repo",     // 1001
+		"ssh://git@github.com/example/repo.git":      "ssh://git@github.com/example/repo",     // 1010
+		"ssh://git@github.com/example/repo.git/":     "ssh://git@github.com/example/repo",     // 1011
+		"ssh://git@localhost:2222/example/repo":      "ssh://git@localhost:2222/example/repo", // 1100
+		"ssh://git@localhost:2222/example/repo/":     "ssh://git@localhost:2222/example/repo", // 1101
+		"ssh://git@localhost:2222/example/repo.git":  "ssh://git@localhost:2222/example/repo", // 1110
+		"ssh://git@localhost:2222/example/repo.git/": "ssh://git@localhost:2222/example/repo", // 1111
+		// SCP-style URLs of the form [user@]host.xz[:path/to/repo[.git][/]]
+		"git.example.com":     "ssh://git.example.com",
+		"git@git.example.com": "ssh://git@git.example.com",
+		// Variable features of the following URLs:
+		//   100. Username or not
+		//   010. .git suffix or not
+		//   001. Trailing slash or not
+		"github.com:example/repo":          "ssh://github.com/example/repo",     // 000
+		"github.com:example/repo/":         "ssh://github.com/example/repo",     // 001
+		"github.com:example/repo.git":      "ssh://github.com/example/repo",     // 010
+		"github.com:example/repo.git/":     "ssh://github.com/example/repo",     // 011
+		"git@github.com:example/repo":      "ssh://git@github.com/example/repo", // 100
+		"git@github.com:example/repo/":     "ssh://git@github.com/example/repo", // 101
+		"git@github.com:example/repo.git":  "ssh://git@github.com/example/repo", // 110
+		"git@github.com:example/repo.git/": "ssh://git@github.com/example/repo", // 111
 	}
-	for in, out := range testCases {
+	for in, out := range validCases {
 		t.Run(in, func(t *testing.T) {
 			require.Equal(t, out, NormalizeGitURL(in))
 		})
