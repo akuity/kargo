@@ -38,7 +38,7 @@ type apiOptions struct {
 
 func newAPICommand() *cobra.Command {
 	cmdOpts := &apiOptions{
-		Logger: logging.LoggerFromContext(context.Background()),
+		Logger: logging.DefaultLogger(),
 	}
 
 	cmd := &cobra.Command{

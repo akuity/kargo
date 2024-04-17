@@ -79,6 +79,12 @@ func init() {
 	runtimelog.SetLogger(globalLogger)
 }
 
+// DefaultLogger returns a logr.Logger with slog as the backend. It writes to
+// stderr and is hardcoded to Info level.
+func DefaultLogger() logr.Logger {
+	return logr.FromSlogHandler(slog.NewTextHandler(os.Stderr, nil))
+}
+
 // ContextWithLogger returns a context.Context that has been augmented with
 // the provided logr.Logger.
 func ContextWithLogger(ctx context.Context, logger logr.Logger) context.Context {
