@@ -32,7 +32,7 @@ export const AnalysisRunModal = ({ visible, hide, name }: Props) => {
       {isLoading ? (
         <LoadingState />
       ) : (
-        <YamlEditor value={yaml.stringify(data?.analysisRun?.toJson())} height='500px' disabled />
+        <YamlEditor value={yaml.stringify(data?.result?.value?.toJson())} height='500px' disabled />
       )}
     </Modal>
   );
