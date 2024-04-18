@@ -139,7 +139,7 @@ func (g *gitMechanism) Promote(
 		); err != nil {
 			return nil, newFreight, err
 		}
-		newStatus = aggregateGitPromoStatus(newStatus, *otherStatus).WithFreight(&newFreight)
+		newStatus = aggregateGitPromoStatus(newStatus, *otherStatus)
 	}
 
 	logger.Debugf("done executing %s", g.name)

@@ -452,18 +452,12 @@ func (r *reconciler) promote(
 	if err != nil {
 		return nil, err
 	}
-	// record the freight reference to the promotion's status
-	err = kubeclient.PatchStatus(ctx, r.kargoClient, &promo, func(status *kargoapi.PromotionStatus) {
-		status.Freight = &targetFreightRef
-	})
-	if err != nil {
-		logger.Errorf("Promotion status patch failed: %v", err)
-	}
 
 	newStatus, nextFreight, err := r.promoMechanisms.Promote(ctx, stage, &promo, targetFreightRef)
 	if err != nil {
 		return nil, err
 	}
+	newStatus = newStatus.WithFreight(&targetFreight)
 
 	logger.Debugf("promotion %s", newStatus.Phase)
 
