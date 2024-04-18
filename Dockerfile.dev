@@ -26,9 +26,9 @@ RUN apt update && apt install -y ca-certificates curl gnupg unzip \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update && apt-get install nodejs -y \
-    && curl -fsSL https://get.pnpm.io/install.sh | bash \
-    && mv /root/.local/share/pnpm/pnpm /usr/bin
+    && apt-get update && apt-get install nodejs -y
+
+RUN npm install --global pnpm@9.0.2
 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
