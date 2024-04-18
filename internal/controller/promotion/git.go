@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/kelseyhightower/envconfig"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -15,11 +18,25 @@ import (
 
 const tmpPrefix = "repo-scrap-"
 
+type GitConfig struct {
+	Name           string `envconfig:"GITCLIENT_NAME"`
+	Email          string `envconfig:"GITCLIENT_EMAIL"`
+	SigningKeyType string `envconfig:"GITCLIENT_SIGNING_KEY_TYPE"`
+	SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
+}
+
+func GitConfigFromEnv() GitConfig {
+	var cfg GitConfig
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
+
 // gitMechanism is an implementation of the Mechanism interface that uses Git to
 // update configuration in a repository. It is easily configured to support
 // different types of configuration management tools.
 type gitMechanism struct {
 	name string
+	cfg  GitConfig
 	// Overridable behaviors:
 	selectUpdatesFn  func([]kargoapi.GitRepoUpdate) []kargoapi.GitRepoUpdate
 	doSingleUpdateFn func(
@@ -32,6 +49,7 @@ type gitMechanism struct {
 		update kargoapi.GitRepoUpdate,
 		commits []kargoapi.GitCommit,
 	) (string, int, error)
+	getAuthorFn      func() (*git.User, error)
 	getCredentialsFn func(
 		ctx context.Context,
 		namespace string,
@@ -75,10 +93,12 @@ func newGitMechanism(
 	g := &gitMechanism{
 		name: name,
 	}
+	g.cfg = GitConfigFromEnv()
 	g.selectUpdatesFn = selectUpdatesFn
 	g.doSingleUpdateFn = g.doSingleUpdate
 	g.getReadRefFn = getReadRef
 	g.getCredentialsFn = getRepoCredentialsFn(credentialsDB)
+	g.getAuthorFn = g.getAuthor
 	g.gitCommitFn = g.gitCommit
 	g.applyConfigManagementFn = applyConfigManagementFn
 	return g
@@ -142,6 +162,13 @@ func (g *gitMechanism) doSingleUpdate(
 		return nil, newFreight, err
 	}
 
+	author, err := g.getAuthorFn()
+	if err != nil {
+		return nil, newFreight, err
+	}
+	if author == nil {
+		author = &git.User{}
+	}
 	creds, err := g.getCredentialsFn(
 		ctx,
 		promo.Namespace,
@@ -155,7 +182,10 @@ func (g *gitMechanism) doSingleUpdate(
 	}
 	repo, err := git.Clone(
 		update.RepoURL,
-		*creds,
+		&git.ClientOptions{
+			User:        author,
+			Credentials: creds,
+		},
 		&git.CloneOptions{
 			InsecureSkipTLSVerify: update.InsecureSkipTLSVerify,
 		},
@@ -279,6 +309,36 @@ func getRepoCredentialsFn(
 			SSHPrivateKey: creds.SSHPrivateKey,
 		}, nil
 	}
+}
+
+func (g *gitMechanism) getAuthor() (*git.User, error) {
+	author := git.User{
+		Name:  g.cfg.Name,
+		Email: g.cfg.Email,
+	}
+
+	switch strings.ToLower(g.cfg.SigningKeyType) {
+	case "gpg", "":
+		author.SigningKeyType = git.SigningKeyTypeGPG
+	default:
+		return nil, fmt.Errorf(
+			"unsupported signing key type: %q",
+			g.cfg.SigningKeyType,
+		)
+	}
+
+	if g.cfg.SigningKeyPath != "" {
+		if _, err := os.Stat(g.cfg.SigningKeyPath); err != nil {
+			return nil, fmt.Errorf(
+				"error locating the commit author signing key path %q: %w",
+				g.cfg.SigningKeyPath,
+				err,
+			)
+		}
+		author.SigningKeyPath = g.cfg.SigningKeyPath
+	}
+
+	return &author, nil
 }
 
 // gitCommit checks out the specified readRef (if non-empty), applies

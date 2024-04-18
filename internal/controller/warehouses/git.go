@@ -124,7 +124,9 @@ func (r *reconciler) selectCommitMeta(
 	}
 	repo, err := git.Clone(
 		sub.RepoURL,
-		*creds,
+		&git.ClientOptions{
+			Credentials: creds,
+		},
 		&git.CloneOptions{
 			Branch:                sub.Branch,
 			SingleBranch:          true,
