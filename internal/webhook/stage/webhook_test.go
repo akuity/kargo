@@ -118,7 +118,7 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "set reverify actor when request doesn't come from kargo controlplane",
+			name: "set reverify actor when request doesn't come from kargo control plane",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
@@ -149,7 +149,7 @@ func TestDefault(t *testing.T) {
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
 				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
 				require.True(t, ok)
-				require.Equal(t, &kargoapi.ReverificationRequest{
+				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
 					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
@@ -180,7 +180,7 @@ func TestDefault(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReverify: (&kargoapi.ReverificationRequest{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID:    "fake-id",
 							Actor: "fake-user",
 						}).String(),
@@ -193,7 +193,7 @@ func TestDefault(t *testing.T) {
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
 				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
 				require.True(t, ok)
-				require.Equal(t, &kargoapi.ReverificationRequest{
+				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
 					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
@@ -203,7 +203,7 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
-			name: "do not overwrite reverify actor when request comes from controlplane",
+			name: "do not overwrite reverify actor when request comes from control plane",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
 				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
@@ -224,7 +224,7 @@ func TestDefault(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReverify: (&kargoapi.ReverificationRequest{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID:    "fake-id",
 							Actor: kargoapi.EventActorAdmin,
 						}).String(),
@@ -237,11 +237,572 @@ func TestDefault(t *testing.T) {
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
 				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
 				require.True(t, ok)
-				require.Equal(t, &kargoapi.ReverificationRequest{
+				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
 					Actor:        kargoapi.EventActorAdmin,
 					ControlPlane: true,
 				}, rr)
+			},
+		},
+		{
+			name: "overwite reverify actor when it has changed for the same ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+										ID:    "fake-id",
+										Actor: "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+							ID:    "fake-id",
+							Actor: "illegitimate-user",
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
+				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.VerificationRequest{
+					ID:    "fake-id",
+					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+				}, rr)
+			},
+		},
+		{
+			name: "overwrite reverify control plane flag when it has changed for the same ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+										ID:    "fake-id",
+										Actor: "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+							ID:           "fake-id",
+							Actor:        "fake-user",
+							ControlPlane: true,
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
+				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.VerificationRequest{
+					ID:           "fake-id",
+					Actor:        kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					ControlPlane: false,
+				}, rr)
+			},
+		},
+		{
+			name: "ignore empty reverify annotation",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: "",
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				v, ok := stage.Annotations[kargoapi.AnnotationKeyReverify]
+				require.True(t, ok)
+				require.Empty(t, v)
+			},
+		},
+		{
+			name: "ignore reverify annotation with empty ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+							ID: "",
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				v, ok := stage.Annotations[kargoapi.AnnotationKeyReverify]
+				require.True(t, ok)
+				require.Equal(t, (&kargoapi.VerificationRequest{
+					ID: "",
+				}).String(), v)
+			},
+		},
+		{
+			name: "ignore unchanged reverify annotation",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+										ID:    "fake-id",
+										Actor: "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+							ID:    "fake-id",
+							Actor: "fake-user",
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				v, ok := stage.Annotations[kargoapi.AnnotationKeyReverify]
+				require.True(t, ok)
+				require.Equal(t, (&kargoapi.VerificationRequest{
+					ID:    "fake-id",
+					Actor: "fake-user",
+				}).String(), v)
+			},
+		},
+		{
+			name: "set abort actor when request doesn't come from kargo control plane",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "fake-id",
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.VerificationRequest{
+					ID: "fake-id",
+					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+						Username: "real-user",
+					}),
+					ControlPlane: false,
+				}, rr)
+			},
+		},
+		{
+			name: "overwrite with admission request user info if abort actor annotation exists",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:    "fake-id",
+							Actor: "fake-user",
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.VerificationRequest{
+					ID: "fake-id",
+					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+						Username: "real-user",
+					}),
+					ControlPlane: false,
+				}, rr)
+			},
+		},
+		{
+			name: "do not overwrite abort actor when request comes from control plane",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return true
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "control-plane-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:    "fake-id",
+							Actor: kargoapi.EventActorAdmin,
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.VerificationRequest{
+					ID:           "fake-id",
+					Actor:        kargoapi.EventActorAdmin,
+					ControlPlane: true,
+				}, rr)
+			},
+		},
+		{
+			name: "overwite abort actor when it has changed for the same ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+										ID:    "fake-id",
+										Actor: "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:    "fake-id",
+							Actor: "illegitimate-user",
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.VerificationRequest{
+					ID:    "fake-id",
+					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+				}, rr)
+			},
+		},
+		{
+			name: "overwrite abort control plane flag when it has changed for the same ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+										ID:    "fake-id",
+										Actor: "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:           "fake-id",
+							Actor:        "fake-user",
+							ControlPlane: true,
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
+				rr, ok := kargoapi.AbortAnnotationValue(stage.Annotations)
+				require.True(t, ok)
+				require.Equal(t, &kargoapi.VerificationRequest{
+					ID:           "fake-id",
+					Actor:        kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					ControlPlane: false,
+				}, rr)
+			},
+		},
+		{
+			name: "ignore empty abort annotation",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: "",
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				v, ok := stage.Annotations[kargoapi.AnnotationKeyAbort]
+				require.True(t, ok)
+				require.Empty(t, v)
+			},
+		},
+		{
+			name: "ignore abort annotation with empty ID",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID: "",
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				v, ok := stage.Annotations[kargoapi.AnnotationKeyAbort]
+				require.True(t, ok)
+				require.Equal(t, (&kargoapi.VerificationRequest{
+					ID: "",
+				}).String(), v)
+			},
+		},
+		{
+			name: "ignore unchanged abort annotation",
+			webhook: &webhook{
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
+					return false
+				},
+			},
+			req: admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					Operation: admissionv1.Update,
+					UserInfo: authnv1.UserInfo{
+						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: map[string]string{
+									kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+										ID:    "fake-id",
+										Actor: "fake-user",
+									}).String(),
+								},
+							},
+						},
+					},
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:    "fake-id",
+							Actor: "fake-user",
+						}).String(),
+					},
+				},
+				Spec: &kargoapi.StageSpec{},
+			},
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				v, ok := stage.Annotations[kargoapi.AnnotationKeyAbort]
+				require.True(t, ok)
+				require.Equal(t, (&kargoapi.VerificationRequest{
+					ID:    "fake-id",
+					Actor: "fake-user",
+				}).String(), v)
 			},
 		},
 	}

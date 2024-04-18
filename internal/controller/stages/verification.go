@@ -43,10 +43,12 @@ func (r *reconciler) startVerification(
 	// Gather information about the verification being a re-verification request,
 	// and extract the actor who requested the re-verification to be used in the
 	// new verification info.
-	reverifyReq, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations())
-	curVerification := stage.Status.CurrentFreight.VerificationHistory.Current()
-	if curVerification != nil && reverifyReq.ForID(curVerification.ID) {
-		newInfo.Actor = reverifyReq.Actor
+	var isReverify bool
+	if curVer := stage.Status.CurrentFreight.VerificationHistory.Current(); curVer != nil {
+		if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(curVer.ID) {
+			isReverify = true
+			newInfo.Actor = req.Actor
+		}
 	}
 
 	if !r.cfg.RolloutsIntegrationEnabled {
@@ -58,11 +60,10 @@ func (r *reconciler) startVerification(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// If the Stage does not have a reverification annotation, or if the
-	// reverification annotation is not set to the current verification ID, then
-	// we need to check if there is an existing AnalysisRun for the Stage and
-	// Freight. If there is, we return the status of this AnalysisRun.
-	if curVerification == nil || !reverifyReq.ForID(curVerification.ID) {
+	// If this is not a re-verification request, check if there is an existing
+	// AnalysisRun for the Stage and Freight. If there is, return the status of
+	// this AnalysisRun.
+	if !isReverify {
 		analysisRuns := rollouts.AnalysisRunList{}
 		if err := r.listAnalysisRunsFn(
 			ctx,
@@ -293,15 +294,23 @@ func (r *reconciler) abortVerification(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) *kargoapi.VerificationInfo {
+	currentInfo := stage.Status.CurrentFreight.VerificationInfo
+	newInfo := &kargoapi.VerificationInfo{
+		ID:        currentInfo.ID,
+		StartTime: currentInfo.StartTime,
+	}
+
+	// Extract the actor who requested the abort to be used in the new
+	// verification info.
+	if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(currentInfo.ID) {
+		newInfo.Actor = req.Actor
+	}
+
 	if !r.cfg.RolloutsIntegrationEnabled {
-		return &kargoapi.VerificationInfo{
-			ID:         stage.Status.CurrentFreight.VerificationInfo.ID,
-			StartTime:  stage.Status.CurrentFreight.VerificationInfo.StartTime,
-			FinishTime: ptr.To(metav1.NewTime(r.nowFn())),
-			Phase:      kargoapi.VerificationPhaseError,
-			Message: "Rollouts integration is disabled on this controller; cannot " +
-				"abort verification",
-		}
+		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+		newInfo.Phase = kargoapi.VerificationPhaseError
+		newInfo.Message = "Rollouts integration is disabled on this controller; cannot abort verification"
+		return newInfo
 	}
 
 	ar := &rollouts.AnalysisRun{
@@ -315,19 +324,16 @@ func (r *reconciler) abortVerification(
 		ar,
 		client.RawPatch(types.MergePatchType, []byte(`{"spec":{"terminate":true}}`)),
 	); err != nil {
-		return &kargoapi.VerificationInfo{
-			ID:         stage.Status.CurrentFreight.VerificationInfo.ID,
-			StartTime:  stage.Status.CurrentFreight.VerificationInfo.StartTime,
-			FinishTime: ptr.To(metav1.NewTime(r.nowFn())),
-			Phase:      kargoapi.VerificationPhaseError,
-			Message: fmt.Errorf(
-				"error terminating AnalysisRun %q in namespace %q: %w",
-				ar.Name,
-				ar.Namespace,
-				err,
-			).Error(),
-			AnalysisRun: stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.DeepCopy(),
-		}
+		newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+		newInfo.Phase = kargoapi.VerificationPhaseError
+		newInfo.Message = fmt.Errorf(
+			"error terminating AnalysisRun %q in namespace %q: %w",
+			ar.Name,
+			ar.Namespace,
+			err,
+		).Error()
+		newInfo.AnalysisRun = currentInfo.AnalysisRun.DeepCopy()
+		return newInfo
 	}
 
 	// Return a new VerificationInfo with the same ID and a message indicating
@@ -335,14 +341,12 @@ func (r *reconciler) abortVerification(
 	// the verification was not successful.
 	// We do not use the further information from the AnalysisRun, as this
 	// will indicate a "Succeeded" phase due to Argo Rollouts behavior.
-	return &kargoapi.VerificationInfo{
-		ID:          stage.Status.CurrentFreight.VerificationInfo.ID,
-		StartTime:   ptr.To(ar.CreationTimestamp),
-		FinishTime:  ptr.To(metav1.NewTime(r.nowFn())),
-		Phase:       kargoapi.VerificationPhaseAborted,
-		Message:     "Verification aborted by user",
-		AnalysisRun: stage.Status.CurrentFreight.VerificationInfo.AnalysisRun.DeepCopy(),
-	}
+	newInfo.StartTime = ptr.To(ar.CreationTimestamp)
+	newInfo.FinishTime = ptr.To(metav1.NewTime(r.nowFn()))
+	newInfo.Phase = kargoapi.VerificationPhaseAborted
+	newInfo.Message = "Verification aborted by user"
+	newInfo.AnalysisRun = currentInfo.AnalysisRun.DeepCopy()
+	return newInfo
 }
 
 func (r *reconciler) buildAnalysisRun(
@@ -388,13 +392,12 @@ func (r *reconciler) buildAnalysisRun(
 	lbls[kargoapi.FreightLabelKey] = stage.Status.CurrentFreight.Name
 
 	// Add Promotion name if the AnalysisRun is triggered by Promotion.
-	// This is the case when there is no re-verification request, or the
-	// re-verification request does not match the current verification
-	// information, or the request has been made by the control plane
+	// This is the case when there is no existing verification information,
+	// or the re-verification request has been made by the control plane
 	// without an actor specified.
 	curInfo := stage.Status.CurrentFreight.VerificationHistory.Current()
 	reverifyReq, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations())
-	if curInfo == nil || !reverifyReq.ForID(curInfo.ID) || reverifyReq.ControlPlane && reverifyReq.Actor == "" {
+	if curInfo == nil || reverifyReq.ForID(curInfo.ID) && reverifyReq.ControlPlane && reverifyReq.Actor == "" {
 		// Add Promotion name if the AnalysisRun is triggered by Promotion.
 		if stage.Status.LastPromotion != nil {
 			lbls[kargoapi.PromotionLabelKey] = stage.Status.LastPromotion.Name

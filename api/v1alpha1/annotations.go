@@ -12,7 +12,7 @@ const (
 	// AnnotationKeyReverify is an annotation key that can be set on a Stage
 	// resource to trigger the re-verification of its Freight. The value of the
 	// annotation should either be the ID of the verification to be reverified,
-	// or a JSON object with the structure of the ReverificationRequest.
+	// or a JSON object with the structure of the VerificationRequest.
 	AnnotationKeyReverify = "kargo.akuity.io/reverify"
 
 	// AnnotationKeyAbort is an annotation key that can be set on a Stage
@@ -58,28 +58,51 @@ func RefreshAnnotationValue(annotations map[string]string) (string, bool) {
 // present.
 //
 // If the value of the annotation is a valid JSON object, it is unmarshalled
-// into a ReverificationRequest struct. Otherwise, the value is treated as the
-// ID of the verification to be reverified.
-func ReverifyAnnotationValue(annotations map[string]string) (*ReverificationRequest, bool) {
+// into a VerificationRequest struct. Otherwise, the value is treated as the ID
+// of the verification to be reverified and set as the ID field of the returned
+// VerificationRequest.
+func ReverifyAnnotationValue(annotations map[string]string) (*VerificationRequest, bool) {
 	requested, ok := annotations[AnnotationKeyReverify]
 	if !ok {
 		return nil, ok
 	}
-	var rr ReverificationRequest
+	var vr VerificationRequest
 	if b := []byte(requested); json.Valid(b) {
-		if err := json.Unmarshal(b, &rr); err != nil {
+		if err := json.Unmarshal(b, &vr); err != nil {
 			return nil, false
 		}
 	} else {
-		rr.ID = requested
+		vr.ID = requested
 	}
-	return &rr, ok
+	if !vr.HasID() {
+		return nil, false
+	}
+	return &vr, ok
 }
 
 // AbortAnnotationValue returns the value of the AnnotationKeyAbort annotation
 // which can be used to abort the verification of a Freight, and a boolean
 // indicating whether the annotation was present.
-func AbortAnnotationValue(annotations map[string]string) (string, bool) {
+//
+// If the value of the annotation is a valid JSON object, it is unmarshalled
+// into a VerificationRequest struct. Otherwise, the value is treated as the ID
+// of the verification to be aborted and set as the ID field of the returned
+// VerificationRequest.
+func AbortAnnotationValue(annotations map[string]string) (*VerificationRequest, bool) {
 	requested, ok := annotations[AnnotationKeyAbort]
-	return requested, ok
+	if !ok {
+		return nil, ok
+	}
+	var vr VerificationRequest
+	if b := []byte(requested); json.Valid(b) {
+		if err := json.Unmarshal(b, &vr); err != nil {
+			return nil, false
+		}
+	} else {
+		vr.ID = requested
+	}
+	if !vr.HasID() {
+		return nil, false
+	}
+	return &vr, ok
 }

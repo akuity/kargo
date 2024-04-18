@@ -355,11 +355,11 @@ func TestReverifyRequested_Update(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "reverify annotation ID changed",
+			name: "empty reverify annotation value",
 			oldObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReverify: (&kargoapi.ReverificationRequest{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID: "foo",
 						}).String(),
 					},
@@ -368,7 +368,27 @@ func TestReverifyRequested_Update(t *testing.T) {
 			newObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReverify: (&kargoapi.ReverificationRequest{
+						kargoapi.AnnotationKeyAbort: "",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "reverify annotation ID changed",
+			oldObject: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+							ID: "foo",
+						}).String(),
+					},
+				},
+			},
+			newObject: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID: "bar",
 						}).String(),
 					},
@@ -377,11 +397,35 @@ func TestReverifyRequested_Update(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "refresh annotation value equal",
+			name: "reverify annotation actor changed with same ID",
 			oldObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReverify: (&kargoapi.ReverificationRequest{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+							ID:    "foo",
+							Actor: "fake-actor",
+						}).String(),
+					},
+				},
+			},
+			newObject: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
+							ID:    "foo",
+							Actor: "real-actor",
+						}).String(),
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "reverify annotation ID equal",
+			oldObject: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID: "foo",
 						}).String(),
 					},
@@ -390,7 +434,7 @@ func TestReverifyRequested_Update(t *testing.T) {
 			newObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReverify: (&kargoapi.ReverificationRequest{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID: "foo",
 						}).String(),
 					},
@@ -429,7 +473,7 @@ func TestAbortRequested_Update(t *testing.T) {
 			newObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyRefresh: "foo",
+						kargoapi.AnnotationKeyAbort: "foo",
 					},
 				},
 			},
@@ -440,7 +484,7 @@ func TestAbortRequested_Update(t *testing.T) {
 			oldObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyRefresh: "foo",
+						kargoapi.AnnotationKeyAbort: "foo",
 					},
 				},
 			},
@@ -496,36 +540,88 @@ func TestAbortRequested_Update(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "abort annotation value changed",
+			name: "empty abort annotation value",
 			oldObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyAbort: "foo",
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID: "foo",
+						}).String(),
 					},
 				},
 			},
 			newObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyAbort: "bar",
+						kargoapi.AnnotationKeyAbort: "",
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "abort annotation ID changed",
+			oldObject: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID: "foo",
+						}).String(),
+					},
+				},
+			},
+			newObject: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID: "bar",
+						}).String(),
 					},
 				},
 			},
 			want: true,
 		},
 		{
-			name: "abort annotation values equal",
+			name: "abort annotation actor changed with same ID",
 			oldObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyAbort: "foo",
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:    "foo",
+							Actor: "fake-actor",
+						}).String(),
 					},
 				},
 			},
 			newObject: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyAbort: "foo",
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:    "foo",
+							Actor: "real-actor",
+						}).String(),
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "abort annotation ID equal",
+			oldObject: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID: "foo",
+						}).String(),
+					},
+				},
+			},
+			newObject: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID: "foo",
+						}).String(),
 					},
 				},
 			},

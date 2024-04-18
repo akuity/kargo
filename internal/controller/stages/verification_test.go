@@ -817,6 +817,14 @@ func TestAbortVerification(t *testing.T) {
 				nowFn: fakeNow,
 			},
 			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:    "fake-id",
+							Actor: "fake-actor",
+						}).String(),
+					},
+				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
@@ -828,6 +836,7 @@ func TestAbortVerification(t *testing.T) {
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Equal(t, vi.ID, "fake-id")
+				require.Equal(t, vi.Actor, "fake-actor")
 				require.Contains(
 					t,
 					vi.Message,
@@ -875,6 +884,14 @@ func TestAbortVerification(t *testing.T) {
 		{
 			name: "success",
 			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAbort: (&kargoapi.VerificationRequest{
+							ID:    "fake-id",
+							Actor: "fake-actor",
+						}).String(),
+					},
+				},
 				Status: kargoapi.StageStatus{
 					CurrentFreight: &kargoapi.FreightReference{
 						VerificationInfo: &kargoapi.VerificationInfo{
@@ -905,6 +922,7 @@ func TestAbortVerification(t *testing.T) {
 			assertions: func(t *testing.T, vi *kargoapi.VerificationInfo) {
 				require.NotNil(t, vi)
 				require.Equal(t, "fake-id", vi.ID)
+				require.Equal(t, "fake-actor", vi.Actor)
 				require.Equal(t, kargoapi.VerificationPhaseAborted, vi.Phase)
 				require.Equal(t, "Verification aborted by user", vi.Message)
 				require.Equal(t, &kargoapi.AnalysisRunReference{
@@ -1217,7 +1235,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReverify: (&kargoapi.ReverificationRequest{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID:           "fake-id",
 							Actor:        kargoapi.EventActorAdmin,
 							ControlPlane: true,
@@ -1263,7 +1281,7 @@ func TestBuildAnalysisRun(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyReverify: (&kargoapi.ReverificationRequest{
+						kargoapi.AnnotationKeyReverify: (&kargoapi.VerificationRequest{
 							ID:           "fake-id",
 							ControlPlane: true,
 						}).String(),

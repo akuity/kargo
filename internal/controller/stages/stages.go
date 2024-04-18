@@ -759,8 +759,8 @@ func (r *reconciler) syncNormalStage(
 			// Confirm if a reverification is requested. If so, clear the
 			// verification info to start the verification process again.
 			info := status.CurrentFreight.VerificationInfo
-			if info != nil && info.ID != "" && info.Phase.IsTerminal() {
-				if rr, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); rr.ForID(info.ID) {
+			if info != nil && info.Phase.IsTerminal() {
+				if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(info.ID) {
 					logger.Debug("rerunning verification")
 					status.Phase = kargoapi.StagePhaseVerifying
 					status.CurrentFreight.VerificationInfo = nil
@@ -802,8 +802,8 @@ func (r *reconciler) syncNormalStage(
 					// Abort the verification if it's still running and the Stage has
 					// been marked to do so.
 					newInfo := status.CurrentFreight.VerificationInfo
-					if newInfo.ID != "" && !newInfo.Phase.IsTerminal() {
-						if id, ok := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); ok && id == newInfo.ID {
+					if !newInfo.Phase.IsTerminal() {
+						if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(newInfo.ID) {
 							log.Debug("aborting verification")
 							status.CurrentFreight.VerificationInfo = r.abortVerificationFn(ctx, stage)
 						}
