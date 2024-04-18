@@ -267,9 +267,9 @@ func filterAppConditions(
 func getDesiredRevision(app *argocd.Application, freight kargoapi.FreightReference) string {
 	if app.Spec.Source.Chart == "" {
 		// This source points to a git repository
-		sourceGitRepoURL := git.NormalizeGitURL(app.Spec.Source.RepoURL)
+		sourceGitRepoURL := git.NormalizeURL(app.Spec.Source.RepoURL)
 		for _, commit := range freight.Commits {
-			if git.NormalizeGitURL(commit.RepoURL) == sourceGitRepoURL {
+			if git.NormalizeURL(commit.RepoURL) == sourceGitRepoURL {
 				if commit.HealthCheckCommit != "" {
 					return commit.HealthCheckCommit
 				}

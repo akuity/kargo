@@ -159,7 +159,7 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 	repoURL string,
 ) (*corev1.Secret, error) {
 	repoURL = helm.NormalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
-		git.NormalizeGitURL(repoURL), // This should be safe even on non-Git URLs
+		git.NormalizeURL(repoURL), // This should be safe even on non-Git URLs
 	)
 
 	secrets := corev1.SecretList{}
@@ -195,7 +195,7 @@ func (k *kubernetesDatabase) getCredentialsSecret(
 			continue
 		}
 		url := helm.NormalizeChartRepositoryURL( // This should be safe even on non-chart repo URLs
-			git.NormalizeGitURL( // This should be safe even on non-Git URLs
+			git.NormalizeURL( // This should be safe even on non-Git URLs
 				string(urlBytes),
 			),
 		)

@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/git"
 )
 
 func TestNewWebhook(t *testing.T) {
@@ -461,7 +462,7 @@ func TestValidateSub(t *testing.T) {
 			seen: uniqueSubSet{
 				subscriptionKey{
 					kind: "git",
-					id:   "bogus",
+					id:   git.NormalizeURL("bogus"),
 				}: field.NewPath("spec.subscriptions[0].git"),
 			},
 			assertions: func(t *testing.T, sub kargoapi.RepoSubscription, errs field.ErrorList) {
@@ -540,7 +541,7 @@ func TestValidateGitSub(t *testing.T) {
 			seen: uniqueSubSet{
 				subscriptionKey{
 					kind: "git",
-					id:   "bogus",
+					id:   git.NormalizeURL("bogus"),
 				}: field.NewPath("spec.subscriptions[0].git"),
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
