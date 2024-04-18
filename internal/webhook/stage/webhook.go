@@ -100,8 +100,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 
 	var oldStage *kargoapi.Stage
 	// We need to decode old object manually since controller-runtime doesn't decode it for us.
-	if req.Operation == admissionv1.Update ||
-		req.Operation == admissionv1.Delete {
+	if req.Operation == admissionv1.Update {
 		oldStage = &kargoapi.Stage{}
 		if err := w.decoder.DecodeRaw(req.OldObject, oldStage); err != nil {
 			return fmt.Errorf("decode old object: %w", err)
