@@ -106,7 +106,7 @@ CMD ["/usr/local/bin/kargo"]
 ####################################################################################################
 FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.2 AS ui-dev
 
-RUN npm install --global pnpm
+RUN npm install --global pnpm@9.0.2
 WORKDIR /ui
 COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
 
