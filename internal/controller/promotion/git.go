@@ -162,6 +162,13 @@ func (g *gitMechanism) doSingleUpdate(
 		return nil, newFreight, err
 	}
 
+	author, err := g.getAuthorFn()
+	if err != nil {
+		return nil, newFreight, err
+	}
+	if author == nil {
+		author = &git.User{}
+	}
 	creds, err := g.getCredentialsFn(
 		ctx,
 		promo.Namespace,
@@ -175,7 +182,10 @@ func (g *gitMechanism) doSingleUpdate(
 	}
 	repo, err := git.Clone(
 		update.RepoURL,
-		*creds,
+		&git.ClientOptions{
+			User:        author,
+			Credentials: creds,
+		},
 		&git.CloneOptions{
 			InsecureSkipTLSVerify: update.InsecureSkipTLSVerify,
 		},
@@ -184,17 +194,6 @@ func (g *gitMechanism) doSingleUpdate(
 		return nil, newFreight, fmt.Errorf("error cloning git repo %q: %w", update.RepoURL, err)
 	}
 	defer repo.Close()
-
-	author, err := g.getAuthorFn()
-	if err != nil {
-		return nil, newFreight, err
-	}
-	if author == nil {
-		author = &git.User{}
-	}
-	if err = repo.SetAuthor(*author); err != nil {
-		return nil, newFreight, fmt.Errorf("error setting default commit author: %w", err)
-	}
 
 	commitBranch := update.WriteBranch
 	if update.PullRequest != nil {

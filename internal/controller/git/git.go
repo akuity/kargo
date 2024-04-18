@@ -121,10 +121,6 @@ type Repo interface {
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who has cloned this repo.
 	HomeDir() string
-	// SetAuthor sets the default commit author. Optionally, the author can
-	// have an associated signing key, and the name and email must match the
-	// signing key identity.
-	SetAuthor(author User) error
 }
 
 // repo is an implementation of the Repo interface for interacting with a git
@@ -135,6 +131,18 @@ type repo struct {
 	dir                   string
 	currentBranch         string
 	insecureSkipTLSVerify bool
+}
+
+// ClientOptions represents options for the git client. Commonly, the
+// repository credentials are required to authenticate with a remote
+// repository.
+type ClientOptions struct {
+	// User represents the actor that performs operations against the git
+	// repository. Th1s has no effect on authentication, see Credentials for
+	// specifying authentication configuration.
+	User *User
+	// Credentials represents the authentication information.
+	Credentials *RepoCredentials
 }
 
 // CloneOptions represents options for cloning a git repository.
@@ -161,8 +169,8 @@ type CloneOptions struct {
 // remote repository.
 func Clone(
 	repoURL string,
-	repoCreds RepoCredentials,
-	opts *CloneOptions,
+	clientOpts *ClientOptions,
+	cloneOpts *CloneOptions,
 ) (Repo, error) {
 	homeDir, err := os.MkdirTemp("", "repo-")
 	if err != nil {
@@ -172,12 +180,12 @@ func Clone(
 		url:                   repoURL,
 		homeDir:               homeDir,
 		dir:                   filepath.Join(homeDir, "repo"),
-		insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		insecureSkipTLSVerify: cloneOpts.InsecureSkipTLSVerify,
 	}
-	if err = r.setupAuth(repoCreds); err != nil {
+	if err = r.setupClient(clientOpts); err != nil {
 		return nil, err
 	}
-	return r, r.clone(opts)
+	return r, r.clone(cloneOpts)
 }
 
 func (r *repo) AddAll() error {
@@ -503,7 +511,28 @@ func (r *repo) WorkingDir() string {
 	return r.dir
 }
 
-func (r *repo) SetAuthor(author User) error {
+// setupClient configures the git CLI for authentication using either SSH or
+// the "store" (username/password-based) credential helper.
+func (r *repo) setupClient(opts *ClientOptions) error {
+	if opts.User != nil {
+		if err := r.setupAuthor(*opts.User); err != nil {
+			return fmt.Errorf("error configuring the author: %w", err)
+		}
+	}
+
+	if opts.Credentials != nil {
+		if err := r.setupAuth(*opts.Credentials); err != nil {
+			return fmt.Errorf("error configuring the credentials: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// setupAuthor configures the git CLI with a default commit author.
+// Optionally, the author can have an associated signing key. When using GPG
+// signing, the name and email must match the GPG key identity.
+func (r *repo) setupAuthor(author User) error {
 	if author.Name == "" {
 		author.Name = "Kargo Render"
 	}
@@ -515,7 +544,7 @@ func (r *repo) SetAuthor(author User) error {
 	}
 
 	if author.Email == "" {
-		author.Email = "kargo-render@akuity.io"
+		author.Name = "kargo-render@akuity.io"
 	}
 
 	cmd = r.buildGitCommand("config", "--global", "user.email", author.Email)
@@ -541,24 +570,9 @@ func (r *repo) SetAuthor(author User) error {
 	return nil
 }
 
-// SetupAuth configures the git CLI for authentication using either SSH or the
-// "store" (username/password-based) credential helper.
-func (r *repo) setupAuth(repoCreds RepoCredentials) error {
-	// Configure the git client
-	cmd := r.buildGitCommand("config", "--global", "user.name", "Kargo Render")
-	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
-	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring git username: %w", err)
-	}
-	cmd =
-		r.buildGitCommand("config", "--global", "user.email", "kargo-render@akuity.io")
-	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
-	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring git user email address: %w", err)
-	}
-
+func (r *repo) setupAuth(creds RepoCredentials) error {
 	// If an SSH key was provided, use that.
-	if repoCreds.SSHPrivateKey != "" {
+	if creds.SSHPrivateKey != "" {
 		sshConfigPath := filepath.Join(r.homeDir, ".ssh", "config")
 		// nolint: lll
 		const sshConfig = "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null"
@@ -570,7 +584,7 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 		rsaKeyPath := filepath.Join(r.homeDir, ".ssh", "id_rsa")
 		if err := os.WriteFile(
 			rsaKeyPath,
-			[]byte(repoCreds.SSHPrivateKey),
+			[]byte(creds.SSHPrivateKey),
 			0600,
 		); err != nil {
 			return fmt.Errorf("error writing SSH key to %q: %w", rsaKeyPath, err)
@@ -581,7 +595,7 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 	// If we get to here, we're authenticating using a password
 
 	// Set up the credential helper
-	cmd = r.buildGitCommand("config", "--global", "credential.helper", "store")
+	cmd := r.buildGitCommand("config", "--global", "credential.helper", "store")
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git credential helper: %w", err)
@@ -597,11 +611,11 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 	// If the username is the empty string, we assume we're working with a git
 	// provider like GitHub that only requires the username to be non-empty. We
 	// arbitrarily set it to "git".
-	if repoCreds.Username == "" {
-		repoCreds.Username = "git"
+	if creds.Username == "" {
+		creds.Username = "git"
 	}
 	// Augment the URL with user/pass information.
-	credentialURL.User = url.UserPassword(repoCreds.Username, repoCreds.Password)
+	credentialURL.User = url.UserPassword(creds.Username, creds.Password)
 	// Write the augmented URL to the location used by the "stored" credential
 	// helper.
 	credentialsPath := filepath.Join(r.homeDir, ".git-credentials")
