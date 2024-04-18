@@ -46,14 +46,14 @@ spec:
             name: kargo-controller
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.committer.signingKeySecret.name }}
         volumeMounts:
-        {{- if .Values.controller.committer.signingKeySecret.name }}
-        - mountPath: /etc/kargo/committer
-          name: committer
-          readOnly: true
-        {{- end }}
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
+          readOnly: true
+        {{- end }}
+        {{- if .Values.controller.committer.signingKeySecret.name }}
+        - mountPath: /etc/kargo/committer
+          name: committer
           readOnly: true
         {{- end }}
         {{- end }}
@@ -63,12 +63,6 @@ spec:
           {{- toYaml .Values.controller.resources | nindent 10 }}
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.committer.signingKeySecret.name }}
       volumes:
-      {{- if .Values.controller.committer.signingKeySecret.name }}
-      - name: committer
-        secret:
-          secretName: {{ .Values.controller.committer.signingKeySecret.name }}
-          defaultMode: 0644
-      {{- end }}
       {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       - name: kubeconfigs
         projected:
@@ -89,6 +83,12 @@ spec:
                 path: argocd-kubeconfig.yaml
                 mode: 0644
           {{- end }}
+      {{- end }}
+      {{- if .Values.controller.committer.signingKeySecret.name }}
+      - name: committer
+        secret:
+          secretName: {{ .Values.controller.committer.signingKeySecret.name }}
+          defaultMode: 0644
       {{- end }}
       {{- end }}
       {{- with .Values.controller.nodeSelector }}
