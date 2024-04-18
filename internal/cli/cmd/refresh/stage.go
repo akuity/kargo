@@ -83,7 +83,10 @@ func waitForStage(
 		}
 		token, ok := kargoapi.RefreshAnnotationValue(msg.Stage.GetAnnotations())
 		if !ok {
-			return fmt.Errorf("Stage %q in Project %q has no refresh annotation", name, project)
+			return fmt.Errorf(
+				"Stage %q in Project %q has no %q annotation",
+				name, project, kargoapi.AnnotationKeyRefresh,
+			)
 		}
 		if msg.Stage.Status.LastHandledRefresh == token {
 			return nil

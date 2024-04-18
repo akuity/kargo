@@ -83,7 +83,10 @@ func waitForWarehouse(
 		}
 		token, ok := kargoapi.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
 		if !ok {
-			return fmt.Errorf("Warehouse %q in Project %q has no refresh annotation", name, project)
+			return fmt.Errorf(
+				"Warehouse %q in Project %q has no %q annotation",
+				name, project, kargoapi.AnnotationKeyRefresh,
+			)
 		}
 		if msg.Warehouse.Status.LastHandledRefresh == token {
 			return nil
