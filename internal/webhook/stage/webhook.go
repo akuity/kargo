@@ -25,7 +25,8 @@ var (
 )
 
 type webhook struct {
-	client client.Client
+	client  client.Client
+	decoder *admission.Decoder
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -49,7 +50,11 @@ func SetupWebhookWithManager(
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 ) error {
-	w := newWebhook(cfg, mgr.GetClient())
+	w := newWebhook(
+		cfg,
+		mgr.GetClient(),
+		admission.NewDecoder(mgr.GetScheme()),
+	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Stage{}).
 		WithDefaulter(w).
@@ -60,9 +65,11 @@ func SetupWebhookWithManager(
 func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
+	decoder *admission.Decoder,
 ) *webhook {
 	w := &webhook{
-		client: kubeClient,
+		client:  kubeClient,
+		decoder: decoder,
 	}
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.validateProjectFn = libWebhook.ValidateProject
@@ -92,8 +99,12 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	}
 
 	var oldStage *kargoapi.Stage
-	if req.OldObject.Object != nil {
-		oldStage = req.OldObject.Object.(*kargoapi.Stage) // nolint: forcetypeassert
+	// We need to decode old object manually since controller-runtime doesn't decode it for us.
+	if req.Operation == admissionv1.Update {
+		oldStage = &kargoapi.Stage{}
+		if err := w.decoder.DecodeRaw(req.OldObject, oldStage); err != nil {
+			return fmt.Errorf("decode old object: %w", err)
+		}
 	}
 
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {

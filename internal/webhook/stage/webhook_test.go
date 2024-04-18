@@ -2,6 +2,7 @@ package stage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -25,6 +26,7 @@ func TestNewWebhook(t *testing.T) {
 	w := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
+		admission.NewDecoder(kubeClient.Scheme()),
 	)
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.admissionRequestFromContextFn)
@@ -36,6 +38,9 @@ func TestNewWebhook(t *testing.T) {
 
 func TestDefault(t *testing.T) {
 	const testShardName = "fake-shard"
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -360,6 +365,9 @@ func TestDefault(t *testing.T) {
 					UserInfo: authnv1.UserInfo{
 						Username: "real-user",
 					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
+					},
 				},
 			},
 			stage: &kargoapi.Stage{
@@ -390,6 +398,9 @@ func TestDefault(t *testing.T) {
 					Operation: admissionv1.Update,
 					UserInfo: authnv1.UserInfo{
 						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
 					},
 				},
 			},
@@ -704,6 +715,9 @@ func TestDefault(t *testing.T) {
 					UserInfo: authnv1.UserInfo{
 						Username: "real-user",
 					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
+					},
 				},
 			},
 			stage: &kargoapi.Stage{
@@ -734,6 +748,9 @@ func TestDefault(t *testing.T) {
 					Operation: admissionv1.Update,
 					UserInfo: authnv1.UserInfo{
 						Username: "real-user",
+					},
+					OldObject: runtime.RawExtension{
+						Object: &kargoapi.Stage{},
 					},
 				},
 			},
@@ -810,6 +827,19 @@ func TestDefault(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			// Apply default decoder to all test cases
+			tc.webhook.decoder = admission.NewDecoder(scheme)
+
+			// Make sure old object has corresponding Raw data instead of Object
+			// since controller-runtime doesn't decode the old object.
+			if tc.req.OldObject.Object != nil {
+				data, err := json.Marshal(tc.req.OldObject.Object)
+				require.NoError(t, err)
+				tc.req.OldObject.Raw = data
+				tc.req.OldObject.Object = nil
+			}
+
 			ctx := admission.NewContextWithRequest(
 				context.Background(),
 				tc.req,
