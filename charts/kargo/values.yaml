@@ -288,8 +288,10 @@ controller:
     email: "kargo-render@akuity.io"
 
     signingKeySecret:
-    ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git author's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo.
+      ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git users's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo. When the signing key is a GPG key, the GPG key's name and email address identity must match the values defined for `controller.gitClient.name` and `controller.gitClient.email`.
       name: ""
+      ## @param controller.gitClient.signingKeySecret.type Specifies the type of the signing key. The currently supported and default option is `gpg`.
+      type: ""
 
   ## @param controller.securityContext Security context for controller pods.
   securityContext: {}

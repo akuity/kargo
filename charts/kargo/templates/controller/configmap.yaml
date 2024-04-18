@@ -18,6 +18,7 @@ data:
   GLOBAL_CREDENTIALS_NAMESPACES: {{ quote (join "," .Values.controller.globalCredentials.namespaces) }}
   GITCLIENT_NAME: {{ quote .Values.controller.gitClient.name }}
   GITCLIENT_EMAIL: {{ quote .Values.controller.gitClient.email }}
+  GITCLIENT_SIGNING_KEY_TYPE: {{ .Values.controller.gitClient.signingKeySecret.type | default "gpg" | quote }}
   {{- if .Values.controller.gitClient.signingKeySecret.name }}
   GITCLIENT_SIGNING_KEY_PATH: /etc/kargo/git/signingKey
   {{- end }}
