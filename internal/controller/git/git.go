@@ -514,6 +514,10 @@ func (r *repo) WorkingDir() string {
 // setupClient configures the git CLI for authentication using either SSH or
 // the "store" (username/password-based) credential helper.
 func (r *repo) setupClient(opts *ClientOptions) error {
+	if opts == nil {
+		opts = &ClientOptions{}
+	}
+
 	if opts.User != nil {
 		if err := r.setupAuthor(*opts.User); err != nil {
 			return fmt.Errorf("error configuring the author: %w", err)
