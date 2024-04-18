@@ -181,6 +181,26 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 8
+        run_install: false
+    - name: Install nodejs
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20.12.2"
+        cache: "pnpm"
+        cache-dependency-path: "**/pnpm-lock.yaml"
+    - name: Build UI
+      env:
+        VERSION: ${{ github.ref_name }}
+      working-directory: ./ui
+      run: |
+        pnpm install
+        NODE_ENV=production pnpm run build
+        rm -rf ../internal/api/ui
+        mv build ../internal/api/ui
     - name: Build CLI
       env:
         GOFLAGS: -buildvcs=false
@@ -210,10 +230,11 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: golang:1.22.2-bookworm
+    strategy:
+      matrix:
+        os: [linux, darwin, windows]
+        arch: [amd64, arm64]
     steps:
-    - name: Install awscli
-      run: |
-        apt update && apt install awscli -y
     - name: Checkout code
       uses: actions/checkout@v4
     - uses: actions/cache@v4
@@ -222,13 +243,38 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 8
+        run_install: false
+    - name: Install nodejs
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20.12.2"
+        cache: "pnpm"
+        cache-dependency-path: "**/pnpm-lock.yaml"
+    - name: Build UI
+      env:
+        VERSION: ${{ github.ref_name }}
+      working-directory: ./ui
+      run: |
+        pnpm install
+        NODE_ENV=production pnpm run build
+        rm -rf ../internal/api/ui
+        mv build ../internal/api/ui
     - name: Build CLI
       env:
         GOFLAGS: -buildvcs=false
+        GOOS: ${{ matrix.os }}
+        GOARCH: ${{ matrix.arch }}
         VERSION: ${{ needs.publish-image.outputs.unstable-version }}
         GIT_COMMIT: ${{ github.sha }}
         GIT_TREE_STATE: clean
-      run: make nightly-cli
+      run: make build-nightly-cli
+    - name: Install awscli
+      run: |
+        apt update && apt install awscli -y
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -239,7 +285,7 @@ jobs:
         CF_DISTRIBUTION_ID: ${{ secrets.CF_DISTRIBUTION_ID }}
         VERSION: ${{ needs.publish-image.outputs.unstable-version }}
       run: |
-        aws s3 sync "./bin/kargo-cli/${VERSION}" "s3://kargo-release/kargo-cli/${VERSION}"
+        aws s3 sync "./bin/kargo-cli/${VERSION}/${{ matrix.os }}/${{ matrix.arch }}" "s3://kargo-release/kargo-cli/${VERSION}/${{ matrix.os }}/${{ matrix.arch }}"
         printf "${VERSION}" > ./bin/kargo-cli/unstable.txt
         aws s3 cp ./bin/kargo-cli/unstable.txt s3://kargo-release/kargo-cli/unstable.txt
         aws cloudfront create-invalidation \
