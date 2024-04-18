@@ -11,7 +11,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 
 // NormalizeURL normalizes Git URLs of the following forms:
 //
-//   - http[s]://[proxy-user@proxy-pass:]host.xz[:port][/path/to/repo[.git][/]]
+//   - http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
 //   - ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
 //   - [user@]host.xz[:path/to/repo[.git][/]]
 //

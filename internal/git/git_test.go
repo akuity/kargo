@@ -14,7 +14,7 @@ func TestNormalizeGitURL(t *testing.T) {
 		"ssh://not a url":                        "ssh://not a url",
 		"ssh://github.com/example/repo?foo=bar":  "ssh://github.com/example/repo?foo=bar",
 		"not even remotely a url":                "not even remotely a url",
-		// URLs of the form http[s]://[proxy-user@proxy-pass:]host.xz[:port][/path/to/repo[.git][/]]
+		// URLs of the form http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
 		"https://github.com":          "https://github.com",
 		"https://github.com/":         "https://github.com",
 		"https://foo:bar@github.com":  "https://github.com",
