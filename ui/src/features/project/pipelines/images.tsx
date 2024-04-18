@@ -122,15 +122,14 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
   }, [stages]);
 
   const [imageURL, setImageURL] = useState(images.keys().next().value as string);
-  const [curImage, setCurImage] = useState(imageURL && images.get(imageURL));
   const [showHistory, setShowHistory] = useLocalStorage(`${projectName}-show-history`, false);
 
   useEffect(() => {
     setImageURL(images.keys().next().value as string);
   }, [images]);
 
-  useEffect(() => {
-    setCurImage(images.get(imageURL));
+  const curImage = useMemo(() => {
+    return images.get(imageURL);
   }, [imageURL]);
 
   return (
