@@ -1,57 +1,78 @@
 package git
 
 import (
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
 )
 
-// NormalizeGitURL normalizes a git URL for purposes of comparison, as well as preventing redundant
-// local clones (by normalizing various forms of a URL to a consistent location).
-// Prefer using SameURL() over this function when possible. This algorithm may change over time
-// and should not be considered stable from release to release
-func NormalizeGitURL(repo string) string {
-	repo = strings.ToLower(strings.TrimSpace(repo))
-	if yes, _ := IsSSHURL(repo); yes {
-		if !strings.HasPrefix(repo, "ssh://") {
-			// We need to replace the first colon in git@server... style SSH URLs with a slash, otherwise
-			// net/url.Parse will interpret it incorrectly as the port.
-			repo = strings.Replace(repo, ":", "/", 1)
-			repo = ensurePrefix(repo, "ssh://")
+var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
+
+// NormalizeURL normalizes Git URLs of the following forms:
+//
+//   - http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
+//   - ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
+//   - [user@]host.xz[:path/to/repo[.git][/]]
+//
+// This is useful for the purposes of comparison and also in cases where a
+// canonical representation of a Git URL is needed. Any URL that cannot be
+// normalized will be returned as-is.
+func NormalizeURL(repo string) string {
+	origRepo := repo
+	repo = strings.ToLower(repo)
+
+	// HTTP/S URLs
+	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
+		repoURL, err := url.Parse(repo)
+		if err != nil {
+			return origRepo
 		}
+		if len(repoURL.Query()) > 0 {
+			// Query parameters are not permitted
+			return origRepo
+		}
+		repoURL.User = nil // Remove user info if there is any
+		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
+		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
+		return repoURL.String()
 	}
-	repo = removeSuffix(repo, ".git")
-	repoURL, err := url.Parse(repo)
+
+	// URLS of the form ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
+	if strings.HasPrefix(repo, "ssh://") {
+		// repo = strings.TrimPrefix(repo, "ssh://")
+		repoURL, err := url.Parse(repo)
+		if err != nil {
+			return origRepo
+		}
+		if len(repoURL.Query()) > 0 {
+			// Query parameters are not permitted
+			return origRepo
+		}
+		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
+		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
+		return repoURL.String()
+	}
+
+	// URLS of the form [user@]host.xz[:path/to/repo[.git][/]]
+	matches := scpSyntaxRegex.FindStringSubmatch(repo)
+	if len(matches) != 2 && len(matches) != 3 {
+		// This URL doesn't appear to be in a format we recognize
+		return origRepo
+	}
+	userHost := matches[1]
+	var path string
+	if len(matches) == 3 {
+		path = matches[2]
+	}
+	pathURL, err := url.Parse(path)
 	if err != nil {
-		return ""
+		return origRepo
 	}
-	normalized := repoURL.String()
-	return strings.TrimPrefix(normalized, "ssh://")
-}
-
-var sshURLRegex = regexp.MustCompile("^(ssh://)?([^/:]*?)@[^@]+$")
-
-// IsSSHURL returns true if supplied URL is SSH URL
-func IsSSHURL(sshUrl string) (bool, string) {
-	matches := sshURLRegex.FindStringSubmatch(sshUrl)
-	if len(matches) > 2 {
-		return true, matches[2]
+	pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
+	pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
+	if pathURL.Path == "" {
+		return fmt.Sprintf("ssh://%s", userHost)
 	}
-	return false, ""
-}
-
-// removeSuffix idempotently removes a given suffix
-func removeSuffix(s, suffix string) string {
-	if strings.HasSuffix(s, suffix) {
-		return s[0 : len(s)-len(suffix)]
-	}
-	return s
-}
-
-// EnsurePrefix idempotently ensures that a base string has a given prefix.
-func ensurePrefix(s, prefix string) string {
-	if !strings.HasPrefix(s, prefix) {
-		s = prefix + s
-	}
-	return s
+	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
 }

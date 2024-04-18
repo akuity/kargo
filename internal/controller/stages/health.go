@@ -123,9 +123,9 @@ func (r *reconciler) checkHealth(
 		var desiredRevision string
 		if app.Spec.Source.Chart == "" {
 			// This source points to a git repository
-			sourceGitRepoURL := git.NormalizeGitURL(app.Spec.Source.RepoURL)
+			sourceGitRepoURL := git.NormalizeURL(app.Spec.Source.RepoURL)
 			for _, commit := range currentFreight.Commits {
-				if git.NormalizeGitURL(commit.RepoURL) == sourceGitRepoURL {
+				if git.NormalizeURL(commit.RepoURL) == sourceGitRepoURL {
 					if commit.HealthCheckCommit != "" {
 						desiredRevision = commit.HealthCheckCommit
 					} else {
