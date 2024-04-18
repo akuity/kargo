@@ -39,6 +39,7 @@ func TestNewGitMechanism(t *testing.T) {
 	require.NotNil(t, gpm.selectUpdatesFn)
 	require.NotNil(t, gpm.doSingleUpdateFn)
 	require.NotNil(t, gpm.getReadRefFn)
+	require.NotNil(t, gpm.getAuthorFn)
 	require.NotNil(t, gpm.getCredentialsFn)
 	require.NotNil(t, gpm.gitCommitFn)
 	require.NotNil(t, gpm.applyConfigManagementFn)
@@ -196,12 +197,47 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				) (string, int, error) {
 					return testRef, 0, nil
 				},
+				getAuthorFn: func() (*git.User, error) {
+					return nil, nil
+				},
 				getCredentialsFn: func(
 					context.Context,
 					string,
 					string,
 				) (*git.RepoCredentials, error) {
 					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.PromotionStatus,
+				newFreightIn kargoapi.FreightReference,
+				newFreightOut kargoapi.FreightReference,
+				err error,
+			) {
+				require.Error(t, err)
+				require.Equal(t, "something went wrong", err.Error())
+				require.Equal(t, newFreightIn, newFreightOut)
+			},
+		},
+		{
+			name: "error getting author",
+			promoMech: &gitMechanism{
+				getReadRefFn: func(
+					kargoapi.GitRepoUpdate,
+					[]kargoapi.GitCommit,
+				) (string, int, error) {
+					return testRef, 0, nil
+				},
+				getAuthorFn: func() (*git.User, error) {
+					return nil, errors.New("something went wrong")
+				},
+				getCredentialsFn: func(
+					context.Context,
+					string,
+					string,
+				) (*git.RepoCredentials, error) {
+					return nil, nil
 				},
 			},
 			assertions: func(
@@ -224,6 +260,9 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					[]kargoapi.GitCommit,
 				) (string, int, error) {
 					return testRef, 0, nil
+				},
+				getAuthorFn: func() (*git.User, error) {
+					return nil, nil
 				},
 				getCredentialsFn: func(
 					context.Context,
@@ -263,6 +302,9 @@ func TestGitDoSingleUpdate(t *testing.T) {
 					[]kargoapi.GitCommit,
 				) (string, int, error) {
 					return testRef, 0, nil
+				},
+				getAuthorFn: func() (*git.User, error) {
+					return nil, nil
 				},
 				getCredentialsFn: func(
 					context.Context,

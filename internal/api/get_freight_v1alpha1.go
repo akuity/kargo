@@ -51,7 +51,20 @@ func (s *server) GetFreight(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
+	obj, raw, err := objectOrRaw(freight, req.Msg.GetFormat())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if raw != nil {
+		return connect.NewResponse(&svcv1alpha1.GetFreightResponse{
+			Result: &svcv1alpha1.GetFreightResponse_Raw{
+				Raw: raw,
+			},
+		}), nil
+	}
 	return connect.NewResponse(&svcv1alpha1.GetFreightResponse{
-		Freight: freight,
+		Result: &svcv1alpha1.GetFreightResponse_Freight{
+			Freight: obj,
+		},
 	}), nil
 }

@@ -73,7 +73,7 @@
                     "type": "string"
                   },
                   "excludePaths": {
-                    "description": "ExcludePaths is an optional list of regular expressions used to specify paths\nin git repository, changes in which should never produce new freight. When used\nin conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes\nprecedence over IncludePaths.",
+                    "description": "ExcludePaths is an optional list of filter strings used to specify paths\nin git repository, changes in which should never produce new freight. When used\nin conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes\nprecedence over IncludePaths.\nFilter strings can be specified as prefix/exact match strings, globs or regular\nexpressions, default being prefix/exact match, for example \"helm/charts/\", for\nregular expressions strings need to be prepended by either \"regex:\" or \"regexp:\"\nas in \"regexp:^.*values\\.yaml$\", for globs with \"glob:\" as in \"glob:helm/*/*/values.*ml\"",
                     "items": {
                       "type": "string"
                     },
@@ -87,7 +87,7 @@
                     "type": "array"
                   },
                   "includePaths": {
-                    "description": "IncludePaths is a list of regular expressions that can optionally be used to\nlimit file paths in repository, changes in which will result in creation of\nnew freight. When not specified - changes in any path will produce new\nfreight, it is equivalent to having a IncludePaths with an entry of \".*\"\nWhen both IncludePaths and ExcludePaths are specified and match same path/paths,\nExcludePaths will prevail over IncludePaths.",
+                    "description": "IncludePaths is a list of filter strings that can optionally be used to\nlimit file paths in repository, changes in which will result in creation of\nnew freight. When not specified - changes in any path will produce new\nfreight, it is equivalent to having a IncludePaths with an entry of \"regex:.*\"\nWhen both IncludePaths and ExcludePaths are specified and match same path/paths,\nExcludePaths will prevail over IncludePaths.\nFilter strings can be specified as prefix/exact match strings, globs or regular\nexpressions, default being prefix/exact match, for example \"helm/charts/\", for\nregular expressions strings need to be prepended by either \"regex:\" or \"regexp:\"\nas in \"regexp:^.*values\\.yaml$\", for globs with \"glob:\" as in \"glob:helm/*/*/values.*ml\"",
                     "items": {
                       "type": "string"
                     },
@@ -280,6 +280,10 @@
               "items": {
                 "description": "VerificationInfo contains information about the currently running\nVerification process.",
                 "properties": {
+                  "actor": {
+                    "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                    "type": "string"
+                  },
                   "analysisRun": {
                     "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                     "properties": {
@@ -302,6 +306,11 @@
                       "phase"
                     ],
                     "type": "object"
+                  },
+                  "finishTime": {
+                    "description": "FinishTime is the time at which the Verification process finished.",
+                    "format": "date-time",
+                    "type": "string"
                   },
                   "id": {
                     "description": "ID is the identifier of the Verification process.",
@@ -328,6 +337,10 @@
             "verificationInfo": {
               "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
               "properties": {
+                "actor": {
+                  "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                  "type": "string"
+                },
                 "analysisRun": {
                   "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                   "properties": {
@@ -350,6 +363,11 @@
                     "phase"
                   ],
                   "type": "object"
+                },
+                "finishTime": {
+                  "description": "FinishTime is the time at which the Verification process finished.",
+                  "format": "date-time",
+                  "type": "string"
                 },
                 "id": {
                   "description": "ID is the identifier of the Verification process.",
@@ -377,6 +395,10 @@
             }
           },
           "type": "object"
+        },
+        "lastHandledRefresh": {
+          "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+          "type": "string"
         },
         "message": {
           "description": "Message describes any errors that are preventing the Warehouse controller\nfrom polling repositories to discover new Freight.",

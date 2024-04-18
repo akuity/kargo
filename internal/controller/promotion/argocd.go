@@ -323,8 +323,8 @@ func applyArgoCDSourceUpdate(
 	} else {
 		// We're dealing with a git repo, so we should normalize the repo URLs
 		// before comparing them.
-		sourceRepoURL := git.NormalizeGitURL(source.RepoURL)
-		if sourceRepoURL != git.NormalizeGitURL(update.RepoURL) {
+		sourceRepoURL := git.NormalizeURL(source.RepoURL)
+		if sourceRepoURL != git.NormalizeURL(update.RepoURL) {
 			return source, nil
 		}
 		// If we get to here, we have confirmed that this update is applicable to
@@ -332,8 +332,12 @@ func applyArgoCDSourceUpdate(
 		//
 		// Now find the commit in the new freight that corresponds to this source.
 		for _, commit := range newFreight.Commits {
-			if git.NormalizeGitURL(commit.RepoURL) == sourceRepoURL {
-				source.TargetRevision = commit.ID
+			if git.NormalizeURL(commit.RepoURL) == sourceRepoURL {
+				if commit.Tag != "" {
+					source.TargetRevision = commit.Tag
+				} else {
+					source.TargetRevision = commit.ID
+				}
 				break
 			}
 		}

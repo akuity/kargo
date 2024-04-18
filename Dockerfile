@@ -1,7 +1,23 @@
 ####################################################################################################
+# ui-builder
+####################################################################################################
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.2 AS ui-builder
+
+RUN npm install --global pnpm
+WORKDIR /ui
+COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
+ARG VERSION
+
+RUN pnpm install
+
+COPY ["ui/", "."]
+
+RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
+
+####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.22.1-bookworm as back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.22.2-bookworm as back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -17,6 +33,7 @@ COPY api/ api/
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
+COPY --from=ui-builder /ui/build internal/api/ui/
 
 ARG VERSION
 ARG GIT_COMMIT
@@ -29,22 +46,6 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
     && bin/kargo version
 
 WORKDIR /kargo/bin
-
-####################################################################################################
-# ui-builder
-####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.0 AS ui-builder
-
-RUN npm install --global pnpm
-WORKDIR /ui
-COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
-ARG VERSION
-
-RUN pnpm install
-
-COPY ["ui/", "."]
-
-RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 
 ####################################################################################################
 # tools
@@ -63,17 +64,33 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
     chmod +x /tools/grpc_health_probe
 
 ####################################################################################################
+# base
+# - install necessary packages
+####################################################################################################
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 as base
+
+USER root
+
+RUN apk update \
+    && apk add gpg gpg-agent
+
+COPY --from=tools /tools/ /usr/local/bin/
+
+USER 1000:0
+
+CMD ["/usr/local/bin/kargo"]
+
+####################################################################################################
 # back-end-dev
 # - no UI
 # - relies on go build that runs on host
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 as back-end-dev
+FROM base as back-end-dev
 
 USER root
 
-COPY --from=tools /tools/ /usr/local/bin/
 COPY bin/controlplane/kargo /usr/local/bin/kargo
 
 USER 1000:0
@@ -87,9 +104,9 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:20.12.2 AS ui-dev
 
-RUN npm install --global pnpm
+RUN npm install --global pnpm@9.0.2
 WORKDIR /ui
 COPY ["ui/package.json", "ui/pnpm-lock.yaml", "./"]
 
@@ -104,13 +121,12 @@ CMD ["pnpm", "dev"]
 # - the official image we publish
 # - purposefully last so that it is the default target when building
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 as final
+FROM base as final
 
 USER root
 
 COPY --from=back-end-builder /kargo/bin/ /usr/local/bin/
 COPY --from=tools /tools/ /usr/local/bin/
-COPY --from=ui-builder /ui/build /ui/build
 
 USER 1000:0
 

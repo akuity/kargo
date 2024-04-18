@@ -52,7 +52,6 @@ func TestClearAnnotations(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
 
-	t.Parallel()
 	newFakeClient := func(obj ...client.Object) client.Client {
 		return fake.NewClientBuilder().
 			WithScheme(scheme).
@@ -164,6 +163,7 @@ func TestClearAnnotations(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			err := ClearAnnotations(context.TODO(), tc.client, tc.obj, tc.keys...)
 			tc.assertions(t, tc.obj, err)
 		})
@@ -174,7 +174,6 @@ func Test_patchAnnotation(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
 
-	t.Parallel()
 	newFakeClient := func(obj ...client.Object) client.Client {
 		return fake.NewClientBuilder().
 			WithScheme(scheme).
@@ -240,6 +239,7 @@ func Test_patchAnnotation(t *testing.T) {
 	for name, tc := range testCases {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			err := patchAnnotation(context.Background(), tc.client, tc.obj, tc.key, tc.value)
 			if tc.errExpected {
 				require.Error(t, err)

@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -21,6 +22,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
+	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
@@ -39,7 +41,7 @@ func newAPICommand() *cobra.Command {
 		Logger: log.StandardLogger(),
 	}
 
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:               "api",
 		DisableAutoGenTag: true,
 		SilenceErrors:     true,
@@ -50,6 +52,8 @@ func newAPICommand() *cobra.Command {
 			return cmdOpts.run(cmd.Context())
 		},
 	}
+
+	return cmd
 }
 
 func (o *apiOptions) complete() {
@@ -68,15 +72,15 @@ func (o *apiOptions) run(ctx context.Context) error {
 
 	cfg := config.ServerConfigFromEnv()
 
-	clientCfg, internalClient, err := o.setupAPIClient(ctx)
+	clientCfg, internalClient, recorder, err := o.setupAPIClient(ctx)
 	if err != nil {
 		return fmt.Errorf("error setting up internal Kubernetes API client: %w", err)
 	}
+
 	kubeClient, err := newWrappedKubernetesClient(ctx, clientCfg, internalClient, cfg)
 	if err != nil {
 		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
 	}
-
 	switch {
 	case !cfg.RolloutsIntegrationEnabled:
 		o.Logger.Info("Argo Rollouts integration is disabled")
@@ -91,17 +95,17 @@ func (o *apiOptions) run(ctx context.Context) error {
 	}
 
 	if cfg.AdminConfig != nil {
-		log.Info("admin account is enabled")
+		o.Logger.Info("admin account is enabled")
 	}
 	if cfg.OIDCConfig != nil {
-		log.WithFields(log.Fields{
+		o.Logger.WithFields(log.Fields{
 			"issuerURL":   cfg.OIDCConfig.IssuerURL,
 			"clientID":    cfg.OIDCConfig.ClientID,
 			"cliClientID": cfg.OIDCConfig.CLIClientID,
 		}).Info("SSO via OpenID Connect is enabled")
 	}
 
-	srv := api.NewServer(cfg, kubeClient, internalClient)
+	srv := api.NewServer(cfg, kubeClient, internalClient, recorder)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
@@ -114,23 +118,23 @@ func (o *apiOptions) run(ctx context.Context) error {
 	return nil
 }
 
-func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.Client, error) {
+func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.Client, record.EventRecorder, error) {
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get REST config: %w", err)
+		return nil, nil, nil, fmt.Errorf("get REST config: %w", err)
 	}
 
 	scheme := runtime.NewScheme()
 	if err = kubescheme.AddToScheme(scheme); err != nil {
-		return nil, nil, fmt.Errorf("error adding Kubernetes API to Kargo API manager scheme: %w", err)
+		return nil, nil, nil, fmt.Errorf("error adding Kubernetes API to Kargo API manager scheme: %w", err)
 	}
 
 	if err = rollouts.AddToScheme(scheme); err != nil {
-		return nil, nil, fmt.Errorf("error adding Argo Rollouts API to Kargo API manager scheme: %w", err)
+		return nil, nil, nil, fmt.Errorf("error adding Argo Rollouts API to Kargo API manager scheme: %w", err)
 	}
 
 	if err = kargoapi.AddToScheme(scheme); err != nil {
-		return nil, nil, fmt.Errorf("error adding Kargo API to Kargo API manager scheme: %w", err)
+		return nil, nil, nil, fmt.Errorf("error adding Kargo API to Kargo API manager scheme: %w", err)
 	}
 
 	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
@@ -147,11 +151,11 @@ func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.C
 		},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("error initializing Kargo API manager: %w", err)
+		return nil, nil, nil, fmt.Errorf("error initializing Kargo API manager: %w", err)
 	}
 
 	if err = registerKargoIndexers(ctx, mgr); err != nil {
-		return nil, nil, fmt.Errorf("failed to register Kargo indexers: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to register Kargo indexers: %w", err)
 	}
 
 	go func() {
@@ -160,7 +164,7 @@ func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.C
 		}
 	}()
 
-	return restCfg, mgr.GetClient(), nil
+	return restCfg, mgr.GetClient(), libEvent.NewRecorder(ctx, scheme, mgr.GetClient(), "api"), nil
 }
 
 func registerKargoIndexers(ctx context.Context, mgr ctrl.Manager) error {

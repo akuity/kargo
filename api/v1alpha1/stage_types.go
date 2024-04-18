@@ -245,9 +245,14 @@ type GitRepoUpdate struct {
 type PullRequestPromotionMechanism struct {
 	// GitHub indicates git provider is GitHub
 	GitHub *GitHubPullRequest `json:"github,omitempty" protobuf:"bytes,1,opt,name=github"`
+	// GitLab indicates git provider is GitLab
+	GitLab *GitLabPullRequest `json:"gitlab,omitempty" protobuf:"bytes,2,opt,name=gitlab"`
 }
 
 type GitHubPullRequest struct {
+}
+
+type GitLabPullRequest struct {
 }
 
 // KargoRenderPromotionMechanism describes how to use Kargo Render to
@@ -499,6 +504,11 @@ type ArgoCDHelmImageUpdate struct {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 type StageStatus struct {
+	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+	// annotation that was handled by the controller. This field can be used to
+	// determine whether the request to refresh the resource has been handled.
+	// +optional
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,11,opt,name=lastHandledRefresh"`
 	// Phase describes where the Stage currently is in its lifecycle.
 	Phase StagePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// CurrentFreight is a simplified representation of the Stage's current
@@ -723,6 +733,9 @@ type AnalysisRunArgument struct {
 type VerificationInfo struct {
 	// ID is the identifier of the Verification process.
 	ID string `json:"id,omitempty" protobuf:"bytes,4,opt,name=id"`
+	// Actor is the name of the entity that initiated or aborted the
+	// Verification process.
+	Actor string `json:"actor,omitempty" protobuf:"bytes,7,opt,name=actor"`
 	// StartTime is the time at which the Verification process was started.
 	StartTime *metav1.Time `json:"startTime,omitempty" protobuf:"bytes,5,opt,name=startTime"`
 	// Phase describes the current phase of the Verification process. Generally,
@@ -736,9 +749,25 @@ type VerificationInfo struct {
 	// AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
 	// the Verification process.
 	AnalysisRun *AnalysisRunReference `json:"analysisRun,omitempty" protobuf:"bytes,3,opt,name=analysisRun"`
+	// FinishTime is the time at which the Verification process finished.
+	FinishTime *metav1.Time `json:"finishTime,omitempty" protobuf:"bytes,6,opt,name=finishTime"`
+}
+
+// HasAnalysisRun returns a bool indicating whether the VerificationInfo has an
+// associated AnalysisRun.
+func (v *VerificationInfo) HasAnalysisRun() bool {
+	return v != nil && v.AnalysisRun != nil
 }
 
 type VerificationInfoStack []VerificationInfo
+
+// Current returns the VerificationInfo at the top of the stack.
+func (v *VerificationInfoStack) Current() *VerificationInfo {
+	if len(*v) == 0 {
+		return nil
+	}
+	return &(*v)[0]
+}
 
 // UpdateOrPush updates the VerificationInfo with the same ID as the provided
 // VerificationInfo or appends the provided VerificationInfo to the stack if no

@@ -281,6 +281,10 @@
                       "github": {
                         "description": "GitHub indicates git provider is GitHub",
                         "type": "object"
+                      },
+                      "gitlab": {
+                        "description": "GitLab indicates git provider is GitLab",
+                        "type": "object"
                       }
                     },
                     "type": "object"
@@ -546,6 +550,10 @@
               "items": {
                 "description": "VerificationInfo contains information about the currently running\nVerification process.",
                 "properties": {
+                  "actor": {
+                    "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                    "type": "string"
+                  },
                   "analysisRun": {
                     "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                     "properties": {
@@ -568,6 +576,11 @@
                       "phase"
                     ],
                     "type": "object"
+                  },
+                  "finishTime": {
+                    "description": "FinishTime is the time at which the Verification process finished.",
+                    "format": "date-time",
+                    "type": "string"
                   },
                   "id": {
                     "description": "ID is the identifier of the Verification process.",
@@ -594,6 +607,10 @@
             "verificationInfo": {
               "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
               "properties": {
+                "actor": {
+                  "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                  "type": "string"
+                },
                 "analysisRun": {
                   "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                   "properties": {
@@ -616,6 +633,11 @@
                     "phase"
                   ],
                   "type": "object"
+                },
+                "finishTime": {
+                  "description": "FinishTime is the time at which the Verification process finished.",
+                  "format": "date-time",
+                  "type": "string"
                 },
                 "id": {
                   "description": "ID is the identifier of the Verification process.",
@@ -745,6 +767,10 @@
                   "items": {
                     "description": "VerificationInfo contains information about the currently running\nVerification process.",
                     "properties": {
+                      "actor": {
+                        "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                        "type": "string"
+                      },
                       "analysisRun": {
                         "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                         "properties": {
@@ -767,6 +793,11 @@
                           "phase"
                         ],
                         "type": "object"
+                      },
+                      "finishTime": {
+                        "description": "FinishTime is the time at which the Verification process finished.",
+                        "format": "date-time",
+                        "type": "string"
                       },
                       "id": {
                         "description": "ID is the identifier of the Verification process.",
@@ -793,6 +824,10 @@
                 "verificationInfo": {
                   "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
                   "properties": {
+                    "actor": {
+                      "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                      "type": "string"
+                    },
                     "analysisRun": {
                       "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                       "properties": {
@@ -815,6 +850,11 @@
                         "phase"
                       ],
                       "type": "object"
+                    },
+                    "finishTime": {
+                      "description": "FinishTime is the time at which the Verification process finished.",
+                      "format": "date-time",
+                      "type": "string"
                     },
                     "id": {
                       "description": "ID is the identifier of the Verification process.",
@@ -850,6 +890,10 @@
             "status": {
               "description": "Status is the (optional) status of the promotion",
               "properties": {
+                "lastHandledRefresh": {
+                  "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+                  "type": "string"
+                },
                 "message": {
                   "description": "Message is a display message about the promotion, including any errors\npreventing the Promotion controller from executing this Promotion.\ni.e. If the Phase field has a value of Failed, this field can be expected\nto explain why.",
                   "type": "string"
@@ -1050,6 +1094,10 @@
                 "items": {
                   "description": "VerificationInfo contains information about the currently running\nVerification process.",
                   "properties": {
+                    "actor": {
+                      "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                      "type": "string"
+                    },
                     "analysisRun": {
                       "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                       "properties": {
@@ -1072,6 +1120,11 @@
                         "phase"
                       ],
                       "type": "object"
+                    },
+                    "finishTime": {
+                      "description": "FinishTime is the time at which the Verification process finished.",
+                      "format": "date-time",
+                      "type": "string"
                     },
                     "id": {
                       "description": "ID is the identifier of the Verification process.",
@@ -1098,6 +1151,10 @@
               "verificationInfo": {
                 "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
                 "properties": {
+                  "actor": {
+                    "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                    "type": "string"
+                  },
                   "analysisRun": {
                     "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                     "properties": {
@@ -1120,6 +1177,11 @@
                       "phase"
                     ],
                     "type": "object"
+                  },
+                  "finishTime": {
+                    "description": "FinishTime is the time at which the Verification process finished.",
+                    "format": "date-time",
+                    "type": "string"
                   },
                   "id": {
                     "description": "ID is the identifier of the Verification process.",
@@ -1149,6 +1211,10 @@
             "type": "object"
           },
           "type": "array"
+        },
+        "lastHandledRefresh": {
+          "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+          "type": "string"
         },
         "lastPromotion": {
           "description": "LastPromotion is a reference to the last completed promotion.",
@@ -1251,6 +1317,10 @@
                   "items": {
                     "description": "VerificationInfo contains information about the currently running\nVerification process.",
                     "properties": {
+                      "actor": {
+                        "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                        "type": "string"
+                      },
                       "analysisRun": {
                         "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                         "properties": {
@@ -1273,6 +1343,11 @@
                           "phase"
                         ],
                         "type": "object"
+                      },
+                      "finishTime": {
+                        "description": "FinishTime is the time at which the Verification process finished.",
+                        "format": "date-time",
+                        "type": "string"
                       },
                       "id": {
                         "description": "ID is the identifier of the Verification process.",
@@ -1299,6 +1374,10 @@
                 "verificationInfo": {
                   "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
                   "properties": {
+                    "actor": {
+                      "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                      "type": "string"
+                    },
                     "analysisRun": {
                       "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                       "properties": {
@@ -1321,6 +1400,11 @@
                         "phase"
                       ],
                       "type": "object"
+                    },
+                    "finishTime": {
+                      "description": "FinishTime is the time at which the Verification process finished.",
+                      "format": "date-time",
+                      "type": "string"
                     },
                     "id": {
                       "description": "ID is the identifier of the Verification process.",
@@ -1356,6 +1440,10 @@
             "status": {
               "description": "Status is the (optional) status of the promotion",
               "properties": {
+                "lastHandledRefresh": {
+                  "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+                  "type": "string"
+                },
                 "message": {
                   "description": "Message is a display message about the promotion, including any errors\npreventing the Promotion controller from executing this Promotion.\ni.e. If the Phase field has a value of Failed, this field can be expected\nto explain why.",
                   "type": "string"

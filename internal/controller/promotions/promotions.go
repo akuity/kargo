@@ -3,11 +3,15 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,20 +25,50 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 )
+
+// ReconcilerConfig represents configuration for the promotion reconciler.
+type ReconcilerConfig struct {
+	ShardName string `envconfig:"SHARD_NAME"`
+}
+
+func (c ReconcilerConfig) Name() string {
+	name := "promotion-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
+func ReconcilerConfigFromEnv() ReconcilerConfig {
+	var cfg ReconcilerConfig
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
 	kargoClient     client.Client
 	promoMechanisms promotion.Mechanism
 
+	cfg ReconcilerConfig
+
+	recorder record.EventRecorder
+
 	pqs            *promoQueues
 	initializeOnce sync.Once
 
 	// The following behaviors are overridable for testing purposes:
 
-	promoteFn func(context.Context, kargoapi.Promotion) (*kargoapi.PromotionStatus, error)
+	getStageFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.Stage, error)
+
+	promoteFn func(context.Context, kargoapi.Promotion, *kargoapi.Freight) (*kargoapi.PromotionStatus, error)
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -44,10 +78,10 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
 	credentialsDB credentials.Database,
-	shardName string,
+	cfg ReconcilerConfig,
 ) error {
 
-	shardPredicate, err := controller.GetShardPredicate(shardName)
+	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
 	if err != nil {
 		return fmt.Errorf("error creating shard selector predicate: %w", err)
 	}
@@ -60,23 +94,18 @@ func SetupReconcilerWithManager(
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		argocdClient,
+		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 		credentialsDB,
-	)
-
-	changePredicate := predicate.Or(
-		predicate.GenerationChangedPredicate{},
-		predicate.AnnotationChangedPredicate{},
+		cfg,
 	)
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Promotion{}).
-		WithEventFilter(changePredicate).
+		WithEventFilter(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			kargo.RefreshRequested{},
+		)).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreAnnotationRemoval{
-			Annotations: []string{
-				kargoapi.AnnotationKeyRefresh,
-			},
-		}).
 		WithOptions(controller.CommonOptions()).
 		Build(reconciler)
 	if err != nil {
@@ -108,7 +137,9 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kargoClient client.Client,
 	argocdClient client.Client,
+	recorder record.EventRecorder,
 	credentialsDB credentials.Database,
+	cfg ReconcilerConfig,
 ) *reconciler {
 	pqs := promoQueues{
 		activePromoByStage:        map[types.NamespacedName]string{},
@@ -116,12 +147,15 @@ func newReconciler(
 	}
 	r := &reconciler{
 		kargoClient: kargoClient,
+		recorder:    recorder,
+		cfg:         cfg,
 		pqs:         &pqs,
 		promoMechanisms: promotion.NewMechanisms(
 			argocdClient,
 			credentialsDB,
 		),
 	}
+	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
 	return r
 }
@@ -132,7 +166,13 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
-	logger := logging.LoggerFromContext(ctx)
+	logger := logging.LoggerFromContext(ctx).
+		WithFields(log.Fields{
+			"namespace": req.NamespacedName.Namespace,
+			"promotion": req.NamespacedName.Name,
+		})
+	ctx = logging.ContextWithLogger(ctx, logger)
+	logger.Debug("reconciling Promotion")
 
 	// Note that initialization occurs here because we basically know that the
 	// controller runtime client's cache is ready at this point. We cannot attempt
@@ -153,8 +193,6 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("error initializing Promotion queues: %w", err)
 	}
 
-	ctx = logging.ContextWithLogger(ctx, logger)
-
 	// Find the Promotion
 	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
@@ -164,6 +202,19 @@ func (r *reconciler) Reconcile(
 		// Ignore if not found or already finished. Promo might be nil if the
 		// Promotion was deleted after the current reconciliation request was issued.
 		return ctrl.Result{}, nil
+	}
+	// Find the Freight
+	freight, err := kargoapi.GetFreight(ctx, r.kargoClient, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	})
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf(
+			"error finding Freight %q in namespace %q: %w",
+			promo.Spec.Freight,
+			promo.Namespace,
+			err,
+		)
 	}
 
 	logger = logger.WithFields(log.Fields{
@@ -219,6 +270,7 @@ func (r *reconciler) Reconcile(
 		otherStatus, promoteErr := r.promoteFn(
 			promoCtx,
 			*promo,
+			freight,
 		)
 		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
@@ -233,19 +285,63 @@ func (r *reconciler) Reconcile(
 		logger.Infof("promotion %s", newStatus.Phase)
 	}
 
+	// Record the current refresh token as having been handled.
+	if token, ok := kargoapi.RefreshAnnotationValue(promo.GetAnnotations()); ok {
+		newStatus.LastHandledRefresh = token
+	}
+
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
 	})
 	if err != nil {
 		logger.Errorf("error updating Promotion status: %s", err)
 	}
-	if clearRefreshErr := kargoapi.ClearAnnotations(
-		ctx,
-		r.kargoClient,
-		promo,
-		kargoapi.AnnotationKeyRefresh,
-	); clearRefreshErr != nil {
-		logger.Errorf("error clearing Promotion refresh annotation: %s", clearRefreshErr)
+
+	// Record event after patching status if new phase is terminal
+	if newStatus.Phase.IsTerminal() {
+		stage, getStageErr := r.getStageFn(
+			ctx,
+			r.kargoClient,
+			types.NamespacedName{
+				Namespace: promo.Namespace,
+				Name:      promo.Spec.Stage,
+			},
+		)
+		if getStageErr != nil {
+			return ctrl.Result{}, fmt.Errorf("get stage: %w", err)
+		}
+		if stage == nil {
+			return ctrl.Result{}, fmt.Errorf(
+				"stage %q not found in namespace %q",
+				promo.Spec.Stage,
+				promo.Namespace,
+			)
+		}
+
+		var reason string
+		switch newStatus.Phase {
+		case kargoapi.PromotionPhaseSucceeded:
+			reason = kargoapi.EventReasonPromotionSucceeded
+		case kargoapi.PromotionPhaseFailed:
+			reason = kargoapi.EventReasonPromotionFailed
+		case kargoapi.PromotionPhaseErrored:
+			reason = kargoapi.EventReasonPromotionErrored
+		}
+
+		msg := fmt.Sprintf("Promotion %s", newStatus.Phase)
+		if newStatus.Message != "" {
+			msg += fmt.Sprintf(": %s", newStatus.Message)
+		}
+
+		eventAnnotations := kargoapi.NewPromotionEventAnnotations(ctx,
+			kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			promo, freight)
+
+		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+			eventAnnotations[kargoapi.AnnotationKeyEventVerificationPending] =
+				strconv.FormatBool(stage.Spec.Verification != nil)
+		}
+		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
 	}
 
 	if err != nil {
@@ -267,13 +363,13 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) promote(
 	ctx context.Context,
 	promo kargoapi.Promotion,
+	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 	stageName := promo.Spec.Stage
 	stageNamespace := promo.Namespace
-	freightName := promo.Spec.Freight
 
-	stage, err := kargoapi.GetStage(
+	stage, err := r.getStageFn(
 		ctx,
 		r.kargoClient,
 		types.NamespacedName{
@@ -289,29 +385,6 @@ func (r *reconciler) promote(
 	}
 	logger.Debug("found associated Stage")
 
-	if stage.Status.CurrentFreight != nil && stage.Status.CurrentFreight.Name == freightName {
-		return &kargoapi.PromotionStatus{
-			Phase:   kargoapi.PromotionPhaseSucceeded,
-			Message: "Stage already has the desired Freight",
-		}, nil
-	}
-
-	targetFreight, err := kargoapi.GetFreight(
-		ctx,
-		r.kargoClient,
-		types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      promo.Spec.Freight,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error finding Freight %q in namespace %q: %w",
-			promo.Spec.Freight,
-			promo.Namespace,
-			err,
-		)
-	}
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
@@ -327,6 +400,8 @@ func (r *reconciler) promote(
 			stageNamespace,
 		)
 	}
+
+	logger = logger.WithField("targetFreight", targetFreight.Name)
 
 	targetFreightRef := kargoapi.FreightReference{
 		Name:      targetFreight.Name,
@@ -359,23 +434,34 @@ func (r *reconciler) promote(
 		// so we are safe from race conditions and can just update the status
 		// TODO: remove all patching of Stage status out of promo reconciler
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
-			// control-flow Stage history is maintained in Stage controller.
-			// So we only modify history for normal Stages.
-			// (Technically, we should prevent creating promotion jobs on
-			// control-flow stages in the first place)
 			status.LastPromotion = status.CurrentPromotion
 			status.LastPromotion.Status = newStatus
-
 			if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
-				// Only push promotion to Stage status history if the promotion succeeded
-				status.Phase = kargoapi.StagePhaseVerifying
-				status.CurrentPromotion = nil
-				if stage.Spec.PromotionMechanisms != nil {
+				// Handle specific things that need to happen on success.
+				// 1. Trigger re-verification for re-promotions.
+				// 2. Otherwise, update the current freight and history.
+				// 3. Update the phase to Verifying and clear the current promotion.
+				if status.CurrentFreight != nil &&
+					status.CurrentFreight.Name == targetFreight.Name {
+					if err = kargoapi.ReverifyStageFreight(
+						ctx,
+						r.kargoClient,
+						types.NamespacedName{
+							Namespace: stageNamespace,
+							Name:      stageName,
+						},
+					); err != nil {
+						// Log the error, but don't let failure to initiate re-verification
+						// prevent the promotion from succeeding.
+						logger.Errorf("error triggering re-verification: %s", err)
+					}
+				} else if stage.Spec.PromotionMechanisms != nil {
 					status.CurrentFreight = &nextFreight
 					status.History.UpdateOrPush(nextFreight)
 				}
+				status.Phase = kargoapi.StagePhaseVerifying
+				status.CurrentPromotion = nil
 			}
-
 		}); err != nil {
 			return nil, fmt.Errorf(
 				"error updating status of Stage %q in namespace %q: %w",

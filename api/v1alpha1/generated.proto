@@ -386,6 +386,9 @@ message GitCommit {
 message GitHubPullRequest {
 }
 
+message GitLabPullRequest {
+}
+
 // GitRepoUpdate describes updates that should be applied to a Git repository
 // (using various configuration management tools) to incorporate Freight into a
 // Stage.
@@ -497,19 +500,27 @@ message GitSubscription {
   // only with great caution.
   optional bool insecureSkipTLSVerify = 7;
 
-  // IncludePaths is a list of regular expressions that can optionally be used to
+  // IncludePaths is a list of filter strings that can optionally be used to
   // limit file paths in repository, changes in which will result in creation of
   // new freight. When not specified - changes in any path will produce new
-  // freight, it is equivalent to having a IncludePaths with an entry of ".*"
+  // freight, it is equivalent to having a IncludePaths with an entry of "regex:.*"
   // When both IncludePaths and ExcludePaths are specified and match same path/paths,
   // ExcludePaths will prevail over IncludePaths.
+  // Filter strings can be specified as prefix/exact match strings, globs or regular
+  // expressions, default being prefix/exact match, for example "helm/charts/", for
+  // regular expressions strings need to be prepended by either "regex:" or "regexp:"
+  // as in "regexp:^.*values\.yaml$", for globs with "glob:" as in "glob:helm/*/*/values.*ml"
   // +kubebuilder:validation:Optional
   repeated string includePaths = 8;
 
-  // ExcludePaths is an optional list of regular expressions used to specify paths
+  // ExcludePaths is an optional list of filter strings used to specify paths
   // in git repository, changes in which should never produce new freight. When used
   // in conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes
   // precedence over IncludePaths.
+  // Filter strings can be specified as prefix/exact match strings, globs or regular
+  // expressions, default being prefix/exact match, for example "helm/charts/", for
+  // regular expressions strings need to be prepended by either "regex:" or "regexp:"
+  // as in "regexp:^.*values\.yaml$", for globs with "glob:" as in "glob:helm/*/*/values.*ml"
   // +kubebuilder:validation:Optional
   repeated string excludePaths = 9;
 }
@@ -880,6 +891,12 @@ message PromotionSpec {
 // PromotionStatus describes the current state of the transition represented by
 // a Promotion.
 message PromotionStatus {
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
+
   // Phase describes where the Promotion currently is in its lifecycle.
   optional string phase = 1;
 
@@ -899,6 +916,9 @@ message PromotionStatus {
 message PullRequestPromotionMechanism {
   // GitHub indicates git provider is GitHub
   optional GitHubPullRequest github = 1;
+
+  // GitLab indicates git provider is GitLab
+  optional GitLabPullRequest gitlab = 2;
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
@@ -967,6 +987,12 @@ message StageSpec {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 message StageStatus {
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 11;
+
   // Phase describes where the Stage currently is in its lifecycle.
   optional string phase = 1;
 
@@ -1038,6 +1064,10 @@ message VerificationInfo {
   // ID is the identifier of the Verification process.
   optional string id = 4;
 
+  // Actor is the name of the entity that initiated or aborted the
+  // Verification process.
+  optional string actor = 7;
+
   // StartTime is the time at which the Verification process was started.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
 
@@ -1054,6 +1084,9 @@ message VerificationInfo {
   // AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
   // the Verification process.
   optional AnalysisRunReference analysisRun = 3;
+
+  // FinishTime is the time at which the Verification process finished.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishTime = 6;
 }
 
 // VerifiedStage describes a Stage in which Freight has been verified.
@@ -1102,6 +1135,12 @@ message WarehouseSpec {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 message WarehouseStatus {
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 6;
+
   // Message describes any errors that are preventing the Warehouse controller
   // from polling repositories to discover new Freight.
   optional string message = 3;

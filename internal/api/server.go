@@ -2,11 +2,12 @@ package api
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/http"
-	goos "os"
 	"time"
 
 	"connectrpc.com/grpchealth"
@@ -16,6 +17,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -25,19 +27,22 @@ import (
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/api/validation"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 var (
 	_ svcv1alpha1connect.KargoServiceHandler = &server{}
+
+	//go:embed all:ui
+	ui embed.FS
 )
 
 type server struct {
 	cfg            config.ServerConfig
 	client         kubernetes.Client
 	internalClient client.Client
+	recorder       record.EventRecorder
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -150,11 +155,13 @@ func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	internalClient client.Client,
+	recorder record.EventRecorder,
 ) Server {
 	s := &server{
 		cfg:            cfg,
 		client:         kubeClient,
 		internalClient: internalClient,
+		recorder:       recorder,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists
@@ -188,7 +195,11 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
-	mux.Handle("/", s.newDashboardRequestHandler())
+	uiFS := fs.FS(ui)
+	if uiFS, err = fs.Sub(uiFS, "ui"); err != nil {
+		return fmt.Errorf("error initializing UI file system: %w", err)
+	}
+	mux.Handle("/", http.FileServer(http.FS(uiFS)))
 	if s.cfg.DexProxyConfig != nil {
 		dexProxyCfg := dex.ProxyConfigFromEnv()
 		dexProxy, err := dex.NewProxy(dexProxyCfg)
@@ -242,21 +253,5 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 			return nil
 		}
 		return err
-	}
-}
-
-func (s *server) newDashboardRequestHandler() http.HandlerFunc {
-	fs := http.FileServer(http.Dir(s.cfg.UIDirectory))
-	return func(w http.ResponseWriter, req *http.Request) {
-		path := s.cfg.UIDirectory + req.URL.Path
-		info, err := goos.Stat(path)
-		if goos.IsNotExist(err) || info.IsDir() {
-			if w != nil {
-				httputil.SetNoCacheHeaders(w)
-				http.ServeFile(w, req, s.cfg.UIDirectory+"/index.html")
-			}
-		} else {
-			fs.ServeHTTP(w, req)
-		}
 	}
 }

@@ -89,15 +89,15 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
             repo = new Map<string, StageStyleMap>();
             images.set(image.repoURL!, repo);
           }
-          let stages = image.tag ? repo.get(image.tag) : undefined;
-          if (!stages) {
-            stages = {} as StageStyleMap;
-            repo.set(image.tag!, stages);
+          let curStages = image.tag ? repo.get(image.tag) : undefined;
+          if (!curStages) {
+            curStages = {} as StageStyleMap;
           }
-          stages[stage.metadata?.name as string] = {
+          curStages[stage.metadata?.name as string] = {
             opacity: 1 - i / len,
             backgroundColor: colors[stage.metadata?.name as string]
           };
+          repo.set(image.tag!, curStages);
         });
       });
 
@@ -107,15 +107,15 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
           repo = new Map<string, StageStyleMap>();
           images.set(image.repoURL!, repo);
         }
-        let stages = image.tag ? repo.get(image.tag) : undefined;
-        if (!stages) {
-          stages = {} as StageStyleMap;
-          repo.set(image.tag!, stages);
+        let curStages = image.tag ? repo.get(image.tag) : undefined;
+        if (!curStages) {
+          curStages = {} as StageStyleMap;
         }
-        stages[stage.metadata?.name as string] = {
+        curStages[stage.metadata?.name as string] = {
           opacity: 1,
           backgroundColor: colors[stage.metadata?.name as string]
         };
+        repo.set(image.tag!, curStages);
       });
     });
     return images;

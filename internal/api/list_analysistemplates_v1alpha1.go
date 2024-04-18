@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,6 +39,10 @@ func (s *server) ListAnalysisTemplates(
 	if err := s.client.List(ctx, &list, opts...); err != nil {
 		return nil, fmt.Errorf("list analysistemplates: %w", err)
 	}
+
+	sort.Slice(list.Items, func(i, j int) bool {
+		return list.Items[i].Name < list.Items[j].Name
+	})
 
 	ats := make([]*rollouts.AnalysisTemplate, len(list.Items))
 	for idx := range list.Items {

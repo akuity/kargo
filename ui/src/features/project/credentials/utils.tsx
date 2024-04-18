@@ -2,6 +2,7 @@ import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 
 import { SegmentLabel } from '@ui/features/common/segment-label';
+import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
 import { Secret } from '@ui/gen/v1alpha1/types_pb';
 
 import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';
@@ -35,6 +36,7 @@ export const constructDefaults = (init?: Secret) => {
   if (!init) {
     return {
       name: '',
+      description: '',
       type: 'git',
       repoUrl: '',
       repoUrlIsRegex: false,
@@ -44,6 +46,7 @@ export const constructDefaults = (init?: Secret) => {
   }
   return {
     name: init?.metadata?.name || '',
+    description: init?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY],
     type: init?.metadata?.labels[CredentialTypeLabelKey] || 'git',
     repoUrl: init?.stringData[CredentialsDataKey.RepoUrl],
     repoUrlIsRegex: init?.stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true',

@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	admission "sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
@@ -28,6 +29,8 @@ type webhook struct {
 
 	// The following behaviors are overridable for testing purposes:
 
+	admissionRequestFromContextFn func(context.Context) (admission.Request, error)
+
 	validateProjectFn func(
 		context.Context,
 		client.Client,
@@ -38,10 +41,15 @@ type webhook struct {
 	validateCreateOrUpdateFn func(*kargoapi.Stage) (admission.Warnings, error)
 
 	validateSpecFn func(*field.Path, *kargoapi.StageSpec) field.ErrorList
+
+	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
 
-func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := newWebhook(mgr.GetClient())
+func SetupWebhookWithManager(
+	cfg libWebhook.Config,
+	mgr ctrl.Manager,
+) error {
+	w := newWebhook(cfg, mgr.GetClient())
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Stage{}).
 		WithDefaulter(w).
@@ -49,17 +57,23 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-func newWebhook(kubeClient client.Client) *webhook {
+func newWebhook(
+	cfg libWebhook.Config,
+	kubeClient client.Client,
+) *webhook {
 	w := &webhook{
 		client: kubeClient,
 	}
+	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.validateProjectFn = libWebhook.ValidateProject
 	w.validateCreateOrUpdateFn = w.validateCreateOrUpdate
 	w.validateSpecFn = w.validateSpec
+	w.isRequestFromKargoControlplaneFn =
+		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
 	return w
 }
 
-func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
+func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
 
 	// Sync the shard label to the convenience shard field
@@ -72,6 +86,55 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 		delete(stage.Labels, kargoapi.ShardLabelKey)
 	}
 
+	req, err := w.admissionRequestFromContextFn(ctx)
+	if err != nil {
+		return fmt.Errorf("get admission request from context: %w", err)
+	}
+
+	var oldStage *kargoapi.Stage
+	if req.OldObject.Object != nil {
+		oldStage = req.OldObject.Object.(*kargoapi.Stage) // nolint: forcetypeassert
+	}
+
+	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
+		if verReq, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations); ok {
+			var oldVerReq *kargoapi.VerificationRequest
+			if oldStage != nil {
+				oldVerReq, _ = kargoapi.ReverifyAnnotationValue(oldStage.Annotations)
+			}
+			// If the re-verification request has changed, enrich the annotation
+			// with the actor and control plane information.
+			if oldStage == nil || oldVerReq == nil || !verReq.Equals(oldVerReq) {
+				verReq.ControlPlane = w.isRequestFromKargoControlplaneFn(req)
+				if !verReq.ControlPlane {
+					// If the re-verification request is not from the control plane, then
+					// it's from a specific Kubernetes user. Without this check we would
+					// overwrite the actor field set by the control plane.
+					verReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+				}
+				stage.Annotations[kargoapi.AnnotationKeyReverify] = verReq.String()
+			}
+		}
+
+		if verReq, ok := kargoapi.AbortAnnotationValue(stage.Annotations); ok {
+			var oldVerReq *kargoapi.VerificationRequest
+			if oldStage != nil {
+				oldVerReq, _ = kargoapi.AbortAnnotationValue(oldStage.Annotations)
+			}
+			// If the abort request has changed, enrich the annotation with the
+			// actor and control plane information.
+			if oldStage == nil || oldVerReq == nil || !verReq.Equals(oldVerReq) {
+				verReq.ControlPlane = w.isRequestFromKargoControlplaneFn(req)
+				if !verReq.ControlPlane {
+					// If the abort request is not from the control plane, then
+					// it's from a specific Kubernetes user. Without this check we would
+					// overwrite the actor field set by the control plane.
+					verReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+				}
+				stage.Annotations[kargoapi.AnnotationKeyAbort] = verReq.String()
+			}
+		}
+	}
 	return nil
 }
 

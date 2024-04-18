@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -21,30 +22,45 @@ import (
 
 func TestGetStage(t *testing.T) {
 	testSets := map[string]struct {
-		req          *svcv1alpha1.GetStageRequest
-		errExpected  bool
-		expectedCode connect.Code
+		req        *svcv1alpha1.GetStageRequest
+		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetStageResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.GetStageRequest{
 				Project: "",
 				Name:    "",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeInvalidArgument,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"empty name": {
 			req: &svcv1alpha1.GetStageRequest{
 				Project: "kargo-demo",
 				Name:    "",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeInvalidArgument,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"existing Stage": {
 			req: &svcv1alpha1.GetStageRequest{
 				Project: "kargo-demo",
 				Name:    "test",
+			},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetRaw())
+
+				require.NotNil(t, c.Msg.GetStage())
+				require.Equal(t, "kargo-demo", c.Msg.GetStage().Namespace)
+				require.Equal(t, "test", c.Msg.GetStage().Name)
 			},
 		},
 		"non-existing project": {
@@ -52,16 +68,78 @@ func TestGetStage(t *testing.T) {
 				Project: "kargo-x",
 				Name:    "test",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeNotFound,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
 		},
 		"non-existing Stage": {
 			req: &svcv1alpha1.GetStageRequest{
-				Project: "non-existing-project",
-				Name:    "test",
+				Project: "kargo-demo",
+				Name:    "non-existing",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeNotFound,
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeUnknown, connect.CodeOf(err))
+				require.Nil(t, c)
+			},
+		},
+		"raw format JSON": {
+			req: &svcv1alpha1.GetStageRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
+			},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetStage())
+				require.NotNil(t, c.Msg.GetRaw())
+
+				scheme := runtime.NewScheme()
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*kargoapi.Stage)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
+			},
+		},
+		"raw format YAML": {
+			req: &svcv1alpha1.GetStageRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
+			},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetStageResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetStage())
+				require.NotNil(t, c.Msg.GetRaw())
+
+				scheme := runtime.NewScheme()
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+
+				obj, _, err := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode(
+					c.Msg.GetRaw(),
+					nil,
+					nil,
+				)
+				require.NoError(t, err)
+				tObj, ok := obj.(*kargoapi.Stage)
+				require.True(t, ok)
+				require.Equal(t, "kargo-demo", tObj.Namespace)
+				require.Equal(t, "test", tObj.Name)
+			},
 		},
 	}
 	for name, ts := range testSets {
@@ -104,14 +182,7 @@ func TestGetStage(t *testing.T) {
 			}
 			svr.externalValidateProjectFn = validation.ValidateProject
 			res, err := (svr).GetStage(ctx, connect.NewRequest(ts.req))
-			if ts.errExpected {
-				require.Error(t, err)
-				require.Equal(t, ts.expectedCode, connect.CodeOf(err))
-				return
-			}
-			require.NotNil(t, res.Msg.GetStage())
-			require.Equal(t, ts.req.GetProject(), res.Msg.GetStage().Namespace)
-			require.Equal(t, ts.req.GetName(), res.Msg.GetStage().Name)
+			ts.assertions(t, res, err)
 		})
 	}
 }

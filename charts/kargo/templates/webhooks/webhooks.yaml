@@ -92,7 +92,7 @@ webhooks:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
     apiVersions: ["v1alpha1"]
-    resources: ["freights"]
+    resources: ["freights", "freights/status"]
     operations: ["CREATE", "UPDATE", "DELETE"]
   failurePolicy: Fail
 - name: project.kargo.akuity.io

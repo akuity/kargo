@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"sort"
 	"strings"
@@ -199,12 +200,8 @@ func getLatestVersion(versions []string, constraintStr string) (string, error) {
 
 func UpdateChartDependencies(homePath, chartPath string) error {
 	cmd := exec.Command("helm", "dependency", "update", chartPath)
-	homeEnvVar := fmt.Sprintf("HOME=%s", homePath)
-	if cmd.Env == nil {
-		cmd.Env = []string{homeEnvVar}
-	} else {
-		cmd.Env = append(cmd.Env, homeEnvVar)
-	}
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", homePath))
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error running `helm dependency update` for chart at %q: %w", chartPath, err)
 	}

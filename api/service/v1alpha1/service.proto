@@ -9,6 +9,12 @@ import "rollouts/api/v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
 
+enum RawFormat {
+  RAW_FORMAT_UNSPECIFIED = 0;
+  RAW_FORMAT_JSON = 1;
+  RAW_FORMAT_YAML = 2;
+}
+
 service KargoService {
   rpc GetVersionInfo(GetVersionInfoRequest) returns (GetVersionInfoResponse);
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
@@ -210,10 +216,14 @@ message ListStagesResponse {
 message GetStageRequest {
   string project = 1;
   string name = 2;
+  RawFormat format = 3;
 }
 
 message GetStageResponse {
-  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+    bytes raw = 2;
+  }
 }
 
 message WatchStagesRequest {
@@ -266,10 +276,14 @@ message WatchPromotionsResponse {
 message GetPromotionRequest {
   string project = 1;
   string name = 2;
+  RawFormat format = 3;
 }
 
 message GetPromotionResponse {
-  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+    bytes raw = 2;
+  }
 }
 
 message WatchPromotionRequest {
@@ -292,10 +306,14 @@ message DeleteProjectResponse {
 
 message GetProjectRequest {
   string name = 1;
+  RawFormat format = 2;
 }
 
 message GetProjectResponse {
-  github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+    bytes raw = 2;
+  }
 }
 
 message ListProjectsRequest {
@@ -331,10 +349,14 @@ message GetFreightRequest {
   string project = 1;
   string name = 2;
   string alias = 3;
+  RawFormat format = 4;
 }
 
 message GetFreightResponse {
-  github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+    bytes raw = 2;
+  }
 }
 
 message PromoteToStageRequest {
@@ -416,10 +438,14 @@ message ListWarehousesResponse {
 message GetWarehouseRequest {
   string project = 1;
   string name = 2;
+  RawFormat format = 3;
 }
 
 message GetWarehouseResponse {
-  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+    bytes raw = 2;
+  }
 }
 
 message WatchWarehousesRequest {
@@ -453,6 +479,7 @@ message RefreshWarehouseResponse {
 message CreateCredentialsRequest {
   string project = 1;
   string name = 2;
+  string description = 8;
   string type = 3;
   string repo_url = 4 [json_name = "repoURL"];
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
@@ -476,10 +503,14 @@ message DeleteCredentialsResponse {
 message GetCredentialsRequest {
   string project = 1;
   string name = 2;
+  RawFormat format = 3;
 }
 
 message GetCredentialsResponse {
-  k8s.io.api.core.v1.Secret credentials = 1;
+  oneof result {
+    k8s.io.api.core.v1.Secret credentials = 1;
+    bytes raw = 2;
+  }
 }
 
 message ListCredentialsRequest {
@@ -493,6 +524,7 @@ message ListCredentialsResponse {
 message UpdateCredentialsRequest {
   string project = 1;
   string name = 2;
+  string description = 8;
   string type = 3;
   string repo_url = 4 [json_name = "repoURL"];
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
@@ -515,16 +547,29 @@ message ListAnalysisTemplatesResponse {
 message GetAnalysisTemplateRequest {
   string project = 1;
   string name = 2;
+  RawFormat format = 3;
 }
 
 message GetAnalysisTemplateResponse {
-  github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+  oneof result {
+    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    bytes raw = 2;
+  }
 }
 
 message GetAnalysisRunRequest {
   string namespace = 1;
   string name = 2;
+  RawFormat format = 3;
 }
+
+message GetAnalysisRunResponse {
+  oneof result {
+    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
+    bytes raw = 2;
+  }
+}
+
 
 message DeleteAnalysisTemplateRequest {
   string project = 1;
@@ -533,8 +578,4 @@ message DeleteAnalysisTemplateRequest {
 
 message DeleteAnalysisTemplateResponse {
   /* explicitly empty */
-}
-
-message GetAnalysisRunResponse {
-  github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
 }

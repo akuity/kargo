@@ -9,6 +9,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/gitprovider"
 	"github.com/akuity/kargo/internal/gitprovider/github"
+	"github.com/akuity/kargo/internal/gitprovider/gitlab"
 )
 
 func pullRequestBranchName(project, stage string) string {
@@ -94,16 +95,19 @@ func newGitProvider(
 ) (gitprovider.GitProviderService, error) {
 	var gpClient gitprovider.GitProviderService
 	var err error
-	if pullRequest.GitHub != nil {
+	switch {
+	case pullRequest.GitHub != nil:
 		gpClient, err = gitprovider.NewGitProviderServiceFromName(github.GitProviderServiceName)
-	} else {
+	case pullRequest.GitLab != nil:
+		gpClient, err = gitprovider.NewGitProviderServiceFromName(gitlab.GitProviderServiceName)
+	default:
 		gpClient, err = gitprovider.NewGitProviderServiceFromURL(url)
+	}
+	if err == nil && creds != nil {
+		gpClient, err = gpClient.WithAuthToken(creds.Password)
 	}
 	if err != nil {
 		return nil, err
-	}
-	if creds != nil {
-		gpClient = gpClient.WithAuthToken(creds.Password)
 	}
 	return gpClient, nil
 }

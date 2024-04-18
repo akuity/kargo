@@ -1,10 +1,12 @@
 run:
-  go: "1.20"
+  go: "1.22"
   build-tags:
     - dockerhub
     - ghcr
-  deadline: 10m
-  skip-files:
+  timeout: 10m
+
+issues:
+  exclude-files:
     - api/.*/*_types.go
     - api/.*/groupversion_info.go
 
@@ -74,17 +76,15 @@ linters-settings:
     # it's a comma-separated list of prefixes
     local-prefixes: github.com/org/project
   govet:
-    # report about shadowed variables
-    check-shadowing: true
+    enable:
+      # report about shadowed variables
+      - shadow
   lll:
     # max line length, lines longer will be reported. Default is 120.
     # '\t' is counted as 1 character by default, and can be changed with the tab-width option
     line-length: 120
     # tab width in spaces. Default to 1.
     tab-width: 2
-  maligned:
-    # print struct with more effective memory layout or not, false by default
-    suggest-new: true
   misspell:
     # Correct spellings using locale preferences for US or UK.
     # Default is to use a neutral variety of English.
@@ -94,19 +94,9 @@ linters-settings:
     # make an issue if func has more lines of code than this setting and it has naked returns; default is 30
     max-func-lines: 30
   unparam:
-    # call graph construction algorithm (cha, rta). In general, use cha for libraries,
-    # and rta for programs with main packages. Default is cha.
-    algo: cha
-
     # Inspect exported functions, default is false. Set to true if no external program/library imports your code.
     # XXX: if you enable this setting, unparam will report a lot of false-positives in text editors:
     # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
-    # with golangci-lint call it on a directory with the changed file.
-    check-exported: false
-  unused:
-    # treat code as a program (not a library) and report unused exported identifiers; default is false.
-    # XXX: if you enable this setting, unused will report a lot of false-positives in text editors:
-    # if it's called for subdir of a project it can't find funcs usages. All text editor integrations
     # with golangci-lint call it on a directory with the changed file.
     check-exported: false
   revive:
@@ -114,8 +104,6 @@ linters-settings:
     ignore-generated-header: false
     severity: warning
     confidence: 0.8
-    error-code: 0
-    warning-code: 0
     # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
     rules:
       # Deny naked return always

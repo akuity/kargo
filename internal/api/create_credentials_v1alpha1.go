@@ -22,6 +22,7 @@ type credentials struct {
 	repoURLIsRegex bool
 	username       string
 	password       string
+	description    string
 }
 
 func (s *server) CreateCredentials(
@@ -31,6 +32,7 @@ func (s *server) CreateCredentials(
 	creds := credentials{
 		project:        req.Msg.GetProject(),
 		name:           req.Msg.GetName(),
+		description:    req.Msg.GetDescription(),
 		credType:       req.Msg.GetType(),
 		repoURL:        req.Msg.GetRepoUrl(),
 		repoURLIsRegex: req.Msg.GetRepoUrlIsRegex(),
@@ -100,6 +102,11 @@ func credentialsToSecret(creds credentials) *corev1.Secret {
 			libCreds.FieldUsername: []byte(creds.username),
 			libCreds.FieldPassword: []byte(creds.password),
 		},
+	}
+	if creds.description != "" {
+		s.Annotations = map[string]string{
+			kargoapi.AnnotationKeyDescription: creds.description,
+		}
 	}
 	if creds.repoURLIsRegex {
 		s.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")

@@ -6,6 +6,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestVerificationInfo_HasAnalysisRun(t *testing.T) {
+	testCases := []struct {
+		name           string
+		info           *VerificationInfo
+		expectedResult bool
+	}{
+		{
+			name:           "VerificationInfo is nil",
+			info:           nil,
+			expectedResult: false,
+		},
+		{
+			name:           "AnalysisRun is nil",
+			info:           &VerificationInfo{},
+			expectedResult: false,
+		},
+		{
+			name: "AnalysisRun is not nil",
+			info: &VerificationInfo{
+				AnalysisRun: &AnalysisRunReference{},
+			},
+			expectedResult: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.info.HasAnalysisRun())
+		})
+	}
+}
+
 func TestFreightReferenceStackUpdateOrPush(t *testing.T) {
 	testCases := []struct {
 		name          string
@@ -51,6 +82,46 @@ func TestFreightReferenceStackUpdateOrPush(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.stack.UpdateOrPush(testCase.newFreight...)
 			require.Equal(t, testCase.expectedStack, testCase.stack)
+		})
+	}
+}
+
+func TestVerificationInfoStack_Current(t *testing.T) {
+	testCases := []struct {
+		name           string
+		stack          VerificationInfoStack
+		expectedResult *VerificationInfo
+	}{
+		{
+			name:           "stack is nil",
+			stack:          nil,
+			expectedResult: nil,
+		},
+		{
+			name:           "stack is empty",
+			stack:          VerificationInfoStack{},
+			expectedResult: nil,
+		},
+		{
+			name: "stack has one element",
+			stack: VerificationInfoStack{
+				{ID: "foo"},
+			},
+			expectedResult: &VerificationInfo{ID: "foo"},
+		},
+		{
+			name: "stack has multiple elements",
+			stack: VerificationInfoStack{
+				{ID: "foo"},
+				{ID: "bar"},
+				{ID: "baz"},
+			},
+			expectedResult: &VerificationInfo{ID: "foo"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.stack.Current())
 		})
 	}
 }

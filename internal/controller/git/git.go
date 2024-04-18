@@ -30,6 +30,25 @@ type RepoCredentials struct {
 	Password string `json:"password,omitempty"`
 }
 
+type SigningKeyType string
+
+const (
+	SigningKeyTypeGPG SigningKeyType = "gpg"
+)
+
+// User represents the user contributing to a git repository.
+type User struct {
+	// Name is the user's full name.
+	Name string
+	// Email is the user's email address.
+	Email string
+	// SigningKeyType indicates the type of signing key.
+	SigningKeyType SigningKeyType
+	// SigningKeyPath is an optional path referencing a signing key for
+	// signing git objects.
+	SigningKeyPath string
+}
+
 // CommitOptions represents options for committing changes to a git repository.
 type CommitOptions struct {
 	// AllowEmpty indicates whether an empty commit should be allowed.
@@ -114,6 +133,18 @@ type repo struct {
 	insecureSkipTLSVerify bool
 }
 
+// ClientOptions represents options for the git client. Commonly, the
+// repository credentials are required to authenticate with a remote
+// repository.
+type ClientOptions struct {
+	// User represents the actor that performs operations against the git
+	// repository. Th1s has no effect on authentication, see Credentials for
+	// specifying authentication configuration.
+	User *User
+	// Credentials represents the authentication information.
+	Credentials *RepoCredentials
+}
+
 // CloneOptions represents options for cloning a git repository.
 type CloneOptions struct {
 	// Branch is the name of the branch to clone. If not specified, the default
@@ -138,8 +169,8 @@ type CloneOptions struct {
 // remote repository.
 func Clone(
 	repoURL string,
-	repoCreds RepoCredentials,
-	opts *CloneOptions,
+	clientOpts *ClientOptions,
+	cloneOpts *CloneOptions,
 ) (Repo, error) {
 	homeDir, err := os.MkdirTemp("", "repo-")
 	if err != nil {
@@ -149,16 +180,16 @@ func Clone(
 		url:                   repoURL,
 		homeDir:               homeDir,
 		dir:                   filepath.Join(homeDir, "repo"),
-		insecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+		insecureSkipTLSVerify: cloneOpts.InsecureSkipTLSVerify,
 	}
-	if err = r.setupAuth(repoCreds); err != nil {
+	if err = r.setupClient(clientOpts); err != nil {
 		return nil, err
 	}
-	return r, r.clone(opts)
+	return r, r.clone(cloneOpts)
 }
 
 func (r *repo) AddAll() error {
-	if _, err := libExec.Exec(r.buildCommand("add", ".")); err != nil {
+	if _, err := libExec.Exec(r.buildGitCommand("add", ".")); err != nil {
 		return fmt.Errorf("error staging changes for commit: %w", err)
 	}
 	return nil
@@ -172,7 +203,7 @@ func (r *repo) AddAllAndCommit(message string) error {
 }
 
 func (r *repo) Clean() error {
-	if _, err := libExec.Exec(r.buildCommand("clean", "-fd")); err != nil {
+	if _, err := libExec.Exec(r.buildGitCommand("clean", "-fd")); err != nil {
 		return fmt.Errorf("error cleaning branch %q: %w", r.currentBranch, err)
 	}
 	return nil
@@ -194,14 +225,14 @@ func (r *repo) clone(opts *CloneOptions) error {
 		args = append(args, "--depth=1")
 	}
 	args = append(args, r.url, r.dir)
-	cmd := r.buildCommand(args...)
-	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
+	cmd := r.buildGitCommand(args...)
+	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error cloning repo %q into %q: %w", r.url, r.dir, err)
 	}
 	if opts.Branch == "" {
 		// If branch wasn't specified as part of options, we need to determine it manually
-		resBytes, err := libExec.Exec(r.buildCommand(
+		resBytes, err := libExec.Exec(r.buildGitCommand(
 			"branch",
 			"--show-current",
 		))
@@ -219,7 +250,7 @@ func (r *repo) Close() error {
 
 func (r *repo) Checkout(branch string) error {
 	r.currentBranch = branch
-	if _, err := libExec.Exec(r.buildCommand(
+	if _, err := libExec.Exec(r.buildGitCommand(
 		"checkout",
 		branch,
 		// The next line makes it crystal clear to git that we're checking out
@@ -241,7 +272,7 @@ func (r *repo) Commit(message string, opts *CommitOptions) error {
 		cmdTokens = append(cmdTokens, "--allow-empty")
 	}
 
-	if _, err := libExec.Exec(r.buildCommand(cmdTokens...)); err != nil {
+	if _, err := libExec.Exec(r.buildGitCommand(cmdTokens...)); err != nil {
 		return fmt.Errorf("error committing changes to branch %q: %w", r.currentBranch, err)
 	}
 	return nil
@@ -249,7 +280,7 @@ func (r *repo) Commit(message string, opts *CommitOptions) error {
 
 func (r *repo) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
 	// `git diff --quiet` returns 0 if no diff, 1 if diff, and non-zero/one for any other error
-	_, err := libExec.Exec(r.buildCommand(
+	_, err := libExec.Exec(r.buildGitCommand(
 		"diff", "--quiet", fmt.Sprintf("%s..%s", commit1, commit2), "--"))
 	if err == nil {
 		return false, nil
@@ -265,7 +296,7 @@ func (r *repo) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
 
 func (r *repo) CreateChildBranch(branch string) error {
 	r.currentBranch = branch
-	if _, err := libExec.Exec(r.buildCommand(
+	if _, err := libExec.Exec(r.buildGitCommand(
 		"checkout",
 		"-b",
 		branch,
@@ -281,7 +312,7 @@ func (r *repo) CreateChildBranch(branch string) error {
 
 func (r *repo) CreateOrphanedBranch(branch string) error {
 	r.currentBranch = branch
-	if _, err := libExec.Exec(r.buildCommand(
+	if _, err := libExec.Exec(r.buildGitCommand(
 		"switch",
 		"--orphan",
 		branch,
@@ -297,7 +328,7 @@ func (r *repo) CurrentBranch() string {
 }
 
 func (r *repo) DeleteBranch(branch string) error {
-	if _, err := libExec.Exec(r.buildCommand(
+	if _, err := libExec.Exec(r.buildGitCommand(
 		"branch",
 		"--delete",
 		"--force",
@@ -309,7 +340,7 @@ func (r *repo) DeleteBranch(branch string) error {
 }
 
 func (r *repo) HasDiffs() (bool, error) {
-	resBytes, err := libExec.Exec(r.buildCommand("status", "-s"))
+	resBytes, err := libExec.Exec(r.buildGitCommand("status", "-s"))
 	if err != nil {
 		return false, fmt.Errorf("error checking status of branch %q: %w", r.currentBranch, err)
 	}
@@ -317,7 +348,7 @@ func (r *repo) HasDiffs() (bool, error) {
 }
 
 func (r *repo) GetDiffPaths() ([]string, error) {
-	resBytes, err := libExec.Exec(r.buildCommand("status", "-s"))
+	resBytes, err := libExec.Exec(r.buildGitCommand("status", "-s"))
 	if err != nil {
 		return nil, fmt.Errorf("error checking status of branch %q: %w", r.currentBranch, err)
 	}
@@ -334,7 +365,7 @@ func (r *repo) GetDiffPaths() ([]string, error) {
 }
 
 func (r *repo) GetDiffPathsSinceCommitID(commitId string) ([]string, error) {
-	resBytes, err := libExec.Exec(r.buildCommand("diff", "--name-only", commitId+"..HEAD"))
+	resBytes, err := libExec.Exec(r.buildGitCommand("diff", "--name-only", commitId+"..HEAD"))
 	if err != nil {
 		return nil,
 			fmt.Errorf("error getting diffs since commit %q %w", commitId, err)
@@ -352,7 +383,7 @@ func (r *repo) GetDiffPathsSinceCommitID(commitId string) ([]string, error) {
 }
 
 func (r *repo) IsAncestor(parent string, child string) (bool, error) {
-	_, err := libExec.Exec(r.buildCommand("merge-base", "--is-ancestor", parent, child))
+	_, err := libExec.Exec(r.buildGitCommand("merge-base", "--is-ancestor", parent, child))
 	if err == nil {
 		return true, nil
 	}
@@ -366,7 +397,7 @@ func (r *repo) IsAncestor(parent string, child string) (bool, error) {
 }
 
 func (r *repo) LastCommitID() (string, error) {
-	shaBytes, err := libExec.Exec(r.buildCommand("rev-parse", "HEAD"))
+	shaBytes, err := libExec.Exec(r.buildGitCommand("rev-parse", "HEAD"))
 	if err != nil {
 		return "", fmt.Errorf("error obtaining ID of last commit: %w", err)
 	}
@@ -375,10 +406,10 @@ func (r *repo) LastCommitID() (string, error) {
 
 func (r *repo) ListTags() ([]string, error) {
 	if _, err :=
-		libExec.Exec(r.buildCommand("fetch", "origin", "--tags")); err != nil {
+		libExec.Exec(r.buildGitCommand("fetch", "origin", "--tags")); err != nil {
 		return nil, fmt.Errorf("error fetching tags from repo %q: %w", r.url, err)
 	}
-	tagsBytes, err := libExec.Exec(r.buildCommand("tag", "--list", "--sort", "-creatordate"))
+	tagsBytes, err := libExec.Exec(r.buildGitCommand("tag", "--list", "--sort", "-creatordate"))
 	if err != nil {
 		return nil, fmt.Errorf("error listing tags for repo %q: %w", r.url, err)
 	}
@@ -393,7 +424,7 @@ func (r *repo) ListTags() ([]string, error) {
 
 func (r *repo) CommitMessage(id string) (string, error) {
 	msgBytes, err := libExec.Exec(
-		r.buildCommand("log", "-n", "1", "--pretty=format:%s", id),
+		r.buildGitCommand("log", "-n", "1", "--pretty=format:%s", id),
 	)
 	if err != nil {
 		return "", fmt.Errorf("error obtaining commit message for commit %q: %w", id, err)
@@ -402,7 +433,7 @@ func (r *repo) CommitMessage(id string) (string, error) {
 }
 
 func (r *repo) CommitMessages(id1, id2 string) ([]string, error) {
-	allMsgBytes, err := libExec.Exec(r.buildCommand(
+	allMsgBytes, err := libExec.Exec(r.buildGitCommand(
 		"log",
 		"--pretty=oneline",
 		"--decorate-refs=",
@@ -431,14 +462,14 @@ func (r *repo) Push(force bool) error {
 	if force {
 		args = append(args, "--force")
 	}
-	if _, err := libExec.Exec(r.buildCommand(args...)); err != nil {
+	if _, err := libExec.Exec(r.buildGitCommand(args...)); err != nil {
 		return fmt.Errorf("error pushing branch %q: %w", r.currentBranch, err)
 	}
 	return nil
 }
 
 func (r *repo) RemoteBranchExists(branch string) (bool, error) {
-	_, err := libExec.Exec(r.buildCommand(
+	_, err := libExec.Exec(r.buildGitCommand(
 		"ls-remote",
 		"--heads",
 		"--exit-code", // Return 2 if not found
@@ -462,7 +493,7 @@ func (r *repo) RemoteBranchExists(branch string) (bool, error) {
 }
 
 func (r *repo) ResetHard() error {
-	if _, err := libExec.Exec(r.buildCommand("reset", "--hard")); err != nil {
+	if _, err := libExec.Exec(r.buildGitCommand("reset", "--hard")); err != nil {
 		return fmt.Errorf("error resetting branch working tree: %w", err)
 	}
 	return nil
@@ -480,24 +511,72 @@ func (r *repo) WorkingDir() string {
 	return r.dir
 }
 
-// SetupAuth configures the git CLI for authentication using either SSH or the
-// "store" (username/password-based) credential helper.
-func (r *repo) setupAuth(repoCreds RepoCredentials) error {
-	// Configure the git client
-	cmd := r.buildCommand("config", "--global", "user.name", "Kargo Render")
-	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
-	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring git username: %w", err)
-	}
-	cmd =
-		r.buildCommand("config", "--global", "user.email", "kargo-render@akuity.io")
-	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
-	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring git user email address: %w", err)
+// setupClient configures the git CLI for authentication using either SSH or
+// the "store" (username/password-based) credential helper.
+func (r *repo) setupClient(opts *ClientOptions) error {
+	if opts == nil {
+		opts = &ClientOptions{}
 	}
 
+	if opts.User != nil {
+		if err := r.setupAuthor(*opts.User); err != nil {
+			return fmt.Errorf("error configuring the author: %w", err)
+		}
+	}
+
+	if opts.Credentials != nil {
+		if err := r.setupAuth(*opts.Credentials); err != nil {
+			return fmt.Errorf("error configuring the credentials: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// setupAuthor configures the git CLI with a default commit author.
+// Optionally, the author can have an associated signing key. When using GPG
+// signing, the name and email must match the GPG key identity.
+func (r *repo) setupAuthor(author User) error {
+	if author.Name == "" {
+		author.Name = "Kargo Render"
+	}
+
+	cmd := r.buildGitCommand("config", "--global", "user.name", author.Name)
+	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error configuring git user name: %w", err)
+	}
+
+	if author.Email == "" {
+		author.Name = "kargo-render@akuity.io"
+	}
+
+	cmd = r.buildGitCommand("config", "--global", "user.email", author.Email)
+	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error configuring git user email: %w", err)
+	}
+
+	if author.SigningKeyPath != "" && author.SigningKeyType == SigningKeyTypeGPG {
+		cmd = r.buildGitCommand("config", "--global", "commit.gpgsign", "true")
+		cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error configuring commit gpg signing: %w", err)
+		}
+
+		cmd = r.buildCommand("gpg", "--import", author.SigningKeyPath)
+		cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+		}
+	}
+
+	return nil
+}
+
+func (r *repo) setupAuth(creds RepoCredentials) error {
 	// If an SSH key was provided, use that.
-	if repoCreds.SSHPrivateKey != "" {
+	if creds.SSHPrivateKey != "" {
 		sshConfigPath := filepath.Join(r.homeDir, ".ssh", "config")
 		// nolint: lll
 		const sshConfig = "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null"
@@ -509,7 +588,7 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 		rsaKeyPath := filepath.Join(r.homeDir, ".ssh", "id_rsa")
 		if err := os.WriteFile(
 			rsaKeyPath,
-			[]byte(repoCreds.SSHPrivateKey),
+			[]byte(creds.SSHPrivateKey),
 			0600,
 		); err != nil {
 			return fmt.Errorf("error writing SSH key to %q: %w", rsaKeyPath, err)
@@ -520,8 +599,8 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 	// If we get to here, we're authenticating using a password
 
 	// Set up the credential helper
-	cmd = r.buildCommand("config", "--global", "credential.helper", "store")
-	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildCommand()
+	cmd := r.buildGitCommand("config", "--global", "credential.helper", "store")
+	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git credential helper: %w", err)
 	}
@@ -536,11 +615,11 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 	// If the username is the empty string, we assume we're working with a git
 	// provider like GitHub that only requires the username to be non-empty. We
 	// arbitrarily set it to "git".
-	if repoCreds.Username == "" {
-		repoCreds.Username = "git"
+	if creds.Username == "" {
+		creds.Username = "git"
 	}
 	// Augment the URL with user/pass information.
-	credentialURL.User = url.UserPassword(repoCreds.Username, repoCreds.Password)
+	credentialURL.User = url.UserPassword(creds.Username, creds.Password)
 	// Write the augmented URL to the location used by the "stored" credential
 	// helper.
 	credentialsPath := filepath.Join(r.homeDir, ".git-credentials")
@@ -554,17 +633,18 @@ func (r *repo) setupAuth(repoCreds RepoCredentials) error {
 	return nil
 }
 
-func (r *repo) buildCommand(arg ...string) *exec.Cmd {
-	cmd := exec.Command("git", arg...)
-	homeEnvVar := fmt.Sprintf("HOME=%s", r.homeDir)
-	if cmd.Env == nil {
-		cmd.Env = []string{homeEnvVar}
-	} else {
-		cmd.Env = append(cmd.Env, homeEnvVar)
-	}
+func (r *repo) buildCommand(command string, arg ...string) *exec.Cmd {
+	cmd := exec.Command(command, arg...)
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", r.homeDir))
+	cmd.Dir = r.dir
+	return cmd
+}
+
+func (r *repo) buildGitCommand(arg ...string) *exec.Cmd {
+	cmd := r.buildCommand("git", arg...)
 	if r.insecureSkipTLSVerify {
 		cmd.Env = append(cmd.Env, "GIT_SSL_NO_VERIFY=true")
 	}
-	cmd.Dir = r.dir
 	return cmd
 }

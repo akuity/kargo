@@ -15,7 +15,6 @@ import (
 
 type StandardConfig struct {
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT" default:"30s"`
-	UIDirectory             string        `envconfig:"UI_DIR" default:"./ui/build"`
 }
 
 type ServerConfig struct {

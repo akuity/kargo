@@ -44,18 +44,26 @@ spec:
         envFrom:
         - configMapRef:
             name: kargo-controller
-        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
+        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name }}
         volumeMounts:
+        {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
           readOnly: true
+        {{- end }}
+        {{- if .Values.controller.gitClient.signingKeySecret.name }}
+        - mountPath: /etc/kargo/git
+          name: git
+          readOnly: true
+        {{- end }}
         {{- end }}
         securityContext:
           {{- toYaml .Values.controller.securityContext | nindent 10 }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
-      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
+      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name }}
       volumes:
+      {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd }}
       - name: kubeconfigs
         projected:
           sources:
@@ -75,6 +83,13 @@ spec:
                 path: argocd-kubeconfig.yaml
                 mode: 0644
           {{- end }}
+      {{- end }}
+      {{- if .Values.controller.gitClient.signingKeySecret.name }}
+      - name: git
+        secret:
+          secretName: {{ .Values.controller.gitClient.signingKeySecret.name }}
+          defaultMode: 0644
+      {{- end }}
       {{- end }}
       {{- with .Values.controller.nodeSelector }}
       nodeSelector:

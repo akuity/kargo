@@ -3,29 +3,40 @@ package promotion
 import (
 	"context"
 	"errors"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
-	w := newWebhook(kubeClient)
+	w := newWebhook(
+		libWebhook.Config{},
+		kubeClient,
+		&fakeevent.EventRecorder{},
+	)
 	// Assert that all overridable behaviors were initialized to a default:
+	require.NotNil(t, w.getFreightFn)
 	require.NotNil(t, w.getStageFn)
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.authorizeFn)
 	require.NotNil(t, w.admissionRequestFromContextFn)
 	require.NotNil(t, w.createSubjectAccessReviewFn)
+	require.NotNil(t, w.isRequestFromKargoControlplaneFn)
 }
 
 func TestDefault(t *testing.T) {
@@ -67,6 +78,24 @@ func TestDefault(t *testing.T) {
 			},
 		},
 		{
+			name: "stage without promotion mechanisms",
+			webhook: &webhook{
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: &kargoapi.StageSpec{},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "has no PromotionMechanisms")
+			},
+		},
+		{
 			name: "success",
 			webhook: &webhook{
 				getStageFn: func(
@@ -76,7 +105,8 @@ func TestDefault(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: &kargoapi.StageSpec{
-							Shard: "fake-shard",
+							PromotionMechanisms: &kargoapi.PromotionMechanisms{},
+							Shard:               "fake-shard",
 						},
 					}, nil
 				},
@@ -105,7 +135,8 @@ func TestValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
-		assertions func(*testing.T, error)
+		userInfo   *authnv1.UserInfo
+		assertions func(*testing.T, *fakeevent.EventRecorder, error)
 	}{
 		{
 			name: "error validating project",
@@ -119,7 +150,7 @@ func TestValidateCreate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
@@ -139,13 +170,13 @@ func TestValidateCreate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Equal(t, "something went wrong", err.Error())
 			},
 		},
 		{
-			name: "success",
+			name: "record promotion created event on non-controlplane request",
 			webhook: &webhook{
 				validateProjectFn: func(
 					context.Context,
@@ -158,19 +189,76 @@ func TestValidateCreate(t *testing.T) {
 				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
 					return nil
 				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getFreightFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Freight, error) {
+					return nil, nil
+				},
+				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
+				),
 			},
-			assertions: func(t *testing.T, err error) {
+			userInfo: &authnv1.UserInfo{
+				Username: "fake-user",
+			},
+			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
 				require.NoError(t, err)
+				require.Len(t, r.Events, 1)
+				event := <-r.Events
+				require.Equal(t, kargoapi.EventReasonPromotionCreated, event.Reason)
+			},
+		},
+		{
+			name: "skip recording promotion created event on controlplane request",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					schema.GroupKind,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				isRequestFromKargoControlplaneFn: libWebhook.IsRequestFromKargoControlplane(
+					regexp.MustCompile("^system:serviceaccount:kargo:(kargo-api|kargo-controller)$"),
+				),
+			},
+			userInfo: &authnv1.UserInfo{
+				Username: serviceaccount.ServiceAccountUsernamePrefix + "kargo:kargo-api",
+			},
+			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
+				require.NoError(t, err)
+				require.Empty(t, r.Events)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			recorder := fakeevent.NewEventRecorder(1)
+			testCase.webhook.recorder = recorder
+
+			var req admission.Request
+			if testCase.userInfo != nil {
+				req.UserInfo = *testCase.userInfo
+			}
+			ctx := admission.NewContextWithRequest(context.Background(), req)
+
 			_, err := testCase.webhook.ValidateCreate(
-				context.Background(),
-				&kargoapi.Promotion{},
+				ctx,
+				&kargoapi.Promotion{
+					Spec: &kargoapi.PromotionSpec{
+						Freight: "fake-freight",
+					},
+				},
 			)
-			testCase.assertions(t, err)
+			testCase.assertions(t, recorder, err)
 		})
 	}
 }

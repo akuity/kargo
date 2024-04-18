@@ -106,34 +106,71 @@ func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
 	return false
 }
 
-// IgnoreAnnotationRemoval is a predicate that ignores the removal of specific
-// Annotations in an update event. This is useful when we want to ignore
-// updates that only remove an annotation and nothing else, which may be the
-// case when the annotation(s) are cleared by the controller itself.
-type IgnoreAnnotationRemoval struct {
+// RefreshRequested is a predicate that returns true if the refresh annotation
+// has been set on a resource, or the value of the annotation has changed
+// compared to the previous state.
+type RefreshRequested struct {
 	predicate.Funcs
-
-	Annotations []string
 }
 
-// Update returns false if the update event only removed any of the Annotations,
-// true otherwise.
-//
-// NOTE: this predicate assumes that the update was to clear the annotation and
-// nothing else. This is safe to assume as long as the helpers of the API are
-// always used to clear the respective annotation.
-func (i IgnoreAnnotationRemoval) Update(e event.UpdateEvent) bool {
+// Update returns true if the refresh annotation has been set on the new object,
+// or if the value of the annotation has changed compared to the old object.
+func (p RefreshRequested) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	if newVal, newOk := kargoapi.RefreshAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := kargoapi.RefreshAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+			return newVal != oldVal
+		}
 		return true
 	}
-	oldAnnotations := e.ObjectOld.GetAnnotations()
-	newAnnotations := e.ObjectNew.GetAnnotations()
-	for _, annotation := range i.Annotations {
-		_, oldHasAnnotation := oldAnnotations[annotation]
-		_, newHasAnnotation := newAnnotations[annotation]
-		if oldHasAnnotation && !newHasAnnotation {
-			return false
-		}
+	return false
+}
+
+// ReverifyRequested is a predicate that returns true if the reverify annotation
+// has been set on a resource, or the ID of the request has changed compared to
+// the previous state.
+type ReverifyRequested struct {
+	predicate.Funcs
+}
+
+// Update returns true if the reverify annotation has been set on the new object,
+// or if the ID of the request has changed compared to the old object.
+func (r ReverifyRequested) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
 	}
-	return true
+
+	if newVal, newOk := kargoapi.ReverifyAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := kargoapi.ReverifyAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+			return !newVal.ForID(oldVal.ID)
+		}
+		return true
+	}
+	return false
+}
+
+// AbortRequested is a predicate that returns true if the abort annotation has
+// been set on a resource, or the ID of the request has changed compared to the
+// previous state.
+type AbortRequested struct {
+	predicate.Funcs
+}
+
+// Update returns true if the abort annotation has been set on the new object,
+// or if the ID of the request has changed compared to the old object.
+func (p AbortRequested) Update(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	if newVal, newOk := kargoapi.AbortAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := kargoapi.AbortAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+			return !newVal.ForID(oldVal.ID)
+		}
+		return true
+	}
+	return false
 }

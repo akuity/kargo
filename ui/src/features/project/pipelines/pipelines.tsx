@@ -196,7 +196,9 @@ export const Pipelines = () => {
           }
         }
 
-        const refreshing = e.warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
+        const refreshRequest = e.warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
+        const refreshStatus = e.warehouse?.status?.lastHandledRefresh;
+        const refreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
         if (refreshing) {
           refresh[e.warehouse?.metadata?.name || ''] = true;
         } else if (refresh[e.warehouse?.metadata?.name || '']) {

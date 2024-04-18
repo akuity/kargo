@@ -14,6 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
+	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
 type serverOptions struct {
@@ -99,6 +100,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		},
 		client,
 		client,
+		&fakeevent.EventRecorder{},
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)

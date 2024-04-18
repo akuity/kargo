@@ -615,6 +615,39 @@ func TestApplyArgoCDSourceUpdate(t *testing.T) {
 		},
 
 		{
+			name: "update target revision (git with tag)",
+			source: argocd.ApplicationSource{
+				RepoURL: "fake-url",
+			},
+			newFreight: kargoapi.FreightReference{
+				Commits: []kargoapi.GitCommit{
+					{
+						RepoURL: "fake-url",
+						ID:      "fake-commit",
+						Tag:     "fake-tag",
+					},
+				},
+			},
+			update: kargoapi.ArgoCDSourceUpdate{
+				RepoURL:              "fake-url",
+				UpdateTargetRevision: true,
+			},
+			assertions: func(
+				t *testing.T,
+				originalSource argocd.ApplicationSource,
+				updatedSource argocd.ApplicationSource,
+				err error,
+			) {
+				require.NoError(t, err)
+				// TargetRevision should be updated
+				require.Equal(t, "fake-tag", updatedSource.TargetRevision)
+				// Everything else should be unchanged
+				updatedSource.TargetRevision = originalSource.TargetRevision
+				require.Equal(t, originalSource, updatedSource)
+			},
+		},
+
+		{
 			name: "update target revision (helm chart)",
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",

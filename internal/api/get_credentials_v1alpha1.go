@@ -61,8 +61,21 @@ func (s *server) GetCredentials(
 		)
 	}
 
+	obj, raw, err := objectOrRaw(sanitizeCredentialSecret(secret), req.Msg.GetFormat())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if raw != nil {
+		return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
+			Result: &svcv1alpha1.GetCredentialsResponse_Raw{
+				Raw: raw,
+			},
+		}), nil
+	}
 	return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
-		Credentials: sanitizeCredentialSecret(secret),
+		Result: &svcv1alpha1.GetCredentialsResponse_Credentials{
+			Credentials: obj,
+		},
 	}), nil
 }
 
@@ -82,8 +95,13 @@ func (s *server) GetCredentials(
 func sanitizeCredentialSecret(secret corev1.Secret) *corev1.Secret {
 	s := secret.DeepCopy()
 	s.StringData = make(map[string]string, len(s.Data))
-	for k := range s.Annotations {
-		s.Annotations[k] = redacted
+	for k, v := range s.Annotations {
+		switch k {
+		case kargoapi.AnnotationKeyDescription:
+			s.Annotations[k] = v
+		default:
+			s.Annotations[k] = redacted
+		}
 	}
 	for k, v := range s.Data {
 		switch k {

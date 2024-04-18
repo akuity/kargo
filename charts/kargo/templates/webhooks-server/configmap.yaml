@@ -13,4 +13,9 @@ data:
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
+  {{- if .Values.webhooksServer.controlplaneUserRegex }}
+  CONTROLPLANE_USER_REGEX: {{ .Values.webhooksServer.controlplaneUserRegex }}
+  {{- else }}
+  CONTROLPLANE_USER_REGEX: {{ include "kargo.controlplane.defaultUserRegex" . }}
+  {{- end }}
 {{- end }}

@@ -115,20 +115,11 @@ build-cli:
 # Used for Nighty/Unstable builds                                              #
 ################################################################################
 
-.PHONY: kargo-all
-kargo-all:
+.PHONY: build-nightly-cli
+build-nightly-cli:
 	CGO_ENABLED=0 go build \
 		-ldflags "-w -X $(VERSION_PACKAGE).version=$(VERSION) -X $(VERSION_PACKAGE).buildDate=$$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X $(VERSION_PACKAGE).gitCommit=$(GIT_COMMIT) -X $(VERSION_PACKAGE).gitTreeState=$(GIT_TREE_STATE)" \
-		-o bin/kargo-cli/${VERSION}/${GOOS}/${GOARCH}/${BIN_NAME} ./cmd/cli
-
-.PHONY: nightly-cli
-nightly-cli:
-	make BIN_NAME=kargo GOOS=darwin GOARCH=amd64 kargo-all
-	make BIN_NAME=kargo GOOS=darwin GOARCH=arm64 kargo-all
-	make BIN_NAME=kargo GOOS=linux GOARCH=amd64 kargo-all
-	make BIN_NAME=kargo GOOS=linux GOARCH=arm64 kargo-all
-	make BIN_NAME=kargo.exe GOOS=windows GOARCH=amd64 kargo-all
-	make BIN_NAME=kargo.exe GOOS=windows GOARCH=arm64 kargo-all
+		-o bin/kargo-cli/${VERSION}/${GOOS}/${GOARCH}/kargo$(shell [ ${GOOS} = windows ] && echo .exe) ./cmd/cli
 
 ################################################################################
 # Code generation: To be run after modifications to API types                  #
@@ -170,9 +161,13 @@ codegen-ui:
 # that is pre-loaded with required tools.                                      #
 ################################################################################
 
+# Prevents issues with vcs stamping within docker containers. 
+GOFLAGS="-buildvcs=false"
+
 DOCKER_CMD := $(CONTAINER_RUNTIME) run \
 	-it \
 	--rm \
+	-e GOFLAGS=$(GOFLAGS) \
 	-v gomodcache:/home/user/gocache \
 	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
 	-v /workspaces/kargo/ui/node_modules \
