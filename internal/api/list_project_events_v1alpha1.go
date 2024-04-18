@@ -39,8 +39,8 @@ func (s *server) ListProjectEvents(
 	})
 
 	events := make([]*corev1.Event, len(eventsList.Items))
-	for i, event := range eventsList.Items {
-		events[i] = &event
+	for i := range eventsList.Items {
+		events[i] = &eventsList.Items[i]
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListProjectEventsResponse{
