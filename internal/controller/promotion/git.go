@@ -47,7 +47,7 @@ type gitMechanism struct {
 		update kargoapi.GitRepoUpdate,
 		commits []kargoapi.GitCommit,
 	) (string, int, error)
-	getAuthorFn      func() (*git.CommitUser, error)
+	getAuthorFn      func() (*git.User, error)
 	getCredentialsFn func(
 		ctx context.Context,
 		namespace string,
@@ -188,7 +188,7 @@ func (g *gitMechanism) doSingleUpdate(
 		return nil, newFreight, err
 	}
 	if author == nil {
-		author = &git.CommitUser{}
+		author = &git.User{}
 	}
 	if err = repo.SetAuthor(*author); err != nil {
 		return nil, newFreight, fmt.Errorf("error setting default commit author: %w", err)
@@ -310,8 +310,8 @@ func getRepoCredentialsFn(
 	}
 }
 
-func (g *gitMechanism) getAuthor() (*git.CommitUser, error) {
-	author := git.CommitUser{
+func (g *gitMechanism) getAuthor() (*git.User, error) {
+	author := git.User{
 		Name:  g.cfg.Name,
 		Email: g.cfg.Email,
 	}

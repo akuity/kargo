@@ -30,14 +30,14 @@ type RepoCredentials struct {
 	Password string `json:"password,omitempty"`
 }
 
-// CommitUser represents the user for committing changes to a git repository.
-type CommitUser struct {
-	// Name is the name of the user making a commit.
+// User represents the user contributing to a git repository.
+type User struct {
+	// Name is the user's full name.
 	Name string
-	// Email is the email of the user making a commit.
+	// Email is the user's email address.
 	Email string
-	// SigningKeyPath is an optional path referencing a signing key for making
-	// a commit.
+	// SigningKeyPath is an optional path referencing a signing key for
+	// signing git objects.
 	SigningKeyPath string
 }
 
@@ -116,7 +116,7 @@ type Repo interface {
 	// SetAuthor sets the default commit author. Optionally, the author can
 	// have an associated signing key, and the name and email must match the
 	// signing key identity.
-	SetAuthor(author CommitUser) error
+	SetAuthor(author User) error
 }
 
 // repo is an implementation of the Repo interface for interacting with a git
@@ -495,7 +495,7 @@ func (r *repo) WorkingDir() string {
 	return r.dir
 }
 
-func (r *repo) SetAuthor(author CommitUser) error {
+func (r *repo) SetAuthor(author User) error {
 	if author.Name == "" {
 		author.Name = "Kargo Render"
 	}

@@ -197,7 +197,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				) (string, int, error) {
 					return testRef, 0, nil
 				},
-				getAuthorFn: func() (*git.CommitUser, error) {
+				getAuthorFn: func() (*git.User, error) {
 					return nil, nil
 				},
 				getCredentialsFn: func(
@@ -229,7 +229,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				) (string, int, error) {
 					return testRef, 0, nil
 				},
-				getAuthorFn: func() (*git.CommitUser, error) {
+				getAuthorFn: func() (*git.User, error) {
 					return nil, errors.New("something went wrong")
 				},
 				getCredentialsFn: func(
@@ -261,7 +261,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				) (string, int, error) {
 					return testRef, 0, nil
 				},
-				getAuthorFn: func() (*git.CommitUser, error) {
+				getAuthorFn: func() (*git.User, error) {
 					return nil, nil
 				},
 				getCredentialsFn: func(
@@ -303,7 +303,7 @@ func TestGitDoSingleUpdate(t *testing.T) {
 				) (string, int, error) {
 					return testRef, 0, nil
 				},
-				getAuthorFn: func() (*git.CommitUser, error) {
+				getAuthorFn: func() (*git.User, error) {
 					return nil, nil
 				},
 				getCredentialsFn: func(
