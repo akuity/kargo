@@ -16,10 +16,10 @@ data:
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   GLOBAL_CREDENTIALS_NAMESPACES: {{ quote (join "," .Values.controller.globalCredentials.namespaces) }}
-  COMMITTER_NAME: {{ quote .Values.controller.committer.name }}
-  COMMITTER_EMAIL: {{ quote .Values.controller.committer.email }}
-  {{- if .Values.controller.committer.signingKeySecret.name }}
-  COMMITTER_SIGNING_KEY_PATH: /etc/kargo/committer/signingKey
+  GITCLIENT_NAME: {{ quote .Values.controller.gitClient.name }}
+  GITCLIENT_EMAIL: {{ quote .Values.controller.gitClient.email }}
+  {{- if .Values.controller.gitClient.signingKeySecret.name }}
+  GITCLIENT_SIGNING_KEY_PATH: /etc/kargo/git/signingKey
   {{- end }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}

@@ -281,14 +281,14 @@ controller:
     ## @param controller.globalCredentials.namespaces List of namespaces to look for shared credentials.
     namespaces: []
 
-  committer:
-    ## @param controller.committer.name Specifies the name of the Kargo controller committer.
+  gitClient:
+    ## @param controller.gitClient.name Specifies the name of the Kargo controller (used when authoring Git commits).
     name: "Kargo Render"
-    ## @param controller.committer.email Specifies the email of the Kargo controller committer.
+    ## @param controller.gitClient.email Specifies the email of the Kargo controller (used when authoring Git commits).
     email: "kargo-render@akuity.io"
 
     signingKeySecret:
-    ## @param controller.committer.signingKeySecret.name Specifies the name of an existing `Secret` which contains the committer's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo.
+    ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git author's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo.
       name: ""
 
   ## @param controller.securityContext Security context for controller pods.

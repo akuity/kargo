@@ -18,9 +18,9 @@ import (
 const tmpPrefix = "repo-scrap-"
 
 type GitConfig struct {
-	Name           string `envconfig:"COMMITTER_NAME"`
-	Email          string `envconfig:"COMMITTER_EMAIL"`
-	SigningKeyPath string `envconfig:"COMMITTER_SIGNING_KEY_PATH"`
+	Name           string `envconfig:"GITCLIENT_NAME"`
+	Email          string `envconfig:"GITCLIENT_EMAIL"`
+	SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
 }
 
 func GitConfigFromEnv() GitConfig {
