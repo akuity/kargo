@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNormalizeGitURL(t *testing.T) {
+func TestNormalizeURL(t *testing.T) {
 	testCases := map[string]string{
 		// Anything we can't normalize should be returned as-is
 		"https://not a url":                      "https://not a url",

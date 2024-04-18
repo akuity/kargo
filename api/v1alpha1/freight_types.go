@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -65,12 +67,12 @@ func (f *Freight) GenerateID() string {
 			// Freight for the new tag.
 			artifacts = append(
 				artifacts,
-				fmt.Sprintf("%s:%s:%s", commit.RepoURL, commit.Tag, commit.ID),
+				fmt.Sprintf("%s:%s:%s", git.NormalizeURL(commit.RepoURL), commit.Tag, commit.ID),
 			)
 		} else {
 			artifacts = append(
 				artifacts,
-				fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
+				fmt.Sprintf("%s:%s", git.NormalizeURL(commit.RepoURL), commit.ID),
 			)
 		}
 	}
@@ -92,7 +94,7 @@ func (f *Freight) GenerateID() string {
 			fmt.Sprintf(
 				"%s:%s",
 				// path.Join accounts for the possibility that chart.Name is empty
-				path.Join(chart.RepoURL, chart.Name),
+				path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
 				chart.Version,
 			),
 		)
