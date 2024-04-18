@@ -108,7 +108,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("index Stages by Freight: %w", err)
 	}
 
-	if err = freight.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
+	if err = freight.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Freight webhook: %w", err)
 	}
 	if err = project.SetupWebhookWithManager(
@@ -117,10 +117,10 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 	); err != nil {
 		return fmt.Errorf("setup Project webhook: %w", err)
 	}
-	if err = promotion.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
+	if err = promotion.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)
 	}
-	if err = stage.SetupWebhookWithManager(mgr); err != nil {
+	if err = stage.SetupWebhookWithManager(webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Stage webhook: %w", err)
 	}
 	if err = warehouse.SetupWebhookWithManager(mgr); err != nil {

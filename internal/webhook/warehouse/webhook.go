@@ -284,7 +284,7 @@ type subscriptionKey struct {
 type uniqueSubSet map[subscriptionKey]*field.Path
 
 func (s uniqueSubSet) addGit(sub kargoapi.GitSubscription, p *field.Path) error {
-	k := subscriptionKey{kind: "git", id: git.NormalizeGitURL(sub.RepoURL)}
+	k := subscriptionKey{kind: "git", id: git.NormalizeURL(sub.RepoURL)}
 	if _, exists := s[k]; exists {
 		return fmt.Errorf("subscription for Git repository already exists at %q", s[k])
 	}

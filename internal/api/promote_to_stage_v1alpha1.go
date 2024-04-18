@@ -139,9 +139,10 @@ func (s *server) recordPromotionCreatedEvent(
 		actor = kargoapi.FormatEventUserActor(u)
 		msg += fmt.Sprintf(" by %q", actor)
 	}
+
 	s.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionCreatedEventAnnotations(actor, p, f),
+		kargoapi.NewPromotionEventAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		msg,

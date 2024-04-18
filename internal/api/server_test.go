@@ -12,7 +12,7 @@ import (
 
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/kubernetes"
-	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
+	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
 func TestNewServer(t *testing.T) {
@@ -31,7 +31,7 @@ func TestNewServer(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	testRecorder := fakekubeclient.NewEventRecorder(0)
+	testRecorder := fakeevent.NewEventRecorder(0)
 
 	s, ok := NewServer(
 		testServerConfig,

@@ -1592,12 +1592,16 @@ export class GitSubscription extends Message<GitSubscription> {
   insecureSkipTLSVerify?: boolean;
 
   /**
-   * IncludePaths is a list of regular expressions that can optionally be used to
+   * IncludePaths is a list of filter strings that can optionally be used to
    * limit file paths in repository, changes in which will result in creation of
    * new freight. When not specified - changes in any path will produce new
-   * freight, it is equivalent to having a IncludePaths with an entry of ".*"
+   * freight, it is equivalent to having a IncludePaths with an entry of "regex:.*"
    * When both IncludePaths and ExcludePaths are specified and match same path/paths,
    * ExcludePaths will prevail over IncludePaths.
+   * Filter strings can be specified as prefix/exact match strings, globs or regular
+   * expressions, default being prefix/exact match, for example "helm/charts/", for
+   * regular expressions strings need to be prepended by either "regex:" or "regexp:"
+   * as in "regexp:^.*values\.yaml$", for globs with "glob:" as in "glob:helm/*\/*\/values.*ml"
    * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string includePaths = 8;
@@ -1605,10 +1609,14 @@ export class GitSubscription extends Message<GitSubscription> {
   includePaths: string[] = [];
 
   /**
-   * ExcludePaths is an optional list of regular expressions used to specify paths
+   * ExcludePaths is an optional list of filter strings used to specify paths
    * in git repository, changes in which should never produce new freight. When used
    * in conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes
    * precedence over IncludePaths.
+   * Filter strings can be specified as prefix/exact match strings, globs or regular
+   * expressions, default being prefix/exact match, for example "helm/charts/", for
+   * regular expressions strings need to be prepended by either "regex:" or "regexp:"
+   * as in "regexp:^.*values\.yaml$", for globs with "glob:" as in "glob:helm/*\/*\/values.*ml"
    * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string excludePaths = 9;
@@ -2880,6 +2888,16 @@ export class PromotionSpec extends Message<PromotionSpec> {
  */
 export class PromotionStatus extends Message<PromotionStatus> {
   /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   *
+   * @generated from field: optional string lastHandledRefresh = 4;
+   */
+  lastHandledRefresh?: string;
+
+  /**
    * Phase describes where the Promotion currently is in its lifecycle.
    *
    * @generated from field: optional string phase = 1;
@@ -2912,6 +2930,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 4, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
@@ -3232,6 +3251,16 @@ export class StageSpec extends Message<StageSpec> {
  */
 export class StageStatus extends Message<StageStatus> {
   /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   *
+   * @generated from field: optional string lastHandledRefresh = 11;
+   */
+  lastHandledRefresh?: string;
+
+  /**
    * Phase describes where the Stage currently is in its lifecycle.
    *
    * @generated from field: optional string phase = 1;
@@ -3299,6 +3328,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
@@ -3497,6 +3527,14 @@ export class VerificationInfo extends Message<VerificationInfo> {
   id?: string;
 
   /**
+   * Actor is the name of the entity that initiated or aborted the
+   * Verification process.
+   *
+   * @generated from field: optional string actor = 7;
+   */
+  actor?: string;
+
+  /**
    * StartTime is the time at which the Verification process was started.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
@@ -3529,6 +3567,13 @@ export class VerificationInfo extends Message<VerificationInfo> {
    */
   analysisRun?: AnalysisRunReference;
 
+  /**
+   * FinishTime is the time at which the Verification process finished.
+   *
+   * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time finishTime = 6;
+   */
+  finishTime?: Time;
+
   constructor(data?: PartialMessage<VerificationInfo>) {
     super();
     proto2.util.initPartial(data, this);
@@ -3538,10 +3583,12 @@ export class VerificationInfo extends Message<VerificationInfo> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.VerificationInfo";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "actor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "startTime", kind: "message", T: Time, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "analysisRun", kind: "message", T: AnalysisRunReference, opt: true },
+    { no: 6, name: "finishTime", kind: "message", T: Time, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerificationInfo {
@@ -3763,6 +3810,16 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
  */
 export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   *
+   * @generated from field: optional string lastHandledRefresh = 6;
+   */
+  lastHandledRefresh?: string;
+
+  /**
    * Message describes any errors that are preventing the Warehouse controller
    * from polling repositories to discover new Freight.
    *
@@ -3793,6 +3850,7 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 6, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 5, name: "lastFreight", kind: "message", T: FreightReference, opt: true },

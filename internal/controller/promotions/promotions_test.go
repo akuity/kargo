@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
+	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
 func TestNewPromotionReconciler(t *testing.T) {
@@ -23,18 +23,19 @@ func TestNewPromotionReconciler(t *testing.T) {
 	r := newReconciler(
 		kubeClient,
 		kubeClient,
-		&fakekubeclient.EventRecorder{},
+		&fakeevent.EventRecorder{},
 		&credentials.FakeDB{},
 		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.pqs.pendingPromoQueuesByStage)
+	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
 }
 
 func newFakeReconciler(
 	t *testing.T,
-	recorder *fakekubeclient.EventRecorder,
+	recorder *fakeevent.EventRecorder,
 	objects ...client.Object,
 ) *reconciler {
 	scheme := k8sruntime.NewScheme()
@@ -53,9 +54,10 @@ func newFakeReconciler(
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name                  string
-		promos                []client.Object
-		promoteFn             func(context.Context, v1alpha1.Promotion) (*kargoapi.PromotionStatus, error)
+		name      string
+		promos    []client.Object
+		promoteFn func(context.Context, v1alpha1.Promotion,
+			*v1alpha1.Freight) (*kargoapi.PromotionStatus, error)
 		promoToReconcile      *types.NamespacedName // if nil, uses the first of the promos
 		expectPromoteFnCalled bool
 		expectedPhase         kargoapi.PromotionPhase
@@ -128,7 +130,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
 				panic("expected panic")
 			},
 		},
@@ -141,7 +143,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
 				return nil, errors.New("expected error")
 			},
 		},
@@ -149,13 +151,19 @@ func TestReconcile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.TODO()
-			recorder := fakekubeclient.NewEventRecorder(1)
+			recorder := fakeevent.NewEventRecorder(1)
 			r := newFakeReconciler(t, recorder, tc.promos...)
 			promoteWasCalled := false
-			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion) (*kargoapi.PromotionStatus, error) {
+			r.getStageFn = func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Stage, error) {
+				return &kargoapi.Stage{
+					Spec: &kargoapi.StageSpec{},
+				}, nil
+			}
+			r.promoteFn = func(ctx context.Context, p v1alpha1.Promotion,
+				f *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
 				if tc.promoteFn != nil {
-					return tc.promoteFn(ctx, p)
+					return tc.promoteFn(ctx, p, f)
 				}
 				return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, nil
 			}
@@ -196,7 +204,7 @@ func TestReconcileInitializeQueues(t *testing.T) {
 		newPromo("fake-namespace", "fake-promo1", "fake-stage", kargoapi.PromotionPhasePending, before),
 		newPromo("fake-namespace", "fake-promo2", "fake-stage", kargoapi.PromotionPhasePending, now),
 	}
-	recorder := &fakekubeclient.EventRecorder{}
+	recorder := &fakeevent.EventRecorder{}
 	r := newFakeReconciler(t, recorder, promos...)
 
 	// reconcile a non-existent promo to trigger initializeQueues

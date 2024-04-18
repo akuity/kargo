@@ -224,9 +224,9 @@ func getReadRef(
 	update kargoapi.GitRepoUpdate,
 	commits []kargoapi.GitCommit,
 ) (string, int, error) {
-	updateRepoURL := libGit.NormalizeGitURL(update.RepoURL)
+	updateRepoURL := libGit.NormalizeURL(update.RepoURL)
 	for i, commit := range commits {
-		if libGit.NormalizeGitURL(commit.RepoURL) == updateRepoURL {
+		if libGit.NormalizeURL(commit.RepoURL) == updateRepoURL {
 			if update.WriteBranch == commit.Branch && update.PullRequest == nil {
 				return "", -1, fmt.Errorf(
 					"invalid update specified; cannot write to branch %q of repo %q "+

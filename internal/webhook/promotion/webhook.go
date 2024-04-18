@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
@@ -77,13 +78,14 @@ type webhook struct {
 }
 
 func SetupWebhookWithManager(
+	ctx context.Context,
 	cfg libWebhook.Config,
 	mgr ctrl.Manager,
 ) error {
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
-		mgr.GetEventRecorderFor("promotion-webhook"),
+		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook"),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Promotion{}).
@@ -137,6 +139,13 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
+	if stage.Spec.PromotionMechanisms == nil {
+		return fmt.Errorf(
+			"Stage %q in namespace %q has no PromotionMechanisms",
+			promo.Spec.Stage,
+			promo.Namespace,
+		)
+	}
 
 	// Make sure the Promotion has the same shard as the Stage
 	if stage.Spec.Shard != "" {
@@ -182,7 +191,7 @@ func (w *webhook) ValidateCreate(
 		if err != nil {
 			return nil, fmt.Errorf("get freight: %w", err)
 		}
-		w.recordPromotionCreatedEvent(req, promo, freight)
+		w.recordPromotionCreatedEvent(ctx, req, promo, freight)
 	}
 	return nil, nil
 }
@@ -285,6 +294,7 @@ func (w *webhook) authorize(
 }
 
 func (w *webhook) recordPromotionCreatedEvent(
+	ctx context.Context,
 	req admission.Request,
 	p *kargoapi.Promotion,
 	f *kargoapi.Freight,
@@ -292,7 +302,7 @@ func (w *webhook) recordPromotionCreatedEvent(
 	actor := kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 	w.recorder.AnnotatedEventf(
 		p,
-		kargoapi.NewPromotionCreatedEventAnnotations(actor, p, f),
+		kargoapi.NewPromotionEventAnnotations(ctx, actor, p, f),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonPromotionCreated,
 		"Promotion created for Stage %q by %q",

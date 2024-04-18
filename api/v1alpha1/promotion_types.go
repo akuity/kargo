@@ -86,6 +86,11 @@ type PromotionSpec struct {
 // PromotionStatus describes the current state of the transition represented by
 // a Promotion.
 type PromotionStatus struct {
+	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+	// annotation that was handled by the controller. This field can be used to
+	// determine whether the request to refresh the resource has been handled.
+	// +optional
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,4,opt,name=lastHandledRefresh"`
 	// Phase describes where the Promotion currently is in its lifecycle.
 	Phase PromotionPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// Message is a display message about the promotion, including any errors

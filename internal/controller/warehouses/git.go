@@ -3,6 +3,7 @@ package warehouses
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -18,6 +19,7 @@ import (
 const (
 	regexpPrefix = "regexp:"
 	regexPrefix  = "regex:"
+	globPrefix   = "glob:"
 )
 
 type gitMeta struct {
@@ -26,6 +28,8 @@ type gitMeta struct {
 	Message string
 	Author  string
 }
+
+type pathSelector func(path string) (bool, error)
 
 func (r *reconciler) selectCommits(
 	ctx context.Context,
@@ -303,90 +307,89 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
-// pathsFilterPositive returns true when IncludePaths and/or ExcludePaths
-// filters match one or more commit diffs and new Freight is
-// to be produced. It returns false otherwise.
-func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
-	includePathsRegexps, err := compileRegexps(includePaths)
-	if err != nil {
-		return false, fmt.Errorf(
-			"error compiling includePaths regexps: %w",
-			err,
-		)
-	}
-
-	excludePathsRegexps, err := compileRegexps(excludePaths)
-	if err != nil {
-		return false, fmt.Errorf(
-			"error compiling excludePaths regexps: %w",
-			err,
-		)
-	}
-
-	filteredDiffs := make([]string, 0, len(diffs))
-	for _, diffPath := range diffs {
-		// matchesIncludePaths case is a bit different from matchesExcludePaths
-		// in the way that if includePaths string array is empty - it matches
-		// ANY change so we need to have a check for that
-		matchesIncludePaths := len(includePaths) == 0 || matchesRegexpList(diffPath, includePathsRegexps)
-		matchesExcludePaths := matchesRegexpList(diffPath, excludePathsRegexps)
-		// combined filter decision, positive for matching includePaths and
-		// unmatching excludePaths
-		if matchesIncludePaths && !matchesExcludePaths {
-			filteredDiffs = append(filteredDiffs, diffPath)
+func getPathSelectors(selectorStrs []string) ([]pathSelector, error) {
+	selectors := make([]pathSelector, len(selectorStrs))
+	for i, selectorStr := range selectorStrs {
+		switch {
+		case strings.HasPrefix(selectorStr, regexpPrefix):
+			regex, err := regexp.Compile(strings.TrimPrefix(selectorStr, regexpPrefix))
+			if err != nil {
+				return nil, err
+			}
+			selectors[i] = func(path string) (bool, error) {
+				return regex.MatchString(path), nil
+			}
+		case strings.HasPrefix(selectorStr, regexPrefix):
+			regex, err := regexp.Compile(strings.TrimPrefix(selectorStr, regexPrefix))
+			if err != nil {
+				return nil, err
+			}
+			selectors[i] = func(path string) (bool, error) {
+				return regex.MatchString(path), nil
+			}
+		case strings.HasPrefix(selectorStr, globPrefix):
+			pattern := strings.TrimPrefix(selectorStr, globPrefix)
+			selectors[i] = func(path string) (bool, error) {
+				return filepath.Match(pattern, path)
+			}
+		default:
+			basePath := selectorStr
+			selectors[i] = func(path string) (bool, error) {
+				relPath, err := filepath.Rel(basePath, path)
+				if err != nil {
+					return false, err
+				}
+				return !strings.Contains(relPath, ".."), nil
+			}
 		}
 	}
-	if len(filteredDiffs) > 0 {
+	return selectors, nil
+}
+
+func matchesPathsFilters(includePaths []string, excludePaths []string, diffs []string) (bool, error) {
+	includeSelectors, err := getPathSelectors(includePaths)
+	if err != nil {
+		return false, err
+	}
+	excludeSelectors, err := getPathSelectors(excludePaths)
+	if err != nil {
+		return false, err
+	}
+pathLoop:
+	for _, path := range diffs {
+		if len(includeSelectors) > 0 {
+			var selected bool
+			for _, selector := range includeSelectors {
+				if selected, err = selector(path); err != nil {
+					return false, err
+				}
+				if selected {
+					// Path was explicitly included, so we can move on to checking if
+					// it should be excluded
+					break
+				}
+			}
+			if !selected {
+				// Path was not explicitly included, so we can move on to the next path
+				continue pathLoop
+			}
+		}
+		// If we reach this point, the path was either implicitly or explicitly
+		// included. Now check if it should be excluded.
+		for _, selector := range excludeSelectors {
+			selected, err := selector(path)
+			if err != nil {
+				return false, err
+			}
+			if selected {
+				// Path was explicitly excluded, so we can move on to the next path
+				continue pathLoop
+			}
+		}
+		// If we reach this point, the path was not explicitly excluded
 		return true, nil
 	}
 	return false, nil
-}
-
-// compileRegexps is a general purpose function taking a slice of strings
-// as argument and compiling them into a slice of *regexp.Regexp. It
-// returns the compiled regexps in case of success and if it fails to compile
-// a string - nil and error is returned
-func compileRegexps(regexpStrings []string) (regexps []*regexp.Regexp, err error) {
-	regexpsSlice := make([]*regexp.Regexp, 0, len(regexpStrings))
-	for _, regexpString := range regexpStrings {
-		switch {
-		case strings.HasPrefix(regexpString, regexpPrefix):
-			regexpString = strings.TrimPrefix(regexpString, regexpPrefix)
-		case strings.HasPrefix(regexpString, regexPrefix):
-			regexpString = strings.TrimPrefix(regexpString, regexPrefix)
-		default:
-			return nil, fmt.Errorf(
-				"error compiling %q into a regular expression: string must start with %q or %q",
-				regexpString, regexpPrefix, regexPrefix,
-			)
-		}
-
-		regex, err := regexp.Compile(regexpString)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error compiling string %q into a regular expression: %w",
-				regexpString,
-				err,
-			)
-		}
-		regexpsSlice = append(regexpsSlice, regex)
-	}
-	return regexpsSlice, nil
-}
-
-// matchesRegexpList is a general purpose function iterating given slice of
-// *regexp.Regexp (regexpList) to check if any of regexps match
-// stringToMatch string, if match is found it returns true and if match
-// is not found it returns false.
-func matchesRegexpList(stringToMatch string, regexpList []*regexp.Regexp) bool {
-	foundMatch := false
-	for _, regex := range regexpList {
-		if regex == nil || regex.MatchString(stringToMatch) {
-			foundMatch = true
-			break
-		}
-	}
-	return foundMatch
 }
 
 // selectLexicallyLastTag sorts the provided tag name in reverse lexicographic

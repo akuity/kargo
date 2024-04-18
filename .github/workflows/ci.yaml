@@ -102,7 +102,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@v4
       with:
-        node-version: "20.12.1"
+        node-version: "20.12.2"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Install nodejs dependencies

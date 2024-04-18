@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -60,7 +62,13 @@ type reconciler struct {
 
 	// The following behaviors are overridable for testing purposes:
 
-	promoteFn func(context.Context, kargoapi.Promotion) (*kargoapi.PromotionStatus, error)
+	getStageFn func(
+		context.Context,
+		client.Client,
+		types.NamespacedName,
+	) (*kargoapi.Stage, error)
+
+	promoteFn func(context.Context, kargoapi.Promotion, *kargoapi.Freight) (*kargoapi.PromotionStatus, error)
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -86,25 +94,18 @@ func SetupReconcilerWithManager(
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		argocdClient,
-		kargoMgr.GetEventRecorderFor(cfg.Name()),
+		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 		credentialsDB,
 		cfg,
 	)
 
-	changePredicate := predicate.Or(
-		predicate.GenerationChangedPredicate{},
-		predicate.AnnotationChangedPredicate{},
-	)
-
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Promotion{}).
-		WithEventFilter(changePredicate).
+		WithEventFilter(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			kargo.RefreshRequested{},
+		)).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreAnnotationRemoval{
-			Annotations: []string{
-				kargoapi.AnnotationKeyRefresh,
-			},
-		}).
 		WithOptions(controller.CommonOptions()).
 		Build(reconciler)
 	if err != nil {
@@ -154,6 +155,7 @@ func newReconciler(
 			credentialsDB,
 		),
 	}
+	r.getStageFn = kargoapi.GetStage
 	r.promoteFn = r.promote
 	return r
 }
@@ -207,11 +209,12 @@ func (r *reconciler) Reconcile(
 		Name:      promo.Spec.Freight,
 	})
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("get freight: %w", err)
-	}
-	var freightAlias string
-	if freight != nil {
-		freightAlias = freight.Alias
+		return ctrl.Result{}, fmt.Errorf(
+			"error finding Freight %q in namespace %q: %w",
+			promo.Spec.Freight,
+			promo.Namespace,
+			err,
+		)
 	}
 
 	logger = logger.WithFields(log.Fields{
@@ -267,6 +270,7 @@ func (r *reconciler) Reconcile(
 		otherStatus, promoteErr := r.promoteFn(
 			promoCtx,
 			*promo,
+			freight,
 		)
 		if promoteErr != nil {
 			newStatus.Phase = kargoapi.PromotionPhaseErrored
@@ -281,6 +285,11 @@ func (r *reconciler) Reconcile(
 		logger.Infof("promotion %s", newStatus.Phase)
 	}
 
+	// Record the current refresh token as having been handled.
+	if token, ok := kargoapi.RefreshAnnotationValue(promo.GetAnnotations()); ok {
+		newStatus.LastHandledRefresh = token
+	}
+
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
 	})
@@ -290,6 +299,25 @@ func (r *reconciler) Reconcile(
 
 	// Record event after patching status if new phase is terminal
 	if newStatus.Phase.IsTerminal() {
+		stage, getStageErr := r.getStageFn(
+			ctx,
+			r.kargoClient,
+			types.NamespacedName{
+				Namespace: promo.Namespace,
+				Name:      promo.Spec.Stage,
+			},
+		)
+		if getStageErr != nil {
+			return ctrl.Result{}, fmt.Errorf("get stage: %w", err)
+		}
+		if stage == nil {
+			return ctrl.Result{}, fmt.Errorf(
+				"stage %q not found in namespace %q",
+				promo.Spec.Stage,
+				promo.Namespace,
+			)
+		}
+
 		var reason string
 		switch newStatus.Phase {
 		case kargoapi.PromotionPhaseSucceeded:
@@ -305,27 +333,15 @@ func (r *reconciler) Reconcile(
 			msg += fmt.Sprintf(": %s", newStatus.Message)
 		}
 
-		eventAnnotations := map[string]string{
-			kargoapi.AnnotationKeyEventActor:               kargoapi.FormatEventControllerActor(r.cfg.Name()),
-			kargoapi.AnnotationKeyEventProject:             promo.GetNamespace(),
-			kargoapi.AnnotationKeyEventPromotionName:       promo.GetName(),
-			kargoapi.AnnotationKeyEventPromotionCreateTime: promo.GetCreationTimestamp().Format(time.RFC3339),
-			kargoapi.AnnotationKeyEventFreightName:         promo.Spec.Freight,
-			kargoapi.AnnotationKeyEventStageName:           promo.Spec.Stage,
-		}
-		if freightAlias != "" {
-			eventAnnotations[kargoapi.AnnotationKeyEventFreightAlias] = freightAlias
+		eventAnnotations := kargoapi.NewPromotionEventAnnotations(ctx,
+			kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			promo, freight)
+
+		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
+			eventAnnotations[kargoapi.AnnotationKeyEventVerificationPending] =
+				strconv.FormatBool(stage.Spec.Verification != nil)
 		}
 		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
-	}
-
-	if clearRefreshErr := kargoapi.ClearAnnotations(
-		ctx,
-		r.kargoClient,
-		promo,
-		kargoapi.AnnotationKeyRefresh,
-	); clearRefreshErr != nil {
-		logger.Errorf("error clearing Promotion refresh annotation: %s", clearRefreshErr)
 	}
 
 	if err != nil {
@@ -347,12 +363,13 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) promote(
 	ctx context.Context,
 	promo kargoapi.Promotion,
+	targetFreight *kargoapi.Freight,
 ) (*kargoapi.PromotionStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 	stageName := promo.Spec.Stage
 	stageNamespace := promo.Namespace
 
-	stage, err := kargoapi.GetStage(
+	stage, err := r.getStageFn(
 		ctx,
 		r.kargoClient,
 		types.NamespacedName{
@@ -368,22 +385,6 @@ func (r *reconciler) promote(
 	}
 	logger.Debug("found associated Stage")
 
-	targetFreight, err := kargoapi.GetFreight(
-		ctx,
-		r.kargoClient,
-		types.NamespacedName{
-			Namespace: promo.Namespace,
-			Name:      promo.Spec.Freight,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error finding Freight %q in namespace %q: %w",
-			promo.Spec.Freight,
-			promo.Namespace,
-			err,
-		)
-	}
 	if targetFreight == nil {
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}

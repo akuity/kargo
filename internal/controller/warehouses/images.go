@@ -88,7 +88,7 @@ func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
 }
 
 func getGithubImageSourceURL(gitRepoURL, tag string) string {
-	return fmt.Sprintf("%s/tree/%s", git.NormalizeGitURL(gitRepoURL), tag)
+	return fmt.Sprintf("%s/tree/%s", git.NormalizeURL(gitRepoURL), tag)
 }
 
 func getImageRefs(

@@ -2,7 +2,6 @@ package stages
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -10,10 +9,12 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -30,6 +31,7 @@ import (
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -66,6 +68,8 @@ type reconciler struct {
 	// The following behaviors are overridable for testing purposes:
 
 	// Loop guard:
+
+	nowFn func() time.Time
 
 	hasNonTerminalPromotionsFn func(
 		ctx context.Context,
@@ -311,23 +315,18 @@ func SetupReconcilerWithManager(
 		WithEventFilter(
 			predicate.Or(
 				predicate.GenerationChangedPredicate{},
-				predicate.AnnotationChangedPredicate{},
+				kargo.RefreshRequested{},
+				kargo.ReverifyRequested{},
+				kargo.AbortRequested{},
 			),
 		).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreAnnotationRemoval{
-			Annotations: []string{
-				kargoapi.AnnotationKeyRefresh,
-				kargoapi.AnnotationKeyReverify,
-				kargoapi.AnnotationKeyAbort,
-			},
-		}).
 		WithOptions(controller.CommonOptions()).
 		Build(
 			newReconciler(
 				kargoMgr.GetClient(),
 				argocdClient,
-				kargoMgr.GetEventRecorderFor(cfg.Name()),
+				libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 				cfg,
 				shardRequirement,
 			),
@@ -454,6 +453,7 @@ func newReconciler(
 	}
 	// The following default behaviors are overridable for testing purposes:
 	// Loop guard:
+	r.nowFn = time.Now
 	r.hasNonTerminalPromotionsFn = r.hasNonTerminalPromotions
 	r.listPromosFn = r.kargoClient.List
 	// Freight verification:
@@ -546,29 +546,23 @@ func (r *reconciler) Reconcile(
 		newStatus.Message = ""
 	}
 
+	// Record the current refresh token as having been handled.
+	if token, ok := kargoapi.RefreshAnnotationValue(stage.GetAnnotations()); ok {
+		newStatus.LastHandledRefresh = token
+	}
+
 	updateErr := kubeclient.PatchStatus(ctx, r.kargoClient, stage, func(status *kargoapi.StageStatus) {
 		*status = newStatus
 	})
 	if updateErr != nil {
 		logger.Errorf("error updating Stage status: %s", updateErr)
 	}
-	clearErr := kargoapi.ClearAnnotations(
-		ctx,
-		r.kargoClient,
-		stage,
-		kargoapi.AnnotationKeyRefresh,
-		kargoapi.AnnotationKeyReverify,
-		kargoapi.AnnotationKeyAbort,
-	)
-	if clearErr != nil {
-		logger.Errorf("error clearing Stage annotations: %s", clearErr)
-	}
 
 	// If we had no error, but couldn't update, then we DO have an error. But we
 	// do it this way so that a failure to update is never counted as THE failure
 	// when something else more serious occurred first.
 	if err == nil {
-		err = errors.Join(updateErr, clearErr)
+		err = updateErr
 	}
 	logger.Debug("done reconciling Stage")
 
@@ -588,6 +582,8 @@ func (r *reconciler) syncControlFlowStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, error) {
+	startTime := r.nowFn()
+
 	status := *stage.Status.DeepCopy()
 	status.ObservedGeneration = stage.Generation
 	status.Health = nil // Reset health
@@ -648,6 +644,8 @@ func (r *reconciler) syncControlFlowStage(
 			)
 		}
 	}
+
+	finishTime := r.nowFn()
 	for _, available := range availableFreight {
 		af := available // Avoid implicit memory aliasing
 		// Only bother to mark as verified in this Stage if not already the case.
@@ -671,8 +669,11 @@ func (r *reconciler) syncControlFlowStage(
 				stage,
 				&af,
 				&kargoapi.VerificationInfo{
-					Phase: kargoapi.VerificationPhaseSuccessful,
+					StartTime:  ptr.To(metav1.NewTime(startTime)),
+					FinishTime: ptr.To(metav1.NewTime(finishTime)),
+					Phase:      kargoapi.VerificationPhaseSuccessful,
 				},
+				nil, // Explicitly pass `nil` here since there is no associated AnalysisRun
 			)
 		}
 	}
@@ -683,6 +684,7 @@ func (r *reconciler) syncNormalStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (kargoapi.StageStatus, error) {
+	startTime := r.nowFn()
 	status := *stage.Status.DeepCopy()
 
 	logger := logging.LoggerFromContext(ctx)
@@ -757,8 +759,8 @@ func (r *reconciler) syncNormalStage(
 			// Confirm if a reverification is requested. If so, clear the
 			// verification info to start the verification process again.
 			info := status.CurrentFreight.VerificationInfo
-			if info != nil && info.ID != "" && info.Phase.IsTerminal() {
-				if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyReverify]; ok && v == info.ID {
+			if info != nil && info.Phase.IsTerminal() {
+				if req, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations()); req.ForID(info.ID) {
 					logger.Debug("rerunning verification")
 					status.Phase = kargoapi.StagePhaseVerifying
 					status.CurrentFreight.VerificationInfo = nil
@@ -800,8 +802,8 @@ func (r *reconciler) syncNormalStage(
 					// Abort the verification if it's still running and the Stage has
 					// been marked to do so.
 					newInfo := status.CurrentFreight.VerificationInfo
-					if newInfo.ID != "" && !newInfo.Phase.IsTerminal() {
-						if v, ok := stage.GetAnnotations()[kargoapi.AnnotationKeyAbort]; ok && v == newInfo.ID {
+					if !newInfo.Phase.IsTerminal() {
+						if req, _ := kargoapi.AbortAnnotationValue(stage.GetAnnotations()); req.ForID(newInfo.ID) {
 							log.Debug("aborting verification")
 							status.CurrentFreight.VerificationInfo = r.abortVerificationFn(ctx, stage)
 						}
@@ -858,12 +860,32 @@ func (r *reconciler) syncNormalStage(
 			}
 		}
 
+		finishTime := r.nowFn()
+
 		// Record freight verification event only if the freight is newly verified
 		if shouldRecordFreightVerificationEvent {
 			vi := status.CurrentFreight.VerificationInfo
 			if stage.Spec.Verification == nil {
 				vi = &kargoapi.VerificationInfo{
-					Phase: kargoapi.VerificationPhaseSuccessful,
+					StartTime:  ptr.To(metav1.NewTime(startTime)),
+					FinishTime: ptr.To(metav1.NewTime(finishTime)),
+					Phase:      kargoapi.VerificationPhaseSuccessful,
+				}
+			}
+
+			var ar *rollouts.AnalysisRun
+			if vi.HasAnalysisRun() {
+				var err error
+				ar, err = r.getAnalysisRunFn(
+					ctx,
+					r.kargoClient,
+					types.NamespacedName{
+						Namespace: vi.AnalysisRun.Namespace,
+						Name:      vi.AnalysisRun.Name,
+					},
+				)
+				if err != nil {
+					return status, fmt.Errorf("get analysisRun: %w", err)
 				}
 			}
 
@@ -879,7 +901,7 @@ func (r *reconciler) syncNormalStage(
 				return status, fmt.Errorf("get freight: %w", err)
 			}
 			if fr != nil {
-				r.recordFreightVerificationEvent(stage, fr, vi)
+				r.recordFreightVerificationEvent(stage, fr, vi, ar)
 			}
 		}
 	}
@@ -981,7 +1003,8 @@ func (r *reconciler) syncNormalStage(
 
 	r.recorder.AnnotatedEventf(
 		&promo,
-		kargoapi.NewPromotionCreatedEventAnnotations(
+		kargoapi.NewPromotionEventAnnotations(
+			ctx,
 			kargoapi.FormatEventControllerActor(r.cfg.Name()),
 			&promo,
 			latestFreight,
@@ -1492,16 +1515,36 @@ func (r *reconciler) recordFreightVerificationEvent(
 	s *kargoapi.Stage,
 	fr *kargoapi.Freight,
 	vi *kargoapi.VerificationInfo,
+	ar *rollouts.AnalysisRun,
 ) {
 	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventActor:        kargoapi.FormatEventControllerActor(r.cfg.Name()),
-		kargoapi.AnnotationKeyEventProject:      s.Namespace,
-		kargoapi.AnnotationKeyEventStageName:    s.Name,
-		kargoapi.AnnotationKeyEventFreightAlias: fr.Alias,
-		kargoapi.AnnotationKeyEventFreightName:  fr.Name,
+		kargoapi.AnnotationKeyEventActor:             kargoapi.FormatEventControllerActor(r.cfg.Name()),
+		kargoapi.AnnotationKeyEventProject:           s.Namespace,
+		kargoapi.AnnotationKeyEventStageName:         s.Name,
+		kargoapi.AnnotationKeyEventFreightAlias:      fr.Alias,
+		kargoapi.AnnotationKeyEventFreightName:       fr.Name,
+		kargoapi.AnnotationKeyEventFreightCreateTime: fr.CreationTimestamp.Format(time.RFC3339),
 	}
-	if vi.AnalysisRun != nil {
-		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = vi.AnalysisRun.Name
+	if vi.StartTime != nil {
+		annotations[kargoapi.AnnotationKeyEventVerificationStartTime] = vi.StartTime.Format(time.RFC3339)
+	}
+	if vi.FinishTime != nil {
+		annotations[kargoapi.AnnotationKeyEventVerificationFinishTime] = vi.FinishTime.Format(time.RFC3339)
+	}
+
+	// Extract metadata from the AnalysisRun if available
+	if ar != nil {
+		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = ar.Name
+		// AnalysisRun that triggered by a Promotion contains the Promotion name
+		if promoName, ok := ar.Labels[kargoapi.PromotionLabelKey]; ok {
+			annotations[kargoapi.AnnotationKeyEventPromotionName] = promoName
+		}
+	}
+
+	// If the verification is manually triggered (e.g. reverify),
+	// override the actor with the one who triggered the verification.
+	if vi.Actor != "" {
+		annotations[kargoapi.AnnotationKeyEventActor] = vi.Actor
 	}
 
 	reason := kargoapi.EventReasonFreightVerificationUnknown

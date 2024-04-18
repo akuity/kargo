@@ -36,7 +36,21 @@ func (s *server) GetStage(
 	}, &stage); err != nil {
 		return nil, fmt.Errorf("get stage: %w", err)
 	}
+
+	obj, raw, err := objectOrRaw(&stage, req.Msg.GetFormat())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if raw != nil {
+		return connect.NewResponse(&svcv1alpha1.GetStageResponse{
+			Result: &svcv1alpha1.GetStageResponse_Raw{
+				Raw: raw,
+			},
+		}), nil
+	}
 	return connect.NewResponse(&svcv1alpha1.GetStageResponse{
-		Stage: &stage,
+		Result: &svcv1alpha1.GetStageResponse_Stage{
+			Stage: obj,
+		},
 	}), nil
 }

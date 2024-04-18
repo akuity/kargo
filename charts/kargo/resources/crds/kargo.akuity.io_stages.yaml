@@ -674,6 +674,11 @@ spec:
                         VerificationInfo contains information about the currently running
                         Verification process.
                       properties:
+                        actor:
+                          description: |-
+                            Actor is the name of the entity that initiated or aborted the
+                            Verification process.
+                          type: string
                         analysisRun:
                           description: |-
                             AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -694,6 +699,11 @@ spec:
                           - namespace
                           - phase
                           type: object
+                        finishTime:
+                          description: FinishTime is the time at which the Verification
+                            process finished.
+                          format: date-time
+                          type: string
                         id:
                           description: ID is the identifier of the Verification process.
                           type: string
@@ -721,6 +731,11 @@ spec:
                       VerificationInfo is information about any verification process that was
                       associated with this Freight for this Stage.
                     properties:
+                      actor:
+                        description: |-
+                          Actor is the name of the entity that initiated or aborted the
+                          Verification process.
+                        type: string
                       analysisRun:
                         description: |-
                           AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -741,6 +756,11 @@ spec:
                         - namespace
                         - phase
                         type: object
+                      finishTime:
+                        description: FinishTime is the time at which the Verification
+                          process finished.
+                        format: date-time
+                        type: string
                       id:
                         description: ID is the identifier of the Verification process.
                         type: string
@@ -884,6 +904,11 @@ spec:
                             VerificationInfo contains information about the currently running
                             Verification process.
                           properties:
+                            actor:
+                              description: |-
+                                Actor is the name of the entity that initiated or aborted the
+                                Verification process.
+                              type: string
                             analysisRun:
                               description: |-
                                 AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -904,6 +929,11 @@ spec:
                               - namespace
                               - phase
                               type: object
+                            finishTime:
+                              description: FinishTime is the time at which the Verification
+                                process finished.
+                              format: date-time
+                              type: string
                             id:
                               description: ID is the identifier of the Verification
                                 process.
@@ -932,6 +962,11 @@ spec:
                           VerificationInfo is information about any verification process that was
                           associated with this Freight for this Stage.
                         properties:
+                          actor:
+                            description: |-
+                              Actor is the name of the entity that initiated or aborted the
+                              Verification process.
+                            type: string
                           analysisRun:
                             description: |-
                               AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -952,6 +987,11 @@ spec:
                             - namespace
                             - phase
                             type: object
+                          finishTime:
+                            description: FinishTime is the time at which the Verification
+                              process finished.
+                            format: date-time
+                            type: string
                           id:
                             description: ID is the identifier of the Verification
                               process.
@@ -985,6 +1025,12 @@ spec:
                   status:
                     description: Status is the (optional) status of the promotion
                     properties:
+                      lastHandledRefresh:
+                        description: |-
+                          LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                          annotation that was handled by the controller. This field can be used to
+                          determine whether the request to refresh the resource has been handled.
+                        type: string
                       message:
                         description: |-
                           Message is a display message about the promotion, including any errors
@@ -1184,6 +1230,11 @@ spec:
                           VerificationInfo contains information about the currently running
                           Verification process.
                         properties:
+                          actor:
+                            description: |-
+                              Actor is the name of the entity that initiated or aborted the
+                              Verification process.
+                            type: string
                           analysisRun:
                             description: |-
                               AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -1204,6 +1255,11 @@ spec:
                             - namespace
                             - phase
                             type: object
+                          finishTime:
+                            description: FinishTime is the time at which the Verification
+                              process finished.
+                            format: date-time
+                            type: string
                           id:
                             description: ID is the identifier of the Verification
                               process.
@@ -1232,6 +1288,11 @@ spec:
                         VerificationInfo is information about any verification process that was
                         associated with this Freight for this Stage.
                       properties:
+                        actor:
+                          description: |-
+                            Actor is the name of the entity that initiated or aborted the
+                            Verification process.
+                          type: string
                         analysisRun:
                           description: |-
                             AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -1252,6 +1313,11 @@ spec:
                           - namespace
                           - phase
                           type: object
+                        finishTime:
+                          description: FinishTime is the time at which the Verification
+                            process finished.
+                          format: date-time
+                          type: string
                         id:
                           description: ID is the identifier of the Verification process.
                           type: string
@@ -1279,6 +1345,12 @@ spec:
                       type: string
                   type: object
                 type: array
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                  annotation that was handled by the controller. This field can be used to
+                  determine whether the request to refresh the resource has been handled.
+                type: string
               lastPromotion:
                 description: LastPromotion is a reference to the last completed promotion.
                 properties:
@@ -1395,6 +1467,11 @@ spec:
                             VerificationInfo contains information about the currently running
                             Verification process.
                           properties:
+                            actor:
+                              description: |-
+                                Actor is the name of the entity that initiated or aborted the
+                                Verification process.
+                              type: string
                             analysisRun:
                               description: |-
                                 AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -1415,6 +1492,11 @@ spec:
                               - namespace
                               - phase
                               type: object
+                            finishTime:
+                              description: FinishTime is the time at which the Verification
+                                process finished.
+                              format: date-time
+                              type: string
                             id:
                               description: ID is the identifier of the Verification
                                 process.
@@ -1443,6 +1525,11 @@ spec:
                           VerificationInfo is information about any verification process that was
                           associated with this Freight for this Stage.
                         properties:
+                          actor:
+                            description: |-
+                              Actor is the name of the entity that initiated or aborted the
+                              Verification process.
+                            type: string
                           analysisRun:
                             description: |-
                               AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -1463,6 +1550,11 @@ spec:
                             - namespace
                             - phase
                             type: object
+                          finishTime:
+                            description: FinishTime is the time at which the Verification
+                              process finished.
+                            format: date-time
+                            type: string
                           id:
                             description: ID is the identifier of the Verification
                               process.
@@ -1496,6 +1588,12 @@ spec:
                   status:
                     description: Status is the (optional) status of the promotion
                     properties:
+                      lastHandledRefresh:
+                        description: |-
+                          LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                          annotation that was handled by the controller. This field can be used to
+                          determine whether the request to refresh the resource has been handled.
+                        type: string
                       message:
                         description: |-
                           Message is a display message about the promotion, including any errors

@@ -12,6 +12,136 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+func TestVerificationRequest_Equals(t *testing.T) {
+	tests := []struct {
+		name     string
+		r1       *VerificationRequest
+		r2       *VerificationRequest
+		expected bool
+	}{
+		{
+			name:     "both nil",
+			r1:       nil,
+			r2:       nil,
+			expected: true,
+		},
+		{
+			name:     "one nil",
+			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
+			r2:       nil,
+			expected: false,
+		},
+		{
+			name:     "other nil",
+			r1:       nil,
+			r2:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
+			expected: false,
+		},
+		{
+			name:     "different IDs",
+			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
+			r2:       &VerificationRequest{ID: "other-id", Actor: "fake-actor", ControlPlane: false},
+			expected: false,
+		},
+		{
+			name:     "different actors",
+			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
+			r2:       &VerificationRequest{ID: "fake-id", Actor: "other-actor", ControlPlane: true},
+			expected: false,
+		},
+		{
+			name:     "different control plane flags",
+			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
+			r2:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: false},
+			expected: false,
+		},
+		{
+			name:     "equal",
+			r1:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
+			r2:       &VerificationRequest{ID: "fake-id", Actor: "fake-actor", ControlPlane: true},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.r1.Equals(tt.r2), tt.expected)
+		})
+	}
+}
+
+func TestVerificationRequest_HasID(t *testing.T) {
+	t.Run("verification request is nil", func(t *testing.T) {
+		var r *VerificationRequest
+		require.False(t, r.HasID())
+	})
+
+	t.Run("verification request has empty ID", func(t *testing.T) {
+		r := &VerificationRequest{
+			ID: "",
+		}
+		require.False(t, r.HasID())
+	})
+
+	t.Run("verification request has ID", func(t *testing.T) {
+		r := &VerificationRequest{
+			ID: "foo",
+		}
+		require.True(t, r.HasID())
+	})
+}
+
+func TestVerificationRequest_ForID(t *testing.T) {
+	t.Run("verification request is nil", func(t *testing.T) {
+		var r *VerificationRequest
+		require.False(t, r.ForID("foo"))
+	})
+
+	t.Run("verification request has ID", func(t *testing.T) {
+		r := &VerificationRequest{
+			ID: "foo",
+		}
+		require.True(t, r.ForID("foo"))
+		require.False(t, r.ForID("bar"))
+	})
+
+	t.Run("verification request has empty ID", func(t *testing.T) {
+		r := &VerificationRequest{
+			ID: "",
+		}
+		require.False(t, r.ForID(""))
+		require.False(t, r.ForID("foo"))
+	})
+}
+
+func TestVerificationRequest_String(t *testing.T) {
+	t.Run("verification request is nil", func(t *testing.T) {
+		var r *VerificationRequest
+		require.Empty(t, r.String())
+	})
+
+	t.Run("verification request is empty", func(t *testing.T) {
+		r := &VerificationRequest{}
+		require.Empty(t, r.String())
+	})
+
+	t.Run("verification request has empty ID", func(t *testing.T) {
+		r := &VerificationRequest{
+			ID: "",
+		}
+		require.Empty(t, r.String())
+	})
+
+	t.Run("verification request has data", func(t *testing.T) {
+		r := &VerificationRequest{
+			ID:           "foo",
+			Actor:        "fake-actor",
+			ControlPlane: true,
+		}
+		require.Equal(t, `{"id":"foo","actor":"fake-actor","controlPlane":true}`, r.String())
+	})
+}
+
 func TestGetStage(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
@@ -164,7 +294,9 @@ func TestReverifyStageFreight(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		require.Equal(t, "fake-id", stage.Annotations[AnnotationKeyReverify])
+		require.Equal(t, (&VerificationRequest{
+			ID: "fake-id",
+		}).String(), stage.Annotations[AnnotationKeyReverify])
 	})
 }
 
@@ -302,6 +434,8 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
-		require.Equal(t, "fake-id", stage.Annotations[AnnotationKeyAbort])
+		require.Equal(t, (&VerificationRequest{
+			ID: "fake-id",
+		}).String(), stage.Annotations[AnnotationKeyAbort])
 	})
 }

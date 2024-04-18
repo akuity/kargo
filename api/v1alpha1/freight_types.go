@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,10 +57,24 @@ func (f *Freight) GenerateID() string {
 	size := len(f.Commits) + len(f.Images) + len(f.Charts)
 	artifacts := make([]string, 0, size)
 	for _, commit := range f.Commits {
-		artifacts = append(
-			artifacts,
-			fmt.Sprintf("%s:%s", commit.RepoURL, commit.ID),
-		)
+		if commit.Tag != "" {
+			// If we have a tag, incorporate it into the canonical representation of a
+			// commit used when calculating Freight ID. This is necessary because one
+			// commit could have multiple tags. Suppose we have already detected a
+			// commit with a tag v1.0.0-rc.1 and produced the corresponding Freight.
+			// Later, that same commit is tagged as v1.0.0. If we don't incorporate
+			// the tag into the ID, we will never produce a new/distinct piece of
+			// Freight for the new tag.
+			artifacts = append(
+				artifacts,
+				fmt.Sprintf("%s:%s:%s", git.NormalizeURL(commit.RepoURL), commit.Tag, commit.ID),
+			)
+		} else {
+			artifacts = append(
+				artifacts,
+				fmt.Sprintf("%s:%s", git.NormalizeURL(commit.RepoURL), commit.ID),
+			)
+		}
 	}
 	for _, image := range f.Images {
 		artifacts = append(
@@ -78,7 +94,7 @@ func (f *Freight) GenerateID() string {
 			fmt.Sprintf(
 				"%s:%s",
 				// path.Join accounts for the possibility that chart.Name is empty
-				path.Join(chart.RepoURL, chart.Name),
+				path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
 				chart.Version,
 			),
 		)
