@@ -1,6 +1,6 @@
 import { Switch, Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -122,12 +122,19 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
   }, [stages]);
 
   const [imageURL, setImageURL] = useState(images.keys().next().value as string);
-  const image = imageURL && images.get(imageURL);
   const [showHistory, setShowHistory] = useLocalStorage(`${projectName}-show-history`, false);
+
+  useEffect(() => {
+    setImageURL(images.keys().next().value as string);
+  }, [images]);
+
+  const curImage = useMemo(() => {
+    return images.get(imageURL);
+  }, [imageURL]);
 
   return (
     <>
-      {image ? (
+      {curImage ? (
         <>
           <div className='mb-4 flex items-center'>
             <Switch onChange={(val) => setShowHistory(val)} checked={showHistory} />
@@ -143,7 +150,7 @@ export const Images = ({ projectName, stages }: { projectName: string; stages: S
               }))}
             />
           </div>
-          {Array.from(image.entries())
+          {Array.from(curImage.entries())
             .sort((a, b) => b[0].localeCompare(a[0], undefined, { numeric: true }))
             .map(([tag, tagStages]) => (
               <ImageTagRow
