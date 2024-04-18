@@ -30,12 +30,20 @@ type RepoCredentials struct {
 	Password string `json:"password,omitempty"`
 }
 
+type SigningKeyType string
+
+const (
+	SigningKeyTypeGPG SigningKeyType = "gpg"
+)
+
 // User represents the user contributing to a git repository.
 type User struct {
 	// Name is the user's full name.
 	Name string
 	// Email is the user's email address.
 	Email string
+	// SigningKeyType indicates the type of signing key.
+	SigningKeyType SigningKeyType
 	// SigningKeyPath is an optional path referencing a signing key for
 	// signing git objects.
 	SigningKeyPath string
@@ -516,7 +524,7 @@ func (r *repo) SetAuthor(author User) error {
 		return fmt.Errorf("error configuring git user email: %w", err)
 	}
 
-	if author.SigningKeyPath != "" {
+	if author.SigningKeyPath != "" && author.SigningKeyType == SigningKeyTypeGPG {
 		cmd = r.buildGitCommand("config", "--global", "commit.gpgsign", "true")
 		cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 		if _, err := libExec.Exec(cmd); err != nil {

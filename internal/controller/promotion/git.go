@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kelseyhightower/envconfig"
 
@@ -20,6 +21,7 @@ const tmpPrefix = "repo-scrap-"
 type GitConfig struct {
 	Name           string `envconfig:"GITCLIENT_NAME"`
 	Email          string `envconfig:"GITCLIENT_EMAIL"`
+	SigningKeyType string `envconfig:"GITCLIENT_SIGNING_KEY_TYPE"`
 	SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
 }
 
@@ -314,6 +316,16 @@ func (g *gitMechanism) getAuthor() (*git.User, error) {
 	author := git.User{
 		Name:  g.cfg.Name,
 		Email: g.cfg.Email,
+	}
+
+	switch strings.ToLower(g.cfg.SigningKeyType) {
+	case "gpg", "":
+		author.SigningKeyType = git.SigningKeyTypeGPG
+	default:
+		return nil, fmt.Errorf(
+			"unsupported signing key type: %q",
+			g.cfg.SigningKeyType,
+		)
 	}
 
 	if g.cfg.SigningKeyPath != "" {
