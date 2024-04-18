@@ -22,6 +22,7 @@ import (
 	"github.com/akuity/kargo/internal/api/kubernetes"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
+	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/os"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
@@ -163,7 +164,7 @@ func (o *apiOptions) setupAPIClient(ctx context.Context) (*rest.Config, client.C
 		}
 	}()
 
-	return restCfg, mgr.GetClient(), mgr.GetEventRecorderFor("api"), nil
+	return restCfg, mgr.GetClient(), libEvent.NewRecorder(ctx, scheme, mgr.GetClient(), "api"), nil
 }
 
 func registerKargoIndexers(ctx context.Context, mgr ctrl.Manager) error {

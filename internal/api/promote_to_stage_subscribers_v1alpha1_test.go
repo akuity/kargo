@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
+	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -24,7 +24,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 		server     *server
 		assertions func(
 			*testing.T,
-			*fakekubeclient.EventRecorder,
+			*fakeevent.EventRecorder,
 			*connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 			error,
 		)
@@ -34,7 +34,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			server: &server{},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -58,7 +58,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -87,7 +87,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -116,7 +116,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -166,7 +166,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -212,7 +212,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -265,7 +265,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -324,7 +324,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -379,7 +379,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -449,7 +449,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -526,7 +526,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				_ *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -606,7 +606,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				res *connect.Response[svcv1alpha1.PromoteToStageSubscribersResponse],
 				err error,
 			) {
@@ -622,7 +622,7 @@ func TestPromoteToStageSubscribers(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			recorder := fakekubeclient.NewEventRecorder(1)
+			recorder := fakeevent.NewEventRecorder(1)
 			testCase.server.recorder = recorder
 			resp, err := testCase.server.PromoteToStageSubscribers(
 				context.Background(),
