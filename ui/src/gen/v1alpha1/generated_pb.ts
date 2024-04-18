@@ -2888,6 +2888,16 @@ export class PromotionSpec extends Message<PromotionSpec> {
  */
 export class PromotionStatus extends Message<PromotionStatus> {
   /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   *
+   * @generated from field: optional string lastHandledRefresh = 4;
+   */
+  lastHandledRefresh?: string;
+
+  /**
    * Phase describes where the Promotion currently is in its lifecycle.
    *
    * @generated from field: optional string phase = 1;
@@ -2920,6 +2930,7 @@ export class PromotionStatus extends Message<PromotionStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.PromotionStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 4, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "metadata", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
@@ -3240,6 +3251,16 @@ export class StageSpec extends Message<StageSpec> {
  */
 export class StageStatus extends Message<StageStatus> {
   /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   *
+   * @generated from field: optional string lastHandledRefresh = 11;
+   */
+  lastHandledRefresh?: string;
+
+  /**
    * Phase describes where the Stage currently is in its lifecycle.
    *
    * @generated from field: optional string phase = 1;
@@ -3307,6 +3328,7 @@ export class StageStatus extends Message<StageStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.StageStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 11, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "currentFreight", kind: "message", T: FreightReference, opt: true },
     { no: 3, name: "history", kind: "message", T: FreightReference, repeated: true },
@@ -3505,6 +3527,14 @@ export class VerificationInfo extends Message<VerificationInfo> {
   id?: string;
 
   /**
+   * Actor is the name of the entity that initiated or aborted the
+   * Verification process.
+   *
+   * @generated from field: optional string actor = 7;
+   */
+  actor?: string;
+
+  /**
    * StartTime is the time at which the Verification process was started.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
@@ -3553,6 +3583,7 @@ export class VerificationInfo extends Message<VerificationInfo> {
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.VerificationInfo";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
     { no: 4, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "actor", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "startTime", kind: "message", T: Time, opt: true },
     { no: 1, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -3779,6 +3810,16 @@ export class WarehouseSpec extends Message<WarehouseSpec> {
  */
 export class WarehouseStatus extends Message<WarehouseStatus> {
   /**
+   * LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+   * annotation that was handled by the controller. This field can be used to
+   * determine whether the request to refresh the resource has been handled.
+   * +optional
+   *
+   * @generated from field: optional string lastHandledRefresh = 6;
+   */
+  lastHandledRefresh?: string;
+
+  /**
    * Message describes any errors that are preventing the Warehouse controller
    * from polling repositories to discover new Freight.
    *
@@ -3809,6 +3850,7 @@ export class WarehouseStatus extends Message<WarehouseStatus> {
   static readonly runtime: typeof proto2 = proto2;
   static readonly typeName = "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus";
   static readonly fields: FieldList = proto2.util.newFieldList(() => [
+    { no: 6, name: "lastHandledRefresh", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "observedGeneration", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 5, name: "lastFreight", kind: "message", T: FreightReference, opt: true },

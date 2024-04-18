@@ -400,6 +400,11 @@ spec:
                         VerificationInfo contains information about the currently running
                         Verification process.
                       properties:
+                        actor:
+                          description: |-
+                            Actor is the name of the entity that initiated or aborted the
+                            Verification process.
+                          type: string
                         analysisRun:
                           description: |-
                             AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -452,6 +457,11 @@ spec:
                       VerificationInfo is information about any verification process that was
                       associated with this Freight for this Stage.
                     properties:
+                      actor:
+                        description: |-
+                          Actor is the name of the entity that initiated or aborted the
+                          Verification process.
+                        type: string
                       analysisRun:
                         description: |-
                           AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements
@@ -503,6 +513,12 @@ spec:
                       this Freight.
                     type: string
                 type: object
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                  annotation that was handled by the controller. This field can be used to
+                  determine whether the request to refresh the resource has been handled.
+                type: string
               message:
                 description: |-
                   Message describes any errors that are preventing the Warehouse controller

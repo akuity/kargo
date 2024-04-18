@@ -280,6 +280,10 @@
               "items": {
                 "description": "VerificationInfo contains information about the currently running\nVerification process.",
                 "properties": {
+                  "actor": {
+                    "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                    "type": "string"
+                  },
                   "analysisRun": {
                     "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                     "properties": {
@@ -333,6 +337,10 @@
             "verificationInfo": {
               "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
               "properties": {
+                "actor": {
+                  "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
+                  "type": "string"
+                },
                 "analysisRun": {
                   "description": "AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements\nthe Verification process.",
                   "properties": {
@@ -387,6 +395,10 @@
             }
           },
           "type": "object"
+        },
+        "lastHandledRefresh": {
+          "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+          "type": "string"
         },
         "message": {
           "description": "Message describes any errors that are preventing the Warehouse controller\nfrom polling repositories to discover new Freight.",

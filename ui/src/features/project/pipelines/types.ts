@@ -50,11 +50,13 @@ export type NodesItemType =
 
 export const NewWarehouseNode = (warehouse: Warehouse, stageNames?: string[]): NodesRepoType => {
   const name = warehouse?.metadata?.name || '';
+  const refreshRequest = warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
+  const refreshStatus = warehouse?.status?.refreshStatus?.lastHandledRefresh;
   return {
     data: warehouse,
     stageNames: stageNames || [],
     warehouseName: name,
-    refreshing: !!warehouse?.metadata?.annotations['kargo.akuity.io/refresh'],
+    refreshing: refreshRequest !== undefined && refreshRequest !== refreshStatus,
     type: NodeType.WAREHOUSE
   };
 };

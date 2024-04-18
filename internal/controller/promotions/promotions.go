@@ -99,20 +99,13 @@ func SetupReconcilerWithManager(
 		cfg,
 	)
 
-	changePredicate := predicate.Or(
-		predicate.GenerationChangedPredicate{},
-		predicate.AnnotationChangedPredicate{},
-	)
-
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Promotion{}).
-		WithEventFilter(changePredicate).
+		WithEventFilter(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			kargo.RefreshRequested{},
+		)).
 		WithEventFilter(shardPredicate).
-		WithEventFilter(kargo.IgnoreAnnotationRemoval{
-			Annotations: []string{
-				kargoapi.AnnotationKeyRefresh,
-			},
-		}).
 		WithOptions(controller.CommonOptions()).
 		Build(reconciler)
 	if err != nil {
@@ -292,6 +285,11 @@ func (r *reconciler) Reconcile(
 		logger.Infof("promotion %s", newStatus.Phase)
 	}
 
+	// Record the current refresh token as having been handled.
+	if token, ok := kargoapi.RefreshAnnotationValue(promo.GetAnnotations()); ok {
+		newStatus.LastHandledRefresh = token
+	}
+
 	err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
 	})
@@ -344,15 +342,6 @@ func (r *reconciler) Reconcile(
 				strconv.FormatBool(stage.Spec.Verification != nil)
 		}
 		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
-	}
-
-	if clearRefreshErr := kargoapi.ClearAnnotations(
-		ctx,
-		r.kargoClient,
-		promo,
-		kargoapi.AnnotationKeyRefresh,
-	); clearRefreshErr != nil {
-		logger.Errorf("error clearing Promotion refresh annotation: %s", clearRefreshErr)
 	}
 
 	if err != nil {

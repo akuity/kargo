@@ -96,20 +96,43 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		oldStage = req.OldObject.Object.(*kargoapi.Stage) // nolint: forcetypeassert
 	}
 
-	if req.Operation == admissionv1.Create ||
-		req.Operation == admissionv1.Update {
-		if id, ok := stage.Annotations[kargoapi.AnnotationKeyReverify]; ok {
-			// Set actor as an admission request's user info when reverification is requested
-			// to allow controllers to track who triggered it.
-			if !w.isRequestFromKargoControlplaneFn(req) &&
-				(oldStage == nil ||
-					(oldStage != nil && oldStage.Annotations[kargoapi.AnnotationKeyReverify] != id)) {
-				stage.Annotations[kargoapi.AnnotationKeyReverifyActor] =
-					kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
+		if verReq, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations); ok {
+			var oldVerReq *kargoapi.VerificationRequest
+			if oldStage != nil {
+				oldVerReq, _ = kargoapi.ReverifyAnnotationValue(oldStage.Annotations)
 			}
-		} else {
-			// Ensure actor annotation is not set when not reverifying
-			delete(stage.Annotations, kargoapi.AnnotationKeyReverifyActor)
+			// If the re-verification request has changed, enrich the annotation
+			// with the actor and control plane information.
+			if oldStage == nil || oldVerReq == nil || !verReq.Equals(oldVerReq) {
+				verReq.ControlPlane = w.isRequestFromKargoControlplaneFn(req)
+				if !verReq.ControlPlane {
+					// If the re-verification request is not from the control plane, then
+					// it's from a specific Kubernetes user. Without this check we would
+					// overwrite the actor field set by the control plane.
+					verReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+				}
+				stage.Annotations[kargoapi.AnnotationKeyReverify] = verReq.String()
+			}
+		}
+
+		if verReq, ok := kargoapi.AbortAnnotationValue(stage.Annotations); ok {
+			var oldVerReq *kargoapi.VerificationRequest
+			if oldStage != nil {
+				oldVerReq, _ = kargoapi.AbortAnnotationValue(oldStage.Annotations)
+			}
+			// If the abort request has changed, enrich the annotation with the
+			// actor and control plane information.
+			if oldStage == nil || oldVerReq == nil || !verReq.Equals(oldVerReq) {
+				verReq.ControlPlane = w.isRequestFromKargoControlplaneFn(req)
+				if !verReq.ControlPlane {
+					// If the abort request is not from the control plane, then
+					// it's from a specific Kubernetes user. Without this check we would
+					// overwrite the actor field set by the control plane.
+					verReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+				}
+				stage.Annotations[kargoapi.AnnotationKeyAbort] = verReq.String()
+			}
 		}
 	}
 	return nil

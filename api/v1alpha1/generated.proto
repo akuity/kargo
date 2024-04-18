@@ -891,6 +891,12 @@ message PromotionSpec {
 // PromotionStatus describes the current state of the transition represented by
 // a Promotion.
 message PromotionStatus {
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
+
   // Phase describes where the Promotion currently is in its lifecycle.
   optional string phase = 1;
 
@@ -981,6 +987,12 @@ message StageSpec {
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 message StageStatus {
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 11;
+
   // Phase describes where the Stage currently is in its lifecycle.
   optional string phase = 1;
 
@@ -1052,6 +1064,10 @@ message VerificationInfo {
   // ID is the identifier of the Verification process.
   optional string id = 4;
 
+  // Actor is the name of the entity that initiated or aborted the
+  // Verification process.
+  optional string actor = 7;
+
   // StartTime is the time at which the Verification process was started.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
 
@@ -1119,6 +1135,12 @@ message WarehouseSpec {
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
 message WarehouseStatus {
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 6;
+
   // Message describes any errors that are preventing the Warehouse controller
   // from polling repositories to discover new Freight.
   optional string message = 3;

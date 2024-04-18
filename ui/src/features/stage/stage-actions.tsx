@@ -58,11 +58,13 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
 
   // Once the Refresh process is done, refetch Freight list
   React.useEffect(() => {
-    if (stage?.metadata?.annotations['kargo.akuity.io/refresh']) {
+    const refreshRequest = stage?.metadata?.annotations['kargo.akuity.io/refresh'];
+    const refreshStatus = stage?.status?.lastHandledRefresh;
+    if (refreshRequest !== undefined && refreshRequest !== refreshStatus) {
       setShouldRefetchFreights(true);
     }
 
-    if (!stage?.metadata?.annotations['kargo.akuity.io/refresh'] && shouldRefetchFreights) {
+    if (refreshRequest === refreshStatus && shouldRefetchFreights) {
       queryClient.invalidateQueries({ queryKey: createConnectQueryKey(queryFreight) });
       setShouldRefetchFreights(false);
     }
@@ -128,7 +130,7 @@ export const StageActions = ({ stage }: { stage: Stage }) => {
         type='default'
         icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
         onClick={onRefresh}
-        loading={isRefreshLoading || !!stage?.metadata?.annotations['kargo.akuity.io/refresh']}
+        loading={isRefreshLoading || (!!stage?.metadata?.annotations['kargo.akuity.io/refresh'] && stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] !== stage?.status?.lastHandledRefresh)}
       >
         Refresh
       </Button>
