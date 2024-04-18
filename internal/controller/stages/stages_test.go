@@ -16,7 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
+	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
 var (
@@ -30,7 +30,7 @@ func TestNewReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	requirement, err := controller.GetShardRequirement(testCfg.ShardName)
 	require.NoError(t, err)
-	recorder := &fakekubeclient.EventRecorder{Events: nil}
+	recorder := &fakeevent.EventRecorder{Events: nil}
 	r := newReconciler(
 		kubeClient,
 		kubeClient,
@@ -83,7 +83,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 		reconciler *reconciler
 		assertions func(
 			t *testing.T,
-			recorder *fakekubeclient.EventRecorder,
+			recorder *fakeevent.EventRecorder,
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
 			err error,
@@ -112,7 +112,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -152,7 +152,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -204,7 +204,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -257,7 +257,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -279,7 +279,7 @@ func TestSyncControlFlowStage(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			recorder := fakekubeclient.NewEventRecorder(1)
+			recorder := fakeevent.NewEventRecorder(1)
 			testCase.reconciler.nowFn = fakeNow
 			testCase.reconciler.recorder = recorder
 			newStatus, err := testCase.reconciler.syncControlFlowStage(
@@ -306,7 +306,7 @@ func TestSyncNormalStage(t *testing.T) {
 		reconciler *reconciler
 		assertions func(
 			t *testing.T,
-			recorder *fakekubeclient.EventRecorder,
+			recorder *fakeevent.EventRecorder,
 			initialStatus kargoapi.StageStatus,
 			newStatus kargoapi.StageStatus,
 			err error,
@@ -326,7 +326,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -355,7 +355,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -413,7 +413,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -484,7 +484,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -533,7 +533,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -606,7 +606,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -680,7 +680,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -754,7 +754,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -846,7 +846,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -951,7 +951,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -994,7 +994,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1050,7 +1050,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1116,7 +1116,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1183,7 +1183,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1256,7 +1256,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1319,7 +1319,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1391,7 +1391,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *fakekubeclient.EventRecorder,
+				_ *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1467,7 +1467,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				initialStatus kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1597,7 +1597,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1736,7 +1736,7 @@ func TestSyncNormalStage(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				recorder *fakekubeclient.EventRecorder,
+				recorder *fakeevent.EventRecorder,
 				_ kargoapi.StageStatus,
 				newStatus kargoapi.StageStatus,
 				err error,
@@ -1782,7 +1782,7 @@ func TestSyncNormalStage(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			recorder := fakekubeclient.NewEventRecorder(2)
+			recorder := fakeevent.NewEventRecorder(2)
 			testCase.reconciler.nowFn = fakeNow
 			testCase.reconciler.recorder = recorder
 			newStatus, err := testCase.reconciler.syncNormalStage(

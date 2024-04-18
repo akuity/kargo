@@ -19,6 +19,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
+	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -75,7 +76,7 @@ func SetupWebhookWithManager(
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
-		kubeclient.NewEventRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook"),
+		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook"),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Freight{}).

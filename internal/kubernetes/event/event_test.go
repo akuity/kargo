@@ -1,4 +1,4 @@
-package kubeclient
+package event
 
 import (
 	"context"
@@ -17,11 +17,11 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func Test_newEventRecorder(t *testing.T) {
+func Test_newRecorder(t *testing.T) {
 	ctx := context.TODO()
 	client := fake.NewClientBuilder().Build()
 	logger := logging.LoggerFromContext(ctx)
-	r := newEventRecorder(ctx, client, logger)
+	r := newRecorder(ctx, client, logger)
 
 	require.NotNil(t, r.backoff)
 	require.NotNil(t, r.sink)
@@ -68,7 +68,7 @@ func Test_retryDecider(t *testing.T) {
 			t.Parallel()
 
 			logger, _ := testlog.NewNullLogger()
-			r := &eventRecorder{
+			r := &recorder{
 				logger: logger.WithFields(nil),
 			}
 			require.Equal(t, tc.shouldRetry, r.newRetryDecider(&corev1.Event{})(tc.input))
@@ -76,8 +76,8 @@ func Test_retryDecider(t *testing.T) {
 	}
 }
 
-func Test_newEventSink(t *testing.T) {
-	s := newEventSink(
+func Test_newSink(t *testing.T) {
+	s := newSink(
 		context.TODO(),
 		fake.NewClientBuilder().Build(),
 	)

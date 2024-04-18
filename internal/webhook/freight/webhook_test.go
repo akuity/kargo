@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	fakekubeclient "github.com/akuity/kargo/internal/kubeclient/fake"
+	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -29,7 +29,7 @@ func TestNewWebhook(t *testing.T) {
 	w := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
-		&fakekubeclient.EventRecorder{},
+		&fakeevent.EventRecorder{},
 	)
 	require.NotNil(t, w.freightAliasGenerator)
 	// Assert that all overridable behaviors were initialized to a default:
@@ -311,7 +311,7 @@ func TestValidateUpdate(t *testing.T) {
 		webhook    *webhook
 		userInfo   *authnv1.UserInfo
 		setup      func() (*kargoapi.Freight, *kargoapi.Freight)
-		assertions func(*testing.T, *fakekubeclient.EventRecorder, error)
+		assertions func(*testing.T, *fakeevent.EventRecorder, error)
 	}{
 		{
 			name: "error listing freight",
@@ -341,7 +341,7 @@ func TestValidateUpdate(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				statusErr, ok := err.(*apierrors.StatusError)
 				require.True(t, ok)
 				require.Equal(
@@ -382,7 +382,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				statusErr, ok := err.(*apierrors.StatusError)
 				require.True(t, ok)
 				require.Equal(t, int32(http.StatusConflict), statusErr.Status().Code)
@@ -417,7 +417,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "is invalid")
 				require.Contains(t, err.Error(), "freight is immutable")
@@ -447,7 +447,7 @@ func TestValidateUpdate(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ *fakekubeclient.EventRecorder, err error) {
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), "is invalid")
 				require.Contains(t, err.Error(), "freight is immutable")
@@ -488,7 +488,7 @@ func TestValidateUpdate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: "fake-user",
 			},
-			assertions: func(t *testing.T, r *fakekubeclient.EventRecorder, err error) {
+			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
 				require.NoError(t, err)
 				// Recorder should not record non-freight approval events
 				require.Empty(t, r.Events)
@@ -533,7 +533,7 @@ func TestValidateUpdate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: "fake-user",
 			},
-			assertions: func(t *testing.T, r *fakekubeclient.EventRecorder, err error) {
+			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
 				require.NoError(t, err)
 				require.Len(t, r.Events, 1)
 				event := <-r.Events
@@ -579,7 +579,7 @@ func TestValidateUpdate(t *testing.T) {
 			userInfo: &authnv1.UserInfo{
 				Username: serviceaccount.ServiceAccountUsernamePrefix + "kargo:kargo-api",
 			},
-			assertions: func(t *testing.T, r *fakekubeclient.EventRecorder, err error) {
+			assertions: func(t *testing.T, r *fakeevent.EventRecorder, err error) {
 				require.NoError(t, err)
 				require.Empty(t, r.Events)
 			},
@@ -589,7 +589,7 @@ func TestValidateUpdate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			oldFreight, newFreight := testCase.setup()
 
-			recorder := fakekubeclient.NewEventRecorder(1)
+			recorder := fakeevent.NewEventRecorder(1)
 			testCase.webhook.recorder = recorder
 
 			var req admission.Request
