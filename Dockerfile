@@ -64,17 +64,33 @@ RUN GRPC_HEALTH_PROBE_VERSION=v0.4.15 && \
     chmod +x /tools/grpc_health_probe
 
 ####################################################################################################
+# base
+# - install necessary packages
+####################################################################################################
+FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 as base
+
+USER root
+
+RUN apk update \
+    && apk add gpg gpg-agent
+
+COPY --from=tools /tools/ /usr/local/bin/
+
+USER 1000:0
+
+CMD ["/usr/local/bin/kargo"]
+
+####################################################################################################
 # back-end-dev
 # - no UI
 # - relies on go build that runs on host
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 as back-end-dev
+FROM base as back-end-dev
 
 USER root
 
-COPY --from=tools /tools/ /usr/local/bin/
 COPY bin/controlplane/kargo /usr/local/bin/kargo
 
 USER 1000:0
@@ -105,7 +121,7 @@ CMD ["pnpm", "dev"]
 # - the official image we publish
 # - purposefully last so that it is the default target when building
 ####################################################################################################
-FROM ghcr.io/akuity/kargo-render:v0.1.0-rc.39 as final
+FROM base as final
 
 USER root
 
