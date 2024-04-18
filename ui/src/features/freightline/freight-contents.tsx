@@ -44,7 +44,9 @@ export const FreightContents = (props: {
             target='_blank'
             className={`${highlighted ? 'text-blue-200' : 'text-gray-500'} hover:text-blue-300`}
           >
-            {c.id?.substring(0, 6)}
+            {c.tag && c.tag.length > 12
+              ? c.tag.substring(0, 12) + '...'
+              : c.tag || c.id?.substring(0, 6)}
           </a>
         </FreightContentItem>
       ))}
@@ -76,8 +78,17 @@ const CommitInfo = ({ commit }: { commit: GitCommit }) => (
     <div>
       <a href={commit.repoURL}>{commit.repoURL}</a>
     </div>
-    <div>Branch:</div>
-    <div>{commit.branch}</div>
+    {commit.branch ? (
+      <>
+        <div>Branch:</div>
+        <div>{commit.branch}</div>
+      </>
+    ) : commit.tag ? (
+      <>
+        <div>Tag:</div>
+        <div>{commit.tag}</div>
+      </>
+    ) : null}
     {commit.author && (
       <>
         <div>Author:</div>
