@@ -106,38 +106,6 @@ func (p PromoWentTerminal) Update(e event.UpdateEvent) bool {
 	return false
 }
 
-// IgnoreAnnotationRemoval is a predicate that ignores the removal of specific
-// Annotations in an update event. This is useful when we want to ignore
-// updates that only remove an annotation and nothing else, which may be the
-// case when the annotation(s) are cleared by the controller itself.
-type IgnoreAnnotationRemoval struct {
-	predicate.Funcs
-
-	Annotations []string
-}
-
-// Update returns false if the update event only removed any of the Annotations,
-// true otherwise.
-//
-// NOTE: this predicate assumes that the update was to clear the annotation and
-// nothing else. This is safe to assume as long as the helpers of the API are
-// always used to clear the respective annotation.
-func (i IgnoreAnnotationRemoval) Update(e event.UpdateEvent) bool {
-	if e.ObjectOld == nil || e.ObjectNew == nil {
-		return true
-	}
-	oldAnnotations := e.ObjectOld.GetAnnotations()
-	newAnnotations := e.ObjectNew.GetAnnotations()
-	for _, annotation := range i.Annotations {
-		_, oldHasAnnotation := oldAnnotations[annotation]
-		_, newHasAnnotation := newAnnotations[annotation]
-		if oldHasAnnotation && !newHasAnnotation {
-			return false
-		}
-	}
-	return true
-}
-
 // RefreshRequested is a predicate that returns true if the refresh annotation
 // has been set on a resource, or the value of the annotation has changed
 // compared to the previous state.

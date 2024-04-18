@@ -3,7 +3,6 @@ package kargo
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,67 +70,6 @@ func TestNewPromotion(t *testing.T) {
 			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.LessOrEqual(t, len(promo.Name), 253)
 			tc.assertions(t, tc.stage, promo)
-		})
-	}
-}
-
-func TestIgnoreAnnotationRemovalUpdates(t *testing.T) {
-	testCases := []struct {
-		name     string
-		old      client.Object
-		new      client.Object
-		expected bool
-	}{
-		{
-			name:     "nil",
-			old:      nil,
-			new:      nil,
-			expected: true,
-		},
-		{
-			name: "annotation removed",
-			old: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyRefresh: time.Now().Format(time.RFC3339),
-					},
-				},
-			},
-			new: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "annotation set",
-			old: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{},
-				},
-			},
-			new: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyRefresh: time.Now().Format(time.RFC3339),
-					},
-				},
-			},
-			expected: true,
-		},
-	}
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			p := IgnoreAnnotationRemoval{
-				Annotations: []string{kargoapi.AnnotationKeyRefresh},
-			}
-			e := event.UpdateEvent{
-				ObjectOld: tc.old,
-				ObjectNew: tc.new,
-			}
-			require.Equal(t, tc.expected, p.Update(e))
 		})
 	}
 }

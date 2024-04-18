@@ -768,15 +768,6 @@ func (v *VerificationInfoStack) Current() *VerificationInfo {
 	return &(*v)[0]
 }
 
-// Previous returns the VerificationInfo immediately below the top of the
-// stack.
-func (v *VerificationInfoStack) Previous() *VerificationInfo {
-	if len(*v) < 2 {
-		return nil
-	}
-	return &(*v)[1]
-}
-
 // UpdateOrPush updates the VerificationInfo with the same ID as the provided
 // VerificationInfo or appends the provided VerificationInfo to the stack if no
 // such VerificationInfo is found.
