@@ -5,8 +5,8 @@ import "encoding/json"
 const (
 	// AnnotationKeyRefresh is an annotation key that can be set on a resource
 	// to trigger a refresh of the resource by the controller. The value of the
-	// annotation is interpreted as a token, and any change in value should
-	// trigger a reconciliation of the resource.
+	// annotation is interpreted as a token, and any change to the value of the
+	// annotation should trigger a reconciliation of the resource.
 	AnnotationKeyRefresh = "kargo.akuity.io/refresh"
 
 	// AnnotationKeyReverify is an annotation key that can be set on a Stage

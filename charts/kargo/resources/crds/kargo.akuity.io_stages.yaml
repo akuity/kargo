@@ -675,8 +675,9 @@ spec:
                         Verification process.
                       properties:
                         actor:
-                          description: Actor is the name of the entity that initiated
-                            the Verification process.
+                          description: |-
+                            Actor is the name of the entity that initiated or aborted the
+                            Verification process.
                           type: string
                         analysisRun:
                           description: |-
@@ -731,8 +732,9 @@ spec:
                       associated with this Freight for this Stage.
                     properties:
                       actor:
-                        description: Actor is the name of the entity that initiated
-                          the Verification process.
+                        description: |-
+                          Actor is the name of the entity that initiated or aborted the
+                          Verification process.
                         type: string
                       analysisRun:
                         description: |-
@@ -903,8 +905,9 @@ spec:
                             Verification process.
                           properties:
                             actor:
-                              description: Actor is the name of the entity that initiated
-                                the Verification process.
+                              description: |-
+                                Actor is the name of the entity that initiated or aborted the
+                                Verification process.
                               type: string
                             analysisRun:
                               description: |-
@@ -960,8 +963,9 @@ spec:
                           associated with this Freight for this Stage.
                         properties:
                           actor:
-                            description: Actor is the name of the entity that initiated
-                              the Verification process.
+                            description: |-
+                              Actor is the name of the entity that initiated or aborted the
+                              Verification process.
                             type: string
                           analysisRun:
                             description: |-
@@ -1227,8 +1231,9 @@ spec:
                           Verification process.
                         properties:
                           actor:
-                            description: Actor is the name of the entity that initiated
-                              the Verification process.
+                            description: |-
+                              Actor is the name of the entity that initiated or aborted the
+                              Verification process.
                             type: string
                           analysisRun:
                             description: |-
@@ -1284,8 +1289,9 @@ spec:
                         associated with this Freight for this Stage.
                       properties:
                         actor:
-                          description: Actor is the name of the entity that initiated
-                            the Verification process.
+                          description: |-
+                            Actor is the name of the entity that initiated or aborted the
+                            Verification process.
                           type: string
                         analysisRun:
                           description: |-
@@ -1462,8 +1468,9 @@ spec:
                             Verification process.
                           properties:
                             actor:
-                              description: Actor is the name of the entity that initiated
-                                the Verification process.
+                              description: |-
+                                Actor is the name of the entity that initiated or aborted the
+                                Verification process.
                               type: string
                             analysisRun:
                               description: |-
@@ -1519,8 +1526,9 @@ spec:
                           associated with this Freight for this Stage.
                         properties:
                           actor:
-                            description: Actor is the name of the entity that initiated
-                              the Verification process.
+                            description: |-
+                              Actor is the name of the entity that initiated or aborted the
+                              Verification process.
                             type: string
                           analysisRun:
                             description: |-

@@ -551,7 +551,7 @@
                 "description": "VerificationInfo contains information about the currently running\nVerification process.",
                 "properties": {
                   "actor": {
-                    "description": "Actor is the name of the entity that initiated the Verification process.",
+                    "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
                     "type": "string"
                   },
                   "analysisRun": {
@@ -608,7 +608,7 @@
               "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
               "properties": {
                 "actor": {
-                  "description": "Actor is the name of the entity that initiated the Verification process.",
+                  "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
                   "type": "string"
                 },
                 "analysisRun": {
@@ -768,7 +768,7 @@
                     "description": "VerificationInfo contains information about the currently running\nVerification process.",
                     "properties": {
                       "actor": {
-                        "description": "Actor is the name of the entity that initiated the Verification process.",
+                        "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
                         "type": "string"
                       },
                       "analysisRun": {
@@ -825,7 +825,7 @@
                   "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
                   "properties": {
                     "actor": {
-                      "description": "Actor is the name of the entity that initiated the Verification process.",
+                      "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
                       "type": "string"
                     },
                     "analysisRun": {
@@ -1095,7 +1095,7 @@
                   "description": "VerificationInfo contains information about the currently running\nVerification process.",
                   "properties": {
                     "actor": {
-                      "description": "Actor is the name of the entity that initiated the Verification process.",
+                      "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
                       "type": "string"
                     },
                     "analysisRun": {
@@ -1152,7 +1152,7 @@
                 "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
                 "properties": {
                   "actor": {
-                    "description": "Actor is the name of the entity that initiated the Verification process.",
+                    "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
                     "type": "string"
                   },
                   "analysisRun": {
@@ -1318,7 +1318,7 @@
                     "description": "VerificationInfo contains information about the currently running\nVerification process.",
                     "properties": {
                       "actor": {
-                        "description": "Actor is the name of the entity that initiated the Verification process.",
+                        "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
                         "type": "string"
                       },
                       "analysisRun": {
@@ -1375,7 +1375,7 @@
                   "description": "VerificationInfo is information about any verification process that was\nassociated with this Freight for this Stage.",
                   "properties": {
                     "actor": {
-                      "description": "Actor is the name of the entity that initiated the Verification process.",
+                      "description": "Actor is the name of the entity that initiated or aborted the\nVerification process.",
                       "type": "string"
                     },
                     "analysisRun": {

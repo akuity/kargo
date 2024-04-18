@@ -3527,7 +3527,8 @@ export class VerificationInfo extends Message<VerificationInfo> {
   id?: string;
 
   /**
-   * Actor is the name of the entity that initiated the Verification process.
+   * Actor is the name of the entity that initiated or aborted the
+   * Verification process.
    *
    * @generated from field: optional string actor = 7;
    */

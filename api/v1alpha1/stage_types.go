@@ -733,7 +733,8 @@ type AnalysisRunArgument struct {
 type VerificationInfo struct {
 	// ID is the identifier of the Verification process.
 	ID string `json:"id,omitempty" protobuf:"bytes,4,opt,name=id"`
-	// Actor is the name of the entity that initiated the Verification process.
+	// Actor is the name of the entity that initiated or aborted the
+	// Verification process.
 	Actor string `json:"actor,omitempty" protobuf:"bytes,7,opt,name=actor"`
 	// StartTime is the time at which the Verification process was started.
 	StartTime *metav1.Time `json:"startTime,omitempty" protobuf:"bytes,5,opt,name=startTime"`
