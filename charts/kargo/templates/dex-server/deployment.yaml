@@ -44,6 +44,10 @@ spec:
         {{- with .Values.api.oidc.dex.env }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
+        {{- with .Values.api.oidc.dex.envFrom }}
+        envFrom:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         volumeMounts:
         - mountPath: /etc/dex
           name: config

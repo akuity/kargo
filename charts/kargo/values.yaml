@@ -3,6 +3,13 @@
 ## This is a YAML-formatted file.
 ## Declare variables to be passed into your templates.
 
+## @section Global Parameters
+global:
+  ## @param global.env env to pass to all deployed Deployments and CronJobs
+  env: []
+    #  - name: GLOBAL_ENV
+    #    value: =========
+
 ## @section Image Parameters
 image:
   ## @param image.repository Image repository of Kargo
@@ -88,6 +95,16 @@ api:
   annotations: {}
   ## @param api.securityContext Security context for api pods.
   securityContext: {}
+  ## @param api.env env to pass to api pods.
+  env: []
+    #  - name: GLOBAL_ENV
+    #    value: =========
+  ## @param api.envFrom envFrom to pass to api pods.
+  envFrom: []
+    #  - configMapRef:
+    #      name: extra-configmap
+    #  - secretRef:
+    #      name: extra-secret
 
   probes:
     ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
@@ -195,6 +212,12 @@ api:
       #     secretKeyRef:
       #       name: github-dex
       #       key: dex.github.clientSecret
+      ## @param api.oidc.dex.envFrom envFrom to pass to Dex pods.
+      envFrom: []
+        #  - configMapRef:
+        #      name: extra-configmap
+        #  - secretRef:
+        #      name: extra-secret
 
       ## @param api.oidc.dex.volumes Add additional volumes to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
       volumes: []
@@ -336,6 +359,16 @@ controller:
   affinity: {}
   ## @param controller.annotations Annotations to add to the controller pods.
   annotations: {}
+  ## @param controller.env env to pass to controller pods.
+  env: []
+    #  - name: GLOBAL_ENV
+    #    value: =========
+  ## @param controller.envFrom envFrom to pass to controller pods.
+  envFrom: []
+    #  - configMapRef:
+    #      name: extra-configmap
+    #  - secretRef:
+    #      name: extra-secret
 
 ## @section Management Controller
 ## All settings for the management controller component
@@ -365,6 +398,16 @@ managementController:
   affinity: {}
   ## @param managementController.annotations Annotations to add to the management controller pods.
   annotations: {}
+  ## @param managementController.env env to pass to management controller pods.
+  env: []
+    #  - name: GLOBAL_ENV
+    #    value: =========
+  ## @param managementController.envFrom envFrom to pass to management controller pods.
+  envFrom: []
+    #  - configMapRef:
+    #      name: extra-configmap
+    #  - secretRef:
+    #      name: extra-secret
 
 ## @section Webhooks
 webhooks:
@@ -403,6 +446,16 @@ webhooksServer:
   annotations: {}
   ## @param webhooksServer.securityContext Security context for webhooks server pods.
   securityContext: {}
+  ## @param webhooksServer.env env to pass to webhooks server pods.
+  env: []
+    #  - name: GLOBAL_ENV
+    #    value: =========
+  ## @param webhooksServer.envFrom envFrom to pass to webhooks server pods.
+  envFrom: []
+    #  - configMapRef:
+    #      name: extra-configmap
+    #  - secretRef:
+    #      name: extra-secret
 
 ## @section Garbage Collector
 garbageCollector:
@@ -440,3 +493,13 @@ garbageCollector:
   annotations: {}
   ## @param garbageCollector.securityContext Security context for garbage collector pods.
   securityContext: {}
+  ## @param garbageCollector.env env to pass to garbage collector pods.
+  env: []
+    #  - name: GLOBAL_ENV
+    #    value: =========
+  ## @param garbageCollector.envFrom envFrom to pass to garbage collector pods.
+  envFrom: []
+    #  - configMapRef:
+    #      name: extra-configmap
+    #  - secretRef:
+    #      name: extra-secret
