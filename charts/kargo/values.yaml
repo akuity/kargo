@@ -123,7 +123,7 @@ api:
     type: ClusterIP
     ## @param api.service.nodePort [nullable] Host port the `Service` will be mapped to when `type` is either `NodePort` or `LoadBalancer`. If not specified, Kubernetes chooses.
     # nodePort:
-    ## @param api.service.annotations Annotations to add to the api service. 
+    ## @param api.service.annotations Annotations to add to the API server's service. 
     annotations: {}
 
   secret:
