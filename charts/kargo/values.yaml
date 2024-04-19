@@ -499,7 +499,6 @@ garbageCollector:
   #    value: value
   ## @param garbageCollector.envFrom Environment variables to add to garbage collector pods from ConfigMaps or Secrets.
   envFrom: []
-  envFrom: []
   #  - configMapRef:
   #      name: config-map-name
   #  - secretRef:
