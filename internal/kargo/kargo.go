@@ -41,7 +41,7 @@ func NewPromotion(
 	annotations := make(map[string]string, 1)
 	// Put actor information to track on the controller side
 	if u, ok := user.InfoFromContext(ctx); ok {
-		annotations[kargoapi.AnnotationKeyPromoteActor] = kargoapi.FormatEventUserActor(u)
+		annotations[kargoapi.AnnotationKeyCreateActor] = kargoapi.FormatEventUserActor(u)
 	}
 
 	// ulid.Make() is pseudo-random, not crypto-random, but we don't care.

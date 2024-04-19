@@ -99,7 +99,7 @@ func NewPromotionEventAnnotations(
 	}
 	// All Promotion-related events are emitted after the promotion was created.
 	// Therefore, if the promotion knows who triggered it, set them as an actor.
-	if promoteActor, ok := p.Annotations[AnnotationKeyPromoteActor]; ok {
+	if promoteActor, ok := p.Annotations[AnnotationKeyCreateActor]; ok {
 		annotations[AnnotationKeyEventActor] = promoteActor
 	}
 

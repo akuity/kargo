@@ -142,15 +142,15 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		// Set actor as an admission request's user info when the promotion is created
 		// to allow controllers to track who created it.
 		if !w.isRequestFromKargoControlplaneFn(req) {
-			promo.Annotations[kargoapi.AnnotationKeyPromoteActor] =
+			promo.Annotations[kargoapi.AnnotationKeyCreateActor] =
 				kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
 		}
 	} else if req.Operation == admissionv1.Update {
 		// Ensure actor annotation immutability
-		if oldActor, ok := oldPromo.Annotations[kargoapi.AnnotationKeyPromoteActor]; ok {
-			promo.Annotations[kargoapi.AnnotationKeyPromoteActor] = oldActor
+		if oldActor, ok := oldPromo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
+			promo.Annotations[kargoapi.AnnotationKeyCreateActor] = oldActor
 		} else {
-			delete(promo.Annotations, kargoapi.AnnotationKeyPromoteActor)
+			delete(promo.Annotations, kargoapi.AnnotationKeyCreateActor)
 		}
 	}
 
