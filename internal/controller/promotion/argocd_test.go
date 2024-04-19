@@ -408,7 +408,7 @@ func TestArgoCDDoSingleUpdate(t *testing.T) {
 				) error {
 					return nil
 				},
-				logAppEventFn: func(context.Context, *argocd.Application, string, string) {},
+				logAppEventFn: func(context.Context, *argocd.Application, string, string, string) {},
 			},
 			stageMeta: metav1.ObjectMeta{
 				Name:      "fake-name",
@@ -438,6 +438,7 @@ func TestLogAppEvent(t *testing.T) {
 	testCases := []struct {
 		name         string
 		app          *argocd.Application
+		user         string
 		eventReason  string
 		eventMessage string
 		assertions   func(*testing.T, client.Client, *argocd.Application)
@@ -455,6 +456,7 @@ func TestLogAppEvent(t *testing.T) {
 					ResourceVersion: "fake-resource-version",
 				},
 			},
+			user:         "fake-user",
 			eventReason:  "fake-reason",
 			eventMessage: "fake-message",
 			assertions: func(t *testing.T, c client.Client, app *argocd.Application) {
@@ -476,7 +478,31 @@ func TestLogAppEvent(t *testing.T) {
 				require.Equal(t, 1, int(event.Count))
 				require.Equal(t, corev1.EventTypeNormal, event.Type)
 				require.Equal(t, "fake-reason", event.Reason)
-				require.Equal(t, "fake-message", event.Message)
+				require.Equal(t, "fake-user fake-message", event.Message)
+			},
+		},
+		{
+			name: "unknown user",
+			app: &argocd.Application{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "Application",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "fake-name",
+					Namespace:       "fake-namespace",
+					UID:             "fake-uid",
+					ResourceVersion: "fake-resource-version",
+				},
+			},
+			eventReason:  "fake-reason",
+			eventMessage: "fake-message",
+			assertions: func(t *testing.T, c client.Client, _ *argocd.Application) {
+				events := &corev1.EventList{}
+				require.NoError(t, c.List(context.TODO(), events))
+				require.Len(t, events.Items, 1)
+
+				event := events.Items[0]
+				require.Equal(t, "Unknown user fake-message", event.Message)
 			},
 		},
 	}
@@ -486,6 +512,7 @@ func TestLogAppEvent(t *testing.T) {
 			(&argoCDMechanism{argocdClient: c}).logAppEvent(
 				context.Background(),
 				testCase.app,
+				testCase.user,
 				testCase.eventReason,
 				testCase.eventMessage,
 			)
