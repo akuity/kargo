@@ -457,7 +457,7 @@ func (r *reconciler) promote(
 	if err != nil {
 		return nil, err
 	}
-	newStatus = newStatus.WithFreight(&targetFreight)
+	newStatus = newStatus.WithFreight(&nextFreight)
 
 	logger.Debugf("promotion %s", newStatus.Phase)
 
