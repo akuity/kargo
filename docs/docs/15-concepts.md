@@ -637,7 +637,7 @@ _even a single change_ that is:
 
 1. Implicitly included via undefined `includePaths`.
 
-   OR
+   &nbsp;&nbsp;&nbsp;&nbsp;OR
 
    Explicitly included via `includePaths`.
 
