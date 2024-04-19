@@ -48,7 +48,7 @@ spec:
         envFrom:
         - configMapRef:
             name: kargo-management-controller
-        {{- with .Values.managementController.envFrom }}
+        {{- with (concat .Values.global.envFrom .Values.managementController.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- if .Values.kubeconfigSecrets.kargo }}

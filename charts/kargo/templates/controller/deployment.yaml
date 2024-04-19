@@ -48,7 +48,7 @@ spec:
         envFrom:
         - configMapRef:
             name: kargo-controller
-        {{- with .Values.controller.envFrom }}
+        {{- with (concat .Values.global.envFrom .Values.controller.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
         {{- if or .Values.kubeconfigSecrets.kargo .Values.kubeconfigSecrets.argocd .Values.controller.gitClient.signingKeySecret.name }}

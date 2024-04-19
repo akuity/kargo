@@ -9,6 +9,12 @@ global:
   env: []
   #  - name: ENV_NAME
   #    value: value
+  ## @param global.envFrom Environment variables to add to all Kargo pods.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
 
 ## @section Image Parameters
 image:
@@ -363,7 +369,7 @@ controller:
   env: []
   #  - name: ENV_NAME
   #    value: value
-  ## @param controller.envFrom envFrom Environment variables to add to controller pods from ConfigMaps or Secrets.
+  ## @param controller.envFrom Environment variables to add to controller pods from ConfigMaps or Secrets.
   envFrom: []
   #  - configMapRef:
   #      name: config-map-name

@@ -48,7 +48,7 @@ spec:
         envFrom:
         - configMapRef:
             name: kargo-webhooks-server
-        {{- with .Values.webhooksServer.envFrom }}
+        {{- with (concat .Values.global.envFrom .Values.webhooksServer.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
         ports:

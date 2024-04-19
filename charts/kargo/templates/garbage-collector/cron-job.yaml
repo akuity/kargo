@@ -41,7 +41,7 @@ spec:
             envFrom:
             - configMapRef:
                 name: kargo-garbage-collector
-            {{- with .Values.garbageCollector.envFrom }}
+            {{- with (concat .Values.global.envFrom .Values.garbageCollector.envFrom) }}
               {{- toYaml . | nindent 12 }}
             {{- end }}
             securityContext:

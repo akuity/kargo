@@ -51,7 +51,7 @@ spec:
               name: kargo-api
           - secretRef:
               name: {{ .Values.api.secret.name | default "kargo-api" }}
-          {{- with .Values.api.envFrom }}
+          {{- with (concat .Values.global.envFrom .Values.api.envFrom) }}
             {{- toYaml . | nindent 10 }}
           {{- end }}
           ports:
