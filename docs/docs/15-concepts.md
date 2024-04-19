@@ -557,24 +557,22 @@ spec:
 Kargo uses [semver](https://github.com/masterminds/semver#checking-version-constraints) to handle semantic versioning constraints.
 :::
 
-#### Git Subscription Filtering
+#### Git Subscription Path Filtering
 
-In some cases, it may be necessary to filter the artifacts that a `Warehouse`
-subscribes to. For example, a `Warehouse` may subscribe to a Git repository but
-only want to produce new `Freight` when a commit contains changes to a specific
-directory.
+In some cases, it may be necessary to constrain the paths within a Git
+repository that a `Warehouse` will consider as triggers for `Freight`
+production. This is especially useful for GitOps repositories that are
+"monorepos" containing configuration for multiple applications.
 
-To accomplish this, a `Warehouse` resource's `spec.subscriptions.git` field may
-include an `includePaths` and/or `excludePaths` field with a list of regular
-expressions.
+The paths that may or must not trigger `Freight` production may be specified
+using a combination of the `includePaths` and `excludePaths` fields of a Git
+repository subscription.
 
-When these fields are present, the `Warehouse` will only produce a new `Freight`
-when a commit contains changes to a file in a directory that matches one of the
-`includePaths` and does not match any of the `excludePaths`.
-
-The following example shows a `Warehouse` resource that subscribes to a Git
-repository but only produces new `Freight` when a commit contains changes to
-the `apps/guestbook` directory:
+The following example demonstrates a `Warehouse` with a Git repository
+subscription that will only produce new `Freight` when the latest commit
+(selected by the applicable commit selection strategy) contains changes in the
+`apps/guestbook` directory since the last piece of `Freight` produced by the
+`Warehouse`:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -587,12 +585,13 @@ spec:
   - git:
       repoURL: https://github.com/example/kargo-demo.git
       includePaths:
-      - regex:^apps/guestbook/.*$
+      - apps/guestbook
 ```
 
-The next example shows a `Warehouse` resource that subscribes to a Git repository
-but only produces new `Freight` when a commit contains changes to the `apps/guestbook`
-while excluding the `apps/guestbook/README.md` file:
+The next example demonstrates the opposite: a `Warehouse` with a Git repository
+subscription that will only produce new `Freight` when the latest commit
+(selected by the applicable commit selection strategy) contains changes to paths
+_other than_ the repository's `docs/` directory:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -604,16 +603,57 @@ spec:
     subscriptions:
     - git:
         repoURL: https://github.com/example/kargo-demo.git
-      includePaths:
-      - regex:^apps/guestbook/.*$
       excludePaths:
-      - regex:^apps/guestbook/README\.md$
+      - docs
 ```
 
-:::info
-Note the requirement of the `regex:` (or `regexp:`) prefix on all regular expressions listed in the `includePaths` or `excludePaths` fields.
+`includePaths` and `excludePaths` may be combined to include a broad set of
+paths and then exclude a subset of those. The following example demonstrates a
+`Warehouse` with a Git repository subscription that will only produce new
+`Freight` when the latest commit (selected by the applicable commit selection
+strategy) contains changes _within_ the `apps/guestbook` directory _other than_
+the `apps/guestbook/README.md`:
 
-This requirement exists so that when support for other, familiar path matching strategies is added in the future, Kargo cannot misinterpret the `*` character. If not for this safeguard, a user expressing desired paths as `example/*`, for instance, could be surprised to find it matches `my-examples/unwanted/file`.
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: my-warehouse
+  namespace: kargo-demo
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/kargo-demo.git
+      includePaths:
+      - apps/guestbook
+      excludePaths:
+      - apps/guestbook/README.md
+```
+
+:::note
+It is important to understand that new `Freight` will be produced when the
+latest commit (selected by the applicable commit selection strategy) contains
+_even a single change_ that is:
+
+1. Implicitly included via undefined `includePaths`.
+
+   &nbsp;&nbsp;&nbsp;&nbsp;OR
+
+   Explicitly included via `includePaths`.
+
+   AND
+
+2. Not explicitly excluded via `excludePaths`.
+:::
+
+:::info
+By default, the strings in the `includePaths` and `excludePaths` fields are
+treated as exact paths to files or directories. (Selecting a directory will
+implicitly select all paths within that directory.)
+
+Paths may _also_ be specified using glob patterns (by prefixing the string with
+`glob:`) or regular expressions (by prefixing the string with `regex:` or
+`regexp:`).
 :::
 
 ### `Promotion` Resources

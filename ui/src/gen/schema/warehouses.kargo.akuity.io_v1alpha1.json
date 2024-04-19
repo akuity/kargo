@@ -73,7 +73,7 @@
                     "type": "string"
                   },
                   "excludePaths": {
-                    "description": "ExcludePaths is an optional list of filter strings used to specify paths\nin git repository, changes in which should never produce new freight. When used\nin conjuction with IncludePaths, both matching same path/paths, ExcludePaths takes\nprecedence over IncludePaths.\nFilter strings can be specified as prefix/exact match strings, globs or regular\nexpressions, default being prefix/exact match, for example \"helm/charts/\", for\nregular expressions strings need to be prepended by either \"regex:\" or \"regexp:\"\nas in \"regexp:^.*values\\.yaml$\", for globs with \"glob:\" as in \"glob:helm/*/*/values.*ml\"",
+                    "description": "ExcludePaths is a list of selectors that designate paths in the repository\nthat should NOT trigger the production of new Freight when changes are\ndetected therein. When specified, changes in the identified paths will not\ntrigger Freight production. When not specified, paths that should trigger\nFreight production will be defined solely by IncludePaths. Selectors may be\ndefined using:\n  1. Exact paths to files or directories (ex. \"charts/foo\")\n  2. Glob patterns (prefix the pattern with \"glob:\"; ex. \"glob:*.yaml\")\n  3. Regular expressions (prefix the pattern with \"regex:\" or \"regexp:\";\n     ex. \"regexp:^.*\\.yaml$\")\nPaths selected by IncludePaths may be unselected by ExcludePaths. This\nis a useful method for including a broad set of paths and then excluding a\nsubset of them.",
                     "items": {
                       "type": "string"
                     },
@@ -87,7 +87,7 @@
                     "type": "array"
                   },
                   "includePaths": {
-                    "description": "IncludePaths is a list of filter strings that can optionally be used to\nlimit file paths in repository, changes in which will result in creation of\nnew freight. When not specified - changes in any path will produce new\nfreight, it is equivalent to having a IncludePaths with an entry of \"regex:.*\"\nWhen both IncludePaths and ExcludePaths are specified and match same path/paths,\nExcludePaths will prevail over IncludePaths.\nFilter strings can be specified as prefix/exact match strings, globs or regular\nexpressions, default being prefix/exact match, for example \"helm/charts/\", for\nregular expressions strings need to be prepended by either \"regex:\" or \"regexp:\"\nas in \"regexp:^.*values\\.yaml$\", for globs with \"glob:\" as in \"glob:helm/*/*/values.*ml\"",
+                    "description": "IncludePaths is a list of selectors that designate paths in the repository\nthat should trigger the production of new Freight when changes are detected\ntherein. When specified, only changes in the identified paths will trigger\nFreight production. When not specified, changes in any path will trigger\nFreight production. Selectors may be defined using:\n  1. Exact paths to files or directories (ex. \"charts/foo\")\n  2. Glob patterns (prefix the pattern with \"glob:\"; ex. \"glob:*.yaml\")\n  3. Regular expressions (prefix the pattern with \"regex:\" or \"regexp:\";\n     ex. \"regexp:^.*\\.yaml$\")\nPaths selected by IncludePaths may be unselected by ExcludePaths. This\nis a useful method for including a broad set of paths and then excluding a\nsubset of them.",
                     "items": {
                       "type": "string"
                     },
