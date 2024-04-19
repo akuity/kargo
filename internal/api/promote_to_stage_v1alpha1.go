@@ -118,7 +118,7 @@ func (s *server) PromoteToStage(
 		return nil, err
 	}
 
-	promotion := kargo.NewPromotion(*stage, freight.Name)
+	promotion := kargo.NewPromotion(ctx, *stage, freight.Name)
 	if err := s.createPromotionFn(ctx, &promotion); err != nil {
 		return nil, fmt.Errorf("create promotion: %w", err)
 	}

@@ -989,7 +989,7 @@ func (r *reconciler) syncNormalStage(
 
 	logger.Debug("auto-promotion will proceed")
 
-	promo := kargo.NewPromotion(*stage, latestFreight.Name)
+	promo := kargo.NewPromotion(ctx, *stage, latestFreight.Name)
 	if err :=
 		r.createPromotionFn(ctx, &promo); err != nil {
 		return status, fmt.Errorf(

@@ -93,9 +93,16 @@ func NewPromotionEventAnnotations(
 		AnnotationKeyEventStageName:           p.Spec.Stage,
 		AnnotationKeyEventPromotionCreateTime: p.GetCreationTimestamp().Format(time.RFC3339),
 	}
+
 	if actor != "" {
 		annotations[AnnotationKeyEventActor] = actor
 	}
+	// All Promotion-related events are emitted after the promotion was created.
+	// Therefore, if the promotion knows who triggered it, set them as an actor.
+	if promoteActor, ok := p.Annotations[AnnotationKeyCreateActor]; ok {
+		annotations[AnnotationKeyEventActor] = promoteActor
+	}
+
 	if f != nil {
 		annotations[AnnotationKeyEventFreightCreateTime] = f.CreationTimestamp.Format(time.RFC3339)
 		annotations[AnnotationKeyEventFreightAlias] = f.Alias
