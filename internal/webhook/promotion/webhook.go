@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,7 +36,8 @@ var (
 )
 
 type webhook struct {
-	client client.Client
+	client  client.Client
+	decoder *admission.Decoder
 
 	recorder record.EventRecorder
 
@@ -85,6 +87,7 @@ func SetupWebhookWithManager(
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
+		admission.NewDecoder(mgr.GetScheme()),
 		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook"),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -97,10 +100,12 @@ func SetupWebhookWithManager(
 func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
+	decoder *admission.Decoder,
 	recorder record.EventRecorder,
 ) *webhook {
 	w := &webhook{
 		client:   kubeClient,
+		decoder:  decoder,
 		recorder: recorder,
 	}
 	w.getFreightFn = kargoapi.GetFreight
@@ -115,7 +120,40 @@ func newWebhook(
 }
 
 func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
+	req, err := w.admissionRequestFromContextFn(ctx)
+	if err != nil {
+		return fmt.Errorf("get admission request from context: %w", err)
+	}
+
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
+	var oldPromo *kargoapi.Promotion
+	// We need to decode old object manually since controller-runtime doesn't decode it for us.
+	if req.Operation == admissionv1.Update {
+		oldPromo = &kargoapi.Promotion{}
+		if err = w.decoder.DecodeRaw(req.OldObject, oldPromo); err != nil {
+			return fmt.Errorf("decode old object: %w", err)
+		}
+	}
+
+	if promo.Annotations == nil {
+		promo.Annotations = make(map[string]string, 1)
+	}
+	if req.Operation == admissionv1.Create {
+		// Set actor as an admission request's user info when the promotion is created
+		// to allow controllers to track who created it.
+		if !w.isRequestFromKargoControlplaneFn(req) {
+			promo.Annotations[kargoapi.AnnotationKeyPromoteActor] =
+				kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+		}
+	} else if req.Operation == admissionv1.Update {
+		// Ensure actor annotation immutability
+		if oldActor, ok := oldPromo.Annotations[kargoapi.AnnotationKeyPromoteActor]; ok {
+			promo.Annotations[kargoapi.AnnotationKeyPromoteActor] = oldActor
+		} else {
+			delete(promo.Annotations, kargoapi.AnnotationKeyPromoteActor)
+		}
+	}
+
 	stage, err := w.getStageFn(
 		ctx,
 		w.client,

@@ -1,6 +1,7 @@
 package kargo
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -64,7 +65,7 @@ func TestNewPromotion(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			promo := NewPromotion(tc.stage, tc.freight)
+			promo := NewPromotion(context.TODO(), tc.stage, tc.freight)
 			require.Equal(t, tc.freight, promo.Spec.Freight)
 			require.Equal(t, tc.stage.Name, promo.Spec.Stage)
 			require.Equal(t, tc.freight, promo.Spec.Freight)

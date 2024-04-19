@@ -133,7 +133,7 @@ func (s *server) PromoteToStageSubscribers(
 	promoteErrs := make([]error, 0, len(subscribers))
 	createdPromos := make([]*kargoapi.Promotion, 0, len(subscribers))
 	for _, subscriber := range subscribers {
-		newPromo := kargo.NewPromotion(subscriber, freight.Name)
+		newPromo := kargo.NewPromotion(ctx, subscriber, freight.Name)
 		if subscriber.Spec.PromotionMechanisms == nil {
 			// Avoid creating a Promotion if the subscriber has no
 			// PromotionMechanisms, and is a "control flow" Stage.

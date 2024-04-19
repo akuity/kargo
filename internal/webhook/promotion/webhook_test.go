@@ -27,6 +27,7 @@ func TestNewWebhook(t *testing.T) {
 	w := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
+		admission.NewDecoder(kubeClient.Scheme()),
 		&fakeevent.EventRecorder{},
 	)
 	// Assert that all overridable behaviors were initialized to a default:
@@ -48,6 +49,9 @@ func TestDefault(t *testing.T) {
 		{
 			name: "error getting stage",
 			webhook: &webhook{
+				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
+					return admission.Request{}, nil
+				},
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -64,6 +68,9 @@ func TestDefault(t *testing.T) {
 		{
 			name: "stage not found",
 			webhook: &webhook{
+				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
+					return admission.Request{}, nil
+				},
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -80,6 +87,9 @@ func TestDefault(t *testing.T) {
 		{
 			name: "stage without promotion mechanisms",
 			webhook: &webhook{
+				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
+					return admission.Request{}, nil
+				},
 				getStageFn: func(
 					context.Context,
 					client.Client,
@@ -98,6 +108,9 @@ func TestDefault(t *testing.T) {
 		{
 			name: "success",
 			webhook: &webhook{
+				admissionRequestFromContextFn: func(context.Context) (admission.Request, error) {
+					return admission.Request{}, nil
+				},
 				getStageFn: func(
 					context.Context,
 					client.Client,

@@ -1,6 +1,7 @@
 package kargo
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api/user"
 )
 
 const (
@@ -22,7 +24,11 @@ const (
 
 // NewPromotion returns a new Promotion from a given stage and freight with our
 // naming convention.
-func NewPromotion(stage kargoapi.Stage, freight string) kargoapi.Promotion {
+func NewPromotion(
+	ctx context.Context,
+	stage kargoapi.Stage,
+	freight string,
+) kargoapi.Promotion {
 	shortHash := freight
 	if len(shortHash) > 7 {
 		shortHash = freight[0:7]
@@ -32,14 +38,21 @@ func NewPromotion(stage kargoapi.Stage, freight string) kargoapi.Promotion {
 		shortStageName = shortStageName[0:maxStageNamePrefixLength]
 	}
 
+	annotations := make(map[string]string, 1)
+	// Put actor information to track on the controller side
+	if u, ok := user.InfoFromContext(ctx); ok {
+		annotations[kargoapi.AnnotationKeyPromoteActor] = kargoapi.FormatEventUserActor(u)
+	}
+
 	// ulid.Make() is pseudo-random, not crypto-random, but we don't care.
 	// We just want a unique ID that can be sorted lexicographically
 	promoName := strings.ToLower(fmt.Sprintf("%s.%s.%s", shortStageName, ulid.Make(), shortHash))
 
 	promotion := kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      promoName,
-			Namespace: stage.Namespace,
+			Name:        promoName,
+			Namespace:   stage.Namespace,
+			Annotations: annotations,
 		},
 		Spec: &kargoapi.PromotionSpec{
 			Stage:   stage.Name,

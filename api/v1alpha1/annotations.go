@@ -23,6 +23,8 @@ const (
 
 	AnnotationKeyDescription = "kargo.akuity.io/description"
 
+	AnnotationKeyPromoteActor = "kargo.akuity.io/promote-actor"
+
 	AnnotationKeyOIDCEmails   = "rbac.kargo.akuity.io/email"
 	AnnotationKeyOIDCGroups   = "rbac.kargo.akuity.io/groups"
 	AnnotationKeyOIDCSubjects = "rbac.kargo.akuity.io/sub"
