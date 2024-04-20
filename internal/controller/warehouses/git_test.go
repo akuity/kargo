@@ -759,6 +759,126 @@ func TestMatchesPathsFilters(t *testing.T) {
 				require.ErrorContains(t, err, "syntax error in pattern")
 			},
 		},
+		{
+			name:         "success unmatching mix1",
+			includePaths: []string{"path3", regexPrefix + "nonexistent", globPrefix + "nonexistent"},
+			excludePaths: []string{regexPrefix + "nonexistent", "*/?helpers.tpl", globPrefix + "nonexistent"},
+			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, false, matchFound)
+			},
+		},
+		{
+			name:         "success unmatching mix2",
+			includePaths: []string{"path1", regexPrefix + "[_-]", globPrefix + "nonexistent"},
+			excludePaths: []string{
+				regexPrefix + "nonexistent",
+				"path1",
+				"path1",
+				globPrefix + "*.tpl",
+				globPrefix + "*/*.tpl",
+				globPrefix + "*.tpl",
+				"path1",
+			},
+			diffs: []string{"path1/values.yaml", "path2/_helpers.tpl", "path2/ingress.yaml"},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, false, matchFound)
+			},
+		},
+		{
+			name: "success unmatching mix3",
+			includePaths: []string{
+				"path1/f",
+				regexpPrefix + "path[1-3]",
+				globPrefix + "file*",
+			},
+			excludePaths: []string{
+				regexPrefix + "\\d",
+				"yaml",
+				globPrefix + "*.tpl",
+				globPrefix + "*.tpl",
+				"nonexistent",
+			},
+			diffs: []string{"path1/file1", "path2/file2", "path3/file3"},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, false, matchFound)
+			},
+		},
+		{
+			name:         "success unmatching mix2; no config",
+			includePaths: []string{},
+			excludePaths: []string{},
+			diffs:        []string{},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, false, matchFound)
+			},
+		},
+		{
+			name: "success matching mix1",
+			includePaths: []string{
+				"path1",
+				regexPrefix + "[_-]",
+				globPrefix + "nonexistent",
+				regexPrefix + "no",
+				globPrefix + "*/*/*/abe/*",
+			},
+			excludePaths: []string{
+				regexPrefix + "nonexistent",
+				"path1",
+				"path1",
+				globPrefix + "*.tpl",
+				globPrefix + "*/*.tpl",
+				globPrefix + "*.tpl",
+				regexpPrefix + ".*q",
+			},
+			diffs: []string{
+				"path1/values.yaml",
+				"path2/_helpers.tpl",
+				"abc",
+				"abb",
+				"aba",
+				"abz",
+				"aby",
+				"abx",
+				"abw",
+				"abv",
+				"abu",
+				"path3/abc/abd/abe/deployment.yaml",
+				"path4.txt",
+			},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, true, matchFound)
+			},
+		},
+		{
+			name: "success matching mix3; no includePaths",
+			excludePaths: []string{
+				regexpPrefix + "ab[cbazxwvu]",
+				"helpers.tpl",
+				globPrefix + "path*/*"},
+			diffs: []string{
+				"path1/values.yaml",
+				"path2/_helpers.tpl",
+				"abc",
+				"abb",
+				"aba",
+				"abz",
+				"aby",
+				"abx",
+				"abw",
+				"abv",
+				"abu",
+			},
+			assertions: func(t *testing.T, matchFound bool, err error) {
+				require.NoError(t, err)
+				require.Equal(t, true, matchFound)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
