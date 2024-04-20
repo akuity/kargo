@@ -9,7 +9,7 @@ global:
   env: []
   #  - name: ENV_NAME
   #    value: value
-  ## @param global.envFrom Environment variables to add to all Kargo pods.
+  ## @param global.envFrom Environment variables to add to all Kargo pods from ConfigMaps or Secrets.
   envFrom: []
   #  - configMapRef:
   #      name: config-map-name
@@ -211,7 +211,7 @@ api:
         pullSecrets: []
         # - name: regcred
 
-      ## @param api.oidc.dex.env Add additional environment variables to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      ## @param api.oidc.dex.env Environment variables to add to Dex server pods. This is convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
       env: []
       # - name: CLIENT_SECRET
       #   valueFrom:
