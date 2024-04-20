@@ -199,7 +199,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
-	dashboardHandler, err := s.newDashboardRequestHandler()
+	dashboardHandler, err := newDashboardRequestHandler()
 	if err != nil {
 		return fmt.Errorf("error initializing dashboard handler: %w", err)
 	}
@@ -260,7 +260,9 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 }
 
-func (s *server) newDashboardRequestHandler() (http.HandlerFunc, error) {
+func newDashboardRequestHandler() (http.HandlerFunc, error) {
+	const indexHTML = "index.html"
+
 	uiFS := fs.FS(ui)
 	uiFS, err := fs.Sub(uiFS, "ui")
 	if err != nil {
@@ -269,42 +271,48 @@ func (s *server) newDashboardRequestHandler() (http.HandlerFunc, error) {
 
 	handler := http.FileServer(http.FS(uiFS))
 	return func(w http.ResponseWriter, req *http.Request) {
-		if req.Method != "GET" {
+		if req.Method != http.MethodGet {
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 			return
 		}
 
 		path := filepath.Clean(req.URL.Path)
 		if path == "/" {
-			path = "index.html"
+			httputil.SetNoCacheHeaders(w)
+			http.ServeFileFS(w, req, uiFS, indexHTML)
+			return
 		}
-		path = strings.TrimPrefix(path, "/")
 
-		f, err := uiFS.Open(path)
-		if err != nil {
+		f, err := uiFS.Open(strings.TrimPrefix(path, "/"))
+		if f != nil {
+			defer f.Close()
+		}
+		if os.IsNotExist(err) {
 			// When the path doesn't match an embedded file, serve index.html
-			if os.IsNotExist(err) {
-				httputil.SetNoCacheHeaders(w)
-				http.ServeFileFS(w, req, uiFS, "index.html")
-			}
+			httputil.SetNoCacheHeaders(w)
+			http.ServeFileFS(w, req, uiFS, indexHTML)
+			return
+		}
+		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
+
+		// If we get to here, the path exists in the embedded file system
 
 		info, err := f.Stat()
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
-
-		// When the path matches a directory, serve index.html (prevents
-		// enumerating files in the directory)
 		if info.IsDir() {
+			// Serve index.html to prevent enumerating files in the directory
 			httputil.SetNoCacheHeaders(w)
-			http.ServeFileFS(w, req, uiFS, "index.html")
+			http.ServeFileFS(w, req, uiFS, indexHTML)
 			return
 		}
 
+		// Path is a file
 		handler.ServeHTTP(w, req)
 	}, nil
 }
