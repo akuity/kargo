@@ -3,6 +3,19 @@
 ## This is a YAML-formatted file.
 ## Declare variables to be passed into your templates.
 
+## @section Global Parameters
+global:
+  ## @param global.env Environment variables to add to all Kargo pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param global.envFrom Environment variables to add to all Kargo pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
+
 ## @section Image Parameters
 image:
   ## @param image.repository Image repository of Kargo
@@ -88,6 +101,16 @@ api:
   annotations: {}
   ## @param api.securityContext Security context for api pods.
   securityContext: {}
+  ## @param api.env Environment variables to add to API server pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param api.envFrom Environment variables to add to API server pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
 
   probes:
     ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
@@ -190,13 +213,19 @@ api:
         pullSecrets: []
         # - name: regcred
 
-      ## @param api.oidc.dex.env Add additional environment variables to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      ## @param api.oidc.dex.env Environment variables to add to Dex server pods. This is convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
       env: []
       # - name: CLIENT_SECRET
       #   valueFrom:
       #     secretKeyRef:
       #       name: github-dex
       #       key: dex.github.clientSecret
+      ## @param api.oidc.dex.envFrom Environment variables to add to Dex server pods from ConfigMaps or Secrets. This is especially convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      envFrom: []
+      #  - configMapRef:
+      #      name: config-map-name
+      #  - secretRef:
+      #      name: secret-name
 
       ## @param api.oidc.dex.volumes Add additional volumes to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
       volumes: []
@@ -338,6 +367,16 @@ controller:
   affinity: {}
   ## @param controller.annotations Annotations to add to the controller pods.
   annotations: {}
+  ## @param controller.env Environment variables to add to controller pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param controller.envFrom Environment variables to add to controller pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
 
 ## @section Management Controller
 ## All settings for the management controller component
@@ -367,6 +406,16 @@ managementController:
   affinity: {}
   ## @param managementController.annotations Annotations to add to the management controller pods.
   annotations: {}
+  ## @param managementController.env Environment variables to add to management controller pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param managementController.envFrom Environment variables to add to management controller pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
 
 ## @section Webhooks
 webhooks:
@@ -405,6 +454,16 @@ webhooksServer:
   annotations: {}
   ## @param webhooksServer.securityContext Security context for webhooks server pods.
   securityContext: {}
+  ## @param webhooksServer.env Environment variables to add to webhook server pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param webhooksServer.envFrom Environment variables to add to webhook server pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
 
 ## @section Garbage Collector
 garbageCollector:
@@ -442,3 +501,13 @@ garbageCollector:
   annotations: {}
   ## @param garbageCollector.securityContext Security context for garbage collector pods.
   securityContext: {}
+  ## @param garbageCollector.env Environment variables to add to garbage collector pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param garbageCollector.envFrom Environment variables to add to garbage collector pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name

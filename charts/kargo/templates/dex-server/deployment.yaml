@@ -40,8 +40,12 @@ spec:
         imagePullPolicy: {{ .Values.api.oidc.dex.image.pullPolicy }}
         command: ["dex", "serve"]
         args: ["/etc/dex/config.yaml"]
+        {{- with (concat .Values.global.env .Values.api.oidc.dex.env) }}
         env:
-        {{- with .Values.api.oidc.dex.env }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with (concat .Values.global.envFrom .Values.api.oidc.dex.envFrom) }}
+        envFrom:
           {{- toYaml . | nindent 8 }}
         {{- end }}
         volumeMounts:

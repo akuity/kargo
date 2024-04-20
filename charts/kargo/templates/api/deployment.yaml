@@ -42,11 +42,18 @@ spec:
           image: {{ include "kargo.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/usr/local/bin/kargo", "api"]
+          {{- with (concat .Values.global.env .Values.api.env) }}
+          env:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
           envFrom:
-            - configMapRef:
-                name: kargo-api
-            - secretRef:
-                name: {{ .Values.api.secret.name | default "kargo-api" }}
+          - configMapRef:
+              name: kargo-api
+          - secretRef:
+              name: {{ .Values.api.secret.name | default "kargo-api" }}
+          {{- with (concat .Values.global.envFrom .Values.api.envFrom) }}
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
           ports:
             - name: h2c
               containerPort: 8080

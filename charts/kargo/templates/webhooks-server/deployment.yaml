@@ -41,9 +41,16 @@ spec:
         image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/usr/local/bin/kargo", "webhooks-server"]
+        {{- with (concat .Values.global.env .Values.webhooksServer.env) }}
+        env:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         envFrom:
         - configMapRef:
             name: kargo-webhooks-server
+        {{- with (concat .Values.global.envFrom .Values.webhooksServer.envFrom) }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         ports:
         - containerPort: 9443
           name: webhooks-server
