@@ -8,6 +8,9 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"connectrpc.com/grpchealth"
@@ -27,6 +30,7 @@ import (
 	"github.com/akuity/kargo/internal/api/option"
 	"github.com/akuity/kargo/internal/api/validation"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
@@ -195,11 +199,11 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
-	uiFS := fs.FS(ui)
-	if uiFS, err = fs.Sub(uiFS, "ui"); err != nil {
-		return fmt.Errorf("error initializing UI file system: %w", err)
+	dashboardHandler, err := newDashboardRequestHandler()
+	if err != nil {
+		return fmt.Errorf("error initializing dashboard handler: %w", err)
 	}
-	mux.Handle("/", http.FileServer(http.FS(uiFS)))
+	mux.Handle("/", dashboardHandler)
 	if s.cfg.DexProxyConfig != nil {
 		dexProxyCfg := dex.ProxyConfigFromEnv()
 		dexProxy, err := dex.NewProxy(dexProxyCfg)
@@ -254,4 +258,61 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 		}
 		return err
 	}
+}
+
+func newDashboardRequestHandler() (http.HandlerFunc, error) {
+	const indexHTML = "index.html"
+
+	uiFS := fs.FS(ui)
+	uiFS, err := fs.Sub(uiFS, "ui")
+	if err != nil {
+		return nil, fmt.Errorf("error initializing UI file system: %w", err)
+	}
+
+	handler := http.FileServer(http.FS(uiFS))
+	return func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodGet {
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+
+		path := filepath.Clean(req.URL.Path)
+		if path == "/" {
+			httputil.SetNoCacheHeaders(w)
+			http.ServeFileFS(w, req, uiFS, indexHTML)
+			return
+		}
+
+		f, err := uiFS.Open(strings.TrimPrefix(path, "/"))
+		if f != nil {
+			defer f.Close()
+		}
+		if os.IsNotExist(err) {
+			// When the path doesn't match an embedded file, serve index.html
+			httputil.SetNoCacheHeaders(w)
+			http.ServeFileFS(w, req, uiFS, indexHTML)
+			return
+		}
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		// If we get to here, the path exists in the embedded file system
+
+		info, err := f.Stat()
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		if info.IsDir() {
+			// Serve index.html to prevent enumerating files in the directory
+			httputil.SetNoCacheHeaders(w)
+			http.ServeFileFS(w, req, uiFS, indexHTML)
+			return
+		}
+
+		// Path is a file
+		handler.ServeHTTP(w, req)
+	}, nil
 }
